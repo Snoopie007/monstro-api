@@ -1,0 +1,91 @@
+#clubs {
+   
+    .circleRadio {
+        align-items: normal;
+        >span {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            overflow: hidden;
+            border-radius: 9999px;
+            justify-content: center;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            width: 1rem;
+            height: 1rem;
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            transition-property: transform, background;
+            transition-timing-function: ease;
+            transition-duration: .25s;
+            --tw-border-opacity: 1;
+            --tw-bg-opacity: 1;
+            background-color: transparent;
+            border: 2px solid #000;
+            margin-top: 4px;
+
+            >span {
+                opacity: 0;
+                display: block;
+                height: .5rem;
+                width: .5rem;
+                z-index: 10;
+                transform-origin: center;
+                --tw-scale-x: 1;
+                --tw-scale-y: 1;
+                transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+                border-radius: 9999px;
+                transition-property: transform, opacity;
+                transition-timing-function: ease;
+                transition-duration: .25s;
+            }
+        }
+
+        &.active {
+            >span {
+                >span {
+                    opacity: 1;
+                    @apply bg-indigo-500;
+                }
+            }
+        }
+    }
+
+    .cycleBox {
+
+        box-shadow: var(--input-box-shadow);
+        @apply flex-1;
+        @apply border-2;
+        @apply border-slate-800;
+        padding: 0.6rem 0.8rem 1.4rem 0.8rem;
+        @apply rounded-sm;
+        cursor: pointer;
+
+        &:hover,
+        &.active {
+            @apply border-indigo-600;
+            @apply text-indigo-600;
+
+            >span {
+                @apply border-indigo-600;
+                @apply bg-indigo-600/40;
+            }
+        }
+
+        .cycleDetails {
+            p {
+                margin-bottom: 0.1rem;
+                font-family: var(--primary-font);
+            }
+        }
+    }
+
+
+    input,
+    .cardElement {
+        @apply bg-white border-2 border-indigo-500 rounded-sm text-base h-auto;
+        box-shadow: var(--input-box-shadow);
+    }
+
+
+}

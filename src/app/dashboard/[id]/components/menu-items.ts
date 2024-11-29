@@ -1,0 +1,67 @@
+import { icons } from "lucide-react";
+
+type SidebarMenuItem = {
+    name: string;
+    path?: string;
+    icon: keyof typeof icons;
+    subMenu?: SubMenuItem[];
+}
+
+type SubMenuItem = {
+    name: string;
+    path: string;
+}
+
+export const SidebarMenuItems: SidebarMenuItem[] = [
+    {
+        name: "Members",
+        path: "members",
+        icon: "Users"
+    },
+    {
+        name: "Programs & Classes",
+        icon: "BookText",
+        subMenu: [
+            {
+                name: "Programs",
+                path: 'programs',
+
+            },
+            {
+                name: "Contracts",
+                path: "contracts",
+            }
+
+        ]
+    },
+    {
+        name: "Achievements & Rewards",
+        icon: "Medal",
+        subMenu: [
+            {
+                name: "Achievements",
+                path: "achievements",
+            },
+            {
+                name: "Rewards",
+                path: "rewards",
+            }
+        ]
+    },
+    {
+        name: "AI",
+        path: "ai",
+        icon: "Bot"
+    },
+
+    {
+        name: "Staffs",
+        path: "staffs",
+        icon: "AtSign"
+    },
+    {
+        name: "Settings",
+        path: "settings/company",
+        icon: "Settings"
+    }
+]

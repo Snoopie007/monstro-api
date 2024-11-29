@@ -1,0 +1,441 @@
+'use client'
+import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { CountryCode } from "@/types";
+import { toast } from "react-toastify";
+import { cn } from "@/libs/utils";
+
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+    Input,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/forms";
+
+import { Loader2 } from "lucide-react";
+import PhoneInput from 'react-phone-number-input/input'
+import { type Value } from 'react-phone-number-input'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, Button } from "@/components/ui";
+
+import CompanyLogo from "./company-logo";
+import { RegionSelect } from "@/components/forms";
+import { post } from "@/libs/api";
+import { useSession } from "next-auth/react";
+import { CompanyInfoSchema } from "./schemas";
+import { Industries, CountryCodes, TimeZones } from "@/libs/datas";
+
+
+
+type CompanyInfo = {
+    businessName: string;
+    legalName: string;
+    email: string;
+    phone: Value;
+    logo: string;
+    industry: string;
+    website: string;
+    address: string;
+    city: string;
+    state: string;
+    postal: string;
+    timezone: string;
+    country: string;
+}
+
+interface CompanyProps {
+    companyInfo: CompanyInfo;
+    locationId: string;
+}
+
+
+export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProps) {
+    const [errorMessage, setErrorMessage] = useState("");
+    const [logoUrl, setLogoUrl] = useState(companyInfo.logo || "");
+    const [phoneRegion, setPhoneRegion] = useState<CountryCode | undefined>("US");
+    const [loeading, setLoading] = useState(false);
+    const { data: session, update } = useSession();
+
+    const form = useForm<z.infer<typeof CompanyInfoSchema>>({
+        resolver: zodResolver(CompanyInfoSchema),
+        defaultValues: {
+            businessName: "",
+            legalName: "",
+            email: "",
+            phone: "",
+            logo: "",
+            industry: "",
+            website: "",
+            address: "",
+            city: "",
+            state: "",
+            postal: "",
+            country: "",
+            timezone: "",
+        },
+        mode: "onSubmit",
+    });
+
+    useEffect(() => {
+        if (companyInfo) {
+            form.reset(companyInfo);
+            setPhoneRegion(companyInfo.country as CountryCode);
+        }
+    }, [companyInfo]);
+
+    async function onSubmit(v: z.infer<typeof CompanyInfoSchema>) {
+        v.logo = logoUrl;
+        setLoading(true);
+        try {
+            // const { data: session, update } = useSession();
+            await post({ url: 'company', data: v, id: locationId }).then(async (response) => {
+                console.log(response)
+                const allLocations = session?.user.locations.filter((location: any) => location.id != response.id);
+                allLocations.push(response);
+                const updatedSession = await update({
+                    user: {
+                        locations: allLocations,
+
+                    }
+                });
+
+                setLoading(false);
+                toast.success("Info Updated Successfully");
+            }).catch((error) => {
+                toast.error("Something Went Wrong",
+                    {
+                        position: "top-center",
+                        hideProgressBar: true,
+                        closeOnClick: true,
+                    }
+                );
+            });
+
+        } catch (e: any) {
+            setLoading(false);
+            toast.error("Your payment was declined by your bank, please talk to support. ",
+                {
+                    position: "top-center",
+                    hideProgressBar: true,
+                    closeOnClick: true,
+                }
+            );
+
+        }
+    }
+    return (
+        <Card className='rounded-sm'>
+
+            <CardContent className="p-0">
+                <CardHeader className="border-b py-2 px-4">
+                    <CardTitle className="text-lg">General Information</CardTitle>
+                </CardHeader>
+                <div className="px-4 py-6">
+                    <CompanyLogo logo={logoUrl} setLogoUrl={setLogoUrl} locationId={locationId} />
+                    <Form {...form}>
+                        <form className="space-y-3">
+                            <input type="hidden" name="logo" value={logoUrl} />
+
+                            <fieldset>
+                                <div className="flex gap-4">
+                                    <FormField control={form.control} name="businessName" render={({ field }) => (
+                                        <FormItem className="flex-1 mt-0">
+                                            <FormLabel className="font-semibold">
+                                                Friendly Business Name
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Input type="text" className="rounded-sm" placeholder="Friendly Business Name" {...field} />
+                                            </FormControl>
+
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="legalName"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1 mt-0">
+                                                <FormLabel className="font-semibold">
+                                                    Legal Business Name
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input type="text" className="rounded-sm" placeholder=" Legal Business Name" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </fieldset>
+                            <fieldset >
+                                <div className="flex flex-row gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="email"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel className="font-semibold">
+                                                    Business Email
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input type="email" className="rounded-sm" placeholder="Email"  {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <div className="flex-1 justify-center space-y-2">
+
+                                        <FormLabel className="font-semibold  ">
+                                            Business Phone
+                                        </FormLabel>
+                                        <div className="flex  flex-row gap-1">
+                                            <Select onValueChange={(value: string) => { setPhoneRegion(value as CountryCode) }} defaultValue={phoneRegion}>
+
+                                                <SelectTrigger className="rounded-sm w-[22%] h-auto" >
+                                                    <SelectValue defaultValue={companyInfo.country} />
+                                                </SelectTrigger>
+
+                                                <SelectContent>
+                                                    {CountryCodes.map((country, index) => (
+                                                        <SelectItem key={index} value={country.code}>
+                                                            {country.shortName}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormField
+                                                control={form.control}
+                                                name="phone"
+                                                render={({ field: { onChange, value } }) => (
+                                                    <FormItem className="flex-1">
+
+                                                        <FormControl >
+
+                                                            <PhoneInput
+                                                                type="tel"
+                                                                className="rounded-sm bg-transparent inline-block w-full border py-1.5 px-4"
+                                                                value={value}
+                                                                withCountryCallingCode={true}
+                                                                international={true}
+                                                                country={phoneRegion}
+                                                                onChange={onChange}
+                                                            />
+                                                        </FormControl>
+
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+
+                                    </div>
+
+                                </div>
+                            </fieldset>
+                            <fieldset >
+                                <div className="flex flex-row gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="website"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel className="font-semibold">
+                                                    Website
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input type="text" className="rounded-sm" placeholder="Website"  {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="industry"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel className="font-semibold">
+                                                    Industry
+                                                </FormLabel>
+
+                                                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="rounded-sm" >
+                                                            <SelectValue placeholder="Select your industry" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {Industries.map((industry, index) => (
+                                                            <SelectItem key={index} value={industry}>
+                                                                {industry}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </fieldset>
+                            <fieldset >
+                                <div className="flex flex-row gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="address"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel className="font-semibold">
+                                                    Street Address
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input type="text" className="rounded-sm" placeholder="Street Address"  {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="city"
+                                        render={({ field }) => (
+                                            <FormItem className="">
+                                                <FormLabel className="font-semibold">
+                                                    City
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input type="text" className="rounded-sm" placeholder="City"  {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </fieldset>
+
+                            <fieldset >
+                                <div className="grid grid-cols-9 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="state"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-3">
+                                                <FormLabel className="font-semibold">
+                                                    State / Prov / Region
+                                                </FormLabel>
+                                                <RegionSelect value={field.value}
+                                                    onChange={(value) => field.onChange(value)}
+                                                />
+                                                <FormMessage />
+                                            </FormItem >
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="postal"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-3">
+                                                <FormLabel className="font-semibold">
+                                                    Postal
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input type="text" className="rounded-sm" placeholder="City"  {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="country"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-3">
+                                                <FormLabel className="font-semibold">
+                                                    Country
+                                                </FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="rounded-sm" >
+                                                            <SelectValue placeholder="Select your country" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent >
+                                                        {CountryCodes.map((t) => (
+                                                            <SelectItem key={t.code} value={t.code}>
+                                                                {t.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </fieldset>
+                            <fieldset >
+                                <div className="flex flex-row gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="timezone"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel className="font-semibold">
+                                                    Timezone
+                                                </FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="rounded-sm" >
+                                                            <SelectValue placeholder="Select your timezone" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent >
+                                                        {TimeZones.map((t, index) => (
+                                                            <SelectItem key={index} value={t}>
+                                                                {t}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                </div>
+                            </fieldset>
+
+                        </form>
+                    </Form>
+                </div>
+                <CardFooter className="px-4 py-3 border-t justify-end">
+                    <Button
+                        variant={"foreground"}
+                        className={cn(" children:hidden", { "children:inline-block": loeading })}
+                        type="submit"
+                        onClick={form.handleSubmit(onSubmit)}
+                    >
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Update
+                    </Button>
+                </CardFooter>
+            </CardContent>
+        </Card >
+
+    );
+}

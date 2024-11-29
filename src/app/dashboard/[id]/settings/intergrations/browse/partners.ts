@@ -1,0 +1,29 @@
+export const IntergrationPartners = [
+    {
+        name: "GHL",
+        description: "GHL is a payment gateway",
+        url: "https://marketplace.gohighlevel.com/oauth/chooselocation",
+        logo: "ghl-logo.jpg",
+        tags: ["Marketing"],
+        options: {
+            response_type: "code",
+            redirect_uri: "https://mymonstroapp.com/dashboard/settings/intergrations/ghl",
+            client_id: "65850b0d2525182171c0e69d-lqg41p93",
+            scope: ["oauth.write", "oauth.readonly"]
+        }
+    },
+    {
+        name: "Stripe",
+        description: "Stripe is a payment gateway",
+        url: "https://connect.stripe.com/oauth/v2/authorize",
+        logo: "stripe-logo.png",
+        tags: ["Payment"],
+        options: {
+            response_type: "code",
+            client_id: "ca_R9ojLAtxSjM3lmwiTVePCUnUP8Dk08J4",
+            scope: "read_write",
+            redirect_uri: "https://localhost:3000/callbacks/intergrations/stripe",
+            state: ""
+        }
+    }
+]

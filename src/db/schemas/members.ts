@@ -1,0 +1,86 @@
+
+import { relations } from "drizzle-orm";
+import { integer, primaryKey, serial, text, timestamp, pgTable, boolean, varchar } from "drizzle-orm/pg-core";
+import { locations, memberLocations } from "./locations";
+import { users } from "./users";
+import { achievements } from "./achievements";
+import { rewards } from "./rewards";
+import { programMembers } from "./programs";
+import { contractsTemplates } from "./contract-templates";
+import { plans } from "./plans";
+
+export const members = pgTable("members", {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    parentId: integer("parent_id"),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name"),
+    email: text("email").notNull(),
+    phone: text("phone"),
+    referralCode: text("referral_code").notNull(),
+    currentPoints: integer("current_points").notNull().default(0),
+    avatar: varchar("avatar"),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
+    deleted: timestamp('deleted_at', { withTimezone: true }),
+});
+
+export const MemberAchievements = pgTable("member_achievements", {
+    memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
+    achievementId: integer("achievement_id").references(() => achievements.id, { onDelete: "cascade" }),
+    note: text("note"),
+    status: text("status"),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);
+
+export const MemberRewards = pgTable("member_rewards", {
+    memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
+    rewardId: integer("reward_id").references(() => rewards.id, { onDelete: "cascade" }),
+    previousPoints: integer("previous_points"),
+    status: text("status"),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);
+
+
+
+export const contracts = pgTable("member_contracts", {
+    id: serial("id").primaryKey(),
+    memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
+    templateId: integer("contract_id").references(() => contractsTemplates.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
+    stripePlanId: text("stripe_plan_id"),
+    content: text("content"),
+    signed: boolean("signed").notNull().default(false),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
+    deleted: timestamp('deleted_at', { withTimezone: true }),
+});
+
+export const membersRelations = relations(members, ({ many, one }) => ({
+    locations: many(memberLocations),
+    achievements: many(MemberAchievements),
+    rewards: many(MemberRewards),
+    contracts: many(contracts),
+    programMembers: many(programMembers),
+    user: one(users, {
+        fields: [members.userId],
+        references: [users.id],
+    }),
+}));
+
+export const contractsRelations = relations(contracts, ({ many, one }) => ({
+    member: one(members, {
+        fields: [contracts.memberId],
+        references: [members.id],
+    }),
+    plan: one(plans, {
+        fields: [contracts.stripePlanId],
+        references: [plans.id],
+    }),
+    contractTemplate: one(contractsTemplates, {
+        fields: [contracts.templateId],
+        references: [contractsTemplates.id],
+    }),
+}));

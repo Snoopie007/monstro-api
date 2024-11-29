@@ -1,0 +1,107 @@
+'use client'
+import {
+    Avatar,
+    AvatarFallback,
+    AvatarImage,
+    Card,
+    CardContent,
+    CardHeader,
+    Skeleton,
+} from "@/components/ui";
+
+import { ChevronLeft, Mail, PhoneCall } from "lucide-react";
+import { useRouter } from 'next/navigation'
+import UpdateMemberProfile from "./update-profile";
+import { formatDateTime } from "@/libs/utils";
+import { useMember } from "../../providers/MemberContext";
+
+interface MemberProfileProps {
+    params: { id: string, mid: number }
+}
+export function MemberProfile({ params }: MemberProfileProps) {
+    const { member, mutate } = useMember()
+    const router = useRouter()
+
+
+    return (
+        <Card className='rounded-sm overflow-hidden'>
+            <CardHeader className='border-b py-0 px-0 text-left ' >
+                <div className='flex justify-between flex-row items-center '>
+                    <div className='px-4'>
+                        <button onClick={() => { router.back() }} className=" text-foreground" >
+                            <ChevronLeft className="inline-block" size={20} />
+                        </button>
+                    </div>
+                    <div>
+
+                        <UpdateMemberProfile member={member} />
+                    </div>
+                </div>
+
+            </CardHeader>
+            <CardContent className='px-0 py-6' >
+
+                <div className="flex px-4 py-4 gap-6">
+                    <div className="flex-initial relative">
+
+                        <Avatar className="w-20 h-20 rounded-full mx-auto">
+                            <AvatarImage src={member.avatar || ""} />
+                            <AvatarFallback className="text-4xl uppercase text-muted bg-foreground font-medium">
+                                {member.firstName.charAt(0)}
+                            </AvatarFallback>
+                        </Avatar>
+                    </div>
+                    <div className="flex flex-initial w-[250px] ">
+                        <div className="flex flex-col  text-sm gap-1.5 ">
+                            <div className=" font-bold text-lg ">
+                                {member.firstName} {member.lastName}
+
+                            </div>
+                            <div className="flex flex-row gap-2 items-center">
+
+                                <Mail size={14} />
+                                <span>
+                                    {member.email}
+                                </span>
+                            </div>
+                            <div className="flex flex-row gap-2 items-center">
+                                <PhoneCall size={14} />
+                                <span>
+                                    {member.phone}
+                                </span>
+                            </div>
+                            <div className="flex flex-row gap-2 items-center">
+                                <strong> Last seen:</strong>
+                                <span>
+                                    {/* {formatDateTime(member.updated)} */}
+                                </span>
+
+                            </div>
+                            <div className="flex flex-row gap-2 items-center">
+                                <strong> Status:</strong> {member.activityStatus}
+                            </div>
+                        </div>
+                    </div>
+                    <div className='flex-1 flex flex-col text-sm gap-2'>
+                        <div className="flex flex-col">
+                            <strong>Points Earned</strong>
+                            <span>
+                                {member.currentPoints}
+
+                            </span>
+                        </div>
+                        <div className="flex flex-col">
+                            <strong className=''>Points Reedemed</strong>
+                            <span>
+                                {member.reedemPoints}
+
+                            </span>
+
+                        </div>
+                    </div>
+                </div>
+
+            </CardContent>
+        </Card>
+    )
+}

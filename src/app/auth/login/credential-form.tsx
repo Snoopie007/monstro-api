@@ -1,0 +1,156 @@
+"use client";
+import { signIn } from "next-auth/react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+	Form,
+	FormControl,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "@/components/forms/form";
+import { Input } from "@/components/forms/input";
+
+import { cn, sleep } from "@/libs/utils";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { LuLoader2 } from "react-icons/lu";
+import { toast, UpdateOptions } from "react-toastify";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { LoginSchema } from "../schema";
+
+const InputStyle = "bg-white border  border-gray-400  rounded-sm py-6 px-4 text-base shadow-none";
+export default function CredentialForm() {
+	const [loading, setLoading] = useState<boolean>(false);
+	const { push } = useRouter();
+	const form = useForm<z.infer<typeof LoginSchema>>({
+		resolver: zodResolver(LoginSchema),
+		defaultValues: {
+			email: "",
+			password: "",
+		},
+		mode: "onChange",
+	});
+
+	async function loginUser(v: z.infer<typeof LoginSchema>) {
+		setLoading(true);
+
+		const errorUpdate: UpdateOptions = { render: "Invalid email or password.", type: "error", isLoading: false, autoClose: 1000 }
+		const toastId = toast.loading("Logging in...", { theme: "dark", hideProgressBar: true });
+
+		const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
+			method: "POST",
+			headers: {
+				"Content-type": "application/json",
+			},
+			body: JSON.stringify({
+				email: v.email,
+				password: v.password,
+			}),
+		});
+		await sleep(2000);
+		if (res.ok) {
+			const { data: user } = await res.json();
+			user.role = user.vendor ? "vendor" : user.member ? "member" : null;
+
+			try {
+				await signIn("credentials", {
+					...user,
+					locations: JSON.stringify(user.locations),
+					callbackUrl: `/dashboard/${user.locations.length >= 1 ? user.locations[0].id : null}`,
+					redirect: true,
+				})
+				// const route = `/dashboard/${user.locations.length >= 1 ? user.locations[0].id : null}`;
+				// push(route);
+
+			} catch (error) {
+				const data = await res.json();
+
+				console.error(error)
+				setLoading(false);
+				toast.update(toastId, errorUpdate);
+			}
+		} else {
+			console.log("error");
+			setLoading(false);
+			toast.update(toastId, errorUpdate);
+		}
+	}
+
+	return (
+		<Form {...form}>
+			<form onSubmit={form.handleSubmit(loginUser)} className="w-full">
+				<fieldset className={"mb-4"}>
+					<FormField
+						control={form.control}
+						name="email"
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel className="font-semibold">
+									Email
+								</FormLabel>
+								<FormControl>
+									<Input
+										type="email"
+										className={InputStyle}
+										placeholder="Your email"
+										{...field}
+									/>
+								</FormControl>
+
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+				</fieldset>
+				<fieldset className="mb-4">
+					<FormField
+						control={form.control}
+						name="password"
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel className="font-semibold">
+									Password
+								</FormLabel>
+								<FormControl>
+									<Input
+										type="password"
+										className={InputStyle}
+										placeholder="Your password"
+										{...field}
+									/>
+								</FormControl>
+
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+					<Link
+						href={"/auth/forgot-password"}
+						className={"font-semibold text-sm block mt-3"}
+					>
+						Forgot your password?
+					</Link>
+				</fieldset>
+
+				<div className={"flex flex-row items-center justify-between "}>
+					<Button
+						className={cn(
+							" text-base bg-indigo-700 hover:bg-indigo-600 w-full  text-white px-4 py-3 h-auto rounded-sm children:hidden",
+							{ "children:inline-block": loading }
+						)}
+						type="submit"
+					>
+						<LuLoader2 className="mr-2 h-4 w-4 animate-spin" />
+						Continue
+					</Button>
+
+				</div>
+			</form>
+
+		</Form>
+	);
+}
