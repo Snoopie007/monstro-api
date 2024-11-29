@@ -37,7 +37,7 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
                         <div className="border-b flex flex-row justify-between ">
                             <div className="flex-initial flex flex-row items-center px-4">
                                 <button onClick={() => { }} className="group" >
-                                    <ArrowLeft size={18} className="stroke-gray-300 group-hover:stroke-black" />
+                                    <ArrowLeft size={18} className="stroke-white" />
                                 </button>
                             </div>
                             <div className="flex-1 flex flex-row items-center justify-end ">
