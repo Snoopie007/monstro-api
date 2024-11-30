@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function SEOPage({params}: {params: {id: string}}) {
+export default function SEOPage(props: { params: Promise<{ id: number }> }) {
     return (
         <div>Coming Soon</div>
     )
