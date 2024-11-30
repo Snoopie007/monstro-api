@@ -23,7 +23,7 @@ async function getCustomerInvoices(customerId: string): Promise<Stripe.Charge[]>
 }
 
 
-export default async function InvoicesPage({ params }: { params: { id: string } }) {
+export default async function InvoicesPage(props: { params: Promise<{ id: number }> }) {
     const session = await auth();
 
     const invoices = await getCustomerInvoices(session?.user.stripeCustomerId);
