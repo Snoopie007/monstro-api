@@ -11,7 +11,11 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
         where: (contracts, { eq }) => eq(contracts.locationId, params.id),
         with: {
           member: true,
-          plan: true,
+          plan: {
+            with: {
+              program: true
+            }
+          },
         }
       });
       // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/contracts/signed`, {

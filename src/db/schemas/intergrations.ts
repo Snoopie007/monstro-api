@@ -23,8 +23,8 @@ export const integrationRelations = relations(integrations, ({ one }) => ({
         fields: [integrations.vendorId],
         references: [vendors.id],
     }),
-    // location: one(locations, {
-    //     fields: [integrations.locationId],
-    //     references: [locations.id],
-    // }),
+    location: one(locations, {
+        fields: [integrations.locationId],
+        references: [locations.id],
+    }),
 }));

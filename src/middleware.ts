@@ -40,12 +40,12 @@ export default auth(async (req) => {
 	}
 	// Handle non-API routes
 	if (!isLoggedin && !pathname.startsWith("/auth") && !pathname.startsWith("/api/auth") && !pathname.startsWith("/clubs")) {
+
 		const newUrl = new URL("/auth/login", req.nextUrl.origin)
 		return Response.redirect(newUrl)
-	}
 
+	} else if (isLoggedin && pathname === "/") {
 
-	else if (isLoggedin && pathname === "/") {
 		// Redirect logged-in users to the home route when they access the base route
 		const homeUrl = new URL(`/dashboard/${req.auth?.user.locations.length >= 1 ? req.auth?.user.locations[0].id : null}`, req.nextUrl.origin);  // Adjust this to your desired route
 		return Response.redirect(homeUrl);

@@ -8,7 +8,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Toolbar } from '../../components'
@@ -16,7 +15,6 @@ import { useEffect, useState } from 'react'
 import { Commands } from "./commands"
 import useContentMenuActions from "./hooks/use-content-menu-auction"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Separator } from '@radix-ui/react-dropdown-menu'
 
 export type ContentMenuProps = {
     editor: Editor

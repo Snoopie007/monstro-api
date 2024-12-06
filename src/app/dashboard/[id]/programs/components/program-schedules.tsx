@@ -85,7 +85,7 @@ export default function AddProgramSchedules({ scheduleIndex, control }: AddProgr
                                             <TimePicker
                                                 label="Time"
                                                 value={field.value}
-                                                onChange={(date) => field.onChange(new Time(date.hour, date.minute))}
+                                                onChange={(date) => field.onChange(date ? new Time(date.hour, date.minute) : new Time(12, 0))}
                                             />
                                         </FormControl>
 

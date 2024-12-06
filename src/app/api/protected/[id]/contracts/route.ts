@@ -45,6 +45,8 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
         },
         body: JSON.stringify(data)
       });
+
+
       if (!res.ok) {
         return NextResponse.json({ message: "An error occurred saving contract." }, { status: 400 });
       }

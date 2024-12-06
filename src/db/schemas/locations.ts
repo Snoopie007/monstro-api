@@ -9,7 +9,7 @@ import { programs } from "./programs";
 export const locations = pgTable("locations", {
     id: serial("id").primaryKey(),
     name: text("name"),
-    industryr: varchar("industry"),
+    industry: varchar("industry"),
     address: text("address"),
     city: text("city"),
     state: text("state"),

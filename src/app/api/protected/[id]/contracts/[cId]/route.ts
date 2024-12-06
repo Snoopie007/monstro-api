@@ -1,24 +1,31 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
+import { db } from '@/db/db';
 
-export async function GET(req: Request, props: { params: Promise<{ cId: string, id: string }> }) {
+export async function GET(req: Request, props: { params: Promise<{ cId: number, id: string }> }) {
   const params = await props.params;
   const session = await auth();
+
   try {
     if (session) {
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/contracts/${params.cId}`, {
-        headers: {
-          'Authorization': `Bearer ${session.user.token}`,
-          "locationId": `${params.id}`
-        }
-      });
+      // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/contracts/${params.cId}`, {
+      //   headers: {
+      //     'Authorization': `Bearer ${session.user.token}`,
+      //     "locationId": `${params.id}`
+      //   }
+      // });
 
-      if (!res.ok) {
-        return NextResponse.json({ message: "An error occurred while fetching the data." }, { status: 400 });
-      }
-      const { data } = await res.json();
-      return NextResponse.json(data, { status: 200 });
+      // if (!res.ok) {
+      //   return NextResponse.json({ message: "An error occurred while fetching the data." }, { status: 400 });
+      // }
+      // const { data } = await res.json();
+
+      const template = await db.query.contractsTemplates.findFirst({
+        where: (templates, { eq }) => eq(templates.id, params.cId),
+      })
+
+      return NextResponse.json(template, { status: 200 });
     }
   } catch (err) {
     return NextResponse.json({ error: err }, { status: 500 })

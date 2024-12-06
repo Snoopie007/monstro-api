@@ -19,16 +19,15 @@ import Loading from '@/components/loading';
 import Link from 'next/link';
 
 
-export default function MemberContractsPgae(props: { params: Promise<{ id: string }> }) {
+export default function MemberContractsPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { contracts, isLoading } = useSignedContracts(params.id);
 
     async function downloadContract(signedId: number) {
         const data = await fetcher({ id: params.id, url: `contracts/signed/${signedId}` });
-        console.log(data);
+
         if (data && data.pdfUrl) {
             // Trigger the download
-            // link.style.display = "none";
             const link = document.createElement('a');
             link.href = data.pdfUrl; // URL from the backend
             link.download = 'contract.pdf'; // Suggested filename for the downloaded PDF
@@ -65,7 +64,7 @@ export default function MemberContractsPgae(props: { params: Promise<{ id: strin
                             <TableHeader className=" text-xs">
                                 <TableRow className='' >
                                     {["Title", "Program", "Plan", "Member", "Signed", "Download"].map((title) => (
-                                        <TableHead key={title} className="font-semibold h-auto py-3 text-xs" >
+                                        <TableHead key={title} className="font-semibold h-auto py-4 text-xs" >
                                             {title}
                                         </TableHead>
                                     ))}
@@ -76,24 +75,27 @@ export default function MemberContractsPgae(props: { params: Promise<{ id: strin
                                     <>
                                         {contracts.map((contract: any, index: number) => (
                                             <TableRow key={index} className='cursor-pointer'>
-                                                <TableCell className="text-sm py-4 px-6 font-roboto">
+                                                <TableCell className="text-sm  ">
                                                     {contract.title}
                                                 </TableCell>
-
-                                                <TableCell className="text-sm py-4 px-6 font-roboto">
+                                                <TableCell className="text-sm  ">
                                                     {contract.plan.program.name}
                                                 </TableCell>
-                                                <TableCell className="text-sm py-4 px-6 font-roboto">
+
+                                                <TableCell className="text-sm  ">
                                                     {contract.plan.name}
                                                 </TableCell>
-                                                <TableCell className="text-sm py-4 px-6 font-roboto">
+
+                                                <TableCell className="text-sm  ">
                                                     {contract.member.firstName} {contract.member.lastName}
                                                 </TableCell>
-                                                <TableCell className="text-sm py-4 px-6 font-roboto">
+
+                                                <TableCell className="text-sm  ">
                                                     {formatDateTime(contract.createdAt)}
                                                 </TableCell>
-                                                <TableCell className="text-sm py-4 px-6 font-roboto">
-                                                    <Button onClick={() => downloadContract(contract.id)}>
+
+                                                <TableCell className="text-sm  ">
+                                                    <Button variant={"ghost"} onClick={() => downloadContract(contract.id)}>
                                                         <Icon name="Download" />
                                                     </Button>
                                                 </TableCell>

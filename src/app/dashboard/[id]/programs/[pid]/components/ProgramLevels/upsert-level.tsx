@@ -315,7 +315,7 @@ function SessionComponents({ form, i, remove }: SessionComponentsProps) {
 								value={field.value}
 								onChange={(date) => {
 
-									field.onChange(new Time(date.hour, date.minute))
+									field.onChange(date ? new Time(date.hour, date.minute) : new Time(12, 0))
 								}}
 							/>
 						</FormControl>
