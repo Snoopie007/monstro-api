@@ -17,6 +17,7 @@ export default auth(async (req) => {
       if (extractedUrl) {
         const [_, encodedId, subpath = ''] = extractedUrl;
         const decodedId = decodeId(encodedId);
+				console.log(decodedId);
         if (!decodedId) {
           return NextResponse.json({ message: "Invalid ID" }, { status: 400 });
         }
