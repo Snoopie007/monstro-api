@@ -71,7 +71,13 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                                             {contract.isDraft ? "Draft" : "Publish"}
                                                         </TableCell>
                                                         <TableCell className="text-sm ">
-                                                            {contract.editable ? <Icon name='Check' /> : <Icon name='X' />}
+                                                            {contract.editable ? (
+                                                                <div className="group flex flex-row items-center">
+                                                                    <Icon name='Check' className="inline-block group-hover:hidden " />
+                                                                    <Link href={`/builder/${params.id}/contract/${contract.id}`} className={"group-hover:inline-block hidden hover:text-indigo-500"}>
+                                                                        <Icon name="Pencil" size={14} /></Link>
+                                                                </div>
+                                                            ) : <Icon name='X' className="text-red-500" />}
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
