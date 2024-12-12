@@ -9,6 +9,9 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
     if (session) {
       const templates = await db.query.contractsTemplates.findMany({
         where: (contractsTemplates, { eq }) => eq(contractsTemplates.locationId, params.id),
+        with: {
+          plans: true
+        }
       });
       // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/contracts`, {
       //   headers: {

@@ -11,6 +11,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
         where: (contracts, { eq }) => eq(contracts.locationId, params.id),
         with: {
           member: true,
+          contractTemplate: true,
           plan: {
             with: {
               program: true

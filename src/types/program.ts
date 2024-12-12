@@ -31,6 +31,7 @@ export type Session = {
     [key: string]: string | number | undefined;
     id?: number,
     durationTime?: number,
+    duration_time?: string,
     startDate?: string,
     endDate?: string,
     monday?: string | undefined,

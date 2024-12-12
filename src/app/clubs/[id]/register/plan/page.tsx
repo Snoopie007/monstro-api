@@ -2,14 +2,18 @@ import { Program } from "@/types";
 import PlanBuilder from "./components/plan-builder";
 import { getRegister } from '@/libs/api';
 import { RegistrationHeader } from "../components";
+import { decodeId } from "@/libs/server-utils";
 
 async function fetchPlans(locationId: string): Promise<Program[]> {
     try {
         // We should make one pull that pulls program with innerjoin of plan;
-        const res = await getRegister({ url: `/vendor/register/get-programs-by-location/${locationId}` });
+        const id = decodeId(locationId)
+        console.log(id)
+        const res = await getRegister({ url: `/vendor/register/get-programs-by-location/${id}` });
+        console.log(res)
         return res.programs;
     } catch (error) {
-        console.log("error");
+        console.log("error", error);
         return [];
     }
 }

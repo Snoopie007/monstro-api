@@ -62,10 +62,10 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                                             )}
                                                         </TableCell>
                                                         <TableCell className="text-sm py-4 px-6 font-roboto">
-                                                            {contract.stripe_plans?.length}
+                                                            {contract.plans?.length}
                                                         </TableCell>
                                                         <TableCell className="text-sm py-4 px-6 font-roboto">
-                                                            {formatDateTime(contract.created_at)}
+                                                            {formatDateTime(contract.created)}
                                                         </TableCell>
                                                         <TableCell className="text-sm py-4 px-6 font-roboto">
                                                             {contract.isDraft ? "Draft" : "Publish"}

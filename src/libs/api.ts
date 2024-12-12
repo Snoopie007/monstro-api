@@ -127,18 +127,18 @@ async function addProgram(body: any, id: string) {
 }
 
 async function addPlan(body: any, pId: number, id: string) {
-  const res = await post({ url: `programs/plans/${pId}`, data: body, id: id });
+  const res = await post({ url: `programs/${pId}/plans/`, data: body, id: id });
   return res;
 }
 
 
-async function updateProgramLevel(lId: number, body: any, id: string) {
-  const res = await put({ url: `programs/levels/${lId}`, data: body, id: id });
+async function updateProgramLevel(lId: number, body: any, pId: number, id: string) {
+  const res = await put({ url: `programs/${pId}/levels/${lId}`, data: body, id: id });
   return res;
 }
 
-async function addProgramLevel(body: any, id: string) {
-  const res = await post({ url: `programs/levels/`, data: body, id });
+async function addProgramLevel(body: any, pId: number, id: string) {
+  const res = await post({ url: `programs/${pId}/levels/`, data: body, id });
   return res;
 }
 

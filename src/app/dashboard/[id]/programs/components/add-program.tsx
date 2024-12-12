@@ -21,14 +21,14 @@ import { cn, sleep } from "@/libs/utils";
 
 import AddProgramSchedules from './program-schedules';
 import { Time } from '@internationalized/date';
-import { nextApi } from '@/libs/api';
+import { nextApi, post } from '@/libs/api';
 import { NewProgramSchema } from './schemas';
 import { Icon } from '@/components/icons';
 import { Session } from '@/types';
 
 
 
-export function AddProgram() {
+export function AddProgram({locationId}: {locationId: string}) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const form = useForm<z.infer<typeof NewProgramSchema>>({
@@ -68,8 +68,17 @@ export function AddProgram() {
         setLoading(true);
         v.levels.forEach((level, levelIndex) => {
             const session: Session = {};
-            level.sessions.forEach((schedule) => {
-                session[schedule.day?.toLowerCase()] = schedule.time?.toString();
+            level.sessions.forEach((s) => {
+                if (!s.day || !s.time) return; // Handle undefined or null values for day and time
+    
+                const day = s.day.toLowerCase();
+                session[day] = s.time.toString(); // Assign time to the corresponding day
+    
+                // Safely handle and update `duration_time` with the correct structure
+                session.duration_time = JSON.stringify({
+                    ...(session.duration_time ? JSON.parse(session.duration_time) : {}),
+                    [day]: s.durationTime || null // Assign durationTime or null if undefined
+                });
             });
             session["program_level_name"] = level.name;
             session["capacity"] = level.capacity;
@@ -85,7 +94,7 @@ export function AddProgram() {
             sessions: sessions
         };
 
-        const res = await nextApi.post(`/api/protected/programs`, body);
+        const res = await post({url: `programs`, id: locationId, data: body});
         await sleep(3000);
         setLoading(false);
 

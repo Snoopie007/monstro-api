@@ -75,9 +75,9 @@ export function ProgramMembers({ programId, locationId }: { programId: number, l
                     />
                 </div>
 
-                <Button variant={"foreground"} className=' rounded-sm '>
+                {/* <Button variant={"foreground"} className=' rounded-sm '>
                     Enroll Member
-                </Button>
+                </Button> */}
             </div>
 
             <div className="flex flex-col w-full">

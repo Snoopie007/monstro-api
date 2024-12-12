@@ -76,7 +76,7 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                                         {contracts.map((contract: any, index: number) => (
                                             <TableRow key={index} className='cursor-pointer'>
                                                 <TableCell className="text-sm  ">
-                                                    {contract.title}
+                                                    {contract.contractTemplate.title}
                                                 </TableCell>
                                                 <TableCell className="text-sm  ">
                                                     {contract.plan.program.name}
@@ -91,7 +91,7 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                                                 </TableCell>
 
                                                 <TableCell className="text-sm  ">
-                                                    {formatDateTime(contract.createdAt)}
+                                                    {formatDateTime(contract.created)}
                                                 </TableCell>
 
                                                 <TableCell className="text-sm  ">

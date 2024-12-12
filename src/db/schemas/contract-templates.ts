@@ -4,13 +4,13 @@ import { integer, boolean, primaryKey, varchar, serial, text, timestamp, pgTable
 import { vendors } from "./users";
 import { locations } from "./locations";
 import { contracts } from "./members";
+import { plans } from "./plans";
 
 export const contractsTemplates = pgTable("contracts", {
     id: serial("id").primaryKey(),
     vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
     content: text("content"),
-    description: text("description"),
     title: varchar("title"),
     isDraft: boolean("isDraft").notNull().default(true),
     editable: boolean("editable").notNull().default(true),
@@ -20,5 +20,6 @@ export const contractsTemplates = pgTable("contracts", {
 });
 
 export const contractRelations = relations(contractsTemplates, ({ many, one }) => ({
-    memberContracts: many(contracts)
+    memberContracts: many(contracts),
+    plans: many(plans)
 }));

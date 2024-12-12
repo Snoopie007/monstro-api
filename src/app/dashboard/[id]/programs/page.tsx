@@ -23,7 +23,7 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
             <div className="mb-3">
                 <div className='flex flex-row gap-4 items-center py-3'>
                     <input placeholder='Search programs' className='w-full rounded-sm border-gray-200 text-sm bg-transparent  py-2.5  px-4 border ' />
-                    <AddProgram />
+                    <AddProgram locationId={params.id} />
                 </div>
             </div>
             {isLoading ? (<SectionLoader />) : (<ProgramList programs={data} locationId={params.id} />)}

@@ -65,6 +65,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 				},
 				body: JSON.stringify(data)
 			})
+			console.log(res)
 			if (!res.ok) {
 				return NextResponse.json({ message: "An error occurred saving program." }, { status: 400 });
 			}

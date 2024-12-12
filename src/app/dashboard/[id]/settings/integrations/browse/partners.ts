@@ -20,7 +20,7 @@ export const IntergrationPartners = [
         tags: ["Payment"],
         options: {
             response_type: "code",
-            client_id: "ca_R9ojLAtxSjM3lmwiTVePCUnUP8Dk08J4",
+            client_id: "ca_QBCPLtQoO8cpmakOwVzCPUCg16GbCGwv",
             scope: "read_write",
             redirect_uri: "https://localhost:3000/callbacks/intergrations/stripe",
             state: ""

@@ -46,15 +46,15 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 		sessions.forEach((session: Session) => {
 			for (const [key, value] of Object.entries(session)) {
 				const day = DaysOfWeek.find(d => d.toLowerCase() === key);
-
+				
 				if (day && value !== undefined && typeof value === 'string') {
-
+					
 					const time = value.split(':');
-					console.log("Time ", time, time[0], time[1])
-
+					// console.log("Time ", time, time[0], time[1])
+					console.log(JSON.parse(session.duration_time as string)[day.toLowerCase()]);
 					schedules.push({
 						day: day,
-						durationTime: session.durationTime || 0,
+						durationTime: JSON.parse(session.duration_time as string)[day.toLowerCase()] || 0,
 						time: new Time(parseInt(time[0]), parseInt(time[1]))
 					});
 				}
@@ -98,7 +98,6 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 	}, [level])
 
 	async function submitForm(v: z.infer<typeof UpdateLevelsSchema>) {
-		console.log(v)
 		const sessions = [];
 		const session: Session = {};
 		setLoading(true);
@@ -109,7 +108,16 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 			session["end_date"] = level.sessions[0].endDate;
 		}
 		v.sessions.forEach((s) => {
-			session[s.day?.toLowerCase()] = s.time?.toString();
+			if (!s.day || !s.time) return; // Handle undefined or null values for day and time
+
+			const day = s.day.toLowerCase();
+			session[day] = s.time.toString(); // Assign time to the corresponding day
+
+			// Safely handle and update `duration_time` with the correct structure
+			session.duration_time = JSON.stringify({
+				...(session.duration_time ? JSON.parse(session.duration_time) : {}),
+				[day]: s.durationTime || null // Assign durationTime or null if undefined
+			});
 		});
 
 		sessions.push(session);
@@ -124,10 +132,10 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 		try {
 			if (level && level.id) {
 				// Await the updateProgramLevel call
-				await updateProgramLevel(level.id, body, locationId);
+				await updateProgramLevel(level.id, body, programId, locationId);
 			} else {
 				// Await the addProgramLevel call
-				await addProgramLevel(body, locationId);
+				await addProgramLevel(body, programId, locationId);
 			}
 
 			onChange(null)
@@ -138,11 +146,9 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 			await mutate();
 		} catch (error) {
 			setLoading(false);
-			console.error("Error:", error); // Add logging for debugging
 			toast.error("Something went wrong, please try again later");
 		}
 	};
-	console.log(!!level)
 
 	return (
 		<Dialog open={!!level} onOpenChange={(open) => !open && onChange(null)} >

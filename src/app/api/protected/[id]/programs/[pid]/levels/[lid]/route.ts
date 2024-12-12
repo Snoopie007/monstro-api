@@ -1,14 +1,14 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-export async function PUT(req: Request, props: { params: Promise<{ id: string, lid: number }> }) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string, pid: number, lid: number }> }) {
     const params = await props.params;
     const session = await auth();
     const data = await req.json()
     try {
 
         if (session) {
-
+            console.log(params)
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/program-level-update/${params.lid}`, {
                 method: 'PUT',
                 headers: {
@@ -18,6 +18,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string, l
                 },
                 body: JSON.stringify(data)
             })
+            console.log(res)
             if (!res.ok) {
                 return NextResponse.json({ message: "An error occurred saving program level." }, { status: 400 });
             }

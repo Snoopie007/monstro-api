@@ -70,17 +70,17 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
         defaultValues: {
             businessName: "",
             legalName: "",
-            email: "",
-            phone: "",
+            email: companyInfo && companyInfo.email ? companyInfo.email : "",
+            phone: companyInfo && companyInfo.phone ? companyInfo.phone : "",
             logo: "",
-            industry: "",
+            industry: companyInfo && companyInfo.industry ? companyInfo.industry : "",
             website: "",
             address: "",
             city: "",
-            state: "",
+            state: companyInfo && companyInfo.state ? companyInfo.state : "",
             postal: "",
-            country: "",
-            timezone: "",
+            country: companyInfo && companyInfo.country ? companyInfo.country : "",
+            timezone: companyInfo && companyInfo.timezone ? companyInfo.timezone : "",
         },
         mode: "onSubmit",
     });
@@ -104,10 +104,8 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
                 const updatedSession = await update({
                     user: {
                         locations: allLocations,
-
                     }
                 });
-
                 setLoading(false);
                 toast.success("Info Updated Successfully");
             }).catch((error) => {
@@ -398,7 +396,7 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
                                                 <FormLabel className="font-semibold">
                                                     Timezone
                                                 </FormLabel>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} required>
                                                     <FormControl>
                                                         <SelectTrigger className="rounded-sm" >
                                                             <SelectValue placeholder="Select your timezone" />
@@ -406,7 +404,7 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
                                                     </FormControl>
                                                     <SelectContent >
                                                         {TimeZones.map((t, index) => (
-                                                            <SelectItem key={index} value={t}>
+                                                            <SelectItem key={index} value={t.split(" ")[1]}>
                                                                 {t}
                                                             </SelectItem>
                                                         ))}

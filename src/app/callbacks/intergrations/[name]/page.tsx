@@ -1,13 +1,16 @@
 import { auth } from '@/auth';
+import { Button } from '@/components/ui';
+import { decodeId } from '@/libs/server-utils';
 import { BadgeCheck, CircleSlash } from 'lucide-react';
+import { redirect } from 'next/navigation';
 
 async function completeIntegerationConnection(name: string, token: string, searchParams: { code: string, scope: string, state: string }): Promise<boolean> {
-
+	const decodedId = decodeId(searchParams.state);
 	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/integrations/${name}`, {
 		method: "POST",
 		headers: {
 			"Authorization": `Bearer ${token}`,
-			"locationId": `${searchParams.state}`,
+			"locationId": `${decodedId}`,
 			"content-type": "application/json"
 		},
 		body: JSON.stringify({
@@ -52,6 +55,8 @@ export default async function CompleteIntegeration(props: { params: Promise<{ na
 					)}
 				</div>
 			</div>
+			{/* Meta tag for redirection */}
+			<meta httpEquiv="refresh" content={`10;url=/dashboard/${searchParams.state}/settings/integrations`} />
 		</div>
 	)
 }

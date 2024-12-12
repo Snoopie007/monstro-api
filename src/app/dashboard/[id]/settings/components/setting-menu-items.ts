@@ -11,5 +11,5 @@ export const SettingMenuItems: SettingMenuItem[] = [
     { path: 'roles', name: "Roles" },
     { path: "billing", name: "Billing" },
     { path: "invoices", name: "Invoices" },
-    { path: "intergrations", name: "Intergrations" }
+    { path: "integrations", name: "Integrations" }
 ];
