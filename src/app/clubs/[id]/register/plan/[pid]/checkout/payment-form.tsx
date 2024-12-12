@@ -39,10 +39,11 @@ const CARD_OPTIONS = {
 
 interface PlanBuilderPaymentProps {
     plan: any,
-    programId: number
+    programId: number,
+    locationId: string
 };
 
-export default function PlanBuilderPayment({ plan, programId }: PlanBuilderPaymentProps) {
+export default function PlanBuilderPayment({ plan, programId, locationId }: PlanBuilderPaymentProps) {
     const [errorMessage, setErrorMessage] = useState("");
     const [payment, setPayment] = useState({ status: "initial" });
 
@@ -109,7 +110,7 @@ export default function PlanBuilderPayment({ plan, programId }: PlanBuilderPayme
                     return;
                 }
                 setPayment({ status: "succeeded" });
-                router.push('/clubs/register/thankyou')
+                router.push(`/clubs/${locationId}/register/thankyou`)
 
             } else {
                 toast.error("Invalid Card.", {

@@ -41,7 +41,7 @@ async function fetchPlan(id: string, session: Session | null): Promise<{ plan: P
 
 interface UserCheckoutPageProps {
     params: Promise<{
-
+        id: string;
         pid: string;
     }>
 }
@@ -50,7 +50,8 @@ export default async function UserCheckoutPage(props: UserCheckoutPageProps) {
     const params = await props.params;
 
     const {
-        pid
+        pid,
+        id
     } = params;
 
     const session = await auth();
@@ -97,7 +98,7 @@ export default async function UserCheckoutPage(props: UserCheckoutPageProps) {
                     </div>
                 </div>
 
-                <PaymentClientWrapper plan={plan} programId={plan ? plan.program_id : 0} stripePublishableKey={stripeKey} />
+                <PaymentClientWrapper plan={plan} programId={plan ? plan.program_id : 0} stripePublishableKey={stripeKey} locationId={id} />
             </div>
 
         </div>

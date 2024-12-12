@@ -6,11 +6,13 @@ import PlanBuilderPayment from "./payment-form";
 export default function PaymentClientWrapper({
     plan,
     programId,
-    stripePublishableKey
+    stripePublishableKey,
+    locationId
 }: {
     plan: any
     programId: number,
-    stripePublishableKey: string
+    stripePublishableKey: string,
+    locationId: string
 }) {
     return (
 
@@ -27,7 +29,7 @@ export default function PaymentClientWrapper({
                         },
                     }}
                 >
-                    <PlanBuilderPayment plan={plan} programId={programId} />
+                    <PlanBuilderPayment plan={plan} programId={programId} locationId={locationId} />
                 </Elements>
             )}
         </div>
