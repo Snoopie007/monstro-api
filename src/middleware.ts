@@ -16,6 +16,9 @@ export default auth(async (req) => {
       const extractedUrl = pathname.match(/^\/api\/protected\/([^/]+)(\/.*)?$/);
       if (extractedUrl) {
         const [_, encodedId, subpath = ''] = extractedUrl;
+				if (!isNaN(Number(encodedId))) {
+					return NextResponse.next(); // Skip further processing if already decoded
+				}
         const decodedId = decodeId(encodedId);
         console.log(decodedId);
         if (!decodedId) {
