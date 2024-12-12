@@ -15,6 +15,7 @@ import { useContracts } from '@/hooks/use-contracts';
 import SectionLoading from '@/components/section-loading';
 import { Icon } from '@/components/icons';
 import Link from 'next/link';
+import { Badge } from "@/components/ui";
 
 export default function ContractTemplatesPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
@@ -68,7 +69,11 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                                             {formatDateTime(contract.created)}
                                                         </TableCell>
                                                         <TableCell className="text-sm ">
-                                                            {contract.isDraft ? "Draft" : "Publish"}
+                                                            {contract.isDraft ? (
+                                                                <Badge className="bg-yellow-300  text-black rounded-xs"> Draft</Badge>
+                                                            ) : (
+                                                                <Badge className="bg-green-300  text-black rounded-xs">Active</Badge>
+                                                            )}
                                                         </TableCell>
                                                         <TableCell className="text-sm ">
                                                             {contract.editable ? (
