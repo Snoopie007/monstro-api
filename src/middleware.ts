@@ -2,60 +2,54 @@ import { NextResponse } from "next/server";
 import { auth } from "./auth";
 import { decodeId } from "./libs/server-utils";
 
-// const ProtectedAPI = [
-// 	"/api/",
-// ];
-
 export default auth(async (req) => {
-	const { pathname } = req.nextUrl;
+  try {
+    const { pathname } = req.nextUrl;
+    const isLoggedin = !!req.auth;
 
-	const isLoggedin = !!req.auth;
-	// const isAdmin = req.auth?.user.role === "Admin";
-	// const isVendor = req.auth?.user.role === "vendor";
-	// Handle authentication for protected API routes
-	if (pathname.startsWith("/api/protected") && (!pathname.startsWith("/api/login"))) {
-		if (!isLoggedin) {
-			return Response.json({ message: "Unauthorized" }, { status: 401 });
-		}
+    // Handle authentication for protected API routes
+    if (pathname.startsWith("/api/protected") && !pathname.startsWith("/api/login")) {
+      if (!isLoggedin) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      }
 
-		// if (ProtectedAPI.includes(pathname)) {
-		// 	if (isAdmin) {
-		// 		return NextResponse.next();
-		// 	}
-		// 	let authorization = req.headers.get("Authorization");
+      const extractedUrl = pathname.match(/^\/api\/protected\/([^/]+)(\/.*)?$/);
+      if (extractedUrl) {
+        const [_, encodedId, subpath = ''] = extractedUrl;
+        const decodedId = decodeId(encodedId);
+				console.log(decodedId);
+        if (!decodedId) {
+          return NextResponse.json({ message: "Invalid ID" }, { status: 400 });
+        }
+        return NextResponse.rewrite(new URL(`/api/protected/${decodedId}${subpath}`, req.url));
+      }
+    }
 
-		// 	if (!authorization) {
-		// 		return Response.json({ message: "Unauthorized" }, { status: 401 });
-		// 	}
-		// }
+    // Handle non-API routes
+    if (!isLoggedin && !pathname.startsWith("/auth") && !pathname.startsWith("/api/auth") && !pathname.startsWith("/clubs")) {
+      const newUrl = new URL("/auth/login", req.nextUrl.origin);
+      return NextResponse.redirect(newUrl);
+    } else if (isLoggedin && pathname === "/") {
+      const homeUrl = new URL(`/dashboard/${req.auth?.user.locations.length >= 1 ? req.auth?.user.locations[0].id : 'default'}`, req.nextUrl.origin);
+      return NextResponse.redirect(homeUrl);
+    }
 
-		const extractedUrl = pathname.match(/^\/api\/protected\/([^/]+)(\/.*)?$/);
-		if (extractedUrl) {
-			const [_, encodedId, subpath = ''] = extractedUrl;
-			const decodedId = decodeId(encodedId);
-			return NextResponse.rewrite(new URL(`/api/protected/${decodedId}${subpath}`, req.url));
-		}
+    // Ensure no unintended caching for dynamic routes
+    const response = NextResponse.next();
+    if (pathname.startsWith("/api/") || pathname.startsWith("/dashboard/")) {
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+    }
 
-		return NextResponse.next();
-	}
-	// Handle non-API routes
-	if (!isLoggedin && !pathname.startsWith("/auth") && !pathname.startsWith("/api/auth") && !pathname.startsWith("/clubs")) {
-
-		const newUrl = new URL("/auth/login", req.nextUrl.origin)
-		return Response.redirect(newUrl)
-
-	} else if (isLoggedin && pathname === "/") {
-
-		// Redirect logged-in users to the home route when they access the base route
-		const homeUrl = new URL(`/dashboard/${req.auth?.user.locations.length >= 1 ? req.auth?.user.locations[0].id : null}`, req.nextUrl.origin);  // Adjust this to your desired route
-		return Response.redirect(homeUrl);
-	}
-
-	return NextResponse.next();
+    return response;
+  } catch (error) {
+    console.error("Middleware error:", error);
+    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+  }
 });
 
 export const config = {
-	matcher: [
-		"/((?!sign-in|_next/static|_next/image|images|favicon.ico).*)",
-	],
+  matcher: [
+    "/((?!sign-in|_next/static|_next/image|images|favicon.ico).*)",
+  ],
 };
+
