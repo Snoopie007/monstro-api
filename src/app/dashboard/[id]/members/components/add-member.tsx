@@ -286,7 +286,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                                             </FormLabel>
 
                                                         </FormItem>
-                                                        <FormItem className="flex items-center space-x-2 space-y-0 ">
+                                                        {/* <FormItem className="flex items-center space-x-2 space-y-0 ">
                                                             <FormControl>
                                                                 <RadioGroupItem disabled={!stripeKey} value="invite" />
                                                             </FormControl>
@@ -294,7 +294,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                                                 Email invoice to the customer to pay manually.
                                                             </FormLabel>
 
-                                                        </FormItem>
+                                                        </FormItem> */}
                                                         <FormItem className="flex items-center space-x-2 space-y-0 ">
                                                             <FormControl>
                                                                 <RadioGroupItem disabled={!stripeKey} value="card" />
