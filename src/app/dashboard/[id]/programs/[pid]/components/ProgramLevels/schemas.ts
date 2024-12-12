@@ -8,6 +8,7 @@ export const UpdateLevelsSchema = z.object({
             day: z.string(),
             time: z.custom<TimeValue>().nullable(),
             durationTime: z.preprocess((val) => Number(val), z.number()),
+            duration_time: z.string().optional()
         })
     ),
     capacity: z.preprocess((val) => Number(val), z.number()),

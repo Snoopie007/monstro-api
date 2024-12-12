@@ -51,12 +51,12 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 					
 					const time = value.split(':');
 					// console.log("Time ", time, time[0], time[1])
-					console.log(JSON.parse(session.duration_time as string)[day.toLowerCase()]);
-					schedules.push({
-						day: day,
-						durationTime: JSON.parse(session.duration_time as string)[day.toLowerCase()] || 0,
-						time: new Time(parseInt(time[0]), parseInt(time[1]))
-					});
+						schedules.push({
+							day: day,
+							durationTime: session.duration_time ? JSON.parse(session.duration_time as string)[day.toLowerCase()] : 0,
+							time: new Time(parseInt(time[0]), parseInt(time[1]))
+						});
+					
 				}
 			}
 		});
@@ -72,7 +72,8 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 				{
 					day: "",
 					time: new Time(12, 0),
-					durationTime: 0
+					durationTime: 0,
+					duration_time: ""
 				}
 			],
 			capacity: 0,
