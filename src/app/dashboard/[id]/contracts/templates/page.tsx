@@ -22,7 +22,7 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
     if (contracts) {
 
         return (
-            <div className='max-w-4xl  py-4 m-auto'>
+            <div className='max-w-6xl  py-4 m-auto'>
                 <div className='flex flex-row items-center justify-between py-4 mb-4'>
                     <div>
                         <h4 className='text-xl mb-1 font-bold'>Contract Templates</h4>
@@ -54,23 +54,23 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                             <>
                                                 {contracts.map((contract: any, index: number) => (
                                                     <TableRow key={index} className='cursor-pointer'>
-                                                        <TableCell className="text-sm py-4 px-6 font-roboto">
+                                                        <TableCell className="text-sm ">
                                                             {contract.editable ? (
                                                                 <Link href={`/builder/${params.id}/contract/${contract.id}`}>{contract.title ? contract.title : "No Title"}</Link>
                                                             ) : (
                                                                 contract.title
                                                             )}
                                                         </TableCell>
-                                                        <TableCell className="text-sm py-4 px-6 font-roboto">
+                                                        <TableCell className="text-sm ">
                                                             {contract.plans?.length}
                                                         </TableCell>
-                                                        <TableCell className="text-sm py-4 px-6 font-roboto">
+                                                        <TableCell className="text-sm ">
                                                             {formatDateTime(contract.created)}
                                                         </TableCell>
-                                                        <TableCell className="text-sm py-4 px-6 font-roboto">
+                                                        <TableCell className="text-sm ">
                                                             {contract.isDraft ? "Draft" : "Publish"}
                                                         </TableCell>
-                                                        <TableCell className="text-sm py-4 px-6 font-roboto">
+                                                        <TableCell className="text-sm ">
                                                             {contract.editable ? <Icon name='Check' /> : <Icon name='X' />}
                                                         </TableCell>
                                                     </TableRow>
@@ -79,7 +79,7 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                         ) : (
 
                                             <TableRow >
-                                                <TableCell colSpan={7} className="text-sm py-4 px-6 font-roboto">
+                                                <TableCell colSpan={7} className="text-sm">
                                                     <p className=' text-center'>No Templates Found. Create One.</p>
                                                 </TableCell>
                                             </TableRow>

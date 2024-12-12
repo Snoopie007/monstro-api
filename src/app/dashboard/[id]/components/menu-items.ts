@@ -28,8 +28,12 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
 
             },
             {
-                name: "Contracts",
+                name: "Signed contracts",
                 path: "contracts",
+            },
+            {
+                name: "Contract Templates",
+                path: "contracts/templates",
             }
 
         ]
