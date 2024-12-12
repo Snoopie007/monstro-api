@@ -15,7 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { cn, sleep } from "@/libs/utils";
 import { z } from "zod";
 import { useEffect, useState } from "react";
-import { api } from "@/libs/api";
+import { api, post } from "@/libs/api";
 import { Loader2 } from "lucide-react";
 import { useProgram } from "@/hooks/use-programs";
 import { toast } from "react-toastify";
@@ -51,15 +51,7 @@ export default function UpdateProgram({ programId, locationId }: UpdateProgramPr
         setLoading(true)
         try {
             // Why withOutToken?
-
-            const res = await api.post(`${process.env.NEXT_PUBLIC_API_URL}/vendor/program/${program.id}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(data)
-            })
-
+            const res = await post({url: `programs/${program.id}`, id: locationId, data: data});
             await sleep(2000)
             setLoading(false)
             setOpen(false)
