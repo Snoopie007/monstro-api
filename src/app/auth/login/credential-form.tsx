@@ -16,11 +16,11 @@ import { Input } from "@/components/forms/input";
 import { cn, sleep } from "@/libs/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LuLoader2 } from "react-icons/lu";
 import { toast, UpdateOptions } from "react-toastify";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoginSchema } from "../schema";
+import { Loader2 } from "lucide-react";
 
 const InputStyle = "bg-white border  border-gray-400  rounded-sm py-6 px-4 text-base shadow-none";
 export default function CredentialForm() {
@@ -144,7 +144,7 @@ export default function CredentialForm() {
 						)}
 						type="submit"
 					>
-						<LuLoader2 className="mr-2 h-4 w-4 animate-spin" />
+						<Loader2 className="animate-spin" />
 						Continue
 					</Button>
 

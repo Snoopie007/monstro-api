@@ -17,6 +17,7 @@ import { formatDateTime } from '@/libs/utils';
 
 import Loading from '@/components/loading';
 import Link from 'next/link';
+import { ChevronRight } from "lucide-react";
 
 
 export default function MemberContractsPage(props: { params: Promise<{ id: string }> }) {
@@ -42,7 +43,7 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
     }
     if (contracts) {
         return (
-            <div className='max-w-4xl py-4 m-auto'>
+            <div className='max-w-6xl py-4 m-auto'>
                 <div className='flex flex-row justify-between items-center py-4 mb-4'>
                     <div>
                         <h4 className='text-xl font-bold'>Signed Contracts</h4>
@@ -51,9 +52,10 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                     <div>
                         <Link
                             href={`/dashboard/${params.id}/contracts/templates`}
-                            className='bg-foreground text-black h-auto inline-block leading-none px-4 py-2.5 rounded-sm font-bold text-sm'
+                            className='bg-foreground text-black h-auto inline-flex flex-row items-center gap-2 px-4 py-2.5 rounded-sm font-bold text-sm'
                         >
-                            Templates
+                            <span>        View Templates</span>
+                            <ChevronRight size={16} className='' />
                         </Link>
 
                     </div>
@@ -75,27 +77,27 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                                     <>
                                         {contracts.map((contract: any, index: number) => (
                                             <TableRow key={index} className='cursor-pointer'>
-                                                <TableCell className="text-sm  ">
+                                                <TableCell className="text-sm py-2  ">
                                                     {contract.contractTemplate.title}
                                                 </TableCell>
-                                                <TableCell className="text-sm  ">
+                                                <TableCell className="text-sm  py-2  ">
                                                     {contract.plan.program.name}
                                                 </TableCell>
 
-                                                <TableCell className="text-sm  ">
+                                                <TableCell className="text-sm  py-2 ">
                                                     {contract.plan.name}
                                                 </TableCell>
 
-                                                <TableCell className="text-sm  ">
+                                                <TableCell className="text-sm  py-2  ">
                                                     {contract.member.firstName} {contract.member.lastName}
                                                 </TableCell>
 
-                                                <TableCell className="text-sm  ">
+                                                <TableCell className="text-sm py-2 ">
                                                     {formatDateTime(contract.created)}
                                                 </TableCell>
 
-                                                <TableCell className="text-sm  ">
-                                                    <Button variant={"ghost"} onClick={() => downloadContract(contract.id)}>
+                                                <TableCell className="text-sm  py-2  ">
+                                                    <Button variant={"ghost"} onClick={() => downloadContract(contract.id)} className="h-auto p-1">
                                                         <Icon name="Download" />
                                                     </Button>
                                                 </TableCell>
