@@ -56,7 +56,7 @@ function SideNav({ locationId }: { locationId: number }) {
                                                     <Icon name='ChevronsUpDown' />
                                                 </CollapsibleTrigger>
                                                 <CollapsibleContent className='mx-4 border-foreground/20 border-l mt-2  '>
-                                                    <ul className='px-2'>
+                                                    <ul className='px-2 space-y-1'>
                                                         {item.subMenu.map((subItem) => (
                                                             <li key={subItem.name} className='w-full h-full '>
                                                                 <Link href={`/dashboard/${locationId}/${subItem.path}`}

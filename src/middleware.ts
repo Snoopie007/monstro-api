@@ -8,22 +8,22 @@ export default auth(async (req) => {
     const isLoggedin = !!req.auth;
 
     // Handle authentication for protected API routes
-    // if (pathname.startsWith("/api/protected") && !pathname.startsWith("/api/login")) {
-    //   if (!isLoggedin) {
-    //     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    //   }
+    if (pathname.startsWith("/api/protected") && !pathname.startsWith("/api/login")) {
+      if (!isLoggedin) {
+        return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      }
 
-    //   const extractedUrl = pathname.match(/^\/api\/protected\/([^/]+)(\/.*)?$/);
-    //   if (extractedUrl) {
-    //     const [_, encodedId, subpath = ''] = extractedUrl;
-    //     const decodedId = decodeId(encodedId);
-		// 		console.log(decodedId);
-    //     if (!decodedId) {
-    //       return NextResponse.json({ message: "Invalid ID" }, { status: 400 });
-    //     }
-    //     return NextResponse.rewrite(new URL(`/api/protected/${decodedId}${subpath}`, req.url));
-    //   }
-    // }
+      const extractedUrl = pathname.match(/^\/api\/protected\/([^/]+)(\/.*)?$/);
+      if (extractedUrl) {
+        const [_, encodedId, subpath = ''] = extractedUrl;
+        const decodedId = decodeId(encodedId);
+        console.log(decodedId);
+        if (!decodedId) {
+          return NextResponse.json({ message: "Invalid ID" }, { status: 400 });
+        }
+        return NextResponse.rewrite(new URL(`/api/protected/${decodedId}${subpath}`, req.url));
+      }
+    }
 
     // Handle non-API routes
     if (!isLoggedin && !pathname.startsWith("/auth") && !pathname.startsWith("/api/auth") && !pathname.startsWith("/clubs")) {

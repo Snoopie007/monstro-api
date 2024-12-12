@@ -52,7 +52,7 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                     <div>
                         <Link
                             href={`/dashboard/${params.id}/contracts/templates`}
-                            className='bg-foreground text-black h-auto inline-flex flex-row items-center gap-2 px-4 py-2.5 rounded-sm font-bold text-sm'
+                            className='bg-foreground text-background  h-auto inline-flex flex-row items-center gap-2 px-4 py-2.5 rounded-sm font-bold text-sm'
                         >
                             <span>        View Templates</span>
                             <ChevronRight size={16} className='' />
