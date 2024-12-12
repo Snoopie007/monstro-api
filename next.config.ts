@@ -28,24 +28,9 @@ const nextConfig: NextConfig = {
       }
     ]
   },
-  api: {
-    bodyParser: {
-      sizeLimit: '1mb',
-    },
-    responseLimit: '8mb',
-    externalResolver: true,
-  },
   serverRuntimeConfig: {
     maxHeaderSize: 32 * 1024, // 32KB
-  },
-  async rewrites() {
-    return [
-      {
-        source: '/api/protected/:path*',
-        destination: 'https://mymonstroapp.com/api/protected/:path*',
-      },
-    ];
-  },
+  }
 };
 
 export default nextConfig;
