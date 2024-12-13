@@ -100,7 +100,7 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 
 	async function submitForm(v: z.infer<typeof UpdateLevelsSchema>) {
 		const sessions = [];
-		const session: Session = {};
+		const session: Session = { status: true };
 		setLoading(true);
 		// Why do we need this?
 		if (level) {
@@ -249,7 +249,14 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 											</div>
 										))}
 									</div>
-									{fields.map((field, i) => <SessionComponents form={form} i={i} remove={remove} key={i} />)}
+									{fields.map((field, i) => (
+  <SessionComponents
+    key={field.id}
+    form={form}
+    index={i}
+    onRemove={() => remove(i)}
+  />
+))}
 								</ScrollArea>
 
 
@@ -281,78 +288,85 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 }
 
 interface SessionComponentsProps {
-	form: UseFormReturn<z.infer<typeof UpdateLevelsSchema>>;
-	i: number;
-
-	remove: (index: number) => void;
+  form: UseFormReturn<z.infer<typeof UpdateLevelsSchema>>;
+  index: number;
+  onRemove: () => void;
 }
 
-function SessionComponents({ form, i, remove }: SessionComponentsProps) {
-	return (
+function SessionComponents({ form, index, onRemove }: SessionComponentsProps) {
+  return (
+    <div className="inline-flex flex-row items-center gap-2 mb-2">
+      {/* Day Selector */}
+      <FormField
+        control={form.control}
+        name={`sessions.${index}.day`}
+        render={({ field }) => (
+          <FormItem className="flex-initial w-[120px]">
+            <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <SelectTrigger className="w-full border rounded-sm">
+                <SelectValue placeholder="Select a day" />
+              </SelectTrigger>
+              <SelectContent>
+                {DaysOfWeek.map((day, index) => (
+                  <SelectItem key={index} value={day}>
+                    {day}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )}
+      />
 
-		<div className='inline-flex flex-row items-center gap-2 mb-2' >
-			<FormField
-				control={form.control}
-				name={`sessions.${i}.day`}
-				render={({ field }) => (
-					<FormItem className='flex-initial w-[120px]'>
+      {/* Time Picker */}
+      <FormField
+        control={form.control}
+        name={`sessions.${index}.time`}
+        render={({ field }) => (
+          <FormItem className="flex-initial w-[120px]">
+            <FormControl>
+              <TimePicker
+                label="Time"
+                value={field.value}
+                onChange={(date) => {
+                  field.onChange(date ? new Time(date.hour, date.minute) : new Time(12, 0));
+                }}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
 
-						<Select onValueChange={field.onChange} defaultValue={field.value}>
-							<SelectTrigger className="w-full border rounded-sm  ">
-								<SelectValue placeholder="Select a day" />
-							</SelectTrigger>
-							<SelectContent>
-								{DaysOfWeek.map((day, index) => (
-									<SelectItem key={index} value={day}>{day}</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</FormItem>
-				)}
-			/>
-			<FormField
-				control={form.control}
-				name={`sessions.${i}.time`}
-				render={({ field }) => (
-					<FormItem className='flex-initial w-[120px] '>
+      {/* Duration Input */}
+      <FormField
+        control={form.control}
+        name={`sessions.${index}.durationTime`}
+        render={({ field }) => (
+          <FormItem className="flex-initial w-[120px]">
+            <FormControl>
+              <Input type="number" placeholder="Duration" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
-						<FormControl>
-							<TimePicker
-								label="Time"
-								value={field.value}
-								onChange={(date) => {
-
-									field.onChange(date ? new Time(date.hour, date.minute) : new Time(12, 0))
-								}}
-							/>
-						</FormControl>
-					</FormItem>
-				)}
-			/>
-			<FormField
-				control={form.control}
-				name={`sessions.${i}.durationTime`}
-				render={({ field }) => (
-					<FormItem className="flex-initial w-[120px] ">
-
-						<FormControl>
-							<Input type='number' className={cn()} placeholder={'Duration'} {...field} />
-						</FormControl>
-						<FormMessage />
-					</FormItem>
-				)}
-			/>
-			{i > 0 ? (
-				<div className="flex flex-row items-center gap-2">
-					<div>
-						<Icon name="Copy" size={16} className="cursor-pointer stroke-gray-500" />
-					</div>
-					<div onClick={() => remove(i)} >
-						<Icon name="Trash2" size={16} className="cursor-pointer stroke-red-500" />
-					</div>
-
-				</div>
-			) : null}
-		</div>
-	)
+      {/* Remove Button */}
+      {index > 0 && (
+        <div className="flex flex-row items-center gap-2">
+          <div>
+            <Icon name="Copy" size={16} className="cursor-pointer stroke-gray-500" />
+          </div>
+          <div onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onRemove();
+          }}>
+            <Icon name="Trash2" size={16} className="cursor-pointer stroke-red-500" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
+

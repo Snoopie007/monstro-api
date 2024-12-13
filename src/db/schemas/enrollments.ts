@@ -1,6 +1,6 @@
 
 import { desc, relations } from "drizzle-orm";
-import { integer, varchar, serial, timestamp, pgTable, jsonb, time, text } from "drizzle-orm/pg-core";
+import { integer, varchar, serial, timestamp, pgTable, jsonb, time, text, boolean } from "drizzle-orm/pg-core";
 import { programLevels, programs } from "./programs";
 import { members } from "./members";
 import { attendances } from "./attendances";
@@ -33,7 +33,7 @@ export const sessions = pgTable("sessions", {
     friday: time("friday"),
     saturday: time("saturday"),
     sunday: time("sunday"),
-    status: varchar("status"),
+    status: boolean("status"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })
@@ -61,5 +61,6 @@ export const sessionsRelations = relations(sessions, ({ one, many }) => ({
     level: one(programLevels, {
         fields: [sessions.programLevelId],
         references: [programLevels.id],
-    })
+    }),
+    enrollments: many(enrollments)
 }))

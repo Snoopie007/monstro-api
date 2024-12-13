@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
+import { and, isNull } from 'drizzle-orm';
 
 export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
   const params = await props.params;
@@ -8,7 +9,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
   try {
     if (session) {
       const templates = await db.query.contractsTemplates.findMany({
-        where: (contractsTemplates, { eq }) => eq(contractsTemplates.locationId, params.id),
+        where: (contractsTemplates, { eq }) => (and(eq(contractsTemplates.locationId, params.id), eq(contractsTemplates.deleted, isNull(contractsTemplates.deleted)))),
         with: {
           plans: true
         }

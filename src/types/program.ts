@@ -26,11 +26,19 @@ export type Level = {
     sessions: Session[];
 };
 
+export type Enrollments = {
+    id: number;
+    status: number;
+    startDate: string;
+    endDate: string;
+}
+
 
 export type Session = {
-    [key: string]: string | number | undefined;
+    [key: string]: string | number | undefined | boolean | Array<Enrollments>;
     id?: number,
     durationTime?: number,
+    status: boolean,
     duration_time?: string,
     startDate?: string,
     endDate?: string,
@@ -41,4 +49,5 @@ export type Session = {
     friday?: string | undefined,
     saturday?: string | undefined,
     sunday?: string | undefined,
+    enrollments?: Array<Enrollments>
 }

@@ -84,6 +84,8 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
     };
 
     const { isCopied, copyToClipboard } = useCopyToClipboard();
+    const columns: Array<string> = ["Name", "Billing Period", "Amount", "Family", "Member Limit"];
+    // const columns: Array<string> = ["Name", "Billing Period", "Amount", "Family", "Member Limit", "Action"];
 
     return (
         <>
@@ -107,7 +109,7 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
                             <Table className=" w-full">
                                 <TableHeader className="bg-white/10 text-xs">
                                     <TableRow >
-                                        {["Name", "Billing Period", "Amount", "Family", "Member Limit", "Action"].map((title, index) => (
+                                        {columns.map((title, index) => (
                                             <TableHead key={index} className="font-semibold  text-xs" >
                                                 {title}
                                             </TableHead>
@@ -134,9 +136,9 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
                                                 <TableCell className={CellStyle}>
                                                     {plan.familyMemberLimit}
                                                 </TableCell>
-                                                <TableCell className={CellStyle}>
+                                                {/* <TableCell className={CellStyle}>
                                                     <Icon name="EllipsisVertical" size={16} />
-                                                </TableCell>
+                                                </TableCell> */}
                                             </TableRow>
                                         );
                                     })}

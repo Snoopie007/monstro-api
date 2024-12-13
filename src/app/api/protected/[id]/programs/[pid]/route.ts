@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
 
-import { sql } from 'drizzle-orm';
+import { isNull, sql } from 'drizzle-orm';
 
 export async function GET(req: Request, props: { params: Promise<{ id: string, pid: number }> }) {
     const params = await props.params;
@@ -15,8 +15,13 @@ export async function GET(req: Request, props: { params: Promise<{ id: string, p
 				where: (programs, { eq }) => eq(programs.id, params.pid),
 				with: {
 					levels: {
+						where: (levels, { eq }) => eq(levels.deleted, isNull(levels.deleted)),
 						with: {
-							sessions: true,
+							sessions: {
+								with: {
+									enrollments: true
+								}
+							},
 						}
 					},
 					plans: {

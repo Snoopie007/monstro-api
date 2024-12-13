@@ -74,25 +74,13 @@ export default function UpsertPlan({ plan, onChange, locationId, programId }: Cr
     }, [plan])
 
     async function submitForm(v: z.infer<typeof PlanSchema>) {
-        console.log("Form Values", v);
-        console.log(v);
-        console.log(programId)
-        const response = await addPlan(v, programId, locationId);
+        const response = await addPlan(v, programId, locationId).then((response) => {
+            onChange(null);
+            return response
+        });
         return response;
     }
 
-
-    // const deleteScheduleAtIndex = (indexToDelete: number) => {
-    //     setFormData(prevState => {
-    //         // Filter out the schedule at the specified index
-    //         const newSchedules = prevState.schedules.filter((schedule, index) => index !== indexToDelete);
-    //         // Create a new object with the updated schedules array
-    //         return {
-    //             ...prevState,
-    //             schedules: newSchedules
-    //         };
-    //     });
-    // };
     return (
         <Dialog open={!!plan} onOpenChange={(open: boolean) => { !open && onChange(null) }} >
             <DialogContent className="p-0">

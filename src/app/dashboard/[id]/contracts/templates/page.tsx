@@ -16,10 +16,15 @@ import SectionLoading from '@/components/section-loading';
 import { Icon } from '@/components/icons';
 import Link from 'next/link';
 import { Badge } from "@/components/ui";
+import { del } from "@/libs/api";
 
 export default function ContractTemplatesPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { contracts, isLoading, error } = useContracts(params.id);
+
+    async function onDelete(id: number) {
+        await del({url: `contracts/${id}`, id: params.id});
+    } 
     if (contracts) {
 
         return (
@@ -43,7 +48,7 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                 <Table className=" w-full ">
                                     <TableHeader className=" text-xs">
                                         <TableRow  >
-                                            {["Title", "Plans", "Created", "Status", "Editable"].map((title) => (
+                                            {["Title", "Plans", "Created", "Status", "Editable", "Action"].map((title) => (
                                                 <TableHead key={title} className="font-semibold h-auto py-3 text-xs" >
                                                     {title}
                                                 </TableHead>
@@ -83,6 +88,11 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                                                         <Icon name="Pencil" size={14} /></Link>
                                                                 </div>
                                                             ) : <Icon name='X' className="text-red-500" />}
+                                                        </TableCell>
+                                                        <TableCell className="text-sm ">
+                                                            <button className={contract.editable ? `` : `disabled:opacity-50`} disabled={!contract.editable} onClick={(e) => { onDelete(contract.id) }}>
+                                                                <Icon name="Trash2" size={16} className="cursor-pointer stroke-red-500" />
+                                                            </button>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}

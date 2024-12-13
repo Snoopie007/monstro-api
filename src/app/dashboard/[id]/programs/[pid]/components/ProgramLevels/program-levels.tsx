@@ -15,10 +15,13 @@ import { UpsertLevel } from "./upsert-level";
 
 import { useMemo, useState } from "react";
 import LevelActions from "./actions";
+import { del } from "@/libs/api";
+import useSWR from "swr";
 const CellStyle = "text-sm px-4 py-2 font-roboto";
 
 export function ProgramLevels({ levels, programId, locationId }: { levels: Level[], programId: number, locationId: string }) {
     const [currentLevel, setCurrentLevel] = useState<Level | null>(null);
+    const { mutate } = useSWR(`/api/protected/${locationId}/programs/${programId}`);
 
     const editLevelOptions = useMemo(() => {
         return {
@@ -27,6 +30,11 @@ export function ProgramLevels({ levels, programId, locationId }: { levels: Level
                 console.log("level", level);
                 setCurrentLevel(level);
             },
+            async onDelete(id: number) {
+                await del({url: `programs/${programId}/levels/${id}`, id: locationId}).then(() => {
+                    mutate();
+                });
+            }
         };
     }, [currentLevel]);
 
@@ -41,6 +49,7 @@ export function ProgramLevels({ levels, programId, locationId }: { levels: Level
                 {
                     monday: "12:00:00",
                     durationTime: 60,
+                    status: true
                 }
             ]
         });
@@ -93,8 +102,7 @@ export function ProgramLevels({ levels, programId, locationId }: { levels: Level
                                             </TableCell>
 
                                             <TableCell className={cn(CellStyle)}>
-                                                <LevelActions level={level} onChange={editLevelOptions.onChange} />
-
+                                                <LevelActions level={level} onChange={editLevelOptions.onChange} onDelete={editLevelOptions.onDelete} />
                                             </TableCell>
                                         </TableRow>
                                     );

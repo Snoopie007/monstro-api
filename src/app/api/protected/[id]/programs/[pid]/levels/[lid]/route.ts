@@ -29,3 +29,29 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string, p
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
+
+export async function DELETE(req: Request, props: { params: Promise<{ id: string, pid: number, lid: number }> }) {
+    const params = await props.params;
+    const session = await auth();
+    try {
+
+        if (session) {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/program-level/${params.lid}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${session.user.token}`,
+                    "locationId": `${params.id}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            if (!res.ok) {
+                return NextResponse.json({ message: "An error occurred deleting program level." }, { status: 400 });
+            }
+            return NextResponse.json({ message: "" }, { status: 200 });
+        }
+    } catch (err) {
+        console.log(err)
+        return NextResponse.json({ error: err }, { status: 500 })
+    }
+}
+

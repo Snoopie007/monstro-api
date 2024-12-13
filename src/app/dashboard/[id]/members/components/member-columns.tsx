@@ -21,8 +21,8 @@ export const MemberColumns = (locationId: string): ColumnDef<Member>[] => [
     accessorKey: "phone",
     header: "Phone",
   },
-  {
-    accessorKey: "status",
-    header: "Status",
-  },
+  // {
+  //   accessorKey: "status",
+  //   header: "Status",
+  // },
 ];
