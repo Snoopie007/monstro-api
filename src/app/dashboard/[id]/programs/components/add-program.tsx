@@ -67,7 +67,7 @@ export function AddProgram({locationId}: {locationId: string}) {
         const sessions: Session[] = [];
         setLoading(true);
         v.levels.forEach((level, levelIndex) => {
-            const session: Session = {};
+            const session: Session = {status: true};
             level.sessions.forEach((s) => {
                 if (!s.day || !s.time) return; // Handle undefined or null values for day and time
     
