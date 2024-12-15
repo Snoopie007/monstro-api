@@ -1,6 +1,5 @@
 import { Icon } from '@/components/icons'
 import { Button } from '@/components/ui'
-import { cn } from '@/libs/utils'
 import { useTheme } from 'next-themes'
 import React from 'react'
 
