@@ -8,6 +8,7 @@ export async function GET(req: Request, props: { params: Promise<{ cid: number, 
 
   try {
     if (session) {
+      console.log(params)
       const template = await db.query.contractsTemplates.findFirst({
         where: (templates, { eq }) => eq(templates.id, params.cid),
       })
