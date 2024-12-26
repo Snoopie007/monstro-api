@@ -3,12 +3,12 @@ import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
 
 
-export async function DELETE(req: Request, props: { params: Promise<{ iId: string, id: string }> }) {
+export async function DELETE(req: Request, props: { params: Promise<{ iid: string, id: string }> }) {
   const params = await props.params;
   const session = await auth();
   try {
     if (session) {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/integrations/${params.iId}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/integrations/${params.iid}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.user.token}`,

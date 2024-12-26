@@ -6,7 +6,7 @@ import { useContract } from '@/hooks/use-contracts'
 export default function ContractBuilder(props: { params: Promise<{ cid: string, id: string }> }) {
     const params = use(props.params);
     const { contract, isLoading } = useContract(params.id, parseInt(params.cid))
-
+	console.log(contract);
     if (!isLoading && !contract) {
         return <div className='h-screen w-full bg-background text-center'>Contract not found</div>
     }

@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
 
-export async function GET(req: Request, props: { params: Promise<{ aId: string, id: string }> }) {
+export async function GET(req: Request, props: { params: Promise<{ aid: string, id: string }> }) {
   const params = await props.params;
   const session = await auth();
   try {
     if (session) {
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/achievements/${params.aId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/achievements/${params.aid}`, {
         headers: {
           'Authorization': `Bearer ${session.user.token}`,
           "locationId": `${params.id}`
@@ -24,7 +24,7 @@ export async function GET(req: Request, props: { params: Promise<{ aId: string, 
   }
 }
 
-export async function PUT(req: Request, props: { params: Promise<{ aId: string, id: string }> }) {
+export async function PUT(req: Request, props: { params: Promise<{ aid: string, id: string }> }) {
   const params = await props.params;
   const session = await auth();
   const data = await req.json()
@@ -32,7 +32,7 @@ export async function PUT(req: Request, props: { params: Promise<{ aId: string, 
 
     if (session) {
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/achievements/${params.aId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/achievements/${params.aid}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${session.user.token}`,
@@ -54,13 +54,13 @@ export async function PUT(req: Request, props: { params: Promise<{ aId: string, 
   }
 }
 
-export async function DELETE(req: Request, props: { params: Promise<{ aId: string, id: string }> }) {
+export async function DELETE(req: Request, props: { params: Promise<{ aid: string, id: string }> }) {
   const params = await props.params;
   const session = await auth();
   try {
     if (session) {
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/achievements/${params.aId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/achievements/${params.aid}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.user.token}`,

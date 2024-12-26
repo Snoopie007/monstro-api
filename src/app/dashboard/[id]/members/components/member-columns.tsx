@@ -2,10 +2,12 @@ import { Member } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 
-export const MemberColumns = (locationId: string): ColumnDef<Member>[] => [
+export const MemberColumns = (locationId: string): ColumnDef<Member, any>[] => [
   {
     accessorKey: "name",
     header: "Name",
+    id: "name",
+    accessorFn: row => `${row.firstName} ${row.lastName}`,
     cell: ({ row }) => {
       const member = row.original
       return (
