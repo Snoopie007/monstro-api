@@ -142,8 +142,8 @@ async function addProgramLevel(body: any, pId: number, id: string) {
   return res;
 }
 
-async function updateAchievment(aId: number, body: any, id: string) {
-  const res = await put({ url: `achievements/${id}`, data: body, id: id });
+async function updateAchievment(aid: number, body: any, id: string) {
+  const res = await put({ url: `achievements/${aid}`, data: body, id: id });
   return res;
 }
 

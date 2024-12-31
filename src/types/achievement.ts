@@ -12,7 +12,7 @@ export type Achievement = {
     id?: number,
     name: string,
     badge: string,
-    rewardPoints: number,
+    points: number,
     action: Action[] | [],
     program: Program,
     actionCount: number

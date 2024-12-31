@@ -7,6 +7,7 @@ import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { useRewards } from '@/hooks/use-rewards'
 import SectionLoader from '@/components/section-loading'
+import { UpsertReward } from "./components";
 
 export default function Rewards(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
@@ -22,7 +23,7 @@ export default function Rewards(props: { params: Promise<{ id: string }> }) {
 
                 <div className='flex flex-row gap-4 items-center py-3'>
                     <input placeholder='Search Rewards' className='w-full rounded-sm text-sm bg-white/5 py-2.5  px-4 border font-roboto ' />
-                    {/* <AddProgram /> */}
+                    <UpsertReward locationId={params.id} reward={undefined} />
                 </div>
             </div>
             <div className=" grid grid-cols-3 gap-5 ">

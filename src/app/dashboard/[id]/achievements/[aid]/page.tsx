@@ -46,7 +46,7 @@ export default function AchievementDetails(props: { params: Promise<{ id: string
                     <div className="flex-initial flex flex-row items-center px-4">
                         <button
                             onClick={() => {
-                                push('/dashboard/achievements');
+                                push(`/dashboard/${params.id}/achievements`);
                             }}
                             className="group"
                         >
@@ -96,7 +96,7 @@ export default function AchievementDetails(props: { params: Promise<{ id: string
                     </div>
                 </div>
             </div>
-            <div className={`grid ${achievement?.rewardPoints ? 'grid-cols-5' : 'grid-cols-3'} mb-4 border border-gray-200 w-full rounded-md`}>
+            <div className={`grid ${achievement?.points ? 'grid-cols-5' : 'grid-cols-4'} mb-4 border border-gray-200 w-full rounded-md`}>
                 {achievement?.badge &&
                     <div className="text-center p-4 border-r border-r-gray-200">
                         <span className="text-1xl font-bold font-poppins text-black-100">
@@ -107,17 +107,18 @@ export default function AchievementDetails(props: { params: Promise<{ id: string
                         </p>
                     </div>
                 }
-                {achievement?.rewardPoints &&
+                {achievement?.points &&
                     <div className="text-center p-4 border-r border-r-gray-200">
                         <span className="text-1xl font-bold font-poppins text-black-100">
-                            Reward Points
+                            Points
                         </span>
                         <p className="text-gray-700 text-sm font-semibold mt-2 font-roboto">
-                            {achievement?.rewardPoints}
+                            {achievement?.points}
                         </p>
                     </div>
                 }
-                <div className="text-center p-4 border-r border-r-gray-200">
+                {achievement?.program ? (
+                    <div className="text-center p-4 border-r border-r-gray-200">
                     <span className="text-1xl font-bold font-poppins text-black-100">
                         Program Name
                     </span>
@@ -125,6 +126,16 @@ export default function AchievementDetails(props: { params: Promise<{ id: string
                         {achievement?.programName}
                     </p>
                 </div>
+                ) : (
+                    <div className="text-center p-4 border-r border-r-gray-200">
+                    <span className="text-1xl font-bold font-poppins text-black-100">
+                        Program
+                    </span>
+                    <p className="text-gray-700 text-sm font-semibold mt-2 font-roboto">
+                        No Program
+                    </p>
+                </div>
+                )}
 
                 <div className="text-center p-4 border-r border-r-gray-200">
                     <span className="text-1xl font-bold font-poppins text-black-100">

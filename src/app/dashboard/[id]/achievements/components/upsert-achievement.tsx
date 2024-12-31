@@ -36,7 +36,7 @@ export function UpsertAchivement({ achievement, locationId }: AddAchievementProp
 			id: achievement?.id || 0,
 			name: achievement?.name || '',
 			badge: achievement?.badge || '',
-			rewardPoints: Number(achievement?.rewardPoints) || 0,
+			points: Number(achievement?.points) || 0,
 			actionCount: (Array.isArray(achievement?.action) ? achievement?.action[0].pivot.count : 0) || 0,
 			action: (Array.isArray(achievement?.action) ? achievement?.action[0].id : 0) || 0,
 			program: achievement?.program?.id || 0
@@ -115,10 +115,10 @@ export function UpsertAchivement({ achievement, locationId }: AddAchievementProp
 								<fieldset>
 									<FormField
 										control={form.control}
-										name="rewardPoints"
+										name="points"
 										render={({ field }) => (
 											<FormItem className="mb-4">
-												<FormLabel>Reward Points</FormLabel>
+												<FormLabel>Points</FormLabel>
 												<FormControl>
 													<Input type='text' className={cn(InputStyle)} placeholder="Reward" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
 												</FormControl>
