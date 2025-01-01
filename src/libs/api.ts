@@ -157,8 +157,8 @@ async function deleteAchievement(aId: number, id: string) {
   return res;
 }
 
-async function updateReward(rId: number, body: any, id: string) {
-  const res = await put({ url: `rewards/${rId}`, data: body, id: id });
+async function updateReward(rid: number, body: any, id: string) {
+  const res = await put({ url: `rewards/${rid}`, data: body, id: id });
   return res;
 }
 

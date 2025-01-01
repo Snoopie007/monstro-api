@@ -5,6 +5,7 @@ import { useEffect } from "react";
 
 export default function Thankyou() {
 	useEffect(() => {
+		window.localStorage.clear();
 		signOut({ redirect: false });
 	}, []);
 	return (

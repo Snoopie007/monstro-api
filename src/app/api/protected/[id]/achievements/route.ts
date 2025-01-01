@@ -12,7 +12,6 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 					"locationId": `${params.id}`
 				}
 			});
-			console.log(res)
 			if (!res.ok) {
 				return NextResponse.json({ message: "An error occurred while fetching the data." }, { status: 400 });
 			}
@@ -39,7 +38,6 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 				},
 				body: JSON.stringify(data)
 			})
-			console.log(res);
 			if (!res.ok) {
 				return NextResponse.json({ message: "An error occurred saving achievement." }, { status: 400 });
 			}

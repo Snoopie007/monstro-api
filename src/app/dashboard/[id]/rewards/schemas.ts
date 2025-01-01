@@ -4,9 +4,9 @@ export const RewardsSchema = z.object({
     id: z.number().optional(),
     name: z.string(),
     description: z.string(),
-    image: z.string(),
-    type: z.number(),
     limitPerMember: z.number(),
-    rewardPoints: z.number().optional(),
     achievementId: z.number().optional(),
+    images: z.array(z.string()),
+    requiredPoints: z.number().optional(),
+    icon: z.string().optional(),
 });

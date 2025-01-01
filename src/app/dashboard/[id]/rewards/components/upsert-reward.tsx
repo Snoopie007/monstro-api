@@ -18,6 +18,8 @@ import useSWR from 'swr';
 import { RewardsSchema } from '../schemas';
 import { Textarea } from '@/components/forms/textarea';
 import { useAchievements } from '@/hooks/use-achievements';
+import { LuLoader2 } from 'react-icons/lu';
+import Image from 'next/image';
 
 
 const InputStyle = "border bg-transparent w-full rounded-[4px] text-sm text-white py-2 px-4 border-white h-auto  font-roboto";
@@ -29,29 +31,53 @@ export interface AddrewardProps {
 
 export function UpsertReward({ reward, locationId }: AddrewardProps) {
 	const [open, setOpen] = useState(false);
-	const [rewardImage, setRewardImage] = useState('');
+	const [rewardImages, setRewardImages] = useState<Array<string>>(reward?.images.length ? reward?.images : []);
+	const [rewardImagesUploading, setRewardImagesUploading] = useState(false);
+	const [selectedRewardImages, setSelectedRewardImages] = useState<Array<File>>([]);
+	const [rewardIcon, setRewardIcon] = useState<string>(reward?.icon ?? "");
+	const [selectedRewardIcon, setSelectedRewardIcon] = useState<File | undefined>();
+	const [rewardIconUploading, setRewardIconUploading] = useState(false);
 	const { mutate } = useSWR(`/api/protected/rewards`);
 	const { achievements, isLoading: achievementLoading } = useAchievements(locationId);
 
-	async function uploadImage(files: FileList | null) {
-		if (!files) return;
-		const file = files[0];
+	async function uploadImages() {
+		if (!selectedRewardImages) return;
+		setRewardImagesUploading(true);
+		const files = selectedRewardImages;
 		const data = new FormData()
-		data.append("file", file)
+		for (const file of files) {
+			data.append("files", file)
+		}
 		data.append("fileDirectory", 'reward-images');
 		try {
-			const upload = await postFile({ url: 'upload', data: data, id: locationId });
-			setRewardImage(upload.url);
+			const upload = await postFile({ url: 's3-upload/multiple', data: data, id: locationId });
+			const urls = upload.map((data: any) => data.url);
+			setRewardImages(urls);
 			// updateMember({ avatar: avatar.fileUrl })
+			setRewardImagesUploading(false);
 		} catch (error) {
 			console.log(error)
+			setRewardImagesUploading(false);
 		}
 	}
 
-	const typeData = [
-		{ id: 1, name: 'achievements' },
-		{ id: 2, name: 'reward points' }
-	];
+	async function uploadIcon() {
+		if (!selectedRewardIcon) return;
+		setRewardIconUploading(true);
+		const file = selectedRewardIcon;
+		const data = new FormData()
+		data.append("file", file)
+		data.append("fileDirectory", 'reward-icons');
+		try {
+			const upload = await postFile({ url: 's3-upload', data: data, id: locationId });
+			setRewardIcon(upload.url);
+			// updateMember({ avatar: avatar.fileUrl })
+			setRewardIconUploading(false)
+		} catch (error) {
+			console.log(error)
+			setRewardIconUploading(false)
+		}
+	}
 
 	const form = useForm<z.infer<typeof RewardsSchema>>({
 		resolver: zodResolver(RewardsSchema),
@@ -59,20 +85,21 @@ export function UpsertReward({ reward, locationId }: AddrewardProps) {
 			id: reward?.id || 0,
 			name: reward?.name || '',
 			description: reward?.description || '',
-			rewardPoints: reward?.rewardPoints || 0,
-			achievementId: reward?.achievementId || 0,
-			image: reward?.image || '',
+			requiredPoints: reward?.requiredPoints || 0,
+			achievementId: reward?.achievement?.id || 0,
+			images: reward?.images || [],
+			icon: reward?.icon || "",
 			limitPerMember: reward?.limitPerMember || 0,
-			type: reward?.type || 1
-
 		},
 		mode: "onChange",
 	})
 
 	async function submitForm(v: z.infer<typeof RewardsSchema>) {
+		console.log(123)
 		const body = {
 			...v,
-			image: rewardImage
+			images: rewardImages,
+			icon: rewardIcon
 		};
 		try {
 			if (reward) {
@@ -159,87 +186,101 @@ export function UpsertReward({ reward, locationId }: AddrewardProps) {
 								</fieldset>
 								<fieldset>
 									<FormItem className="mb-4 mt-4">
-										<FormLabel>Reward Image</FormLabel>
+										<FormLabel>Reward Images</FormLabel>
 										<FormControl>
-											<input type='file' className={cn(InputStyle)} onInput={(e) => uploadImage(e.currentTarget.files)} />
+											<input type='file' multiple className={cn(InputStyle)} onInput={(e) => setSelectedRewardImages(Array.from(e.currentTarget.files?.length ? e.currentTarget.files : []))} accept='image/*' />
 										</FormControl>
 									</FormItem>
+									<Button
+										className={cn(
+											"p-4 bg-indigo-700 text-white rounded-sm children:hidden text-base ",
+											{ "children:inline-flex": rewardImagesUploading }
+										)}
+										disabled={rewardImagesUploading}
+										type='button'
+										onClick={uploadImages}
+									>
+										<LuLoader2 className="mr-2 h-4 w-4 animate-spin" />
+										Upload
+									</Button>
+								</fieldset>
+								<fieldset className='flex gap-2 mt-2'>
+									{rewardImages.map((url: string) => (
+										<div key={url} className='h-[80px] relative w-[80px]' >
+											<Image src={url} alt="reward gallery" className='object-contain' fill unoptimized />
+										</div>
+									))}
+								</fieldset>
+								<fieldset>
+									<FormItem className="mb-4 mt-4">
+										<FormLabel>Reward Icon</FormLabel>
+										<FormControl>
+											<input type='file' className={cn(InputStyle)} onInput={(e) => setSelectedRewardIcon(e.currentTarget.files?.length ? e.currentTarget.files[0] : undefined)} accept='image/png' />
+										</FormControl>
+									</FormItem>
+									<Button
+										className={cn(
+											"p-4 bg-indigo-700 text-white rounded-sm children:hidden text-base ",
+											{ "children:inline-flex": rewardIconUploading }
+										)}
+										disabled={rewardIconUploading && !selectedRewardIcon}
+										type='button'
+										onClick={uploadIcon}
+									>
+										<LuLoader2 className="mr-2 h-4 w-4 animate-spin" />
+										Upload
+									</Button>
+								</fieldset>
+								<fieldset className='flex gap-2 mt-2'>
+									{rewardIcon &&
+										<div className='h-[80px] relative w-[80px]' >
+											<Image src={rewardIcon} alt="reward gallery" className='object-contain' fill unoptimized />
+										</div>
+									}
 								</fieldset>
 								<fieldset>
 									<FormField
 										control={form.control}
-										name="type"
+										name="achievementId"
 										render={({ field }) => (
-											<FormItem className="flex-1">
-												<FormLabel className="font-semibold">
-													Type
-												</FormLabel>
-												<Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field.value.toString()}>
+											<FormItem className="mb-4">
+												<FormLabel>Achievements</FormLabel>
+												<Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field?.value?.toString()}>
 													<FormControl>
 														<SelectTrigger className="rounded-sm" >
-															<SelectValue placeholder="Select Type" />
+															<SelectValue placeholder="Select Achievement" />
 														</SelectTrigger>
 													</FormControl>
 													<SelectContent>
-														{typeData.map((type, index) => (
-															<SelectItem key={index} value={type.id.toString()}>
-																{type.name}
+														{!achievementLoading && achievements.achievements.map((achievement: Achievement, index: number) => (
+															<SelectItem key={index} value={achievement?.id ? achievement?.id?.toString() : '0'}>
+																{achievement?.name}
 															</SelectItem>
 														))}
 													</SelectContent>
 												</Select>
-
 												<FormMessage />
 											</FormItem>
+
 										)}
 									/>
 								</fieldset>
-								{form.getValues('type') == 1 ?
-									<fieldset>
-										<FormField
-											control={form.control}
-											name="achievementId"
-											render={({ field }) => (
-												<FormItem className="mb-4">
-													<FormLabel>Achievements</FormLabel>
-													<Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field?.value?.toString()}>
-														<FormControl>
-															<SelectTrigger className="rounded-sm" >
-																<SelectValue placeholder="Select Achievement" />
-															</SelectTrigger>
-														</FormControl>
-														<SelectContent>
-															{!achievementLoading && achievements.achievements.map((achievement: Achievement, index: number) => (
-																<SelectItem key={index} value={achievement?.id ? achievement?.id?.toString() : '0'}>
-																	{achievement?.name}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-													<FormMessage />
-												</FormItem>
+								<fieldset>
+									<FormField
+										control={form.control}
+										name="requiredPoints"
+										render={({ field }) => (
+											<FormItem className="mb-4">
+												<FormLabel>Points</FormLabel>
+												<FormControl>
+													<Input type='text' className={cn(InputStyle)} placeholder="Reward" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+												</FormControl>
+												<FormMessage />
+											</FormItem>
 
-											)}
-										/>
-									</fieldset>
-									:
-									<fieldset>
-										<FormField
-											control={form.control}
-											name="rewardPoints"
-											render={({ field }) => (
-												<FormItem className="mb-4">
-													<FormLabel>Points</FormLabel>
-													<FormControl>
-														<Input type='text' className={cn(InputStyle)} placeholder="Reward" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
-													</FormControl>
-													<FormMessage />
-												</FormItem>
-
-											)}
-										/>
-									</fieldset>
-								}
+										)}
+									/>
+								</fieldset>
 							</form>
 						</Form>
 					</ScrollArea>

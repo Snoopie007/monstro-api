@@ -22,7 +22,7 @@ export default function UserAvatar({ currentAvatar, onChange, locationId }: User
         data.append("file", file)
         data.append("fileDirectory", 'business-logo');
         try {
-            const upload = await postFile({ url: 'upload', data: data, id: locationId });
+            const upload = await postFile({ url: 's3-upload', data: data, id: locationId });
             console.log(upload);
             onChange(upload.url);
             // updateMember({ avatar: avatar.fileUrl })

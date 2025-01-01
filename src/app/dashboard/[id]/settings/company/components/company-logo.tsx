@@ -15,7 +15,7 @@ export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: st
         data.append("file", file)
         data.append("fileDirectory", 'business-logo');
         try {
-            const upload = await postFile({ url: 'upload', data: data, id: locationId });
+            const upload = await postFile({ url: 's3-upload', data: data, id: locationId });
             console.log(upload);
             setLogoUrl(upload.url);
             // updateMember({ avatar: avatar.fileUrl })

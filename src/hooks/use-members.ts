@@ -22,6 +22,15 @@ function useMemberSubscriptions(id: string, mid: number, customerId: string | un
 	};
 }
 
+function useMemberAchievements(id: string, mid: number) {
+	const { data, error, isLoading } = useSWR({ url: `members/${mid}/achievements`, id: id }, fetcher);
+	return {
+		achievements: data,
+		error,
+		isLoading,
+	};
+}
+
 
 function useMemberPayments(id: string, mid: number, customerId: string | undefined) {
 	if (!customerId) return { payments: [], error: { message: "No Customer ID" }, isLoading: false };
@@ -48,7 +57,7 @@ function useAttedance(id: string, mId: number) {
 
 export {
 	useMembers,
-
+	useMemberAchievements,
 	useAttedance,
 	useMemberPayments,
 	useMemberSubscriptions,

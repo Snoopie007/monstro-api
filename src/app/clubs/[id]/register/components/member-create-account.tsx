@@ -37,6 +37,7 @@ export function MemberCreateAccount({ locationId }: { locationId: string }) {
             password: "",
             confirmPassword: "",
             phone: "",
+            referralCode: ""
         },
         mode: "onChange",
     });
@@ -193,6 +194,28 @@ export function MemberCreateAccount({ locationId }: { locationId: string }) {
                         )}
                     />
 
+                </fieldset>
+                <fieldset >
+                    <FormField
+                        control={form.control}
+                        name="referralCode"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>
+                                    Referral Code
+                                </FormLabel>
+                                <FormControl>
+                                    <Input
+                                        type="text"
+                                        placeholder="Enter the referral Code"
+                                        {...field}
+                                    />
+                                </FormControl>
+
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
                 </fieldset>
 
                 <div className={"pt-2"}>

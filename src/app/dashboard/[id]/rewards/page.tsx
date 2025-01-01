@@ -36,7 +36,7 @@ export default function Rewards(props: { params: Promise<{ id: string }> }) {
                             return (
                                 <Card key={data.id} className=' rounded-sm'>
                                     <CardContent className=' py-3 px-4  flex flex-row'>
-                                        <Link href={`/dashboard/${params.id}/programs/${data.id}`} className="w-full  inline-flex" >
+                                        <Link href={`/dashboard/${params.id}/rewards/${data.id}`} className="w-full  inline-flex" >
                                             <div className="flex flex-row   w-full items-center justify-between">
                                                 <div className="flex-initial flex gap-3 flex-row items-center">
                                                     <Avatar className="group-hover:bg-violet-600 max-w-full flex items-center justify-center text-black-100 w-8 h-8 mr-2 bg-gray-200 rounded-full">
