@@ -99,7 +99,7 @@ export async function PUT(req: Request, props: { params: Promise<{ rid: string, 
       });
 
       if (!res.ok) {
-        return NextResponse.json({ message: "An error occurred saving achievement." }, { status: 400 });
+        return NextResponse.json({ message: "An error occurred saving reward." }, { status: 400 });
       }
 
       return NextResponse.json({ message: 'Success' }, { status: 200 });

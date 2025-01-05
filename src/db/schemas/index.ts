@@ -10,3 +10,5 @@ export * from "./achievements";
 export * from "./enrollments";
 export * from "./attendances";
 export * from "./pricing";
+export * from "./roles-and-permissions"
+export * from "./staffs"

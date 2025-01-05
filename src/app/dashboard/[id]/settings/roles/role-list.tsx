@@ -3,39 +3,42 @@ import { Icon } from '@/components/icons'
 import { Card, CardContent, Table, TableCell, TableHead, TableBody, TableHeader, TableRow, Button } from '@/components/ui'
 import { UpsertRole } from './components'
 import { useMemo, useState } from 'react';
-import { Role } from '@/types';
+import { Permission, Role } from '@/types';
 import RoleListActions from './components/actions';
-import { PermissionGroup } from '@/types';
 import { useRoles } from '@/hooks/use-roles';
+import { deleteRole } from '@/libs/api';
+import { toast } from 'react-toastify';
+import useSWR from 'swr';
 
-export default function RoleList({ permissions, locationId }: { permissions: PermissionGroup[], locationId: string }) {
+export default function RoleList({ permissions, locationId }: { permissions: Array<Permission>, locationId: string }) {
     const [currentRole, setCurrentRole] = useState<Role | null>(null);
+    const { mutate } = useSWR(`/api/protected/${locationId}/roles`);
     const { roles, isLoading, error } = useRoles(locationId);
-
-
-    const editOptions = useMemo(() => {
-        return {
-            currentRole,
-            onChange: (role: Role) => setCurrentRole(role),
-        }
-    }, [currentRole])
 
     function handleCreateRole() {
         console.log('create role')
-        //Create Temprary Role
-        //Mutate Roles
         setCurrentRole({
-            name: 'New Role',
-            color: 'red',
+            name: '',
+            color: "red",
             staffs: 0,
             permissions: []
         })
     }
+
+    async function removeRole(roleId: number) {
+        await deleteRole(roleId, locationId).then(() => {
+            mutate();
+            toast.success("Role Deleted");
+        }).catch(() => {
+            toast.error("Something went wrong.");
+        })
+    }
+
     if (isLoading) return <div>Loading...</div>
     if (roles) {
         return (
             <>
-                <UpsertRole role={editOptions.currentRole} permissions={permissions} onChange={editOptions.onChange} />
+                <UpsertRole role={currentRole} permissions={permissions} setCurrentRole={setCurrentRole} locationId={locationId} />
                 <div className="mb-3">
                     <div className='flex flex-row  justify-between items-center py-3'>
                         <div className='relative flex-initial'>
@@ -65,10 +68,9 @@ export default function RoleList({ permissions, locationId }: { permissions: Per
 
                                 {roles.map((role: Role, index: number) => (
                                     <TableRow key={index}
-                                        onClick={() => setCurrentRole(role)}
                                         className='cursor-pointer border-foreground/20 text-sm'
                                     >
-                                        <TableCell className="py-4 ">
+                                        <TableCell className="py-4 " onClick={() => {setCurrentRole(role);}}>
                                             <div className='flex flex-row  gap-1 items-center text-sm'>
                                                 <Icon name="Shield" size={20} className="text-indigo-600" />
                                                 <span>{role.name}</span>
@@ -81,9 +83,9 @@ export default function RoleList({ permissions, locationId }: { permissions: Per
                                                 <Icon name='User' size={16} />
                                             </div>
                                         </TableCell>
-                                        <TableCell className="py-4 ">
+                                        <TableCell className="py-4 " onClick={(e) => e.stopPropagation()}>
                                             <div className='flex justify-end'>
-                                                <RoleListActions role={role} />
+                                                <RoleListActions role={role} deleteFunction={removeRole} />
                                             </div>
                                         </TableCell>
 

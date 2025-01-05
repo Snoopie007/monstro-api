@@ -2,7 +2,8 @@ import { Role } from "./role";
 
 export type Staff = {
     id?: number;
-    name: string;
+    firstName: string;
+    lastName: string;
     email: string;
     image: string;
     phone: string;

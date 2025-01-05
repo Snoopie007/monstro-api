@@ -10,20 +10,26 @@ import {
 } from '@/components/ui/';
 import {
     Input,
-    TagInput,
-    Checkbox,
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
 } from '@/components/forms';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/forms/form'
 import { cn } from '@/libs/utils'
 import { zodResolver } from '@hookform/resolvers/zod'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import z from 'zod'
 import { InviteStaffSchema } from '../schema'
 import { DialogClose, DialogDescription } from '@radix-ui/react-dialog'
+import { Role } from '@/types';
+import { addStaff } from '@/libs/api';
+import { toast } from 'react-toastify';
 
-export default function InviteStaff() {
-    const [open, setOpen] = useState(false);
+export default function InviteStaff({ roles, locationId }: { roles: Array<Role>, locationId: string }) {
+    const [open, setOpen] = useState<boolean>(false);
     const form = useForm<z.infer<typeof InviteStaffSchema>>({
         resolver: zodResolver(InviteStaffSchema),
         defaultValues: {
@@ -31,14 +37,24 @@ export default function InviteStaff() {
             lastName: "",
             email: "",
             phone: "",
-            role: [],
-            changePassword: false
+            role: "",
         },
         mode: "onChange",
     })
 
     async function onSubmit(v: z.infer<typeof InviteStaffSchema>) {
-
+        console.log(v);
+        const body = {
+            ...v
+        };
+        try {
+            await addStaff(body, locationId);
+            toast.success("Staff Added");
+            setOpen(false);
+        } catch (error) {
+            console.error("Error:", error); // Add logging for debugging
+            toast.error("Something went wrong, please try again later");
+        }
     }
     return (
         <Dialog>
@@ -120,32 +136,19 @@ export default function InviteStaff() {
                                     control={form.control}
                                     name="role"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className='flex-initial min-w-[30%]'>
                                             <FormLabel>Role</FormLabel>
-                                            <FormControl>
-                                                <TagInput data={["admin", "staff", "coach"]} value={field.value} onChange={field.onChange} />
-                                            </FormControl>
+                                            <Select onValueChange={(value) => field.onChange(value)}>
+                                                <SelectTrigger className="w-full border rounded-sm bg-transparent font-normal border-white">
+                                                    <SelectValue placeholder="Select a Role" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {roles.map((role: Role, index: number) => (
+                                                        <SelectItem key={index} value={(role.id as number).toString()}>{role.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </fieldset>
-                            <fieldset className='py-2'>
-                                <FormField
-                                    control={form.control}
-                                    name="changePassword"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-row items-center justify-start gap-2 space-y-0 ">
-                                            <FormControl>
-                                                <Checkbox
-                                                    className='border-foreground'
-                                                    checked={field.value}
-                                                    onCheckedChange={field.onChange}
-                                                />
-                                            </FormControl>
-                                            <FormLabel className='mt-0 '>
-                                                Require to change their password when they first sign in
-                                            </FormLabel>
                                         </FormItem>
                                     )}
                                 />
@@ -155,9 +158,9 @@ export default function InviteStaff() {
                 </DialogBody>
                 <DialogFooter >
                     <DialogClose asChild>
-                        <Button variant="outline" size={"sm"} className='rounded-sm' onClick={() => { setOpen(false); }}>Cancel</Button>
+                        <Button variant="outline" size={"sm"} className='rounded-sm' onClick={() => setOpen(false)}>Cancel</Button>
                     </DialogClose>
-                    <Button variant="foreground" size={"sm"} className=' rounded-sm' onClick={() => { setOpen(false); form.handleSubmit(onSubmit) }}>Save</Button>
+                    <Button variant="foreground" size={"sm"} className=' rounded-sm' onClick={form.handleSubmit(onSubmit)}>Save</Button>
                 </DialogFooter>
             </DialogContent>
 

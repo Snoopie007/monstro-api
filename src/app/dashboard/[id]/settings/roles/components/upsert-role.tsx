@@ -16,9 +16,13 @@ import {
 import { Form, FormField, FormLabel, FormItem, FormControl, FormDescription, FormMessage, Input, Checkbox, } from '@/components/forms'
 import { cn } from '@/libs/utils';
 import React, { useEffect, useState } from 'react';
-
+import { toast } from 'react-toastify';
 import { useForm } from 'react-hook-form';
-import { PermissionGroup, Role } from '@/types';
+import { Permission, PermissionGroup, Role, RoleColor, RoleHasPermission } from '@/types';
+import { CreateRoleSchema } from '../schema';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { addRole, updateRole } from '@/libs/api';
 
 type CheckboxVarients = 'red' | 'green' | 'blue' | 'pink' | 'cyan' | 'lime' | 'orange' | 'fuchsia' | 'sky' | 'lemon' | 'purple' | 'yellow'
 const RoleColors: CheckboxVarients[] = [
@@ -29,45 +33,83 @@ const RoleColors: CheckboxVarients[] = [
 
 interface UpsertRoleProps {
     role?: Role | null
-    permissions: PermissionGroup[]
-    onChange: (role: any) => void
+    permissions: Array<Permission>,
+    setCurrentRole: Function,
+    locationId: string
 }
 
-export function UpsertRole({ role, permissions, onChange }: UpsertRoleProps) {
+export function UpsertRole({ role, permissions, setCurrentRole, locationId }: UpsertRoleProps) {
 
-    const [filteredPermissions, setFilteredPermissions] = useState(permissions)
-
-    const form = useForm()
+    const [filteredPermissions, setFilteredPermissions] = useState<Array<Permission>>([])
     useEffect(() => {
-        if (!role) return
-        form.reset(role)
+        console.log(permissions)
+        setFilteredPermissions(permissions);
+        if(role) {
+            const ids = role.permissions.map((permission: any) => permission.permissionId);
+            console.log(ids)
+            const permissionNames = permissions.filter((permission: Permission) => ids.includes(Number(permission.id)) ).map((permission) => permission.name);
+            form.reset({
+                name: role.name,
+                color: role.color,
+                permissions: permissionNames
+            });
+            console.log(role.color)
+        }
+    }, [role]);
 
-    }, [role])
+    function closeEdit() {
+        form.reset({
+            name: "",
+            color: "red",
+            permissions: []
+        });
+        setCurrentRole(null);
+    }
 
+    const form = useForm<z.infer<typeof CreateRoleSchema>>({
+        resolver: zodResolver(CreateRoleSchema),
+        defaultValues: {
+            name: "",
+            color: "red",
+            permissions: []
+        },
+        mode: "onChange",
+    });
     function permissionFilter(query: string) {
         if (query === '') {
-            setFilteredPermissions(permissions)
+            setFilteredPermissions(permissions); // Show all permissions if query is empty
         } else {
-            const filtered = permissions.map((group) => {
-                return {
-                    name: group.name,
-                    permissions: group.permissions.filter((permission) => {
-                        return permission.name.toLowerCase().includes(query.toLowerCase())
-                    })
-                }
-            })
-            setFilteredPermissions(filtered)
+            const filtered = permissions.filter((permission) =>
+                permission.name.toLowerCase().includes(query.toLowerCase())
+            );
+            setFilteredPermissions(filtered); // Update the state with filtered permissions
         }
     }
 
-    function handleSubmit(data: { [key: string]: any }) {
-        console.log(data)
-        onChange(data)
-
-    }
+    async function handleSubmit(v: z.infer<typeof CreateRoleSchema>) {
+        console.log(v)
+		const body = {
+			...v
+		};
+		try {
+			if (role && role.id) {
+				// Await the updateProgramLevel call
+				await updateRole(Number(role.id), body, locationId);
+				toast.success("Role Updated");
+			} else {
+				// Await the addProgramLevel call
+				await addRole(body, locationId);
+				toast.success("Role Added");
+			}
+            closeEdit();
+		} catch (error) {
+			console.error("Error:", error); // Add logging for debugging
+			toast.error("Something went wrong, please try again later");
+		}
+	};
 
     return (
-        <Sheet open={!!role} onOpenChange={(open) => !open && onChange(null)}>
+        <Sheet open={!!role} onOpenChange={(open) => !open}>
 
             <SheetContent className="w-[30%] p-0 sm:max-w-[30%]">
                 <SheetHeader className='p-4'>
@@ -87,9 +129,8 @@ export function UpsertRole({ role, permissions, onChange }: UpsertRoleProps) {
                                         <FormItem>
                                             <FormLabel>Role Name</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="" {...field} />
+                                                <Input placeholder="Enter role name" {...field} />
                                             </FormControl>
-
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -117,6 +158,7 @@ export function UpsertRole({ role, permissions, onChange }: UpsertRoleProps) {
                                                             className={cn(` h-6 w-6`)}
                                                             checked={field.value === color}
                                                             onCheckedChange={(checked) => {
+                                                                console.log(color)
                                                                 field.onChange(color)
                                                             }}
                                                         />
@@ -146,44 +188,42 @@ export function UpsertRole({ role, permissions, onChange }: UpsertRoleProps) {
                                         </div>
                                     </div>
                                     <div className='border-b border-foreground/10'></div>
-                                    {filteredPermissions.map((group) => (
-                                        <React.Fragment key={group.name}>
-                                            <div className='uppercase text-xs text-foreground/50 pt-3'>{group.name}</div>
+                                    {filteredPermissions.map((permission) => (
+                                        <React.Fragment key={permission.name.replace(' ', '_')}>
                                             <div>
-                                                {group.permissions.map((permission) => (
-                                                    <FormField
-                                                        key={permission.name}
-                                                        control={form.control}
-                                                        name={`permissions`}
-                                                        render={({ field }) => (
-                                                            <FormItem className="flex flex-col border-b py-4 border-foreground/20">
-                                                                <div className="flex flex-row items-center justify-between w-full">
-                                                                    <FormLabel className="text-sm">
-                                                                        {permission.name}
-                                                                    </FormLabel>
-                                                                    <FormControl>
-                                                                        <Switch
-                                                                            checked={field.value?.includes(permission.name.toLowerCase())}
-                                                                            onCheckedChange={(checked) => {
-                                                                                return checked
-                                                                                    ? field.onChange([...field.value, permission.name.toLowerCase()])
-                                                                                    : field.onChange(
-                                                                                        field.value?.filter(
-                                                                                            (value: string) => value !== permission.name.toLowerCase()
-                                                                                        )
+                                                <FormField
+                                                    key={permission.name}
+                                                    control={form.control}
+                                                    name="permissions"
+                                                    render={({ field }) => (
+                                                        <FormItem className="flex flex-col border-b py-4 border-foreground/20">
+                                                            <div className="flex flex-row items-center justify-between w-full">
+                                                                <FormLabel className="text-sm">
+                                                                    {permission.name}
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Switch
+                                                                        checked={field.value?.includes(permission.name.toLowerCase())}
+                                                                        onCheckedChange={(checked) => {
+                                                                            console.log(field.value)
+                                                                            return checked
+                                                                                ? field.onChange([...field.value, permission.name.toLowerCase()])
+                                                                                : field.onChange(
+                                                                                    field.value?.filter(
+                                                                                        (value: string) => value !== permission.name.toLowerCase()
                                                                                     )
-                                                                            }}
-                                                                            className={cn('data-[state=checked]:bg-green-500')}
-                                                                        />
-                                                                    </FormControl>
-                                                                </div>
-                                                                <FormDescription className='text-xs'>
-                                                                    {permission.description}
-                                                                </FormDescription>
-                                                            </FormItem>
-                                                        )}
-                                                    />
-                                                ))}
+                                                                                )
+                                                                        }}
+                                                                        className={cn('data-[state=checked]:bg-green-500')}
+                                                                    />
+                                                                </FormControl>
+                                                            </div>
+                                                            <FormDescription className='text-xs'>
+                                                                {permission.description}
+                                                            </FormDescription>
+                                                        </FormItem>
+                                                    )}
+                                                />
                                             </div>
                                         </React.Fragment>
                                     ))}
@@ -198,6 +238,7 @@ export function UpsertRole({ role, permissions, onChange }: UpsertRoleProps) {
                 <SheetFooter className='border-foreground/10 border-t w-full p-4 absolute bottom-0 left-0'>
                     <SheetClose asChild>
                         <Button
+                            onClick={closeEdit}
                             variant={"outline"}
                             size={"sm"}
                         >
@@ -208,9 +249,9 @@ export function UpsertRole({ role, permissions, onChange }: UpsertRoleProps) {
                     <Button
                         variant={"foreground"} type="submit"
                         size={"sm"}
-                        onClick={() => {
-                            form.handleSubmit(handleSubmit);
-                        }}
+                        onClick={
+                            form.handleSubmit(handleSubmit)
+                        }
                     >
                         Save Changes
                     </Button>

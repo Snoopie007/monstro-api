@@ -1,65 +1,54 @@
 
 import { auth } from "@/auth";
+import { db } from "@/db/db";
+import { and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { permission } from "process";
 
-export async function GET() {
+export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
+    const params = await props.params;
     const session = await auth();
     try {
         if (session) {
-            /* Adding Your API logic Here */
-
-            const data = [
-                {
-                    id: 1,
-                    name: 'John Doe',
-                    email: '',
-                    phone: '1234567890',
-                    image: '#',
-                    role: {
-                        id: 1,
-                        name: 'Admin',
-                        color: 'red',
-                        permissions: ['read', 'write']
-                    },
-                    status: 'Active',
-                    created: new Date()// 2021-09-01 in milliseconds   
-                },
-                {
-                    id: 2,
-                    name: 'Jane Doe',
-                    email: '',
-                    phone: '1234567890',
-                    image: '#',
-                    role: {
-                        id: 1,
-                        name: 'Staff',
-                        color: 'red',
-                        permissions: ['read', 'write']
-                    },
-                    status: 'Active',
-                    created: new Date() // 2021-09-01 in milliseconds   
-                },
-                {
-                    id: 3,
-                    name: 'John Smith',
-                    email: 'steve@test.com',
-                    phone: '1234567890',
-                    image: '#',
-                    role: {
-                        id: 1,
-                        name: 'Staff',
-                        color: 'red',
-                        permissions: ['read', 'write']
-                    },
-                    status: 'Active',
-                    created: new Date() // 2021-09-01 in milliseconds   
+            const staffs = await db.query.staffs.findMany({
+                where: (staffs, {eq}) => and(eq(staffs.locationId,params.id), isNull(staffs.deleted)),
+                with: {
+                    role: true
                 }
-
-            ]
-            return NextResponse.json(data, { status: 200 });
+            })
+            return NextResponse.json(staffs, { status: 200 });
         }
     } catch (err) {
         return NextResponse.json({ error: err }, { status: 500 })
     }
+}
+
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+    const params = await props.params;
+    const session = await auth();
+    const data = await req.json()
+    try {
+
+		if (session) {
+
+			const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/staffs`, {
+				method: 'POST',
+				headers: {
+					'Authorization': `Bearer ${session.user.token}`,
+					"locationId": `${params.id}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(data)
+			})
+            console.log(res)
+			if (!res.ok) {
+				return NextResponse.json({ message: "An error occurred inviting staff." }, { status: 400 });
+			}
+
+			return NextResponse.json({ message: "Success" }, { status: 200 });
+		}
+	} catch (err) {
+		// console.log(err)
+		return NextResponse.json({ error: err }, { status: 500 })
+	}
 }

@@ -192,6 +192,36 @@ async function updateContract(contractId: number, body: any, id: string) {
   return res;
 }
 
+async function addRole(body: any, id: string) {
+  const res = await post({ url: `roles`, data: body, id: id });
+  return res;
+}
+
+async function updateRole(rid: number, body: any, id: string) {
+  const res = await put({ url: `roles/${rid}`, data: body, id: id });
+  return res;
+}
+
+async function deleteRole(rid: number, id: string) {
+  const res = await del({ url: `roles/${rid}`, id: id });
+  return res;
+}
+
+async function addStaff(body: any, id: string) {
+  const res = await post({ url: `staffs`, data: body, id: id });
+  return res;
+}
+
+async function updateStaff(rid: number, body: any, id: string) {
+  const res = await put({ url: `staffs/${rid}`, data: body, id: id });
+  return res;
+}
+
+async function deleteStaff(rid: number, id: string) {
+  const res = await del({ url: `staffs/${rid}`, id: id });
+  return res;
+}
+
 
 export {
   api,
@@ -224,5 +254,11 @@ export {
   addReward,
   deleteReward,
   addMemberManually,
+  addRole,
+  updateRole,
+  deleteRole,
+  addStaff,
+  updateStaff,
+  deleteStaff,
   fetcher
 };
