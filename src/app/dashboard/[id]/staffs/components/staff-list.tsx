@@ -6,21 +6,37 @@ import { Staff } from '@/types'
 import { useMemo, useState } from 'react'
 import { cn } from '@/libs/utils'
 import { StaffProfile } from './staff-profile'
+import { useRoles } from '@/hooks/use-roles'
+import { deleteStaff } from '@/libs/api'
+import { toast } from 'react-toastify'
+import useSWR from 'swr'
 
 
 interface StaffListProps {
-    staffs: Staff[]
+    staffs: Staff[],
+    locationId: string
 }
 
-export function StaffList({ staffs }: StaffListProps) {
-    const [filteredStaffs, setFilteredStaffs] = useState<Staff[]>(staffs)
-    const [currentStaff, setCurrentStaff] = useState<Staff | null>(null)
+export function StaffList({ staffs, locationId }: StaffListProps) {
+    const [filteredStaffs, setFilteredStaffs] = useState<Staff[]>(staffs);
+    const [currentStaff, setCurrentStaff] = useState<Staff | null>(null);
+    const { mutate } = useSWR(`/api/protected/${locationId}/staffs`);
+    const { roles, isLoading: isRolesLoading, error: isRolesError } = useRoles(locationId);
     const editOptions = useMemo(() => {
         return {
             currentStaff,
             onChange: (staff: Staff) => setCurrentStaff(staff),
         }
     }, [currentStaff])
+
+    async function removeStaff(staffId: number) {
+        await deleteStaff(staffId, locationId).then(() => {
+            mutate();
+            toast.success("Staff Deleted");
+        }).catch(() => {
+            toast.error("Something went wrong.");
+        })
+    }
 
     return (
         <div>
@@ -32,7 +48,9 @@ export function StaffList({ staffs }: StaffListProps) {
                             <Icon name="Search" size={15} className="text-gray-400  absolute left-[10px] top-[50%] -translate-y-[51%]" />
                         </div>
                     </div>
-                    <InviteStaff />
+                    {!isRolesLoading && !isRolesError && (
+                        <InviteStaff roles={roles} locationId={locationId} />
+                    )}
                 </div>
             </div>
             <Card className='overflow-hidden shadow-none  rounded-sm '>
@@ -52,7 +70,7 @@ export function StaffList({ staffs }: StaffListProps) {
                             {filteredStaffs.map((staff, index) => (
                                 <TableRow key={index} className='cursor-pointer text-sm'>
                                     <TableCell className="p-1.5 px-4">
-                                        {staff.name}
+                                        {staff.firstName} {staff.lastName}
                                     </TableCell>
 
                                     <TableCell className="p-1.5 px-4">
@@ -74,7 +92,7 @@ export function StaffList({ staffs }: StaffListProps) {
                                                 if (staff) {
                                                     setCurrentStaff(staff)
                                                 }
-                                            }} />
+                                            }} deleteFunction={removeStaff} />
                                         </div>
                                     </TableCell>
                                 </TableRow>

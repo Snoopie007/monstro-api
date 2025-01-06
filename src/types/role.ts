@@ -3,6 +3,7 @@ export type RoleColor = "default" | "secondary" | "destructive" | "outline" | "r
 export type Permission = {
     name: string;
     description: string;
+    id: number
 }
 
 export type PermissionGroup = {
@@ -16,6 +17,11 @@ export type Role = {
     name: string
     color: RoleColor
     staffs?: number
-    permissions: string[]
+    permissions: Array<string> | Array<RoleHasPermission>
+}
+
+export type RoleHasPermission = {
+    permissionId: number;
+    roleId: number
 }
 

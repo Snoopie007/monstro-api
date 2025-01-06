@@ -13,10 +13,11 @@ import { Staff } from '@/types'
 
 interface StaffListProps {
     staff?: Staff | null
-    onChange: (staff: any) => void
+    onChange: (staff: any) => void,
+    deleteFunction: Function
 }
 
-export default function StaffListActions({ staff, onChange }: StaffListProps) {
+export default function StaffListActions({ staff, onChange, deleteFunction }: StaffListProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -35,7 +36,7 @@ export default function StaffListActions({ staff, onChange }: StaffListProps) {
 
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className='mb-2' />
-                <DropdownMenuItem className='cursor-pointer bg-red-500 '>
+                <DropdownMenuItem className='cursor-pointer bg-red-500 ' onClick={() => deleteFunction(staff?.id)}>
 
                     <span>Remove</span>
 

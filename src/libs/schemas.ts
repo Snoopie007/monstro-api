@@ -6,6 +6,7 @@ export const UserInfoSchema = z.object({
     firstName: z.string().min(2, { message: "Required" }),
     lastName: z.string().min(2, { message: "Required" }),
     phone: z.string().min(11, { message: 'Invalid phone number' }),
+    referralCode: z.string().optional()
 });
 
 export const PasswordSchema = z.object({

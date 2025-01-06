@@ -142,8 +142,8 @@ async function addProgramLevel(body: any, pId: number, id: string) {
   return res;
 }
 
-async function updateAchievment(aId: number, body: any, id: string) {
-  const res = await put({ url: `achievements/${id}`, data: body, id: id });
+async function updateAchievment(aid: number, body: any, id: string) {
+  const res = await put({ url: `achievements/${aid}`, data: body, id: id });
   return res;
 }
 
@@ -157,8 +157,8 @@ async function deleteAchievement(aId: number, id: string) {
   return res;
 }
 
-async function updateReward(rId: number, body: any, id: string) {
-  const res = await put({ url: `rewards/${rId}`, data: body, id: id });
+async function updateReward(rid: number, body: any, id: string) {
+  const res = await put({ url: `rewards/${rid}`, data: body, id: id });
   return res;
 }
 
@@ -189,6 +189,36 @@ async function createContract(body: any, id: string) {
 
 async function updateContract(contractId: number, body: any, id: string) {
   const res = await post({ url: `contracts/${contractId}`, data: body, id: id });
+  return res;
+}
+
+async function addRole(body: any, id: string) {
+  const res = await post({ url: `roles`, data: body, id: id });
+  return res;
+}
+
+async function updateRole(rid: number, body: any, id: string) {
+  const res = await put({ url: `roles/${rid}`, data: body, id: id });
+  return res;
+}
+
+async function deleteRole(rid: number, id: string) {
+  const res = await del({ url: `roles/${rid}`, id: id });
+  return res;
+}
+
+async function addStaff(body: any, id: string) {
+  const res = await post({ url: `staffs`, data: body, id: id });
+  return res;
+}
+
+async function updateStaff(rid: number, body: any, id: string) {
+  const res = await put({ url: `staffs/${rid}`, data: body, id: id });
+  return res;
+}
+
+async function deleteStaff(rid: number, id: string) {
+  const res = await del({ url: `staffs/${rid}`, id: id });
   return res;
 }
 
@@ -224,5 +254,11 @@ export {
   addReward,
   deleteReward,
   addMemberManually,
+  addRole,
+  updateRole,
+  deleteRole,
+  addStaff,
+  updateStaff,
+  deleteStaff,
   fetcher
 };

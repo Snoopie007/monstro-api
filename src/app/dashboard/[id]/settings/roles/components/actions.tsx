@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Role } from '@/types'
 import { DropdownMenuSeparator } from '@radix-ui/react-dropdown-menu'
 
-export default function RoleListActions({ role }: { role: Role }) {
+export default function RoleListActions({ role, deleteFunction }: { role: Role, deleteFunction: Function }) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -15,7 +15,7 @@ export default function RoleListActions({ role }: { role: Role }) {
             <DropdownMenuContent className='w-[150px]'>
 
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className='cursor-pointer bg-red-500 flex flex-row items-center justify-between'>
+                <DropdownMenuItem className='cursor-pointer bg-red-500 flex flex-row items-center justify-between' onClick={() => deleteFunction(role.id)}>
 
                     <span>Delete</span>
                     <Icon name="Trash2" size={16} className="" />

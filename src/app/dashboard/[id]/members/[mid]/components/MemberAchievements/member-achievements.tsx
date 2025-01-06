@@ -8,6 +8,7 @@ import {
     TableHeader,
     TableRow
 } from '@/components/ui'
+import { useMemberAchievements } from '@/hooks/use-members'
 import { formatDateTime } from '@/libs/utils'
 
 const Dummy = [
@@ -15,6 +16,8 @@ const Dummy = [
 ]
 
 export function MemberAchievements({ params }: { params: { id: string, mid: number } }) {
+    const {achievements, error, isLoading} = useMemberAchievements(params.id, params.mid)
+    console.log(achievements)
     return (
         <div className='py-4'>
             <div className='w-full flex flex-row items-center  justify-between'>
@@ -36,21 +39,21 @@ export function MemberAchievements({ params }: { params: { id: string, mid: numb
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {Dummy.map((achievement: any, i) => (
+                        {achievements.map((achievement: any, i: number) => (
                             <TableRow key={i}>
 
                                 <TableCell>
-                                    {achievement.name}
+                                    {achievement.achievement.name}
                                 </TableCell>
                                 <TableCell>
-                                    {achievement.description}
+                                    {achievement.achievement.description}
                                 </TableCell>
                                 <TableCell>
-                                    {achievement.points}
+                                    {achievement.achievement.points}
                                 </TableCell>
 
                                 <TableCell>
-                                    {formatDateTime(achievement.created, {
+                                    {formatDateTime(achievement.dateAchieved, {
                                         month: 'short',
                                         day: 'numeric',
 

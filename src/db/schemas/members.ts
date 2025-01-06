@@ -25,14 +25,15 @@ export const members = pgTable("members", {
     deleted: timestamp('deleted_at', { withTimezone: true }),
 });
 
-export const MemberAchievements = pgTable("member_achievements", {
+export const memberAchievements = pgTable("member_achievements", {
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
-    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
     achievementId: integer("achievement_id").references(() => achievements.id, { onDelete: "cascade" }),
     note: text("note"),
     status: text("status"),
+    progress: integer("progress"),
+    dateAchieved: timestamp("date_achieved", { withTimezone: true }).notNull().defaultNow(),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);
+}, (t) => [primaryKey({ columns: [t.memberId] })]);
 
 export const MemberRewards = pgTable("member_rewards", {
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
@@ -60,13 +61,24 @@ export const contracts = pgTable("member_contracts", {
 
 export const membersRelations = relations(members, ({ many, one }) => ({
     locations: many(memberLocations),
-    achievements: many(MemberAchievements),
+    achievements: many(memberAchievements),
     rewards: many(MemberRewards),
     contracts: many(contracts),
     programMembers: many(programMembers),
     user: one(users, {
         fields: [members.userId],
         references: [users.id],
+    }),
+}));
+
+export const memberAchievementsRelations = relations(memberAchievements, ({ one }) => ({
+    member: one(members, {
+        fields: [memberAchievements.memberId],
+        references: [members.id],
+    }),
+    achievement: one(achievements, {
+        fields: [memberAchievements.achievementId],
+        references: [achievements.id],
     }),
 }));
 

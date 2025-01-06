@@ -47,4 +47,4 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 		// console.log(err)
 		return NextResponse.json({ error: err }, { status: 500 })
 	}
-}
+} 

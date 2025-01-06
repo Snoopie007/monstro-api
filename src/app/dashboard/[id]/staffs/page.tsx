@@ -10,14 +10,13 @@ import { StaffList } from "./components"
 
 interface StaffsPageProps {
     params: Promise<{
-        lid: string
+        id: string
     }>
 }
 
 export default function StaffsPage(props: StaffsPageProps) {
     const params = use(props.params);
-    const { staffs, isLoading, error } = useStaffs(params.lid)
-
+    const { staffs, isLoading, error } = useStaffs(params.id)
     if (error) {
         return (
             <ErrorComponent error={error} />
@@ -30,7 +29,7 @@ export default function StaffsPage(props: StaffsPageProps) {
                 <h4 className='text-xl font-bold'>Staffs</h4>
             </div>
 
-            {isLoading ? (<SectionLoading />) : (<StaffList staffs={staffs} />)}
+            {isLoading ? (<SectionLoading />) : (<StaffList staffs={staffs} locationId={params.id} />)}
         </div>
     )
 }

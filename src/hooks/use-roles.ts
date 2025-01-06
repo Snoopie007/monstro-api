@@ -11,4 +11,13 @@ function useRoles(id: string) {
     };
 }
 
-export { useRoles };
+function usePermissions(id: string) {
+    const { data, error, isLoading } = useSWR({url: `roles/permissions`, id: id}, fetcher);
+    return {
+        permissions: data,
+        error,
+        isLoading,
+    };
+}
+
+export { useRoles, usePermissions };

@@ -5,22 +5,23 @@ import { Skeleton, Avatar, AvatarFallback, AvatarImage } from "@/components/ui";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ArchiveConfirmation } from "@/components/ui/archive-confirmation";
-import { useAchievement } from "@/hooks/use-achievements";
-import { UpsertAchivement } from "../components";
-import { deleteAchievement } from "@/libs/api";
+import { deleteReward } from "@/libs/api";
 import { toast } from "react-toastify";
+import { useReward } from "@/hooks/use-rewards";
+import { UpsertReward } from "../components";
+import Image from "next/image";
 
 const CardButtons =
     "flex bg-transparent text-black-100 rounded-none border-l border-gray-200 flex-row items-center gap-2 hover:bg-black-100 hover:text-white h-10 px-4 py-2";
-export default function AchievementDetails(props: { params: Promise<{ id: string, aid: number }> }) {
+export default function RewardDetails(props: { params: Promise<{ id: string, rid: number }> }) {
     const params = use(props.params);
-    const { achievement, isLoading, error } = useAchievement(params.id, params.aid);
+    const { reward, isLoading, error } = useReward(params.id, params.rid);
     const { push } = useRouter();
 
-    const removeAchievement = async () => {
-        await deleteAchievement(params.aid, params.id);
-        toast.success("Achievement Updated");
-        push(`/dashboard/${params.id}/achievements`);
+    const removeReward = async () => {
+        await deleteReward(params.rid, params.id);
+        toast.success("Reward Updated");
+        push(`/dashboard/${params.id}/rewards`);
     };
 
     if (isLoading) {
@@ -32,10 +33,10 @@ export default function AchievementDetails(props: { params: Promise<{ id: string
             </div>
         );
     }
-    if (!isLoading && !achievement) {
+    if (!isLoading && !reward) {
         return (
             <div className="flex text-black-100 font-semibold font-roboto justify-center items-center bg-transparent border border-gray-100 rounded-sm p-3 px-5 mb-5 mt-4">
-                Uh oh! No Achievement found.
+                Uh oh! No Reward found.
             </div>
         );
     }
@@ -46,7 +47,7 @@ export default function AchievementDetails(props: { params: Promise<{ id: string
                     <div className="flex-initial flex flex-row items-center px-4">
                         <button
                             onClick={() => {
-                                push(`/dashboard/${params.id}/achievements`);
+                                push(`/dashboard/${params.id}/rewards`);
                             }}
                             className="group"
                         >
@@ -58,11 +59,11 @@ export default function AchievementDetails(props: { params: Promise<{ id: string
                     </div>
                     <div className="flex-1 flex flex-row items-center justify-end ">
                         <div className="flex ">
-                            <UpsertAchivement achievement={achievement} locationId={params.id} />
+                            <UpsertReward reward={reward} locationId={params.id} />
                             <ArchiveConfirmation
-                                entity="achievement"
+                                entity="reward"
                                 params={{}}
-                                removeFunction={removeAchievement}
+                                removeFunction={removeReward}
                                 buttonType="button"
                                 buttonClassName={CardButtons}
                                 openButtonText={"Archive"}
@@ -76,81 +77,74 @@ export default function AchievementDetails(props: { params: Promise<{ id: string
                         <Avatar className=" max-w-full flex mr-4 items-center justify-center text-black-100 w-20 h-20 bg-gray-200 rounded-full">
                             <AvatarImage
                                 className="w-full h-full rounded-full border"
-                                src={achievement.image as string}
+                                src={reward.icon as string}
                             />
                             <AvatarFallback className=" group-hover:bg-violet-700 bg-gray-200 text-gray-400 text-5xl font-bold">
-                                {achievement?.name.charAt(0)}
+                                {reward?.name.charAt(0)}
                             </AvatarFallback>
                         </Avatar>
                         <div className="">
                             <div>
                                 <h4 className="flex-initial inline-block text-3xl font-poppins px-5  font-bold text-black-100  capitalize ">
-                                    {achievement?.name}
+                                    {reward?.name}
                                 </h4>
 
                                 <p className="font-normal text-base text-gray-600 font-roboto">
-                                    {achievement?.description}
+                                    {reward?.description}
                                 </p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div className={`grid ${achievement?.points ? 'grid-cols-5' : 'grid-cols-4'} mb-4 border border-gray-200 w-full rounded-md`}>
-                {achievement?.badge &&
+            <div className={`grid ${reward?.requiredPoints ? 'grid-cols-5' : 'grid-cols-4'} mb-4 border border-gray-200 w-full rounded-md`}>
+                {reward?.requiredPoints &&
                     <div className="text-center p-4 border-r border-r-gray-200">
                         <span className="text-1xl font-bold font-poppins text-black-100">
-                            Badge
-                        </span>
-                        <p className=" text-gray-700 text-sm font-semibold mt-2 font-roboto">
-                            {achievement?.badge}
-                        </p>
-                    </div>
-                }
-                {achievement?.points &&
-                    <div className="text-center p-4 border-r border-r-gray-200">
-                        <span className="text-1xl font-bold font-poppins text-black-100">
-                            Points
+                            Required Points
                         </span>
                         <p className="text-gray-700 text-sm font-semibold mt-2 font-roboto">
-                            {achievement?.points}
+                            {reward?.requiredPoints}
                         </p>
                     </div>
                 }
-                {achievement?.program ? (
+                {reward?.achievement ? (
                     <div className="text-center p-4 border-r border-r-gray-200">
                     <span className="text-1xl font-bold font-poppins text-black-100">
-                        Program Name
+                        Achievement
                     </span>
                     <p className="text-gray-700 text-sm font-semibold mt-2 font-roboto">
-                        {achievement?.programName}
+                        {reward?.achievement?.name}
                     </p>
                 </div>
                 ) : (
                     <div className="text-center p-4 border-r border-r-gray-200">
                     <span className="text-1xl font-bold font-poppins text-black-100">
-                        Program
+                        Achievement
                     </span>
                     <p className="text-gray-700 text-sm font-semibold mt-2 font-roboto">
-                        No Program
+                        No Achievement
                     </p>
                 </div>
                 )}
-
                 <div className="text-center p-4 border-r border-r-gray-200">
                     <span className="text-1xl font-bold font-poppins text-black-100">
-                        Action
+                        Gallery
                     </span>
                     <p className="text-gray-700 text-sm font-semibold mt-2 font-roboto">
-                        {achievement?.action[0].name}
+                        {reward?.images.map((url: string) => (
+                            <div key={url} className='h-[80px] relative w-[80px]' >
+                                <Image src={url} alt="reward gallery" className='object-contain' fill unoptimized />
+                            </div>
+                        ))}
                     </p>
                 </div>
                 <div className="text-center p-4 border-r border-r-gray-200">
                     <span className="text-1xl font-bold font-poppins text-black-100">
-                        Action Count
+                        Limit Per member
                     </span>
                     <p className="text-gray-700 text-sm font-semibold mt-2 font-roboto">
-                        {achievement?.action[0].pivot?.count}
+                        {reward?.limitPerMember}
                     </p>
                 </div>
 

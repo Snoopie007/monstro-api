@@ -1,10 +1,13 @@
+import { Achievement } from "./achievement"
+
 export interface Reward {
 	id?: number,
 	name: string,
 	description: string,
-	image: string,
-	type: number,
+	images: Array<string>,
+	icon: string,
 	limitPerMember: number,
-	achievementId: number
-	rewardPoints: number
+	achievementId: number,
+	achievement: Achievement,
+	requiredPoints: number
 }

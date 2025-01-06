@@ -1,18 +1,19 @@
 
+import { relations } from "drizzle-orm";
 import { integer, varchar, serial, timestamp, pgTable } from "drizzle-orm/pg-core";
-
 import { programs } from "./programs";
+import { locations } from "./locations";
+import { memberAchievements } from "./members";
 
 export const achievements = pgTable("achievements", {
     id: serial("id").primaryKey(),
     name: varchar("name").notNull(),
-    image: varchar("image").notNull(),
     badge: varchar("badge").notNull(),
-    reward_points: integer("reward_points").notNull(),
+    points: integer("points").notNull(),
     programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp('updated_at', { withTimezone: true }),
-    deleted: timestamp('deleted_at', { withTimezone: true })
+    updated: timestamp('updated_at', { withTimezone: true })
 });
 
 export const actions = pgTable("actions", {
@@ -31,3 +32,7 @@ export const achievementsActions = {
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 }
+
+export const achievementsRelations = relations(achievements, ({ many }) => ({
+    members: many(memberAchievements),
+}));
