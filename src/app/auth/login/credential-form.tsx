@@ -54,12 +54,14 @@ export default function CredentialForm() {
 		await sleep(2000);
 		if (res.ok) {
 			const { data: user } = await res.json();
-			user.role = user.vendor ? "vendor" : user.member ? "member" : null;
+			user.customRole = user.role
+			user.role = user.vendor ? "vendor" : user.member ? "member" : "staff";
 
 			try {
 				await signIn("credentials", {
 					...user,
 					locations: JSON.stringify(user.locations),
+					customRole: JSON.stringify(user.customRole),
 					callbackUrl: `/dashboard/${user.locations.length >= 1 ? user.locations[0].id : null}`,
 					redirect: true,
 				})
