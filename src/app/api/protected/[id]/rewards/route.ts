@@ -4,14 +4,13 @@ import { db } from "@/db/db";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
-    const params = await props.params;
-    const session = await auth();
-    try {
+	const params = await props.params;
+	const session = await auth();
+	try {
 		if (session) {
 			const rewards = await db.query.rewards.findMany({
 				where: (rewards, { eq }) => eq(rewards.locationId, params.id),
 			});
-			console.log(rewards)
 			return NextResponse.json(rewards, { status: 200 });
 		}
 	} catch (err) {
@@ -20,10 +19,10 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 }
 
 export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
-    const params = await props.params;
-    const session = await auth();
-    const data = await req.json()
-    try {
+	const params = await props.params;
+	const session = await auth();
+	const data = await req.json()
+	try {
 
 		if (session) {
 

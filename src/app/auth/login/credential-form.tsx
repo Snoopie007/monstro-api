@@ -141,12 +141,12 @@ export default function CredentialForm() {
 				<div className={"flex flex-row items-center justify-between "}>
 					<Button
 						className={cn(
-							" text-base bg-indigo-700 hover:bg-indigo-600 w-full  text-white px-4 py-3 h-auto rounded-sm children:hidden",
+							" text-base bg-indigo-700 hover:bg-indigo-600 w-full   text-white px-4 py-3 h-auto rounded-sm children:hidden",
 							{ "children:inline-block": loading }
 						)}
 						type="submit"
 					>
-						<Loader2 className="animate-spin" />
+						<Loader2 size={16} className="animate-spin mr-2" />
 						Continue
 					</Button>
 

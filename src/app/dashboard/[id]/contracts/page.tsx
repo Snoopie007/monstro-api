@@ -43,80 +43,82 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
     }
     if (contracts) {
         return (
-            <div className='max-w-6xl py-4 m-auto'>
-                <div className='flex flex-row justify-between items-center py-4 mb-4'>
-                    <div>
-                        <h4 className='text-xl font-bold'>Signed Contracts</h4>
-                        <p className='text-sm text-foreground/80'>Manage and oversee all documents & contracts created for your business.</p>
+            <div className='flex flex-col gap-0 h-full'>
+                <div className='flex flex-row flex-initial justify-start items-center gap-2 '>
+                    <div className="border-r border-foreground/10 p-2.5">
+                        <h6 className='text-sm font-bold'>Signed Contracts</h6>
+
                     </div>
                     <div>
                         <Link
                             href={`/dashboard/${params.id}/contracts/templates`}
-                            className='bg-foreground text-background  h-auto inline-flex flex-row items-center gap-2 px-4 py-2.5 rounded-sm font-bold text-sm'
+                            className='bg-foreground text-background  h-auto inline-flex flex-row items-center  px-2 py-1 rounded-xs font-bold text-xs'
                         >
-                            <span>        View Templates</span>
-                            <ChevronRight size={16} className='' />
+                            View Templates
                         </Link>
 
                     </div>
                 </div>
-                <Card className='rounded-sm shadow-none'>
-                    <CardContent className='p-0'>
-                        <Table className=" w-full ">
-                            <TableHeader className=" text-xs">
-                                <TableRow className='' >
-                                    {["Title", "Program", "Plan", "Member", "Signed", "Download"].map((title) => (
-                                        <TableHead key={title} className="font-semibold h-auto py-4 text-xs" >
-                                            {title}
-                                        </TableHead>
+                <div className='flex-1 border-y border-foreground/10'>
+                    <Table className=" w-full ">
+                        <TableHeader className=" text-xs">
+                            <TableRow className='' >
+                                {["Title", "Program", "Plan", "Member", "Signed", "Download"].map((title) => (
+                                    <TableHead key={title} className="font-semibold h-auto py-3 text-xs" >
+                                        {title}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {contracts.length > 0 ? (
+                                <>
+                                    {contracts.map((contract: any, index: number) => (
+                                        <TableRow key={index} className='cursor-pointer'>
+                                            <TableCell className="text-sm py-2  ">
+                                                {contract.contractTemplate.title}
+                                            </TableCell>
+                                            <TableCell className="text-sm  py-2  ">
+                                                {contract.plan.program.name}
+                                            </TableCell>
+
+                                            <TableCell className="text-sm  py-2 ">
+                                                {contract.plan.name}
+                                            </TableCell>
+
+                                            <TableCell className="text-sm  py-2  ">
+                                                {contract.member.firstName} {contract.member.lastName}
+                                            </TableCell>
+
+                                            <TableCell className="text-sm py-2 ">
+                                                {formatDateTime(contract.created)}
+                                            </TableCell>
+
+                                            <TableCell className="text-sm  py-2  ">
+                                                <Button variant={"ghost"} onClick={() => downloadContract(contract.id)} className="h-auto p-1">
+                                                    <Icon name="Download" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
                                     ))}
+                                </>
+                            ) : (
+                                <TableRow >
+                                    <TableCell colSpan={7} className="text-sm py-4 px-6 font-roboto">
+                                        <p className=' text-center'>No Contracts Found</p>
+                                    </TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {contracts.length > 0 ? (
-                                    <>
-                                        {contracts.map((contract: any, index: number) => (
-                                            <TableRow key={index} className='cursor-pointer'>
-                                                <TableCell className="text-sm py-2  ">
-                                                    {contract.contractTemplate.title}
-                                                </TableCell>
-                                                <TableCell className="text-sm  py-2  ">
-                                                    {contract.plan.program.name}
-                                                </TableCell>
 
-                                                <TableCell className="text-sm  py-2 ">
-                                                    {contract.plan.name}
-                                                </TableCell>
+                            )}
 
-                                                <TableCell className="text-sm  py-2  ">
-                                                    {contract.member.firstName} {contract.member.lastName}
-                                                </TableCell>
-
-                                                <TableCell className="text-sm py-2 ">
-                                                    {formatDateTime(contract.created)}
-                                                </TableCell>
-
-                                                <TableCell className="text-sm  py-2  ">
-                                                    <Button variant={"ghost"} onClick={() => downloadContract(contract.id)} className="h-auto p-1">
-                                                        <Icon name="Download" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </>
-                                ) : (
-                                    <TableRow >
-                                        <TableCell colSpan={7} className="text-sm py-4 px-6 font-roboto">
-                                            <p className=' text-center'>No Contracts Found</p>
-                                        </TableCell>
-                                    </TableRow>
-
-                                )}
-
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
+                        </TableBody>
+                    </Table>
+                </div>
+                <div className='flex-initial p-2'>
+                    <div className='flex flex-row justify-between items-center  text-sm'>
+                        <p>Total Contracts: {contracts.length}</p>
+                    </div>
+                </div>
             </div>
         )
     }
