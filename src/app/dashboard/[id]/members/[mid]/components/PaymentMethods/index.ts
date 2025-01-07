@@ -1,1 +1,1 @@
-export * from './list';
+export * from './member-payment-methods';

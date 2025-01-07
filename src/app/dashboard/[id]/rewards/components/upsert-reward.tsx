@@ -1,6 +1,6 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetClose, Button, ScrollArea } from '@/components/ui';
-import { Plus } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { z } from "zod";
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form';
@@ -18,7 +18,7 @@ import useSWR from 'swr';
 import { RewardsSchema } from '../schemas';
 import { Textarea } from '@/components/forms/textarea';
 import { useAchievements } from '@/hooks/use-achievements';
-import { LuLoader2 } from 'react-icons/lu';
+
 import Image from 'next/image';
 
 
@@ -126,8 +126,8 @@ export function UpsertReward({ reward, locationId }: AddrewardProps) {
 		<div>
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetTrigger asChild>
-					<Button className="font-semibold py-2.5 px-4 text-sm flex flex-row bg-foreground text-background h-auto ">
-						{reward ? (<span>Update Reward</span>) : (<><Plus size={17} /> <span> Add Reward</span></>)}
+					<Button variant={"foreground"} size={"sm"} className="h-auto py-2.5  text-xs  ">
+						{reward ? (<span>Update Reward</span>) : (<><span> Add Reward</span></>)}
 					</Button>
 				</SheetTrigger>
 				<SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0">
@@ -200,7 +200,7 @@ export function UpsertReward({ reward, locationId }: AddrewardProps) {
 										type='button'
 										onClick={uploadImages}
 									>
-										<LuLoader2 className="mr-2 h-4 w-4 animate-spin" />
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 										Upload
 									</Button>
 								</fieldset>
@@ -227,7 +227,7 @@ export function UpsertReward({ reward, locationId }: AddrewardProps) {
 										type='button'
 										onClick={uploadIcon}
 									>
-										<LuLoader2 className="mr-2 h-4 w-4 animate-spin" />
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 										Upload
 									</Button>
 								</fieldset>

@@ -11,13 +11,9 @@ import {
 import { useMemberAchievements } from '@/hooks/use-members'
 import { formatDateTime } from '@/libs/utils'
 
-const Dummy = [
-    {}
-]
-
 export function MemberAchievements({ params }: { params: { id: string, mid: number } }) {
-    const {achievements, error, isLoading} = useMemberAchievements(params.id, params.mid)
-    console.log(achievements)
+    const { achievements, error, isLoading } = useMemberAchievements(params.id, params.mid)
+
     return (
         <div className='py-4'>
             <div className='w-full flex flex-row items-center  justify-between'>
@@ -39,34 +35,43 @@ export function MemberAchievements({ params }: { params: { id: string, mid: numb
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {achievements.map((achievement: any, i: number) => (
-                            <TableRow key={i}>
+                        {achievements && achievements.length > 0 ? (
+                            <>
+                                {achievements.map((achievement: any, i: number) => (
+                                    <TableRow key={i}>
 
-                                <TableCell>
-                                    {achievement.achievement.name}
-                                </TableCell>
-                                <TableCell>
-                                    {achievement.achievement.description}
-                                </TableCell>
-                                <TableCell>
-                                    {achievement.achievement.points}
-                                </TableCell>
+                                        <TableCell>
+                                            {achievement.achievement.name}
+                                        </TableCell>
+                                        <TableCell>
+                                            {achievement.achievement.description}
+                                        </TableCell>
+                                        <TableCell>
+                                            {achievement.achievement.points}
+                                        </TableCell>
 
-                                <TableCell>
-                                    {formatDateTime(achievement.dateAchieved, {
-                                        month: 'short',
-                                        day: 'numeric',
+                                        <TableCell>
+                                            {formatDateTime(achievement.dateAchieved, {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                hour: 'numeric',
+                                                minute: 'numeric'
+                                            })}
+                                        </TableCell>
 
-                                        hour: 'numeric',
-                                        minute: 'numeric'
-                                    })}
-                                </TableCell>
+                                        <TableCell className='flex flex-row items-center'>
 
-                                <TableCell className='flex flex-row items-center'>
-
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </>
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={5} className='text-center text-sm text-foreground/50'>
+                                    No achievements found
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )}
                     </TableBody>
                 </Table>
             </div>

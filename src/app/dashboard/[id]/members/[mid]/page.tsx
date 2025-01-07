@@ -6,9 +6,9 @@ import {
     MemberEnrollments,
     MemberPayments,
     MemberRewards,
-    MemberAttedance
+    MemberAttedance,
+    MemberFamilies
 } from './components'
-
 
 import { cn } from '@/libs/utils'
 
@@ -98,9 +98,8 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
                 <div className='col-span-4 space-y-4'>
                     <MemberProfile params={params} />
                     <PaymentMethods stripeKey={stripeKey ? stripeKey?.apiKey : ''} params={params} />
+                    <MemberFamilies params={params} />
                 </div>
-
-
                 <div className='col-span-8'>
                     <Tabs defaultValue="Achievements" className="w-full" >
                         <TabsList className={cn(`grid w-full grid-cols-${MemberDetailsMenu.length}`)}>

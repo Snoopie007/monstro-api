@@ -9,14 +9,19 @@ import {
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { MemberColumns } from "./member-columns";
 import { Input } from "@/components/forms/input";
 import { MemberTable } from "./member-table";
 import ErrorComponent from "@/components/error";
 import CreateMember from "./add-member";
 import { Member } from "@/types/member";
+
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { debounce } from "@tiptap-pro/extension-table-of-contents";
+import ImportMember from "./import-member";
+import { Separator } from "@/components/ui";
+
 
 export function MemberList({ params, stripeKey }: { params: { id: string }, stripeKey: string | null }) {
     // Pagination state
@@ -36,7 +41,7 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
         }
         return 1; // Default to 1 page if data is unavailable
     }, [data?.count, pageSize]);
-    
+
     const table = useReactTable<Member>({
         data: !isLoading && data?.members ? data.members : [], // Only use data when it's available
         columns,
@@ -65,18 +70,6 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
         manualPagination: true, // Enable manual pagination
     });
 
-    useEffect(() => {
-        console.log("Current page:", page);
-        console.log("Page size:", pageSize);
-        console.log("Current rows:", table.getPaginationRowModel().rows);
-    }, [page, pageSize, table]);
-
-    useEffect(() => {
-        console.log("Current data:", data);
-        console.log("Current column filters:", columnFilters);
-        console.log("Filtered rows:", table.getFilteredRowModel().rows);
-        
-    }, [data, columnFilters, table]);
 
     const handleSearch = useMemo(
         () =>
@@ -92,46 +85,61 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
     }
 
     return (
-        <>
-            <div className="flex flex-row items-center gap-4 mb-2">
+        <div className="flex flex-col w-full h-full">
+            <div className="flex flex-row items-center flex-initial gap-4 p-2">
                 <div className="min-w-[350px]">
                     <Input
-                        placeholder="Filter names..."
+                        placeholder="Find a member..."
                         // value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
                         onChange={(event) => {
                             const value = event.target.value;
                             // table.getColumn("name")?.setFilterValue(value);
                             handleSearch(value);
                         }}
-                        className="border text-sm h-auto py-2 border-foreground rounded-sm"
+                        className="border text-sm h-auto py-1 border-foreground/10 rounded-xs"
                     />
                 </div>
                 <CreateMember locationId={params.id} stripeKey={stripeKey} />
+                <ImportMember locationId={params.id} />
             </div>
 
-            <div className="flex flex-col w-full">
+            <div className="flex flex-col flex-1 border-y border-foreground/5">
                 <MemberTable table={table} isLoading={isLoading} columns={columns.length} />
-                <div className="flex justify-between items-center mt-4">
-                    {/* Pagination Controls */}
-                    <button
-                        className="px-4 py-2 border rounded"
-                        onClick={() => table.previousPage()}
-                        disabled={!table.getCanPreviousPage()}
-                    >
-                        Previous
-                    </button>
-                    <span>
-                        Page {page + 1} of {totalPages}
-                    </span>
-                    <button
-                        className="px-4 py-2 border rounded"
-                        onClick={() => table.nextPage()}
-                        disabled={!table.getCanNextPage()}
-                    >
-                        Next
-                    </button>
+            </div>
+            <div className="flex-initial h-[35px] py-2 ">
+                <div className="flex gap-1 items-center h-full text-xs">
+
+                    <div className="flex gap-2 items-center  p-2">
+                        <button
+                            className="text-foreground/50 border-foreground/50 p-1 border rounded-xs hover:text-indigo-600 hover:border-indigo-600 cursor-pointer"
+                            onClick={() => table.previousPage()}
+                            disabled={!table.getCanPreviousPage()}
+                        >
+                            <ChevronLeftIcon size={14} />
+                        </button>
+                        <span>Page</span>
+                        <span>
+                            <input type="number" value={page + 1} onChange={(e) => setPage(Number(e.target.value) - 1)}
+                                className="w-10 py-0.5 text-center border border-foreground/50 text-xs rounded-xs" />
+                        </span>
+                        <span>
+                            of {totalPages}
+                        </span>
+                        <button
+
+                            className="text-foreground/50 border-foreground/50 p-1 border rounded-xs hover:text-indigo-600 hover:border-indigo-600 cursor-pointer"
+                            onClick={() => table.nextPage()}
+                            disabled={!table.getCanNextPage()}
+                        >
+                            <ChevronRightIcon size={14} />
+                        </button>
+                    </div>
+                    <Separator orientation="vertical" />
+                    <div className="flex gap-2 items-center px-2">
+                        Total members: {data?.count}
+                    </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }

@@ -16,16 +16,13 @@ export default async function DashLayout(
     } = props;
 
     return (
-        <main className={cn("min-h-screen max-h-screen h-screen overflow-hidden w-full  bg-background")}>
+        <main className={cn("min-h-screen max-h-screen h-screen overflow-hidden flex flex-col w-full  bg-background")}>
             <TopNav locationId={params.id} />
-            <div className="relative flex flex-row justify-start items-start h-[calc(100vh-55px)] w-full">
+            <div className="relative flex flex-1 flex-row justify-start items-start  w-full">
 
                 <SideNav locationId={params.id} />
                 <div className="flex-1 h-full">
-                    <ScrollArea className=" pb-10 h-full overflow-hidden">
-
-                        {children}
-                    </ScrollArea>
+                    {children}
                 </div>
             </div>
 

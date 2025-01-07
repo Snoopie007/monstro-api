@@ -27,17 +27,6 @@ export async function GET(req: Request, props: { params: Promise<{ mid: number, 
                 }))
             );
 
-            // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/get-reservations-by-member/${params.mId}`, {
-            //     headers: {
-            //         'Authorization': `Bearer ${session.user.token}`,
-            //         "locationId": `${params.id}`
-            //     }
-            // })
-            // console.log(res)
-            // if (!res.ok) {
-            //     return NextResponse.json({ message: "An error occurred while fetching the data." }, { status: 400 });
-            // }
-            // const { data } = await res.json();
             return NextResponse.json(attendances, { status: 200 });
         }
     } catch (err) {

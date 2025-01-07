@@ -43,7 +43,7 @@ export default function LocationSelect({ locationId }: { locationId: number }) {
                 <Button
                     variant="outline"
                     role="combobox"
-                    className={cn("w-auto font-medium py-1.5 text-foreground hover:bg-accent h-auto rounded-sm border-0 justify-between")}
+                    className="h-auto py-1 px-2 text-xs rounded-sm border-0"
                 >
                     {selected ? selected.name : "Select a location"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 stroke-black dark:stroke-white" />

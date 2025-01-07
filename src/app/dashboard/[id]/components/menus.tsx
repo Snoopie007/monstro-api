@@ -12,11 +12,17 @@ import SupportMenu from './support-menu';
 import UserMenu from './user-menu';
 import { Icon } from '@/components/icons';
 import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbList,
+    BreadcrumbSeparator,
+    BreadcrumbLink,
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui"
 import React from 'react';
+import { usePathname } from 'next/navigation';
 
 
 function SideNav({ locationId }: { locationId: number }) {
@@ -95,19 +101,50 @@ function SideNav({ locationId }: { locationId: number }) {
 
 
 function TopNav({ locationId }: { locationId: number }) {
+    const pathname = usePathname();
+    const pathSegments = pathname.split('/').filter(Boolean);
+    const currentPath = pathSegments;
 
     return (
-        <div className=" w-full border-b border-gray-200 py-2 px-3 flex justify-between">
+        <div className=" w-full border-b border-gray-200 py-2 px-3 flex flex-initial justify-between">
 
 
-            <div className='flex flex-row items-center gap-3'>
+            <div className='flex flex-row items-center gap-2'>
                 <div className={cn('logo  flex flex-row ')}>
-                    <Image src='/images/monstro-icon.webp' alt='' width={28} height={28} />
+                    <Image src='/images/monstro-icon.webp' alt='' width={24} height={24} />
                 </div>
-                <div>
+                <Breadcrumb>
+                    <BreadcrumbList >
+                        <BreadcrumbItem>
+                            <LocationSelect locationId={locationId} />
+                        </BreadcrumbItem>
+                        <BreadcrumbSeparator>
+                            /
+                        </BreadcrumbSeparator>
+                        <BreadcrumbItem>
+                            <BreadcrumbLink href={`/dashboard/${locationId}`} className='py-1 text-xs px-2 hover:bg-accent rounded-sm'>
+                                Dashboard
+                            </BreadcrumbLink>
+                        </BreadcrumbItem>
+                        {currentPath.slice(2).map((segment, index) => {
+                            const href = `/${currentPath.slice(0, index + 3).join('/')}`;
+                            return (
+                                <React.Fragment key={index}>
+                                    <BreadcrumbSeparator>
+                                        /
+                                    </BreadcrumbSeparator>
+                                    <BreadcrumbItem>
+                                        <BreadcrumbLink href={href} className='py-1 text-xs px-2 hover:bg-accent capitalize rounded-sm'>
+                                            {segment}
+                                        </BreadcrumbLink>
+                                    </BreadcrumbItem>
+                                </React.Fragment>
+                            );
+                        })}
 
-                    <LocationSelect locationId={locationId} />
-                </div>
+                    </BreadcrumbList>
+                </Breadcrumb>
+
 
             </div>
             <div className='flex flex-row items-center gap-3'>
@@ -116,7 +153,7 @@ function TopNav({ locationId }: { locationId: number }) {
                 </div>
                 <div>
                     <div className='px-3'>
-                        <Bell size={18} />
+                        <Bell size={16} />
                     </div>
                 </div>
                 <div className='items-center'>

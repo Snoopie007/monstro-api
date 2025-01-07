@@ -15,7 +15,7 @@ export default function SupportMenu({ locationId }: { locationId: number }) {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button className="bg-transparent rounded-sm h-8 w-8 p-1 text-foreground  hover:bg-accent">
-                    <CircleHelp size={18} className="" />
+                    <CircleHelp size={16} className="" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>

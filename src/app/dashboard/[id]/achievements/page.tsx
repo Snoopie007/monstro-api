@@ -20,7 +20,7 @@ export default function Achievements(props: { params: Promise<{ id: string }> })
                 </div>
                 <div className="mb-3">
                     <div className='flex flex-row gap-4 items-center py-3'>
-                        <input placeholder='Search Achievments' className='w-full rounded-sm text-sm bg-white/5 py-2.5  px-4 border font-roboto ' />
+                        <input placeholder='Search Achievments' className='w-full rounded-sm text-sm bg-white/5 py-2  px-4 border font-roboto ' />
                         <UpsertAchivement achievement={undefined} locationId={params.id} />
                     </div>
                 </div>

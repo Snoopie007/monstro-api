@@ -19,8 +19,8 @@ export default function ThemeMenu() {
             <DropdownMenuTrigger asChild>
                 <Button className="bg-transparent rounded-sm focus-visible:ring-0 focus-visible:ring-offset-0  w-8 h-8  p-1 text-foreground hover:bg-accent ">
 
-                    <Sun size={18} className="rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                    <Moon size={18} className="absolute rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                    <Sun size={16} className="rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                    <Moon size={16} className="absolute rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                     <span className="sr-only">Toggle theme</span>
                 </Button>
             </DropdownMenuTrigger>

@@ -30,8 +30,6 @@ export default async function Members(props: { params: Promise<{ id: string }> }
     const stripeKey = await fetchStripeKeys(params.id, session)
 
     return (
-        <div className='p-5'>
-            <MemberList params={params} stripeKey={stripeKey} />
-        </div>
+        <MemberList params={params} stripeKey={stripeKey} />
     )
 }
