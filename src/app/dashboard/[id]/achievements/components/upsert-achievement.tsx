@@ -69,8 +69,8 @@ export function UpsertAchivement({ achievement, locationId }: AddAchievementProp
 		<div>
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetTrigger asChild>
-					<Button variant={"foreground"} size={"sm"} className="h-auto py-2.5  text-xs  ">
-						{achievement ? (<span>Update Achievement</span>) : (<><span>Add Achievement</span></>)}
+					<Button variant={"foreground"} size={"xs"} >
+						{achievement ? (<span>Update Achievement</span>) : (<><span>+ Achievement</span></>)}
 					</Button>
 				</SheetTrigger>
 				<SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0">
