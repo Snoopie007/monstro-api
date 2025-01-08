@@ -3,6 +3,7 @@ import { auth } from "./auth";
 import { decodeId } from "./libs/server-utils";
 
 export default auth(async (req) => {
+	console.log("middleware")
 	try {
 		const { pathname } = req.nextUrl;
 		const isLoggedin = !!req.auth;
@@ -33,6 +34,7 @@ export default auth(async (req) => {
 			const newUrl = new URL("/auth/login", req.nextUrl.origin);
 			return NextResponse.redirect(newUrl);
 		} else if (isLoggedin && pathname === "/") {
+
 			const homeUrl = new URL(`/dashboard/${req.auth?.user.locations.length >= 1 ? req.auth?.user.locations[0].id : 'default'}`, req.nextUrl.origin);
 			return NextResponse.redirect(homeUrl);
 		}
@@ -40,6 +42,7 @@ export default auth(async (req) => {
 		// Ensure no unintended caching for dynamic routes
 		const response = NextResponse.next();
 		if (pathname.startsWith("/api/") || pathname.startsWith("/dashboard/")) {
+
 			response.headers.set('Cache-Control', 'no-store, max-age=0');
 		}
 

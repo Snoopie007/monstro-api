@@ -91,7 +91,7 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
     return (
         <TablePage>
             <TablePageHeader>
-                <TablePageHeaderTitle>Signed Contracts</TablePageHeaderTitle>
+                <TablePageHeaderTitle>Members</TablePageHeaderTitle>
                 <TablePageHeaderSection>
                     <Input
                         placeholder="Find a member..."
@@ -101,7 +101,7 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
                             // table.getColumn("name")?.setFilterValue(value);
                             handleSearch(value);
                         }}
-                        className="border text-sm h-auto py-1 border-foreground/10 rounded-xs"
+                        className="border text-xs h-auto py-1 border-foreground/10 rounded-xs"
                     />
 
                     <CreateMember locationId={params.id} stripeKey={stripeKey} />

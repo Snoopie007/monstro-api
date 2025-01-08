@@ -59,7 +59,7 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant={"foreground"} className="h-auto py-2" >Invite</Button>
+                <Button variant={"foreground"} size={"xs"}  >Invite</Button>
             </DialogTrigger>
             <DialogContent className={cn("border-foreground/10 p-0")}>
                 <DialogHeader >
