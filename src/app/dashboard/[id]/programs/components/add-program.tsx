@@ -28,7 +28,7 @@ import { Session } from '@/types';
 
 
 
-export function AddProgram({locationId}: {locationId: string}) {
+export function AddProgram({ locationId }: { locationId: string }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const form = useForm<z.infer<typeof NewProgramSchema>>({
@@ -67,13 +67,13 @@ export function AddProgram({locationId}: {locationId: string}) {
         const sessions: Session[] = [];
         setLoading(true);
         v.levels.forEach((level, levelIndex) => {
-            const session: Session = {status: true};
+            const session: Session = { status: true };
             level.sessions.forEach((s) => {
                 if (!s.day || !s.time) return; // Handle undefined or null values for day and time
-    
+
                 const day = s.day.toLowerCase();
                 session[day] = s.time.toString(); // Assign time to the corresponding day
-    
+
                 // Safely handle and update `duration_time` with the correct structure
                 session.duration_time = JSON.stringify({
                     ...(session.duration_time ? JSON.parse(session.duration_time) : {}),
@@ -94,7 +94,7 @@ export function AddProgram({locationId}: {locationId: string}) {
             sessions: sessions
         };
 
-        const res = await post({url: `programs`, id: locationId, data: body});
+        const res = await post({ url: `programs`, id: locationId, data: body });
         await sleep(3000);
         setLoading(false);
 
@@ -120,8 +120,8 @@ export function AddProgram({locationId}: {locationId: string}) {
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button variant={"foreground"}>
-                    <span>+ Program</span>
+                <Button variant={"foreground"} size={"xs"}>
+                    + Program
                 </Button>
             </SheetTrigger>
             <SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0">

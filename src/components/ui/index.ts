@@ -18,3 +18,4 @@ export * from './tabs';
 export * from './breadcrumb';
 export * from './calendar';
 export * from './separator';
+export * from './table-page';

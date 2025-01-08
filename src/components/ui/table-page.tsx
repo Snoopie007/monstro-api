@@ -15,9 +15,9 @@ const TablePage = React.forwardRef<HTMLDialogElement, React.HTMLAttributes<HTMLD
         });
 
         return (
-            <div className="flex flex-col w-full h-full">
+            <main className="flex flex-col w-full h-full">
                 {children}
-            </div>
+            </main>
         )
     }
 )

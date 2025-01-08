@@ -1,13 +1,17 @@
 'use client';
 import { use } from "react";
-import { Skeleton } from '@/components/ui/skeleton'
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent } from '@/components/ui/card'
-import { ChevronRight } from 'lucide-react'
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui"
 import Link from 'next/link'
 import { useRewards } from '@/hooks/use-rewards'
 import SectionLoader from '@/components/section-loading'
 import { UpsertReward } from "./components";
+
+import {
+    TablePage, TablePageHeaderSection, TablePageHeaderTitle, TablePageHeader, TablePageContent,
+    TableCell, Table, TableHead, TableHeader, TableRow, TableBody
+} from "@/components/ui";
+import { Reward } from "@/types";
 
 export default function Rewards(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
@@ -15,56 +19,66 @@ export default function Rewards(props: { params: Promise<{ id: string }> }) {
 
 
     return (
-        <main className='max-w-4xl py-4 m-auto'>
-            <div className='border-b py-4 mb-4'>
-                <h4 className='text-xl font-bold'>Rewards</h4>
-            </div>
-            <div className="mb-3">
-
-                <div className='flex flex-row gap-4 items-center py-3'>
-                    <input placeholder='Search Rewards' className='w-full rounded-sm text-sm bg-white/5 py-2.5  px-4 border font-roboto ' />
+        <TablePage>
+            <TablePageHeader>
+                <TablePageHeaderTitle>Rewards</TablePageHeaderTitle>
+                <TablePageHeaderSection>
                     <UpsertReward locationId={params.id} reward={undefined} />
-                </div>
-            </div>
-            <div className=" grid grid-cols-3 gap-5 ">
-
+                </TablePageHeaderSection>
+            </TablePageHeader>
+            <TablePageContent>
                 {isLoading || error ? (
                     <SectionLoader />
                 ) : (
-                    <>
-                        {rewards.map((data: any) => {
-                            return (
-                                <Card key={data.id} className=' rounded-sm'>
-                                    <CardContent className=' py-3 px-4  flex flex-row'>
-                                        <Link href={`/dashboard/${params.id}/rewards/${data.id}`} className="w-full  inline-flex" >
-                                            <div className="flex flex-row   w-full items-center justify-between">
-                                                <div className="flex-initial flex gap-3 flex-row items-center">
-                                                    <Avatar className="group-hover:bg-violet-600 max-w-full flex items-center justify-center text-black-100 w-8 h-8 mr-2 bg-gray-200 rounded-full">
+                    <Table className=" w-auto border-r border-b border-foreground/10 ">
+                        <TableHeader className=" text-xs  ">
+                            <TableRow className='bg-foreground/10 ' >
+                                {["Name", "Total Claimed"].map((title) => (
+                                    <TableHead key={title} className="font-semibold text-foreground h-auto py-2 border border-foreground/10 text-xs" >
+                                        {title}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {rewards.length > 0 ? (
+                                <>
+                                    {rewards.map((reward: Reward, index: number) => (
+                                        <TableRow key={index} className='cursor-pointer '>
+                                            <TableCell className="text-sm py-2 border border-foreground/10">
+                                                <Link href={`/dashboard/${params.id}/rewards/${reward.id}`} className="flex flex-row items-center">
+                                                    <Avatar className="group-hover:bg-violet-600 max-w-full flex items-center justify-center text-black-100 w-5 h-5 mr-2 bg-gray-200 rounded-full">
                                                         <AvatarImage
-                                                            src={data.avatar}
+                                                            src={reward.images[0]}
                                                         />
-                                                        <AvatarFallback className="group-hover:text-gray-100 group-hover:bg-violet-700 bg-gray-200 text-gray-400 text-lg font-bold">
-                                                            {data.name.charAt(0)}
+                                                        <AvatarFallback className=" bg-gray-200 text-gray-400 text-xs ">
+                                                            {reward.name.charAt(0)}
                                                         </AvatarFallback>
                                                     </Avatar>
-                                                    <div className="text-sm  group-hover:text-violet-600 font-bold text-black-200 font-poppins">
-                                                        {data.name}
-                                                    </div>
-                                                </div>
-                                                <ChevronRight size={20} className="stroke-black-100 group-hover:stroke-violet-600" />
-                                            </div>
-                                        </Link>
-                                    </CardContent>
+                                                    <span className="text-sm">
+                                                        {reward.name}
+                                                    </span>
+                                                </Link>
 
-                                </Card>
+                                            </TableCell>
 
-                            );
-                        })}
-                    </>
+                                        </TableRow>
+                                    ))}
+                                </>
+                            ) : (
+                                <TableRow >
+                                    <TableCell colSpan={7} className="text-sm py-4 px-6 font-roboto">
+                                        <p className=' text-center'>No Rewards Found</p>
+                                    </TableCell>
+                                </TableRow>
+                            )}
+
+                        </TableBody>
+                    </Table>
                 )}
 
+            </TablePageContent>
+        </TablePage>
 
-            </div>
-        </main>
     )
 }

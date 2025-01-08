@@ -1,42 +1,47 @@
 import { Program } from '@/types';
-import { Card, CardContent } from '@/components/ui/card'
-import { ChevronRight } from 'lucide-react'
+
 import Link from 'next/link'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui'
+
 export function ProgramList({ programs, locationId }: { programs: Program[], locationId: string }) {
 
-    if (programs.length === 0) {
-        return (
-            <div className='flex flex-col items-center w-full justify-center h-full'>
-                <p className='text-black dark:text-gray-400 text-lg'>No programs found, please create one.</p>
-            </div>
-        )
-    }
-
     return (
-        <div className=" grid gap-2 ">
-            {programs.map((program: any) => {
-                return (
-                    <Card key={program.id} className=' rounded-sm bg-background border border-gray-100'>
-                        <CardContent className=' py-3 px-4  flex flex-row'>
-                            <Link href={`/dashboard/${locationId}/programs/${program.id}`} className="w-full  inline-flex" >
-                                <div className="flex flex-row   w-full items-center justify-between">
-                                    <div className="flex-initial flex gap-3 flex-row items-center">
+        <Table className=" w-auto border-r border-b border-foreground/10 ">
+            <TableHeader className=" text-xs  ">
+                <TableRow className='bg-foreground/10 ' >
+                    {["Name", "Plans"].map((title) => (
+                        <TableHead key={title} className="font-semibold text-foreground h-auto py-2 border border-foreground/10 text-xs" >
+                            {title}
+                        </TableHead>
+                    ))}
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {programs.length > 0 ? (
+                    <>
+                        {programs.map((program: Program, index: number) => (
+                            <TableRow key={index} className='cursor-pointer '>
+                                <TableCell className="text-sm py-2 border border-foreground/10">
+                                    <Link href={`/dashboard/${locationId}/programs/${program.id}`} className="" >
+                                        {program.name}
+                                    </Link>
+                                </TableCell>
+                                <TableCell className="text-sm py-2 border border-foreground/10">
+                                    {program.planCounts}
+                                </TableCell>
 
+                            </TableRow>
+                        ))}
+                    </>
+                ) : (
+                    <TableRow >
+                        <TableCell colSpan={7} className="text-sm py-4 px-6 font-roboto">
+                            <p className=' text-center'>No Programs Found</p>
+                        </TableCell>
+                    </TableRow>
+                )}
+            </TableBody>
+        </Table>
 
-                                        <p className="text-sm text-foreground group-hover:text-violet-600 font-bold ">{program.name}</p>
-
-
-                                        <span className='text-sm text-gray-500'>Plans: {program.planCounts}</span>
-                                    </div>
-                                    <ChevronRight size={20} className="stroke-black-100 group-hover:stroke-violet-600" />
-                                </div>
-                            </Link>
-                        </CardContent>
-
-                    </Card>
-
-                );
-            })}
-        </div>
     )
 }

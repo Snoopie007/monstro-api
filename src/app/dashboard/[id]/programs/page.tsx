@@ -6,6 +6,9 @@ import { AddProgram, ProgramList } from './components';
 import ErrorComponent from '@/components/error';
 import SectionLoader from '@/components/section-loading';
 import { Program } from "@/types";
+import { TablePage, TablePageHeaderTitle, TablePageHeader, TablePageHeaderSection, TablePageContent, TablePageFooter } from "@/components/ui";
+import Loading from "@/components/loading";
+
 
 export default function Programs(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
@@ -24,26 +27,32 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
     );
 
     return (
-        <div className='max-w-4xl py-4 m-auto'>
-            <div className='border-b py-4 mb-4'>
-                <h4 className='text-xl font-bold'>Programs</h4>
-            </div>
-            <div className="mb-3">
-                <div className='flex flex-row gap-4 items-center py-3'>
+        <TablePage>
+            <TablePageHeader>
+                <TablePageHeaderTitle>Programs</TablePageHeaderTitle>
+                <TablePageHeaderSection>
                     <input
                         placeholder='Search programs'
-                        className='w-full rounded-sm border-gray-200 text-sm bg-transparent py-2.5 px-4 border'
+                        className='text-xs bg-transparent py-1 px-2 rounded-xs border'
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                     <AddProgram locationId={params.id} />
-                </div>
-            </div>
-            {isLoading ? (
-                <SectionLoader />
-            ) : (
-                <ProgramList programs={filteredPrograms} locationId={params.id} />
-            )}
-        </div>
+                </TablePageHeaderSection>
+            </TablePageHeader>
+            <TablePageContent>
+                {isLoading ? (
+                    <Loading />
+                ) : (
+                    <ProgramList programs={filteredPrograms} locationId={params.id} />
+                )}
+            </TablePageContent>
+            <TablePageFooter>
+                <p className="p-2">
+                    {filteredPrograms?.length} programs found
+                </p>
+            </TablePageFooter>
+        </TablePage>
+
     );
 }
