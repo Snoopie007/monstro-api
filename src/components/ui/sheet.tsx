@@ -67,10 +67,10 @@ const SheetContent = React.forwardRef<
 			{...props}
 		>
 			{children}
-			<SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+			{/* <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
 				<X className="h-4 w-4" />
 				<span className="sr-only">Close</span>
-			</SheetPrimitive.Close>
+			</SheetPrimitive.Close> */}
 		</SheetPrimitive.Content>
 	</SheetPortal>
 ))
@@ -134,7 +134,7 @@ const SheetSection = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
 	<div
 		className={cn(
-			"p-4 border-b space-y-2 last:border-b-0 last:border-none",
+			"p-4 border-b space-y-3 last:border-b-0 last:border-none",
 			className
 		)}
 		{...props}
@@ -142,6 +142,35 @@ const SheetSection = ({
 )
 SheetSection.displayName = "SheetSection"
 
+
+const SheetFieldSet = ({
+	className,
+	children,
+	...props
+}: React.HTMLAttributes<HTMLFieldSetElement>) => (
+	<fieldset className={cn("grid grid-cols-10 gap-3 leading-none", className)} {...props} >
+		{children}
+	</fieldset>
+)
+SheetFieldSet.displayName = "SheetFieldSet"
+
+const SheetFieldLabel = ({
+	className,
+	children,
+	...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+	<div className={cn("col-span-3", className)} {...props} >{children}</div>
+)
+SheetFieldLabel.displayName = "SheetFieldLabel"
+
+const SheetFieldInput = ({
+	className,
+	children,
+	...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+	<div className={cn("col-span-7", className)} {...props} >{children}</div>
+)
+SheetFieldInput.displayName = "SheetFieldInput"
 
 
 export {
@@ -156,4 +185,7 @@ export {
 	SheetTitle,
 	SheetSection,
 	SheetDescription,
+	SheetFieldSet,
+	SheetFieldLabel,
+	SheetFieldInput,
 }

@@ -8,17 +8,21 @@ import { UpsertAchivement } from './components'
 import {
     TablePage, TablePageHeaderSection, TablePageHeaderTitle, TablePageHeader, TablePageContent,
     TableCell, Table, TableHead, TableHeader, TableRow, TableBody,
-    TablePageFooter
+    TablePageFooter,
+    Button
 } from "@/components/ui";
 import Loading from '@/components/loading';
 import { Input } from '@/components/forms';
 import { Achievement } from '@/types';
+import ErrorComponent from '@/components/error';
 
 export default function Achievements(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { achievements, isLoading, error } = useAchievements(params.id);
+
     if (isLoading) return <Loading />
-    if (error) return <div>Error</div>
+    if (error) return <ErrorComponent error={error} />
+
     return (
         <TablePage>
             <TablePageHeader>
@@ -34,7 +38,11 @@ export default function Achievements(props: { params: Promise<{ id: string }> })
                         }}
                         className="border text-xs h-auto py-1 border-foreground/10 rounded-xs"
                     />
-                    <UpsertAchivement achievement={undefined} locationId={params.id} />
+                    <UpsertAchivement achievement={undefined} locationId={params.id} >
+                        <Button variant={"foreground"} size={"xs"} >
+                            + Achievement
+                        </Button>
+                    </UpsertAchivement>
                 </TablePageHeaderSection>
             </TablePageHeader>
             <TablePageContent>

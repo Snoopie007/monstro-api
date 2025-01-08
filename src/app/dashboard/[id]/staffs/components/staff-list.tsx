@@ -13,6 +13,23 @@ interface StaffListProps {
     locationId: string
 }
 
+const StaffColumns = [{
+    label: "First Name",
+    key: "firstName"
+}, {
+    label: "Last Name",
+    key: "lastName"
+}, {
+    label: "Email",
+    key: "email"
+}, {
+    label: "Phone",
+    key: "phone"
+}, {
+    label: "Role",
+    key: "role"
+}];
+
 export function StaffList({ staffs, locationId }: StaffListProps) {
     const [filteredStaffs, setFilteredStaffs] = useState<Staff[]>(staffs);
     const [currentStaff, setCurrentStaff] = useState<Staff | null>(null);
@@ -39,47 +56,53 @@ export function StaffList({ staffs, locationId }: StaffListProps) {
             <Table className=" w-auto border-r border-b border-foreground/10 ">
                 <TableHeader >
                     <TableRow className='px-4 bg-transparent' >
-                        {["Name", "Email", "Phone", "Role", ""].map((title) => (
-                            <TableHead key={title} className="font-semibold text-xs text-foreground bg-foreground/5 h-auto py-2 px-4 " >
-                                {title}
+                        {StaffColumns.map((title) => (
+                            <TableHead key={title.label} className="font-semibold text-xs text-foreground bg-foreground/5 h-auto py-2 px-4 " >
+                                {title.label}
                             </TableHead>
                         ))}
+                        <TableHead className=" bg-foreground/5 h-auto py-2 px-4 " ></TableHead>
                     </TableRow>
+
+
                 </TableHeader>
                 <TableBody>
 
                     {filteredStaffs.map((staff, index) => (
                         <TableRow key={index} className='cursor-pointer text-sm'>
-                            <TableCell className="p-1.5 px-4">
-                                {staff.firstName} {staff.lastName}
-                            </TableCell>
+                            {StaffColumns.map(column => {
 
-                            <TableCell className="p-1.5 px-4">
-                                {staff.email}
-                            </TableCell>
-                            <TableCell className="p-1.5 px-4">
-                                {staff.phone}
-                            </TableCell>
-                            <TableCell className="p-1.5 px-4">
-                                <Badge roles={staff.role.color} className='border-0 py-0.5 rounded-sm'>
-                                    {staff.role.name}
-                                </Badge>
-
-
-                            </TableCell>
+                                if (column.key === "role") {
+                                    return (
+                                        <TableCell key={column.key} className="p-1.5 px-4">
+                                            <Badge roles={staff.role.color} className='border-0 py-0.5 capitalize rounded-sm'>
+                                                {staff.role.name}
+                                            </Badge>
+                                        </TableCell>
+                                    )
+                                }
+                                return (
+                                    <TableCell key={column.key} className="p-1.5 px-4">
+                                        {typeof staff[column.key as keyof Staff] === 'object' ? JSON.stringify(staff[column.key as keyof Staff]) : String(staff[column.key as keyof Staff])}
+                                    </TableCell>
+                                )
+                            })}
                             <TableCell className="p-1.5 px-2">
                                 <div className='flex justify-end'>
-                                    <StaffListActions staff={staff} onChange={(staff) => {
-                                        if (staff) {
-                                            setCurrentStaff(staff)
-                                        }
-                                    }} deleteFunction={removeStaff} />
+                                    <StaffListActions
+                                        staff={staff}
+                                        onChange={(staff) => {
+                                            if (staff) {
+                                                setCurrentStaff(staff)
+                                            }
+                                        }}
+                                        deleteFunction={removeStaff}
+                                    />
                                 </div>
                             </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
-
             </Table>
 
             <StaffProfile staff={editOptions.currentStaff} onChange={editOptions.onChange} />

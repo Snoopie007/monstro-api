@@ -3,7 +3,7 @@ import { auth } from "./auth";
 import { decodeId } from "./libs/server-utils";
 
 export default auth(async (req) => {
-	console.log("middleware")
+
 	try {
 		const { pathname } = req.nextUrl;
 		const isLoggedin = !!req.auth;

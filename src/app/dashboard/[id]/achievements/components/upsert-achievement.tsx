@@ -1,7 +1,10 @@
 'use client'
 
-import { Sheet, Button, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter, SheetClose, ScrollArea } from '@/components/ui';
-import { Plus } from 'lucide-react';
+import {
+	Sheet, Button, SheetContent, SheetHeader, SheetTitle,
+	SheetTrigger, SheetFooter, SheetClose, ScrollArea, SheetFieldInput, SheetFieldLabel, SheetFieldSet, SheetSection
+} from '@/components/ui';
+
 import { z } from "zod";
 import { useState } from 'react'
 import { useForm } from 'react-hook-form';
@@ -22,10 +25,11 @@ const InputStyle = "border bg-transparent w-full rounded-[4px] text-sm text-whit
 
 export interface AddAchievementProps {
 	achievement: Achievement | undefined,
-	locationId: string
+	locationId: string,
+	children: React.ReactNode
 }
 
-export function UpsertAchivement({ achievement, locationId }: AddAchievementProps) {
+export function UpsertAchivement({ achievement, locationId, children }: AddAchievementProps) {
 	const [open, setOpen] = useState(false);
 	const { mutate } = useSWR(`/api/protected/achievements`);
 	const { data } = usePrograms(locationId);
@@ -69,140 +73,173 @@ export function UpsertAchivement({ achievement, locationId }: AddAchievementProp
 		<div>
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetTrigger asChild>
-					<Button variant={"foreground"} size={"xs"} >
-						{achievement ? (<span>Update Achievement</span>) : (<><span>+ Achievement</span></>)}
-					</Button>
+					{children}
 				</SheetTrigger>
 				<SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0">
-					<SheetHeader className="px-6 pt-4 pb-2 border-b">
-						{achievement ? (<SheetTitle>Update Achievement</SheetTitle>) : (<SheetTitle>Add a New Achievement</SheetTitle>)}
+					<SheetHeader className=" border-b">
+						<SheetTitle className='text-base font-semibold'>Update Achievement</SheetTitle>
 					</SheetHeader>
 					<ScrollArea className="h-[calc(100vh-150px)] w-full ">
 
 						<Form {...form}>
-							<form className='px-5 py-4' >
-								<fieldset>
-									<FormField
-										control={form.control}
-										name="name"
-										render={({ field }) => (
-											<FormItem className="mb-4">
-												<FormLabel>Achievement Name</FormLabel>
-												<FormControl>
-													<Input type='text' className={cn(InputStyle)} placeholder="Achievement Name" {...field} />
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-
-										)}
-									/>
-									<FormField
-										control={form.control}
-										name="badge"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Achievement Badge</FormLabel>
-												<FormControl>
-													<Input type='text' className={cn(InputStyle)} placeholder="Achievement Badge" {...field} />
-												</FormControl>
-
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-
-								</fieldset>
-								<fieldset>
-									<FormField
-										control={form.control}
-										name="points"
-										render={({ field }) => (
-											<FormItem className="mb-4">
-												<FormLabel>Points</FormLabel>
-												<FormControl>
-													<Input type='text' className={cn(InputStyle)} placeholder="Reward" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-
-										)}
-									/>
-								</fieldset>
-								{!achievement && (
-									<>
-
-										<fieldset>
+							<form className='' >
+								<SheetSection>
+									<SheetFieldSet>
+										<SheetFieldLabel>
+											<FormLabel>Achievement Name</FormLabel>
+										</SheetFieldLabel>
+										<SheetFieldInput>
 											<FormField
 												control={form.control}
-												name="actionCount"
+												name="name"
 												render={({ field }) => (
-													<FormItem className="mb-4">
-														<FormLabel>Action Count</FormLabel>
+													<FormItem>
 														<FormControl>
-															<Input type='text' className={cn(InputStyle)} placeholder="Action Count" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+															<Input type='text' className={cn(InputStyle)} placeholder="Achievement Name" {...field} />
 														</FormControl>
 														<FormMessage />
 													</FormItem>
+												)}
+											/>
+										</SheetFieldInput>
+									</SheetFieldSet>
+									<SheetFieldSet>
+										<SheetFieldLabel>
+											<FormLabel>Achievement Badge</FormLabel>
+										</SheetFieldLabel>
+										<SheetFieldInput>
+											<FormField
+												control={form.control}
+												name="badge"
+												render={({ field }) => (
+													<FormItem>
+														<FormControl>
+															<Input type='text' className={cn(InputStyle)} placeholder="Achievement Badge" {...field} />
+														</FormControl>
+														<FormMessage />
+													</FormItem>
+												)}
+											/>
+										</SheetFieldInput>
+									</SheetFieldSet>
+									<SheetFieldSet>
+										<SheetFieldLabel>
+											<FormLabel>Points</FormLabel>
+										</SheetFieldLabel>
+										<SheetFieldInput>
+											<FormField
+												control={form.control}
+												name="points"
+												render={({ field }) => (
+													<FormItem>
+														<FormControl>
+															<Input type='text' className={cn(InputStyle)} placeholder="Points" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+														</FormControl>
+														<FormMessage />
+													</FormItem>
+												)}
+											/>
+										</SheetFieldInput>
+									</SheetFieldSet>
+								</SheetSection>
+								{!achievement && (
+									<SheetSection>
 
-												)}
-											/>
-										</fieldset>
-										<fieldset>
-											<FormField
-												control={form.control}
-												name="action"
-												render={({ field }) => (
-													<FormItem className='flex-initial min-w-[30%]'>
-														<FormLabel>Action</FormLabel>
-														<Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field.value.toString()}>
-															<SelectTrigger className="w-full border rounded-sm bg-transparent font-normal border-white">
-																<SelectValue placeholder="Select a day" />
-															</SelectTrigger>
-															<SelectContent>
-																{actions.map((action: Action, index: number) => (
-																	<SelectItem key={index} value={action.id.toString()}>{action.name}</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-														<FormMessage />
-													</FormItem>
-												)}
-											/>
-										</fieldset>
-										<fieldset>
-											<FormField
-												control={form.control}
-												name="program"
-												render={({ field }) => (
-													<FormItem className='flex-initial min-w-[30%]'>
-														<FormLabel>Program</FormLabel>
-														<Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field.value.toString()}>
-															<SelectTrigger className="w-full border rounded-sm bg-transparent font-normal border-white">
-																<SelectValue placeholder="Select a Program" />
-															</SelectTrigger>
-															<SelectContent>
-																{data.programs?.map((program: Program, index: number) => (
-																	<SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
-														<FormMessage />
-													</FormItem>
-												)}
-											/>
-										</fieldset>
-									</>
+
+										<SheetFieldSet>
+											<SheetFieldLabel>
+												<FormLabel>Action</FormLabel>
+											</SheetFieldLabel>
+											<SheetFieldInput>
+												<FormField
+													control={form.control}
+													name="action"
+													render={({ field }) => (
+														<FormItem>
+															<Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field.value.toString()}>
+																<SelectTrigger className="w-full border rounded-sm bg-transparent font-normal border-white">
+																	<SelectValue placeholder="Select an action" />
+																</SelectTrigger>
+																<SelectContent>
+																	{actions.map((action: Action, index: number) => (
+																		<SelectItem key={index} value={action.id.toString()}>{action.name}</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+											</SheetFieldInput>
+										</SheetFieldSet>
+
+										<SheetFieldSet>
+											<SheetFieldLabel>
+												<FormLabel>Action Count</FormLabel>
+											</SheetFieldLabel>
+											<SheetFieldInput>
+												<FormField
+													control={form.control}
+													name="actionCount"
+													render={({ field }) => (
+														<FormItem>
+															<FormControl>
+																<Input type='number' className={cn(InputStyle)} placeholder="Action Count" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+															</FormControl>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+											</SheetFieldInput>
+										</SheetFieldSet>
+
+										<SheetFieldSet>
+											<SheetFieldLabel>
+												<FormLabel>Program</FormLabel>
+											</SheetFieldLabel>
+											<SheetFieldInput>
+												<FormField
+													control={form.control}
+													name="program"
+													render={({ field }) => (
+														<FormItem>
+															<Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field.value.toString()}>
+																<SelectTrigger className="w-full border rounded-sm bg-transparent font-normal border-white">
+																	<SelectValue placeholder="Select a program" />
+																</SelectTrigger>
+																<SelectContent>
+																	{data.programs?.map((program: Program, index: number) => (
+																		<SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+											</SheetFieldInput>
+										</SheetFieldSet>
+									</SheetSection>
 								)}
 							</form>
 						</Form>
 					</ScrollArea>
-					<SheetFooter className='border-t py-4 px-5'>
+					<SheetFooter className='border-t py-3 px-4'>
 						<SheetClose asChild>
-							<Button onClick={form.handleSubmit(submitForm)} className=" py-2.5 px-4 rounded-sm text-sm flex flex-row bg-white text-black hover:text-white h-auto">
-								{achievement ? (<span>Update</span>) : (<><Plus size={17} /> <span> Add</span></>)}
+							<Button
+								variant={"outline"} size={"xs"}
+							>
+								Close
 							</Button>
 						</SheetClose>
-
+						<SheetClose asChild>
+							<Button
+								onClick={form.handleSubmit(submitForm)}
+								variant={"foreground"} size={"xs"}
+							>
+								Create
+							</Button>
+						</SheetClose>
 					</SheetFooter>
 
 

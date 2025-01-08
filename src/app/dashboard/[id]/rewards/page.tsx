@@ -12,13 +12,14 @@ import {
 } from "@/components/ui";
 import { Reward } from "@/types";
 import Loading from "@/components/loading";
+import ErrorComponent from "@/components/error";
 
 export default function Rewards(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { rewards, isLoading, error } = useRewards(params.id)
-    if (isLoading) return <Loading />
-    if (error) return <div>Error</div>
 
+    if (isLoading) return <Loading />
+    if (error) return <ErrorComponent error={error} />
     return (
         <TablePage>
             <TablePageHeader>

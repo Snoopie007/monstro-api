@@ -22,11 +22,8 @@ export default function StaffsPage(props: StaffsPageProps) {
     const { staffs, isLoading, error } = useStaffs(params.id);
     const { roles, isLoading: isRolesLoading, error: isRolesError } = useRoles(params.id);
 
-    if (error) {
-        return (
-            <ErrorComponent error={error} />
-        )
-    }
+    if (isLoading) return <Loading />
+    if (error) return <ErrorComponent error={error} />
 
     return (
         <TablePage>
@@ -55,7 +52,7 @@ export default function StaffsPage(props: StaffsPageProps) {
                 </TablePageHeaderSection>
             </TablePageHeader>
             <TablePageContent>
-                {isLoading ? (<Loading />) : (<StaffList staffs={staffs} locationId={params.id} />)}
+                <StaffList staffs={staffs} locationId={params.id} />
             </TablePageContent>
             <TablePageFooter>
                 {!isLoading &&
