@@ -31,13 +31,13 @@ export function MemberTable<TData, TValue>({
 }: { columns: number, table: TansackTable<Member>, isLoading: boolean }) {
 
     return (
-        <Table >
+        <Table className="w-auto border-l border-r border-b border-foreground/5" >
             <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id} className="align-middle text-sm  bg-foreground/5">
                         {headerGroup.headers.map((header) => {
                             return (
-                                <TableHead key={header.id} className="h-auto py-1.5  text-foreground" >
+                                <TableHead key={header.id} className="h-auto border border-foreground/5  py-1  text-foreground" >
                                     {header.isPlaceholder ? null : flexRender(
                                         header.column.columnDef.header,
                                         header.getContext()
@@ -54,7 +54,7 @@ export function MemberTable<TData, TValue>({
                         {table.getHeaderGroups()[0].headers.map((header, i) => {
                             return (
                                 <TableCell key={i}>
-                                    <Skeleton className="w-full h-4 bg-gray-100" />
+                                    <Skeleton className="w-full h-4 g-gray-100" />
                                 </TableCell>
                             )
                         })}
@@ -65,7 +65,7 @@ export function MemberTable<TData, TValue>({
                             table.getRowModel().rows.map((row) => (
                                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} className="" >
+                                        <TableCell key={cell.id} className="border border-foreground/5 py-1" >
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
 
                                         </TableCell>

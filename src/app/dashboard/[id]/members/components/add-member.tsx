@@ -80,7 +80,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button size={"sm"} variant={"foreground"} className='h-auto py-1 text-xs rounded-sm border'>
+                <Button size={"sm"} variant={"foreground"} className='h-auto py-1 text-xs rounded-xs border'>
                     + Member
                 </Button>
             </SheetTrigger>

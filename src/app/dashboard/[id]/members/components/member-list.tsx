@@ -21,6 +21,10 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { debounce } from "@tiptap-pro/extension-table-of-contents";
 import ImportMember from "./import-member";
 import { Separator } from "@/components/ui";
+import { TablePageHeaderTitle } from "@/components/ui/table-page";
+import { TablePageContent, TablePageHeaderSection } from "@/components/ui/table-page";
+import { TablePageFooter, TablePage } from "@/components/ui/table-page";
+import { TablePageHeader } from "@/components/ui/table-page";
 
 
 export function MemberList({ params, stripeKey }: { params: { id: string }, stripeKey: string | null }) {
@@ -85,9 +89,10 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
     }
 
     return (
-        <div className="flex flex-col w-full h-full">
-            <div className="flex flex-row items-center flex-initial gap-4 p-2">
-                <div className="min-w-[350px]">
+        <TablePage>
+            <TablePageHeader>
+                <TablePageHeaderTitle>Signed Contracts</TablePageHeaderTitle>
+                <TablePageHeaderSection>
                     <Input
                         placeholder="Find a member..."
                         // value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
@@ -98,48 +103,47 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
                         }}
                         className="border text-sm h-auto py-1 border-foreground/10 rounded-xs"
                     />
-                </div>
-                <CreateMember locationId={params.id} stripeKey={stripeKey} />
-                <ImportMember locationId={params.id} />
-            </div>
 
-            <div className="flex flex-col flex-1 border-y border-foreground/5">
+                    <CreateMember locationId={params.id} stripeKey={stripeKey} />
+                    <ImportMember locationId={params.id} />
+                </TablePageHeaderSection>
+            </TablePageHeader>
+            <TablePageContent>
                 <MemberTable table={table} isLoading={isLoading} columns={columns.length} />
-            </div>
-            <div className="flex-initial h-[35px] py-2 ">
-                <div className="flex gap-1 items-center h-full text-xs">
+            </TablePageContent>
+            <TablePageFooter>
 
-                    <div className="flex gap-2 items-center  p-2">
-                        <button
-                            className="text-foreground/50 border-foreground/50 p-1 border rounded-xs hover:text-indigo-600 hover:border-indigo-600 cursor-pointer"
-                            onClick={() => table.previousPage()}
-                            disabled={!table.getCanPreviousPage()}
-                        >
-                            <ChevronLeftIcon size={14} />
-                        </button>
-                        <span>Page</span>
-                        <span>
-                            <input type="number" value={page + 1} onChange={(e) => setPage(Number(e.target.value) - 1)}
-                                className="w-10 py-0.5 text-center border border-foreground/50 text-xs rounded-xs" />
-                        </span>
-                        <span>
-                            of {totalPages}
-                        </span>
-                        <button
+                <div className="flex gap-2 items-center p-2">
+                    <button
+                        className="text-foreground/50 border-foreground/50 p-1 border rounded-xs hover:text-indigo-600 hover:border-indigo-600 cursor-pointer"
+                        onClick={() => table.previousPage()}
+                        disabled={!table.getCanPreviousPage()}
+                    >
+                        <ChevronLeftIcon size={14} />
+                    </button>
+                    <span>Page</span>
+                    <span>
+                        <input type="number" value={page + 1} onChange={(e) => setPage(Number(e.target.value) - 1)}
+                            className="w-10 py-0.5 text-center border border-foreground/50 text-xs rounded-xs" />
+                    </span>
+                    <span>
+                        of {totalPages}
+                    </span>
+                    <button
 
-                            className="text-foreground/50 border-foreground/50 p-1 border rounded-xs hover:text-indigo-600 hover:border-indigo-600 cursor-pointer"
-                            onClick={() => table.nextPage()}
-                            disabled={!table.getCanNextPage()}
-                        >
-                            <ChevronRightIcon size={14} />
-                        </button>
-                    </div>
-                    <Separator orientation="vertical" />
-                    <div className="flex gap-2 items-center px-2">
-                        Total members: {data?.count}
-                    </div>
+                        className="text-foreground/50 border-foreground/50 p-1 border rounded-xs hover:text-indigo-600 hover:border-indigo-600 cursor-pointer"
+                        onClick={() => table.nextPage()}
+                        disabled={!table.getCanNextPage()}
+                    >
+                        <ChevronRightIcon size={14} />
+                    </button>
                 </div>
-            </div>
-        </div>
+                <Separator orientation="vertical" className="bg-foreground/10" />
+                <div className=" px-2">
+                    Total members: {data?.count}
+                </div>
+            </TablePageFooter>
+        </TablePage>
+
     );
 }

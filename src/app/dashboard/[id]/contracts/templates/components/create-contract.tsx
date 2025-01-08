@@ -38,8 +38,9 @@ export function CreateContract({ locationId }: { locationId: string }) {
 
 
     return (
-        <Button variant={"foreground"} size={"sm"} className={cn("children:hidden rounded-sm", { "children:inline-block": loading })} onClick={createContract}>
-            <Icon name="LoaderCircle" className="animate-spin" />
+        <Button variant={"foreground"} size={"xs"} className={cn("children:hidden rounded-sm", { "children:inline-block": loading })}
+            onClick={createContract}>
+            <Icon name="LoaderCircle" size={14} className="animate-spin mr-1" />
             Create
         </Button>
     )

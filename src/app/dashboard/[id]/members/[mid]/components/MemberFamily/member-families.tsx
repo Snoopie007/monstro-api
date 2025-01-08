@@ -6,6 +6,8 @@ import {
     CardContent,
     CardTitle,
     Avatar,
+    AvatarImage,
+    AvatarFallback,
 } from "@/components/ui"
 import AddFamilyMember from "./add-family-member"
 import { useMember } from "../../providers/MemberContext"
@@ -43,7 +45,14 @@ export function MemberFamilies({ params }: MemberFamiliesProps) {
                     {DummyData.map((member, i) => (
                         <li key={i} className='border-b last-of-type:border-b-0 flex flex-row gap-4   py-3 px-4 items-center'>
                             <div className="flex flex-row gap-4 items-center">
-
+                                <div>
+                                    <Avatar className="w-20 h-20 rounded-full mx-auto">
+                                        <AvatarImage src={member.image || ""} />
+                                        <AvatarFallback className="text-4xl uppercase text-muted bg-foreground font-medium">
+                                            {member.name.charAt(0)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </div>
                                 <div className="flex flex-col">
                                     <p className="text-sm font-medium">{member.name}</p>
                                     <p className="text-sm text-muted-foreground">{member.relationship}</p>

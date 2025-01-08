@@ -5,10 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import React, { useEffect, useRef, useState } from 'react'
 import Papa from 'papaparse';
 
-import { FileIcon } from 'lucide-react';
+import { FileIcon, FileUp } from 'lucide-react';
 import { cn, sleep } from '@/libs/utils';
 
-import { Table, TableHead, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui';
+import { Table, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'react-toastify';
 
@@ -70,7 +70,9 @@ export default function ImportMembers({ locationId }: { locationId: string }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant={"foreground"} size={"sm"} className='h-auto py-1 text-xs rounded-sm border'>Import</Button>
+                <Button variant={"ghost"} size={"icon"} className='h-auto py-1 text-xs rounded-xs border'>
+                    <FileUp size={16} />
+                </Button>
             </DialogTrigger>
             <DialogContent className='w-full max-w-4xl rounded-xs p-0  gap-0'>
                 <DialogHeader className='space-y-1 px-4 py-2 '>

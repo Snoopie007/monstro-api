@@ -18,6 +18,7 @@ import { formatDateTime } from '@/libs/utils';
 import Loading from '@/components/loading';
 import Link from 'next/link';
 import { ChevronRight } from "lucide-react";
+import { TablePage, TablePageContent, TablePageFooter, TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle } from "@/components/ui/table-page";
 
 
 export default function MemberContractsPage(props: { params: Promise<{ id: string }> }) {
@@ -43,28 +44,24 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
     }
     if (contracts) {
         return (
-            <div className='flex flex-col gap-0 h-full'>
-                <div className='flex flex-row flex-initial justify-start items-center gap-2 '>
-                    <div className="border-r border-foreground/10 p-2.5">
-                        <h6 className='text-sm font-bold'>Signed Contracts</h6>
-
-                    </div>
-                    <div>
+            <TablePage>
+                <TablePageHeader>
+                    <TablePageHeaderTitle>Signed Contracts</TablePageHeaderTitle>
+                    <TablePageHeaderSection>
                         <Link
                             href={`/dashboard/${params.id}/contracts/templates`}
                             className='bg-foreground text-background  h-auto inline-flex flex-row items-center  px-2 py-1 rounded-xs font-bold text-xs'
                         >
                             View Templates
                         </Link>
-
-                    </div>
-                </div>
-                <div className='flex-1 border-y border-foreground/10'>
-                    <Table className=" w-full ">
-                        <TableHeader className=" text-xs">
-                            <TableRow className='' >
+                    </TablePageHeaderSection>
+                </TablePageHeader>
+                <TablePageContent>
+                    <Table className=" w-auto border-r border-b border-foreground/10 ">
+                        <TableHeader className=" text-xs  border-foreground/10">
+                            <TableRow className='bg-foreground/10 ' >
                                 {["Title", "Program", "Plan", "Member", "Signed", "Download"].map((title) => (
-                                    <TableHead key={title} className="font-semibold h-auto py-3 text-xs" >
+                                    <TableHead key={title} className="font-semibold text-foreground h-auto py-2 border border-foreground/10 text-xs" >
                                         {title}
                                     </TableHead>
                                 ))}
@@ -74,27 +71,27 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                             {contracts.length > 0 ? (
                                 <>
                                     {contracts.map((contract: any, index: number) => (
-                                        <TableRow key={index} className='cursor-pointer'>
-                                            <TableCell className="text-sm py-2  ">
+                                        <TableRow key={index} className='cursor-pointer '>
+                                            <TableCell className="text-sm py-1 border border-foreground/10">
                                                 {contract.contractTemplate.title}
                                             </TableCell>
-                                            <TableCell className="text-sm  py-2  ">
+                                            <TableCell className="text-sm  py-1 border border-foreground/10">
                                                 {contract.plan.program.name}
                                             </TableCell>
 
-                                            <TableCell className="text-sm  py-2 ">
+                                            <TableCell className="text-sm  py-1 border border-foreground/10">
                                                 {contract.plan.name}
                                             </TableCell>
 
-                                            <TableCell className="text-sm  py-2  ">
+                                            <TableCell className="text-sm  py-1 border border-foreground/10">
                                                 {contract.member.firstName} {contract.member.lastName}
                                             </TableCell>
 
-                                            <TableCell className="text-sm py-2 ">
+                                            <TableCell className="text-sm py-1 border border-foreground/10">
                                                 {formatDateTime(contract.created)}
                                             </TableCell>
 
-                                            <TableCell className="text-sm  py-2  ">
+                                            <TableCell className="text-sm flex flex-row items-center justify-center  py-1 border border-foreground/10">
                                                 <Button variant={"ghost"} onClick={() => downloadContract(contract.id)} className="h-auto p-1">
                                                     <Icon name="Download" />
                                                 </Button>
@@ -108,18 +105,16 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                                         <p className=' text-center'>No Contracts Found</p>
                                     </TableCell>
                                 </TableRow>
-
                             )}
 
                         </TableBody>
                     </Table>
-                </div>
-                <div className='flex-initial p-2'>
-                    <div className='flex flex-row justify-between items-center  text-sm'>
-                        <p>Total Contracts: {contracts.length}</p>
-                    </div>
-                </div>
-            </div>
+                </TablePageContent>
+                <TablePageFooter>
+                    <p className="text-xs">Total Contracts: {contracts.length}</p>
+                </TablePageFooter>
+            </TablePage>
+
         )
     }
 }
