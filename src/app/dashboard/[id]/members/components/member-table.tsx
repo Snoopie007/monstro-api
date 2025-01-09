@@ -31,13 +31,13 @@ export function MemberTable<TData, TValue>({
 }: { columns: number, table: TansackTable<Member>, isLoading: boolean }) {
 
     return (
-        <Table className="w-auto border-l border-r border-b border-foreground/5" >
+        <Table className="w-auto  border-r border-b border-foreground/5" >
             <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id} className="align-middle text-sm  bg-foreground/5">
                         {headerGroup.headers.map((header) => {
                             return (
-                                <TableHead key={header.id} className="h-auto border border-foreground/5  py-1  text-foreground" >
+                                <TableHead key={header.id} className="h-auto border-l border-foreground/5  py-1  text-foreground" >
                                     {header.isPlaceholder ? null : flexRender(
                                         header.column.columnDef.header,
                                         header.getContext()

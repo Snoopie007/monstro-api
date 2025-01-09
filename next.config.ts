@@ -31,7 +31,7 @@ const nextConfig: NextConfig = {
   serverRuntimeConfig: {
     maxHeaderSize: 32 * 1024, // 32KB
   },
-  // skipTrailingSlashRedirect: true,
+  skipTrailingSlashRedirect: true,
   output: 'standalone'
 };
 

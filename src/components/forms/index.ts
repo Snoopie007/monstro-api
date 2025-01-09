@@ -5,7 +5,7 @@ export * from "./input";
 export * from "./textarea";
 export * from "./select";
 export * from "./datetime-picker";
-export * from "./file-uploader";
+export * from "../../hooks/use-file-uploader";
 export * from "./form";
 export * from "./tag-input";
 export * from "./label";

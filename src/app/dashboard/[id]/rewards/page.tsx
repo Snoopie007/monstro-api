@@ -1,10 +1,10 @@
 'use client';
-import { use } from "react";
+import { use, useMemo, useState } from "react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui"
+import { Avatar, AvatarFallback, AvatarImage, Button, Skeleton } from "@/components/ui"
 import Link from 'next/link'
 import { useRewards } from '@/hooks/use-rewards'
-import { UpsertReward } from "./components";
+import { RewardColumns, UpsertReward } from "./components";
 
 import {
     TablePage, TablePageHeaderSection, TablePageHeaderTitle, TablePageHeader, TablePageContent,
@@ -13,69 +13,109 @@ import {
 import { Reward } from "@/types";
 import Loading from "@/components/loading";
 import ErrorComponent from "@/components/error";
+import { ColumnFiltersState, flexRender, getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
 
 export default function Rewards(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { rewards, isLoading, error } = useRewards(params.id)
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+    const [currentReward, setCurrentReward] = useState<Reward | undefined>(undefined);
 
-    if (isLoading) return <Loading />
     if (error) return <ErrorComponent error={error} />
+
+    const columns = useMemo(() => RewardColumns(params.id), [params.id])
+    const table = useReactTable<Reward>({
+        data: !isLoading && rewards ? rewards : [], // Only use data when it's available
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        onColumnFiltersChange: setColumnFilters,
+        getSortedRowModel: getSortedRowModel(),
+        state: {
+            columnFilters
+        },
+    });
+
     return (
-        <TablePage>
-            <TablePageHeader>
-                <TablePageHeaderTitle>Rewards</TablePageHeaderTitle>
-                <TablePageHeaderSection>
-                    <UpsertReward locationId={params.id} reward={undefined} />
-                </TablePageHeaderSection>
-            </TablePageHeader>
-            <TablePageContent>
-                <Table className=" w-auto border-r border-b border-foreground/10 ">
-                    <TableHeader className=" text-xs  ">
-                        <TableRow className='bg-foreground/10 ' >
-                            {["Name", "Total Claimed"].map((title) => (
-                                <TableHead key={title} className="font-semibold text-foreground h-auto py-2 border border-foreground/10 text-xs" >
-                                    {title}
-                                </TableHead>
+        <>
+
+            <UpsertReward locationId={params.id} reward={currentReward} setCurrentReward={setCurrentReward} />
+            <TablePage>
+                <TablePageHeader>
+                    <TablePageHeaderTitle>Rewards</TablePageHeaderTitle>
+                    <TablePageHeaderSection>
+                        <Button variant={"foreground"} size={"xs"}
+                            onClick={() => setCurrentReward({
+                                name: "",
+                                requiredPoints: 0,
+                                limitPerMember: 0,
+                                images: [],
+                                description: "",
+                                icon: "",
+                            })}
+                        >
+                            + Reward
+                        </Button>
+                    </TablePageHeaderSection>
+                </TablePageHeader>
+                <TablePageContent>
+                    <Table className="w-auto border-r border-b border-foreground/5" >
+                        <TableHeader>
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id} className="align-middle text-sm  bg-foreground/5">
+                                    {headerGroup.headers.map((header) => {
+                                        return (
+                                            <TableHead key={header.id} className="h-auto  border-foreground/5  py-1  text-foreground" >
+                                                {header.isPlaceholder ? null : flexRender(
+                                                    header.column.columnDef.header,
+                                                    header.getContext()
+                                                )}
+                                            </TableHead>
+                                        )
+                                    })}
+                                </TableRow>
                             ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {rewards.length > 0 ? (
-                            <>
-                                {rewards.map((reward: Reward, index: number) => (
-                                    <TableRow key={index} className='cursor-pointer '>
-                                        <TableCell className="text-sm py-2 border border-foreground/10">
-                                            <Link href={`/dashboard/${params.id}/rewards/${reward.id}`} className="flex flex-row items-center">
-                                                <Avatar className="group-hover:bg-violet-600 max-w-full flex items-center justify-center text-black-100 w-5 h-5 mr-2 bg-gray-200 rounded-full">
-                                                    <AvatarImage
-                                                        src={reward.images[0]}
-                                                    />
-                                                    <AvatarFallback className=" bg-gray-200 text-gray-400 text-xs ">
-                                                        {reward.name.charAt(0)}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <span className="text-sm">
-                                                    {reward.name}
-                                                </span>
-                                            </Link>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow >
+                                    {table.getHeaderGroups()[0].headers.map((header, i) => {
+                                        return (
+                                            <TableCell key={i}>
+                                                <Skeleton className="w-full h-4 bg-gray-100" />
+                                            </TableCell>
+                                        )
+                                    })}
+                                </TableRow>
+                            ) : (
+                                <>
+                                    {table.getRowModel().rows?.length ? (
+                                        table.getRowModel().rows.map((row) => (
+                                            <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} >
+                                                {row.getVisibleCells().map((cell) => (
+                                                    <TableCell key={cell.id} className="border border-foreground/5 py-1.5" >
+                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
 
-                                        </TableCell>
+                                                    </TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={columns.length} className="h-6 w-full font-medium text-center">
+                                                No rewards found.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </>
+                            )}
 
-                                    </TableRow>
-                                ))}
-                            </>
-                        ) : (
-                            <TableRow >
-                                <TableCell colSpan={7} className="text-sm py-4 px-6 font-roboto">
-                                    <p className=' text-center'>No Rewards Found</p>
-                                </TableCell>
-                            </TableRow>
-                        )}
+                        </TableBody>
+                    </Table>
 
-                    </TableBody>
-                </Table>
-            </TablePageContent>
-        </TablePage>
+                </TablePageContent>
+            </TablePage>
+        </>
 
     )
 }

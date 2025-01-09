@@ -7,7 +7,7 @@ export interface Reward {
 	images: Array<string>,
 	icon: string,
 	limitPerMember: number,
-	achievementId: number,
-	achievement: Achievement,
+	achievementId?: number,
+	achievement?: Achievement,
 	requiredPoints: number
 }
