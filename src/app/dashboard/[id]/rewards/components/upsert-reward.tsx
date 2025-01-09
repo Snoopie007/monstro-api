@@ -229,9 +229,16 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 								</SheetFieldSet>
 							</SheetSection>
 							<SheetSection>
+								<div className='flex flex-col'>
+									<div className='text-sm font-semibold'>Upload Images for Reward</div>
+									<div className='text-xs text-gray-500'>
+										Upload up to 5 images for the reward The proposed size is 800px * 800px. No bigger than 1 MB. Only PNG, JPG, JPEG are allowed..
+									</div>
+								</div>
 								<RewardImages
 									value={form.getValues("images")}
-									onFilesChange={setRewardImages} />
+									onFilesChange={setRewardImages}
+								/>
 							</SheetSection>
 
 

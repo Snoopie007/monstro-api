@@ -1,9 +1,9 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui";
-import { Reward } from "@/types";
+import { Achievement } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 
-export const RewardColumns = (locationId: string): ColumnDef<Reward, any>[] => [
+export const AchievementColumns = (locationId: string): ColumnDef<Achievement, any>[] => [
 
     {
         accessorKey: "name",
@@ -17,7 +17,7 @@ export const RewardColumns = (locationId: string): ColumnDef<Reward, any>[] => [
 
                     <Avatar className="group-hover:bg-violet-600 max-w-full flex items-center justify-center text-black-100 w-5 h-5 mr-2 bg-gray-200 rounded-full">
                         <AvatarImage
-                            src={reward.images[0]}
+                            src={reward.badge}
                         />
                         <AvatarFallback className=" bg-gray-200 text-gray-400 text-xs ">
                             {reward.name.charAt(0)}

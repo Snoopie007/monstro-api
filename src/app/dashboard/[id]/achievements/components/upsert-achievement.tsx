@@ -6,7 +6,7 @@ import {
 } from '@/components/ui';
 
 import { z } from "zod";
-import { useState } from 'react'
+import { SetStateAction, Dispatch, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Achievement, Action, Program } from '@/types';
@@ -21,19 +21,19 @@ import useSWR from 'swr';
 import { AchievementSchema } from '../schemas';
 
 
-const InputStyle = "border bg-transparent w-full rounded-[4px] text-sm text-white py-2 px-4 border-white h-auto  font-roboto";
 
 export interface AddAchievementProps {
 	achievement: Achievement | undefined,
 	locationId: string,
-	children: React.ReactNode
+	setCurrentAchievement: Dispatch<SetStateAction<Achievement | undefined>>
 }
 
-export function UpsertAchivement({ achievement, locationId, children }: AddAchievementProps) {
-	const [open, setOpen] = useState(false);
+export function UpsertAchivement({ achievement, locationId }: AddAchievementProps) {
+
 	const { mutate } = useSWR(`/api/protected/achievements`);
 	const { data } = usePrograms(locationId);
 	const { actions } = useActions(locationId);
+
 	const form = useForm<z.infer<typeof AchievementSchema>>({
 		resolver: zodResolver(AchievementSchema),
 		defaultValues: {
@@ -49,21 +49,16 @@ export function UpsertAchivement({ achievement, locationId, children }: AddAchie
 	})
 
 	async function submitForm(v: z.infer<typeof AchievementSchema>) {
-		const body = {
-			...v
-		};
+		const body = v;
 		try {
-			if (achievement) {
+			if (achievement?.id) {
 				// Await the updateProgramLevel call
 				await updateAchievment(Number(v.id), body, locationId);
-				setOpen(false)
-				toast.success("Achievement Updated");
 			} else {
-				// Await the addProgramLevel call
 				await addAchievment(body, locationId);
-				setOpen(false)
-				toast.success("Achievement Added");
 			}
+			await mutate();
+			toast.success("Achievement Saved");
 		} catch (error) {
 			console.error("Error:", error); // Add logging for debugging
 			toast.error("Something went wrong, please try again later");
@@ -71,10 +66,12 @@ export function UpsertAchivement({ achievement, locationId, children }: AddAchie
 	};
 	return (
 		<div>
-			<Sheet open={open} onOpenChange={setOpen}>
-				<SheetTrigger asChild>
-					{children}
-				</SheetTrigger>
+			<Sheet open={!!achievement} onOpenChange={(setOpen) => {
+				if (!setOpen) {
+					form.reset();
+				}
+			}}>
+
 				<SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0">
 					<SheetHeader className=" border-b">
 						<SheetTitle className='text-base font-semibold'>Update Achievement</SheetTitle>
@@ -95,7 +92,7 @@ export function UpsertAchivement({ achievement, locationId, children }: AddAchie
 												render={({ field }) => (
 													<FormItem>
 														<FormControl>
-															<Input type='text' className={cn(InputStyle)} placeholder="Achievement Name" {...field} />
+															<Input type='text' className={cn()} placeholder="Achievement Name" {...field} />
 														</FormControl>
 														<FormMessage />
 													</FormItem>
@@ -114,7 +111,7 @@ export function UpsertAchivement({ achievement, locationId, children }: AddAchie
 												render={({ field }) => (
 													<FormItem>
 														<FormControl>
-															<Input type='text' className={cn(InputStyle)} placeholder="Achievement Badge" {...field} />
+															<Input type='text' className={cn()} placeholder="Achievement Badge" {...field} />
 														</FormControl>
 														<FormMessage />
 													</FormItem>
@@ -133,7 +130,7 @@ export function UpsertAchivement({ achievement, locationId, children }: AddAchie
 												render={({ field }) => (
 													<FormItem>
 														<FormControl>
-															<Input type='text' className={cn(InputStyle)} placeholder="Points" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+															<Input type='text' className={cn()} placeholder="Points" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
 														</FormControl>
 														<FormMessage />
 													</FormItem>
@@ -184,7 +181,7 @@ export function UpsertAchivement({ achievement, locationId, children }: AddAchie
 													render={({ field }) => (
 														<FormItem>
 															<FormControl>
-																<Input type='number' className={cn(InputStyle)} placeholder="Action Count" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+																<Input type='number' className={cn()} placeholder="Action Count" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
 															</FormControl>
 															<FormMessage />
 														</FormItem>

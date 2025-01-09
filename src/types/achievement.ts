@@ -14,6 +14,6 @@ export type Achievement = {
     badge: string,
     points: number,
     action: Action[] | [],
-    program: Program,
+    program?: Program,
     actionCount: number
 }

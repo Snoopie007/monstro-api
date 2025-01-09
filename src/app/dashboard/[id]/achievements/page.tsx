@@ -1,103 +1,132 @@
 'use client'
-import React, { use } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import React, { use, useState } from 'react';
 
-import Link from 'next/link'
 import { useAchievements } from '@/hooks/use-achievements'
 import { UpsertAchivement } from './components'
 import {
     TablePage, TablePageHeaderSection, TablePageHeaderTitle, TablePageHeader, TablePageContent,
     TableCell, Table, TableHead, TableHeader, TableRow, TableBody,
     TablePageFooter,
-    Button
+    Button,
+    Skeleton
 } from "@/components/ui";
-import Loading from '@/components/loading';
 import { Input } from '@/components/forms';
 import { Achievement } from '@/types';
 import ErrorComponent from '@/components/error';
+import { useReactTable } from '@tanstack/react-table';
+import { getCoreRowModel } from '@tanstack/react-table';
+import { AchievementColumns } from './components/achievement-columns';
+import { flexRender } from '@tanstack/react-table';
 
 export default function Achievements(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { achievements, isLoading, error } = useAchievements(params.id);
+    const [currentAchievement, setCurrentAchievement] = useState<Achievement | undefined>(undefined);
 
-    if (isLoading) return <Loading />
+    const columns = AchievementColumns(params.id);
+    const table = useReactTable({
+        data: achievements,
+        columns,
+        getCoreRowModel: getCoreRowModel(),
+    });
+
+
     if (error) return <ErrorComponent error={error} />
 
-    return (
-        <TablePage>
-            <TablePageHeader>
-                <TablePageHeaderTitle>Achievements</TablePageHeaderTitle>
-                <TablePageHeaderSection>
-                    <Input
-                        placeholder="Find a member..."
-                        // value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                            const value = event.target.value;
-                            // table.getColumn("name")?.setFilterValue(value);
 
-                        }}
-                        className="border text-xs h-auto py-1 border-foreground/10 rounded-xs"
-                    />
-                    <UpsertAchivement achievement={undefined} locationId={params.id} >
-                        <Button variant={"foreground"} size={"xs"} >
+    return (
+        <>
+            <UpsertAchivement achievement={currentAchievement} locationId={params.id} setCurrentAchievement={setCurrentAchievement} />
+            <TablePage>
+                <TablePageHeader>
+                    <TablePageHeaderTitle>Achievements</TablePageHeaderTitle>
+                    <TablePageHeaderSection>
+                        <Input
+                            placeholder="Find a achievement..."
+                            // value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+                            onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                                const value = event.target.value;
+                                // table.getColumn("name")?.setFilterValue(value);
+
+                            }}
+                            className="border text-xs h-auto py-1 border-foreground/10 rounded-xs"
+                        />
+
+
+                        <Button variant={"foreground"} size={"xs"} onClick={() => setCurrentAchievement({
+                            name: "",
+                            badge: "",
+                            points: 0,
+                            action: [],
+                            actionCount: 0,
+                        })}>
                             + Achievement
                         </Button>
-                    </UpsertAchivement>
-                </TablePageHeaderSection>
-            </TablePageHeader>
-            <TablePageContent>
-                <Table className=" w-auto border-r border-b border-foreground/10 ">
-                    <TableHeader className=" text-xs  ">
-                        <TableRow className='bg-foreground/10 ' >
-                            {["Name", "Total Achieved"].map((title) => (
-                                <TableHead key={title} className="font-semibold text-foreground h-auto py-2 border border-foreground/10 text-xs" >
-                                    {title}
-                                </TableHead>
+                    </TablePageHeaderSection>
+                </TablePageHeader>
+                <TablePageContent>
+                    <Table className="w-auto border-r border-b border-foreground/5" >
+                        <TableHeader>
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id} className="align-middle text-sm  bg-foreground/5">
+                                    {headerGroup.headers.map((header) => {
+                                        return (
+                                            <TableHead key={header.id} className="h-auto  border-foreground/5  py-1  text-foreground" >
+                                                {header.isPlaceholder ? null : flexRender(
+                                                    header.column.columnDef.header,
+                                                    header.getContext()
+                                                )}
+                                            </TableHead>
+                                        )
+                                    })}
+                                </TableRow>
                             ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {achievements.length > 0 ? (
-                            <>
-                                {achievements.map((achievement: Achievement, index: number) => (
-                                    <TableRow key={index} className='cursor-pointer '>
-                                        <TableCell className="text-sm py-2 border border-foreground/10">
-                                            <Link href={`/dashboard/${params.id}/achievements/${achievement.id}`} className="flex flex-row items-center">
-                                                <Avatar className="group-hover:bg-violet-600 max-w-full flex items-center justify-center text-black-100 w-5 h-5 mr-2 bg-gray-200 rounded-full">
-                                                    <AvatarImage
-                                                        src={achievement.badge}
-                                                    />
-                                                    <AvatarFallback className=" bg-gray-200 text-gray-400 text-xs ">
-                                                        {achievement.name.charAt(0)}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <span className="text-sm">
-                                                    {achievement.name}
-                                                </span>
-                                            </Link>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow >
+                                    {table.getHeaderGroups()[0].headers.map((header, i) => {
+                                        return (
+                                            <TableCell key={i}>
+                                                <Skeleton className="w-full h-4 bg-gray-100" />
+                                            </TableCell>
+                                        )
+                                    })}
+                                </TableRow>
+                            ) : (
+                                <>
+                                    {table.getRowModel().rows?.length ? (
+                                        table.getRowModel().rows.map((row) => (
+                                            <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} >
+                                                {row.getVisibleCells().map((cell) => (
+                                                    <TableCell key={cell.id} className="border border-foreground/5 py-1.5" >
+                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
 
-                                        </TableCell>
+                                                    </TableCell>
+                                                ))}
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={columns.length} className="h-6 w-full font-medium text-center">
+                                                No rewards found.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </>
+                            )}
 
-                                    </TableRow>
-                                ))}
-                            </>
-                        ) : (
-                            <TableRow >
-                                <TableCell colSpan={7} className="text-sm py-4 px-6 font-roboto">
-                                    <p className=' text-center'>No Achievements Found</p>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
+                        </TableBody>
+                    </Table>
+                </TablePageContent>
+                <TablePageFooter>
+                    <div className='p-2'>
+                        Showing {achievements && achievements.length} achievements
+                    </div>
+                </TablePageFooter>
 
-                </Table>
-            </TablePageContent>
-            <TablePageFooter>
-                <div className='p-2'>
-                    Showing {achievements.length} achievements
-                </div>
-            </TablePageFooter>
-        </TablePage>
+            </TablePage>
 
+        </>
     )
 }
