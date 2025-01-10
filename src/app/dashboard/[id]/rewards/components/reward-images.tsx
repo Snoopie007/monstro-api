@@ -63,22 +63,24 @@ export function RewardImages({ value, onFilesChange }: RewardImagesProps) {
                     <div className='text-sm font-medium'>
                         Preview
                     </div>
-                    {previews.map((url: string) => (
-                        <div key={url} className='h-24 w-24   relative '>
-                            <div className='absolute -top-1.5 -right-1.5 cursor-pointer' onClick={() => {
-                                handleRemoveImage(url)
-                            }}>
-                                <XCircle className='h-4 w-4 fill-red-500 stroke-foreground' />
+                    <div className='flex flex-row gap-2 flex-wrap'>
+                        {previews.map((url: string) => (
+                            <div key={url} className='h-24 w-24   relative '>
+                                <div className='absolute -top-1.5 -right-1.5 cursor-pointer' onClick={() => {
+                                    handleRemoveImage(url)
+                                }}>
+                                    <XCircle className='h-4 w-4 fill-red-500 stroke-foreground' />
+                                </div>
+                                <Image
+                                    src={url}
+                                    alt="reward gallery"
+                                    className='object-contain rounded-sm  -z-10'
+                                    fill
+                                    unoptimized
+                                />
                             </div>
-                            <Image
-                                src={url}
-                                alt="reward gallery"
-                                className='object-contain rounded-sm  -z-10'
-                                fill
-                                unoptimized
-                            />
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
