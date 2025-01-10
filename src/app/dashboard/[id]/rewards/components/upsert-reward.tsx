@@ -36,10 +36,9 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 
 	const { mutate } = useSWR(`/api/protected/rewards`);
 	const [loading, setLoading] = useState(false);
-	const iconRef = useRef<HTMLInputElement>(null);
 
 	const [rewardImages, setRewardImages] = useState<File[]>([]);
-	const [redwardIcon, setRewardIcon] = useState<File | undefined>();
+
 
 
 	const form = useForm<z.infer<typeof RewardsSchema>>({
