@@ -15,7 +15,7 @@ export function RewardImages({ value, onFilesChange }: RewardImagesProps) {
     const inputRef = React.useRef<HTMLInputElement>(null);
 
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
         const files = e.target.files;
         if (files) {
             const urls = Array.from(files).map((file) => URL.createObjectURL(file))
@@ -23,9 +23,18 @@ export function RewardImages({ value, onFilesChange }: RewardImagesProps) {
 
             onFilesChange(Array.from(files));
         }
-    };
+    }
 
-    const handleRemoveImage = (url: string) => {
+    function handleDrop(e: React.DragEvent<HTMLInputElement>) {
+        if (previews.length > 0) return;
+        e.preventDefault();
+        const droppedFiles = e.dataTransfer.files;
+        if (e.dataTransfer.files.length > 1 || !droppedFiles[0]) return;
+        const urls = Array.from(droppedFiles).map((file) => URL.createObjectURL(file))
+        handleFileChange({ target: { files: droppedFiles } } as React.ChangeEvent<HTMLInputElement>)
+    }
+
+    function handleRemoveImage(url: string) {
         setPreviews(previews.filter(p => p !== url));
     }
 
@@ -38,6 +47,8 @@ export function RewardImages({ value, onFilesChange }: RewardImagesProps) {
                 />
                 <div
                     onClick={() => inputRef.current?.click()}
+                    onDrop={handleDrop}
+                    onDragOver={(event) => event.preventDefault()}
                     className='flex h-32 cursor-pointer items-center justify-center rounded-md border border-dashed border-strong'
                 >
                     <div className='space-y-1'>

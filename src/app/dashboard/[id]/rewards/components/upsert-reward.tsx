@@ -138,14 +138,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 				<ScrollArea className="h-[calc(100vh-150px)] w-full ">
 					<Form {...form}>
 						<form  >
-							<SheetSection >
 
-								<RewardIcon
-									value={form.getValues("icon")}
-									onFilesChange={setRewardIcon}
-								/>
-
-							</SheetSection>
 							<SheetSection>
 								<SheetFieldSet>
 									<SheetFieldLabel>
