@@ -102,10 +102,10 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 		setLoading(true);
 		const body = v;
 		try {
-			if (redwardIcon) {
-				const icon = await postFile({ url: 's3-upload', data: { file: redwardIcon, fileDirectory: 'reward-icons' }, id: locationId });
-				body.icon = icon.url;
-			}
+			// if (redwardIcon) {
+			// 	const icon = await postFile({ url: 's3-upload', data: { file: redwardIcon, fileDirectory: 'reward-icons' }, id: locationId });
+			// 	body.icon = icon.url;
+			// }
 			if (rewardImages.length > 0) {
 				const images = await postFile({ url: 's3-upload/multiple', data: { files: rewardImages, fileDirectory: 'reward-images' }, id: locationId });
 				body.images = images.map((image: Record<string, any>) => image.url);
