@@ -40,7 +40,6 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 	const [rewardImages, setRewardImages] = useState<File[]>([]);
 
 
-
 	const form = useForm<z.infer<typeof RewardsSchema>>({
 		resolver: zodResolver(RewardsSchema),
 		defaultValues: {

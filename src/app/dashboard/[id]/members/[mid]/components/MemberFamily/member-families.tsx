@@ -41,21 +41,21 @@ export function MemberFamilies({ params }: MemberFamiliesProps) {
 
             </CardHeader>
             <CardContent className='p-0' >
-                <ul>
+                <ul className="space-y-2 py-2">
                     {DummyData.map((member, i) => (
                         <li key={i} className='border-b last-of-type:border-b-0 flex flex-row gap-4   py-3 px-4 items-center'>
                             <div className="flex flex-row gap-4 items-center">
                                 <div>
-                                    <Avatar className="w-20 h-20 rounded-full mx-auto">
+                                    <Avatar className="w-10 h-10 rounded-full mx-auto">
                                         <AvatarImage src={member.image || ""} />
-                                        <AvatarFallback className="text-4xl uppercase text-muted bg-foreground font-medium">
+                                        <AvatarFallback className="text-base uppercase text-muted bg-foreground font-medium">
                                             {member.name.charAt(0)}
                                         </AvatarFallback>
                                     </Avatar>
                                 </div>
                                 <div className="flex flex-col">
-                                    <p className="text-sm font-medium">{member.name}</p>
-                                    <p className="text-sm text-muted-foreground">{member.relationship}</p>
+                                    <p className="text-xs font-medium">{member.name}</p>
+                                    <p className="text-xs text-muted-foreground">{member.relationship} <span className="text-muted-foreground"> - </span> [Plan Name]</p>
                                 </div>
                             </div>
 

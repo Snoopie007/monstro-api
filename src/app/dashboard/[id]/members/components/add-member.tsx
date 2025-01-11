@@ -284,16 +284,22 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                                             <FormLabel >
                                                                 Add member without payment.
                                                             </FormLabel>
-
+                                                        </FormItem>
+                                                        <FormItem className="flex items-center space-x-2 space-y-0 ">
+                                                            <FormControl>
+                                                                <RadioGroupItem value="invite" />
+                                                            </FormControl>
+                                                            <FormLabel >
+                                                                Use parent payment method.
+                                                            </FormLabel>
                                                         </FormItem>
                                                         {/* <FormItem className="flex items-center space-x-2 space-y-0 ">
                                                             <FormControl>
-                                                                <RadioGroupItem disabled={!stripeKey} value="invite" />
+                                                                <RadioGroupItem value="invite" />
                                                             </FormControl>
                                                             <FormLabel >
                                                                 Email invoice to the customer to pay manually.
                                                             </FormLabel>
-
                                                         </FormItem> */}
                                                         <FormItem className="flex items-center space-x-2 space-y-0 ">
                                                             <FormControl>
