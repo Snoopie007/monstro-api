@@ -17,7 +17,7 @@ export default async function CompanyProfile(props: { params: Promise<{ id: stri
         postal: location.postal_code || '',
 
     }
-    console.log('companyInfo', companyInfo)
+
     return (
         <div>
             <div className="mb-4">
