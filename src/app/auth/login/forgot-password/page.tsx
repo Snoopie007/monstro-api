@@ -20,7 +20,7 @@ import {
     Input
 } from "@/components/forms";
 import { toast } from "react-toastify";
-import { ForgotPasswordSchema } from "../schema";
+import { ForgotPasswordSchema } from "../../schema";
 
 
 export default function ForgotPassword() {
