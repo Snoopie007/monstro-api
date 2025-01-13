@@ -4,7 +4,8 @@ import { UserProfile } from "./components";
 async function getStaff(id: number): Promise<Staff> {
     return {
         id: 1,
-        name: 'Jane Doe',
+        firstName: 'Jane',
+        lastName: 'Doe',
         email: '',
         phone: '1234567890',
         image: '#',

@@ -51,7 +51,8 @@ export default function Rewards(props: { params: Promise<{ id: string }> }) {
                                 limitPerMember: 0,
                                 images: [],
                                 description: "",
-                                icon: "",
+                                // icon: "",
+                                limitTotal: ""
                             })}
                         >
                             + Reward

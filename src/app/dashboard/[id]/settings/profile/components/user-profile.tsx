@@ -63,7 +63,6 @@ export function UserProfile({ staff, locationId }: { staff: Staff, locationId: s
                                     </FormItem>
                                 )}
                                 />
-
                                 <FormField control={form.control} name="lastName" render={({ field }) => (
                                     <FormItem className="flex-1 mt-0">
                                         <FormLabel className="font-semibold">
@@ -95,9 +94,7 @@ export function UserProfile({ staff, locationId }: { staff: Staff, locationId: s
                                         </FormItem>
                                     )}
                                 />
-
                                 <div className="flex-1 justify-center space-y-2">
-
                                     <FormLabel className="font-semibold  ">
                                         Phone
                                     </FormLabel>
@@ -139,14 +136,9 @@ export function UserProfile({ staff, locationId }: { staff: Staff, locationId: s
                                             )}
                                         />
                                     </div>
-
                                 </div>
-
                             </div>
                         </fieldset>
-
-
-
                     </form>
                 </Form>
             </div>
