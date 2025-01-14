@@ -5,7 +5,6 @@ import { Button } from "@/components/ui";
 import { useRouter } from "next/navigation";
 
 import { cn } from "@/libs/utils";
-import { LuLoader2 } from "react-icons/lu";
 
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -21,6 +20,7 @@ import {
 } from "@/components/forms";
 import { toast } from "react-toastify";
 import { ForgotPasswordSchema } from "../schema";
+import { LucideLoader2 } from "lucide-react";
 
 
 export default function ForgotPassword() {
@@ -104,7 +104,7 @@ export default function ForgotPassword() {
                                     )}
                                     disabled={false}
                                 >
-                                    <LuLoader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <LucideLoader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Next
                                 </Button>
                             </div>

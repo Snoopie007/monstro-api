@@ -5,7 +5,6 @@ import { Button } from "@/components/ui";
 import { useRouter } from "next/navigation";
 
 import { cn, sleep } from "@/libs/utils";
-import { LuLoader2 } from "react-icons/lu";
 
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -21,6 +20,7 @@ import {
 import { Input } from "@/components/forms";
 import { toast } from "react-toastify";
 import { ResetPasswordSchema } from "../schema";
+import { LucideLoader2 } from "lucide-react";
 const InputStyle =
     "bg-white rounded-sm p-6 border border-gray-200 text-black shadow-none";
 
@@ -134,7 +134,7 @@ export default function ResetPassword(props: { searchParams: Promise<{ token: st
                                     )}
                                     disabled={false}
                                 >
-                                    <LuLoader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <LucideLoader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Next
                                 </Button>
                             </div>
