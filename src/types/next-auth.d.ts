@@ -8,7 +8,10 @@ export type ExtendedUser = DefaultUser["user"] & {
     email: string;
     expireTime: Date | null;
     locations: Array<any> | null;
-    activeLocation: any | null
+    activeLocation: any | null,
+    vendorId: number | 0,
+    memberId: number | 0,
+    staffId: number | 0
 };
 
 

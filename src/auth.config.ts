@@ -16,6 +16,9 @@ export default {
         phone: { label: "phone", type: "text" },
         token: { label: "token", type: "text" },
         locations: { label: "locations", type: "text" },
+        vendorId: {label: "vendorId", type: "number"},
+        memberId: {label: "memberId", type: "number"},
+        staffId: {label: "staffId", type: "number"}
       },
       authorize: (credentials) => {
         if (!credentials || !credentials.id || !credentials.email) {
@@ -33,6 +36,9 @@ export default {
             phone: credentials.phone,
             token: credentials.token,
             locations: JSON.parse(credentials.locations as string),
+            vendorId: credentials.vendorId,
+            memberId: credentials.memberId,
+            staffId: credentials.staffId,
           };
           return user;
 

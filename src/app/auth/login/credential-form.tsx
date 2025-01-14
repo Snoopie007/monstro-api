@@ -55,8 +55,11 @@ export default function CredentialForm() {
 		if (res.ok) {
 			const { data: user } = await res.json();
 			user.customRole = user.role
-			user.role = user.vendor ? "vendor" : user.member ? "member" : "staff";
-
+			user.role = user.vendor ? "vendor" : user.member ? "member" : user.staff ? "staff" : null;
+			user.vendorId = user.vendor?.id ?? 0;
+			user.memberId = user.member?.id ?? 0;
+			user.staffId = user.staff?.id ?? 0;
+			console.log(user)
 			try {
 				await signIn("credentials", {
 					...user,
