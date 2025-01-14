@@ -2,7 +2,6 @@
 import { use } from "react";
 import { Icon } from '@/components/icons';
 import { Button } from '@/components/ui';
-import { Card, CardContent } from '@/components/ui/card';
 import {
     Table,
     TableBody,
@@ -17,7 +16,6 @@ import { formatDateTime } from '@/libs/utils';
 
 import Loading from '@/components/loading';
 import Link from 'next/link';
-import { ChevronRight } from "lucide-react";
 import { TablePage, TablePageContent, TablePageFooter, TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle } from "@/components/ui/table-page";
 
 

@@ -9,6 +9,7 @@ import { useRoles } from '@/hooks/use-roles';
 import { deleteRole } from '@/libs/api';
 import { toast } from 'react-toastify';
 import useSWR from 'swr';
+import SectionLoader from '@/components/section-loading';
 
 export default function RoleList({ permissions, locationId }: { permissions: Array<Permission>, locationId: string }) {
     const [currentRole, setCurrentRole] = useState<Role | null>(null);
@@ -34,7 +35,7 @@ export default function RoleList({ permissions, locationId }: { permissions: Arr
         })
     }
 
-    if (isLoading) return <div>Loading...</div>
+    if (isLoading) return <SectionLoader />
     if (roles) {
         return (
             <>
@@ -42,17 +43,17 @@ export default function RoleList({ permissions, locationId }: { permissions: Arr
                 <div className="mb-3">
                     <div className='flex flex-row  justify-between items-center py-3'>
                         <div className='relative flex-initial'>
-                            <input placeholder='Search Roles' className='rounded-sm border-foreground text-sm bg-transparent  py-2  pl-7 pr-3 border ' />
+                            <input placeholder='Search Roles' className='rounded-sm border-foreground text-xs bg-transparent  py-1   pl-7 pr-3 border ' />
                             <div>
                                 <Icon name="Search" size={15} className="text-gray-400  absolute left-[10px] top-[50%] -translate-y-[51%]" />
                             </div>
                         </div>
                         <div className='flex-initial'>
-                            <Button size={"sm"} variant={"foreground"} onClick={handleCreateRole}>Create Role</Button>
+                            <Button size={"xs"} variant={"foreground"} onClick={handleCreateRole}>Create</Button>
                         </div>
                     </div>
                 </div>
-                <Card>
+                <Card className='rounded-xs'>
                     <CardContent className='p-0'>
                         <Table className=" w-full ">
                             <TableHeader >
@@ -70,20 +71,20 @@ export default function RoleList({ permissions, locationId }: { permissions: Arr
                                     <TableRow key={index}
                                         className='cursor-pointer border-foreground/20 text-sm'
                                     >
-                                        <TableCell className="py-4 " onClick={() => {setCurrentRole(role);}}>
+                                        <TableCell className="py-2 " onClick={() => { setCurrentRole(role); }}>
                                             <div className='flex flex-row  gap-1 items-center text-sm'>
                                                 <Icon name="Shield" size={20} className="text-indigo-600" />
                                                 <span>{role.name}</span>
                                             </div>
                                         </TableCell>
 
-                                        <TableCell className="py-4 ">
+                                        <TableCell className="py-2 ">
                                             <div className='flex flex-row  gap-1 items-center text-sm'>
                                                 <span className=''>  {role.staffs}</span>
                                                 <Icon name='User' size={16} />
                                             </div>
                                         </TableCell>
-                                        <TableCell className="py-4 " onClick={(e) => e.stopPropagation()}>
+                                        <TableCell className="py-2 " onClick={(e) => e.stopPropagation()}>
                                             <div className='flex justify-end'>
                                                 <RoleListActions role={role} deleteFunction={removeRole} />
                                             </div>

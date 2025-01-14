@@ -18,3 +18,4 @@ export type Pricing = {
     stripe_plan_id?: string;
     stripe_price_id?: string;
 }
+

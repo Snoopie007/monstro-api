@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 export default function PlanBuilder({ programs, locationId }: { programs: Program[], locationId: string }) {
     const router = useRouter();
     const [selectedProgram, setSelectedProgram] = useState<Program | null>();
+
     useEffect(() => {
         let registrationDetails: string | null = window.localStorage.getItem("registrationDetails");
         if (!registrationDetails)

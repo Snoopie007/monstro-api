@@ -1,10 +1,8 @@
-
-
-import { bigint, integer, boolean, primaryKey, varchar, serial, text, timestamp, pgTable, jsonb, real, time } from "drizzle-orm/pg-core";
+import { integer, boolean, text, timestamp, pgTable, serial } from "drizzle-orm/pg-core";
 import { programs } from "./programs";
 import { contractsTemplates } from "./contract-templates";
 import { relations } from "drizzle-orm";
-import { vendors } from "./users";
+import { vendors } from "./vendor";
 import { pricings } from "./pricing";
 
 export const plans = pgTable("stripe_plans", {

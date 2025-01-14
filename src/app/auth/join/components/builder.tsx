@@ -1,17 +1,17 @@
 'use client'
 import { cn } from '@/libs/utils'
-import { Launcher, Plan } from '@/types'
+import { MonstroLauncher, MonstroPlan } from '@/types'
 import { Elements } from '@stripe/react-stripe-js'
 import { formatAmountForDisplay, getStripe } from "@/libs/stripe";
 import { CircleCheck } from 'lucide-react'
 import { useState } from 'react'
-import PlanBuilderPayment from './plan-builder-payment';
+import PlanBuilderPayment from './plan-payment';
 import Image from 'next/image';
 import { motion } from 'framer-motion'
 
-export default function PlanBuilder({ plans, launchers }: { plans: Plan[], launchers: Launcher[] }) {
-    const [currentPlan, setCurrentPlan] = useState<Plan | null>();
-    const [currentLauncher, setCurrentLauncher] = useState<Launcher | null>();
+export default function VendorPlanBuilder({ plans, launchers }: { plans: MonstroPlan[], launchers: MonstroLauncher[] }) {
+    const [currentPlan, setCurrentPlan] = useState<MonstroPlan | null>();
+    const [currentLauncher, setCurrentLauncher] = useState<MonstroLauncher | null>();
 
     function isLauncher(id: number) {
         if (!currentLauncher) return false;
