@@ -3,10 +3,9 @@ import { Button } from '@/components/ui/button'
 import { del } from '@/libs/api';
 import { cn } from '@/libs/utils';
 import { int } from 'drizzle-orm/mysql-core';
-import { Trash2 } from 'lucide-react';
+import { LucideLoader2, Trash2 } from 'lucide-react';
 import Image from 'next/image'
 import React, { useState } from 'react'
-import { LuLoader2 } from 'react-icons/lu';
 import { toast } from 'react-toastify';
 import useSWR from 'swr';
 
@@ -59,7 +58,7 @@ export default function IntegrationList({ integrations, locationId }: Intergrati
                             className={cn("")}
                             type="button"
                         >
-                            <LuLoader2 size={"16"} className={cn('animate-spin hidden',
+                            <LucideLoader2 size={"16"} className={cn('animate-spin hidden',
                                 { 'inline-block': loading })} />
 
 

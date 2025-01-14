@@ -16,10 +16,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn, sleep } from "@/libs/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LuLoader2 } from "react-icons/lu";
 import { toast } from "react-toastify";
 import Link from "next/link";
 import { MemberRegistrationSchema } from "../schema";
+import { LucideLoader2 } from "lucide-react";
 
 
 export function MemberCreateAccount({ locationId }: { locationId: string }) {
@@ -220,7 +220,7 @@ export function MemberCreateAccount({ locationId }: { locationId: string }) {
 
                 <div className={"pt-2"}>
                     <Button className={cn("children:hidden rounded-sm w-full h-auto py-3 text-base", { "children:inline-block": loading })} type="submit" >
-                        <LuLoader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <LucideLoader2 className="mr-2 h-4 w-4 animate-spin" />
                         Create Account
                     </Button>
                     <p className="mt-2 text-black/80 text-base text-center">
