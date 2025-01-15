@@ -38,6 +38,13 @@ async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnTy
         })
         const member = await db.query.members.findFirst({
             where: (members, { eq }) => eq(members.id, mid),
+            with: {
+                familyMembers: {
+                    with: {
+                        relatedMember: true
+                    }
+                }
+            },
             extras: {
                 stripeCustomerId: sql<string>`(SELECT stripe_customer_id FROM member_locations WHERE member_locations.member_id = members.id 
                  AND member_locations.location_id = ${decodedId})`.as("stripeCustomerId"),
@@ -87,7 +94,7 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
     if (!member) {
         return <div>Member not found</div>
     }
-
+    console.log(member)
     if (stripeKey?.accessToken && member?.stripeCustomerId) {
         paymentMethods = await fetchStripePyamentMethods(stripeKey.accessToken, member.stripeCustomerId);
     }
@@ -98,7 +105,7 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
                 <div className='col-span-4 space-y-4'>
                     <MemberProfile params={params} />
                     <PaymentMethods stripeKey={stripeKey ? stripeKey?.apiKey : ''} params={params} />
-                    <MemberFamilies params={params} />
+                    <MemberFamilies params={params} familyMembers={member.familyMembers} />
                 </div>
                 <div className='col-span-8'>
                     <Tabs defaultValue="Achievements" className="w-full" >

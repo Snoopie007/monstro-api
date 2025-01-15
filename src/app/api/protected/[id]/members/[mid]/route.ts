@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
+import { familyMembers } from '@/db/schemas';
 
 export async function GET(req: Request, props: { params: Promise<{ mid: number, id: number }> }) {
     const params = await props.params;
@@ -9,9 +10,16 @@ export async function GET(req: Request, props: { params: Promise<{ mid: number, 
 		const session = await auth();
 		if (session) {
 			const member = await db.query.members.findFirst({
-				where: (members, { eq }) => eq(members.id, params.mid),
-
+				where: (members, { eq }) => eq(members.id, params.mid)
 			});
+
+			const family = await db.query.familyMembers.findMany({
+				where: (familyMembers, { eq }) => eq(familyMembers.memberId, params.mid),
+				with: {
+					member: true
+				}
+			});
+			console.log(family)
 
 			// const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/member-details/${params.mId}`, {
 			//   headers: {

@@ -1,4 +1,5 @@
 import { Achievement } from "./achievement";
+import { FamilyMember } from "./family-member";
 import { Reward } from "./reward";
 
 export type Member = {
@@ -15,6 +16,8 @@ export type Member = {
     achievements?: Achievement[];
     stripeCustomerId?: string;
     rewards?: Reward[];
+    familyMembers?: Array<FamilyMember>;
+    relatedByFamily?: Array<FamilyMember>;
     created: Date;
     updated: Date | null;
     deleted: Date | null;
