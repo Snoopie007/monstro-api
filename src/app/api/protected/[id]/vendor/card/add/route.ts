@@ -6,7 +6,7 @@ import { getStripe } from '@/libs/server-utils';
 export async function POST(req: Request) {
     const session = await auth();
     const data = await req.json()
-    console.log(data)
+
     try {
         const stripe = getStripe()
         const paymentMethod = await stripe.paymentMethods.create({

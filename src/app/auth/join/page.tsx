@@ -1,8 +1,6 @@
-import PlanBuilder from '@/app/clubs/[id]/register/plan/components/plan-builder';
+
 import React from 'react'
-import { plans, launchers } from './dummy-data';
-import { MonstroLauncher } from '@/types/vendor';
-import { MonstroPlan } from '@/types/vendor';
+import { plans, launchers, MonstroPlan, MonstroLauncher } from './dummy-data';
 import VendorPlanBuilder from './components/builder';
 
 
