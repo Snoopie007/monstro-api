@@ -1,7 +1,7 @@
 import { fetcher } from "@/libs/api";
 import useSWR from "swr";
 
-function useMembers(id: string, query: string, page: number, size: number) {
+function useMembers(id: string, query: string = "", page: number = 1, size: number = 15) {
 	const { data, error, isLoading } = useSWR({ url: `members?query=${query}&page=${page}&size=${size}`, id: id }, fetcher);
 
 	return {

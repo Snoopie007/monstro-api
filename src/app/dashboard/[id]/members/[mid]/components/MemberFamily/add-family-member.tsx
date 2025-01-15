@@ -25,7 +25,6 @@ import { AddCreditCardSchema } from "@/libs/schemas";
 import { z } from "zod";
 import { toast } from "react-toastify";
 import { Checkbox, Input, Select, SelectValue, SelectTrigger, SelectItem, SelectContent } from "@/components/forms";
-import { useMembers } from "@/hooks/use-members";
 
 
 interface AddPaymentMethodProps {
@@ -37,7 +36,6 @@ export default function AddFamilyMember({ member, locationId }: AddPaymentMethod
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [selectedMember, setSelectedMember] = useState<Member | null>(null)
-    const { members, isLoading } = useMembers(locationId)
 
 
     async function onSubmit(v: z.infer<typeof AddCreditCardSchema>) {
@@ -79,15 +77,15 @@ export default function AddFamilyMember({ member, locationId }: AddPaymentMethod
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {[{ firstName: "John", lastName: "Doe", phone: "#6772e5", email: "#6772e5" }].map((member, i) => (
+                                        {[{ firstName: "John", lastName: "Doe", phone: "#6772e5", email: "#6772e5" }].map((m, i) => (
                                             <TableRow key={i} className="hover:bg-transparent">
                                                 <TableCell className="flex flex-row items-center gap-2 pl-0">
                                                     <Checkbox onClick={() => setSelectedMember(member)} className="border-foreground/80" />
                                                 </TableCell>
-                                                <TableCell >  {member.firstName}</TableCell>
-                                                <TableCell>{member.lastName}</TableCell>
-                                                <TableCell>{member.phone}</TableCell>
-                                                <TableCell>{member.email}</TableCell>
+                                                <TableCell >  {m.firstName}</TableCell>
+                                                <TableCell>{m.lastName}</TableCell>
+                                                <TableCell>{m.phone}</TableCell>
+                                                <TableCell>{m.email}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
