@@ -60,6 +60,7 @@ export default function UpdateMemberProfile({ member }: UpdateMemberProps) {
             });
         }
     }, [member]);
+
     async function onSubmit(v: z.infer<typeof UpdateMemberSchema>) {
 
     }

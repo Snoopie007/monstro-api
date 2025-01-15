@@ -94,7 +94,7 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
     if (!member) {
         return <div>Member not found</div>
     }
-    console.log(member)
+
     if (stripeKey?.accessToken && member?.stripeCustomerId) {
         paymentMethods = await fetchStripePyamentMethods(stripeKey.accessToken, member.stripeCustomerId);
     }

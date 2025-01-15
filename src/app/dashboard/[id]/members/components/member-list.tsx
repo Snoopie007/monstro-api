@@ -14,17 +14,14 @@ import { MemberColumns } from "./member-columns";
 import { Input } from "@/components/forms/input";
 import { MemberTable } from "./member-table";
 import ErrorComponent from "@/components/error";
-import CreateMember from "./add-member";
+import AddMember from "./add-member";
 import { Member } from "@/types/member";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { debounce } from "@tiptap-pro/extension-table-of-contents";
 import ImportMember from "./import-member";
 import { Separator } from "@/components/ui";
-import { TablePageHeaderTitle } from "@/components/ui/table-page";
-import { TablePageContent, TablePageHeaderSection } from "@/components/ui/table-page";
-import { TablePageFooter, TablePage } from "@/components/ui/table-page";
-import { TablePageHeader } from "@/components/ui/table-page";
+import { TablePage, TablePageContent, TablePageFooter, TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle } from "@/components/ui/table-page";
 
 
 export function MemberList({ params, stripeKey }: { params: { id: string }, stripeKey: string | null }) {
@@ -103,8 +100,7 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
                         }}
                         className="border text-xs h-auto py-1 border-foreground/10 rounded-xs"
                     />
-
-                    <CreateMember locationId={params.id} stripeKey={stripeKey} />
+                    <AddMember locationId={params.id} stripeKey={stripeKey} />
                     <ImportMember locationId={params.id} />
                 </TablePageHeaderSection>
             </TablePageHeader>

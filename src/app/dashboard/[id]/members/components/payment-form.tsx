@@ -29,13 +29,11 @@ export default function NewMemberPaymentForm({ form }: NewMemberPaymentFormProps
     }, [paymentMethod])
 
     async function handleCardChange(event: any) {
-        console.log(event)
-        console.log(form)
+
         if (event.complete) {
             if (!elements || !stripe) return;
 
             const tokenRef = await stripe.createToken(elements.getElement(CardElement)!);
-            console.log(tokenRef)
             if (tokenRef.token) {
                 form.setValue('billing.stripeToken', tokenRef.token.id)
             }

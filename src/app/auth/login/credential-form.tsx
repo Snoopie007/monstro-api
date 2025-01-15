@@ -25,7 +25,6 @@ import { Loader2 } from "lucide-react";
 const InputStyle = "bg-white border  border-gray-400  rounded-sm py-6 px-4 text-base shadow-none";
 export default function CredentialForm() {
 	const [loading, setLoading] = useState<boolean>(false);
-	const { push } = useRouter();
 	const form = useForm<z.infer<typeof LoginSchema>>({
 		resolver: zodResolver(LoginSchema),
 		defaultValues: {

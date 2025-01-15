@@ -22,3 +22,16 @@ export const NewEnrollmentSchema = z.object({
     trail: z.number(),
     paymentMethod: z.string(),
 })
+
+export const AddChildMemberSchema = z.object({
+    firstName: z.string(),
+    lastName: z.string(),
+    email: z.string().optional(),
+    phone: z.string().optional(),
+    family: z.object({
+        planId: z.number().optional(),
+        existingPlanId: z.number().optional(),
+        programId: z.number().optional(),
+        relationship: z.string(),
+    }),
+})

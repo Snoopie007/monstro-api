@@ -16,9 +16,9 @@ import {
 } from "@/components/ui";
 
 import { Member } from "@/types";
-import { DialogDescription, DialogTrigger } from "@radix-ui/react-dialog";
+import { DialogDescription } from "@radix-ui/react-dialog";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { cn, } from "@/libs/utils";
 
 import { AddCreditCardSchema } from "@/libs/schemas";
@@ -28,12 +28,14 @@ import { Checkbox, Input, Select, SelectValue, SelectTrigger, SelectItem, Select
 
 
 interface AddPaymentMethodProps {
-    member: Member;
+    parent: Member;
     locationId: string;
+    open: boolean;
+    setOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-export default function AddFamilyMember({ member, locationId }: AddPaymentMethodProps) {
-    const [open, setOpen] = useState(false)
+export default function AttachFamilyMember({ parent, locationId, open, setOpen }: AddPaymentMethodProps) {
+
     const [loading, setLoading] = useState(false)
     const [selectedMember, setSelectedMember] = useState<Member | null>(null)
 
@@ -45,9 +47,7 @@ export default function AddFamilyMember({ member, locationId }: AddPaymentMethod
     return (
 
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button variant={"ghost"} className="border-l text-lg rounded-none">+</Button>
-            </DialogTrigger>
+
             <DialogContent className="sm:max-w-[625px] rounded-sm">
                 <DialogHeader className="space-y-0">
                     <DialogTitle className="text-base">Attach a Member</DialogTitle>
@@ -80,7 +80,7 @@ export default function AddFamilyMember({ member, locationId }: AddPaymentMethod
                                         {[{ firstName: "John", lastName: "Doe", phone: "#6772e5", email: "#6772e5" }].map((m, i) => (
                                             <TableRow key={i} className="hover:bg-transparent">
                                                 <TableCell className="flex flex-row items-center gap-2 pl-0">
-                                                    <Checkbox onClick={() => setSelectedMember(member)} className="border-foreground/80" />
+                                                    <Checkbox onClick={() => setSelectedMember(parent)} className="border-foreground/80" />
                                                 </TableCell>
                                                 <TableCell >  {m.firstName}</TableCell>
                                                 <TableCell>{m.lastName}</TableCell>
