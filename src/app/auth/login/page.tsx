@@ -27,7 +27,7 @@ export default async function SignIn() {
                 <p className="text-base text-center mt-5">
                     Don't have an account{" "}
                     <Link
-                        href={"/auth/register"}
+                        href={"/auth/join"}
                         className={"inline-flex text-indigo-600 hover:text-black underline  text-base rounded-sm"}
                     >
                         Sign up

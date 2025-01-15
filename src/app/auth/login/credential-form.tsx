@@ -22,7 +22,7 @@ import { useRouter } from "next/navigation";
 import { LoginSchema } from "../schema";
 import { Loader2 } from "lucide-react";
 
-const InputStyle = "bg-white border  border-gray-400  rounded-sm py-6 px-4 text-base shadow-none";
+
 export default function CredentialForm() {
 	const [loading, setLoading] = useState<boolean>(false);
 	const { push } = useRouter();
@@ -84,8 +84,8 @@ export default function CredentialForm() {
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(loginUser)} className="w-full">
-				<fieldset className={"mb-4"}>
+			<form onSubmit={form.handleSubmit(loginUser)} className="w-full space-y-3">
+				<fieldset >
 					<FormField
 						control={form.control}
 						name="email"
@@ -97,7 +97,7 @@ export default function CredentialForm() {
 								<FormControl>
 									<Input
 										type="email"
-										className={InputStyle}
+										className={"bg-white border placeholder:text-sm  border-gray-400  rounded-sm py-4 px-4 text-sm shadow-none"}
 										placeholder="Your email"
 										{...field}
 									/>
@@ -108,7 +108,7 @@ export default function CredentialForm() {
 						)}
 					/>
 				</fieldset>
-				<fieldset className="mb-4">
+				<fieldset >
 					<FormField
 						control={form.control}
 						name="password"
@@ -120,7 +120,7 @@ export default function CredentialForm() {
 								<FormControl>
 									<Input
 										type="password"
-										className={InputStyle}
+										className={"bg-white border placeholder:text-sm  border-gray-400  rounded-sm py-4 px-4 text-sm shadow-none"}
 										placeholder="Your password"
 										{...field}
 									/>
@@ -141,7 +141,7 @@ export default function CredentialForm() {
 				<div className={"flex flex-row items-center justify-between "}>
 					<Button
 						className={cn(
-							" text-base bg-indigo-700 hover:bg-indigo-600 w-full   text-white px-4 py-3 h-auto rounded-sm children:hidden",
+							" text-sm bg-indigo-700 hover:bg-indigo-600 w-full   text-white px-4 py-2 h-auto rounded-sm children:hidden",
 							{ "children:inline-block": loading }
 						)}
 						type="submit"

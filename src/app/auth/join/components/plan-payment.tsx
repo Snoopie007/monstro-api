@@ -1,28 +1,22 @@
-import React, { use, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui";
+
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import { useForm } from "react-hook-form";
+
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AccountCreationSchema, Launcher, Plan } from "@/types.d";
+
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { cn } from "@/libs/utils";
 import { useSearchParams } from 'next/navigation'
 
 import { motion } from "framer-motion";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
-
 import { Loader2, LockIcon } from "lucide-react";
-import PhoneInput from "react-phone-input-2";
+import { MonstroLauncher, MonstroPlan } from "@/types/monstro-plan";
+import { AccountCreationSchema } from "../schema";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input } from "@/components/forms";
 
 const CARD_OPTIONS = {
     style: {
@@ -40,8 +34,8 @@ const CARD_OPTIONS = {
 };
 
 type PlanBuilderPaymentProps = {
-    plan: Plan
-    launcher: Launcher;
+    plan: MonstroPlan;
+    launcher: MonstroLauncher;
 };
 
 export default function PlanPayment({ launcher, plan }: PlanBuilderPaymentProps) {
@@ -261,16 +255,7 @@ export default function PlanPayment({ launcher, plan }: PlanBuilderPaymentProps)
                                         Phone*
                                     </FormLabel>
                                     <FormControl >
-                                        <PhoneInput
 
-                                            containerClass={cn("phoneInput  ")}
-                                            inputClass={"!text-base bg-white"}
-                                            value={value}
-                                            onChange={onChange}
-                                            country="us"
-                                            onlyCountries={["us", "ca", 'gb', "au"]}
-
-                                        />
                                     </FormControl>
 
                                     <FormMessage />
