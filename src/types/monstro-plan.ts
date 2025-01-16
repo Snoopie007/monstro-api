@@ -5,6 +5,7 @@ export type MonstroLauncher = {
     downPayment: number;
     monthlyPayment: number;
     term: number;
+    cycle: string;
     benefits: string[];
 }
 export type MonstroPlan = {

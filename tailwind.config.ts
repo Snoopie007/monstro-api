@@ -18,6 +18,9 @@ const config: Config = {
 				poppins: ["var(--font-poppins)", "sans-serif"],
 				roboto: ["var(--font-roboto)", "sans-serif"]
 			},
+			boxShadow: {
+				unique: "var(--input-box-shadow)"
+			},
 			backgroundImage: {
 				'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
 				'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))'

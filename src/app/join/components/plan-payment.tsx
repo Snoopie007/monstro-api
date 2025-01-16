@@ -14,7 +14,7 @@ import { useSearchParams } from 'next/navigation'
 
 import { motion } from "framer-motion";
 import { Loader2, LockIcon } from "lucide-react";
-import { MonstroLauncher, MonstroPlan } from "@/types/monstro-plan";
+import { MonstroLauncher, MonstroPlan } from "../dummy-data";
 import { AccountCreationSchema } from "../schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input } from "@/components/forms";
 
@@ -176,7 +176,7 @@ export default function PlanPayment({ launcher, plan }: PlanBuilderPaymentProps)
 
                     <div className="line flex justify-between">
                         <div className="text-base font-semibold">
-                            Due in {launcher?.duration} Days
+                            Due in {launcher?.term} Days
                         </div>
                         <div className="text-base">
                             ${plan?.price}

@@ -3,19 +3,19 @@ export type Plan = {
     name: string;
     description: string;
     status?: boolean;
-    vendor_id: number;
+    vendorId: number;
     family: boolean;
-    program_id: number;
-    family_member_limit: number;
+    programId: number;
+    familyMemberLimit: number;
     pricing: Pricing;
     contractId?: number;
 };
 
 export type Pricing = {
     amount: number;
-    billing_period: string;
+    billingPeriod: string;
     id?: number;
-    stripe_plan_id?: string;
-    stripe_price_id?: string;
+    stripePlanId?: string;
+    stripePriceId?: string;
 }
 

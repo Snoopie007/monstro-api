@@ -30,7 +30,10 @@ export default auth(async (req) => {
 		}
 
 		// Handle non-API routes
-		if (!isLoggedin && !pathname.startsWith("/auth") && !pathname.startsWith("/api/auth") && !pathname.startsWith("/clubs")) {
+		if (!isLoggedin &&
+			!pathname.startsWith("/auth") &&
+			!pathname.startsWith("/api/auth") &&
+			!pathname.startsWith("/join")) {
 			const newUrl = new URL("/auth/login", req.nextUrl.origin);
 			return NextResponse.redirect(newUrl);
 		} else if (isLoggedin && pathname === "/") {

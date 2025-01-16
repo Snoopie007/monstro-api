@@ -30,7 +30,7 @@ async function JoinPage() {
         );
     }
     return (
-        <div className="max-w-3xl w-full m-auto">
+        <div className="max-w-6xl w-full m-auto">
             <VendorPlanBuilder plans={plans} launchers={launchers} />
         </div>
     );
