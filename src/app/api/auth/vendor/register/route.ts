@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 
-import { StripePayments } from "@/libs/stripe-sdk";
+import { StripePayments } from "./stripe-sdk";
 import { NextRequest, NextResponse } from "next/server";
 
 const stripe = new StripePayments();
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
 
     const { vendor, launcher, plan, token, rep } = await req.json();
 
-    const initialCharge = Number(launcher.price) * 100;
+    const initialCharge = Number(launcher.downPayment) * 100;
 
     const planName = plan.name.toLocaleLowerCase();
 

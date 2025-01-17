@@ -1,7 +1,7 @@
 
 import React from 'react'
 import { plans, launchers, MonstroPlan, MonstroLauncher } from './dummy-data';
-import VendorPlanBuilder from './components/builder';
+import VendorPlanBuilder from './components/plan-builder';
 
 
 async function fetchData(): Promise<{ plans: MonstroPlan[], launchers: MonstroLauncher[] }> {
@@ -30,7 +30,7 @@ async function JoinPage() {
         );
     }
     return (
-        <div className="max-w-6xl w-full m-auto">
+        <div className="max-w-3xl w-full m-auto">
             <VendorPlanBuilder plans={plans} launchers={launchers} />
         </div>
     );

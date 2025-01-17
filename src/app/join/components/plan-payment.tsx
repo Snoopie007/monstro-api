@@ -38,6 +38,8 @@ type PlanBuilderPaymentProps = {
     launcher: MonstroLauncher;
 };
 
+const InputStyle = "border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-none py-3 h-auto rounded-sm  shadow-unique bg-white"
+
 export default function PlanPayment({ launcher, plan }: PlanBuilderPaymentProps) {
     const [errorMessage, setErrorMessage] = useState("");
     const [payment, setPayment] = useState({ status: "initial" });
@@ -62,9 +64,7 @@ export default function PlanPayment({ launcher, plan }: PlanBuilderPaymentProps)
 
 
 
-    useEffect(() => {
 
-    }, []);
     const PaymentStatus = ({ status }: { status: string }) => {
         switch (status) {
             case "processing":
@@ -154,39 +154,20 @@ export default function PlanPayment({ launcher, plan }: PlanBuilderPaymentProps)
                 type: 'spring', bounce: 0.4, duration: 0.8
             }}
             className="px-5 sm:px-0">
-            <div className="border text-base bg-white p-4 rounded-sm mb-4 mt-4 sm:mt-0 shadow-sm sm:shadow-none">
+            <div className="border text-black border-gray-200 text-base bg-white p-4 rounded-sm mb-4 mt-4 sm:mt-0">
                 <div className="flex flex-col gap-2">
-                    <div className="flex  justify-between">
-                        <div className="text-base font-semibold">
-                            Launcher
-                        </div>
-                        <div className="text-base capitalize">
-                            {launcher?.name}
-                        </div>
-                    </div>
-                    <div className="flex  justify-between">
-
-                        <div className="text-base font-semibold">
-                            Plan
-                        </div>
-                        <div className="text-base capitalize">
-                            {plan?.name}
-                        </div>
+                    <div className="flex justify-between">
+                        <div className="text-sm font-semibold">One Time Payment</div>
+                        <div className="text-sm capitalize">${launcher?.price}</div>
                     </div>
 
-                    <div className="line flex justify-between">
-                        <div className="text-base font-semibold">
-                            Due in {launcher?.term} Days
-                        </div>
-                        <div className="text-base">
-                            ${plan?.price}
-                        </div>
+                    <div className="flex justify-between">
+                        <div className="text-sm font-semibold">Due in {launcher?.length}</div>
+                        <div className="text-sm">${plan?.price}/{plan?.interval}</div>
                     </div>
                 </div>
-
                 <div>
-                    <div className="border-b my-3 border-dashed"></div>
-
+                    <div className="border-b my-3 border-gray-200 border-dashed"></div>
                     <div className="flex font-bold justify-between">
                         <div className="text-base">Due Today</div>
                         <div className="text-base">${launcher?.price}</div>
@@ -203,7 +184,7 @@ export default function PlanPayment({ launcher, plan }: PlanBuilderPaymentProps)
                                         First Name*
                                     </FormLabel>
                                     <FormControl>
-                                        <Input type="text" className="bg-white" placeholder="First Name" {...field} />
+                                        <Input type="text" className={InputStyle} placeholder="First Name" {...field} />
                                     </FormControl>
 
                                     <FormMessage />
@@ -220,7 +201,7 @@ export default function PlanPayment({ launcher, plan }: PlanBuilderPaymentProps)
                                             Last Name*
                                         </FormLabel>
                                         <FormControl>
-                                            <Input type="text" className="bg-white" placeholder="Last Name" {...field} />
+                                            <Input type="text" className={InputStyle} placeholder="Last Name" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -238,7 +219,7 @@ export default function PlanPayment({ launcher, plan }: PlanBuilderPaymentProps)
                                         Email*
                                     </FormLabel>
                                     <FormControl>
-                                        <Input type="email" className="bg-white" placeholder="Email"  {...field} />
+                                        <Input type="email" className={InputStyle} placeholder="Email"  {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -270,7 +251,7 @@ export default function PlanPayment({ launcher, plan }: PlanBuilderPaymentProps)
                                 Card info*
                             </FormLabel>
                             <CardElement
-                                className="text-base bg-white border-2 rounded-sm border-indigo-500 py-3.5 px-3 w-full"
+                                className="text-base shadow-unique bg-white border-2 rounded-sm border-indigo-500 py-3.5 px-3 w-full"
                                 options={CARD_OPTIONS}
                                 onChange={(e) => {
                                     if (e.error) {

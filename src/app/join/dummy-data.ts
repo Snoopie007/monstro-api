@@ -6,7 +6,7 @@ export type MonstroLauncher = {
     price: number;
     downPayment: number;
     monthlyPayment: number;
-    term: number;
+    length: string;
     benefits: string[];
 }
 
@@ -14,7 +14,7 @@ export type MonstroPlan = {
     id: number;
     name: string;
     price: number;
-    cycle: string;
+    interval: string;
     benefits: string[];
 }
 
@@ -27,7 +27,7 @@ const launchers: MonstroLauncher[] = [
         price: 8000,
         downPayment: 2000,
         monthlyPayment: 499,
-        term: 12,
+        length: "12 Months",
         benefits: [
             "Benefit 1",
             "Benefit 2",
@@ -40,7 +40,7 @@ const launchers: MonstroLauncher[] = [
         price: 10000,
         downPayment: 3000,
         monthlyPayment: 599,
-        term: 12,
+        length: "12 Months",
         benefits: [
             "Benefit 1",
             "Benefit 2",
@@ -53,22 +53,22 @@ const plans: MonstroPlan[] = [
     {
         id: 1,
         name: "Plan 1",
-        price: 10000,
-        cycle: "monthly",
+        price: 99,
+        interval: "month",
         benefits: ["Benefit 1", "Benefit 2", "Benefit 3"],
     },
     {
         id: 2,
         name: "Plan 2",
-        price: 12000,
-        cycle: "monthly",
+        price: 99,
+        interval: "month",
         benefits: ["Benefit 1", "Benefit 2", "Benefit 3"],
     },
     {
         id: 3,
         name: "Plan 3",
         price: 14000,
-        cycle: "monthly",
+        interval: "month",
         benefits: ["Benefit 1", "Benefit 2", "Benefit 3"],
 
     }
