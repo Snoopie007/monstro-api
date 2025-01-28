@@ -1,1 +1,1 @@
-export * from './plan-builder';
+export * from './builder';

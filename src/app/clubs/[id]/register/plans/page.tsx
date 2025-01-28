@@ -1,17 +1,27 @@
 import { Program } from "@/types";
 import PlanBuilder from "./components/plan-builder";
-import { getRegister } from '@/libs/api';
+
 import { RegistrationHeader } from "../components";
 import { decodeId } from "@/libs/server-utils";
+import { db } from "@/db/db";
 
 async function fetchPlans(locationId: string): Promise<Program[]> {
     try {
-        // We should make one pull that pulls program with innerjoin of plan;
-        const id = decodeId(locationId)
-        console.log(id)
-        const res = await getRegister({ url: `/vendor/register/get-programs-by-location/${id}` });
-        console.log(res)
-        return res.programs;
+
+        const decodedId = decodeId(locationId)
+        // const res = await getRegister({ url: `/vendor/register/get-programs-by-location/${decodedId}` });
+        const programs = await db.query.programs.findMany({
+            where: (programs, { eq }) => eq(programs.locationId, decodedId),
+            with: {
+                plans: {
+                    with: {
+                        pricing: true
+                    }
+                }
+            }
+        })
+        const filteredPrograms = programs.filter(program => program.plans && program.plans.length > 0);
+        return filteredPrograms;
     } catch (error) {
         console.log("error", error);
         return [];
@@ -21,10 +31,7 @@ async function fetchPlans(locationId: string): Promise<Program[]> {
 
 export default async function ClubRegistration(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
-
-    const {
-        id
-    } = params;
+    const { id } = params;
 
     const programs = await fetchPlans(id);
 

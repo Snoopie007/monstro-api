@@ -21,19 +21,18 @@ const DateFormateOptions: Intl.DateTimeFormatOptions = {
 	year: 'numeric',
 }
 
- function formatAmountForDisplay(
+ const formatAmountForDisplay = (
 	amount: number,
 	currency: string,
-	style: boolean = true,
-	fractionDigit?: number | undefined
-): string {
-	let numberFormat = new Intl.NumberFormat(['en-US'], {
-		currency: currency,
-		currencyDisplay: 'symbol',
-		maximumFractionDigits: fractionDigit || 0,
-		...(style ? { style: 'currency' } : {}),
-	})
-  	return numberFormat.format(amount)
+	withSymbol = true
+): string => {
+	const formatter = new Intl.NumberFormat('en-US', {
+		style: withSymbol ? 'currency' : 'decimal',
+		currency,
+		minimumFractionDigits: 0,
+	});
+	
+	return formatter.format(amount);
 }
 
 export function isExpired(dateTimeString: string) {

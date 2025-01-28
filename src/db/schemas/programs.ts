@@ -12,7 +12,7 @@ export const programs = pgTable("programs", {
     description: text("description"),
     avatar: varchar("avatar"),
     lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
-    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })
@@ -25,7 +25,7 @@ export const programLevels = pgTable("program_levels", {
     capacity: integer("capacity").notNull().default(0),
     minAge: integer("min_age").notNull().default(1),
     maxAge: integer("max_age").notNull().default(50),
-    programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
+    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     parentId: integer("parent_id"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),

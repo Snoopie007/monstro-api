@@ -9,7 +9,6 @@ export * from "./contract-templates";
 export * from "./achievements";
 export * from "./enrollments";
 export * from "./attendances";
-export * from "./pricing";
 export * from "./permissions"
 export * from "./staffs"
 export * from "./vendor"

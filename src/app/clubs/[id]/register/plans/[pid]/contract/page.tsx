@@ -22,6 +22,7 @@ async function getContract(pid: string, session: Session | null) {
             throw new Error("An error occurred while fetching the data.");
         }
         const { data: contract } = await contractRef.json();
+
         const variableRef = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/member/contract/${contract.id}/variables`, { headers });
         if (!variableRef.ok) {
             throw new Error("An error occurred while fetching the data.");
@@ -38,10 +39,7 @@ async function getContract(pid: string, session: Session | null) {
 export default async function UserContractPage(props: { params: Promise<{ id: string, pid: string }> }) {
     const params = await props.params;
 
-    const {
-        id,
-        pid
-    } = params;
+    const { id, pid } = params;
 
     const session = await auth();
     const contract: any = await getContract(pid, session);

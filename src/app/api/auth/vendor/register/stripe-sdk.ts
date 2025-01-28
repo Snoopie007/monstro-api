@@ -92,21 +92,32 @@ class StripePayments {
         return await this._stripe.customers.update(id, updates);
     }
 
-    async createSubscription(plan: Plan, customer: string) {
-        const price = process.env.NODE_ENV === "production" ? plan.planId : plan.testId;
-        if (!price) throw new Error("Invalid Plan");
+    async createPaymentPlan(price: string, customer: string, trial: number) {
+        // const price = process.env.NODE_ENV === "production" ? subscriptions.planId : subscriptions.testId;
+        // if (!price) throw new Error("Invalid Payment Plan");
+        const items = [{ price }]
+        const options: Stripe.SubscriptionCreateParams = {
+            customer,
+            description: "Thanks for subscribing to Monstro. For support email support@mymonstro.com.",
+            items,
+            cancel_at: Math.floor(new Date().setDate(new Date().getDate() + 396) / 1000), // Unix timestamp in seconds (UTC) - today + 30 days + 1 year + 1 day
+            trial_period_days: trial || 0,
+        };
 
-        const items = [{ price }];
-        if (plan.seoPlanId) {
-            items.push({ price: plan.seoPlanId });
-        }
+        return this._stripe.subscriptions.create(options);
+    }
+
+    async createSubscription(customer: string) {
+        // const price = process.env.NODE_ENV === "production" ? subscriptions.planId : subscriptions.testId;
+        // if (!price) throw new Error("Invalid Plan");
+
+        const items = [{ price: "price_1NVhoxDePDUzIffAPzStEiBA" }]
 
         const options: Stripe.SubscriptionCreateParams = {
             customer,
             description: "Thanks for subscribing to Monstro. For support email support@mymonstro.com.",
             items,
-            coupon: plan.couponId || undefined,
-            trial_period_days: plan.trial ? +plan.trial : 1,
+            trial_period_days: 365,
         };
 
         return this._stripe.subscriptions.create(options);

@@ -6,20 +6,24 @@ import { forwardRef } from "react";
 interface RadioBoxProps<T> extends React.HTMLAttributes<HTMLDivElement> {
     value: T;
     selected?: boolean;
+    hasRadio?: boolean;
     onSelectChange: (value: T) => void;
 }
 
-const RadioBox = <T,>({ children, value, selected, onSelectChange, className, ...props }: RadioBoxProps<T>) => {
+const RadioBox = <T,>({ children, value, selected, onSelectChange, className, hasRadio = true, ...props }: RadioBoxProps<T>) => {
     return (
         <div
-            className={cn("border-2 cursor-pointer group flex hover:border-indigo-600 flex-row  shadow-unique border-black rounded-sm text-black bg-white p-4 gap-2", {
-                "border-indigo-600 ": selected,
-            }, className)}
+            className={cn("border-2 cursor-pointer group flex hover:border-indigo-600 flex-row  shadow-unique border-black rounded-sm text-black bg-white p-4 gap-2",
+                {
+                    "border-indigo-600 ": selected,
+
+                }
+                , className)}
             data-selected={selected}
             onClick={() => onSelectChange(value)}
             {...props}
         >
-            <span className='
+            {hasRadio && <span className='
                 flex-initial border-2 h-4 w-4 group cursor-pointer flex-shrink-0 box-border border-black rounded-full relative
                 group-data-[selected=true]:border-indigo-600
                 group-hover:border-indigo-600
@@ -31,7 +35,7 @@ const RadioBox = <T,>({ children, value, selected, onSelectChange, className, ..
                     group-hover:opacity-100  group-hover:bg-indigo-600 
                     `,
                 )}></span>
-            </span>
+            </span>}
             <div className="space-y-2  flex-1  ">
                 {children}
             </div>
@@ -43,7 +47,7 @@ const RadioBox = <T,>({ children, value, selected, onSelectChange, className, ..
 RadioBox.displayName = "RadioBox";
 
 const RadioBoxTitle = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ children, className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex-1 font-bold text-base leading-none", className)} {...props}>{children}</div>
+    <div ref={ref} className={cn("flex-1 font-semibold text-[0.95rem] leading-none", className)} {...props}>{children}</div>
 ));
 
 RadioBoxTitle.displayName = "RadioBoxTitle";
