@@ -238,20 +238,12 @@ export default function PlanPayment({ userSelection }: { userSelection: UserSele
                                 className={cn("border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-none py-3 h-auto rounded-sm  shadow-unique bg-white", "w-full px-4")}
                                 options={CARD_OPTIONS}
                                 onChange={(e) => {
-                                    if (e.error) {
-
-                                        setErrorMessage(
-                                            e.error.message ??
-                                            "An unknown error occured"
-                                        );
-                                    } else {
-                                        setErrorMessage("");
-                                    }
+                                    setErrorMessage(
+                                        e.error ? (e.error.message ? e.error.message : "An unknown error occured") : ""
+                                    );
                                 }}
                             />
-                            <FormMessage className="loaderWrp">
-                                {errorMessage}
-                            </FormMessage>
+                            <FormMessage >{errorMessage}  </FormMessage>
                             <span className="flex flex-row items-center mt-2 text-gray-400">
                                 <LockIcon size={12} className="" />
                                 <span className="text-xs leading-none">

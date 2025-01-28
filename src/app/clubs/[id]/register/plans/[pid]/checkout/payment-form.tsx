@@ -45,8 +45,8 @@ interface PlanBuilderPaymentProps {
 
 export default function PlanBuilderPayment({ plan, programId, locationId }: PlanBuilderPaymentProps) {
     const [errorMessage, setErrorMessage] = useState("");
-    const [payment, setPayment] = useState({ status: "initial" });
 
+    const [loading, setLoading] = useState<boolean>(false);
     const stripe = useStripe();
     const elements = useElements();
     const router = useRouter();
@@ -62,32 +62,11 @@ export default function PlanBuilderPayment({ plan, programId, locationId }: Plan
     });
 
 
-    const PaymentStatus = ({ status }: { status: string }) => {
-        switch (status) {
-            case "processing":
-            case "requires_payment_method":
-            case "requires_confirmation":
-                return (
-                    <>
-                        <span className="loader"></span>
-                        <span>processing...</span>
-                    </>
-                );
-            case "requires_action":
-                return "authenticating...";
-            case "succeeded":
-                return "Succeeded 🥳";
-            case "error":
-                return <>{errorMessage} 😭</>;
-            default:
-                return null;
-        }
-    };
 
     async function onSubmit(v: z.infer<typeof BillingSchema>) {
         if (!elements || !stripe || !plan) return;
-        setPayment({ status: "processing" });
-
+        setLoading(true);
+        const toastRef = toast.loading("Processing payment...");
         const cardElement = elements!.getElement(CardElement);
 
         try {
@@ -101,36 +80,28 @@ export default function PlanBuilderPayment({ plan, programId, locationId }: Plan
 
 
                 if (!res.ok) {
-                    toast.error("An error occurred while processing your payment.", {
-                        position: "top-center",
-                        hideProgressBar: true,
-                        closeOnClick: true,
-                    });
-                    setPayment({ status: "error" });
+                    handlePaymentError(toastRef, "An error occurred while processing your payment.");
                     return;
                 }
-                setPayment({ status: "succeeded" });
+
                 router.push(`/clubs/${locationId}/register/thankyou`)
 
             } else {
-                toast.error("Invalid Card.", {
-                    position: "top-center",
-                    hideProgressBar: true,
-                    closeOnClick: true,
-                });
-                setPayment({ status: "error" });
+                handlePaymentError(toastRef, "Invalid Card.");
             }
         } catch (e: any) {
             console.log(e);
-            toast.error("Your payment was declined by your bank, please talk to support. ",
-                {
-                    position: "top-center",
-                    hideProgressBar: true,
-                    closeOnClick: true,
-                }
-            );
-            setPayment({ status: "error" });
+            handlePaymentError(toastRef, "Your payment was declined by your bank, please talk to support.");
         }
+    }
+    function handlePaymentError(toastRef: string | number, message: string) {
+        setLoading(false);
+        toast.update(toastRef, {
+            render: message,
+            type: "error",
+            isLoading: false,
+            autoClose: 3000,
+        });
     }
 
     return (
@@ -143,7 +114,7 @@ export default function PlanBuilderPayment({ plan, programId, locationId }: Plan
                                 Name on Card
                             </FormLabel>
                             <FormControl>
-                                <Input type="text" placeholder="Name on Card" {...field} />
+                                <Input variant={"register"} type="text" placeholder="Name on Card" {...field} />
                             </FormControl>
 
                             <FormMessage />
@@ -158,7 +129,7 @@ export default function PlanBuilderPayment({ plan, programId, locationId }: Plan
                                 Billing Address
                             </FormLabel>
                             <FormControl>
-                                <Input type="text" placeholder="Billing Address" {...field} />
+                                <Input variant={"register"} type="text" placeholder="Billing Address" {...field} />
                             </FormControl>
 
                             <FormMessage />
@@ -174,22 +145,16 @@ export default function PlanBuilderPayment({ plan, programId, locationId }: Plan
                         </FormLabel>
 
                         <CardElement
-                            className="text-base bg-white border-2 rounded-sm border-indigo-500 py-3.5 px-3 w-full"
+                            className={cn("border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-none py-3 h-auto rounded-sm  shadow-unique bg-white", "w-full px-4")}
                             options={CARD_OPTIONS}
                             onChange={(e) => {
-                                if (e.error) {
-                                    setPayment({ status: "error" });
-                                    setErrorMessage(
-                                        e.error.message ??
-                                        "An unknown error occured"
-                                    );
-                                }
+                                setErrorMessage(
+                                    e.error ? (e.error.message ? e.error.message : "An unknown error occured") : ""
+                                );
                             }}
                         />
 
-                        <FormMessage className="loaderWrp">
-                            {PaymentStatus(payment)}
-                        </FormMessage>
+                        <FormMessage >{errorMessage}  </FormMessage>
                         <span className="flex flex-row items-center mt-2 text-gray-400">
                             <LockIcon size={12} className="" />
                             <span className="text-xs leading-none">
@@ -200,11 +165,12 @@ export default function PlanBuilderPayment({ plan, programId, locationId }: Plan
                 </fieldset>
 
                 <Button
-
-                    variant={"foreground"}
-                    className={cn(payment.status === "processing" && "children:inline-block")}
+                    className={cn(
+                        "mt-2 text-base py-3 font-semibold w-full bg-black rounded-sm hover:bg-indigo-600 children:hidden",
+                        loading && "children:inline-block"
+                    )}
                     type="submit"
-                    disabled={!["initial", "succeeded", "error"].includes(payment.status) || !stripe}
+                    disabled={loading || !stripe}
                 >
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Subscribe
