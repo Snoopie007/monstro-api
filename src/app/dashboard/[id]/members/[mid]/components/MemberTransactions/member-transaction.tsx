@@ -11,33 +11,31 @@ import {
 import { Input } from '@/components/forms'
 import { cn, formatAmountForDisplay, formatDateTime } from '@/libs/utils'
 import MemberPaymentActions from './actions'
-import NewMemberPayment from './create-payment'
+import NewMemberTransaction from './create-transaction'
 import { useMemberPayments } from '@/hooks/use-members'
 import { useMember } from '../../providers/MemberContext'
 import Stripe from 'stripe'
 
-export function MemberPayments({ params }: { params: { id: string, mid: number } }) {
+export function MemberTransactions({ params }: { params: { id: string, mid: number } }) {
     const { member } = useMember();
     const { payments, error, isLoading } = useMemberPayments(params.id, params.mid, member.stripeCustomerId);
     return (
         <div className='py-4'>
             <div className='w-full flex flex-row items-center  gap-2'>
                 <div className='flex-initial'>
-                    <Input placeholder='Search payments...' className='w-[250px] text-xs h-auto py-1 rounded-xs' />
+                    <Input placeholder='Search transactions...' className='w-[250px] text-xs h-auto py-1 rounded-xs' />
                 </div>
                 <div>
-                    <NewMemberPayment />
+                    <NewMemberTransaction />
                 </div>
             </div>
             <div className='border rounded-sm mt-4'>
                 <Table className=''>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Payment Method</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead></TableHead>
+                            {["Amount", "Description", "Payment Method", "Date", ""].map((header, index) => (
+                                <TableHead key={index} className='text-xs h-auto py-2'>{header}</TableHead>
+                            ))}
                         </TableRow>
                     </TableHeader>
                     <TableBody>

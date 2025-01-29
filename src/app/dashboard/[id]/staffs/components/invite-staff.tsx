@@ -19,7 +19,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/forms/form'
 import { cn } from '@/libs/utils'
 import { zodResolver } from '@hookform/resolvers/zod'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import z from 'zod'
 import { InviteStaffSchema } from '../schema'
@@ -44,9 +44,7 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
 
     async function onSubmit(v: z.infer<typeof InviteStaffSchema>) {
 
-        const body = {
-            ...v
-        };
+        const body = { ...v };
         try {
             await addStaff(body, locationId);
             toast.success("Staff Added");

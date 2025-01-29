@@ -8,11 +8,6 @@ import {
     DialogTrigger,
     DialogFooter,
     DialogClose,
-    PopoverContent,
-    Popover,
-    PopoverTrigger,
-    Calendar,
-
 } from "@/components/ui";
 import {
     Form, FormField, FormLabel, FormMessage, FormItem, FormControl,
@@ -28,11 +23,11 @@ import { z } from "zod";
 import { NewMemberPaymentSchema } from "../../schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/libs/utils";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useMemberPaymentMethods } from "../../providers/MemberContext";
-import { format } from "date-fns"
 
-export default function NewMemberPayment() {
+
+export default function NewMemberTransaction() {
     const [open, setOpen] = useState<boolean>(false);
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods()
@@ -42,7 +37,6 @@ export default function NewMemberPayment() {
         defaultValues: {
             amount: 0,
             paymentMethod: "",
-            chargedDate: new Date(),
             card: "",
             description: "",
             statement: "",
@@ -51,19 +45,20 @@ export default function NewMemberPayment() {
         mode: "onSubmit",
     })
 
-
+    const method = form.watch("paymentMethod")
     async function onSubmit(data: z.infer<typeof NewMemberPaymentSchema>) {
         console.log(data)
+        setLoading(true)
     }
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant={"foreground"} size={"xs"} className='border'>+ Payment</Button>
+                <Button variant={"foreground"} size={"xs"} className='border'>+ Transaction</Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Add a Payment</DialogTitle>
+                    <DialogTitle>Add a Transaction</DialogTitle>
                 </DialogHeader>
                 <DialogBody>
                     <Form {...form}>
@@ -91,42 +86,7 @@ export default function NewMemberPayment() {
                                     )}
                                 />
                             </fieldset>
-                            <fieldset>
-                                <FormField
-                                    control={form.control}
-                                    name="chargedDate"
-                                    render={({ field }) => (
-                                        <FormItem className="flex-1">
-                                            <FormLabel>Charged Date</FormLabel>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <FormControl>
-                                                        <Button variant={"outline"}
-                                                            className={cn("rounded-sm pl-3 w-full text-left font-normal")}
-                                                        >
-                                                            {field.value ? (
-                                                                format(field.value, "PPP")
-                                                            ) : (
-                                                                <span>Pick a date</span>
-                                                            )}
-                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                        </Button>
-                                                    </FormControl>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0" align="start">
-                                                    <Calendar mode="single" selected={field.value}
-                                                        onSelect={field.onChange}
-                                                        disabled={(date) =>
-                                                            date > new Date() || date < new Date("1900-01-01")
-                                                        }
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </fieldset>
+
                             <fieldset>
                                 <FormField
                                     control={form.control}
@@ -156,7 +116,7 @@ export default function NewMemberPayment() {
                                     )}
                                 />
                             </fieldset>
-                            {form.getValues("paymentMethod") === "Charge a Card" && (
+                            {method === "Charge a Card" && (
 
                                 <fieldset className="flex flex-row items-center gap-2">
                                     <FormField
@@ -191,7 +151,6 @@ export default function NewMemberPayment() {
                                         )}
                                     />
                                 </fieldset>
-
                             )}
 
                             <fieldset>
@@ -265,7 +224,7 @@ export default function NewMemberPayment() {
                         onClick={form.handleSubmit(onSubmit)}
                     >
                         <Loader2 className="mr-2 h-4 w-4 hidden animate-spin" />
-                        Add Payment
+                        Add Transaction
                     </Button>
                 </DialogFooter>
             </DialogContent>
