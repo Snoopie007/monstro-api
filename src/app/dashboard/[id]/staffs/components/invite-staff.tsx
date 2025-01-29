@@ -43,7 +43,7 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
     })
 
     async function onSubmit(v: z.infer<typeof InviteStaffSchema>) {
-        console.log(v);
+
         const body = {
             ...v
         };
@@ -158,9 +158,9 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
                 </DialogBody>
                 <DialogFooter >
                     <DialogClose asChild>
-                        <Button variant="outline" size={"sm"} className='rounded-sm' onClick={() => setOpen(false)}>Cancel</Button>
+                        <Button variant="outline" size={"xs"} className='rounded-sm' onClick={() => setOpen(false)}>Cancel</Button>
                     </DialogClose>
-                    <Button variant="foreground" size={"sm"} className=' rounded-sm' onClick={form.handleSubmit(onSubmit)}>Save</Button>
+                    <Button variant="foreground" size={"xs"} className=' rounded-sm' onClick={form.handleSubmit(onSubmit)}>Save</Button>
                 </DialogFooter>
             </DialogContent>
 

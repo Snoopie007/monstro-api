@@ -51,18 +51,11 @@ export function MemberEnrollments({ params }: { params: { id: string, mid: numbe
             <div className='border rounded-sm mt-4'>
                 <Table className=''>
                     <TableHeader>
-                        <TableRow>
-
-                            <TableHead>Plan</TableHead>
-                            <TableHead>Length</TableHead>
-
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Total Collected</TableHead>
-
-                            <TableHead>Next Invoice</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead></TableHead>
-                        </TableRow>
+                        {['Plan', 'Length', 'Amount', 'Total Collected', 'Next Invoice', 'Status', ''].map((header, i) => (
+                            <TableRow key={i}>
+                                <TableHead>{header}</TableHead>
+                            </TableRow>
+                        ))}
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
