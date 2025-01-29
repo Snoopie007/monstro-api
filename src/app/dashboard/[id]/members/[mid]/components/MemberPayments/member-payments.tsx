@@ -21,9 +21,9 @@ export function MemberPayments({ params }: { params: { id: string, mid: number }
     const { payments, error, isLoading } = useMemberPayments(params.id, params.mid, member.stripeCustomerId);
     return (
         <div className='py-4'>
-            <div className='w-full flex flex-row items-center  justify-between'>
+            <div className='w-full flex flex-row items-center  gap-2'>
                 <div className='flex-initial'>
-                    <Input placeholder='Filter' className='w-[250px] h-auto py-2 rounded-sm' />
+                    <Input placeholder='Search payments...' className='w-[250px] text-xs h-auto py-1 rounded-xs' />
                 </div>
                 <div>
                     <NewMemberPayment />
@@ -33,7 +33,6 @@ export function MemberPayments({ params }: { params: { id: string, mid: number }
                 <Table className=''>
                     <TableHeader>
                         <TableRow>
-
                             <TableHead>Amount</TableHead>
                             <TableHead>Description</TableHead>
                             <TableHead>Payment Method</TableHead>
@@ -106,7 +105,7 @@ export function MemberPayments({ params }: { params: { id: string, mid: number }
 function ChargeAmount({ amount, currency, status, refunded }: { amount: number, currency: string, status: string, refunded: boolean }) {
     return (
         <div className='flex flex-row items-center gap-2'>
-            <span className='font-bold inline-block leading-5 align-middle'>{formatAmountForDisplay(amount / 100, currency, true, 2)}</span>
+            <span className='font-bold inline-block leading-5 align-middle'>{formatAmountForDisplay(amount / 100, currency, true)}</span>
             <span className='uppercase  inline-block leading-5 align-middle'>{currency}</span>
             <span className={cn("capitalize text-xs leading-5 inline-block font-medium px-2 rounded-sm", {
                 'bg-green-300 text-green-800': status === 'succeeded',

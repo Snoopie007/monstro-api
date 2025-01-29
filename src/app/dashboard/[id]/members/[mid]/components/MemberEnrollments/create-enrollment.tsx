@@ -31,7 +31,7 @@ import { z } from "zod";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/libs/utils";
 import { PopoverTrigger } from "@radix-ui/react-popover";
-import { addDays, format, set } from "date-fns"
+import { addDays, format } from "date-fns"
 import { EndDatePresets, StartDatePresets } from "./data";
 import { useMemberPaymentMethods } from "../../providers/MemberContext";
 
@@ -52,14 +52,18 @@ export function CreateEnrollment() {
 
     const startDate = form.watch("startDate")
 
-
+    async function onSubmit(data: z.infer<typeof NewEnrollmentSchema>) {
+        console.log(data)
+    }
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant={"foreground"} size={"sm"} className='rounded-sm'>+ Enrollment</Button>
+                <Button variant={"foreground"} size={"xs"} className='border'>+ Enrollment</Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
-                <DialogHeader><DialogTitle>Create Enrollment</DialogTitle></DialogHeader>
+                <DialogHeader>
+                    <DialogTitle>Add Enrollment</DialogTitle>
+                </DialogHeader>
                 <DialogBody>
 
                     <Form {...form}>
@@ -208,17 +212,17 @@ export function CreateEnrollment() {
                 </DialogBody>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button type="button" variant="outline" size={"sm"}>Cancel</Button>
+                        <Button type="button" variant="outline" size={"xs"}>Cancel</Button>
                     </DialogClose>
                     <Button
                         className={cn("",)}
                         variant={"foreground"}
-                        size={"sm"}
+                        size={"xs"}
                         type="submit"
-
+                        onClick={form.handleSubmit(onSubmit)}
                     >
                         <Loader2 className="mr-2 h-4 w-4 hidden animate-spin" />
-                        Create Enrollment
+                        Add Enrollment
                     </Button>
                 </DialogFooter>
             </DialogContent>

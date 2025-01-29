@@ -26,7 +26,6 @@ export function MemberAchievements({ params }: { params: { id: string, mid: numb
                 <Table className=''>
                     <TableHeader>
                         <TableRow>
-
                             <TableHead>Name</TableHead>
                             <TableHead>Description</TableHead>
                             <TableHead>Points Earned</TableHead>
