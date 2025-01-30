@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
     maxHeaderSize: 32 * 1024, // 32KB
   },
   skipTrailingSlashRedirect: true,
-  output: 'standalone'
+  // output: 'standalone'
 };
 
 export default nextConfig;

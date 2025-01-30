@@ -1,11 +1,9 @@
-
-
-import { bigint, integer, boolean, primaryKey, varchar, serial, text, timestamp, pgTable, jsonb, real, time } from "drizzle-orm/pg-core";
+import { integer, boolean, text, timestamp, pgTable, serial, doublePrecision } from "drizzle-orm/pg-core";
 import { programs } from "./programs";
 import { contractsTemplates } from "./contract-templates";
 import { relations } from "drizzle-orm";
-import { vendors } from "./users";
-import { pricings } from "./pricing";
+import { vendors } from "./vendor";
+
 
 export const plans = pgTable("stripe_plans", {
     id: serial("id").primaryKey(),
@@ -15,14 +13,32 @@ export const plans = pgTable("stripe_plans", {
     familyMemberLimit: integer("family_member_limit").notNull().default(0),
     status: boolean("status").notNull().default(false),
     vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
-    programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
+    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     contractId: integer("contract_id").references(() => contractsTemplates.id),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })
 });
 
-export const plansRelations = relations(plans, ({ one }) => ({
+
+export const pricings = pgTable("stripe_plan_pricings", {
+    id: serial("id").primaryKey(),
+    amount: doublePrecision("amount").notNull(),
+    billingPeriod: text("billing_period"),
+    stripePriceId: text("stripe_price_id").notNull(),
+    stripePlanId: integer("stripe_plan_id").notNull().references(() => plans.id),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
+});
+
+export const pricingRelations = relations(pricings, ({ one }) => ({
+    plan: one(plans, {
+        fields: [pricings.stripePlanId],
+        references: [plans.id],
+    }),
+}))
+
+export const plansRelations = relations(plans, ({ one, many }) => ({
     program: one(programs, {
         fields: [plans.programId],
         references: [programs.id],
@@ -31,5 +47,8 @@ export const plansRelations = relations(plans, ({ one }) => ({
         fields: [plans.contractId],
         references: [contractsTemplates.id],
     }),
-    pricings: one(pricings)
+    pricing: one(pricings, {
+        fields: [plans.id],
+        references: [pricings.stripePlanId],
+    })
 }))

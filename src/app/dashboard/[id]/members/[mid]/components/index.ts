@@ -5,5 +5,5 @@ export * from './MemberEnrollments';
 export * from './MemberAchievements';
 export * from './MemberAttedance';
 export * from './MemberRewards';
-export * from './MemberPayments';
+export * from './MemberTransactions';
 export * from './MemberFamily';

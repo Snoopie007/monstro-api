@@ -40,9 +40,9 @@ export function MemberEnrollments({ params }: { params: { id: string, mid: numbe
 
     return (
         <div className='py-4'>
-            <div className='w-full flex flex-row items-center  justify-between'>
+            <div className='w-full flex flex-row items-center  gap-2'>
                 <div className='flex-initial'>
-                    <Input placeholder='Filter' className='w-[250px] h-auto py-2 rounded-sm' />
+                    <Input placeholder='Search enrollments...' className='w-[250px] h-auto py-1  text-xs rounded-xs' />
                 </div>
                 <div>
                     <CreateEnrollment />
@@ -51,18 +51,11 @@ export function MemberEnrollments({ params }: { params: { id: string, mid: numbe
             <div className='border rounded-sm mt-4'>
                 <Table className=''>
                     <TableHeader>
-                        <TableRow>
-
-                            <TableHead>Plan</TableHead>
-                            <TableHead>Length</TableHead>
-
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Total Collected</TableHead>
-
-                            <TableHead>Next Invoice</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead></TableHead>
-                        </TableRow>
+                        {['Plan', 'Length', 'Amount', 'Total Collected', 'Next Invoice', 'Status', ''].map((header, i) => (
+                            <TableRow key={i}>
+                                <TableHead>{header}</TableHead>
+                            </TableRow>
+                        ))}
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
@@ -110,7 +103,6 @@ function SubscriptionRow({ subscriptions }: { subscriptions: Stripe.Subscription
                         <div className='flex flex-row gap-2 items-center'>
                             <div className="relative flex items-center justify-center w-5 h-5">
                                 <CircleProgress progress={calculateProgressPercentage(enrollment.current_period_start, enrollment.current_period_end)} />
-
                             </div>
                             <span>{enrollment.items.data[0].plan.nickname}</span>
                         </div>
@@ -119,7 +111,7 @@ function SubscriptionRow({ subscriptions }: { subscriptions: Stripe.Subscription
                         {formatDateTime(enrollment.created * 1000)} - {enrollment.ended_at ? formatDateTime(enrollment.ended_at) : 'Never'}
                     </TableCell>
                     <TableCell>
-                        {formatAmountForDisplay(enrollment.items.data[0].plan.amount / 100, enrollment.currency, true, 2)} / {enrollment.items.data[0].plan.interval}
+                        {formatAmountForDisplay(enrollment.items.data[0].plan.amount / 100, enrollment.currency, true)} / {enrollment.items.data[0].plan.interval}
                     </TableCell>
                     <TableCell>
                     </TableCell>

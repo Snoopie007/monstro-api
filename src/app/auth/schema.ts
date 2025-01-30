@@ -3,7 +3,7 @@ import * as z from "zod";
 
 
 export const LoginSchema = z.object({
-    email: z.string().min(8).email("invalid email.")
+    email: z.string().min(8, "Email is required.").email("invalid email."),
 }).merge(PasswordSchema);
 
 export const VendorRegistrationSchema = z.object({
@@ -12,11 +12,11 @@ export const VendorRegistrationSchema = z.object({
 
 
 export const ForgotPasswordSchema = z.object({
-    email: z.string().min(8).email("invalid email."),
+    email: z.string().min(8, "Email is required.").email("invalid email."),
 });
 
 export const ResetPasswordSchema = z.object({
-    email: z.string().min(8).email("invalid email."),
+    email: z.string().min(8, "Email is required.").email("invalid email."),
     token: z.string(),
     password_confirmation: z.string().min(8)
 }).merge(PasswordSchema);

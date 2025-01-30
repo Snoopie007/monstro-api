@@ -9,6 +9,7 @@ export const UpdateMemberSchema = z.object({
 export const NewMemberPaymentSchema = z.object({
     amount: z.number().multipleOf(0.01),
     paymentMethod: z.string(),
+    card: z.string().optional(),
     statement: z.string(),
     description: z.string(),
     authorize: z.boolean(),

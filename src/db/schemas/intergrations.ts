@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
 import { integer, boolean, primaryKey, varchar, serial, text, timestamp, pgTable, jsonb, json } from "drizzle-orm/pg-core";
-import { vendors } from "./users";
+import { vendors } from "./vendor";
 import { locations } from "./locations";
 
 

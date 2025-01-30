@@ -11,3 +11,6 @@ export * from './program';
 export * from './member';
 export * from './partner';
 export * from './reward';
+export * from './user';
+export * from './vendor';
+export * from './vendor-referral';

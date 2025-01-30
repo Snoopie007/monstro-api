@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui"
 import {
     MemberAchievements,
     MemberEnrollments,
-    MemberPayments,
+    MemberTransactions,
     MemberRewards,
     MemberAttedance,
     MemberFamilies
@@ -81,7 +81,7 @@ const MemberDetailsMenu = [
     "Achievements",
     "Attendance",
     "Enrollments",
-    "Payments",
+    "Transactions",
     "Rewards"
 ]
 
@@ -123,8 +123,8 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
                         <TabsContent value="Enrollments">
                             <MemberEnrollments params={params} />
                         </TabsContent>
-                        <TabsContent value="Payments">
-                            <MemberPayments params={params} />
+                        <TabsContent value="Transactions">
+                            <MemberTransactions params={params} />
                         </TabsContent>
 
                         <TabsContent value="Rewards">

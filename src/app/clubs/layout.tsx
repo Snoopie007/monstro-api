@@ -1,5 +1,5 @@
 import 'react-toastify/dist/ReactToastify.css';
-import '@public/clubs.scss'
+
 import { ToastContainer } from 'react-toastify';
 
 export default function ClubRegistration({

@@ -1,20 +1,28 @@
+import { Contract } from "./contract";
+
 export type Plan = {
     id?: number;
     name: string;
-    description: string;
+    description: string | null;
     status?: boolean;
-    vendor_id: number;
+    vendorId: number | null;
     family: boolean;
-    program_id: number;
-    family_member_limit: number;
+    programId: number;
+    familyMemberLimit: number;
     pricing: Pricing;
-    contractId?: number;
+    contractId?: number | null;
+    contract?: Contract | null;
+    created: Date | null;
+    updated: Date | null;
+    deleted: Date | null;
 };
 
 export type Pricing = {
     amount: number;
-    billing_period: string;
+    billingPeriod: string | null;
     id?: number;
-    stripe_plan_id?: string;
-    stripe_price_id?: string;
+    stripePlanId: number;
+    stripePriceId: string;
+
 }
+

@@ -19,7 +19,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/forms/form'
 import { cn } from '@/libs/utils'
 import { zodResolver } from '@hookform/resolvers/zod'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import z from 'zod'
 import { InviteStaffSchema } from '../schema'
@@ -43,10 +43,8 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
     })
 
     async function onSubmit(v: z.infer<typeof InviteStaffSchema>) {
-        console.log(v);
-        const body = {
-            ...v
-        };
+
+        const body = { ...v };
         try {
             await addStaff(body, locationId);
             toast.success("Staff Added");
@@ -158,9 +156,9 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
                 </DialogBody>
                 <DialogFooter >
                     <DialogClose asChild>
-                        <Button variant="outline" size={"sm"} className='rounded-sm' onClick={() => setOpen(false)}>Cancel</Button>
+                        <Button variant="outline" size={"xs"} className='rounded-sm' onClick={() => setOpen(false)}>Cancel</Button>
                     </DialogClose>
-                    <Button variant="foreground" size={"sm"} className=' rounded-sm' onClick={form.handleSubmit(onSubmit)}>Save</Button>
+                    <Button variant="foreground" size={"xs"} className=' rounded-sm' onClick={form.handleSubmit(onSubmit)}>Save</Button>
                 </DialogFooter>
             </DialogContent>
 

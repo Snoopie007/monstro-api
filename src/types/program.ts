@@ -3,15 +3,19 @@ import { Plan } from "./plan";
 export type Program = {
     id: number;
     name: string;
-    description: string;
+    description: string | null;
     icon?: string | null | File;
-    benefits: string[];
+    // benefits?: string[];
     plans: Plan[];
     programLevels?: Level[];
-    locationId?: string;
-    status: string | null;
-    location?: any;
+    locationId?: number;
+    // status: string | null;
+    location?: Location;
     planCounts?: string;
+    lastSyncAt: Date | null;
+    created: Date;
+    updated: Date | null;
+    deleted: Date | null;
 };
 
 export type Level = {
@@ -24,6 +28,9 @@ export type Level = {
     program?: Program;
     parentId?: number;
     sessions: Session[];
+    created: Date | null;
+    updated: Date | null;
+    deleted: Date | null;
 };
 
 export type Enrollments = {

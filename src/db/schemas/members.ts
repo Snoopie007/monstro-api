@@ -11,6 +11,7 @@ import { plans } from "./plans";
 export const members = pgTable("members", {
     id: serial("id").primaryKey(),
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    // parentId: integer("parent_id"),
     firstName: text("first_name").notNull(),
     lastName: text("last_name"),
     email: text("email").notNull(),
