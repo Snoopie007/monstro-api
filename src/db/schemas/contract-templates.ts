@@ -4,7 +4,7 @@ import { integer, boolean, varchar, serial, text, timestamp, pgTable } from "dri
 import { vendors } from "./vendor";
 import { locations } from "./locations";
 import { contracts } from "./members";
-import { plans } from "./plans";
+import { memberPlans } from "./member-plans";
 
 export const contractsTemplates = pgTable("contracts", {
     id: serial("id").primaryKey(),
@@ -21,5 +21,5 @@ export const contractsTemplates = pgTable("contracts", {
 
 export const contractRelations = relations(contractsTemplates, ({ many, one }) => ({
     memberContracts: many(contracts),
-    plans: many(plans)
+    plans: many(memberPlans)
 }));

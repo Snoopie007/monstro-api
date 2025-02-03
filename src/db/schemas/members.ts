@@ -7,7 +7,8 @@ import { achievements } from "./achievements";
 import { rewards } from "./rewards";
 import { programMembers } from "./programs";
 import { contractsTemplates } from "./contract-templates";
-import { plans } from "./plans";
+import { memberPlans } from "./member-plans";
+
 
 export const members = pgTable("members", {
     id: serial("id").primaryKey(),
@@ -87,10 +88,11 @@ export const contractsRelations = relations(contracts, ({ many, one }) => ({
         fields: [contracts.memberId],
         references: [members.id],
     }),
-    plan: one(plans, {
+    memberPlan: one(memberPlans, {
         fields: [contracts.stripePlanId],
-        references: [plans.id],
+        references: [memberPlans.id],
     }),
+
     contractTemplate: one(contractsTemplates, {
         fields: [contracts.templateId],
         references: [contractsTemplates.id],

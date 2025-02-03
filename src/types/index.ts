@@ -14,3 +14,4 @@ export * from './reward';
 export * from './user';
 export * from './vendor';
 export * from './vendor-referral';
+export * from './transaction';

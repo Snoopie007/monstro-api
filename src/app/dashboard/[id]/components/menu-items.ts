@@ -64,6 +64,16 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
         icon: "AtSign"
     },
     {
+        name: "Transactions",
+        path: "transactions",
+        icon: "Receipt"
+    },
+    {
+        name: "Reporting",
+        path: "reporting",
+        icon: "SquareChartGantt"
+    },
+    {
         name: "Settings",
         path: "settings/company",
         icon: "Settings"

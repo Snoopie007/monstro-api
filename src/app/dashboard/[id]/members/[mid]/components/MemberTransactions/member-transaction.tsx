@@ -34,7 +34,9 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
                     <TableHeader>
                         <TableRow>
                             {["Amount", "Description", "Payment Method", "Date", ""].map((header, index) => (
-                                <TableHead key={index} className='text-xs h-auto py-2'>{header}</TableHead>
+                                <TableHead key={index} className='text-xs h-auto py-2'>
+                                    {header}
+                                </TableHead>
                             ))}
                         </TableRow>
                     </TableHeader>
