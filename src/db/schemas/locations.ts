@@ -5,6 +5,7 @@ import { integer, boolean, primaryKey, varchar, serial, text, timestamp, pgTable
 import { members } from "./members";
 import { integrations } from "./intergrations";
 import { programs } from "./programs";
+import { transactions } from "./transactions";
 
 export const locations = pgTable("locations", {
     id: serial("id").primaryKey(),
@@ -43,7 +44,7 @@ export const locationsRelations = relations(locations, ({ many }) => ({
 }));
 
 
-export const memberLocationsRelations = relations(memberLocations, ({ one }) => ({
+export const memberLocationsRelations = relations(memberLocations, ({ one, many }) => ({
     member: one(members, {
         fields: [memberLocations.memberId],
         references: [members.id],
@@ -52,5 +53,6 @@ export const memberLocationsRelations = relations(memberLocations, ({ one }) => 
         fields: [memberLocations.locationId],
         references: [locations.id],
     }),
+    transactions: many(transactions),
 }));
 

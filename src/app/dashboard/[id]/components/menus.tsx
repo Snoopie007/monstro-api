@@ -24,16 +24,20 @@ import {
 import React from 'react';
 import { usePathname } from 'next/navigation';
 
-
 function SideNav({ locationId }: { locationId: number }) {
     const [currentMenuToggle, setCurrentMenuToggle] = React.useState<string | null>(null)
     const [isOpen, setIsOpen] = React.useState<boolean>(false)
-    return (
-        <aside className=" h-full  ">
-            <nav className='flex-row flex w-full  h-full relative'>
 
+
+    const iconContainerClass = "flex-initial inline-flex flex-row justify-start gap-2 h-auto items-center text-nowrap"
+    const subMenuItemClass = "text-xs block px-2 py-1.5 hover:bg-foreground/10 rounded-sm font-semibold w-full"
+    const menuLinkClass = "flex flex-row justify-start gap-2 hover:bg-foreground/10 rounded-sm py-2 px-2.5 items-center"
+
+    return (
+        <aside className="h-full">
+            <nav className='flex-row flex w-full h-full relative'>
                 <motion.aside whileHover={{ width: "300px" }}
-                    className=" border-r border-gray-100 w-[56px] group   overflow-hidden   h-full "
+                    className={"border-r border-gray-100 w-[56px] group overflow-hidden h-full"}
                     onMouseEnter={() => setIsOpen(true)}
                     onMouseLeave={() => {
                         setCurrentMenuToggle(null)
@@ -41,9 +45,8 @@ function SideNav({ locationId }: { locationId: number }) {
                     }}
                     data-state={isOpen ? 'open' : 'closed'}
                 >
-
-                    <div className='w-full py-6 px-2' >
-                        <ul className=' space-y-3'>
+                    <div className='w-full py-6 px-2'>
+                        <ul className='space-y-2'>
                             {SidebarMenuItems.map((item) => (
                                 <React.Fragment key={item.name}>
                                     {item.subMenu ? (
@@ -53,48 +56,43 @@ function SideNav({ locationId }: { locationId: number }) {
                                                 onOpenChange={(open) => open ? setCurrentMenuToggle(item.name) : setCurrentMenuToggle(null)}
                                             >
                                                 <CollapsibleTrigger value={item.name}
-                                                    className='flex flex-row items-center w-full justify-between hover:bg-accent rounded-sm py-2 px-2'
+                                                    className={'flex flex-row items-center w-full justify-between hover:bg-foreground/10 rounded-sm py-2 px-2'}
                                                 >
-                                                    <div className={cn("flex-initial inline-flex flex-row justify-start gap-2 h-auto items-center text-nowrap ")}>
-                                                        <span><Icon name={item.icon} size={20} /></span>
-                                                        <b className='group-data-[state=closed]:opacity-0 font-semibold  flex-1 text-sm'>{item.name}</b>
+                                                    <div className={cn(iconContainerClass)}>
+                                                        <span><Icon name={item.icon} size={16} /></span>
+                                                        <b className='group-data-[state=closed]:opacity-0 font-semibold flex-1 text-xs'>{item.name}</b>
                                                     </div>
                                                     <Icon name='ChevronsUpDown' />
                                                 </CollapsibleTrigger>
-                                                <CollapsibleContent className='mx-4 border-foreground/20 border-l mt-2  '>
+                                                <CollapsibleContent className='mx-4 border-foreground/20 border-l mt-2'>
                                                     <ul className='px-2 space-y-1'>
                                                         {item.subMenu.map((subItem) => (
-                                                            <li key={subItem.name} className='w-full h-full '>
+                                                            <li key={subItem.name} className='w-full'>
                                                                 <Link href={`/dashboard/${locationId}/${subItem.path}`}
-                                                                    className={cn("text-sm  block  px-2 py-1.5 hover:bg-accent   rounded-sm font-semibold w-full")}>
+                                                                    className={cn(subMenuItemClass)}>
                                                                     {subItem.name}
                                                                 </Link>
                                                             </li>
                                                         ))}
                                                     </ul>
-
                                                 </CollapsibleContent>
                                             </Collapsible>
                                         </li>
                                     ) : (
-                                        <li className='w-full '>
-                                            <Link href={`/dashboard/${locationId}/${item.path}`} className={cn("flex flex-row justify-start gap-2 hover:bg-accent rounded-sm  py-2 px-2.5 items-center ")}>
-                                                <span><Icon name={item.icon} size={20} /></span>
-                                                <b className='group-data-[state=closed]:opacity-0 font-semibold  flex-1 text-sm'>{item.name}</b>
+                                        <li className='w-full'>
+                                            <Link href={`/dashboard/${locationId}/${item.path}`} className={cn(menuLinkClass)}>
+                                                <span><Icon name={item.icon} size={16} /></span>
+                                                <b className='group-data-[state=closed]:opacity-0 font-semibold flex-1 text-xs'>{item.name}</b>
                                             </Link>
                                         </li>
-
                                     )}
-
                                 </React.Fragment>
-
                             ))}
                         </ul>
-
                     </div>
                 </motion.aside>
             </nav>
-        </aside >
+        </aside>
     )
 }
 

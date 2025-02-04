@@ -28,7 +28,7 @@ class StripePayments {
         });
     }
 
-    public async createCustomer(data: Owner, token: string) {
+    public async createCustomer(data: Owner, token: string, vendorId: number) {
         if (!data.email || !data.phone || !data.firstName || !data.lastName) {
             throw new Error("Invalid Customer Info");
         }
@@ -37,8 +37,12 @@ class StripePayments {
             email: data.email,
             phone: data.phone,
             source: token,
+            metadata: {
+                vendorId: `${vendorId}`,
+            },
         });
     }
+
 
     async updatePaymentMethod(
         id: string,

@@ -6,7 +6,8 @@ import { achievements } from "./achievements";
 import { rewards } from "./rewards";
 import { programMembers, programs } from "./programs";
 import { contractsTemplates } from "./contract-templates";
-import { plans } from "./plans";
+import { memberPlans } from "./member-plans";
+
 
 export const members = pgTable("members", {
     id: serial("id").primaryKey(),
@@ -43,12 +44,12 @@ export const MemberRewards = pgTable("member_rewards", {
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.memberId, t.locationId, t.rewardId] })]);
 
-export const contracts = pgTable("member_contracts", {
+export const memberContracts = pgTable("member_contracts", {
     id: serial("id").primaryKey(),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
     templateId: integer("contract_id").references(() => contractsTemplates.id, { onDelete: "cascade" }),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
-    memberPlanId: text("member_plan_id"),
+    memberPlanId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     content: text("content"),
     signed: boolean("signed").notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -80,7 +81,7 @@ export const memberPayments = pgTable("member_payments", {
     memberId: integer("payer_id").references(() => members.id, { onDelete: "cascade" }),
     beneficiaryId: integer("beneficiary_id").references(() => members.id, { onDelete: "cascade" }),
     programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
-    planId: integer("member_plan_id").references(() => plans.id, { onDelete: "cascade" }),
+    planId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });
@@ -89,7 +90,7 @@ export const membersRelations = relations(members, ({ many, one }) => ({
     locations: many(memberLocations),
     achievements: many(memberAchievements),
     rewards: many(MemberRewards),
-    contracts: many(contracts),
+    contracts: many(memberContracts),
     programMembers: many(programMembers),
     user: one(users, {
         fields: [members.userId],
@@ -135,9 +136,9 @@ export const memberPaymentRelations = relations(memberPayments, ({ one }) => ({
         fields: [memberPayments.programId],
         references: [programs.id],
     }),
-    plan: one(plans, {
+    plan: one(memberPlans, {
         fields: [memberPayments.planId],
-        references: [plans.id],
+        references: [memberPlans.id],
     }),
 }));
 
@@ -152,17 +153,19 @@ export const memberAchievementsRelations = relations(memberAchievements, ({ one 
     }),
 }));
 
-export const contractsRelations = relations(contracts, ({ many, one }) => ({
+
+
+export const memberContractsRelations = relations(memberContracts, ({ many, one }) => ({
     member: one(members, {
-        fields: [contracts.memberId],
+        fields: [memberContracts.memberId],
         references: [members.id],
     }),
-    plan: one(plans, {
-        fields: [contracts.memberPlanId],
-        references: [plans.id],
+    plan: one(memberPlans, {
+        fields: [memberContracts.memberPlanId],
+        references: [memberPlans.id],
     }),
     contractTemplate: one(contractsTemplates, {
-        fields: [contracts.templateId],
+        fields: [memberContracts.templateId],
         references: [contractsTemplates.id],
     }),
 }));

@@ -4,8 +4,7 @@ import { contractsTemplates } from "./contract-templates";
 import { relations } from "drizzle-orm";
 import { vendors } from "./vendor";
 
-
-export const plans = pgTable("member_plans", {
+export const memberPlans = pgTable("member_plans", {
     id: serial("id").primaryKey(),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -21,34 +20,38 @@ export const plans = pgTable("member_plans", {
 });
 
 
-export const pricings = pgTable("member_plan_pricings", {
+export const memberPlanPricings = pgTable("member_plan_pricings", {
     id: serial("id").primaryKey(),
     amount: doublePrecision("amount").notNull(),
     billingPeriod: text("billing_period").notNull(),
     stripePriceId: text("stripe_price_id").notNull(),
-    memberPlanId: integer("member_plan_id").notNull().references(() => plans.id),
+    memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
+
 });
 
-export const pricingRelations = relations(pricings, ({ one }) => ({
-    plan: one(plans, {
-        fields: [pricings.memberPlanId],
-        references: [plans.id],
+export const memberPlanPricingsRelations = relations(memberPlanPricings, ({ one }) => ({
+    plan: one(memberPlans, {
+        fields: [memberPlanPricings.memberPlanId],
+        references: [memberPlans.id],
     }),
 }))
 
-export const plansRelations = relations(plans, ({ one, many }) => ({
+
+export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
     program: one(programs, {
-        fields: [plans.programId],
+        fields: [memberPlans.programId],
         references: [programs.id],
     }),
     contract: one(contractsTemplates, {
-        fields: [plans.contractId],
+        fields: [memberPlans.contractId],
         references: [contractsTemplates.id],
     }),
-    pricing: one(pricings, {
-        fields: [plans.id],
-        references: [pricings.memberPlanId],
+    pricing: one(memberPlanPricings, {
+        fields: [memberPlans.id],
+        references: [memberPlanPricings.memberPlanId],
     })
+
+
 }))

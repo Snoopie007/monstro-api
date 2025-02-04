@@ -10,8 +10,8 @@ export async function GET(req: Request, props: { params: Promise<{ pid: number, 
     try {
         if (session) {
 
-            const plans = db.query.plans.findMany({
-                where: (plans, { eq }) => eq(plans.programId, params.pid),
+            const plans = db.query.memberPlans.findMany({
+                where: (memberPlans, { eq }) => eq(memberPlans.programId, params.pid),
             });
             console.log(plans)
             return NextResponse.json(plans, { status: 200 });

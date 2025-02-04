@@ -73,10 +73,24 @@ function ErrorHandler<T, E extends new (message?: string) => Error>(
 	});
 }
 
+async function tryCatch<T, E = Error>(
+    promise: Promise<T>
+): Promise<{ error: E | null; result: T | null }> {
+    try {
+        const result = await promise;
+
+        return { error: null, result };
+    } catch (error) {
+        return { error: error as E, result: null };
+    }
+
+}
+
 export {
   formatDateTime,
   convertToCurrency,
   sleep,
+  tryCatch,
   formatAmountForDisplay,
   DateFormateOptions,
   cn

@@ -48,14 +48,16 @@ export function MemberEnrollments({ params }: { params: { id: string, mid: numbe
                     <CreateEnrollment />
                 </div>
             </div>
-            <div className='border rounded-sm mt-4'>
+            <div className='border rounded-xs mt-4'>
                 <Table className=''>
                     <TableHeader>
-                        {['Plan', 'Length', 'Amount', 'Total Collected', 'Next Invoice', 'Status', ''].map((header, i) => (
-                            <TableRow key={i}>
-                                <TableHead>{header}</TableHead>
-                            </TableRow>
-                        ))}
+                        <TableRow >
+                            {['Plan', 'Length', 'Amount', 'Total Collected', 'Next Invoice', 'Status', ''].map((header, i) => (
+
+                                <TableHead key={i} className='text-sm h-auto  py-2'>{header}</TableHead>
+
+                            ))}
+                        </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
@@ -76,7 +78,7 @@ export function MemberEnrollments({ params }: { params: { id: string, mid: numbe
                     </TableBody>
                 </Table>
             </div>
-        </div>
+        </div >
     )
 }
 

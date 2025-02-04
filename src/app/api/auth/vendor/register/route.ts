@@ -2,6 +2,7 @@ import { db } from "@/db/db";
 
 import { StripePayments } from "./stripe-sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { vendors } from "@/db/schemas";
 
 const stripe = new StripePayments();
 
@@ -12,7 +13,15 @@ export async function POST(req: NextRequest) {
     // const planName = plan.name.toLocaleLowerCase();
 
     try {
-        const customer = await stripe.createCustomer(vendor, token.id);
+
+        const [{ id }] = await db.insert(vendors).values({
+            ...vendor,
+        }).returning({ id: vendors.id });
+
+
+        const customer = await stripe.createCustomer(vendor, token.id, id);
+
+
         const { clientSecret } = await stripe.createPaymentIntent(
             initialCharge,
             customer.id,

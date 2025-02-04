@@ -3,7 +3,7 @@ export * from "./locations";
 export * from "./programs";
 export * from "./members";
 export * from "./intergrations";
-export * from "./plans";
+export * from "./member-plans";
 export * from "./rewards";
 export * from "./contract-templates";
 export * from "./achievements";
@@ -14,3 +14,4 @@ export * from "./staffs"
 export * from "./vendor"
 export * from "./vendor-progress"
 export * from "./vendor-referrals"
+export * from "./transactions"

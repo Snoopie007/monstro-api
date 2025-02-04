@@ -21,19 +21,18 @@ export function MemberRewards({ params }: { params: { id: string, mid: number } 
                 </div>
 
             </div>
-            <div className='border rounded-sm mt-4'>
+            <div className='border rounded-xs mt-4'>
                 <Table className=''>
                     <TableHeader>
                         <TableRow>
 
-                            <TableHead>Reward</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Claim Date</TableHead>
-
-                            <TableHead></TableHead>
+                            {['Reward', 'Description', 'Claim Date', ''].map((header, index) => (
+                                <TableHead key={index} className='text-sm h-auto  py-4'>{header}</TableHead>
+                            ))}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
+
                         {Dummy.map((reward: any, i) => (
                             <TableRow key={i}>
 

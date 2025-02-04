@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "./auth";
 import { decodeId } from "./libs/server-utils";
-const publicPaths = ['/auth', '/api/auth', '/join', '/clubs'];
+const publicPaths = ['/auth', '/api/auth', '/join', '/clubs', '/api/webhooks'];
 
 export default auth(async (req) => {
+
 	try {
 		const { pathname } = req.nextUrl;
 		const isLoggedin = !!req.auth;

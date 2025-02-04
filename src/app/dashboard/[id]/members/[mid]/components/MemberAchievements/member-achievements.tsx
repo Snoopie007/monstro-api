@@ -22,15 +22,13 @@ export function MemberAchievements({ params }: { params: { id: string, mid: numb
                 </div>
 
             </div>
-            <div className='border rounded-sm mt-4'>
+            <div className='border rounded-xs mt-4'>
                 <Table className=''>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Points Earned</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead></TableHead>
+                            {['Name', 'Description', 'Points Earned', 'Date', ''].map((header, index) => (
+                                <TableHead key={index} className='text-sm h-auto py-2'>{header}</TableHead>
+                            ))}
                         </TableRow>
                     </TableHeader>
                     <TableBody>

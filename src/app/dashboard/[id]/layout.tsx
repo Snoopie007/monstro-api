@@ -1,5 +1,4 @@
 import { SideNav, TopNav } from "./components/menus";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { cn } from "@/libs/utils";
 
