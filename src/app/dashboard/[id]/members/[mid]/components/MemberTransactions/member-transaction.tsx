@@ -26,7 +26,7 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
                     <Input placeholder='Search transactions...' className='w-[250px] text-xs h-auto py-1 rounded-xs' />
                 </div>
                 <div>
-                    <NewMemberTransaction />
+                    <NewMemberTransaction params={params} />
                 </div>
             </div>
             <div className='border rounded-sm mt-4'>

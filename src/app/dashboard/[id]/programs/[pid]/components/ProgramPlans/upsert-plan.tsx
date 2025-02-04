@@ -31,7 +31,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useEffect } from "react";
 import { DialogClose, DialogDescription } from "@radix-ui/react-dialog";
 import { useContractsByLocationId } from "@/hooks/use-contracts";
-import { addPlan } from "@/libs/api";
+import { addPlan, updatePlan } from "@/libs/api";
+import paymentmethods from "@/jsons/payment-methods.json"
 
 
 
@@ -49,22 +50,25 @@ const Intervals: { label: string, value: string }[] = [
     { label: "Yearly", value: "year" }
 ];
 
+const paymentMethods: { label: string, value: string }[] = paymentmethods;
+
 export default function UpsertPlan({ plan, onChange, locationId, programId }: CreatePlanProps) {
-    const { contracts, isLoading: isContractsLoading } = useContractsByLocationId(locationId);
+    const { contracts, isLoading: isContractsLoading } = useContractsByLocationId(locationId, false);
 
 
     const form = useForm<z.infer<typeof PlanSchema>>({
         resolver: zodResolver(PlanSchema),
         defaultValues: {
-            name: '',
-            description: '',
-            family: false,
-            family_member_limit: 0,
+            name: plan?.name ?? "",
+            description: plan?.description ?? "",
+            family: plan?.family ?? false,
+            // programId: Number(programId),
+            familyMemberLimit: plan?.familyMemberLimit ?? 0,
             pricing: {
-                amount: 0.00,
-                billing_period: ''
+                amount: plan?.pricing.amount ?? 0.00,
+                billingPeriod: plan?.pricing.billingPeriod ?? ""
             },
-            contractId: 0
+            contractId: plan?.contractId ?? 0,
         },
         mode: 'onSubmit'
     })
@@ -74,11 +78,20 @@ export default function UpsertPlan({ plan, onChange, locationId, programId }: Cr
     }, [plan])
 
     async function submitForm(v: z.infer<typeof PlanSchema>) {
-        const response = await addPlan(v, programId, locationId).then((response) => {
-            onChange(null);
-            return response
-        });
-        return response;
+        console.log(v)
+        if(plan && plan.id) {
+            const response = await updatePlan(v, programId, plan.id, locationId).then((response) => {
+                onChange(null);
+                return response
+            });
+            return response;
+        } else {
+            const response = await addPlan(v, programId, locationId).then((response) => {
+                onChange(null);
+                return response
+            });
+            return response;
+        }
     }
 
     return (
@@ -144,7 +157,7 @@ export default function UpsertPlan({ plan, onChange, locationId, programId }: Cr
                             />
                             <FormField
                                 control={form.control}
-                                name="pricing.billing_period"
+                                name="pricing.billingPeriod"
                                 render={({ field }) => (
                                     <FormItem className="flex-1">
                                         <FormLabel>Billing Period</FormLabel>
@@ -167,7 +180,6 @@ export default function UpsertPlan({ plan, onChange, locationId, programId }: Cr
                                 )}
                             />
                         </fieldset>
-
                         <fieldset>
                             <FormField
                                 control={form.control}
@@ -220,7 +232,7 @@ export default function UpsertPlan({ plan, onChange, locationId, programId }: Cr
                             <>
                                 <FormField
                                     control={form.control}
-                                    name="family_member_limit"
+                                    name="familyMemberLimit"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Number of Family</FormLabel>

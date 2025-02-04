@@ -10,9 +10,7 @@ import {
 } from '@/components/ui'
 import { formatDateTime } from '@/libs/utils'
 
-const Dummy = [
-    {}
-]
+const Dummy: Array<any> = []
 
 export function MemberRewards({ params }: { params: { id: string, mid: number } }) {
     return (

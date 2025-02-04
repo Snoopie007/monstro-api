@@ -55,10 +55,20 @@ function useAttedance(id: string, mId: number) {
 	};
 }
 
+function useMemberPrograms(id: string, mId: number){
+	const { data, error, isLoading } = useSWR({ url: `members/${mId}/programs`, id: id }, fetcher);
+	return {
+		programs: data,
+		error,
+		isLoading,
+	};
+}
+
 export {
 	useMembers,
 	useMemberAchievements,
 	useAttedance,
 	useMemberPayments,
 	useMemberSubscriptions,
+	useMemberPrograms
 };

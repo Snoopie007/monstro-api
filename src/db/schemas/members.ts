@@ -48,7 +48,7 @@ export const contracts = pgTable("member_contracts", {
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
     templateId: integer("contract_id").references(() => contractsTemplates.id, { onDelete: "cascade" }),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
-    stripePlanId: text("stripe_plan_id"),
+    memberPlanId: text("member_plan_id"),
     content: text("content"),
     signed: boolean("signed").notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -80,7 +80,7 @@ export const memberPayments = pgTable("member_payments", {
     memberId: integer("payer_id").references(() => members.id, { onDelete: "cascade" }),
     beneficiaryId: integer("beneficiary_id").references(() => members.id, { onDelete: "cascade" }),
     programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
-    planId: integer("stripe_plan_id").references(() => plans.id, { onDelete: "cascade" }),
+    planId: integer("member_plan_id").references(() => plans.id, { onDelete: "cascade" }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });
@@ -158,7 +158,7 @@ export const contractsRelations = relations(contracts, ({ many, one }) => ({
         references: [members.id],
     }),
     plan: one(plans, {
-        fields: [contracts.stripePlanId],
+        fields: [contracts.memberPlanId],
         references: [plans.id],
     }),
     contractTemplate: one(contractsTemplates, {

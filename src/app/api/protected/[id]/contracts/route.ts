@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
-import { and, isNull } from 'drizzle-orm';
+import { and, inArray, isNull } from 'drizzle-orm';
 
 export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
   const params = await props.params;
   const session = await auth();
+  const { searchParams } = new URL(req.url);
+  const query = searchParams.get("withDraft") || true;
   try {
     if (session) {
       const templates = await db.query.contractsTemplates.findMany({
-        where: (contractsTemplates, { eq }) => (and(eq(contractsTemplates.locationId, params.id), eq(contractsTemplates.deleted, isNull(contractsTemplates.deleted)))),
+        where: (contractsTemplates, { eq }) => (and(eq(contractsTemplates.locationId, params.id), eq(contractsTemplates.deleted, isNull(contractsTemplates.deleted)), inArray(contractsTemplates.isDraft, query === 'true' ? [true, false] : [false]))),
         with: {
           plans: true
         }

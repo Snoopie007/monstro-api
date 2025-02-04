@@ -1,0 +1,26 @@
+[
+  {
+    "label": "Cash",
+    "value": "cash"
+  },
+  {
+    "label": "Stripe",
+    "value": "stripe"
+  },
+  {
+    "label": "Zelle",
+    "value": "zelle"
+  },
+  {
+    "label": "Bank Payment",
+    "value": "bank payment"
+  },
+  {
+    "label": "Cheque",
+    "value": "cheque"
+  },
+  {
+    "label": "Charge a Card",
+    "value": "charge a card"
+  }
+]

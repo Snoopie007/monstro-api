@@ -3,33 +3,14 @@ import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
 
-
-export async function GET(req: Request, props: { params: Promise<{ pid: number, id: number }> }) {
-    const params = await props.params;
-    const session = await auth();
-    try {
-        if (session) {
-
-            const plans = db.query.plans.findMany({
-                where: (plans, { eq }) => eq(plans.programId, params.pid),
-            });
-            console.log(plans)
-            return NextResponse.json(plans, { status: 200 });
-        }
-    } catch (err) {
-        return NextResponse.json({ error: err }, { status: 500 })
-    }
-}
-
-
-export async function POST(req: Request, props: { params: Promise<{ id: string, pid: number }> }) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string, pid: number, planid: number }> }) {
     const params = await props.params;
     const session = await auth();
     const data = await req.json()
     try {
         if (session) {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/add-member-plan/${params.pid}`, {
-                method: 'POST',
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/update-member-plan/${params.pid}/${params.planid}`, {
+                method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${session.user.token}`,
                     "locationId": `${params.id}`,
@@ -37,6 +18,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
                 },
                 body: JSON.stringify(data)
             });
+            console.log(res)
             if (!res.ok) {
                 return NextResponse.json({ message: "An error occurred saving plan." }, { status: 400 });
             }

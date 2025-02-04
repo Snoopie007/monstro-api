@@ -131,6 +131,11 @@ async function addPlan(body: any, pId: number, id: string) {
   return res;
 }
 
+async function updatePlan(body: any, pId: number, planId: number, id: string) {
+  const res = await put({ url: `programs/${pId}/plans/${planId}`, data: body, id: id });
+  return res;
+}
+
 
 async function updateProgramLevel(lId: number, body: any, pId: number, id: string) {
   const res = await put({ url: `programs/${pId}/levels/${lId}`, data: body, id: id });
@@ -272,5 +277,6 @@ export {
   deleteStaff,
   updatePassword,
   updateProfile,
+  updatePlan,
   fetcher
 };

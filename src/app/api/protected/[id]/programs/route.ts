@@ -26,7 +26,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 				},
 				extras: {
 					counts: db.$count(program, eq(program.locationId, params.id)).as("counts"),
-					planCounts: sql<number>`(SELECT count(*) FROM stripe_plans WHERE stripe_plans.program_id = programs.id)`.as("planCounts")
+					planCounts: sql<number>`(SELECT count(*) FROM member_plans WHERE member_plans.program_id = programs.id)`.as("planCounts")
 				}
 			})
 

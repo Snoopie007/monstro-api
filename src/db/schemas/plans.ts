@@ -5,14 +5,14 @@ import { relations } from "drizzle-orm";
 import { vendors } from "./vendor";
 
 
-export const plans = pgTable("stripe_plans", {
+export const plans = pgTable("member_plans", {
     id: serial("id").primaryKey(),
     name: text("name").notNull(),
-    description: text("description"),
+    description: text("description").notNull().default(""),
     family: boolean("family").notNull().default(false),
     familyMemberLimit: integer("family_member_limit").notNull().default(0),
     status: boolean("status").notNull().default(false),
-    vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
+    vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     contractId: integer("contract_id").references(() => contractsTemplates.id),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -21,19 +21,19 @@ export const plans = pgTable("stripe_plans", {
 });
 
 
-export const pricings = pgTable("stripe_plan_pricings", {
+export const pricings = pgTable("member_plan_pricings", {
     id: serial("id").primaryKey(),
     amount: doublePrecision("amount").notNull(),
-    billingPeriod: text("billing_period"),
+    billingPeriod: text("billing_period").notNull(),
     stripePriceId: text("stripe_price_id").notNull(),
-    stripePlanId: integer("stripe_plan_id").notNull().references(() => plans.id),
+    memberPlanId: integer("member_plan_id").notNull().references(() => plans.id),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });
 
 export const pricingRelations = relations(pricings, ({ one }) => ({
     plan: one(plans, {
-        fields: [pricings.stripePlanId],
+        fields: [pricings.memberPlanId],
         references: [plans.id],
     }),
 }))
@@ -49,6 +49,6 @@ export const plansRelations = relations(plans, ({ one, many }) => ({
     }),
     pricing: one(pricings, {
         fields: [plans.id],
-        references: [pricings.stripePlanId],
+        references: [pricings.memberPlanId],
     })
 }))

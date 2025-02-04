@@ -11,6 +11,7 @@ export const CreateMemberSchema = z.object({
     programId: z.number(),
     planId: z.number(),
     paymentMethod: z.string(),
+    paymentMode: z.string().default("manual"),
     billing: z.object({
         cardHolderName: z.string().optional(),
         stripeToken: z.string().optional(),

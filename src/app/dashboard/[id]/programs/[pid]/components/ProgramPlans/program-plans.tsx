@@ -7,12 +7,12 @@ import {
     TableRow,
     Button
 } from "@/components/ui";
-import { convertToCurrency } from "@/libs/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useMemo, useState } from "react";
 import { Plan } from "@/types";
 import UpsertPlan from "./upsert-plan";
-import { Icon } from "@/components/icons";
+import { convertToCurrency } from "@/libs/utils";
+import { PencilIcon } from "lucide-react";
 
 const CellStyle = "text-sm py-4 px-6 ";
 
@@ -35,19 +35,46 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
         };
     }, [currentPlan]);
 
-    async function create() {
-        setCurrentPlan({
-            name: '',
-            description: '',
-            family: false,
-            program_id: programId,
-            vendor_id: vendorId,
-            family_member_limit: 0,
-            pricing: {
-                amount: 0.00,
-                billing_period: ''
-            }
-        });
+    async function create(plan: Plan | null) {
+        if (plan && plan.id) {
+            setCurrentPlan({
+                id: plan.id,
+                name: plan.name,
+                description: plan.description,
+                family: plan.family,
+                programId: plan.programId,
+                vendorId: plan.vendorId,
+                familyMemberLimit: plan.familyMemberLimit,
+                contractId: plan.contractId,
+                pricing: {
+                    amount: plan.pricing.amount,
+                    billingPeriod: plan.pricing.billingPeriod,
+                    memberPlanId: plan.id,
+                    stripePriceId: plan.pricing.stripePriceId,
+                },
+                created: plan.created,
+                updated: plan.updated,
+                deleted: null,
+            });
+        } else {
+            setCurrentPlan({
+                name: '',
+                description: '',
+                family: false,
+                programId: programId,
+                vendorId: vendorId,
+                familyMemberLimit: 0,
+                pricing: {
+                    amount: 0.00,
+                    billingPeriod: '',
+                    memberPlanId: 0,
+                    stripePriceId: ''
+                },
+                created: new Date(),
+                updated: new Date(),
+                deleted: new Date(),
+            });
+        }
     }
 
     const removeProgramPlan = (params: { id: string, index: number }) => {
@@ -97,7 +124,7 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
                             Plans
                         </div>
                         <div className="flex">
-                            <Button variant={"ghost"} className={"border-l rounded-none"} onClick={create} >
+                            <Button variant={"ghost"} className={"border-l rounded-none"} onClick={() => create(null)} >
                                 Create Plan
                             </Button>
                         </div>
@@ -125,10 +152,10 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
                                                     <p className="text-xs">{plan.description}</p>
                                                 </TableCell>
                                                 <TableCell className={CellStyle}>
-                                                    {plan.pricings.billingPeriod}
+                                                    {plan.pricing.billingPeriod}
                                                 </TableCell>
                                                 <TableCell className={CellStyle}>
-                                                    {convertToCurrency(plan.pricings.amount, '$', 'USD')}
+                                                    {convertToCurrency(plan.pricing.amount, '$', 'USD')}
                                                 </TableCell>
                                                 <TableCell className={CellStyle}>
                                                     {plan.family ? 'Allowed' : 'N/A'}
@@ -137,7 +164,11 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
                                                     {plan.familyMemberLimit}
                                                 </TableCell>
                                                 {/* <TableCell className={CellStyle}>
-                                                    <Icon name="EllipsisVertical" size={16} />
+                                                    {plan.pricing.paymentMethod != "stripe" && (
+                                                        <div className="flex">
+                                                            <PencilIcon onClick={() => create(plan)} size={16} />
+                                                        </div>
+                                                    )}
                                                 </TableCell> */}
                                             </TableRow>
                                         );

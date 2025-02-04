@@ -21,8 +21,8 @@ function useSignedContracts(id: string) {
   };
 }
 
-function useContractsByLocationId(id: string) {
-  const { data, error, isLoading } = useSWR({ url: `contracts`, id: id }, fetcher);
+function useContractsByLocationId(id: string, withDraft: boolean = true) {
+  const { data, error, isLoading } = useSWR({ url: `contracts?withDraft=${withDraft}`, id: id }, fetcher);
   return {
     contracts: data,
     error,

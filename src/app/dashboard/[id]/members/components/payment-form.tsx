@@ -17,7 +17,7 @@ interface NewMemberPaymentFormProps {
 
 export default function NewMemberPaymentForm({ form }: NewMemberPaymentFormProps) {
     const [open, setOpen] = useState<boolean>(false);
-    const paymentMethod = form.watch('paymentMethod')
+    const paymentMethod = form.watch('paymentMode')
     const { theme } = useTheme();
     const stripe = useStripe();
     const elements = useElements();

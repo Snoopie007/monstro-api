@@ -3,9 +3,9 @@ import { Contract } from "./contract";
 export type Plan = {
     id?: number;
     name: string;
-    description: string | null;
+    description: string;
     status?: boolean;
-    vendorId: number | null;
+    vendorId: number;
     family: boolean;
     programId: number;
     familyMemberLimit: number;
@@ -19,10 +19,9 @@ export type Plan = {
 
 export type Pricing = {
     amount: number;
-    billingPeriod: string | null;
+    billingPeriod: string;
     id?: number;
-    stripePlanId: number;
+    memberPlanId: number;
     stripePriceId: string;
-
 }
 

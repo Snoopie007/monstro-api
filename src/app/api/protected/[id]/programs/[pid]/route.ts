@@ -26,7 +26,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string, p
 					},
 					plans: {
 						with: {
-							pricings: true
+							pricing: true
 						}
 					},
 				},

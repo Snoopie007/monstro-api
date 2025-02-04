@@ -25,12 +25,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/libs/utils";
 import { Loader2 } from "lucide-react";
 import { useMemberPaymentMethods } from "../../providers/MemberContext";
+import { useMemberPrograms } from "@/hooks/use-members";
+import { Plan, Program } from "@/types";
 
 
-export default function NewMemberTransaction() {
+export default function NewMemberTransaction({ params }: { params: { id: string, mid: number } }) {
     const [open, setOpen] = useState<boolean>(false);
     const [loading, setLoading] = useState(false);
-    const { paymentMethods } = useMemberPaymentMethods()
+    const { paymentMethods } = useMemberPaymentMethods();
+    const { programs,  isLoading: programIsLoading } = useMemberPrograms(params.id, params.mid);
+    console.log(params.id, params.mid);
+    console.log(programs);
 
     const form = useForm<z.infer<typeof NewMemberPaymentSchema>>({
         resolver: zodResolver(NewMemberPaymentSchema),
@@ -40,12 +45,17 @@ export default function NewMemberTransaction() {
             card: "",
             description: "",
             statement: "",
-            authorize: false,
+            chargeFor: "",
+            item: "",
+            planId: 0,
+            programId: 0
         },
         mode: "onSubmit",
     })
 
     const method = form.watch("paymentMethod")
+    const chargeFor = form.watch("chargeFor")
+    const programId = form.watch("programId")
     async function onSubmit(data: z.infer<typeof NewMemberPaymentSchema>) {
         console.log(data)
         setLoading(true)
@@ -63,29 +73,132 @@ export default function NewMemberTransaction() {
                 <DialogBody>
                     <Form {...form}>
                         <form className='space-y-2' >
-                            <fieldset className="flex flex-row items-center gap-2">
+                            <fieldset>
                                 <FormField
                                     control={form.control}
-                                    name="amount"
+                                    name="chargeFor"
                                     render={({ field }) => (
                                         <FormItem className="flex-1">
-                                            <FormLabel>Amount</FormLabel>
+                                            <FormLabel>Charge For</FormLabel>
                                             <FormControl>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-[50%] -translate-y-[51%] text-sm text-foreground/50">$</span>
-                                                    <Input type="number" step="0.01" min="0.00" className={cn("w-full pl-6")} placeholder="0.00" {...field}
-                                                        value={field.value === 0 ? "" : field.value}
-                                                        onChange={(e) => {
-                                                            field.onChange(e.target.value === "" ? "" : Math.floor(parseFloat(e.target.value) * 100) / 100)
-                                                        }}
-                                                    />
-                                                </div>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select Product" />
+
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {["Saleable Item", "Program"].map((method, index) => (
+                                                            <SelectItem key={index} value={method} className="w-full">
+                                                                {method}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </fieldset>
+                            {chargeFor == "Saleable Item" &&
+                                (
+                                    <>
+                                        <fieldset className="flex flex-row items-center gap-2">
+                                            <FormField
+                                                control={form.control}
+                                                name="item"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex-1">
+                                                        <FormLabel>Item</FormLabel>
+                                                        <FormControl>
+                                                            <Input type="text" placeholder="Item Name" className={cn("w-full ")} {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </fieldset>
+                                        <fieldset className="flex flex-row items-center gap-2">
+                                            <FormField
+                                                control={form.control}
+                                                name="amount"
+                                                render={({ field }) => (
+                                                    <FormItem className="flex-1">
+                                                        <FormLabel>Amount</FormLabel>
+                                                        <FormControl>
+                                                            <div className="relative">
+                                                                <span className="absolute left-3 top-[50%] -translate-y-[51%] text-sm text-foreground/50">$</span>
+                                                                <Input type="number" step="0.01" min="0.00" className={cn("w-full pl-6")} placeholder="0.00" {...field}
+                                                                    value={field.value === 0 ? "" : field.value}
+                                                                    onChange={(e) => {
+                                                                        field.onChange(e.target.value === "" ? "" : Math.floor(parseFloat(e.target.value) * 100) / 100)
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </fieldset>
+                                    </>
+                                )}
+                                {chargeFor == "Program" && (
+                                    <>
+                                        <fieldset>
+                                            <FormField
+                                                control={form.control}
+                                                name="programId"
+                                                render={({ field }) => (
+                                                    <FormItem>
+
+                                                        <Select onValueChange={(value) => field.onChange(Number(value))}>
+                                                            <FormControl>
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder="Select a program" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                {!programIsLoading && programs.map((program: Program, index: number) => (
+                                                                    program.plans.length ? <SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem> : null
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </fieldset>
+                                        <fieldset>
+                                            <FormField
+                                                control={form.control}
+                                                name="planId"
+                                                render={({ field }) => (
+                                                    <FormItem>
+
+                                                        <Select onValueChange={(value) => field.onChange(Number(value))}>
+                                                            <FormControl>
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder="Select a plan" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                {programId && programs.find((program: Program) => program.id == programId).plans.map((plan: Plan, index: number) => (
+                                                                    (plan.contractId && plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </fieldset>
+                                    </>
+                                )}
 
                             <fieldset>
                                 <FormField
@@ -182,32 +295,6 @@ export default function NewMemberTransaction() {
                                         </FormItem>
                                     )}
                                 />
-                            </fieldset>
-                            <fieldset>
-                                <FormField
-                                    control={form.control}
-                                    name="authorize"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-row items-start space-y-0 mt-4  gap-2 ">
-                                            <FormControl>
-                                                <Checkbox
-                                                    className="border-foreground"
-                                                    checked={field.value}
-                                                    onCheckedChange={field.onChange}
-                                                />
-                                            </FormControl>
-
-                                            <div className="space-y-0.5 leading-none">
-                                                <FormLabel >
-                                                    Authorize only
-                                                </FormLabel>
-                                                <FormDescription>
-                                                    You'll have a 7 days to capture this payment.
-                                                </FormDescription>
-                                            </div>
-
-                                        </FormItem>
-                                    )} />
                             </fieldset>
                         </form>
                     </Form>

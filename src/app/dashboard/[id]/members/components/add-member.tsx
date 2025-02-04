@@ -24,7 +24,7 @@ import {
 } from '@/components/forms';
 import { cn, sleep } from "@/libs/utils";
 import { z } from "zod";
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Icon } from '@/components/icons';
@@ -38,6 +38,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/libs/stripe';
 import { usePrograms } from '@/hooks/use-programs';
 import { addMemberManually } from '@/libs/api';
+import paymentmethods from "@/jsons/payment-methods.json";
 import useSWR from 'swr';
 
 
@@ -45,6 +46,8 @@ interface CreateMemberProps {
     locationId: string
     stripeKey: string | null
 }
+
+const paymentMethods: { label: string, value: string }[] = paymentmethods;
 
 export default function AddMember({ locationId, stripeKey }: CreateMemberProps) {
     const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
@@ -67,11 +70,14 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
             },
             planId: 0,
             programId: 0,
-            paymentMethod: ""
+            paymentMethod: "",
+            paymentMode: ""
         },
         mode: "onChange",
     })
+    const watchPaymentMethod = form.watch("paymentMethod"); // Watch for changes
     async function onSubmit(v: z.infer<typeof CreateMemberSchema>) {
+        // console.log(v);
         const member = await addMemberManually(v, locationId);
         console.log(member);
         await mutate();
@@ -253,81 +259,111 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                         )}
                                     />
                                 </fieldset>
-
-                            </SheetSection>
-                            <SheetSection>
-                                <div className='mb-4'>
-                                    <FormLabel className='text-base font-bold'>
-                                        Payment Method
-                                    </FormLabel>
-                                    <FormDescription>
-                                        Select whether you want to add a payment method for the member or send an invite link via email for them to add their own payment method.
-                                    </FormDescription>
-                                </div>
                                 <fieldset>
                                     <FormField
                                         control={form.control}
                                         name="paymentMethod"
                                         render={({ field }) => (
-                                            <FormItem className="space-y-3">
+                                            <FormItem className="flex-1">
+                                                <FormLabel>Payment Method</FormLabel>
 
-                                                <FormControl>
-                                                    <RadioGroup
-                                                        onValueChange={field.onChange}
-                                                        defaultValue={field.value}
-                                                        className="flex flex-col space-y-1"
-                                                    >
-                                                        <FormItem className="flex items-center space-x-2 space-y-0 ">
-                                                            <FormControl>
-                                                                <RadioGroupItem value="free" />
-                                                            </FormControl>
-                                                            <FormLabel >
-                                                                Add member without payment.
-                                                            </FormLabel>
-                                                        </FormItem>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select Payment Method" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {paymentMethods.map((interval, index) => (
+                                                            <SelectItem key={index} value={interval.value}>{interval.label}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
 
-                                                        <FormItem className="flex items-center space-x-2 space-y-0 ">
-                                                            <FormControl>
-                                                                <RadioGroupItem value="invite" />
-                                                            </FormControl>
-                                                            <FormLabel >
-                                                                Email invoice to the customer to pay manually.
-                                                            </FormLabel>
-                                                        </FormItem>
-                                                        <FormItem className="flex items-center space-x-2 space-y-0 ">
-                                                            <FormControl>
-                                                                <RadioGroupItem disabled={!stripeKey} value="card" />
-                                                            </FormControl>
-                                                            <FormLabel >
-                                                                Add a payment method on behave of the customer .
-                                                            </FormLabel>
-
-                                                        </FormItem>
-
-                                                    </RadioGroup>
-                                                </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
-
                                 </fieldset>
 
-                                {stripeKey && (
-                                    <Elements
-                                        stripe={getStripe(stripeKey)}
-                                        options={{
-                                            appearance: {
-                                                variables: {
-                                                    colorIcon: "#6772e5",
-                                                    fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
-                                                },
-                                            },
-                                        }}
-                                    >
-                                        <NewMemberPaymentForm form={form} />
+                            </SheetSection>
+                            <SheetSection>
+                                {watchPaymentMethod === "stripe" && (
+                                    <React.Fragment>
+                                        <div className='mb-4'>
+                                            <FormLabel className='text-base font-bold'>
+                                                Payment Mode
+                                            </FormLabel>
+                                            <FormDescription>
+                                                Select whether you want to add a payment mode for the member or send an invite link via email for them to add their own payment method.
+                                            </FormDescription>
+                                        </div>
+                                        <fieldset>
+                                            <FormField
+                                                control={form.control}
+                                                name="paymentMode"
+                                                render={({ field }) => (
+                                                    <FormItem className="space-y-3">
 
-                                    </Elements>
+                                                        <FormControl>
+                                                            <RadioGroup
+                                                                onValueChange={field.onChange}
+                                                                defaultValue={field.value}
+                                                                className="flex flex-col space-y-1"
+                                                            >
+                                                                <FormItem className="flex items-center space-x-2 space-y-0 ">
+                                                                    <FormControl>
+                                                                        <RadioGroupItem value="free" />
+                                                                    </FormControl>
+                                                                    <FormLabel >
+                                                                        Add member without payment.
+                                                                    </FormLabel>
+                                                                </FormItem>
+
+                                                                <FormItem className="flex items-center space-x-2 space-y-0 ">
+                                                                    <FormControl>
+                                                                        <RadioGroupItem value="invite" />
+                                                                    </FormControl>
+                                                                    <FormLabel >
+                                                                        Email invoice to the customer to pay manually.
+                                                                    </FormLabel>
+                                                                </FormItem>
+                                                                <FormItem className="flex items-center space-x-2 space-y-0 ">
+                                                                    <FormControl>
+                                                                        <RadioGroupItem disabled={!stripeKey} value="card" />
+                                                                    </FormControl>
+                                                                    <FormLabel >
+                                                                        Add a payment method on behave of the customer .
+                                                                    </FormLabel>
+
+                                                                </FormItem>
+
+                                                            </RadioGroup>
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                        </fieldset>
+
+                                        {stripeKey && (
+                                            <Elements
+                                                stripe={getStripe(stripeKey)}
+                                                options={{
+                                                    appearance: {
+                                                        variables: {
+                                                            colorIcon: "#6772e5",
+                                                            fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
+                                                        },
+                                                    },
+                                                }}
+                                            >
+                                                <NewMemberPaymentForm form={form} />
+
+                                            </Elements>
+                                        )}
+                                    </React.Fragment>
                                 )}
 
                             </SheetSection>

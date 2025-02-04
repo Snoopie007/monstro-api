@@ -12,7 +12,10 @@ export const NewMemberPaymentSchema = z.object({
     card: z.string().optional(),
     statement: z.string(),
     description: z.string(),
-    authorize: z.boolean(),
+    programId: z.number().optional(),
+    planId: z.number().optional(),
+    item: z.string().optional(),
+    chargeFor: z.string().optional(),
 });
 
 export const NewEnrollmentSchema = z.object({
