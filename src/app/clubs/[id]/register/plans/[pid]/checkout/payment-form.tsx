@@ -145,7 +145,7 @@ export default function PlanBuilderPayment({ plan, programId, locationId }: Plan
                         </FormLabel>
 
                         <CardElement
-                            className={cn("border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-none py-3 h-auto rounded-sm  shadow-unique bg-white", "w-full px-4")}
+                            className={cn("border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-hidden py-3 h-auto rounded-sm  shadow-unique bg-white", "w-full px-4")}
                             options={CARD_OPTIONS}
                             onChange={(e) => {
                                 setErrorMessage(

@@ -70,7 +70,7 @@ export default function ResetPassword(props: { searchParams: Promise<{ token: st
         <div className={"py-36 max-w-lg m-auto bg-white"}>
             <div
                 className={
-                    "shadow-sm border border-gray-200 px-6 py-12 rounded-sm"
+                    "shadow-xs border border-gray-200 px-6 py-12 rounded-sm"
                 }
             >
                 <div className={"mb-8 text-center"}>

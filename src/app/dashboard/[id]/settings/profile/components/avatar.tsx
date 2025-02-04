@@ -41,7 +41,7 @@ export default function UserAvatar({ currentAvatar, onChange, locationId }: User
             <input type='file' ref={fileRef} onInput={uploadLogo} className='hidden' />
             {currentAvatar ? (
 
-                <div className='avatar group flex-shrink relative items-end flex'>
+                <div className='avatar group shrink relative items-end flex'>
                     {/* <Image src={currentAvatar ? currentAvatar : ''}
                         width={100}
                         height={100}

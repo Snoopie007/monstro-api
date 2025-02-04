@@ -89,7 +89,7 @@ export default function MessageArea({ locationId, ticket }: { locationId: string
                     value={newReply}
                     ref={textAreaRef}
                     style={{ height: textAreaRef.current?.scrollHeight }}
-                    className="m-0 resize-none border-0 py-2 focus:outline-none bg-transparent px-0 text-token-text-primary focus:ring-0 focus-visible:ring-0 max-h-52"
+                    className="m-0 resize-none border-0 py-2 focus:outline-hidden bg-transparent px-0 text-token-text-primary focus:ring-0 focus-visible:ring-0 max-h-52"
                 />
             </div>
             <div className="flex flex-row items-center justify-between px-2">

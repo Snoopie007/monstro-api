@@ -34,7 +34,7 @@ export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: st
             <input type='file' ref={fileRef} onInput={uploadLogo} className='hidden' />
             {logo ? (
 
-                <div className='avatar group flex-shrink relative items-end flex'>
+                <div className='avatar group shrink relative items-end flex'>
                     <Image src={logo}
                         width={100}
                         height={100}

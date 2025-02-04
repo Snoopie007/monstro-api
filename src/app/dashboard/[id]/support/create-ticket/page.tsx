@@ -17,7 +17,7 @@ export default async function SupportTicket() {
     return (
         <div className='lg:py-20'>
             <div className='max-w-2xl m-auto'>
-                <div className='border rounded-sm shadow-sm '>
+                <div className='border rounded-sm shadow-xs '>
 
                     <TicketForm />
 

@@ -19,7 +19,7 @@ interface TopMenuProps {
     locationId: string
 }
 
-const LeftMenuButtonStyle = "font-medium text-sm flex flex-row items-center children:hidden border-foreground/20 h-full text-nowrap px-4 flex-1"
+const LeftMenuButtonStyle = "font-medium text-sm flex flex-row items-center cursor-pointer children:hidden border-foreground/20 h-full text-nowrap px-4 flex-1"
 
 export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, locationId }: TopMenuProps) {
     const [savingDraft, setSavingDraft] = useState<boolean>(false)
@@ -68,7 +68,7 @@ export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, locati
             console.log(updated)
             toast.success('Contract saved successfully', { theme: 'dark' })
             setSavingDraft(false)
-            
+
         } catch (error) {
             console.log('Error:', error);
             setSavingDraft(false)

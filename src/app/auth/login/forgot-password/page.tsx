@@ -62,7 +62,7 @@ export default function ForgotPassword() {
         <div className={"py-36 max-w-lg m-auto bg-white"}>
             <div
                 className={
-                    "shadow-sm border border-gray-100 p-6 rounded-sm"
+                    "shadow-xs border border-gray-100 p-6 rounded-sm"
                 }
             >
                 <div className={"mb-4 text-left"}>

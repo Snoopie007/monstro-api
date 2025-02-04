@@ -24,7 +24,7 @@ const RadioBox = <T,>({ children, value, selected, onSelectChange, className, ha
             {...props}
         >
             {hasRadio && <span className='
-                flex-initial border-2 h-4 w-4 group cursor-pointer flex-shrink-0 box-border border-black rounded-full relative
+                flex-initial border-2 h-4 w-4 group cursor-pointer shrink-0 box-border border-black rounded-full relative
                 group-data-[selected=true]:border-indigo-600
                 group-hover:border-indigo-600
                 ' aria-hidden="true">

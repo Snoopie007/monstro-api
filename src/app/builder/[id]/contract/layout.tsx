@@ -1,4 +1,4 @@
-import "@public/editor.scss";
+import "@public/editor.css";
 import { auth } from "@/auth"
 
 export default async function DashLayout({

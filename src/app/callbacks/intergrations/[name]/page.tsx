@@ -39,7 +39,7 @@ export default async function CompleteIntegeration(props: { params: Promise<{ na
 		<div className=" h-[100svh] bg-white dark:bg-white text-black dark:text-black w-full ">
 
 			<div className="max-w-lg w-full h-full m-auto py-10 flex flex-row items-center">
-				<div className=" text-center border px-6 py-10 rounded-sm   border-gray-200 shadow-sm   m-auto ">
+				<div className=" text-center border px-6 py-10 rounded-sm   border-gray-200 shadow-xs   m-auto ">
 					{connection ? (
 						<div className='text-center'>
 							<BadgeCheck size={60} className='stroke-green-600 m-auto mb-4' />

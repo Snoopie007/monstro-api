@@ -43,7 +43,7 @@ export default function ContractEditor({ contractRef, locationId }: ContractEdit
                 <ScrollArea className='h-[100vh-50px] pt-10  pb-2 flex-1'>
                     <div className=' max-w-2xl h-full rounded-sm m-auto w-full font-roboto'>
                         <Input
-                            className='font-semibold focus-visible:ring-0 rounded-none outline-none border-transparent block text-3xl px-8'
+                            className='font-semibold focus-visible:ring-0 rounded-none outline-hidden border-transparent block text-3xl px-8'
                             defaultValue={`${contractRef.title ? contractRef.title : ''} #${contractRef.id}`} onChange={(v) => {
                                 setContract({ ...contract, title: v.target.value })
                             }}

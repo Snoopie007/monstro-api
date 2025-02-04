@@ -190,7 +190,7 @@ export default function PlanPayment({ userSelection }: { userSelection: UserSele
                             <div className="flex  flex-row gap-1">
                                 <Select onValueChange={(value: string) => { setPhoneRegion(value as CountryCode) }} defaultValue={phoneRegion}>
 
-                                    <SelectTrigger className={cn("border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-none py-3 h-auto rounded-sm  shadow-unique bg-white", "w-[22%] h-auto")} >
+                                    <SelectTrigger className={cn("border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-hidden py-3 h-auto rounded-sm  shadow-unique bg-white", "w-[22%] h-auto")} >
                                         <SelectValue defaultValue={""} />
                                     </SelectTrigger>
 
@@ -210,7 +210,7 @@ export default function PlanPayment({ userSelection }: { userSelection: UserSele
                                             <FormControl >
                                                 <PhoneInput
                                                     type="tel"
-                                                    className={cn("border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-none py-3 h-auto rounded-sm  shadow-unique bg-white", "w-full px-4")}
+                                                    className={cn("border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-hidden py-3 h-auto rounded-sm  shadow-unique bg-white", "w-full px-4")}
                                                     value={value}
                                                     withCountryCallingCode={true}
                                                     international={true}
@@ -235,7 +235,7 @@ export default function PlanPayment({ userSelection }: { userSelection: UserSele
                                 Card info*
                             </FormLabel>
                             <CardElement
-                                className={cn("border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-none py-3 h-auto rounded-sm  shadow-unique bg-white", "w-full px-4")}
+                                className={cn("border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-hidden py-3 h-auto rounded-sm  shadow-unique bg-white", "w-full px-4")}
                                 options={CARD_OPTIONS}
                                 onChange={(e) => {
                                     setErrorMessage(

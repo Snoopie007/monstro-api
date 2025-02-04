@@ -77,7 +77,7 @@ export function TagInput({ value, data, onChange }: TagInputProps) {
                         onKeyUp={handleEnter}
                         value={input}
                         onChange={handleChange}
-                        className='border-none bg-transparent w-full py-2 px-1 focus:outline-none focus-visible:ring-0 focus:ring-0'
+                        className='border-none bg-transparent w-full py-2 px-1 focus:outline-hidden focus-visible:ring-0 focus:ring-0'
                     />
 
                 </div>

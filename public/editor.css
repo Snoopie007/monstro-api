@@ -1,0 +1,156 @@
+@import './globals.css';
+
+.ProseMirror {
+	@apply caret-black dark:caret-white outline-0 pr-8 pl-20 z-0 lg:pl-8 lg:pr-8;
+}
+.ProseMirror .selection {
+	@apply inline;
+}
+.ProseMirror .variable {
+	@apply bg-indigo-700 text-white rounded px-1.5 text-sm py-1;
+}
+.ProseMirror .selection, .ProseMirror *::selection {
+	@apply bg-black/10 dark:bg-white/20 inline;
+}
+.ProseMirror p {
+	@apply mb-4;
+}
+.ProseMirror ul, .ProseMirror ol {
+	@apply pl-8;
+}
+.ProseMirror ul li, .ProseMirror ol li {
+	margin-top: 0;
+	@apply mb-1.5;
+}
+.ProseMirror ul li > p, .ProseMirror ol li > p {
+	margin-top: 0;
+	margin-bottom: 0;
+}
+.ProseMirror ul {
+	@apply list-disc;
+}
+.ProseMirror ol {
+	@apply list-decimal;
+}
+.ProseMirror .is-empty::before {
+	@apply text-neutral-500 dark:text-neutral-400;
+}
+.ProseMirror .is-editor-empty::before {
+	color: --accent-foreground/10;
+	content: attr(data-placeholder);
+	float: left;
+	height: 0;
+	pointer-events: none;
+}
+.ProseMirror > *:first-child, .ProseMirror [data-type='column'] > * {
+	@apply first:mt-0 last:mb-0;
+}
+.ProseMirror > * + * {
+	margin-top: 0.75em;
+}
+.ProseMirror .node-imageUpload {
+	@apply rounded border-2 border-dotted border-black border-inherit/10 p-2 dark:border-neutral-500;
+	transition: border 160ms cubic-bezier(0.45, 0.05, 0.55, 0.95);
+}
+.ProseMirror .node-imageUpload:hover {
+	@apply border-inherit/30;
+}
+.ProseMirror .node-imageUpload:has(.is-active), .ProseMirror .node-imageUpload.has-focus {
+	@apply border-inherit/40;
+}
+.ProseMirror [data-type='columns'].has-focus [data-type='column'], .ProseMirror [data-type='columns']:hover [data-type='column'] {
+	@apply border-neutral-300 dark:border-neutral-700;
+}
+.ProseMirror [data-type='columns'] [data-type='column'].has-focus {
+	@apply border-neutral-400 dark:border-neutral-600;
+}
+.ProseMirror [data-type='column'] {
+	@apply rounded border-2 border-dotted border-transparent p-1;
+	transition: border 160ms cubic-bezier(0.45, 0.05, 0.55, 0.95);
+}
+.ProseMirror [data-type='column']:hover {
+	@apply border-neutral-100 dark:border-neutral-900;
+}
+.ProseMirror [data-type='column']:has(.is-active), .ProseMirror [data-type='column'].has-focus {
+	@apply border-neutral-100 dark:border-neutral-900;
+}
+.ProseMirror .node-imageBlock img {
+	@apply border-2 border-transparent rounded-xl overflow-hidden;
+}
+.ProseMirror .node-imageBlock:hover img {
+	@apply border-2 border-neutral-100 dark:border-neutral-900;
+}
+.ProseMirror .node-imageBlock:has(.is-active) img, .ProseMirror .node-imageBlock.has-focus img {
+	@apply border-2 border-neutral-800 dark:border-neutral-200;
+}
+.ProseMirror [data-type='blockquoteFigure'] > div {
+	@apply border-l-4 border-l-neutral-700 py-2 px-4 bg-inherit/80 rounded-lg rounded-tl-none rounded-bl-none;
+	@apply dark:border-l-neutral-300;
+}
+.ProseMirror [data-type='blockquoteFigure'] > blockquote {
+	@apply text-lg text-black;
+	@apply dark:text-white;
+}
+.ProseMirror [data-type='blockquoteFigure'] figcaption {
+	@apply text-sm text-neutral-500 mt-4 transition-all overflow-hidden;
+	@apply dark:text-neutral-400;
+}
+.ProseMirror p {
+	@apply leading-relaxed my-3 first:mt-0 last:mb-0;
+}
+.ProseMirror > p {
+	@apply my-6 first:mt-0 last:mb-0;
+}
+.ProseMirror h1 {
+	@apply text-3xl;
+}
+.ProseMirror h2 {
+	@apply text-2xl;
+}
+.ProseMirror h3 {
+	@apply text-xl;
+}
+.ProseMirror h4 {
+	@apply text-lg;
+}
+.ProseMirror h5 {
+	@apply text-base;
+}
+.ProseMirror h6 {
+	@apply text-sm;
+}
+.ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
+	@apply font-bold first:mt-0 last:mb-0;
+}
+.ProseMirror h1, .ProseMirror h2, .ProseMirror h3 {
+	@apply mt-12;
+}
+.ProseMirror h4, .ProseMirror h5, .ProseMirror h6 {
+	@apply mt-8;
+}
+.ProseMirror a.link {
+	@apply text-blue-500 font-extrabold dark:text-blue-400;
+}
+.ProseMirror mark {
+	@apply bg-red-500 rounded-sm decoration-clone text-inherit py-1 px-0 dark:bg-red-400;
+}
+.ProseMirror img {
+	@apply h-auto w-full max-w-full;
+}
+.ProseMirror [data-type='horizontalRule'] {
+	@apply my-8 py-4 transition-all duration-100 ease-in-out cursor-pointer;
+}
+.ProseMirror [data-type='horizontalRule'].ProseMirror-selectednode {
+	@apply bg-black/5 dark:bg-white/10;
+}
+.ProseMirror [data-type='horizontalRule'].ProseMirror-selectednode hr {
+	@apply border-t-black/30 dark:border-t-white/30;
+}
+.ProseMirror [data-type='horizontalRule']:hover:not(.ProseMirror [data-type='horizontalRule'].ProseMirror-selectednode) {
+	@apply bg-black/5;
+	@apply dark:bg-white/10;
+}
+.ProseMirror [data-type='horizontalRule'] hr {
+	@apply border-0 border-t border-black/20 bg-black/80;
+	@apply dark:border-white/20 dark:bg-white/80;
+}
