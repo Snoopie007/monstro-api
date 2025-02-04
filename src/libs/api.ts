@@ -237,6 +237,16 @@ async function updateProfile(body: any, id: string) {
   return res;
 }
 
+async function addTransaction(body: any, id: string, model: string) {
+  const res = await post({ url: `transactions/${model}`, data: body, id: id });
+  return res;
+}
+
+async function updateTransaction(tid: number, body: any, id: string, model: string) {
+  const res = await put({ url: `transactions/${model}/${tid}`, data: body, id: id });
+  return res;
+}
+
 
 export {
   api,
@@ -278,5 +288,7 @@ export {
   updatePassword,
   updateProfile,
   updatePlan,
+  addTransaction,
+  updateTransaction,
   fetcher
 };

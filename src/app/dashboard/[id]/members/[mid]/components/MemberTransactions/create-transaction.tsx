@@ -27,6 +27,8 @@ import { Loader2 } from "lucide-react";
 import { useMemberPaymentMethods } from "../../providers/MemberContext";
 import { useMemberPrograms } from "@/hooks/use-members";
 import { Plan, Program } from "@/types";
+import { addTransaction } from "@/libs/api";
+import { toast } from "react-toastify";
 
 
 export default function NewMemberTransaction({ params }: { params: { id: string, mid: number } }) {
@@ -34,8 +36,6 @@ export default function NewMemberTransaction({ params }: { params: { id: string,
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods();
     const { programs,  isLoading: programIsLoading } = useMemberPrograms(params.id, params.mid);
-    console.log(params.id, params.mid);
-    console.log(programs);
 
     const form = useForm<z.infer<typeof NewMemberPaymentSchema>>({
         resolver: zodResolver(NewMemberPaymentSchema),
@@ -57,8 +57,16 @@ export default function NewMemberTransaction({ params }: { params: { id: string,
     const chargeFor = form.watch("chargeFor")
     const programId = form.watch("programId")
     async function onSubmit(data: z.infer<typeof NewMemberPaymentSchema>) {
-        console.log(data)
-        setLoading(true)
+        setLoading(true);
+        addTransaction({...data, memberId: params.mid}, params.id, 'member').then(response => {
+            setOpen(false);
+            setLoading(false);
+            toast.success("Level Updated Successfully");
+            form.reset();
+        }).catch(error => {
+            setLoading(false);
+			toast.error("Something went wrong, please try again later");
+        });
     }
 
     return (
@@ -216,8 +224,8 @@ export default function NewMemberTransaction({ params }: { params: { id: string,
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
-                                                        {["Cash", "Zelle", "Bank Payment", "Check", "Charge a Card"].map((method, index) => (
-                                                            <SelectItem key={index} value={method} className="w-full">
+                                                        {["Cash", "Stripe", "Zelle", "Bank Payment", "Check", "Charge a Card"].map((method, index) => (
+                                                            <SelectItem key={index} value={method.toLowerCase()} className="w-full">
                                                                 {method}
                                                             </SelectItem>
                                                         ))}
