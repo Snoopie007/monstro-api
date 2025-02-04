@@ -1,14 +1,16 @@
 import { auth } from "@/auth";
 import { db } from "@/db/db";
+import { memberLocations } from "@/db/schemas";
 import { getStripe } from "@/libs/server-utils";
-import { and } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
-export async function POST(req: Request, props: { params: Promise<{ id: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ id: number, mId: number }> }) {
     const params = await props.params;
     const session = await auth();
     const data = await req.json();
+    console.log(params)
     try {
 
         if (session) {
@@ -40,7 +42,17 @@ export async function POST(req: Request, props: { params: Promise<{ id: number }
                         email: member.email,
                         phone: `${member.phone}`
                     });
+
+                    const memberUpdate = await db.update(memberLocations).set({stripeCustomerId: customer.id}).where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mId)));
+                    console.log(memberUpdate);
+                } else {
+                    console.log(123);
+                    const memberUpdate = await db.update(memberLocations).set({stripeCustomerId: `customer.id`}).where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mId))).catch(error => {
+                        console.log(error)
+                    });
+                    console.log(memberUpdate);
                 }
+                console.log(customer)
 
                 const paymentMethod = await stripe.paymentMethods.create(
                     {
@@ -50,6 +62,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number }
                         }
                     }
                 );
+                console.log(paymentMethod)
                 if (paymentMethod) {
                     await stripe.paymentMethods.attach(
                         paymentMethod.id,

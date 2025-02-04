@@ -60,7 +60,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
             setLoading(false);
             if (tokenRef.token) {
 
-                const res = await fetch(`/api/protected/${locationId}/members/${member.id}/payment/method`, {
+                const res = await fetch(`/api/protected/${locationId}/members/${member.id}/payments/methods`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",

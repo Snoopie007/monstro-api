@@ -34,6 +34,9 @@ export const locations = pgTable("locations", {
 export const memberLocations = pgTable("member_locations", {
     memberId: integer("member_id").notNull().references(() => members.id),
     locationId: integer("location_id").notNull().references(() => locations.id),
+    stripeCustomerId: varchar("stripe_customer_id"),
+    created: timestamp('created_at', { withTimezone: true }),
+    updated: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);
 
 

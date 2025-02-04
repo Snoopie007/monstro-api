@@ -20,11 +20,11 @@ interface PaymentMethodActionsProps {
 
 export default function PaymentMethodsActions({ paymentMethod, memberId, locationId, customerId }: PaymentMethodActionsProps) {
     async function detachPaymentMethod(id: string) {
-        await del({ url: `members/${memberId}/payments/method?paymentMethodId=${id}`, id: locationId });
+        await del({ url: `members/${memberId}/payments/methods?paymentMethodId=${id}`, id: locationId });
     }
 
     async function makeDefualtPaymentMethod(id: string) {
-        await put({ url: `members/${memberId}/payments/method`, data: { paymentMethodId: id, customerId: customerId }, id: locationId });
+        await put({ url: `members/${memberId}/payments/methods`, data: { paymentMethodId: id, customerId: customerId }, id: locationId });
     }
 
 
