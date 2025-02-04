@@ -126,9 +126,10 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                                             ...StripeCardOptions,
                                             style: {
                                                 base: {
-                                                    color: theme === "dark" ? "#fff" : "#000",
-                                                    iconColor: theme === "dark" ? "#fff" : "#000",
+                                                    color: theme === "dark" || theme === "system" ? "#fff" : "#000",
+                                                    iconColor: theme === "dark" || theme === "system" ? "#fff" : "#000",
                                                 }
+
                                             },
                                             hidePostalCode: true
                                         }}

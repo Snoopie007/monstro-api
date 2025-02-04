@@ -4,13 +4,12 @@ import { memberLocations } from "@/db/schemas";
 import { getStripe } from "@/libs/server-utils";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
 
-export async function POST(req: Request, props: { params: Promise<{ id: number, mId: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
     const params = await props.params;
     const session = await auth();
     const data = await req.json();
-    console.log(params)
+
     try {
 
         if (session) {
@@ -43,14 +42,16 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                         phone: `${member.phone}`
                     });
 
-                    const memberUpdate = await db.update(memberLocations).set({stripeCustomerId: customer.id}).where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mId)));
+                    const memberUpdate = await db.update(memberLocations)
+                        .set({ stripeCustomerId: customer.id, updated: new Date() })
+                        .where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mid)));
                     console.log(memberUpdate);
                 } else {
-                    console.log(123);
-                    const memberUpdate = await db.update(memberLocations).set({stripeCustomerId: `customer.id`}).where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mId))).catch(error => {
-                        console.log(error)
-                    });
-                    console.log(memberUpdate);
+                    console.log("issue", params.id, params.mid);
+                    await db.update(memberLocations)
+                        .set({ stripeCustomerId: "test", updated: new Date() })
+                        .where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mid)))
+
                 }
                 console.log(customer)
 
@@ -78,7 +79,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
 
         }
     } catch (err) {
-        // console.log(err)
+        console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
