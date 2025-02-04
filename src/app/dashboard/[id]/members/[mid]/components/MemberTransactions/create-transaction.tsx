@@ -35,7 +35,7 @@ export default function NewMemberTransaction({ params }: { params: { id: string,
     const [open, setOpen] = useState<boolean>(false);
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods();
-    const { programs,  isLoading: programIsLoading } = useMemberPrograms(params.id, params.mid);
+    const { programs, isLoading: programIsLoading } = useMemberPrograms(params.id, params.mid);
 
     const form = useForm<z.infer<typeof NewMemberPaymentSchema>>({
         resolver: zodResolver(NewMemberPaymentSchema),
@@ -58,14 +58,14 @@ export default function NewMemberTransaction({ params }: { params: { id: string,
     const programId = form.watch("programId")
     async function onSubmit(data: z.infer<typeof NewMemberPaymentSchema>) {
         setLoading(true);
-        addTransaction({...data, memberId: params.mid}, params.id, 'member').then(response => {
+        addTransaction({ ...data, memberId: params.mid }, params.id, 'member').then(response => {
             setOpen(false);
             setLoading(false);
             toast.success("Level Updated Successfully");
             form.reset();
         }).catch(error => {
             setLoading(false);
-			toast.error("Something went wrong, please try again later");
+            toast.error("Something went wrong, please try again later");
         });
     }
 
@@ -87,17 +87,16 @@ export default function NewMemberTransaction({ params }: { params: { id: string,
                                     name="chargeFor"
                                     render={({ field }) => (
                                         <FormItem className="flex-1">
-                                            <FormLabel>Charge For</FormLabel>
+                                            <FormLabel>Transaction Type</FormLabel>
                                             <FormControl>
                                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                     <FormControl>
                                                         <SelectTrigger>
-                                                            <SelectValue placeholder="Select Product" />
-
+                                                            <SelectValue placeholder="Select a transaction type" />
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
-                                                        {["Saleable Item", "Program"].map((method, index) => (
+                                                        {["One Time", "Subscription"].map((method, index) => (
                                                             <SelectItem key={index} value={method} className="w-full">
                                                                 {method}
                                                             </SelectItem>
@@ -110,7 +109,7 @@ export default function NewMemberTransaction({ params }: { params: { id: string,
                                     )}
                                 />
                             </fieldset>
-                            {chargeFor == "Saleable Item" &&
+                            {chargeFor == "One Time" &&
                                 (
                                     <>
                                         <fieldset className="flex flex-row items-center gap-2">
@@ -121,10 +120,11 @@ export default function NewMemberTransaction({ params }: { params: { id: string,
                                                     <FormItem className="flex-1">
                                                         <FormLabel>Item</FormLabel>
                                                         <FormControl>
-                                                            <Input type="text" placeholder="Item Name" className={cn("w-full ")} {...field} />
+                                                            <Input type="text" placeholder="Name of the item" className={cn("w-full ")} {...field} />
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
+
                                                 )}
                                             />
                                         </fieldset>
@@ -153,60 +153,60 @@ export default function NewMemberTransaction({ params }: { params: { id: string,
                                         </fieldset>
                                     </>
                                 )}
-                                {chargeFor == "Program" && (
-                                    <>
-                                        <fieldset>
-                                            <FormField
-                                                control={form.control}
-                                                name="programId"
-                                                render={({ field }) => (
-                                                    <FormItem>
+                            {chargeFor == "Subscription" && (
+                                <>
+                                    <fieldset>
+                                        <FormField
+                                            control={form.control}
+                                            name="programId"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Program</FormLabel>
+                                                    <Select onValueChange={(value) => field.onChange(Number(value))}>
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select a program" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {!programIsLoading && programs.map((program: Program, index: number) => (
+                                                                program.plans.length ? <SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem> : null
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
 
-                                                        <Select onValueChange={(value) => field.onChange(Number(value))}>
-                                                            <FormControl>
-                                                                <SelectTrigger>
-                                                                    <SelectValue placeholder="Select a program" />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent>
-                                                                {!programIsLoading && programs.map((program: Program, index: number) => (
-                                                                    program.plans.length ? <SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem> : null
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </fieldset>
+                                    <fieldset>
+                                        <FormField
+                                            control={form.control}
+                                            name="planId"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Plan</FormLabel>
+                                                    <Select onValueChange={(value) => field.onChange(Number(value))}>
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select a plan" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {programId && programs.find((program: Program) => program.id == programId).plans.map((plan: Plan, index: number) => (
+                                                                (plan.contractId && plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
 
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </fieldset>
-                                        <fieldset>
-                                            <FormField
-                                                control={form.control}
-                                                name="planId"
-                                                render={({ field }) => (
-                                                    <FormItem>
-
-                                                        <Select onValueChange={(value) => field.onChange(Number(value))}>
-                                                            <FormControl>
-                                                                <SelectTrigger>
-                                                                    <SelectValue placeholder="Select a plan" />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent>
-                                                                {programId && programs.find((program: Program) => program.id == programId).plans.map((plan: Plan, index: number) => (
-                                                                    (plan.contractId && plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </fieldset>
-                                    </>
-                                )}
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </fieldset>
+                                </>
+                            )}
 
                             <fieldset>
                                 <FormField

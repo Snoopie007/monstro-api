@@ -55,7 +55,7 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
                             </>
                         ) : (
                             <>
-                                {payments.map((payment: Stripe.Charge) => (
+                                {payments && payments.map((payment: Stripe.Charge) => (
                                     <TableRow key={payment.id}>
 
                                         <TableCell>
