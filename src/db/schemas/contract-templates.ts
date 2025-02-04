@@ -3,7 +3,7 @@ import { relations } from "drizzle-orm";
 import { integer, boolean, varchar, serial, text, timestamp, pgTable } from "drizzle-orm/pg-core";
 import { vendors } from "./vendor";
 import { locations } from "./locations";
-import { contracts } from "./members";
+import { memberContracts } from "./members";
 import { memberPlans } from "./member-plans";
 
 export const contractsTemplates = pgTable("contracts", {
@@ -19,7 +19,7 @@ export const contractsTemplates = pgTable("contracts", {
     deleted: timestamp('deleted_at', { withTimezone: true })
 });
 
-export const contractRelations = relations(contractsTemplates, ({ many, one }) => ({
-    memberContracts: many(contracts),
+export const contractTemplateRelations = relations(contractsTemplates, ({ many, one }) => ({
+    memberContracts: many(memberContracts),
     plans: many(memberPlans)
 }));

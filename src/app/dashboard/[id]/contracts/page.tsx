@@ -74,11 +74,11 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                                                 {contract.contractTemplate.title}
                                             </TableCell>
                                             <TableCell className="text-sm  py-1 border border-foreground/10">
-                                                {contract.plan.program.name}
+                                                {contract.plan ? contract.plan.program.name : ""}
                                             </TableCell>
 
                                             <TableCell className="text-sm  py-1 border border-foreground/10">
-                                                {contract.plan.name}
+                                                {contract.plan ? contract.plan.name : ""}
                                             </TableCell>
 
                                             <TableCell className="text-sm  py-1 border border-foreground/10">
@@ -108,8 +108,11 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                         </TableBody>
                     </Table>
                 </TablePageContent>
-                <TablePageFooter>
-                    <p className="text-xs">Total Contracts: {contracts.length}</p>
+                <TablePageFooter className="border-t border-foreground/10">
+                    <div className=" p-2">
+                        <p className="text-xs ">Total Contracts: {contracts.length}</p>
+                    </div>
+
                 </TablePageFooter>
             </TablePage>
 

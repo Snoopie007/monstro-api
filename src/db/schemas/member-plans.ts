@@ -48,7 +48,6 @@ export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
         fields: [memberPlans.contractId],
         references: [contractsTemplates.id],
     }),
-
     pricing: one(memberPlanPricings, {
         fields: [memberPlans.id],
         references: [memberPlanPricings.memberPlanId],

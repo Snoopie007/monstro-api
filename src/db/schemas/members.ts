@@ -47,12 +47,12 @@ export const MemberRewards = pgTable("member_rewards", {
 
 
 
-export const contracts = pgTable("member_contracts", {
+export const memberContracts = pgTable("member_contracts", {
     id: serial("id").primaryKey(),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
     templateId: integer("contract_id").references(() => contractsTemplates.id, { onDelete: "cascade" }),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
-    stripePlanId: text("stripe_plan_id"),
+    memberPlanId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     content: text("content"),
     signed: boolean("signed").notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -60,11 +60,12 @@ export const contracts = pgTable("member_contracts", {
     deleted: timestamp('deleted_at', { withTimezone: true }),
 });
 
+
 export const membersRelations = relations(members, ({ many, one }) => ({
     locations: many(memberLocations),
     achievements: many(memberAchievements),
     rewards: many(MemberRewards),
-    contracts: many(contracts),
+    contracts: many(memberContracts),
     programMembers: many(programMembers),
     user: one(users, {
         fields: [members.userId],
@@ -83,18 +84,19 @@ export const memberAchievementsRelations = relations(memberAchievements, ({ one 
     }),
 }));
 
-export const contractsRelations = relations(contracts, ({ many, one }) => ({
+
+
+export const memberContractsRelations = relations(memberContracts, ({ many, one }) => ({
     member: one(members, {
-        fields: [contracts.memberId],
+        fields: [memberContracts.memberId],
         references: [members.id],
     }),
-    memberPlan: one(memberPlans, {
-        fields: [contracts.stripePlanId],
+    plan: one(memberPlans, {
+        fields: [memberContracts.memberPlanId],
         references: [memberPlans.id],
     }),
-
     contractTemplate: one(contractsTemplates, {
-        fields: [contracts.templateId],
+        fields: [memberContracts.templateId],
         references: [contractsTemplates.id],
     }),
 }));
