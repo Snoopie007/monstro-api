@@ -34,9 +34,9 @@ export default function CredentialForm() {
 		mode: "onChange",
 	});
 
-	async function loginUser(v: z.infer<typeof LoginSchema>) {
+	async function login(v: z.infer<typeof LoginSchema>) {
 		setLoading(true);
-
+		console.log(v)
 		const errorUpdate: UpdateOptions = { render: "Invalid email or password.", type: "error", isLoading: false, autoClose: 1000 }
 		const toastId = toast.loading("Logging in...", { theme: "dark", hideProgressBar: true });
 
@@ -86,20 +86,20 @@ export default function CredentialForm() {
 
 	return (
 		<Form {...form}>
-			<form onSubmit={form.handleSubmit(loginUser)} className="w-full space-y-3">
+			<form onSubmit={form.handleSubmit(login)} className="w-full space-y-4">
 				<fieldset >
 					<FormField
 						control={form.control}
 						name="email"
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel className="font-semibold">
+								<FormLabel className="font-semibold text-[0.65rem] uppercase">
 									Email
 								</FormLabel>
 								<FormControl>
 									<Input
 										type="email"
-										className={"bg-white border placeholder:text-sm  border-gray-400  rounded-sm py-4 px-4 text-sm shadow-none"}
+										className={"bg-white border placeholder:text-sm  border-gray-400  rounded-sm py-4 px-4 text-sm "}
 										placeholder="Your email"
 										{...field}
 									/>
@@ -116,8 +116,12 @@ export default function CredentialForm() {
 						name="password"
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel className="font-semibold">
-									Password
+								<FormLabel className="flex flex-row justify-between">
+									<span className="text-[0.65rem] font-semibold  uppercase">										Password</span>
+									<Link href={"/auth/forgot-password"} className={"font-semibold text-[0.65rem]  uppercase"}					>
+										Forgot your password?
+									</Link>
+
 								</FormLabel>
 								<FormControl>
 									<Input
@@ -132,25 +136,21 @@ export default function CredentialForm() {
 							</FormItem>
 						)}
 					/>
-					<Link
-						href={"/auth/forgot-password"}
-						className={"font-semibold text-sm block mt-3"}
-					>
-						Forgot your password?
-					</Link>
+
 				</fieldset>
 
 				<div className={"flex flex-row items-center justify-between "}>
 					<Button
 						className={cn(
-							" text-sm bg-indigo-700 hover:bg-indigo-600 w-full   text-white px-4 py-2 h-auto rounded-sm children:hidden",
+							" text-sm bg-indigo-600 w-full  text-white px-4 py-2.5 h-auto rounded-sm children:hidden",
 							{ "children:inline-block": loading }
 						)}
 						type="submit"
 					>
 						<Loader2 size={16} className="animate-spin mr-2" />
-						Continue
+						Login
 					</Button>
+
 
 				</div>
 			</form>

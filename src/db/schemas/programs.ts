@@ -2,7 +2,7 @@ import { integer, varchar, serial, text, timestamp, pgTable, time, primaryKey } 
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { members } from "./members";
-import { memberPlans } from "./member-plans";
+import { memberPlans } from "./MemberPlans";
 import { achievements } from "./achievements";
 import { sessions } from "./enrollments";
 

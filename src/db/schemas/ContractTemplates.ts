@@ -4,7 +4,7 @@ import { integer, boolean, varchar, serial, text, timestamp, pgTable } from "dri
 import { vendors } from "./vendors";
 import { locations } from "./locations";
 import { memberContracts } from "./members";
-import { memberPlans } from "./member-plans";
+import { memberPlans } from "./MemberPlans";
 
 export const contractTemplates = pgTable("contracts", {
     id: serial("id").primaryKey(),

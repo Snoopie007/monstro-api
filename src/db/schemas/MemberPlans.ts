@@ -1,6 +1,6 @@
 import { integer, boolean, text, timestamp, pgTable, serial, doublePrecision } from "drizzle-orm/pg-core";
 import { programs } from "./programs";
-import { contractsTemplates } from "./contract-templates";
+import { contractTemplates } from "./ContractTemplates";
 import { relations } from "drizzle-orm";
 import { vendors } from "./vendors";
 
@@ -13,7 +13,7 @@ export const memberPlans = pgTable("member_plans", {
     status: boolean("status").notNull().default(false),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
-    contractId: integer("contract_id").references(() => contractsTemplates.id),
+    contractId: integer("contract_id").references(() => contractTemplates.id),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })
@@ -44,9 +44,9 @@ export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
         fields: [memberPlans.programId],
         references: [programs.id],
     }),
-    contract: one(contractsTemplates, {
+    contract: one(contractTemplates, {
         fields: [memberPlans.contractId],
-        references: [contractsTemplates.id],
+        references: [contractTemplates.id],
     }),
     pricing: one(memberPlanPricings, {
         fields: [memberPlans.id],

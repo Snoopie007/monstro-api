@@ -1,7 +1,7 @@
 import { integer, numeric, serial, text, timestamp, pgTable } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
-import { memberPlans } from "./member-plans";
+import { memberPlans } from "./MemberPlans";
 import { members } from "./members";
 import { vendors } from "./vendors";
 import { programs } from "./programs";

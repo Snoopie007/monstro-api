@@ -5,8 +5,8 @@ import { users } from "./users";
 import { achievements } from "./achievements";
 import { rewards } from "./rewards";
 import { programMembers, programs } from "./programs";
-import { contractTemplates } from "./contract-templates";
-import { memberPlans } from "./member-plans";
+import { contractTemplates } from "./ContractTemplates";
+import { memberPlans } from "./MemberPlans";
 
 
 export const members = pgTable("members", {
