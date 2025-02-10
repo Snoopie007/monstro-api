@@ -8,8 +8,8 @@ export async function GET(req: Request, props: { params: Promise<{ planid: numbe
     const session = await auth();
     try {
 		if (session) {
-			const plan = await db.query.plans.findFirst({
-				where: (plans, { eq }) => eq(plans.id, params.planid),
+			const plan = await db.query.memberPlans.findFirst({
+				where: (memberPlans, { eq }) => eq(memberPlans.id, params.planid),
 
 			});
 

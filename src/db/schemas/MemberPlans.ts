@@ -44,6 +44,7 @@ export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
         fields: [memberPlans.programId],
         references: [programs.id],
     }),
+
     contract: one(contractTemplates, {
         fields: [memberPlans.contractId],
         references: [contractTemplates.id],

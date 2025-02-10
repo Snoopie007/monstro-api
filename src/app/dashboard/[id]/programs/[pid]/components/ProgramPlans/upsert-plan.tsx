@@ -74,7 +74,7 @@ export default function UpsertPlan({ plan, onChange, locationId, programId }: Cr
     })
 
     useEffect(() => {
-        if (plan) { form.reset(plan) }
+        if (plan) { form.reset({...plan, contractId: 0}) }
     }, [plan])
 
     async function submitForm(v: z.infer<typeof PlanSchema>) {

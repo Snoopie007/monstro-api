@@ -20,7 +20,7 @@ class StripePayments {
 
     constructor() {
         this._stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-            apiVersion: "2024-11-20.acacia",
+            apiVersion: "2025-01-27.acacia",
             appInfo: {
                 name: "My Monstro",
                 url: "https://mymonstro.com", // Fixed typo in URL
