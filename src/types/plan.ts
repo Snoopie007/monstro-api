@@ -11,7 +11,7 @@ export type Plan = {
     familyMemberLimit: number;
     pricing: Pricing;
     contractId?: number | null;
-    contract?: Contract | null;
+    contract?: Contract | undefined;
     created: Date | null;
     updated: Date | null;
     deleted: Date | null;

@@ -28,9 +28,9 @@ export type Level = {
     program?: Program;
     parentId?: number;
     sessions: Session[];
-    created: Date | null;
-    updated: Date | null;
-    deleted: Date | null;
+    created?: Date | null;
+    updated?: Date | null;
+    deleted?: Date | null;
 };
 
 export type Enrollments = {

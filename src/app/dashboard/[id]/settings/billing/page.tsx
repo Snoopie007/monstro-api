@@ -59,7 +59,7 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
             return total;
         }, 0);
 
-        return formatAmountForDisplay((total / 100), subscriptions[0].currency, true, 2)
+        return formatAmountForDisplay((total / 100), subscriptions[0].currency, true)
     }
 
     return (
@@ -89,7 +89,7 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
                                     (
                                         <TableRow key={sub.id}>
                                             <TableCell className='pl-0'>{plan.nickname}</TableCell>
-                                            <TableCell>{formatAmountForDisplay((amount / 100), plan.currency, true, 2)}</TableCell>
+                                            <TableCell>{formatAmountForDisplay((amount / 100), plan.currency, true)}</TableCell>
                                             <TableCell >
                                                 {new Date(sub.current_period_end * 1000).toLocaleString('en-US', {
                                                     month: 'short',

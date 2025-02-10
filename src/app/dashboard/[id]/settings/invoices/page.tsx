@@ -51,7 +51,7 @@ export default async function InvoicesPage(props: { params: Promise<{ id: number
                             <TableRow key={index} >
                                 <TableCell className="py-3">{formatDateTime(invoice.created * 1000)}</TableCell>
 
-                                <TableCell className="py-3">{formatAmountForDisplay(invoice.amount / 100, 'usd', true, 2)}</TableCell>
+                                <TableCell className="py-3">{formatAmountForDisplay(invoice.amount / 100, 'usd', true)}</TableCell>
                                 <TableCell className="py-3">{invoice.captured ? (
                                     <span className="text-green-500">Paid</span>
                                 ) : (
