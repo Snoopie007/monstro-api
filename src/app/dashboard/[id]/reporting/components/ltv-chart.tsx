@@ -4,6 +4,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { customerLTVData } from '../dummy-data'
 import { TrendingUp } from 'lucide-react'
 import ChartYAxis from './y-axis'
+import { useReportFilters } from '../provider/report-context'
 
 const chartConfig = {
     desktop: {
@@ -13,7 +14,8 @@ const chartConfig = {
 }
 
 
-export function CustomerLTVChart({ filters }: { filters: Record<string, any> }) {
+export function CustomerLTVChart() {
+    const { filters } = useReportFilters()
     const [data, setData] = useState<Record<string, any>[]>([])
     const maxAmount = React.useMemo(() => Math.max(...customerLTVData.map(item => item.amount)), [customerLTVData]);
 

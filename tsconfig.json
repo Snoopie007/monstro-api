@@ -9,7 +9,7 @@
 	  "module": "esnext",
 	  "moduleResolution": "bundler",
 	  "downlevelIteration": true,
-	  "target": "es2015",
+	  "target": "ES2024",
 	  "resolveJsonModule": true,
 	  "isolatedModules": true,
 	  "jsx": "preserve",

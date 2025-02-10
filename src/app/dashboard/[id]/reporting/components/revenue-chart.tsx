@@ -3,6 +3,7 @@ import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { totalGrossRevenueData } from '../dummy-data'
 import { TrendingUp } from 'lucide-react'
+import { useReportFilters } from '../provider/report-context'
 
 const chartConfig = {
     desktop: {
@@ -11,10 +12,12 @@ const chartConfig = {
     },
 }
 
-export function RevenueChart({ filters }: { filters: Record<string, any> }) {
+export function RevenueChart() {
+    const { filters } = useReportFilters()
     const maxAmount = React.useMemo(() => Math.max(...totalGrossRevenueData.map(item => item.revenue)), [totalGrossRevenueData]);
     return (
         <div className='space-y-4'>
+
             <div className='text-base font-semibold'>
                 Gross Revenue
             </div>

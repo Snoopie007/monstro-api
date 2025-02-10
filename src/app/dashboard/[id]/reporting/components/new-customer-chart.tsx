@@ -12,7 +12,7 @@ const chartConfig = {
     },
 }
 
-export function NewCustomerChart({ filters }: { filters: Record<string, any> }) {
+export function NewCustomerChart() {
     const maxCustomers = React.useMemo(() => Math.max(...newCustomersData.map(item => item.customers)), [newCustomersData]);
     return (
         <div className='space-y-4'>

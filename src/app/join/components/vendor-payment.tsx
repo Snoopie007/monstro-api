@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui";
 
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form";
 
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import { cn } from "@/libs/utils";

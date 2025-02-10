@@ -1,5 +1,5 @@
 import { integer, serial, timestamp, pgTable, boolean } from "drizzle-orm/pg-core";
-import { vendors } from "./vendor";
+import { vendors } from "./vendors";
 import { relations } from "drizzle-orm";
 
 export const vendorReferrals = pgTable("vendor_referrals", {

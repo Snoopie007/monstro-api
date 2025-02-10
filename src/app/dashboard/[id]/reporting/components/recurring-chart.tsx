@@ -4,6 +4,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { recurringRevenueData } from '../dummy-data'
 import { TrendingUp } from 'lucide-react'
 import ChartYAxis from './y-axis'
+import { useReportFilters } from '../provider/report-context'
 
 const chartConfig = {
     desktop: {
@@ -12,8 +13,8 @@ const chartConfig = {
     },
 }
 
-export function RecurringRevenueChart({ filters }: { filters: Record<string, any> }) {
-
+export function RecurringRevenueChart() {
+    const { filters } = useReportFilters()
     const maxAmount = React.useMemo(() => Math.max(...recurringRevenueData.map(item => item.amount)), [recurringRevenueData]);
     return (
         <div className='space-y-4'>

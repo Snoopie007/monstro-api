@@ -5,7 +5,7 @@ import { users } from "./users";
 import { achievements } from "./achievements";
 import { rewards } from "./rewards";
 import { programMembers, programs } from "./programs";
-import { contractsTemplates } from "./contract-templates";
+import { contractTemplates } from "./contract-templates";
 import { memberPlans } from "./member-plans";
 
 
@@ -47,7 +47,7 @@ export const MemberRewards = pgTable("member_rewards", {
 export const memberContracts = pgTable("member_contracts", {
     id: serial("id").primaryKey(),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
-    templateId: integer("contract_id").references(() => contractsTemplates.id, { onDelete: "cascade" }),
+    templateId: integer("contract_id").references(() => contractTemplates.id, { onDelete: "cascade" }),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
     memberPlanId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     content: text("content"),
@@ -59,7 +59,7 @@ export const memberContracts = pgTable("member_contracts", {
 
 export const relationEnum = pgEnum('relationship', [
     'parent',
-    'spouse', 
+    'spouse',
     'child',
     'sibling',
     'other'
@@ -87,7 +87,7 @@ export const memberPayments = pgTable("member_payments", {
 });
 
 export const membersRelations = relations(members, ({ many, one }) => ({
-    locations: many(memberLocations),
+    memberLocations: many(memberLocations),
     achievements: many(memberAchievements),
     rewards: many(MemberRewards),
     contracts: many(memberContracts),
@@ -97,7 +97,7 @@ export const membersRelations = relations(members, ({ many, one }) => ({
         references: [users.id],
     }),
     familyMembers: many(familyMembers, {
-        relationName: "memberFamilyMembers", 
+        relationName: "memberFamilyMembers",
     }),
     relatedByFamily: many(familyMembers, {
         relationName: "relatedMemberFamily",
@@ -112,12 +112,12 @@ export const membersRelations = relations(members, ({ many, one }) => ({
 
 export const familyMemberRelations = relations(familyMembers, ({ one }) => ({
     member: one(members, {
-        relationName: "memberFamilyMembers", 
+        relationName: "memberFamilyMembers",
         fields: [familyMembers.memberId],
         references: [members.id],
     }),
     relatedMember: one(members, {
-        relationName: "relatedMemberFamily", 
+        relationName: "relatedMemberFamily",
         fields: [familyMembers.relatedMemberId],
         references: [members.id],
     }),
@@ -164,8 +164,8 @@ export const memberContractsRelations = relations(memberContracts, ({ many, one 
         fields: [memberContracts.memberPlanId],
         references: [memberPlans.id],
     }),
-    contractTemplate: one(contractsTemplates, {
+    contractTemplate: one(contractTemplates, {
         fields: [memberContracts.templateId],
-        references: [contractsTemplates.id],
+        references: [contractTemplates.id],
     }),
 }));

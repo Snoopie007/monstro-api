@@ -3,7 +3,7 @@ import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { memberPlans } from "./member-plans";
 import { members } from "./members";
-import { vendors } from "./vendor";
+import { vendors } from "./vendors";
 import { programs } from "./programs";
 
 

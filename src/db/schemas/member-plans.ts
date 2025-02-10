@@ -2,7 +2,7 @@ import { integer, boolean, text, timestamp, pgTable, serial, doublePrecision } f
 import { programs } from "./programs";
 import { contractsTemplates } from "./contract-templates";
 import { relations } from "drizzle-orm";
-import { vendors } from "./vendor";
+import { vendors } from "./vendors";
 
 export const memberPlans = pgTable("member_plans", {
     id: serial("id").primaryKey(),

@@ -52,7 +52,7 @@ export const memberLocationsRelations = relations(memberLocations, ({ one, many 
         fields: [memberLocations.memberId],
         references: [members.id],
     }),
-    locations: one(locations, {
+    location: one(locations, {
         fields: [memberLocations.locationId],
         references: [locations.id],
     }),

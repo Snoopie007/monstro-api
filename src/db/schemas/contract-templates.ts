@@ -1,12 +1,12 @@
 
 import { relations } from "drizzle-orm";
 import { integer, boolean, varchar, serial, text, timestamp, pgTable } from "drizzle-orm/pg-core";
-import { vendors } from "./vendor";
+import { vendors } from "./vendors";
 import { locations } from "./locations";
 import { memberContracts } from "./members";
 import { memberPlans } from "./member-plans";
 
-export const contractsTemplates = pgTable("contracts", {
+export const contractTemplates = pgTable("contracts", {
     id: serial("id").primaryKey(),
     vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
@@ -19,7 +19,7 @@ export const contractsTemplates = pgTable("contracts", {
     deleted: timestamp('deleted_at', { withTimezone: true })
 });
 
-export const contractTemplateRelations = relations(contractsTemplates, ({ many, one }) => ({
+export const contractTemplateRelations = relations(contractTemplates, ({ many, one }) => ({
     memberContracts: many(memberContracts),
     plans: many(memberPlans)
 }));

@@ -11,7 +11,7 @@ export * from "./enrollments";
 export * from "./attendances";
 export * from "./permissions"
 export * from "./staffs"
-export * from "./vendor"
+export * from "./vendors"
 export * from "./vendor-progress"
 export * from "./vendor-referrals"
 export * from "./transactions"

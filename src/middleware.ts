@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "./auth";
 import { decodeId } from "./libs/server-utils";
-const publicPaths = ['/auth', '/api/auth', '/join', '/clubs', '/api/webhooks'];
+const publicPaths = ['/auth', '/api/auth', '/join', '/api/webhooks'];
 
 export default auth(async (req) => {
 

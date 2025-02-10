@@ -1,5 +1,5 @@
 import { integer, serial, timestamp, pgTable, boolean, text, jsonb } from "drizzle-orm/pg-core";
-import { vendors } from "./vendor";
+import { vendors } from "./vendors";
 import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 

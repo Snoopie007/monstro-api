@@ -10,8 +10,8 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
   const query = searchParams.get("withDraft") || true;
   try {
     if (session) {
-      const templates = await db.query.contractsTemplates.findMany({
-        where: (contractsTemplates, { eq }) => (and(eq(contractsTemplates.locationId, params.id), eq(contractsTemplates.deleted, isNull(contractsTemplates.deleted)), inArray(contractsTemplates.isDraft, query === 'true' ? [true, false] : [false]))),
+      const templates = await db.query.contractTemplates.findMany({
+        where: (templates, { eq }) => (and(eq(templates.locationId, params.id), eq(templates.deleted, isNull(templates.deleted)), inArray(templates.isDraft, query === 'true' ? [true, false] : [false]))),
         with: {
           plans: true
         }

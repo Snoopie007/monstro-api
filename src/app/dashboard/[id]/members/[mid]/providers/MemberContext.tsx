@@ -52,8 +52,6 @@ const useMemberContext = (initState: StateType) => {
 
 type UseMemberContextType = ReturnType<typeof useMemberContext>
 
-
-
 export const MemberContext = createContext<UseMemberContextType | null>(null)
 
 type MemberProviderType = {

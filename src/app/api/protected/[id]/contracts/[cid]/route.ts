@@ -8,11 +8,11 @@ export async function GET(req: Request, props: { params: Promise<{ cid: number, 
 
   try {
     if (session) {
-	console.log(params);
-      const template = await db.query.contractsTemplates.findFirst({
+      console.log(params);
+      const template = await db.query.contractTemplates.findFirst({
         where: (templates, { eq }) => eq(templates.id, params.cid),
       })
-	console.log(template);
+      console.log(template);
       return NextResponse.json(template, { status: 200 });
     }
   } catch (err) {

@@ -33,6 +33,10 @@ export async function POST(req: NextRequest) {
         await stripe.createSubscription(customer.id);
         if (clientSecret) {
 
+            // Create user 
+            // Create vendor
+            // Create location
+            // (Password sent via email)
 
 
             // const res = await fetch(`${process.env.GHL_URL}/contacts/`, {
