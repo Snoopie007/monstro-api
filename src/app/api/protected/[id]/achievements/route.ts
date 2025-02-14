@@ -1,22 +1,33 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
+import { db } from '@/db/db';
 
-export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
     const params = await props.params;
     const session = await auth();
     try {
 		if (session) {
-			const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/achievements`, {
-				headers: {
-					'Authorization': `Bearer ${session.user.token}`,
-					"locationId": `${params.id}`
+			const achievements = await db.query.achievements.findMany({
+				where: (achievements, {eq}) => eq(achievements.locationId, params.id),
+				with: {
+					members: true,
+					actions: {
+						with: {
+							action: true
+						}
+					}
 				}
-			});
-			if (!res.ok) {
-				return NextResponse.json({ message: "An error occurred while fetching the data." }, { status: 400 });
-			}
-			const { data } = await res.json();
-			return NextResponse.json(data, { status: 200 });
+			})
+			.then((achievements) =>
+				achievements.map((achievement) => ({
+					...achievement,
+					actions: achievement.actions.map(({ action, ...rest }) => ({
+						...rest,
+						...action, // Merge action object properties into the parent object
+					})),
+				}))
+			)
+			return NextResponse.json(achievements, { status: 200 });
 		}
 	} catch (err) {
 		return NextResponse.json({ error: err }, { status: 500 })

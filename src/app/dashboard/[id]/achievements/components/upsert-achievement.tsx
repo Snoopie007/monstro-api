@@ -28,7 +28,7 @@ export interface AddAchievementProps {
 	setCurrentAchievement: Dispatch<SetStateAction<Achievement | undefined>>
 }
 
-export function UpsertAchivement({ achievement, locationId }: AddAchievementProps) {
+export function UpsertAchivement({ achievement, locationId,setCurrentAchievement }: AddAchievementProps) {
 
 	const { mutate } = useSWR(`/api/protected/achievements`);
 	const { data } = usePrograms(locationId);
@@ -38,11 +38,13 @@ export function UpsertAchivement({ achievement, locationId }: AddAchievementProp
 		resolver: zodResolver(AchievementSchema),
 		defaultValues: {
 			id: achievement?.id || 0,
-			name: achievement?.name || '',
+			title: achievement?.title || '',
+			description: achievement?.description || '',
+			icon: achievement?.icon || '',
 			badge: achievement?.badge || '',
 			points: Number(achievement?.points) || 0,
-			actionCount: (Array.isArray(achievement?.action) ? achievement?.action[0].pivot.count : 0) || 0,
-			action: (Array.isArray(achievement?.action) ? achievement?.action[0].id : 0) || 0,
+			actionCount: (Array.isArray(achievement?.actions) && achievement?.actions.length ? achievement?.actions[0].count : 0) || 0,
+			action: (Array.isArray(achievement?.actions) && achievement?.actions.length ? achievement?.actions[0].id : 0) || 0,
 			program: achievement?.program?.id || 0
 		},
 		mode: "onChange",
@@ -74,7 +76,7 @@ export function UpsertAchivement({ achievement, locationId }: AddAchievementProp
 
 				<SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0">
 					<SheetHeader className=" border-b">
-						<SheetTitle className='text-base font-semibold'>Update Achievement</SheetTitle>
+						<SheetTitle className='text-base font-semibold'>{achievement?.id ? 'Update Achievement' : 'Add Achievement'}</SheetTitle>
 					</SheetHeader>
 					<ScrollArea className="h-[calc(100vh-150px)] w-full ">
 
@@ -83,16 +85,35 @@ export function UpsertAchivement({ achievement, locationId }: AddAchievementProp
 								<SheetSection>
 									<SheetFieldSet>
 										<SheetFieldLabel>
-											<FormLabel>Achievement Name</FormLabel>
+											<FormLabel>Achievement Title</FormLabel>
 										</SheetFieldLabel>
 										<SheetFieldInput>
 											<FormField
 												control={form.control}
-												name="name"
+												name="title"
 												render={({ field }) => (
 													<FormItem>
 														<FormControl>
-															<Input type='text' className={cn()} placeholder="Achievement Name" {...field} />
+															<Input type='text' className={cn()} placeholder="Achievement Title" {...field} />
+														</FormControl>
+														<FormMessage />
+													</FormItem>
+												)}
+											/>
+										</SheetFieldInput>
+									</SheetFieldSet>
+									<SheetFieldSet>
+										<SheetFieldLabel>
+											<FormLabel>Achievement Description</FormLabel>
+										</SheetFieldLabel>
+										<SheetFieldInput>
+											<FormField
+												control={form.control}
+												name="description"
+												render={({ field }) => (
+													<FormItem>
+														<FormControl>
+															<Input type='text' className={cn()} placeholder="Achievement Description" {...field} />
 														</FormControl>
 														<FormMessage />
 													</FormItem>
@@ -139,7 +160,6 @@ export function UpsertAchivement({ achievement, locationId }: AddAchievementProp
 										</SheetFieldInput>
 									</SheetFieldSet>
 								</SheetSection>
-								{!achievement && (
 									<SheetSection>
 
 
@@ -205,7 +225,7 @@ export function UpsertAchivement({ achievement, locationId }: AddAchievementProp
 																	<SelectValue placeholder="Select a program" />
 																</SelectTrigger>
 																<SelectContent>
-																	{data.programs?.map((program: Program, index: number) => (
+																	{data.map((program: Program, index: number) => (
 																		<SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem>
 																	))}
 																</SelectContent>
@@ -217,7 +237,6 @@ export function UpsertAchivement({ achievement, locationId }: AddAchievementProp
 											</SheetFieldInput>
 										</SheetFieldSet>
 									</SheetSection>
-								)}
 							</form>
 						</Form>
 					</ScrollArea>
@@ -225,6 +244,7 @@ export function UpsertAchivement({ achievement, locationId }: AddAchievementProp
 						<SheetClose asChild>
 							<Button
 								variant={"outline"} size={"xs"}
+								onClick={() => setCurrentAchievement(undefined)}
 							>
 								Close
 							</Button>

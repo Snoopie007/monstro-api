@@ -7,7 +7,8 @@ import { memberAchievements } from "./members";
 
 export const achievements = pgTable("achievements", {
     id: serial("id").primaryKey(),
-    name: varchar("name").notNull(),
+    title: varchar("title").notNull(),
+    description: varchar("description").notNull(),
     badge: varchar("badge").notNull(),
     points: integer("points").notNull(),
     programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
@@ -24,15 +25,27 @@ export const actions = pgTable("actions", {
 })
 
 
-export const achievementsActions = {
+export const achievementsActions = pgTable("achievement_actions", {
     id: serial("id").primaryKey(),
     achievementId: integer("achievement_id").references(() => achievements.id, { onDelete: "cascade" }),
-    actionsId: integer("actions_id").references(() => actions.id, { onDelete: "cascade" }),
+    actionId: integer("action_id").references(() => actions.id, { onDelete: "cascade" }),
     count: integer("count").notNull(),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
-}
+});
 
 export const achievementsRelations = relations(achievements, ({ many }) => ({
     members: many(memberAchievements),
+    actions: many(achievementsActions)
 }));
+
+export const achievementsActionsRelations = relations(achievementsActions, ({ one }) => ({
+    achievement: one(achievements, {
+      fields: [achievementsActions.achievementId],
+      references: [achievements.id],
+    }),
+    action: one(actions, {
+      fields: [achievementsActions.actionId],
+      references: [actions.id],
+    }),
+  }))
