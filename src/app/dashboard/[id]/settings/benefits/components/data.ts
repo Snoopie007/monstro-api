@@ -34,7 +34,6 @@ export type AchivementBadge = {
     description: string;
     icon: string;
     type: "count" | "actions"; // This is already correct - type is already set to be either "count" or "actions"
-    progress: number;
     points: number;
     requiredCount?: number;
     requiredActions?: string[];
@@ -48,7 +47,7 @@ export const badges: AchivementBadge[] = [
         description: "Earn this achievement by completing 10 messages.",
         type: "count",
         requiredCount: 100,
-        progress: 0,
+
         points: 100,
 
     },
@@ -59,7 +58,6 @@ export const badges: AchivementBadge[] = [
         description: "Description 2",
         type: "count",
         requiredCount: 100,
-        progress: 0,
         points: 100,
     }
 ]
