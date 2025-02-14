@@ -54,10 +54,12 @@ export default function Achievements(props: { params: Promise<{ id: string }> })
 
 
                         <Button variant={"foreground"} size={"xs"} onClick={() => setCurrentAchievement({
-                            name: "",
+                            title: "",
+                            icon: "",
+                            description: "",
                             badge: "",
                             points: 0,
-                            action: [],
+                            actions: [],
                             actionCount: 0,
                         })}>
                             + Achievement
@@ -109,7 +111,7 @@ export default function Achievements(props: { params: Promise<{ id: string }> })
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={columns.length} className="h-6 w-full font-medium text-center">
-                                                No rewards found.
+                                                No achievements found.
                                             </TableCell>
                                         </TableRow>
                                     )}

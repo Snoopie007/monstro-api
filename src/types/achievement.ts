@@ -1,19 +1,23 @@
+import { Member } from "./member";
 import { Program } from "./program";
 
 
 export type Action = {
     id: number,
     name: string,
-    pivot: any
+    count: number
 }
 
 
 export type Achievement = {
     id?: number,
-    name: string,
+    title: string,
+    description: string | null,
+    icon: string | null,
     badge: string,
     points: number,
-    action: Action[] | [],
+    actions: Action[] | [],
     program?: Program,
-    actionCount: number
+    actionCount: number,
+    members?: Array<Member>
 }
