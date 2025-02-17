@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "./auth";
-import { decodeId } from "./libs/server-utils";
-const publicPaths = ['/auth', '/api/auth', '/join', '/api/webhooks'];
+import { decodeId } from "./libs/server/sqids";
+const publicPaths = ['/login', '/api/auth', '/join', '/api/webhooks'];
 
 export default auth(async (req) => {
 
@@ -18,7 +18,8 @@ export default auth(async (req) => {
 			const match = pathname.match(/^\/api\/protected\/([^/]+)(\/.*)?$/);
 			if (match) {
 				const [_, encodedId, subpath = ''] = match;
-				if (!isNaN(Number(encodedId))) {
+
+				if (!isNaN(Number(encodedId)) || encodedId.startsWith("location")) {
 					return NextResponse.next();
 				}
 
@@ -34,7 +35,7 @@ export default auth(async (req) => {
 		// Handle public routes
 
 		if (!isLoggedin && !publicPaths.some(path => pathname.startsWith(path))) {
-			return NextResponse.redirect(new URL("/auth/login", req.nextUrl.origin));
+			return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
 		}
 
 		// Redirect logged in users from home page

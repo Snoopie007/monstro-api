@@ -87,7 +87,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant={"ghost"} className="border-l rounded-none">+ Add Card</Button>
+                <Button variant={"ghost"} size={"sm"} className="border-l rounded-none">+ Add Card</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[625px] rounded-sm">
                 <DialogHeader>

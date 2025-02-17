@@ -32,7 +32,7 @@ import { RegionSelect } from "@/components/forms";
 import { post } from "@/libs/api";
 import { useSession } from "next-auth/react";
 import { CompanyInfoSchema } from "./schemas";
-import { Industries, CountryCodes, TimeZones } from "@/libs/datas";
+import { Industries, CountryCodes, TimeZones } from "@/libs/data";
 
 
 

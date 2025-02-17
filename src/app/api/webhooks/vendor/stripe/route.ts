@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { headers } from "next/headers";
 import Stripe from "stripe";
-
+import { tryCatch } from "@/libs/utils";
+import { waitUntil } from "@vercel/functions";
 
 export async function POST(req: NextRequest) {
     console.log("Stripe webhook received");
@@ -17,20 +18,20 @@ export async function POST(req: NextRequest) {
     if (!signature) return NextResponse.json({ message: "No signature", status: 400 });
 
 
-    // async function doEventProcessing(): Promise<void> {
-    //     if (typeof signature !== "string") {
-    //         throw new Error("Stripe Hook Signature is not a string");
-    //     }
-    //     // waitUntil(processEvent(body));
-    //     return await processEvent(body);
-    // }
+    async function doEventProcessing(): Promise<void> {
+        if (typeof signature !== "string") {
+            throw new Error("Stripe Hook Signature is not a string");
+        }
+        waitUntil(processEvent(body));
+
+    }
 
 
-    // const { error } = await tryCatch(doEventProcessing());
+    const { error } = await tryCatch(doEventProcessing());
 
-    // if (error) {
-    //     console.error("[STRIPE HOOK] Error processing event", error);
-    // }
+    if (error) {
+        console.error("[STRIPE HOOK] Error processing event", error);
+    }
 
     return NextResponse.json({ message: "Stripe webhook received", status: 200 });
 }
@@ -38,8 +39,6 @@ export async function POST(req: NextRequest) {
 
 
 const allowedEvents: Stripe.Event.Type[] = [
-    "checkout.session.completed",
-    "customer.subscription.created",
     "customer.subscription.updated",
     "customer.subscription.deleted",
     "customer.subscription.paused",
@@ -63,7 +62,7 @@ async function processEvent(event: Stripe.Event) {
     if (!allowedEvents.includes(event.type)) return;
 
     // All the events I track have a customerId
-    const { customer: customerId } = event?.data?.object as {
+    const { customer: customerId } = event.data?.object as {
         customer: string; // Sadly TypeScript does not know this
     };
 

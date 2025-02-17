@@ -28,7 +28,7 @@ import { ChevronRight, Loader2 } from "lucide-react";
 import { UpdateMemberSchema } from "../../schema";
 
 import PhoneInput from "react-phone-number-input/input";
-import { CountryCodes } from "@/libs/datas";
+import { CountryCodes } from "@/libs/data";
 
 
 interface UpdateMemberProps {

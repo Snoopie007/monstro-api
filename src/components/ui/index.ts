@@ -19,3 +19,4 @@ export * from './breadcrumb';
 export * from './calendar';
 export * from './separator';
 export * from './table-page';
+export * from './ToolTip';

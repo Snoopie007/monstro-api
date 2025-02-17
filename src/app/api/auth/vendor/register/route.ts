@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 
 import { StripePayments } from "./stripe-sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { vendors } from "@/db/schemas";
+import { locations, users, vendors } from "@/db/schemas";
 
 const stripe = new StripePayments();
 
@@ -13,14 +13,41 @@ export async function POST(req: NextRequest) {
     // const planName = plan.name.toLocaleLowerCase();
 
     try {
+        const user = await db.query.users.findFirst({
+            where: (user, { eq }) => eq(user.email, data.email)
+        })
+        if (user) {
+            return NextResponse.json({ error: "User already exists" }, { status: 400 })
+        }
 
-        const [{ id }] = await db.insert(vendors).values({
-            ...vendor,
-        }).returning({ id: vendors.id });
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword: string = await bcrypt.hash(data.password, salt);
+        const userId = await db.transaction(async (tx) => {
+            const [user] = await tx.insert(users).values({
+                email: data.email,
+                password: hashedPassword,
+                name: data.email
+            }).returning()
+
+            const [{ vendorId }] = await tx.insert(vendors).values({
+                userId: user.id,
+
+                email: data.email,
+                firstName: '',
+                lastName: '',
+                phone: '',
+            }).returning({ vendorId: vendors.id })
+
+            await tx.insert(locations).values({
+                vendorId,
+                status: 'Pending',
+            })
+            return { ...user, vendorId }
+
+        })
 
 
         const customer = await stripe.createCustomer(vendor, token.id, id);
-
 
         const { clientSecret } = await stripe.createPaymentIntent(
             initialCharge,
@@ -33,9 +60,7 @@ export async function POST(req: NextRequest) {
         await stripe.createSubscription(customer.id);
         if (clientSecret) {
 
-            // Create user 
-            // Create vendor
-            // Create location
+
             // (Password sent via email)
 
 

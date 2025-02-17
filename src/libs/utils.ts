@@ -24,12 +24,13 @@ const DateFormateOptions: Intl.DateTimeFormatOptions = {
  const formatAmountForDisplay = (
 	amount: number,
 	currency: string,
-	withSymbol = true
+	withSymbol = true,
+	minimumFractionDigits = 0
 ): string => {
 	const formatter = new Intl.NumberFormat('en-US', {
 		style: withSymbol ? 'currency' : 'decimal',
 		currency,
-		minimumFractionDigits: 0,
+		minimumFractionDigits,
 	});
 	
 	return formatter.format(amount);
@@ -86,6 +87,9 @@ async function tryCatch<T, E = Error>(
 
 }
 
+
+
+
 export {
   formatDateTime,
   convertToCurrency,
@@ -93,7 +97,7 @@ export {
   tryCatch,
   formatAmountForDisplay,
   DateFormateOptions,
-  cn
+  cn,
 }
 
 

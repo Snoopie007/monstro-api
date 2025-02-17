@@ -30,7 +30,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Icon } from '@/components/icons';
 import { CreateMemberSchema } from '../schema';
 import PhoneInput from 'react-phone-number-input/input';
-import { CountryCodes } from '@/libs/datas';
+import { CountryCodes } from '@/libs/data';
 import { CountryCode, Plan, Program } from '@/types';
 import { RadioGroup, RadioGroupItem } from '@/components/forms';
 import NewMemberPaymentForm from './payment-form';

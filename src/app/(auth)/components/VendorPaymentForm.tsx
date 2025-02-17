@@ -16,7 +16,7 @@ import { Loader2, LockIcon } from "lucide-react";
 import { UserSelection } from "../dummy-data";
 import { AccountCreationSchema } from "../schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input, SelectItem, SelectContent, SelectValue, Select, SelectTrigger } from "@/components/forms";
-import { CountryCodes } from "@/libs/datas";
+import { CountryCodes } from "@/libs/data";
 import { CountryCode } from "@/types";
 import PhoneInput from "react-phone-number-input/input";
 

@@ -54,7 +54,7 @@ export default function ResetPassword(props: { searchParams: Promise<{ token: st
                 ...v,
             }),
         });
-        console.log(res)
+
         // await sleep(2000);
         setLoading(false);
 

@@ -18,10 +18,12 @@ import { getStripe } from '@/libs/server-utils';
 import Link from 'next/link'
 import React from 'react'
 
-import CardList from './components/card-list';
+import CardList from './components/CardList';
 import Stripe from 'stripe';
 import { formatAmountForDisplay } from '@/libs/utils';
 import { auth } from '@/auth';
+import { StripePayments } from '@/libs/server/stripe';
+import Wallet from './components/Wallet';
 
 
 type ClientStripeReturn = { paymentMethods: Stripe.PaymentMethod[], subscriptions: Stripe.Subscription[] }
@@ -30,22 +32,21 @@ type ClientStripeReturn = { paymentMethods: Stripe.PaymentMethod[], subscription
 async function fetchClientStripe(customerId: string): Promise<ClientStripeReturn> {
 
     try {
-        const stripe = getStripe();
-        const methods = await stripe.customers.listPaymentMethods(customerId);
-        const subscriptions = await stripe.subscriptions.list({ customer: customerId, limit: 10 });
-
+        const stripe = new StripePayments();
+        const methods = await stripe.getPaymentMethods(customerId);
+        const subscriptions = await stripe.getSubscriptions(customerId);
 
         return { paymentMethods: methods.data, subscriptions: subscriptions.data };
     } catch (error) {
-        console.log(error);
+        console.log("Error ", error);
         return { paymentMethods: [], subscriptions: [] };
     }
 }
 
+import { wallet, VendorWallet } from './data';
 
 export default async function BillingPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
-
     const sesson = await auth();
 
     const { paymentMethods, subscriptions } = await fetchClientStripe(sesson?.user.stripeCustomerId);
@@ -61,17 +62,24 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
 
         return formatAmountForDisplay((total / 100), subscriptions[0].currency, true)
     }
-
+    if (subscriptions.length == 0) {
+        return (
+            <div className='flex flex-col items-center justify-center h-full'>
+                <p className='text-base font-medium'>Uh oh! No subscriptions found</p>
+                <p className='text-sm text-muted-foreground'>Please contact support if you think this is an error.</p>
+            </div>
+        )
+    }
     return (
         <div>
-            <Card className='rounded-sm mb-6'>
+            <Card className=' mb-6'>
                 <CardHeader className='border-b p-0 space-y-0  justify-between flex flex-row items-center'>
-                    <CardTitle className='text-base py-2 px-4'>Your Monstro Subscriptions</CardTitle>
+                    <CardTitle className='text-base py-2 px-4 '>Your Monstro Subscriptions</CardTitle>
                     <Link href={"#"} className='text-sm bg-transparent hover:bg-accent inline-flex p-2.5 font-medium  h-full border-l'>
                         Change Plan
                     </Link>
                 </CardHeader>
-                <CardContent className='py-6'>
+                <CardContent className='py-6 px-5'>
                     <Table className='w-full border-b mb-4'>
                         <TableHeader >
                             <TableRow>
@@ -82,7 +90,7 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {subscriptions.map(sub => {
+                            {subscriptions && subscriptions.map(sub => {
                                 const plan = sub.items.data[0].plan;
                                 const amount = plan.amount || 0;
                                 return (
@@ -111,7 +119,11 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
                     Have a Question? <Link href={`/dashboard/${params.id}/support`} className='ml-1 text-indigo-500'>Contact Support</Link>
                 </CardFooter>
             </Card>
-            <CardList paymentMethods={paymentMethods} customerId={sesson?.user.stripeCustomerId} locationId={params.id} />
+            <div className='grid grid-cols-2 gap-4'>
+                <Wallet wallet={wallet} />
+                <CardList paymentMethods={paymentMethods} customerId={sesson?.user.stripeCustomerId} locationId={params.id} />
+
+            </div>
         </div >
     )
 }

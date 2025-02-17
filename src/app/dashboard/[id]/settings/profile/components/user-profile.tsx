@@ -18,7 +18,7 @@ import { useMemo, useState } from "react";
 import { CountryCode, Staff } from "@/types";
 import PhoneInput from "react-phone-number-input/input";
 import UserAvatar from "./avatar";
-import { CountryCodes } from "@/libs/datas";
+import { CountryCodes } from "@/libs/data";
 
 export function UserProfile({ staff, locationId }: { staff: Staff, locationId: string }) {
     const [avatar, setAvatar] = useState<string>(staff.image);

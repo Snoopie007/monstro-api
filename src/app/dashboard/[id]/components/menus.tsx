@@ -6,7 +6,7 @@ import Image from 'next/image';
 
 import { SidebarMenuItems } from './menu-items';
 import LocationSelect from './location-select';
-import ThemeMenu from './theme-menu';
+import ThemeMenu from '../../../../components/ui/ThemeMenu';
 import { Bell } from 'lucide-react';
 import SupportMenu from './support-menu';
 import UserMenu from './user-menu';

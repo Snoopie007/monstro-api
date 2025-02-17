@@ -7,7 +7,7 @@ import { ChevronsUpDown } from "lucide-react";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 
 import { useEffect, useState } from "react";
-import { Regions } from "@/libs/datas";
+import { Regions } from "@/libs/data";
 
 interface RegionSelectProps {
     value: string | undefined
