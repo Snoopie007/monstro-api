@@ -13,7 +13,7 @@ import {
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 
-export default function UserMenu({ locationId }: { locationId: number }) {
+export default function UserMenu({ locationId }: { locationId: string }) {
     const session = useSession();
     const user = session.data?.user;
 

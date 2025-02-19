@@ -3,6 +3,9 @@ import { serial, text, timestamp, pgTable, boolean } from "drizzle-orm/pg-core";
 import { accounts } from "./accounts";
 import { relations } from "drizzle-orm";
 import { members } from "./members";
+import { vendors } from "./vendors";
+import { modelHasRoles } from "./permissions";
+import { staffs } from "./staffs";
 
 export const users = pgTable("users", {
     id: serial("id").primaryKey(),
@@ -22,5 +25,14 @@ export const usersRelations = relations(users, ({ many, one }) => ({
         fields: [users.id],
         references: [members.userId],
     }),
+    vendor: one(vendors, {
+        fields: [users.id],
+        references: [vendors.userId],
+    }),
+    staff: one(staffs, {
+        fields: [users.id],
+        references: [staffs.userId],
+    }),
+    roles: many(modelHasRoles),
 }));
 

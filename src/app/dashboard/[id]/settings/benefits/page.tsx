@@ -2,7 +2,7 @@
 import { auth } from '@/auth'
 import { db } from '@/db/db'
 import { Vendor } from '@/types'
-import { decodeId } from '@/libs/server-utils'
+import { decodeId } from '@/libs/server/sqids'
 import { Card, CardContent, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 import { cn } from '@/libs/utils'
 import { VendorBadges, VendorRewards } from './components'

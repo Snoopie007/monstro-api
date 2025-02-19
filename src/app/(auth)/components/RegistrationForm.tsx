@@ -2,8 +2,11 @@
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input } from "@/components/forms";
-import { useRouter, useSearchParams } from "next/navigation";
+import {
+    Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input,
+    SelectContent, SelectValue, SelectTrigger, Select, SelectItem
+} from "@/components/forms";
+import { useSearchParams } from "next/navigation";
 import { cn, sleep, tryCatch } from "@/libs/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,58 +14,52 @@ import { toast } from "react-toastify";
 import Link from "next/link";;
 import { Loader2 } from "lucide-react";
 import { RegisterSchema } from "@/libs/schemas";
+import PhoneInput from 'react-phone-number-input/input'
+import { CountryCodes } from "@/libs/data";
+import { CountryCode } from "@/types";
+import { signIn } from "next-auth/react";
+
 
 export function RegisterForm() {
     const searchParams = useSearchParams();
     const emailParam = searchParams.get("email");
-    const router = useRouter();
     const [loading, setLoading] = useState<boolean>(false);
-    const form = useForm<z.infer<typeof RegisterSchema>>({
+    const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
 
+    const form = useForm<z.infer<typeof RegisterSchema>>({
         resolver: zodResolver(RegisterSchema),
         defaultValues: {
             firstName: "",
             lastName: "",
             email: "",
             password: "",
+            phone: "",
         },
         mode: "onChange",
     });
 
     async function registerUser(v: z.infer<typeof RegisterSchema>) {
-
         setLoading(true);
-        await sleep(1000);
-
         try {
-
-            const vendor = await fetch("/api/auth/register", {
+            const res = await fetch("/api/auth/vendor/register", {
                 method: "POST",
                 body: JSON.stringify(v)
             })
-
-
-
-
-            // const result = await signIn("credentials", {
-            //     id: user.id,
-            //     email: user.email,
-            //     name: user.name,
-            //     role: user.role,
-            //     image: user.avatar,
-            //     phone: user.phone,
-            //     token: user.token,
-            //     locations: JSON.stringify(user.locations),
-            //     callbackUrl: `/dashboard/${locationId}/onboarding/${planId}/contract`,
-            //     redirect: true,
-            // }).then((res) => { }).catch((error) => { });
-
+            await sleep(1000);
             setLoading(false);
-            // router.push(`/onboarding/${locationId}`)
 
+            if (!res.ok) {
+                return toast.error("Something went wrong");
+            }
+
+            await signIn("credentials", {
+                ...v,
+                redirect: true,
+                callbackUrl: "/onboarding"
+            })
         } catch (error) {
-            console.log("error");
-            setLoading(false);
+            console.log(error);
+            return toast.error("Something went wrong");
         }
     }
 
@@ -73,7 +70,9 @@ export function RegisterForm() {
                     <fieldset className="grid grid-cols-2 gap-2">
                         <FormField control={form.control} name="firstName" render={({ field }) => (
                             <FormItem className="col-span-1">
-                                <FormLabel className="text-[0.6rem] uppercase">First Name</FormLabel>
+                                <FormLabel className="text-[0.6rem] uppercase">
+                                    First Name
+                                </FormLabel>
                                 <FormControl>
                                     <Input type="text" className="bg-white border border-gray-200  rounded-sm py-4 px-4 text-sm " placeholder="Your email" disabled={emailParam ? true : false} {...field} />
                                 </FormControl>
@@ -82,7 +81,9 @@ export function RegisterForm() {
                         )} />
                         <FormField control={form.control} name="lastName" render={({ field }) => (
                             <FormItem className="col-span-1">
-                                <FormLabel className="text-[0.6rem] uppercase">Last Name</FormLabel>
+                                <FormLabel className="text-[0.6rem] uppercase">
+                                    Last Name
+                                </FormLabel>
                                 <FormControl>
                                     <Input type="text" className="bg-white border border-gray-200  rounded-sm py-4 px-4 text-sm " placeholder="Your last name" {...field} />
                                 </FormControl>
@@ -101,7 +102,51 @@ export function RegisterForm() {
                             </FormItem>
                         )} />
                     </fieldset>
+                    <fieldset>
+                        <div className="flex-1 justify-center space-y-2">
 
+                            <FormLabel className="text-[0.6rem] uppercase"> Phone </FormLabel>
+                            <div className="flex  flex-row gap-1">
+                                <Select onValueChange={(value: string) => { setPhoneRegion(value as CountryCode) }} defaultValue={phoneRegion}>
+
+                                    <SelectTrigger className="rounded-sm w-[22%] h-auto bg-white border border-gray-200" >
+                                        <SelectValue defaultValue={'US'} />
+                                    </SelectTrigger>
+
+                                    <SelectContent>
+                                        {CountryCodes.map((country, index) => (
+                                            <SelectItem key={index} value={country.code}>
+                                                {country.shortName}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormField
+                                    control={form.control}
+                                    name="phone"
+                                    render={({ field: { onChange, value } }) => (
+                                        <FormItem className="flex-1">
+                                            <FormControl >
+                                                <PhoneInput
+                                                    type="tel"
+                                                    className="rounded-sm bg-transparent inline-block w-full border py-1.5 px-4"
+                                                    value={value}
+                                                    withCountryCallingCode={true}
+                                                    international={true}
+                                                    country={phoneRegion}
+                                                    onChange={onChange}
+                                                />
+                                            </FormControl>
+
+                                        </FormItem>
+                                    )}
+                                />
+
+                            </div>
+
+                        </div>
+
+                    </fieldset>
                     <fieldset>
                         <FormField control={form.control} name="password" render={({ field }) => (
                             <FormItem>
@@ -113,13 +158,11 @@ export function RegisterForm() {
                             </FormItem>
                         )} />
                     </fieldset>
-
-
                 </form>
             </Form>
             <div className={"space-y-1"}>
                 <Button
-                    className={cn("children:hidden w-full bg-indigo-600 text-white cursor-pointer ",
+                    className={cn("children:hidden w-full bg-indigo-600 text-white cursor-pointer  rounded-sm",
                         { "children:inline-block": loading })}
                     onClick={form.handleSubmit(registerUser)}
                     disabled={loading}
@@ -130,7 +173,12 @@ export function RegisterForm() {
                 </Button>
                 <p className=" text-black text-sm text-center">
                     By creating an account you agree to {" "}
-                    <Link href={"#"} className={" text-indigo-700 inline-block"}>Terms of service</Link>.
+                    <Link href={"https://www.mymonstro.com/legal/term-of-use"} className={" text-indigo-700 inline-block"} target="_blank">
+                        Terms of service
+                    </Link> and {" "}
+                    <Link href={"https://www.mymonstro.com/legal/privacy-policy"} className={" text-indigo-700 inline-block"} target="_blank">
+                        Privacy policy
+                    </Link>.
                 </p>
             </div>
         </div>

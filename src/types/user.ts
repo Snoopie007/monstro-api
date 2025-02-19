@@ -10,3 +10,4 @@ export type User = {
     vendor?: Vendor;
     member?: Member;
 }
+

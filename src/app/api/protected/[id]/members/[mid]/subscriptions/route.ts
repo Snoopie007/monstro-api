@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/db/db";
-import { getStripe } from "@/libs/server-utils";
+import { StripePayments } from "@/libs/server/stripe";
 import { and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
@@ -22,12 +22,10 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
             })
 
             if (integrations?.accessToken) {
-                const stripe = getStripe(integrations?.accessToken);
-                const subscriptions = await stripe.subscriptions.list(
-                    {
-                        limit: 25,
-                        customer: customerId
-                    }
+                const stripe = new StripePayments(integrations?.accessToken);
+                const subscriptions = await stripe.getSubscriptions(
+                    customerId,
+
                 );
 
                 return NextResponse.json(subscriptions.data, { status: 200 });

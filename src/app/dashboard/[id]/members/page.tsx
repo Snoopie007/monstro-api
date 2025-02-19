@@ -5,7 +5,7 @@ import { MemberList } from "./components/member-list";
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { and } from "drizzle-orm";
-import { decodeId } from "@/libs/server-utils";
+import { decodeId } from "@/libs/server/sqids";
 
 async function fetchStripeKeys(id: string, session: Session | null): Promise<string | null> {
     const decodedId = decodeId(id);

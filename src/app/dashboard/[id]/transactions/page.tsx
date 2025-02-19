@@ -1,6 +1,6 @@
 
 
-import { decodeId } from "@/libs/server-utils";
+import { decodeId } from "@/libs/server/sqids";
 import { db } from "@/db/db";
 import { TransactionsList } from "./components/transactions-list";
 import { Transaction } from "@/types";

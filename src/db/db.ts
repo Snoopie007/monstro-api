@@ -1,7 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schemas";
-import * as process from "process";
 import { createClient } from "@supabase/supabase-js";
 
 
@@ -9,7 +8,6 @@ import { Database } from "@/types";
 if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is missing");
 }
-
 
 const connectionString = process.env.DATABASE_URL;
 

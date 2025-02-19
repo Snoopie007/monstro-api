@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { SetStateAction, Dispatch, useState } from "react";
 
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import { useForm } from "react-hook-form";
@@ -22,9 +22,10 @@ import { VendorBillingSchema } from "@/libs/schemas";
 import { useOnboarding } from "../../provider/OnboardingProvider";
 import { Button } from "@/components/ui/button";
 
-import { MonstroPackage, MonstroPlan } from "../ProgramSelection/dummy";
-
-
+import { dummyContract } from "../ProgramSelection/dummy";
+import { DialogTrigger, Dialog, DialogContent, DialogDescription, DialogTitle, DialogHeader, DialogFooter, DialogClose } from "@/components/ui";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { MonstroPackage, MonstroPlan } from "@/types/vendor";
 
 
 
@@ -42,6 +43,7 @@ export default function VendorPaymentForm() {
     const { progress, updateProgress } = useOnboarding();
     const [errorMessage, setErrorMessage] = useState("");
     const [loading, setLoading] = useState<boolean>(false);
+
     const stripe = useStripe();
     const elements = useElements();
     const router = useRouter();
@@ -99,7 +101,7 @@ export default function VendorPaymentForm() {
 
     return (
         <div className="space-y-3 pb-3">
-            <div className="flex flex-col gap-2 bg-white border border-gray-200 rounded-sm p-4">
+            <div className="flex flex-col gap-2 bg-white border border-gray-200 rounded-sm p-4 pb-6 space-y-3">
                 <Form {...form}>
                     <form className="space-y-1">
 
@@ -197,6 +199,14 @@ export default function VendorPaymentForm() {
 
                     </form>
                 </Form >
+                <TermsAndConditions checked={progress.agreedToTerms}
+                    setChecked={(checked) =>
+                        updateProgress({
+                            ...progress,
+                            agreedToTerms: checked
+                        })
+                    }
+                />
             </div>
             <div className="flex justify-end">
                 <Button
@@ -206,7 +216,7 @@ export default function VendorPaymentForm() {
                         "children:hidden": !loading
                     })}
                     onClick={form.handleSubmit(onSubmit)}
-                    disabled={loading || !stripe}
+                    disabled={loading || !stripe || !form.formState.isValid || !progress.agreedToTerms}
 
                 >
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -219,3 +229,71 @@ export default function VendorPaymentForm() {
 }
 
 
+interface TermsAndConditionsProps {
+    checked: boolean;
+    setChecked: (checked: boolean) => void;
+}
+
+function TermsAndConditions({ checked, setChecked }: TermsAndConditionsProps) {
+    const [scrolled, setScrolled] = useState(false);
+
+    function handleScroll(e: React.UIEvent<HTMLDivElement>) {
+        const element = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
+        if (!element) return;
+        const { scrollTop, scrollHeight, clientHeight } = element;
+        const scrollPercentage = (scrollTop + clientHeight) / scrollHeight * 100;
+        if (scrollPercentage >= 90) {
+            setScrolled(true);
+        }
+    }
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <div className="items-center relative bg-gray-50 flex space-x-1 border group border-gray-200 px-2 py-2.5 rounded-sm cursor-pointer">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="group" data-checked={checked}>
+                        <rect x="1" y="1" width="14" height="14" rx="2" strokeWidth="1.5" className="stroke-gray-600" />
+                        <path d="M12 5L6.5 10.5L4 8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                            className={cn("stroke-gray-600 opacity-0 ",
+                                " group-data-[checked=true]:opacity-100 "
+                            )} />
+                    </svg>
+                    <p className="text-xs leading-none">
+                        You have read and agree to our <span className="text-red-500">Terms of Service</span> and <span className="text-red-500">Privacy Policy</span>.
+                    </p>
+                </div>
+            </DialogTrigger>
+            <DialogContent className="max-w-[500px] space-y-4 py-6 border-foreground/10">
+                <DialogHeader className="hidden">
+                    <DialogTitle></DialogTitle>
+                    <DialogDescription></DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col gap-2 space-y-1 ">
+                    <p className="font-semibold  text-lg text-center px-4">Monstro <span className="text-red-500">Terms of Service</span></p>
+                    <ScrollArea className="h-[500px] px-4 border-y border-foreground/10" onScrollCapture={handleScroll}>
+                        <div className='prose pb-4 px-3  text-foreground prose-strong:text-foreground prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'
+                            dangerouslySetInnerHTML={{ '__html': dummyContract }}>
+                        </div>
+                    </ScrollArea>
+
+                </div>
+                <DialogFooter className="px-4 py-0">
+                    <DialogClose asChild>
+                        <Button variant={"outline"} onClick={() => setChecked(false)} size={"xs"} className="hover:bg-transparent cursor-pointer">
+                            Decline
+                        </Button>
+                    </DialogClose>
+                    <DialogClose asChild>
+                        <Button
+                            disabled={!scrolled}
+                            onClick={() => setChecked(true)}
+                            size={"xs"}
+                            className="bg-red-500 hover:bg-red-600 cursor-pointer"
+                        >
+                            Accept
+                        </Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}

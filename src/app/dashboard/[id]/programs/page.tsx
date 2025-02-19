@@ -2,9 +2,8 @@
 import { use, useState } from "react";
 
 import { usePrograms } from '@/hooks/use-programs';
-import { AddProgram, ProgramList } from './components';
+import { AddProgram } from './components';
 import ErrorComponent from '@/components/error';
-import SectionLoader from '@/components/section-loading';
 import { Program } from "@/types";
 import { TablePage, TablePageHeaderTitle, TablePageHeader, TablePageHeaderSection, TablePageContent, TablePageFooter, TableCell, TableHeader, Table, TableRow, TableHead, TableBody, Skeleton } from "@/components/ui";
 import Loading from "@/components/loading";

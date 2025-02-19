@@ -1,18 +1,12 @@
 'use client'
 
 import { createContext, useReducer, ReactElement, useCallback, useContext, ReactNode } from "react";
-import { MonstroPlan, MonstroPackage, PackagePaymentPlan } from "../components/ProgramSelection/dummy";
 
-export type OnboardingProgress = {
-    plan: MonstroPlan | null;
-    pkg: MonstroPackage | null;
-    paymentPlan: PackagePaymentPlan | null;
-    currentStep: number;
-    completedSteps: number[];
-}
+import { VendorOnboarding } from "@/types/vendor";
+
 
 type StateType = {
-    progress: OnboardingProgress;
+    progress: VendorOnboarding;
 }
 
 const enum REDUCER_ACTION_TYPE {
@@ -27,7 +21,7 @@ type ReducerAction = {
 const reducer = (state: StateType, action: ReducerAction): StateType => {
     switch (action.type) {
         case REDUCER_ACTION_TYPE.UPDATE_PROGRESS:
-            return { ...state, progress: action.payload as OnboardingProgress }
+            return { ...state, progress: action.payload as VendorOnboarding }
         default:
             throw new Error();
     }
@@ -51,7 +45,7 @@ type UseOnboardingContextType = ReturnType<typeof useOnboardingContext>
 export const OnboardingContext = createContext<UseOnboardingContextType | null>(null)
 
 interface OnboardingProviderProps {
-    progress: OnboardingProgress;
+    progress: VendorOnboarding;
     children: ReactNode;
 }
 
@@ -66,7 +60,7 @@ export const OnboardingProvider = ({ children, progress }: OnboardingProviderPro
 }
 
 type UseOnboardingHookType = {
-    progress: OnboardingProgress;
+    progress: VendorOnboarding;
     updateProgress: (progress: Record<string, any>) => void;
 }
 

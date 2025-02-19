@@ -6,6 +6,7 @@ import { members } from "./members";
 import { integrations } from "./intergrations";
 import { programs } from "./programs";
 import { transactions } from "./transactions";
+import { vendors } from "./vendors";
 
 export const locations = pgTable("locations", {
     id: serial("id").primaryKey(),
@@ -20,10 +21,7 @@ export const locations = pgTable("locations", {
     phone: text("phone"),
     timezone: varchar("timezone"),
     status: text("status").notNull().default("Inactive"),
-    metadata: jsonb("metadata"),
-    intergrationId: integer("integration_id"),
-    vendorId: integer("vendor_id"),
-    passFee: boolean("pass_fee").notNull().default(false),
+    vendorId: integer("vendor_id").notNull().references(() => vendors.id),
     isNew: boolean("is_new").notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
@@ -40,10 +38,14 @@ export const memberLocations = pgTable("member_locations", {
 }, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);
 
 
-export const locationsRelations = relations(locations, ({ many }) => ({
-    members: many(memberLocations),
+export const locationsRelations = relations(locations, ({ many, one }) => ({
+    memberLocations: many(memberLocations),
     integrations: many(integrations),
     programs: many(programs),
+    vendor: one(vendors, {
+        fields: [locations.vendorId],
+        references: [vendors.id],
+    })
 }));
 
 

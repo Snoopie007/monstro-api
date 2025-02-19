@@ -4,8 +4,6 @@ import { auth } from "@/auth";
 import LoginForm from "../components/LoginForm";
 
 export default async function SignIn() {
-    const session = await auth();
-
 
     return (
         <div className="flex text-black font-roboto h-screen flex-col items-center py-[10%]">
@@ -16,7 +14,7 @@ export default async function SignIn() {
                     </h1>
                     <LoginForm />
                 </div>
-                <div className="py-4 bg-gray-50 px-2 text-center  rounded-b-sm">
+                <div className="py-4 bg-gray-100 px-2 text-center rounded-sm">
                     <p className="text-sm  ">
                         Don't have an account{" "}
                         <Link href={"/auth/join"} className={"inline-flex text-indigo-600 hover:text-black underline  text-sm"} >

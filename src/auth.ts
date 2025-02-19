@@ -13,21 +13,19 @@ export const {
 		signOut: "/sign-out",
 		error: "/auth/error", // Error code passed in query string as ?error=
 		verifyRequest: "/auth/verify-request", // (used for check email message)
-		newUser: "/dashboard", // New users will be directed here on first sign in (leave the property out if not of interest)
+		newUser: "/onboarding"
 	},
 	session: {
 		strategy: "jwt",
 	},
 	callbacks: {
-		jwt: async ({ user, token, trigger }) => {
+		jwt: async ({ user, token, session, trigger }) => {
 			if (trigger === "update") {
-				return { ...token, ...user };
+				return { ...token, ...session };
 			}
 			return { ...token, ...user };
 		},
 		session: async ({ session, token }: { session: Session, token: ExtendedUser }) => {
-			// console.log('Session: ',session)
-			// console.log('TOken: ',token)
 			session.user = token
 			return session;
 		},

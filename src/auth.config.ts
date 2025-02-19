@@ -1,51 +1,93 @@
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { ExtendedUser } from "./types/next-auth";
+import bcrypt from "bcryptjs";
+import { db } from "./db/db";
+import { tryCatch } from "./libs/utils";
+import { and, eq } from "drizzle-orm";
+import { locations, vendors } from "./db/schemas";
+import { users } from "./db/schemas";
+import { encodeId } from "./libs/server/sqids";
 
 export default {
-  providers: [
-    Credentials({
-      credentials: {
-        email: { label: "Email", type: "text", placeholder: "email" },
-        name: { label: "name", type: "text" },
-        id: { label: "id", type: "text" },
-        role: { label: "role", type: "text" },
-        customRole: { label: "customRole", type: "text" },
-        image: { label: "image", type: "text" },
-        stripeCustomerId: { label: "stripeCustomerId", type: "text" },
-        phone: { label: "phone", type: "text" },
-        token: { label: "token", type: "text" },
-        locations: { label: "locations", type: "text" },
-        vendorId: {label: "vendorId", type: "number"},
-        memberId: {label: "memberId", type: "number"},
-        staffId: {label: "staffId", type: "number"}
-      },
-      authorize: (credentials) => {
-        if (!credentials || !credentials.id || !credentials.email) {
-          return null;
-        }
-        try {
-          const user: ExtendedUser = {
-            id: credentials.id,
-            name: credentials.name,
-            email: credentials.email,
-            image: credentials.image || "",
-            stripeCustomerId: credentials.stripeCustomerId,
-            role: credentials.role ,
-            customRole: JSON.parse(credentials.customRole as string),
-            phone: credentials.phone,
-            token: credentials.token,
-            locations: JSON.parse(credentials.locations as string),
-            vendorId: credentials.vendorId,
-            memberId: credentials.memberId,
-            staffId: credentials.staffId,
-          };
-          return user;
+	providers: [
+		Credentials({
+			credentials: {
+				email: { label: "Email", type: "email" },
+				password: { label: "Password", type: "password" },
+			},
+			authorize: async (credentials) => {
 
-        } catch (e) {
-          return null;
-        }
-      }
-    }),
-  ],
+				if (!credentials || !credentials.email || !credentials.password) {
+					return null;
+				}
+
+				const user = await db.query.users.findFirst({
+					where: (user, { eq }) => eq(user.email, `${credentials.email}`),
+					with: {
+						vendor: {
+							columns: {
+								id: true,
+								phone: true,
+								logo: true,
+								stripeCustomerId: true,
+								onboarding: true
+							},
+							with: {
+								locations: {
+									where: (locations, { eq }) => eq(locations.status, 'Active'),
+									columns: {
+										id: true,
+										name: true
+									}
+								}
+							}
+						}
+					},
+				})
+
+
+				if (!user || !user.password) return null;
+
+				const match = await bcrypt.compare(`${credentials.password}`, user.password);
+				if (!match) return null;
+
+				const { result, error } = await tryCatch(
+					fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
+						method: "POST",
+						headers: { "Content-type": "application/json" },
+						body: JSON.stringify({
+							email: credentials.email,
+						}),
+					})
+				)
+
+
+				if (error || !result || !result.ok) return null;
+
+				const { data: { token } } = await result.json();
+
+				const { vendor: { locations, ...vendor }, ...rest } = user;
+				const encodedLocations = locations.map(location => ({
+					...location,
+					id: encodeId(location.id)
+				}));
+				return {
+					id: rest.id.toString(),
+					name: rest.name,
+					email: rest.email,
+					phone: vendor.phone,
+					image: vendor?.logo,
+					vendorId: vendor?.id,
+					vendorPhone: vendor?.phone,
+					onboarding: vendor?.onboarding,
+					stripeCustomerId: vendor?.stripeCustomerId,
+					role: 'vendor',
+					token: token,
+					locations: encodedLocations,
+					permissions: {}
+				};
+
+			}
+		}),
+	],
 } satisfies NextAuthConfig;

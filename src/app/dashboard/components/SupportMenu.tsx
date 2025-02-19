@@ -10,7 +10,7 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CircleHelp } from "lucide-react";
-export default function SupportMenu({ locationId }: { locationId: number }) {
+export default function SupportMenu({ locationId }: { locationId: string }) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>

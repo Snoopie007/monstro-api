@@ -16,10 +16,12 @@ import { PaymentMethods, MemberProfile } from './components'
 
 import { db } from "@/db/db"
 import { and, sql } from "drizzle-orm"
-import { decodeId, getStripe } from "@/libs/server-utils"
+import { decodeId } from "@/libs/server/sqids"
 import { MemberProvider } from "./providers/MemberContext"
 import { Member } from "@/types"
 import Stripe from "stripe"
+import { StripePayments } from "@/libs/server/stripe"
+
 
 type PromiseReturnType = {
     stripeKey: { apiKey: string | null, accessToken: string | null } | null,
@@ -62,14 +64,8 @@ async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnTy
 
 async function fetchStripePyamentMethods(accessToken: string, customerId: string): Promise<Stripe.PaymentMethod[]> {
     try {
-        const stripe = getStripe(accessToken);
-        const paymentMethods = await stripe.customers.listPaymentMethods(
-            customerId,
-            {
-                limit: 25
-            }
-        );
-
+        const stripe = new StripePayments(accessToken);
+        const paymentMethods = await stripe.getPaymentMethods(customerId, 25)
         return paymentMethods.data;
     } catch (error) {
         return [];

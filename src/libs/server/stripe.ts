@@ -108,8 +108,8 @@ class StripePayments {
         return this._stripe.subscriptions.create(options);
     }
 
-    async getPaymentMethods(customerId: string) {
-        return await this._stripe.customers.listPaymentMethods(customerId);
+    async getPaymentMethods(customerId: string, limit?: number) {
+        return await this._stripe.customers.listPaymentMethods(customerId, { limit });
     }
 
     async setupIntent(source: string, customerId: string, type?: string) {

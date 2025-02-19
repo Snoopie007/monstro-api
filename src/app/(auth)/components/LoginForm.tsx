@@ -1,5 +1,5 @@
 "use client";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +16,7 @@ import { Input } from "@/components/forms/input";
 import { cn, sleep } from "@/libs/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { toast, UpdateOptions } from "react-toastify";
+import { toast } from "react-toastify";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoginSchema } from "@/libs/schemas";
@@ -25,6 +25,8 @@ import { Loader2 } from "lucide-react";
 
 export default function LoginForm() {
 	const [loading, setLoading] = useState<boolean>(false);
+	const router = useRouter();
+	const { data: session } = useSession();
 	const form = useForm<z.infer<typeof LoginSchema>>({
 		resolver: zodResolver(LoginSchema),
 		defaultValues: {
@@ -36,48 +38,30 @@ export default function LoginForm() {
 
 	async function login(v: z.infer<typeof LoginSchema>) {
 		setLoading(true);
-		console.log(v)
+		try {
 
-		const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
-			method: "POST",
-			headers: {
-				"Content-type": "application/json",
-			},
-			body: JSON.stringify({
-				email: v.email,
-				password: v.password,
-			}),
-		});
-
-		await sleep(2000);
-		if (res.ok) {
-			const { data: user } = await res.json();
-			console.log(user)
-			user.customRole = user.role
-			user.role = user.vendor ? "vendor" : user.member ? "member" : user.staff ? "staff" : null;
-			user.vendorId = user.vendor?.id ?? 0;
-			user.staffId = user.staff?.id ?? 0;
-			console.log(user)
-			try {
-				await signIn("credentials", {
-					...user,
-					locations: JSON.stringify(user.locations),
-					customRole: JSON.stringify(user.customRole),
-					callbackUrl: `/dashboard/${user.locations.length >= 1 ? user.locations[0].id : null}`,
-					redirect: true,
-				})
-
-			} catch (error) {
-				const data = await res.json();
-
-				console.error(error)
-				setLoading(false);
+			const res = await signIn("credentials", { ...v, redirect: false });
+			if (res?.error) {
 				toast.error('Invalid email or password.');
 			}
-		} else {
-			console.log("error");
-			setLoading(false);
+
+			const locationId = localStorage.getItem('locationId');
+			const locationRes = await fetch(`/api/auth/vendor/location`, {
+				method: 'POST',
+				body: JSON.stringify({ ...v, lid: locationId }),
+			});
+			const { lid } = await locationRes.json();
+			if (lid) {
+				localStorage.setItem('locationId', lid);
+			}
+
+			router.push(lid ? `/dashboard/${lid}` : '/onboarding');
+
+		} catch (error) {
+			console.error(error);
 			toast.error('Something went wrong. Please contact support at support@monstro.com.');
+		} finally {
+			setLoading(false);
 		}
 	}
 

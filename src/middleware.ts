@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth } from "./auth";
 import { decodeId } from "./libs/server/sqids";
+
 const publicPaths = ['/login', '/api/auth', '/join', '/api/webhooks'];
 
 export default auth(async (req) => {
-
 	try {
 		const { pathname } = req.nextUrl;
 		const isLoggedin = !!req.auth;
+		const locations = req.auth?.user?.locations || [];
 
 		// Handle protected API routes
 		if (pathname.startsWith("/api/protected")) {
@@ -15,41 +16,41 @@ export default auth(async (req) => {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 			}
 
-			const match = pathname.match(/^\/api\/protected\/([^/]+)(\/.*)?$/);
-			if (match) {
-				const [_, encodedId, subpath = ''] = match;
+			const [_, encodedId, subpath = ''] = pathname.match(/^\/api\/protected\/([^/]+)(\/.*)?$/) || [];
 
-				if (!isNaN(Number(encodedId)) || encodedId.startsWith("location")) {
-					return NextResponse.next();
-				}
-
-				const decodedId = decodeId(encodedId);
-				if (!decodedId) {
-					return NextResponse.json({ message: "Invalid ID" }, { status: 400 });
-				}
-
-				return NextResponse.rewrite(new URL(`/api/protected/${decodedId}${subpath}`, req.url));
+			if (!encodedId || !isNaN(Number(encodedId)) || encodedId.startsWith("vendor")) {
+				return NextResponse.next();
 			}
+
+			const decodedId = decodeId(encodedId);
+			return decodedId
+				? NextResponse.rewrite(new URL(`/api/protected/${decodedId}${subpath}`, req.url))
+				: NextResponse.json({ message: "Invalid location" }, { status: 400 });
 		}
 
-		// Handle public routes
-
+		// Handle authentication redirects
 		if (!isLoggedin && !publicPaths.some(path => pathname.startsWith(path))) {
 			return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
 		}
 
-		// Redirect logged in users from home page
-		if (isLoggedin && pathname === "/") {
-			const defaultLocation = req.auth?.user.locations[0]?.id || 'default';
-			return NextResponse.redirect(new URL(`/dashboard/${defaultLocation}`, req.nextUrl.origin));
+		// Handle home page redirect for logged in users
+		if (isLoggedin && pathname === "/" && locations.length > 0) {
+			return NextResponse.redirect(new URL(`/dashboard/${locations[0].id}`, req.nextUrl.origin));
 		}
 
+		// Handle dashboard access
+		const [_, dashboardId] = pathname.match(/^\/dashboard\/([^/]+)/) || [];
+		if (dashboardId && !locations.some((loc: { id: string }) => loc.id === dashboardId)) {
+			return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
+		}
+
+		// Set cache headers for API and dashboard routes
 		const response = NextResponse.next();
 		if (pathname.startsWith("/api/") || pathname.startsWith("/dashboard/")) {
 			response.headers.set('Cache-Control', 'no-store, max-age=0');
 		}
-
 		return response;
+
 	} catch (error) {
 		console.error("Middleware error:", error);
 		return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });

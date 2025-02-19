@@ -1,3 +1,4 @@
+
 import { VendorReferral } from "./vendor-referral";
 
 
@@ -12,18 +13,61 @@ export type Vendor = {
     companyEmail: string | null;
     companyWebsite: string | null;
     companyAddress: string | null;
-    logo: string | null;
-    planId: number | null;
-    isNew: boolean;
+    icon: string | null;
     credits: number;
     spendedCredits: number;
     userId: number;
+    onboarding: VendorOnboarding;
     referrals?: VendorReferral[];
     vendorProgress?: VendorProgress;
     created: Date;
     updated: Date | null;
     deleted: Date | null;
 }
+
+export type VendorOnboarding = {
+    plan: MonstroPlan | null;
+    pkg: MonstroPackage | null;
+    agreedToTerms: boolean;
+    paymentPlan: PackagePaymentPlan | null;
+    currentStep: number;
+    completedSteps: number[];
+    vendor?: Vendor;
+    completed: boolean;
+}
+
+export type MonstroPackage = {
+    id: number;
+    name: string;
+    description: string;
+    price: number;
+    benefits: { name: string, description?: string }[];
+    paymentPlans: PackagePaymentPlan[];
+}
+
+export type PackagePaymentPlan = {
+    name: string;
+    description: string;
+    downPayment: number;
+    monthlyPayment: number;
+    length: number;
+    interval: string;
+    discount: number;
+    trial: number;
+    priceId: string;
+}
+
+export type MonstroPlan = {
+    id: number;
+    name: string;
+    price: number;
+    interval: string;
+    benefits: { name: string, description?: string }[];
+    description: string;
+    priceId: string;
+    note?: string;
+}
+
 
 export type VendorProgress = {
     id: number;

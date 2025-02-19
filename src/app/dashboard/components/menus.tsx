@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { motion } from "framer-motion"
 import Image from 'next/image';
 
-import { SidebarMenuItems } from './menu-items';
-import LocationSelect from './location-select';
-import ThemeMenu from '../../../../components/ui/ThemeMenu';
+import { SidebarMenuItems } from './MenuItems';
+import LocationSelect from './SelectLocation';
+import ThemeMenu from '../../../components/ui/ThemeMenu';
 import { Bell } from 'lucide-react';
-import SupportMenu from './support-menu';
-import UserMenu from './user-menu';
+import SupportMenu from './SupportMenu';
+import UserMenu from './UserMenu';
 import { Icon } from '@/components/icons';
 import {
     Breadcrumb,
@@ -24,7 +24,7 @@ import {
 import React from 'react';
 import { usePathname } from 'next/navigation';
 
-function SideNav({ locationId }: { locationId: number }) {
+function SideNav({ locationId }: { locationId: string }) {
     const [currentMenuToggle, setCurrentMenuToggle] = React.useState<string | null>(null)
     const [isOpen, setIsOpen] = React.useState<boolean>(false)
 
@@ -98,7 +98,7 @@ function SideNav({ locationId }: { locationId: number }) {
 
 
 
-function TopNav({ locationId }: { locationId: number }) {
+function TopNav({ locationId }: { locationId: string }) {
     const pathname = usePathname();
     const pathSegments = pathname.split('/').filter(Boolean);
     const currentPath = pathSegments;

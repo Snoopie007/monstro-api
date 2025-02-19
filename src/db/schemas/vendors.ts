@@ -1,9 +1,11 @@
-import { integer, serial, text, timestamp, pgTable, boolean } from "drizzle-orm/pg-core";
+import { integer, serial, text, timestamp, pgTable, boolean, jsonb } from "drizzle-orm/pg-core";
 import { users } from "./users";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { vendorProgress } from "./vendor-progress";
 import { vendorReferrals } from "./vendor-referrals";
 import { locations } from "./locations";
+import { Icon } from "lucide-react";
+import { VendorOnboarding } from "@/types/vendor";
 
 export const vendors = pgTable("vendors", {
     id: serial("id").primaryKey(),
@@ -16,8 +18,7 @@ export const vendors = pgTable("vendors", {
     companyWebsite: text("company_website"),
     companyAddress: text("company_address"),
     logo: text("logo"),
-    planId: integer("plan_id"),
-    isNew: boolean("is_new").notNull().default(true),
+    onboarding: jsonb("onboarding").$type<VendorOnboarding>().notNull().default(sql`'{}'`),
     credits: integer("credits").notNull().default(0),
     spendedCredits: integer("spended_credits").notNull().default(0),
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
