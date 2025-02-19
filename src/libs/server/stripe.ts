@@ -1,4 +1,4 @@
-import { Member } from "@/types";
+import { Member, MonstroPlan, PackagePaymentPlan, Vendor } from "@/types";
 import Stripe from "stripe";
 
 
@@ -15,18 +15,16 @@ class StripePayments {
         });
     }
 
-    public async createCustomer(member: Member, token: string, billingInfo?: { name: string, address: string, phone: string }) {
-        if (!member.email || !member.phone || !member.firstName || !member.lastName) {
+    public async createCustomer(vendor: Partial<Vendor>, token: string, metadata?: Record<string, any>) {
+        if (!vendor.companyEmail || !vendor.phone || !vendor.firstName || !vendor.lastName) {
             throw new Error("Invalid Customer Info");
         }
         return await this._stripe.customers.create({
-            name: `${member.firstName} ${member.lastName}`,
-            email: member.email,
-            phone: member.phone,
+            name: `${vendor.firstName} ${vendor.lastName}`,
+            email: vendor.companyEmail,
+            phone: vendor.phone,
             source: token,
-            metadata: {
-                memberId: `${member.id}`,
-            },
+            ...(metadata && { metadata })
         });
     }
 
@@ -53,19 +51,24 @@ class StripePayments {
         amount: number,
         customerId: string,
         cardId: string,
-        authorizeOnly: boolean = false
+        options?: {
+            authorizeOnly?: boolean,
+            statement?: string,
+            description?: string
+        }
     ): Promise<{ clientSecret: string }> {
         const option: Stripe.PaymentIntentCreateParams = {
             amount,
+            description: options?.description,
             automatic_payment_methods: { enabled: true },
             currency: "usd",
             confirm: true,
-            capture_method: authorizeOnly ? "manual" : "automatic",
+            capture_method: options?.authorizeOnly ? "manual" : "automatic",
             customer: customerId,
             setup_future_usage: "off_session",
-            statement_descriptor: "",
+            statement_descriptor: "Monstro",
             payment_method: cardId,
-            return_url: "",
+            return_url: "https://mymonstro.com",
         };
 
         const paymentIntent = await this._stripe.paymentIntents.create(option);
@@ -83,27 +86,41 @@ class StripePayments {
         return await this._stripe.customers.update(id, updates);
     }
 
-    async createPaymentPlan(price: string, customer: string, trial: number) {
-        // const price = process.env.NODE_ENV === "production" ? subscriptions.planId : subscriptions.testId;
-        // if (!price) throw new Error("Invalid Payment Plan");
-        const items = [{ price }]
+    async createPaymentPlan(paymentPlan: PackagePaymentPlan, customer: string, vendorId: string, locationId: string) {
+        const items = [{ price: paymentPlan.priceId }];
+        const today = new Date();
+
+        // Calculate exact number of days in the subscription period
+        const monthsInMs = paymentPlan.length * 30.44 * 24 * 60 * 60 * 1000; // Using average month length of 30.44 days
+        // Trial is already in days, so multiply by ms in a day
+        const trialInMs = paymentPlan.trial * 24 * 60 * 60 * 1000;
+        const cancelDate = new Date(today.getTime() + monthsInMs + trialInMs);
+
         const options: Stripe.SubscriptionCreateParams = {
             customer,
-            description: "Thanks for subscribing to Monstro. For support email support@mymonstro.com.",
+            description: `${paymentPlan.length} months payment plan`,
             items,
-            cancel_at: Math.floor(new Date().setDate(new Date().getDate() + 396) / 1000), // Unix timestamp in seconds (UTC) - today + 30 days + 1 year + 1 day
-            trial_period_days: trial || 0,
+            cancel_at: Math.floor(cancelDate.getTime() / 1000), // Unix timestamp in seconds (UTC)
+            trial_period_days: paymentPlan.trial,
+            collection_method: 'charge_automatically',
+            metadata: {
+                vendorId: vendorId
+            }
         };
 
         return this._stripe.subscriptions.create(options);
     }
 
-    async createSubscription(customer: string, price: string, paymentMethodId?: string, trial?: number) {
+    async createSubscription(plan: MonstroPlan, customer: string, vendorId: string, locationId: string, trial?: number) {
         const options: Stripe.SubscriptionCreateParams = {
             customer,
-            items: [{ price }],
+            description: `Monstro ${plan.name} Subscription`,
+            items: [{ price: plan.priceId }],
             trial_period_days: trial || 0,
-            ...(paymentMethodId && { default_payment_method: paymentMethodId })
+            metadata: {
+                vendorId: vendorId,
+                locationId: locationId
+            }
         };
         return this._stripe.subscriptions.create(options);
     }

@@ -6,7 +6,7 @@ import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import { cn, StripeCardOptions } from "@/libs/utils";
+import { cn, sleep, StripeCardOptions } from "@/libs/utils";
 import {
     Form,
     FormControl,
@@ -46,6 +46,7 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
     const [errorMessage, setErrorMessage] = useState("");
     const [locationId, setLocationId] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
+    const [validCard, setValidCard] = useState<boolean>(false);
     const { data: session } = useSession();
     const stripe = useStripe();
     const elements = useElements();
@@ -72,7 +73,7 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
     async function onSubmit(v: z.infer<typeof VendorBillingSchema>) {
         if (!elements || !stripe || !locationId) return;
         setLoading(true);
-        const toastRef = toast.loading("Processing payment...");
+        const toastRef = toast.loading("Processing payment...", { className: 'text-sm font-medium ' });
         const cardElement = elements!.getElement(CardElement);
         try {
 
@@ -83,20 +84,19 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
                 const res = await fetch(`/api/protected/vendor/checkout`, {
                     method: 'POST',
                     body: JSON.stringify({
-                        vendorId: session?.user.vendor.id,
+                        vendorId: session?.user.vendorId,
                         locationId: locationId,
                         token: tokenRef.token,
-                        plan: userSelection.plan,
-                        paymentPlan: userSelection.paymentPlan,
                         progress: progress
                     }),
                 });
                 setLoading(false);
                 if (!res.ok) {
                     return handlePaymentError(toastRef, "An error occurred while processing your payment.");
-
                 }
-                router.push(`/dashboard/${locationId}`)
+
+                toast.update(toastRef, { render: "Payment successful", type: "success", autoClose: 2000, isLoading: false });
+                // router.push(`/dashboard/${locationId}`)
             } else {
                 setLoading(false);
                 return handlePaymentError(toastRef, "Invalid Card.");
@@ -120,9 +120,10 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
                             <FormField control={form.control} name="address_line1" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className="text-[0.58rem] uppercase font-semibold">
-                                        Billing address</FormLabel>
+                                        Billing addres
+                                    </FormLabel>
                                     <FormControl>
-                                        <Input type="text" className="bg-white border-gray-200 border" placeholder="Billing address" {...field} />
+                                        <Input type="text" className="bg-white  border-gray-200 border" placeholder="Billing address" {...field} />
                                     </FormControl>
 
                                     <FormMessage />
@@ -138,7 +139,7 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
                                     </FormLabel>
 
                                     <FormControl>
-                                        <RegionSelect value={field.value} onChange={field.onChange} />
+                                        <RegionSelect value={field.value} onChange={field.onChange} className="bg-white text-black" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -151,7 +152,7 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
                                     </FormLabel>
 
                                     <FormControl>
-                                        <Input type="text" className="bg-white border-gray-200 border" placeholder="City" {...field} />
+                                        <Input type="text" className="bg-white text-black border-gray-200 border" placeholder="City" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -162,7 +163,7 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
                                         Zip
                                     </FormLabel>
                                     <FormControl>
-                                        <Input type="text" className="bg-white border-gray-200 border" placeholder="Zip" {...field} />
+                                        <Input type="text" className="bg-white text-black autofill:text-black border-gray-200 border" placeholder="Zip" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -176,7 +177,7 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
                                         Name on card
                                     </FormLabel>
                                     <FormControl>
-                                        <Input type="text" className="bg-white border-gray-200 border" placeholder="Name on card" {...field} />
+                                        <Input type="text" className="bg-white text-black border-gray-200 border" placeholder="Name on card" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -195,6 +196,7 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
                                         setErrorMessage(
                                             e.error ? (e.error.message ? e.error.message : "An unknown error occured") : ""
                                         );
+                                        setValidCard(e.complete);
                                     }}
                                 />
 
@@ -227,7 +229,7 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
                         "children:hidden": !loading
                     })}
                     onClick={form.handleSubmit(onSubmit)}
-                    disabled={loading || !stripe || !form.formState.isValid || !progress.agreedToTerms}
+                    disabled={loading || !stripe || !form.formState.isValid || !progress.agreedToTerms || !validCard}
 
                 >
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

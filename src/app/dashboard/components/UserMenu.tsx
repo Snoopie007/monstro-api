@@ -25,7 +25,7 @@ export default function UserMenu({ locationId }: { locationId: string }) {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Avatar className="ml-2  h-7 w-7">
-                    <AvatarImage src={`${user.picture !== "null" ? user.picture : ""}`} alt={user.name} />
+                    <AvatarImage src={`${user.image !== "null" ? user.image : ""}`} alt={user.name} />
                     <AvatarFallback className="text-xs  bg-foreground/50 text-primary-foreground  font-bold">
                         {`${user.name.charAt(0)}${user.name.charAt(user.name.indexOf(' ') + 1)}`}
                     </AvatarFallback>

@@ -30,7 +30,7 @@ const packages: MonstroPackage[] = [
                 length: 0,
                 interval: "mo.",
                 trial: 0,
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA"
+                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
             },
             {
                 id: 2,
@@ -42,7 +42,7 @@ const packages: MonstroPackage[] = [
                 length: 12,
                 interval: "mo.",
                 trial: 30,
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA"
+                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
             },
             {
                 id: 3,
@@ -54,7 +54,7 @@ const packages: MonstroPackage[] = [
                 length: 18,
                 interval: "mo.",
                 trial: 0,
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA"
+                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
             }
 
         ]
@@ -85,7 +85,7 @@ const packages: MonstroPackage[] = [
                 interval: "mo.",
                 discount: 0,
                 trial: 30,
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA"
+                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
             },
             {
                 id: 5,
@@ -97,7 +97,7 @@ const packages: MonstroPackage[] = [
                 length: 0,
                 trial: 0,
                 interval: "mo.",
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA"
+                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
             }
         ]
     }
@@ -122,7 +122,7 @@ const plans: MonstroPlan[] = [
         description: `Get full access to Monstro free with basic support (email & live chat only). Pay only for new member sign ups and transactions. 
         <span>You'll be charged $10 per new member (once).`,
         note: "Stripe transaction fees apply. (2.9% + $0.30)",
-        priceId: "price_1NVhoxDePDUzIffAPzStEiBA"
+        priceId: ""
     },
     {
         id: 2,
@@ -139,7 +139,7 @@ const plans: MonstroPlan[] = [
             name: "1x AI Bot"
         }],
         description: "Get full access to Monstro free with basic support (email & live chat only). Pay only for new member sign ups and transactions.",
-        priceId: "price_1NVhoxDePDUzIffAPzStEiBA"
+        priceId: "price_1QuLaWDePDUzIffAo7JtMv5i"
     },
     {
         id: 3,
@@ -173,7 +173,7 @@ const plans: MonstroPlan[] = [
         description: `Get full access to Monstro free. No new member fees. 
             <span> No additional transaction fees.fsdfsdfsd.
         `,
-        priceId: "price_1NVhoxDePDUzIffAPzStEiBA"
+        priceId: "price_1QuLbCDePDUzIffAu0b7ubYZ"
     }
 ]
 

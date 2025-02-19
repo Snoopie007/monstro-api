@@ -1,7 +1,6 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
-import { cn } from "@/libs/utils";
 import { Input } from "@/components/forms";
 
 interface AutoCompleteProps {
@@ -92,29 +91,27 @@ export function AutoComplete({ onSelectChange }: AutoCompleteProps) {
     }
 
     return (
-        <>
+        <div className="space-y-2">
             <Script src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_API_KEY}&libraries=places&callback=initMap`} defer />
-            <div className="space-y-2">
-                <div className="relative">
-                    <Input type="text" ref={inputRef} className="w-full text-foreground" placeholder="Find your business on Google" onChange={handleSearch} />
-                </div>
-
-                {predictions.length > 0 && (
-                    <div className="border bg-transparent rounded-xs w-full">
-                        <ul className="overflow-hidden rounded-sm">
-                            {predictions.map((prediction) => (
-                                <li
-                                    key={prediction.place_id}
-                                    className="py-2 px-4 flex flex-row text-foreground items-center gap-2 border-b border-gray-200 cursor-pointer last-of-type:border-b-0 text-sm hover:bg-indigo-600"
-                                    onClick={() => selectPlace(prediction.place_id)}
-                                >
-                                    {prediction.description}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
+            <div className="relative">
+                <Input type="text" ref={inputRef} className="w-full text-foreground" placeholder="Find your business on Google" onChange={handleSearch} />
             </div>
-        </>
+
+            {predictions.length > 0 && (
+                <div className="border bg-transparent rounded-xs w-full shadow-xs">
+                    <ul className="overflow-hidden rounded-sm">
+                        {predictions.map((prediction) => (
+                            <li
+                                key={prediction.place_id}
+                                className="py-2 px-4 flex flex-row text-foreground items-center gap-2 border-b hover:text-white border-gray-200 cursor-pointer last-of-type:border-b-0 text-sm hover:bg-indigo-600"
+                                onClick={() => selectPlace(prediction.place_id)}
+                            >
+                                {prediction.description}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
     );
 }

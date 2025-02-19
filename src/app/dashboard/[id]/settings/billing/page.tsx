@@ -13,8 +13,6 @@ import {
     TableRow
 } from '@/components/ui'
 
-import { getStripe } from '@/libs/server-utils';
-
 import Link from 'next/link'
 import React from 'react'
 
@@ -24,6 +22,7 @@ import { formatAmountForDisplay } from '@/libs/utils';
 import { auth } from '@/auth';
 import { StripePayments } from '@/libs/server/stripe';
 import Wallet from './components/Wallet';
+import { wallet } from './data';
 
 
 type ClientStripeReturn = { paymentMethods: Stripe.PaymentMethod[], subscriptions: Stripe.Subscription[] }
@@ -43,7 +42,7 @@ async function fetchClientStripe(customerId: string): Promise<ClientStripeReturn
     }
 }
 
-import { wallet, VendorWallet } from './data';
+
 
 export default async function BillingPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;

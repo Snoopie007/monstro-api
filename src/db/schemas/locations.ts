@@ -24,6 +24,7 @@ export const locations = pgTable("locations", {
     status: text("status").notNull().default("Inactive"),
     metadata: jsonb("meta_data").$type<Record<string, any>>(),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id),
+    subscriptionPlanId: integer("subscription_plan_id"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })
@@ -38,6 +39,18 @@ export const memberLocations = pgTable("member_locations", {
     updated: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);
 
+export const wallet = pgTable("wallet", {
+    id: serial("id").primaryKey(),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    balance: integer("balance").notNull().default(0),
+    credit: integer("credit").notNull().default(0),
+    rechargeAmount: integer("recharge_amount").notNull().default(20),
+    rechargeThreshold: integer("recharge_threshold").notNull().default(10),
+    lastCharged: timestamp('last_charged', { withTimezone: true }),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
+    deleted: timestamp('deleted_at', { withTimezone: true }),
+});
 
 export const locationsRelations = relations(locations, ({ many, one }) => ({
     memberLocations: many(memberLocations),
@@ -46,6 +59,10 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
     vendor: one(vendors, {
         fields: [locations.vendorId],
         references: [vendors.id],
+    }),
+    wallet: one(wallet, {
+        fields: [locations.id],
+        references: [wallet.locationId],
     })
 }));
 
@@ -62,3 +79,9 @@ export const memberLocationsRelations = relations(memberLocations, ({ one, many 
     transactions: many(transactions),
 }));
 
+export const walletRelations = relations(wallet, ({ one }) => ({
+    location: one(locations, {
+        fields: [wallet.locationId],
+        references: [locations.id],
+    })
+}));

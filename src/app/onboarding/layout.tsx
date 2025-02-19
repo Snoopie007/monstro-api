@@ -21,7 +21,7 @@ export default async function OnboardingLayout({ children, }: { children: ReactN
         completed: false
     }
     return (
-        <main className="h-full  overflow-hidden   ">
+        <main className="h-full  overflow-hidden  bg-white  text-black">
             <TooltipProvider>
 
                 <OnboardingProvider progress={{ ...DefaultProgress, ...session?.user.onboarding }}>

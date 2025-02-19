@@ -50,7 +50,7 @@ export default function PlanList() {
                                 ${plan.price}/{plan.interval}
                             </span>
                         </div>
-                        <p className="text-sm text-foreground/60" dangerouslySetInnerHTML={{ __html: plan.description }} />
+                        <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: plan.description }} />
                     </div>
 
                     <button

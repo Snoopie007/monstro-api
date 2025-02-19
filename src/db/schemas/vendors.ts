@@ -26,6 +26,8 @@ export const vendors = pgTable("vendors", {
     deleted: timestamp('deleted_at', { withTimezone: true }),
 });
 
+
+
 export const vendorsRelations = relations(vendors, ({ one, many }) => ({
     user: one(users, {
         fields: [vendors.userId],
@@ -43,3 +45,5 @@ export const vendorsRelations = relations(vendors, ({ one, many }) => ({
         relationName: 'referee'
     }),
 }));
+
+

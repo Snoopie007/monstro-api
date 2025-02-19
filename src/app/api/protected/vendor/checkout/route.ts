@@ -1,33 +1,109 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { locations, vendors } from '@/db/schemas';
+import { locations, vendors, wallet } from '@/db/schemas';
 import { decodeId } from '@/libs/server/sqids';
-import { eq } from 'drizzle-orm';
+
+import { StripePayments } from '@/libs/server/stripe';
+
+import { packages, plans } from '@/app/onboarding/components/ProgramSelection/dummy';
+import { MonstroPackage } from '@/types/vendor';
+
+const stripe = new StripePayments();
 
 export async function POST(req: Request) {
     const data = await req.json();
-    const { vendorId, locationId, token, plan, paymentPlan, progress } = data;
-    console.log(data)
+    const { vendorId, locationId, token, progress } = data;
+    const decodedLocationId = decodeId(locationId);
+
+    const paymentPlan = progress.pkg
+        ? packages.find((p: MonstroPackage) => p.id === progress.pkg)?.paymentPlans.find(p => p.id === progress.paymentPlan)
+        : undefined;
+
+    const plan = !progress.pkg
+        ? plans.find(p => p.id === progress.plan)
+        : undefined;
+
+    if (!plan && !paymentPlan) {
+        return NextResponse.json({ error: "Plan not found" }, { status: 404 })
+    }
+
     try {
-        const decodedLocationId = decodeId(locationId);
+        const vendor = await db.query.vendors.findFirst({
+            where: (vendor, { eq }) => eq(vendor.id, vendorId),
+            columns: {
+                firstName: true,
+                lastName: true,
+                companyEmail: true,
+                phone: true,
+            }
+        });
+        if (!vendor) {
+            return NextResponse.json({ error: "Vendor not found" }, { status: 404 })
+        }
+        const customer = await stripe.createCustomer(vendor, token.id, {
+            locationId: locationId,
+            vendorId: vendorId
+        });
 
+        const walletPayment = 20 * 100;
+        const { clientSecret } = await stripe.createPaymentIntent(
+            walletPayment,
+            customer.id,
+            token.card.id,
+            { description: `Auto-charge USD ${walletPayment / 100} was successfully added to wallet.` }
+        );
 
+        if (!clientSecret) {
+            return NextResponse.json({ error: "Payment failed" }, { status: 400 })
+        }
 
-        await db.transaction(async (tx) => {
-            await tx.update(locations).set({
-                status: "Active",
-                updated: new Date()
-            }).where(eq(locations.id, decodedLocationId))
-            await db.update(vendors).set({
-                onboarding: {
-                    ...progress,
-                    completed: true,
-                    completedSteps: [...progress.completedSteps, progress.currentStep]
-                },
-                updated: new Date()
-            }).where(eq(vendors.id, vendorId))
-        })
+        await db.insert(wallet).values({
+            locationId: decodedLocationId,
+            balance: walletPayment / 100,
+            credit: 0,
+            rechargeAmount: 20,
+            rechargeThreshold: 10,
+            lastCharged: new Date(),
+            created: new Date()
+        }).onConflictDoNothing({ target: [wallet.locationId] });
+
+        if (paymentPlan) {
+
+            const downPayment = Number(paymentPlan.downPayment - paymentPlan.discount) * 100;
+            if (paymentPlan.downPayment > 0) {
+                await stripe.createPaymentIntent(downPayment, customer.id, token.card.id)
+            }
+            if (paymentPlan.monthlyPayment > 0) {
+                const basicPlan = plans.find(p => p.id === 2);
+                await Promise.all([
+                    // add payment plan description
+                    stripe.createPaymentPlan(paymentPlan, customer.id, vendorId, locationId),
+                    stripe.createSubscription(basicPlan!, customer.id, vendorId, locationId, 365)
+                ]);
+            }
+        }
+
+        if (plan && plan.id !== 1) {
+            await stripe.createSubscription(plan, customer.id, vendorId, locationId);
+        }
+
+        // await db.transaction(async (tx) => {
+        //     await tx.update(locations).set({
+        //         subscriptionPlanId: plan ? plan.id : paymentPlan ? paymentPlan.id : null,
+        //         status: "Active",
+        //         updated: new Date()
+        //     }).where(eq(locations.id, decodedLocationId))
+        //     await tx.update(vendors).set({
+        //         stripeCustomerId: customer.id,
+        //         onboarding: {
+        //             ...progress,
+        //             completed: true,
+        //             completedSteps: [...progress.completedSteps, progress.currentStep]
+        //         },
+        //         updated: new Date()
+        //     }).where(eq(vendors.id, vendorId))
+        // })
 
         return NextResponse.json({ success: true }, { status: 200 })
     } catch (err) {

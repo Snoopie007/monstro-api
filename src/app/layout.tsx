@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Poppins, Roboto } from "next/font/google";
+import { ToastContainer } from "react-toastify";
 import "@public/globals.css";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
-import { ToastContainer } from "react-toastify";
 import { ThemeProvider } from "@/providers/theme-provider";
 
 
@@ -44,6 +44,7 @@ export default async function RootLayout({
                         {children}
                     </ThemeProvider>
                     <ToastContainer
+
                         position="top-right"
                         hideProgressBar={false}
                         closeOnClick

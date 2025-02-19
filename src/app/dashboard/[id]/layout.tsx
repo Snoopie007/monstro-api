@@ -1,7 +1,5 @@
 import { SideNav, TopNav } from "../components/menus";
-
 import { cn } from "@/libs/utils";
-
 import { DashboardProvider } from "../providers/DashboardProvider";
 
 interface DashboardLayoutProps {

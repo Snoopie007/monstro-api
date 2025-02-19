@@ -72,13 +72,14 @@ export default function PackageList() {
                             {pkg.paymentPlans.map((paymentPlan) => (
                                 <div key={paymentPlan.name}
                                     className={cn(
-                                        `border border-foreground/10 px-4 py-2 space-y-1 text-sm text-foreground rounded-xs hover:bg-indigo-500 cursor-pointer`,
+                                        `border border-foreground/10 px-4 py-2 space-y-1 text-sm text-foreground rounded-xs group
+                                         hover:bg-indigo-500 hover:text-white cursor-pointer`,
                                         isPaymentPlan(paymentPlan.id) && "bg-indigo-500 text-white"
                                     )}
                                     onClick={(e) => handlePaymentPlanSelect(e, paymentPlan.id)}
                                 >
                                     <div className="text-sm font-semibold">{paymentPlan.name}</div>
-                                    <p className="text-xs text-foreground/60">{paymentPlan.description}</p>
+                                    <p className={cn("text-xs text-gray-700", isPaymentPlan(paymentPlan.id) && "text-white/80")}>{paymentPlan.description}</p>
                                 </div>
                             ))}
                         </div>
@@ -98,7 +99,7 @@ interface PackageInfoProps {
 const PackageInfo = React.memo(({ pkg, onExpandClick, InfoIcon }: PackageInfoProps) => {
     return (
         <div className={cn(`flex flex-col gap-2 text-foreground cursor-pointer
-             hover:border-indigo-500 opacity-50 border border-foreground/10 p-4 rounded-sm
+             hover:border-indigo-500 opacity-70 border border-foreground/10 p-4 rounded-sm
              group-data-[selected=true]:border-indigo-500 group-data-[selected=true]:opacity-100
              hover:opacity-100
             `)} >
@@ -109,12 +110,12 @@ const PackageInfo = React.memo(({ pkg, onExpandClick, InfoIcon }: PackageInfoPro
                     </h2>
                     <span className="text-xs font-semibold bg-indigo-500 text-white px-2 py-1 rounded-sm">${pkg.price}</span>
                 </div>
-                <p className="text-sm text-foreground/60 group-data-[selected=true]:hidden" dangerouslySetInnerHTML={{ __html: pkg.description }} />
+                <p className="text-sm text-gray-700 group-data-[selected=true]:hidden" dangerouslySetInnerHTML={{ __html: pkg.description }} />
             </div>
 
             <button
                 onClick={(e) => onExpandClick(e, pkg.id)}
-                className="text-xs text-indigo-500 hover:text-indigo-600 font-medium text-left"
+                className="text-xs text-indigo-500 hover:text-indigo-600 font-medium text-left cursor-pointer"
             >
                 <span className="group-data-[expanded=true]:hidden">See Details</span>
                 <span className="group-data-[expanded=false]:hidden">Hide Details</span>

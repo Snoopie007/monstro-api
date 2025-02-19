@@ -111,7 +111,7 @@ export default function AddLocation() {
                 </div>
             </div>
             {edit && (
-                <div className="bg-background border border-foreground text-foreground p-4 pb-8 space-y-2 rounded-sm">
+                <div className="bg-background border border-gray-200 shadow-xs text-foreground p-4 pb-8 space-y-2 rounded-sm">
                     <p className="text-sm font-medium border-b border-foreground/10  pb-2">Double check your information.</p>
                     <ul className="space-y-2 list-disc list-inside ">
 
