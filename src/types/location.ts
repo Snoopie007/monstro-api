@@ -10,10 +10,11 @@ export type Location = {
     website: string | null;
     country: string | null;
     phone: string | null;
+    metadata: Record<string, any> | null;
+    logoUrl: string | null;
     timezone: string | null;
     status: string | null;
     vendorId: number;
-    isNew: boolean;
     created: Date;
     updated: Date | null;
     deleted: Date | null;

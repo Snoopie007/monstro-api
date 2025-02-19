@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { cn, sleep } from "@/libs/utils";
 import PackageList from "./PackageList";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 
 export function SelectPlan() {
     const { progress, updateProgress } = useOnboarding();

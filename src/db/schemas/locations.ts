@@ -20,9 +20,10 @@ export const locations = pgTable("locations", {
     country: text("country"),
     phone: text("phone"),
     timezone: varchar("timezone"),
+    logoUrl: text("logo_url"),
     status: text("status").notNull().default("Inactive"),
+    metadata: jsonb("meta_data").$type<Record<string, any>>(),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id),
-    isNew: boolean("is_new").notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })

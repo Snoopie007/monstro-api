@@ -27,7 +27,7 @@ export default function AddLocation() {
     const [loading, setLoading] = useState<boolean>(false);
     const [metadata, setMetadata] = useState<Record<string, any>>({});
     const [edit, setEdit] = useState<boolean>(false);
-    const { data: session } = useSession();
+    const { data: session, update } = useSession();
 
     const form = useForm<z.infer<typeof LocationSetupSchema>>({
         resolver: zodResolver(LocationSetupSchema),
@@ -62,10 +62,10 @@ export default function AddLocation() {
         setLoading(true);
 
         const { result, error } = await tryCatch(
-            fetch("/api/protected/location", {
+            fetch("/api/protected/vendor/location", {
                 method: "POST",
                 body: JSON.stringify({
-                    vendorId: session?.user?.id,
+                    vendorId: session?.user?.vendorId,
                     ...v,
                     metadata,
                 }),
@@ -74,16 +74,21 @@ export default function AddLocation() {
 
         await sleep(2000);
         setLoading(false);
-        if (error) {
-            toast.error("Failed to add location, please try again.");
+        if (!result || error || !result.ok) {
+            return toast.error("Failed to add location, please try again.");
         }
-        const data = await result?.json();
-
-        updateProgress({
+        const data = await result.json();
+        localStorage.setItem("locationId", data.lid);
+        const updatedProgress = {
             ...progress,
             currentStep: 2,
             completedSteps: [1]
-        });
+        }
+        update({
+            locations: [{ id: data.lid, name: data.name }],
+            onboarding: updatedProgress
+        })
+        updateProgress(updatedProgress);
     }
 
     function remove() {
@@ -94,8 +99,17 @@ export default function AddLocation() {
 
     return (
         <div className="space-y-4">
-            <AutoComplete onSelectChange={selectAddress} />
+            <div className="space-y-1">
+                <AutoComplete onSelectChange={selectAddress} />
+                <div className="text-sm text-foreground flex items-center gap-1">
+                    Cannot find your business on Google?
 
+                    <span className="inline-block text-indigo-600 underline cursor-pointer" onClick={() => setEdit(true)}>
+                        Manually add one.
+
+                    </span>
+                </div>
+            </div>
             {edit && (
                 <div className="bg-background border border-foreground text-foreground p-4 pb-8 space-y-2 rounded-sm">
                     <p className="text-sm font-medium border-b border-foreground/10  pb-2">Double check your information.</p>

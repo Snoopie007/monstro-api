@@ -61,7 +61,7 @@ export const OnboardingProvider = ({ children, progress }: OnboardingProviderPro
 
 type UseOnboardingHookType = {
     progress: VendorOnboarding;
-    updateProgress: (progress: Record<string, any>) => void;
+    updateProgress: (progress: VendorOnboarding) => void;
 }
 
 export const useOnboarding = (): UseOnboardingHookType => {

@@ -1,45 +1,46 @@
-import { packages, MonstroPackage, PackagePaymentPlan } from "./dummy";
+import { packages } from "./dummy";
 import { cn } from "@/libs/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui";
 import { useOnboarding } from "../../provider/OnboardingProvider";
 import React, { useState, useMemo, useCallback } from "react";
+import { MonstroPackage } from "@/types";
 
 export default function PackageList() {
     const { progress, updateProgress } = useOnboarding();
     const [expandedPackageId, setExpandedPackageId] = useState<number | null>(null);
 
-    const isSelected = useCallback((pkg: MonstroPackage) => {
+    const isSelected = useCallback((pkgId: number) => {
         if (!progress.pkg) return false;
-        return progress.pkg.id === pkg.id;
+        return progress.pkg === pkgId;
     }, [progress.pkg]);
 
-    const isPaymentPlan = useCallback((paymentPlan: PackagePaymentPlan) => {
+    const isPaymentPlan = useCallback((paymentPlanId: number) => {
         if (!progress.paymentPlan) return false;
-        return progress.paymentPlan.name === paymentPlan.name;
+        return progress.paymentPlan === paymentPlanId;
     }, [progress.paymentPlan]);
 
-    const isExpanded = useCallback((pkg: MonstroPackage) => {
-        return expandedPackageId === pkg.id;
+    const isExpanded = useCallback((pkgId: number) => {
+        return expandedPackageId === pkgId;
     }, [expandedPackageId]);
 
-    const toggleExpanded = useCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>, pkg: MonstroPackage) => {
+    const toggleExpanded = useCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>, pkgId: number) => {
         e.stopPropagation();
-        setExpandedPackageId(prevId => prevId === pkg.id ? null : pkg.id);
+        setExpandedPackageId(prevId => prevId === pkgId ? null : pkgId);
     }, []);
 
-    const handlePackageSelect = useCallback((pkg: MonstroPackage) => {
+    const handlePackageSelect = useCallback((pkgId: number) => {
         updateProgress({
             ...progress,
-            pkg,
+            pkg: pkgId,
             plan: null
         });
     }, [progress, updateProgress]);
 
-    const handlePaymentPlanSelect = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>, paymentPlan: PackagePaymentPlan) => {
+    const handlePaymentPlanSelect = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>, paymentPlanId: number) => {
         e.stopPropagation();
         updateProgress({
             ...progress,
-            paymentPlan,
+            paymentPlan: paymentPlanId,
             plan: null
         });
     }, [progress, updateProgress]);
@@ -55,7 +56,9 @@ export default function PackageList() {
     return (
         <div className="flex flex-col gap-2">
             {packages.map((pkg, i) => (
-                <div key={pkg.id} onClick={() => handlePackageSelect(pkg)} className="group space-y-2" data-selected={isSelected(pkg)} data-expanded={isExpanded(pkg)}>
+                <div key={pkg.id} onClick={() => handlePackageSelect(pkg.id)} className="group space-y-2"
+                    data-selected={isSelected(pkg.id)}
+                    data-expanded={isExpanded(pkg.id)}>
                     <PackageInfo
                         pkg={pkg}
                         onExpandClick={toggleExpanded}
@@ -70,9 +73,9 @@ export default function PackageList() {
                                 <div key={paymentPlan.name}
                                     className={cn(
                                         `border border-foreground/10 px-4 py-2 space-y-1 text-sm text-foreground rounded-xs hover:bg-indigo-500 cursor-pointer`,
-                                        isPaymentPlan(paymentPlan) && "bg-indigo-500 text-white"
+                                        isPaymentPlan(paymentPlan.id) && "bg-indigo-500 text-white"
                                     )}
-                                    onClick={(e) => handlePaymentPlanSelect(e, paymentPlan)}
+                                    onClick={(e) => handlePaymentPlanSelect(e, paymentPlan.id)}
                                 >
                                     <div className="text-sm font-semibold">{paymentPlan.name}</div>
                                     <p className="text-xs text-foreground/60">{paymentPlan.description}</p>
@@ -88,7 +91,7 @@ export default function PackageList() {
 
 interface PackageInfoProps {
     pkg: MonstroPackage;
-    onExpandClick: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, pkg: MonstroPackage) => void;
+    onExpandClick: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, pkgId: number) => void;
     InfoIcon: React.ReactNode;
 }
 
@@ -110,7 +113,7 @@ const PackageInfo = React.memo(({ pkg, onExpandClick, InfoIcon }: PackageInfoPro
             </div>
 
             <button
-                onClick={(e) => onExpandClick(e, pkg)}
+                onClick={(e) => onExpandClick(e, pkg.id)}
                 className="text-xs text-indigo-500 hover:text-indigo-600 font-medium text-left"
             >
                 <span className="group-data-[expanded=true]:hidden">See Details</span>

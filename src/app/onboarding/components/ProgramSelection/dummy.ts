@@ -21,6 +21,7 @@ const packages: MonstroPackage[] = [
         ],
         paymentPlans: [
             {
+                id: 1,
                 name: "Pay In Full",
                 description: "Pay in full today for a $500 discount.",
                 downPayment: 8000,
@@ -32,6 +33,7 @@ const packages: MonstroPackage[] = [
                 priceId: "price_1NVhoxDePDUzIffAPzStEiBA"
             },
             {
+                id: 2,
                 name: "12 Months",
                 description: "$2000 down,  $500 for 12 months.",
                 downPayment: 2000,
@@ -43,6 +45,7 @@ const packages: MonstroPackage[] = [
                 priceId: "price_1NVhoxDePDUzIffAPzStEiBA"
             },
             {
+                id: 3,
                 name: "0 Down",
                 description: "Pay 0 down, $500 for 18 months.",
                 downPayment: 0,
@@ -73,6 +76,7 @@ const packages: MonstroPackage[] = [
         ],
         paymentPlans: [
             {
+                id: 4,
                 name: "12 Months",
                 description: "12 Months payment plan",
                 downPayment: 8000,
@@ -84,6 +88,7 @@ const packages: MonstroPackage[] = [
                 priceId: "price_1NVhoxDePDUzIffAPzStEiBA"
             },
             {
+                id: 5,
                 name: "Pay In Full",
                 description: "24 Months payment plan",
                 downPayment: 15000,

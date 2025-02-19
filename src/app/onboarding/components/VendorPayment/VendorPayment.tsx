@@ -1,34 +1,48 @@
-
 import { Elements } from '@stripe/react-stripe-js';
 import { Skeleton } from '@/components/ui';
-
 import { getStripe } from '@/libs/stripe';
 import { useEffect, useState } from 'react';
 import { formatAmountForDisplay, tryCatch } from '@/libs/utils';
 import { useOnboarding } from '../../provider/OnboardingProvider';
-
-
 import { useSession } from 'next-auth/react';
-import { MonstroPackage, MonstroPlan, PackagePaymentPlan } from '../ProgramSelection/dummy';
+import { MonstroPlan, MonstroPackage, PackagePaymentPlan } from '@/types';
 import VendorPaymentForm from './VendorPaymentForm';
+import { plans, packages } from '../ProgramSelection/dummy';
+
+
+
+export type UserSelection = {
+    plan: MonstroPlan | undefined;
+    pkg: MonstroPackage | undefined;
+    paymentPlan: PackagePaymentPlan | undefined;
+}
 
 export default function VendorPayment() {
-
     const { progress } = useOnboarding();
     const [loading, setLoading] = useState<boolean>(false);
-
     const { data: session } = useSession();
+    const [userSelection, setUserSelection] = useState<UserSelection>({ plan: undefined, pkg: undefined, paymentPlan: undefined });
 
-
-
+    useEffect(() => {
+        if (progress.plan) {
+            const plan = plans.find(p => p.id === progress.plan);
+            setUserSelection({ ...userSelection, plan });
+        }
+        if (progress.pkg) {
+            const pkg = packages.find(p => p.id === progress.pkg);
+            const paymentPlan = pkg?.paymentPlans.find(pp => pp.id === progress.paymentPlan);
+            if (pkg && paymentPlan) {
+                setUserSelection({ ...userSelection, pkg, paymentPlan });
+            }
+        }
+    }, [progress])
     return (
         <div className='flex flex-col gap-2'>
-            <VendorPaymentDetails plan={progress.plan} pkg={progress.pkg} paymentPlan={progress.paymentPlan} />
+            <VendorPaymentDetails userSelection={userSelection} />
 
             <Elements
                 stripe={getStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY)}
                 options={{
-
                     appearance: {
                         variables: {
                             colorIcon: "#6772e5",
@@ -37,49 +51,49 @@ export default function VendorPayment() {
                     },
                 }}
             >
-                <VendorPaymentForm />
+                <VendorPaymentForm userSelection={userSelection} />
             </Elements>
         </div>
     )
 }
 
 
-function VendorPaymentDetails({ plan, pkg, paymentPlan }: { plan: MonstroPlan | null, pkg: MonstroPackage | null, paymentPlan: PackagePaymentPlan | null }) {
-    if (!plan && !pkg && !paymentPlan) return (
+function VendorPaymentDetails({ userSelection }: { userSelection: UserSelection }) {
+    if (!userSelection.plan && !userSelection.pkg && !userSelection.paymentPlan) return (
         <Skeleton className="w-full h-20" />
     );
     function dueToday() {
-        const amount = paymentPlan
-            ? (paymentPlan.downPayment || paymentPlan.monthlyPayment) + 10
-            : (plan?.price || 0) + 10;
+        const amount = userSelection.paymentPlan
+            ? (userSelection.paymentPlan.downPayment || userSelection.paymentPlan.monthlyPayment) + 10
+            : (userSelection.plan?.price || 0) + 10;
         return formatAmountForDisplay(amount, 'USD');
     }
 
     return (
-        <div className="bg-foreground border border-foreground/10 rounded-sm p-4">
+        <div className="bg-white border border-foreground/10 rounded-sm p-4 shadow-xs">
             <div className="flex flex-col gap-2 text-xs">
 
                 <div className="flex justify-between">
-                    <span >{pkg ? "Package" : "Plan"}</span>
-                    <span>{pkg ? `${pkg.name} (${paymentPlan?.name})` : plan?.name}</span>
+                    <span >{userSelection.pkg ? "Package" : "Plan"}</span>
+                    <span>{userSelection.pkg ? `${userSelection.pkg.name} (${userSelection.paymentPlan?.name})` : userSelection.plan?.name}</span>
                 </div>
-                {plan && (
+                {userSelection.plan && (
                     <div className="flex justify-between">
                         <span >Recurring Payment</span>
-                        <span>{formatAmountForDisplay(plan?.price!, 'USD')}/{plan.interval}</span>
+                        <span>{formatAmountForDisplay(userSelection.plan?.price!, 'USD')}/{userSelection.plan.interval}</span>
                     </div>
                 )}
-                {pkg && (
+                {userSelection.pkg && (
                     <>
 
                         <div className="flex justify-between">
                             <span >Down Payment</span>
 
-                            <span>{formatAmountForDisplay(paymentPlan?.downPayment!, 'USD')}</span>
+                            <span>{formatAmountForDisplay(userSelection.paymentPlan?.downPayment!, 'USD')}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span >Term Payments ({paymentPlan?.length} {paymentPlan?.interval})</span>
-                            <span>{formatAmountForDisplay(paymentPlan?.monthlyPayment!, 'USD')}</span>
+                            <span >Term Payments ({userSelection.paymentPlan?.length} {userSelection.paymentPlan?.interval})</span>
+                            <span>{formatAmountForDisplay(userSelection.paymentPlan?.monthlyPayment!, 'USD')}</span>
                         </div>
                     </>
                 )}

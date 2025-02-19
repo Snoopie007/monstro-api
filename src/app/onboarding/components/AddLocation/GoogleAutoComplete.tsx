@@ -56,18 +56,19 @@ export function AutoComplete({ onSelectChange }: AutoCompleteProps) {
             !place.name
         ) return;
 
+        console.log(place)
+
         const fullAddress = place.address_components;
         const getAddressComponent = (type: string) =>
             fullAddress.find(comp => comp.types.includes(type))?.long_name || "";
-        const getStateComponent = () =>
-            fullAddress.find(comp => comp.types.includes("administrative_area_level_1"))?.short_name || "";
+
 
         onSelectChange({
             name: place.name,
             address: `${getAddressComponent("street_number")} ${getAddressComponent("route")}`,
-            website: place.website?.replace(/(\?.*$|^https?:\/\/|\/$)/g, ''),
+            website: place.website?.replace(/^(https?:\/\/[^\/]+).*$/, '$1'),
             city: getAddressComponent("locality"),
-            state: getStateComponent(),
+            state: getAddressComponent("administrative_area_level_1"),
             logoUrl: place.icon,
             country: getAddressComponent("country"),
             postalCode: getAddressComponent("postal_code"),

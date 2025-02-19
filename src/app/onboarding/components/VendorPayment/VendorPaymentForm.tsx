@@ -1,4 +1,4 @@
-import { SetStateAction, Dispatch, useState } from "react";
+import { SetStateAction, Dispatch, useState, useEffect } from "react";
 
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import { useForm } from "react-hook-form";
@@ -26,6 +26,8 @@ import { dummyContract } from "../ProgramSelection/dummy";
 import { DialogTrigger, Dialog, DialogContent, DialogDescription, DialogTitle, DialogHeader, DialogFooter, DialogClose } from "@/components/ui";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MonstroPackage, MonstroPlan } from "@/types/vendor";
+import { UserSelection } from "./VendorPayment";
+import { useSession } from "next-auth/react";
 
 
 
@@ -39,14 +41,21 @@ function handlePaymentError(toastRef: string | number, message: string) {
 }
 
 
-export default function VendorPaymentForm() {
+export default function VendorPaymentForm({ userSelection }: { userSelection: UserSelection }) {
     const { progress, updateProgress } = useOnboarding();
     const [errorMessage, setErrorMessage] = useState("");
+    const [locationId, setLocationId] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
-
+    const { data: session } = useSession();
     const stripe = useStripe();
     const elements = useElements();
     const router = useRouter();
+
+    useEffect(() => {
+        if (session?.user.locations[0]) {
+            setLocationId(session.user.locations[0].id);
+        }
+    }, [session])
 
     const form = useForm<z.infer<typeof VendorBillingSchema>>({
         resolver: zodResolver(VendorBillingSchema),
@@ -61,7 +70,7 @@ export default function VendorPaymentForm() {
     });
 
     async function onSubmit(v: z.infer<typeof VendorBillingSchema>) {
-        if (!elements || !stripe) return;
+        if (!elements || !stripe || !locationId) return;
         setLoading(true);
         const toastRef = toast.loading("Processing payment...");
         const cardElement = elements!.getElement(CardElement);
@@ -71,13 +80,15 @@ export default function VendorPaymentForm() {
 
             if (tokenRef.token) {
 
-                const res = await fetch(`/api/register/vendor/checkout/new`, {
+                const res = await fetch(`/api/protected/vendor/checkout`, {
                     method: 'POST',
                     body: JSON.stringify({
+                        vendorId: session?.user.vendor.id,
+                        locationId: locationId,
                         token: tokenRef.token,
-                        plan: progress.plan,
-                        pkg: progress.pkg,
-                        billingInfo: v
+                        plan: userSelection.plan,
+                        paymentPlan: userSelection.paymentPlan,
+                        progress: progress
                     }),
                 });
                 setLoading(false);
@@ -85,12 +96,12 @@ export default function VendorPaymentForm() {
                     return handlePaymentError(toastRef, "An error occurred while processing your payment.");
 
                 }
-                // router.push(`/onboarding/${lid}/complete`)
+                router.push(`/dashboard/${locationId}`)
             } else {
                 setLoading(false);
                 return handlePaymentError(toastRef, "Invalid Card.");
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.log(e);
             setLoading(false);
             return handlePaymentError(toastRef, "Your payment was declined by your bank, please talk to support.");
@@ -100,8 +111,8 @@ export default function VendorPaymentForm() {
 
 
     return (
-        <div className="space-y-3 pb-3">
-            <div className="flex flex-col gap-2 bg-white border border-gray-200 rounded-sm p-4 pb-6 space-y-3">
+        <div className="space-y-3 pb-3 ">
+            <div className="flex flex-col gap-2 bg-white border border-gray-200 rounded-sm p-4 pb-6 space-y-3 shadow-xs">
                 <Form {...form}>
                     <form className="space-y-1">
 
@@ -262,15 +273,15 @@ function TermsAndConditions({ checked, setChecked }: TermsAndConditionsProps) {
                     </p>
                 </div>
             </DialogTrigger>
-            <DialogContent className="max-w-[500px] space-y-4 py-6 border-foreground/10">
+            <DialogContent className="max-w-[500px] space-y-4 py-4 border-foreground/10">
                 <DialogHeader className="hidden">
                     <DialogTitle></DialogTitle>
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col gap-2 space-y-1 ">
-                    <p className="font-semibold  text-lg text-center px-4">Monstro <span className="text-red-500">Terms of Service</span></p>
+                    <p className="font-semibold  text-base px-4">Monstro <span className="text-red-500">Terms of Service</span></p>
                     <ScrollArea className="h-[500px] px-4 border-y border-foreground/10" onScrollCapture={handleScroll}>
-                        <div className='prose pb-4 px-3  text-foreground prose-strong:text-foreground prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'
+                        <div className='prose pb-4   text-foreground prose-strong:text-foreground prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'
                             dangerouslySetInnerHTML={{ '__html': dummyContract }}>
                         </div>
                     </ScrollArea>

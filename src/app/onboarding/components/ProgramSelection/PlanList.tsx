@@ -1,15 +1,16 @@
-import { plans, MonstroPlan } from "./dummy";
+import { plans } from "./dummy";
 import { cn } from "@/libs/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui";
 import { useOnboarding } from "../../provider/OnboardingProvider";
 import { useState } from "react";
+import { MonstroPlan } from "@/types";
 
 export default function PlanList() {
     const { progress, updateProgress } = useOnboarding();
     const [expandedPlanId, setExpandedPlanId] = useState<number | null>(null);
 
     function isSelected(plan: MonstroPlan) {
-        return progress.plan?.id === plan.id;
+        return progress.plan === plan.id;
     }
 
     function toggleExpanded(e: React.MouseEvent<HTMLButtonElement, MouseEvent>, plan: MonstroPlan) {
@@ -20,7 +21,7 @@ export default function PlanList() {
     const handlePlanSelect = (plan: MonstroPlan) => {
         updateProgress({
             ...progress,
-            plan: plan
+            plan: plan.id
         });
         setExpandedPlanId(plan.id);
     };

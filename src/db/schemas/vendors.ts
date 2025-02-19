@@ -4,7 +4,6 @@ import { relations, sql } from "drizzle-orm";
 import { vendorProgress } from "./vendor-progress";
 import { vendorReferrals } from "./vendor-referrals";
 import { locations } from "./locations";
-import { Icon } from "lucide-react";
 import { VendorOnboarding } from "@/types/vendor";
 
 export const vendors = pgTable("vendors", {

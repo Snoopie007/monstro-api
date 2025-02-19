@@ -26,10 +26,10 @@ export type Vendor = {
 }
 
 export type VendorOnboarding = {
-    plan: MonstroPlan | null;
-    pkg: MonstroPackage | null;
+    plan: number | null;
+    pkg: number | null;
     agreedToTerms: boolean;
-    paymentPlan: PackagePaymentPlan | null;
+    paymentPlan: number | null;
     currentStep: number;
     completedSteps: number[];
     vendor?: Vendor;
@@ -46,6 +46,7 @@ export type MonstroPackage = {
 }
 
 export type PackagePaymentPlan = {
+    id: number;
     name: string;
     description: string;
     downPayment: number;
