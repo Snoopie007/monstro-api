@@ -1,6 +1,6 @@
 import { auth } from '@/auth';
 import { Button } from '@/components/ui';
-import { decodeId } from '@/libs/server-utils';
+import { decodeId } from '@/libs/server/sqids';
 import { BadgeCheck, CircleSlash } from 'lucide-react';
 import { redirect } from 'next/navigation';
 
@@ -25,17 +25,17 @@ async function completeIntegerationConnection(name: string, token: string, searc
 }
 
 export default async function CompleteIntegeration(props: { params: Promise<{ name: string }>, searchParams: Promise<any> }) {
-    const searchParams = await props.searchParams;
-    const params = await props.params;
-    const session = await auth();
+	const searchParams = await props.searchParams;
+	const params = await props.params;
+	const session = await auth();
 
-    if (!session) {
+	if (!session) {
 		// return redirect to login?
 		return null;
 	}
 
-    const connection = await completeIntegerationConnection(params.name, session.user.token, searchParams);
-    return (
+	const connection = await completeIntegerationConnection(params.name, session.user.token, searchParams);
+	return (
 		<div className=" h-[100svh] bg-white dark:bg-white text-black dark:text-black w-full ">
 
 			<div className="max-w-lg w-full h-full m-auto py-10 flex flex-row items-center">

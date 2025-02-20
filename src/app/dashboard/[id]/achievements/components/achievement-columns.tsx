@@ -4,7 +4,6 @@ import { Achievement } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 
 export const AchievementColumns = (locationId: string): ColumnDef<Achievement, any>[] => [
-
     {
         accessorKey: "title",
         header: "Title",

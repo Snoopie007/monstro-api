@@ -1,1 +1,1 @@
-export * from './member-attedance';
+export * from './MemberAttedance';
