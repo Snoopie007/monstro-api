@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/libs/utils"
 
 const buttonVariants = cva(
-	"inline-flex items-center justify-center whitespace-nowrap rounded-sm text-sm font-medium ring-offset-background transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+	"inline-flex items-center justify-center cursor-pointer whitespace-nowrap rounded-sm text-sm font-medium ring-offset-background transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
 	{
 		variants: {
 			variant: {
@@ -19,9 +19,9 @@ const buttonVariants = cva(
 				ghost: "hover:bg-accent hover:text-accent-foreground",
 				link: "text-primary underline-offset-4 hover:underline",
 				foreground: "bg-foreground text-background font-semibold rounded-sm",
-				menu: "flex cursor-pointer flex-row items-center justify-start rounded-sm gap-2 w-full hover:bg-accent hover:text-accent-foreground",
-				clear: "rounded-sm bg-gray-200 text-black cursor-pointer hover:bg-gray-100",
-				continue: "rounded-sm cursor-pointer  bg-red-500 text-white",
+				menu: "flex  flex-row items-center justify-start rounded-sm gap-2 w-full hover:bg-accent hover:text-accent-foreground",
+				clear: "rounded-sm bg-gray-200 text-black hover:bg-gray-100",
+				continue: "rounded-sm  bg-red-500 text-white",
 			},
 			size: {
 				default: "h-10 px-4 py-2",

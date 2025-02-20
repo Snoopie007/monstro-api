@@ -1,7 +1,6 @@
 "use client"
 
 import {
-    ColumnDef,
     Table as TansackTable,
     flexRender,
 
@@ -18,11 +17,6 @@ import {
 import { Member } from "@/types"
 import { Skeleton } from "@/components/ui"
 
-interface DataTableProps<TData, TValue> {
-    columns: number
-    data: TData[]
-    table: TansackTable<Member>
-}
 
 export function MemberTable<TData, TValue>({
     columns,

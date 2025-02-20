@@ -33,7 +33,7 @@ import PhoneInput from 'react-phone-number-input/input';
 import { CountryCodes } from '@/libs/data';
 import { CountryCode, Plan, Program } from '@/types';
 import { RadioGroup, RadioGroupItem } from '@/components/forms';
-import NewMemberPaymentForm from './payment-form';
+import NewMemberPaymentForm from './MemberPaymentForm';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/libs/stripe';
 import { usePrograms } from '@/hooks/use-programs';
@@ -111,7 +111,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                         name="firstName"
                                         render={({ field }) => (
                                             <FormItem className="flex-1">
-                                                <FormLabel>First Name</FormLabel>
+                                                <FormLabel size='tiny'>First Name</FormLabel>
                                                 <FormControl>
                                                     <Input type='text' className={cn("")} placeholder="First Name" {...field} />
                                                 </FormControl>
@@ -125,7 +125,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                         name="lastName"
                                         render={({ field }) => (
                                             <FormItem className="flex-1">
-                                                <FormLabel>Last Name</FormLabel>
+                                                <FormLabel size='tiny'>Last Name</FormLabel>
                                                 <FormControl>
                                                     <Input type='text' className={cn("")} placeholder="Last Name" {...field} />
                                                 </FormControl>
@@ -143,7 +143,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                         name="email"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Email</FormLabel>
+                                                <FormLabel size='tiny'>Email</FormLabel>
                                                 <FormControl>
                                                     <Input type='email' className={cn("w-full")} placeholder="Email" {...field} />
                                                 </FormControl>
@@ -153,7 +153,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                     />
                                     <div className="flex-1  justify-center space-y-2">
 
-                                        <FormLabel className="font-semibold  ">
+                                        <FormLabel size='tiny'>
                                             Phone
                                         </FormLabel>
                                         <div className="flex  flex-row gap-1">
@@ -200,9 +200,9 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                     </div>
                                 </fieldset>
                             </SheetSection>
-                            <SheetSection>
+                            <SheetSection >
                                 <div className='mb-4'>
-                                    <FormLabel className='text-base font-bold'>
+                                    <FormLabel className='text-sm font-bold'>
                                         Enroll in a Program
                                     </FormLabel>
                                     <FormDescription>
@@ -215,7 +215,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                         name="programId"
                                         render={({ field }) => (
                                             <FormItem>
-
+                                                <FormLabel size='tiny'>Select a Program</FormLabel>
                                                 <Select onValueChange={(value) => field.onChange(Number(value))}>
                                                     <FormControl>
                                                         <SelectTrigger>
@@ -240,7 +240,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                         name="planId"
                                         render={({ field }) => (
                                             <FormItem>
-
+                                                <FormLabel size='tiny'>Select a Plan</FormLabel>
                                                 <Select onValueChange={(value) => field.onChange(Number(value))}>
                                                     <FormControl>
                                                         <SelectTrigger>
@@ -265,7 +265,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                         name="paymentMethod"
                                         render={({ field }) => (
                                             <FormItem className="flex-1">
-                                                <FormLabel>Payment Method</FormLabel>
+                                                <FormLabel size='tiny'>Payment Method</FormLabel>
 
                                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                     <FormControl>
@@ -291,7 +291,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                 {watchPaymentMethod === "stripe" && (
                                     <React.Fragment>
                                         <div className='mb-4'>
-                                            <FormLabel className='text-base font-bold'>
+                                            <FormLabel size='tiny'>
                                                 Payment Mode
                                             </FormLabel>
                                             <FormDescription>
@@ -375,12 +375,13 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
 
                 <SheetFooter className='border-t py-4 px-5'>
                     <SheetClose asChild>
-                        <Button variant={"outline"} className="bg-transparent">Cancel</Button>
+                        <Button variant={"outline"} size={"sm"} className="">Cancel</Button>
                     </SheetClose>
                     <Button
                         variant={"foreground"}
+                        size={"sm"}
                         onClick={form.handleSubmit(onSubmit)}
-                        className={cn("py-2.5  children:hidden  px-4 rounded-sm text-sm flex flex-row h-auto", (loading && "children:inline-block"))}
+                        className={cn("children:hidden", (loading && "children:inline-block"))}
                     >
                         <Icon name="LoaderCircle" className="mr-2  animate-spin" />
                         Save

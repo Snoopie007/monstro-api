@@ -48,6 +48,11 @@
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
     --radius-xs: calc(var(--radius) - 6px);
+
+	--text-tiny: 0.625rem;
+  	--text-tiny--line-height: 1.5rem; 
+  	--text-tiny--letter-spacing: 0.05rem; 
+ 	--text-tiny--font-weight: 500; 
 }
 
 @utility container {

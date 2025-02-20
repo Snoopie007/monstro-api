@@ -1,6 +1,6 @@
 
 import { Session } from "next-auth";
-import { MemberList } from "./components/member-list";
+import { MemberList } from "./components/MemberList";
 
 import { auth } from "@/auth";
 import { db } from "@/db/db";

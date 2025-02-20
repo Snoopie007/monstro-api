@@ -10,16 +10,16 @@ import {
     useReactTable,
 } from "@tanstack/react-table";
 import { useState, useMemo } from "react";
-import { MemberColumns } from "./member-columns";
+import { MemberColumns } from "./MemberColumns";
 import { Input } from "@/components/forms/input";
-import { MemberTable } from "./member-table";
+import { MemberTable } from "./MemberTable";
 import ErrorComponent from "@/components/error";
-import AddMember from "./add-member";
+import AddMember from "./AddMember";
 import { Member } from "@/types/member";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { debounce } from "@tiptap-pro/extension-table-of-contents";
-import ImportMember from "./import-member";
+import ImportMembers from "./ImportMember";
 import { Separator } from "@/components/ui";
 import { TablePage, TablePageContent, TablePageFooter, TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle } from "@/components/ui/table-page";
 
@@ -101,7 +101,7 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
                         className="border text-xs h-auto py-1 border-foreground/10 rounded-xs"
                     />
                     <AddMember locationId={params.id} stripeKey={stripeKey} />
-                    <ImportMember locationId={params.id} />
+                    <ImportMembers locationId={params.id} />
                 </TablePageHeaderSection>
             </TablePageHeader>
             <TablePageContent>
@@ -126,7 +126,6 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
                         of {totalPages}
                     </span>
                     <button
-
                         className="text-foreground/50 border-foreground/50 p-1 border rounded-xs hover:text-indigo-600 hover:border-indigo-600 cursor-pointer"
                         onClick={() => table.nextPage()}
                         disabled={!table.getCanNextPage()}
