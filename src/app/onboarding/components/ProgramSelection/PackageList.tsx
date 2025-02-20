@@ -65,14 +65,14 @@ export default function PackageList() {
                         InfoIcon={InfoIcon}
                     />
                     <div className="flex-col gap-2 group-data-[selected=true]:flex hidden">
-                        <div className="text-sm text-foreground font-semibold">
+                        <div className="text-sm text-black font-semibold">
                             Select a payment plan
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                             {pkg.paymentPlans.map((paymentPlan) => (
                                 <div key={paymentPlan.name}
                                     className={cn(
-                                        `border border-foreground/10 px-4 py-2 space-y-1 text-sm text-foreground rounded-xs group
+                                        `border border-gray-200 px-4 py-2 space-y-1 text-sm text-black rounded-xs group
                                          hover:bg-indigo-500 hover:text-white cursor-pointer`,
                                         isPaymentPlan(paymentPlan.id) && "bg-indigo-500 text-white"
                                     )}
@@ -98,8 +98,8 @@ interface PackageInfoProps {
 
 const PackageInfo = React.memo(({ pkg, onExpandClick, InfoIcon }: PackageInfoProps) => {
     return (
-        <div className={cn(`flex flex-col gap-2 text-foreground cursor-pointer
-             hover:border-indigo-500 opacity-70 border border-foreground/10 p-4 rounded-sm
+        <div className={cn(`flex flex-col gap-2 text-black cursor-pointer
+             hover:border-indigo-500 opacity-70 border border-gray-200 shadow-xs p-4 rounded-sm
              group-data-[selected=true]:border-indigo-500 group-data-[selected=true]:opacity-100
              hover:opacity-100
             `)} >

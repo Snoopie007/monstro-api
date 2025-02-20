@@ -35,8 +35,8 @@ export default function PlanList() {
             {plans.map((plan, i) => (
                 <div key={i} onClick={() => handlePlanSelect(plan)} data-selected={isSelected(plan)} data-expanded={isExpanded(plan)}
                     className={cn(
-                        "flex flex-col gap-2 text-foreground group cursor-pointer",
-                        " hover:border-indigo-500 border border-foreground/10 p-4 rounded-sm",
+                        "flex flex-col gap-2 text-black group cursor-pointer",
+                        " hover:border-indigo-500 border border-gray-200  shadow-xs p-4 rounded-sm",
                         "data-[selected=true]:border-indigo-500 ",
 
                     )}
@@ -64,11 +64,11 @@ export default function PlanList() {
                     <div className="space-y-2 border-t border-foreground/10 pt-4 group-data-[expanded=true]:block hidden">
                         <ul className="text-sm grid grid-cols-2 gap-2">
                             {plan.benefits.map((benefit, index) => (
-                                <li key={index} className="flex flex-row gap-2 text-sm items-center font-semibold">
+                                <li key={index} className="flex flex-row gap-2 text-sm items-center font-medium">
                                     <span>{benefit.name}</span>
                                     {benefit.description && (
                                         <Tooltip>
-                                            <TooltipTrigger>
+                                            <TooltipTrigger className="cursor-pointer">
                                                 <InfoIcon />
                                             </TooltipTrigger>
                                             <TooltipContent className="max-w-[200px] border-foreground/10 border">
@@ -80,9 +80,9 @@ export default function PlanList() {
                             ))}
                         </ul>
                         {plan.note && (
-                            <p className="text-xs text-foreground flex flex-row gap-0.5 items-center">
-                                <span className="text-red-500">*</span>
-                                <span className="italic text-foreground/60">{plan.note}</span>
+                            <p className="text-xs  flex flex-row gap-0.5 items-center">
+                                <span className="text-red-500 pt-0.5">*</span>
+                                <span className="italic text-gray-600">{plan.note}</span>
                             </p>
                         )}
                     </div>

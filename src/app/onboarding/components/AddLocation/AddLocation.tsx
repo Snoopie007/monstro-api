@@ -101,7 +101,7 @@ export default function AddLocation() {
         <div className="space-y-4">
             <div className="space-y-1">
                 <AutoComplete onSelectChange={selectAddress} />
-                <div className="text-sm text-foreground flex items-center gap-1">
+                <div className="text-sm text-black flex items-center gap-1">
                     Cannot find your business on Google?
 
                     <span className="inline-block text-indigo-600 underline cursor-pointer" onClick={() => setEdit(true)}>
@@ -111,8 +111,8 @@ export default function AddLocation() {
                 </div>
             </div>
             {edit && (
-                <div className="bg-background border border-gray-200 shadow-xs text-foreground p-4 pb-8 space-y-2 rounded-sm">
-                    <p className="text-sm font-medium border-b border-foreground/10  pb-2">Double check your information.</p>
+                <div className="bg-white border border-gray-200 shadow-xs text-black p-4 pb-8 space-y-2 rounded-sm">
+                    <p className="text-sm font-medium border-b border-gray-100  pb-2">Double check your information.</p>
                     <ul className="space-y-2 list-disc list-inside ">
 
                         {form.formState.errors && Object.keys(form.formState.errors).map((key) => (
@@ -130,7 +130,7 @@ export default function AddLocation() {
                                         <FormItem>
                                             <FormLabel className="text-[0.65rem]  uppercase font-semibold">Business Name</FormLabel>
                                             <FormControl>
-                                                <Input type="text"  {...field} />
+                                                <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
                                             </FormControl>
 
                                             <FormMessage />
@@ -146,13 +146,13 @@ export default function AddLocation() {
 
                                             <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                                 <FormControl>
-                                                    <SelectTrigger className="rounded-sm" >
+                                                    <SelectTrigger className="rounded-sm bg-white border border-gray-200 cursor-pointer" >
                                                         <SelectValue placeholder="Select your industry" />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent>
+                                                <SelectContent className="bg-white border border-gray-200 text-black">
                                                     {Industries.map((industry, index) => (
-                                                        <SelectItem key={index} value={industry}>
+                                                        <SelectItem key={index} value={industry} className="cursor-pointer">
                                                             {industry}
                                                         </SelectItem>
                                                     ))}
@@ -172,7 +172,7 @@ export default function AddLocation() {
                                         <FormItem>
                                             <FormLabel className="text-[0.65rem] uppercase font-semibold">Phone</FormLabel>
                                             <FormControl>
-                                                <Input type="text" {...field} />
+                                                <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -185,7 +185,7 @@ export default function AddLocation() {
                                         <FormItem>
                                             <FormLabel className="text-[0.65rem] uppercase font-semibold">Website</FormLabel>
                                             <FormControl>
-                                                <Input type="text" {...field} />
+                                                <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
                                             </FormControl>
 
                                         </FormItem>
@@ -202,7 +202,7 @@ export default function AddLocation() {
                                         <FormItem>
                                             <FormLabel className="text-[0.65rem] uppercase font-semibold">Address</FormLabel>
                                             <FormControl>
-                                                <Input type="text"  {...field} />
+                                                <Input type="text" className="bg-white border border-gray-200 rounded-sm"  {...field} />
                                             </FormControl>
 
                                         </FormItem>
@@ -219,7 +219,7 @@ export default function AddLocation() {
                                             <FormItem>
                                                 <FormLabel className="text-[0.65rem] uppercase font-semibold">City</FormLabel>
                                                 <FormControl>
-                                                    <Input type="text" {...field} />
+                                                    <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
                                                 </FormControl>
 
                                                 <FormMessage />
@@ -235,7 +235,7 @@ export default function AddLocation() {
                                             <FormItem>
                                                 <FormLabel className="text-[0.65rem] uppercase font-semibold">State</FormLabel>
                                                 <FormControl>
-                                                    <Input type="text"  {...field} />
+                                                    <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
                                                 </FormControl>
 
                                                 <FormMessage />
@@ -252,7 +252,7 @@ export default function AddLocation() {
                                             <FormItem >
                                                 <FormLabel className="text-[0.65rem] uppercase font-semibold">Postal Code</FormLabel>
                                                 <FormControl>
-                                                    <Input type="text"  {...field} />
+                                                    <Input type="text" className="bg-white border border-gray-200 rounded-sm"  {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -267,13 +267,13 @@ export default function AddLocation() {
             )
             }
             <div className="flex justify-end gap-2">
-                <Button variant={"foreground"} size={"sm"} onClick={() => remove()} className="rounded-xs">Clear</Button>
+                <Button variant={"clear"} size={"sm"} onClick={() => remove()} className="">Clear</Button>
 
                 <Button
-                    variant={"foreground"}
+                    variant={"continue"}
                     size={"sm"}
                     onClick={form.handleSubmit(submit)}
-                    className={cn(" children:hidden rounded-xs cursor-pointer  bg-red-500 text-white", {
+                    className={cn(" children:hidden ", {
                         "children:inline-flex": loading
                     })}
                     disabled={!form.formState.isValid}

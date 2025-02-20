@@ -70,7 +70,7 @@ function VendorPaymentDetails({ userSelection }: { userSelection: UserSelection 
     }
 
     return (
-        <div className="bg-white border border-foreground/10 rounded-sm p-4 shadow-xs">
+        <div className="bg-white border border-gray-200 rounded-sm p-4 shadow-xs">
             <div className="flex flex-col gap-2 text-xs">
 
                 <div className="flex justify-between">

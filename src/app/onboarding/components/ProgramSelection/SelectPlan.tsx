@@ -38,10 +38,10 @@ export function SelectPlan() {
     }
     return (
         <div className="flex flex-col gap-4">
-            <Tabs defaultValue="plans">
-                <TabsList className="grid w-full grid-cols-2 rounded-xs">
-                    <TabsTrigger value="plans" className="rounded-xs text-sm">Plans</TabsTrigger>
-                    <TabsTrigger value="packages" className="rounded-xs text-sm">Packages</TabsTrigger>
+            <Tabs defaultValue="plans" >
+                <TabsList className="grid w-full grid-cols-2 rounded-xs bg-gray-200" >
+                    <TabsTrigger value="plans" className="rounded-xs text-sm cursor-pointer">Plans</TabsTrigger>
+                    <TabsTrigger value="packages" className="rounded-xs text-sm cursor-pointer">Packages</TabsTrigger>
                 </TabsList>
                 <TabsContent value="plans">
                     <PlanList />
@@ -51,15 +51,15 @@ export function SelectPlan() {
                 </TabsContent>
             </Tabs>
             <div className="flex flex-row gap-2 justify-end">
-                <Button variant={"outline"} size={"sm"} className="rounded-xs text-foreground" onClick={clear}>Clear</Button>
+                <Button variant={"clear"} size={"sm"} onClick={clear}>Clear</Button>
                 <Button
-                    variant={"foreground"} size={"sm"} className={cn("rounded-xs children:hidden cursor-pointer flex flex-row items-center gap-2", {
+                    variant={"continue"} size={"sm"} className={cn("children:hidden", {
                         "children:inline-block": loading,
                     })}
                     onClick={next}
                     disabled={!progress.plan && !progress.paymentPlan}
                 >
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin mr-1" />
                     Continue
                 </Button>
             </div>
