@@ -3,9 +3,6 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "./db/db";
 import { tryCatch } from "./libs/utils";
-import { and, eq } from "drizzle-orm";
-import { locations, vendors } from "./db/schemas";
-import { users } from "./db/schemas";
 import { encodeId } from "./libs/server/sqids";
 
 export default {
@@ -28,7 +25,7 @@ export default {
 							columns: {
 								id: true,
 								phone: true,
-								logo: true,
+								icon: true,
 								stripeCustomerId: true,
 								onboarding: true
 							},
@@ -49,6 +46,7 @@ export default {
 				if (!user || !user.password) return null;
 
 				const match = await bcrypt.compare(`${credentials.password}`, user.password);
+
 				if (!match) return null;
 
 				const { result, error } = await tryCatch(
@@ -76,7 +74,7 @@ export default {
 					name: rest.name,
 					email: rest.email,
 					phone: vendor.phone,
-					image: vendor?.logo,
+					image: vendor?.icon,
 					vendorId: vendor?.id,
 					vendorPhone: vendor?.phone,
 					onboarding: vendor?.onboarding,

@@ -9,7 +9,7 @@ export default auth(async (req) => {
 		const { pathname } = req.nextUrl;
 		const isLoggedin = !!req.auth;
 		const locations = req.auth?.user?.locations || [];
-
+		const onboarding = req.auth?.user?.onboarding;
 		// Handle protected API routes
 		if (pathname.startsWith("/api/protected")) {
 			if (!isLoggedin) {
@@ -35,7 +35,8 @@ export default auth(async (req) => {
 
 		// Handle home page redirect for logged in users
 		if (isLoggedin && pathname === "/" && locations.length > 0) {
-			return NextResponse.redirect(new URL(`/dashboard/${locations[0].id}`, req.nextUrl.origin));
+			const url = onboarding.completed ? `/dashboard/${locations[0].id}` : `/onboarding`
+			return NextResponse.redirect(new URL(url, req.nextUrl.origin));
 		}
 
 		// Handle dashboard access

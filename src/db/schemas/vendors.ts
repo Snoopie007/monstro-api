@@ -16,7 +16,7 @@ export const vendors = pgTable("vendors", {
     companyEmail: text("company_email").unique(),
     companyWebsite: text("company_website"),
     companyAddress: text("company_address"),
-    logo: text("logo"),
+    icon: text("icon"),
     onboarding: jsonb("onboarding").$type<VendorOnboarding>().notNull().default(sql`'{}'`),
     credits: integer("credits").notNull().default(0),
     spendedCredits: integer("spended_credits").notNull().default(0),

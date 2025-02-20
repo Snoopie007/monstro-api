@@ -13,7 +13,7 @@ import {
 } from "@/components/forms/form";
 import { Input } from "@/components/forms/input";
 
-import { cn, sleep } from "@/libs/utils";
+import { cn } from "@/libs/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
@@ -43,6 +43,7 @@ export default function LoginForm() {
 			const res = await signIn("credentials", { ...v, redirect: false });
 			if (res?.error) {
 				toast.error('Invalid email or password.');
+				return;
 			}
 
 			const locationId = localStorage.getItem('locationId');

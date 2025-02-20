@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
         let location = null;
 
         if (data.lid) {
-            console.log("Given ID", data.lid);
+
             const decodedId = decodeId(data.lid);
             location = await db.query.locations.findFirst({
                 where: (locations, { eq, and }) => and(eq(locations.vendorId, user.vendor.id), eq(locations.id, decodedId)),
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (!location) {
-            console.log("In Correct ID, location found");
+
             location = await db.query.locations.findFirst({
                 where: (locations, { eq, and }) => and(eq(locations.vendorId, user.vendor.id), eq(locations.status, 'Active')),
                 columns: {

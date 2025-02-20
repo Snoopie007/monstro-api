@@ -13,7 +13,7 @@ export type Vendor = {
     companyEmail: string | null;
     companyWebsite: string | null;
     companyAddress: string | null;
-    logo: string | null;
+    icon: string | null;
     credits: number;
     spendedCredits: number;
     userId: number;
