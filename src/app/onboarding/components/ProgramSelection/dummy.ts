@@ -5,26 +5,32 @@ import { MonstroPackage, MonstroPlan } from "@/types/vendor";
 const packages: MonstroPackage[] = [
     {
         id: 1,
-        name: "Scale",
-        price: 8000,
+        name: "Growth",
+        price: 3500,
         description: "Scale your business with our comprehensive package that includes everything you need to grow your online presence. Get access to premium features, dedicated support, and proven strategies.",
         benefits: [
             {
-                name: "Benefit 1",
-                description: "Benefit 1 description"
+                name: "High-Converting Basic Website",
+                description: "We will build a 5 page website that not only will make your brand stand out, but also tested and proven to convert your visitors."
             },
             {
-                name: "Benefit 2",
+                name: "12 Months of Monstro"
+            },
+            {
+                name: "12 Months of Monstro Marketing Suite",
                 description: "Benefit 2 description"
+            },
+            {
+                name: "12 Months of Premium Support",
+                description: "Benefit 3 description"
             }
-
         ],
         paymentPlans: [
             {
                 id: 1,
                 name: "Pay In Full",
                 description: "Pay in full today for a $500 discount.",
-                downPayment: 8000,
+                downPayment: 3500,
                 discount: 500,
                 monthlyPayment: 0,
                 length: 0,
@@ -34,12 +40,12 @@ const packages: MonstroPackage[] = [
             },
             {
                 id: 2,
-                name: "12 Months",
-                description: "$2000 down,  $500 for 12 months.",
-                downPayment: 2000,
-                monthlyPayment: 500,
+                name: "500 Down",
+                description: "$500 down, $299 for 10 months.",
+                downPayment: 500,
+                monthlyPayment: 299,
                 discount: 0,
-                length: 12,
+                length: 10,
                 interval: "mo.",
                 trial: 30,
                 priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
@@ -47,11 +53,11 @@ const packages: MonstroPackage[] = [
             {
                 id: 3,
                 name: "0 Down",
-                description: "Pay 0 down, $500 for 18 months.",
+                description: "Pay 0 down, $299 for 14 months.",
                 downPayment: 0,
                 discount: 0,
-                monthlyPayment: 500,
-                length: 18,
+                monthlyPayment: 299,
+                length: 14,
                 interval: "mo.",
                 trial: 0,
                 priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
@@ -61,12 +67,12 @@ const packages: MonstroPackage[] = [
     },
     {
         id: 2,
-        name: "Monster",
-        price: 15000,
+        name: "Scale",
+        price: 6000,
         description: "Our most comprehensive plan, designed for businesses that want to maximize their growth potential. Includes advanced features, priority support, and exclusive benefits to help scale your business effectively.",
         benefits: [
             {
-                name: "Benefit 1",
+                name: "High-Converting Premium Website",
                 description: "Benefit 1 description"
             },
             {
@@ -77,28 +83,41 @@ const packages: MonstroPackage[] = [
         paymentPlans: [
             {
                 id: 4,
-                name: "12 Months",
-                description: "12 Months payment plan",
-                downPayment: 8000,
-                monthlyPayment: 500,
-                length: 12,
-                interval: "mo.",
-                discount: 0,
-                trial: 30,
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
-            },
-            {
-                id: 5,
                 name: "Pay In Full",
-                description: "24 Months payment plan",
-                downPayment: 15000,
+                description: "Pay in full today for a $1,000 discount.",
+                downPayment: 6000,
                 discount: 1000,
                 monthlyPayment: 0,
                 length: 0,
                 trial: 0,
                 interval: "mo.",
                 priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
+            },
+            {
+                id: 5,
+                name: "1000 Down",
+                description: "1000 down, $499 for 10 months.",
+                downPayment: 1000,
+                monthlyPayment: 499,
+                length: 10,
+                interval: "mo.",
+                discount: 0,
+                trial: 30,
+                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
+            },
+            {
+                id: 6,
+                name: "0 Down",
+                description: "Pay 0 down, $499 for 14 months.",
+                downPayment: 0,
+                discount: 0,
+                monthlyPayment: 499,
+                length: 14,
+                interval: "mo.",
+                trial: 0,
+                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
             }
+
         ]
     }
 ]

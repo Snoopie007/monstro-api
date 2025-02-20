@@ -1,8 +1,8 @@
 import { integer, serial, text, timestamp, pgTable, boolean, jsonb } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { relations, sql } from "drizzle-orm";
-import { vendorProgress } from "./vendor-progress";
-import { vendorReferrals } from "./vendor-referrals";
+import { vendorProgress } from "./VendorProgress";
+import { vendorReferrals } from "./VendorReferrals";
 import { locations } from "./locations";
 import { VendorOnboarding } from "@/types/vendor";
 

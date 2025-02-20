@@ -123,14 +123,14 @@ const PackageInfo = React.memo(({ pkg, onExpandClick, InfoIcon }: PackageInfoPro
             <div className="space-y-2 border-t border-foreground/10 pt-4 group-data-[expanded=true]:block hidden">
                 <ul className="text-sm grid grid-cols-2 gap-2">
                     {pkg.benefits.map((benefit) => (
-                        <li key={benefit.name} className="flex flex-row gap-2 text-sm items-center font-semibold">
+                        <li key={benefit.name} className="flex flex-row gap-2 text-[0.8rem] items-center font-medium">
                             <span>{benefit.name}</span>
                             {benefit.description && (
                                 <Tooltip>
-                                    <TooltipTrigger>
+                                    <TooltipTrigger className="cursor-pointer">
                                         {InfoIcon}
                                     </TooltipTrigger>
-                                    <TooltipContent className="max-w-[200px] border-foreground/10 border">
+                                    <TooltipContent className="max-w-[200px] border-foreground/10 border leading-1 font-normal">
                                         <span className="text-xs">{benefit.description}</span>
                                     </TooltipContent>
                                 </Tooltip>

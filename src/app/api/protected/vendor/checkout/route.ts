@@ -8,6 +8,7 @@ import { StripePayments } from '@/libs/server/stripe';
 
 import { packages, plans } from '@/app/onboarding/components/ProgramSelection/dummy';
 import { MonstroPackage } from '@/types/vendor';
+import { eq } from 'drizzle-orm';
 
 const stripe = new StripePayments();
 
@@ -88,22 +89,22 @@ export async function POST(req: Request) {
             await stripe.createSubscription(plan, customer.id, vendorId, locationId);
         }
 
-        // await db.transaction(async (tx) => {
-        //     await tx.update(locations).set({
-        //         subscriptionPlanId: plan ? plan.id : paymentPlan ? paymentPlan.id : null,
-        //         status: "Active",
-        //         updated: new Date()
-        //     }).where(eq(locations.id, decodedLocationId))
-        //     await tx.update(vendors).set({
-        //         stripeCustomerId: customer.id,
-        //         onboarding: {
-        //             ...progress,
-        //             completed: true,
-        //             completedSteps: [...progress.completedSteps, progress.currentStep]
-        //         },
-        //         updated: new Date()
-        //     }).where(eq(vendors.id, vendorId))
-        // })
+        await db.transaction(async (tx) => {
+            await tx.update(locations).set({
+                subscriptionPlanId: plan ? plan.id : paymentPlan ? paymentPlan.id : null,
+                status: "Active",
+                updated: new Date()
+            }).where(eq(locations.id, decodedLocationId))
+            await tx.update(vendors).set({
+                stripeCustomerId: customer.id,
+                onboarding: {
+                    ...progress,
+                    completed: true,
+                    completedSteps: [...progress.completedSteps, progress.currentStep]
+                },
+                updated: new Date()
+            }).where(eq(vendors.id, vendorId))
+        })
 
         return NextResponse.json({ success: true }, { status: 200 })
     } catch (err) {

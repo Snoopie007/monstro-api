@@ -37,7 +37,6 @@ export async function POST(req: NextRequest) {
 }
 
 
-
 const allowedEvents: Stripe.Event.Type[] = [
     "customer.subscription.updated",
     "customer.subscription.deleted",
