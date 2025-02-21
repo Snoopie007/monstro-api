@@ -5,7 +5,7 @@ import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CountryCode } from "@/types";
 import { toast } from "react-toastify";
-import { cn } from "@/libs/utils";
+import { cn, tryCatch } from "@/libs/utils";
 
 import {
     Form,
@@ -23,20 +23,17 @@ import {
 } from "@/components/forms";
 
 import { Loader2 } from "lucide-react";
-import PhoneInput, { type Value } from 'react-phone-number-input/input'
+import PhoneInput from 'react-phone-number-input/input'
 
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, Button } from "@/components/ui";
 
 import CompanyLogo from "./CompanyLogo";
 import { RegionSelect } from "@/components/forms";
-import { post } from "@/libs/api";
-import { useSession } from "next-auth/react";
 import { CompanyInfoSchema } from "./schemas";
 import { Industries, CountryCodes, TimeZones } from "@/libs/data";
 import { Location } from "@/types";
 interface CompanyProps {
     location: Location;
-    locationId: string;
 }
 
 export default function CompanyInfoForm({ location }: CompanyProps) {
@@ -44,59 +41,54 @@ export default function CompanyInfoForm({ location }: CompanyProps) {
     const [logoUrl, setLogoUrl] = useState(location.logoUrl || "");
     const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
     const [loading, setLoading] = useState(false);
-    const { data: session, update } = useSession();
 
     const form = useForm<z.infer<typeof CompanyInfoSchema>>({
         resolver: zodResolver(CompanyInfoSchema),
         defaultValues: {
-            name: "",
-            // legalName: "",
-            email: "",
-            phone: "",
-            logoUrl: "",
-            industry: "",
-            website: "",
-            address: "",
-            city: "",
-            state: "",
-            postal: "",
-            country: "",
-            timezone: "",
+            name: location.name || "",
+            // legalName: location.legalName || "",
+            email: location.email || "",
+            phone: location.phone || "",
+            logoUrl: location.logoUrl || "",
+            industry: location.industry || "",
+            website: location.website || "",
+            address: location.address || "",
+            city: location.city || "",
+            state: location.state || "",
+            postalCode: location.postalCode || "",
+            country: location.country || "",
+            timezone: location.timezone || ""
         },
         mode: "onSubmit",
     });
 
     useEffect(() => {
         if (location) {
-            form.reset(location as any);
             setPhoneRegion(location.country as CountryCode);
         }
     }, [location]);
 
     async function onSubmit(values: z.infer<typeof CompanyInfoSchema>) {
         setLoading(true);
-        try {
-            const response = await post({
-                url: 'company',
-                data: { ...values, logoUrl },
-                id: location.id
-            });
 
-            const allLocations = session?.user.locations.filter(
-                (location: any) => location.id !== response.id
-            );
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${location.id}/company`, {
+                method: 'POST',
+                body: JSON.stringify(values),
+            })
+        )
 
-
-            toast.success("Info Updated Successfully");
-        } catch (error) {
+        if (error || !result || !result.ok) {
             toast.error("Something went wrong", {
-                position: "top-center",
                 hideProgressBar: true,
                 closeOnClick: true,
             });
-        } finally {
-            setLoading(false);
         }
+
+
+        setLoading(false);
+        toast.success("Info Updated Successfully");
+
     }
 
     return (
@@ -312,11 +304,11 @@ export default function CompanyInfoForm({ location }: CompanyProps) {
 
                                     <FormField
                                         control={form.control}
-                                        name="postal"
+                                        name="postalCode"
                                         render={({ field }) => (
                                             <FormItem className="col-span-3">
                                                 <FormLabel size="tiny">
-                                                    Postal
+                                                    Postal Code
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Input type="text" className="rounded-sm" placeholder="Postal Code" {...field} />
@@ -392,6 +384,7 @@ export default function CompanyInfoForm({ location }: CompanyProps) {
                 <CardFooter className="px-4 py-3 border-t justify-end">
                     <Button
                         variant="foreground"
+                        size="sm"
                         className={cn("children:hidden", {
                             "children:inline-block": loading
                         })}

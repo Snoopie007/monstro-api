@@ -74,7 +74,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                     }),
                 });
                 if (res.ok) {
-                    toast.success("Card added successfully", { theme: "dark" });
+                    toast.success("Card added successfully");
                     setOpen(false);
                 }
             }
@@ -89,7 +89,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
             <DialogTrigger asChild>
                 <Button variant={"ghost"} size={"sm"} className="border-l rounded-none">+ Add Card</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px] rounded-sm">
+            <DialogContent className="sm:max-w-[425px] rounded-sm">
                 <DialogHeader>
                     <DialogTitle>Add a Card</DialogTitle>
                     <DialogDescription>Add a card to management your monthly payments.</DialogDescription>
@@ -103,7 +103,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                                     name="name"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>
+                                            <FormLabel size="tiny">
                                                 Cardholder Name
                                             </FormLabel>
                                             <FormControl>
@@ -116,7 +116,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                             </fieldset>
                             <fieldset>
                                 <FormItem className="flex-1">
-                                    <FormLabel className="font-semibold">
+                                    <FormLabel size="tiny">
                                         Card Info
                                     </FormLabel>
                                     <CardElement

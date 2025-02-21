@@ -1,8 +1,7 @@
 'use client';
 import { use, useMemo, useState } from "react";
 
-import { Avatar, AvatarFallback, AvatarImage, Button, Skeleton } from "@/components/ui"
-import Link from 'next/link'
+import { Button, Skeleton } from "@/components/ui"
 import { useRewards } from '@/hooks/use-rewards'
 import { RewardColumns, UpsertReward } from "./components";
 
@@ -11,7 +10,6 @@ import {
     TableCell, Table, TableHead, TableHeader, TableRow, TableBody
 } from "@/components/ui";
 import { Reward } from "@/types";
-import Loading from "@/components/loading";
 import ErrorComponent from "@/components/error";
 import { ColumnFiltersState, flexRender, getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
 

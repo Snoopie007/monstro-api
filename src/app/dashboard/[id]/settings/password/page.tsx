@@ -1,5 +1,5 @@
 import { Staff } from "@/types";
-import { UpdatePassword } from "./components/update-password";
+import { UpdatePassword } from "./components/UpdatePassword";
 
 async function getStaff(id: number): Promise<Staff> {
     return {

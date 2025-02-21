@@ -1,5 +1,5 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
-import SettingMenu from './components/setting-menu';
+import { SettingMenu } from './components';
 import { auth } from '@/auth';
 
 export default async function SettingsLayout(

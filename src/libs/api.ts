@@ -68,10 +68,6 @@ async function del(props: { url: string, id: string }) {
 	});
 }
 
-// async function syncMember(locationId: string, programId: number) {
-//   const res = await api.post(`/vendor/sync-members`, { locationId, programId });
-//   return;
-// }
 
 async function getProgramsByVendorId(vendorId: number) {
 	const res = await nextApi.get(`/api/auth/register/programs/${vendorId}`);

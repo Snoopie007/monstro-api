@@ -31,7 +31,7 @@ export default async function CompanyProfile(props: { params: Promise<{ id: stri
 
             </div>
             <div>
-                <CompanyInfoForm location={location} locationId={params.id} />
+                <CompanyInfoForm location={location} />
             </div>
 
         </div>

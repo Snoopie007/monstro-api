@@ -11,7 +11,7 @@ export const CompanyInfoSchema = z.object({
     address: z.string(),
     city: z.string(),
     state: z.string(),
-    postal: z.string(),
+    postalCode: z.string(),
     country: z.string(),
-    timezone: z.string(),
+    timezone: z.string().min(1, "Timezone is required"),
 });

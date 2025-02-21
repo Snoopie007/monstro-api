@@ -8,6 +8,9 @@ import { packages, plans } from '@/app/onboarding/components/ProgramSelection/du
 import { MonstroPackage } from '@/types/vendor';
 import { eq } from 'drizzle-orm';
 import * as sendgrid from '@sendgrid/mail';
+import { MonstroData } from '@/libs/data';
+import { EmailSender } from '@/libs/server/emails';
+import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 
 
 const stripe = new StripePayments();
@@ -89,14 +92,19 @@ export async function POST(req: Request) {
         if (plan && plan.id !== 1) {
             await stripe.createSubscription(plan, customer.id, vendorId, locationId);
         }
-
-        // await sendgrid.send({
-        //     to: 'stevey@simplygrowonline.com',
-        //     from: 'no-reply@monstro.com',
-        //     subject: 'Welcome to Monstro',
-        //     text: 'Welcome to Monstro',
-        //     html: '<p>Welcome to Monstro</p>'
-        // })
+        const emailSender = new EmailSender();
+        await emailSender.send('stevey@simplygrowonline.com', 'Welcome to Monstro', InviteEmailTemplate, {
+            ui: {
+                button: "Join the class."
+            },
+            location: {
+                name: 'Gracie\'s Gym',
+            },
+            monstro: MonstroData,
+            member: {
+                name: 'John Doe',
+            }
+        });
 
         await db.transaction(async (tx) => {
             await tx.update(locations).set({

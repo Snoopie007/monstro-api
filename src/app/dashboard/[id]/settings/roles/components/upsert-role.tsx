@@ -42,12 +42,12 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
 
     const [filteredPermissions, setFilteredPermissions] = useState<Array<Permission>>([])
     useEffect(() => {
-        console.log(permissions)
+
         setFilteredPermissions(permissions);
-        if(role) {
+        if (role) {
             const ids = role.permissions.map((permission: any) => permission.permissionId);
             console.log(ids)
-            const permissionNames = permissions.filter((permission: Permission) => ids.includes(Number(permission.id)) ).map((permission) => permission.name);
+            const permissionNames = permissions.filter((permission: Permission) => ids.includes(Number(permission.id))).map((permission) => permission.name);
             form.reset({
                 name: role.name,
                 color: role.color,
@@ -88,25 +88,25 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
 
     async function handleSubmit(v: z.infer<typeof CreateRoleSchema>) {
         console.log(v)
-		const body = {
-			...v
-		};
-		try {
-			if (role && role.id) {
-				// Await the updateProgramLevel call
-				await updateRole(Number(role.id), body, locationId);
-				toast.success("Role Updated");
-			} else {
-				// Await the addProgramLevel call
-				await addRole(body, locationId);
-				toast.success("Role Added");
-			}
+        const body = {
+            ...v
+        };
+        try {
+            if (role && role.id) {
+                // Await the updateProgramLevel call
+                await updateRole(Number(role.id), body, locationId);
+                toast.success("Role Updated");
+            } else {
+                // Await the addProgramLevel call
+                await addRole(body, locationId);
+                toast.success("Role Added");
+            }
             closeEdit();
-		} catch (error) {
-			console.error("Error:", error); // Add logging for debugging
-			toast.error("Something went wrong, please try again later");
-		}
-	};
+        } catch (error) {
+            console.error("Error:", error); // Add logging for debugging
+            toast.error("Something went wrong, please try again later");
+        }
+    };
 
     return (
         <Sheet open={!!role} onOpenChange={(open) => !open}>

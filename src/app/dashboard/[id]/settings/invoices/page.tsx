@@ -35,11 +35,9 @@ export default async function InvoicesPage(props: { params: Promise<{ id: number
                 <Table >
                     <TableHeader>
                         <TableRow>
-                            <TableHead>ID</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead></TableHead>
+                            {['ID', 'Date', 'Status', 'Amount', ''].map((header, i) => (
+                                <TableHead key={i}>{header}</TableHead>
+                            ))}
                         </TableRow>
                     </TableHeader>
                     <TableBody>

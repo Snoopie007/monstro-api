@@ -1,9 +1,9 @@
 import { cn } from '@/libs/utils'
 import Link from 'next/link'
-import { SettingMenuItems } from './setting-menu-items'
+import { SettingMenuItems } from './SettingMenuItems'
 
 
-export default function SettingMenu({ roles, locationId }: { roles: string, locationId: string }) {
+export function SettingMenu({ roles, locationId }: { roles: string, locationId: string }) {
     return (
         <aside className="col-span-2">
             <ul className="text-foreground flex flex-col gap-1">

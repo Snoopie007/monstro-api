@@ -5,6 +5,20 @@ const CountryCodes = [
     { name: "Australia", code: "AU", shortName: "AUS" }
 ]
 
+const MonstroData = {
+    fullAddress: '7901 4th ST N STE 300 St Petersburg, FL 33702, USA',
+    phone: '123-456-7890',
+    email: 'stevey@simplygrowonline.com',
+    name: 'John Doe',
+    url: 'https://mymonstro.com',
+    privacyUrl: 'https://mymonstro.com/legal/privacy-policy',
+    termsUrl: 'https://mymonstro.com/legal/terms-of-service',
+    supportUrl: 'https://mymonstro.com/support',
+    unsubscribeUrl: 'https://mymonstro.com/unsubscribe',
+    logoUrl: 'https://mymonstro.com/logo.png',
+}
+
+
 const TimeZones = [
     "GMT-04:00 America/New_York (EDT)",
     "GMT-05:00 America/Chicago (CDT)",
@@ -109,5 +123,6 @@ export {
     CountryCodes,
     Regions,
     TimeZones,
-    Industries
+    Industries,
+    MonstroData
 }

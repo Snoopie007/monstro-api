@@ -50,7 +50,7 @@ class StripePayments {
     async createPaymentIntent(
         amount: number,
         customerId: string,
-        cardId: string,
+        cardId: string | undefined,
         options?: {
             authorizeOnly?: boolean,
             statement?: string,
@@ -67,7 +67,7 @@ class StripePayments {
             customer: customerId,
             setup_future_usage: "off_session",
             statement_descriptor: "Monstro",
-            payment_method: cardId,
+            ...(cardId && { payment_method: cardId }),
             return_url: "https://mymonstro.com",
         };
 

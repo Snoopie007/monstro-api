@@ -4,6 +4,7 @@ export type Location = {
     name: string;
     industry: string | null;
     address: string | null;
+    email: string | null;
     city: string | null;
     state: string | null;
     postalCode: string | null;
