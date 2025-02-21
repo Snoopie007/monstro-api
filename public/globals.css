@@ -94,6 +94,11 @@
 	::-webkit-scrollbar-thumb {
 		@apply bg-neutral-500/50 rounded-full;
 	}
+	input:-webkit-autofill,
+	input:-webkit-autofill:focus {
+		-webkit-box-shadow: 0 0 0px 1000px #fff inset !important;
+		-webkit-text-fill-color: #000 !important;
+	}
 	:root {
 		--background: 0 0% 100%;
 		--foreground: 222.2 84% 4.9%;
@@ -124,10 +129,8 @@
 		--ring: 222.2 84% 4.9%;
 	
 		--radius: 0.5rem;
-	
 		--input-box-shadow: inset 0 0.25em 0 0 #f0f1f3;
 	
-		
 		--chart-1: 12 76% 61%;
 		--chart-2: 173 58% 39%;
 		--chart-3: 197 37% 24%;

@@ -40,7 +40,6 @@ export default function ImportMembers({ locationId }: { locationId: string }) {
                         headers: results.meta.fields as string[],
                         rows: results.data as Record<string, any>[]
                     });
-
                 }
                 // step: function (row, parser) {
                 //     lineCount++;

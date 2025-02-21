@@ -1,13 +1,13 @@
 'use client'
 import { Button, Card, CardContent, CardHeader, CardTitle, Separator } from '@/components/ui'
-import { VendorWallet } from '../data'
+import { Wallet as WalletType } from '@/types'
 import React from 'react'
 import { formatAmountForDisplay } from '@/libs/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/forms'
 
 
 interface WalletProps {
-    wallet: VendorWallet
+    wallet: WalletType
 }
 
 export default function Wallet({ wallet }: WalletProps) {
@@ -54,7 +54,7 @@ export default function Wallet({ wallet }: WalletProps) {
 }
 
 
-function AutoRecharge({ wallet }: { wallet: VendorWallet }) {
+function AutoRecharge({ wallet }: { wallet: WalletType }) {
 
     return (
         <div className='text-sm  space-y-2 bg-foreground/10 py-3 px-2 rounded-xs'>

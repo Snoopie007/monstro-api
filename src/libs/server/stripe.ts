@@ -147,6 +147,11 @@ class StripePayments {
     async getSubscriptions(customerId: string) {
         return await this._stripe.subscriptions.list({ customer: customerId, limit: 10 });
     }
+
+    async getInvoices(customerId: string) {
+        const res = await this._stripe.charges.list({ customer: customerId, limit: 10 });
+        return res.data;
+    }
 }
 
 export { StripePayments };

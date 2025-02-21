@@ -31,7 +31,7 @@ export default {
 							},
 							with: {
 								locations: {
-									where: (locations, { eq }) => eq(locations.status, 'Active'),
+									where: (locations, { eq, or }) => or(eq(locations.status, 'Active'), eq(locations.status, 'Pending')),
 									columns: {
 										id: true,
 										name: true

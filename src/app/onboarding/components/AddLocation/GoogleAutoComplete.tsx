@@ -55,11 +55,11 @@ export function AutoComplete({ onSelectChange }: AutoCompleteProps) {
             !place.name
         ) return;
 
-        console.log(place)
+
 
         const fullAddress = place.address_components;
-        const getAddressComponent = (type: string) =>
-            fullAddress.find(comp => comp.types.includes(type))?.long_name || "";
+        const getAddressComponent = (type: string, shortName: boolean = false) =>
+            fullAddress.find(comp => comp.types.includes(type))?.[shortName ? "short_name" : "long_name"] || "";
 
 
         onSelectChange({
@@ -69,9 +69,9 @@ export function AutoComplete({ onSelectChange }: AutoCompleteProps) {
             city: getAddressComponent("locality"),
             state: getAddressComponent("administrative_area_level_1"),
             logoUrl: place.icon,
-            country: getAddressComponent("country"),
+            country: getAddressComponent("country", true),
             postalCode: getAddressComponent("postal_code"),
-            phone: place.formatted_phone_number,
+            phone: place.international_phone_number,
             metadata: {
                 lat: place.geometry.location.lat(),
                 lng: place.geometry.location.lng(),

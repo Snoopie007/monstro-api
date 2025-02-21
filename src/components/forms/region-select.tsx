@@ -29,25 +29,25 @@ export function RegionSelect({ value, onChange, className }: RegionSelectProps) 
                     <Button
                         variant="outline"
                         role="combobox"
-                        className={cn("w-full   bg-foreground border border-gray-200 cursor-pointer  rounded-xs font-normal justify-between", className)}
+                        className={cn("w-full bg-background border border-gray-200 cursor-pointer  rounded-xs font-normal justify-between", className)}
                     >
                         {selected ? selected : "Select a state"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </FormControl>
             </PopoverTrigger>
-            <PopoverContent align="start" className={cn("w-[200px] p-0")}>
-                <Command className={cn("bg-white text-black rounded-xs")}>
+            <PopoverContent align="start" className={cn("w-[200px] p-0 rounded-sm")}>
+                <Command className={cn("bg-background text-foreground rounded-sm ")}>
                     <CommandInput placeholder="Seach state" className="h-auto py-2" />
-                    <CommandList>
+                    <CommandList >
                         <CommandEmpty>No region found.</CommandEmpty>
                         <CommandGroup>
-                            <ScrollArea className="overflow-y-auto  w-[210px] h-52">
+                            <ScrollArea className="overflow-y-auto w-[210px] h-52 ">
                                 {Regions.us.regions.map((region) => (
                                     <CommandItem
                                         value={region}
                                         key={region}
-                                        className="rounded-xs text-black cursor-pointer"
+                                        className="rounded-xs text-foreground cursor-pointer"
                                         onSelect={() => {
                                             setSelected(region);
                                             onChange(region);

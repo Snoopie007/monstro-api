@@ -25,7 +25,6 @@ import { Button } from "@/components/ui/button";
 import { dummyContract } from "../ProgramSelection/dummy";
 import { DialogTrigger, Dialog, DialogContent, DialogDescription, DialogTitle, DialogHeader, DialogFooter, DialogClose } from "@/components/ui";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MonstroPackage, MonstroPlan } from "@/types/vendor";
 import { UserSelection } from "./VendorPayment";
 import { useSession } from "next-auth/react";
 
@@ -47,13 +46,15 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
     const [locationId, setLocationId] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [validCard, setValidCard] = useState<boolean>(false);
-    const { data: session } = useSession();
+    const { data: session, update } = useSession();
     const stripe = useStripe();
     const elements = useElements();
     const router = useRouter();
 
     useEffect(() => {
+
         if (session?.user.locations[0]) {
+
             setLocationId(session.user.locations[0].id);
         }
     }, [session])
@@ -71,6 +72,7 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
     });
 
     async function onSubmit(v: z.infer<typeof VendorBillingSchema>) {
+
         if (!elements || !stripe || !locationId) return;
         setLoading(true);
         const toastRef = toast.loading("Processing payment...", { className: 'text-sm font-medium ' });
@@ -95,8 +97,14 @@ export default function VendorPaymentForm({ userSelection }: { userSelection: Us
                     return handlePaymentError(toastRef, "An error occurred while processing your payment.");
                 }
 
-                toast.update(toastRef, { render: "Payment successful", type: "success", autoClose: 2000, isLoading: false });
-                // router.push(`/dashboard/${locationId}`)
+                update({
+                    onboarding: {
+                        ...progress,
+                        completed: true
+                    }
+                })
+
+                router.push(`/dashboard/${locationId}`)
             } else {
                 setLoading(false);
                 return handlePaymentError(toastRef, "Invalid Card.");
@@ -275,15 +283,15 @@ function TermsAndConditions({ checked, setChecked }: TermsAndConditionsProps) {
                     </p>
                 </div>
             </DialogTrigger>
-            <DialogContent className="max-w-[500px] space-y-4 py-4 border-foreground/10">
+            <DialogContent className="max-w-[500px] space-y-4 py-4 border-gray-100 bg-white text-black">
                 <DialogHeader className="hidden">
                     <DialogTitle></DialogTitle>
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col gap-2 space-y-1 ">
                     <p className="font-semibold  text-base px-4">Monstro <span className="text-red-500">Terms of Service</span></p>
-                    <ScrollArea className="h-[500px] px-4 border-y border-foreground/10" onScrollCapture={handleScroll}>
-                        <div className='prose pb-4   text-foreground prose-strong:text-foreground prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'
+                    <ScrollArea className="h-[500px] px-4 border-y border-gray-200" onScrollCapture={handleScroll}>
+                        <div className='prose pb-4   text-black prose-strong:text-black prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'
                             dangerouslySetInnerHTML={{ '__html': dummyContract }}>
                         </div>
                     </ScrollArea>
@@ -291,7 +299,7 @@ function TermsAndConditions({ checked, setChecked }: TermsAndConditionsProps) {
                 </div>
                 <DialogFooter className="px-4 py-0">
                     <DialogClose asChild>
-                        <Button variant={"outline"} onClick={() => setChecked(false)} size={"xs"} className="hover:bg-transparent cursor-pointer">
+                        <Button variant={"clear"} onClick={() => setChecked(false)} size={"xs"} >
                             Decline
                         </Button>
                     </DialogClose>
@@ -299,8 +307,8 @@ function TermsAndConditions({ checked, setChecked }: TermsAndConditionsProps) {
                         <Button
                             disabled={!scrolled}
                             onClick={() => setChecked(true)}
+                            variant={"continue"}
                             size={"xs"}
-                            className="bg-red-500 hover:bg-red-600 cursor-pointer"
                         >
                             Accept
                         </Button>

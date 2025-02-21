@@ -1,22 +1,27 @@
 
 import { auth } from '@/auth';
-import CompanyInfoForm from './components/general-info'
+import CompanyInfoForm from './components/CompanyInfo'
 import { Session } from 'next-auth';
+import { decodeId } from '@/libs/server/sqids';
+import { db } from '@/db/db';
 
+
+async function getCompanyInfo(id: string) {
+    const decoded = decodeId(id);
+    const location = await db.query.locations.findFirst({
+        where: (location, { eq }) => eq(location.id, decoded)
+    });
+    return location;
+}
 
 export default async function CompanyProfile(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     const session: Session | null = await auth();
-    const location = session?.user.locations.find((e: any) => e.id == params.id);
-
-    const companyInfo = {
-        ...location,
-        businessName: location.name,
-        legalName: location.name,
-        logo: location.logo_url || '',
-        postal: location.postal_code || '',
-
+    const location = await getCompanyInfo(params.id);
+    if (!location) {
+        return <div>Location not found</div>
     }
+
 
     return (
         <div>
@@ -26,7 +31,7 @@ export default async function CompanyProfile(props: { params: Promise<{ id: stri
 
             </div>
             <div>
-                <CompanyInfoForm companyInfo={companyInfo} locationId={params.id} />
+                <CompanyInfoForm location={location} locationId={params.id} />
             </div>
 
         </div>

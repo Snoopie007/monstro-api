@@ -10,7 +10,7 @@ export default auth(async (req) => {
 		const isLoggedin = !!req.auth;
 		const locations = req.auth?.user?.locations || [];
 		const onboarding = req.auth?.user?.onboarding;
-		// Handle protected API routes
+
 		if (pathname.startsWith("/api/protected")) {
 			if (!isLoggedin) {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

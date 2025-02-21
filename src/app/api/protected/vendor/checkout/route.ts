@@ -3,14 +3,15 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { locations, vendors, wallet } from '@/db/schemas';
 import { decodeId } from '@/libs/server/sqids';
-
 import { StripePayments } from '@/libs/server/stripe';
-
 import { packages, plans } from '@/app/onboarding/components/ProgramSelection/dummy';
 import { MonstroPackage } from '@/types/vendor';
 import { eq } from 'drizzle-orm';
+import * as sendgrid from '@sendgrid/mail';
+
 
 const stripe = new StripePayments();
+sendgrid.setApiKey(process.env.SENDGRID_API_KEY!);
 
 export async function POST(req: Request) {
     const data = await req.json();
@@ -88,6 +89,14 @@ export async function POST(req: Request) {
         if (plan && plan.id !== 1) {
             await stripe.createSubscription(plan, customer.id, vendorId, locationId);
         }
+
+        // await sendgrid.send({
+        //     to: 'stevey@simplygrowonline.com',
+        //     from: 'no-reply@monstro.com',
+        //     subject: 'Welcome to Monstro',
+        //     text: 'Welcome to Monstro',
+        //     html: '<p>Welcome to Monstro</p>'
+        // })
 
         await db.transaction(async (tx) => {
             await tx.update(locations).set({

@@ -23,152 +23,122 @@ import {
 } from "@/components/forms";
 
 import { Loader2 } from "lucide-react";
-import PhoneInput from 'react-phone-number-input/input'
-import { type Value } from 'react-phone-number-input'
+import PhoneInput, { type Value } from 'react-phone-number-input/input'
+
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, Button } from "@/components/ui";
 
-import CompanyLogo from "./company-logo";
+import CompanyLogo from "./CompanyLogo";
 import { RegionSelect } from "@/components/forms";
 import { post } from "@/libs/api";
 import { useSession } from "next-auth/react";
 import { CompanyInfoSchema } from "./schemas";
 import { Industries, CountryCodes, TimeZones } from "@/libs/data";
-
-
-
-type CompanyInfo = {
-    businessName: string;
-    legalName: string;
-    email: string;
-    phone: Value;
-    logo: string;
-    industry: string;
-    website: string;
-    address: string;
-    city: string;
-    state: string;
-    postal: string;
-    timezone: string;
-    country: string;
-}
-
+import { Location } from "@/types";
 interface CompanyProps {
-    companyInfo: CompanyInfo;
+    location: Location;
     locationId: string;
 }
 
+export default function CompanyInfoForm({ location }: CompanyProps) {
 
-export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProps) {
-    const [errorMessage, setErrorMessage] = useState("");
-    const [logoUrl, setLogoUrl] = useState(companyInfo.logo || "");
-    const [phoneRegion, setPhoneRegion] = useState<CountryCode | undefined>("US");
-    const [loeading, setLoading] = useState(false);
+    const [logoUrl, setLogoUrl] = useState(location.logoUrl || "");
+    const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
+    const [loading, setLoading] = useState(false);
     const { data: session, update } = useSession();
 
     const form = useForm<z.infer<typeof CompanyInfoSchema>>({
         resolver: zodResolver(CompanyInfoSchema),
         defaultValues: {
-            businessName: "",
-            legalName: "",
-            email: companyInfo && companyInfo.email ? companyInfo.email : "",
-            phone: companyInfo && companyInfo.phone ? companyInfo.phone : "",
-            logo: "",
-            industry: companyInfo && companyInfo.industry ? companyInfo.industry : "",
+            name: "",
+            // legalName: "",
+            email: "",
+            phone: "",
+            logoUrl: "",
+            industry: "",
             website: "",
             address: "",
             city: "",
-            state: companyInfo && companyInfo.state ? companyInfo.state : "",
+            state: "",
             postal: "",
-            country: companyInfo && companyInfo.country ? companyInfo.country : "",
-            timezone: companyInfo && companyInfo.timezone ? companyInfo.timezone : "",
+            country: "",
+            timezone: "",
         },
         mode: "onSubmit",
     });
 
     useEffect(() => {
-        if (companyInfo) {
-            form.reset(companyInfo);
-            setPhoneRegion(companyInfo.country as CountryCode);
+        if (location) {
+            form.reset(location as any);
+            setPhoneRegion(location.country as CountryCode);
         }
-    }, [companyInfo]);
+    }, [location]);
 
-    async function onSubmit(v: z.infer<typeof CompanyInfoSchema>) {
-        v.logo = logoUrl;
+    async function onSubmit(values: z.infer<typeof CompanyInfoSchema>) {
         setLoading(true);
         try {
-            // const { data: session, update } = useSession();
-            await post({ url: 'company', data: v, id: locationId }).then(async (response) => {
-                console.log(response)
-                const allLocations = session?.user.locations.filter((location: any) => location.id != response.id);
-                allLocations.push(response);
-                const updatedSession = await update({
-                    user: {
-                        locations: allLocations,
-                    }
-                });
-                setLoading(false);
-                toast.success("Info Updated Successfully");
-            }).catch((error) => {
-                toast.error("Something Went Wrong",
-                    {
-                        position: "top-center",
-                        hideProgressBar: true,
-                        closeOnClick: true,
-                    }
-                );
+            const response = await post({
+                url: 'company',
+                data: { ...values, logoUrl },
+                id: location.id
             });
 
-        } catch (e: any) {
-            setLoading(false);
-            toast.error("Your payment was declined by your bank, please talk to support. ",
-                {
-                    position: "top-center",
-                    hideProgressBar: true,
-                    closeOnClick: true,
-                }
+            const allLocations = session?.user.locations.filter(
+                (location: any) => location.id !== response.id
             );
 
+
+            toast.success("Info Updated Successfully");
+        } catch (error) {
+            toast.error("Something went wrong", {
+                position: "top-center",
+                hideProgressBar: true,
+                closeOnClick: true,
+            });
+        } finally {
+            setLoading(false);
         }
     }
+
     return (
         <Card className='rounded-sm'>
-
             <CardContent className="p-0">
                 <CardHeader className="border-b py-2 px-4">
                     <CardTitle className="text-lg">General Information</CardTitle>
                 </CardHeader>
                 <div className="px-4 py-6">
-                    <CompanyLogo logo={logoUrl} setLogoUrl={setLogoUrl} locationId={locationId} />
+                    <CompanyLogo logo={logoUrl} setLogoUrl={setLogoUrl} locationId={location.id} />
                     <Form {...form}>
                         <form className="space-y-3">
                             <input type="hidden" name="logo" value={logoUrl} />
 
                             <fieldset>
                                 <div className="flex gap-4">
-                                    <FormField control={form.control} name="businessName" render={({ field }) => (
-                                        <FormItem className="flex-1 mt-0">
-                                            <FormLabel className="font-semibold">
-                                                Friendly Business Name
-                                            </FormLabel>
-                                            <FormControl>
-                                                <Input type="text" className="rounded-sm" placeholder="Friendly Business Name" {...field} />
-                                            </FormControl>
-
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
+                                    <FormField
+                                        control={form.control}
+                                        name="name"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1 mt-0">
+                                                <FormLabel size="tiny">
+                                                    Friendly Business Name
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Input type="text" className="rounded-sm" placeholder="Friendly Business Name" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
                                     />
 
                                     <FormField
                                         control={form.control}
-                                        name="legalName"
+                                        name="name"
                                         render={({ field }) => (
                                             <FormItem className="flex-1 mt-0">
-                                                <FormLabel className="font-semibold">
+                                                <FormLabel size="tiny">
                                                     Legal Business Name
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <Input type="text" className="rounded-sm" placeholder=" Legal Business Name" {...field} />
+                                                    <Input type="text" className="rounded-sm" placeholder="Legal Business Name" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -176,18 +146,19 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
                                     />
                                 </div>
                             </fieldset>
-                            <fieldset >
+
+                            <fieldset>
                                 <div className="flex flex-row gap-4">
                                     <FormField
                                         control={form.control}
                                         name="email"
                                         render={({ field }) => (
                                             <FormItem className="flex-1">
-                                                <FormLabel className="font-semibold">
+                                                <FormLabel size="tiny">
                                                     Business Email
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <Input type="email" className="rounded-sm" placeholder="Email"  {...field} />
+                                                    <Input type="email" className="rounded-sm" placeholder="Email" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -195,33 +166,30 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
                                     />
 
                                     <div className="flex-1 justify-center space-y-2">
-
-                                        <FormLabel className="font-semibold  ">
+                                        <FormLabel size="tiny">
                                             Business Phone
                                         </FormLabel>
-                                        <div className="flex  flex-row gap-1">
+                                        <div className="flex flex-row gap-1">
                                             <Select onValueChange={(value: string) => { setPhoneRegion(value as CountryCode) }} defaultValue={phoneRegion}>
-
-                                                <SelectTrigger className="rounded-sm w-[22%] h-auto" >
-                                                    <SelectValue defaultValue={companyInfo.country} />
+                                                <SelectTrigger className="rounded-sm w-[22%] h-auto">
+                                                    <SelectValue defaultValue={location.country || "US"} />
                                                 </SelectTrigger>
 
                                                 <SelectContent>
-                                                    {CountryCodes.map((country, index) => (
-                                                        <SelectItem key={index} value={country.code}>
+                                                    {CountryCodes.map((country) => (
+                                                        <SelectItem key={country.code} value={country.code}>
                                                             {country.shortName}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+
                                             <FormField
                                                 control={form.control}
                                                 name="phone"
                                                 render={({ field: { onChange, value } }) => (
                                                     <FormItem className="flex-1">
-
-                                                        <FormControl >
-
+                                                        <FormControl>
                                                             <PhoneInput
                                                                 type="tel"
                                                                 className="rounded-sm bg-transparent inline-block w-full border py-1.5 px-4"
@@ -232,29 +200,27 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
                                                                 onChange={onChange}
                                                             />
                                                         </FormControl>
-
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
                                             />
                                         </div>
-
                                     </div>
-
                                 </div>
                             </fieldset>
-                            <fieldset >
+
+                            <fieldset>
                                 <div className="flex flex-row gap-4">
                                     <FormField
                                         control={form.control}
                                         name="website"
                                         render={({ field }) => (
                                             <FormItem className="flex-1">
-                                                <FormLabel className="font-semibold">
+                                                <FormLabel size="tiny">
                                                     Website
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <Input type="text" className="rounded-sm" placeholder="Website"  {...field} />
+                                                    <Input type="text" className="rounded-sm" placeholder="Website" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -266,58 +232,58 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
                                         name="industry"
                                         render={({ field }) => (
                                             <FormItem className="flex-1">
-                                                <FormLabel className="font-semibold">
+                                                <FormLabel size="tiny">
                                                     Industry
                                                 </FormLabel>
-
                                                 <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                                     <FormControl>
-                                                        <SelectTrigger className="rounded-sm" >
+                                                        <SelectTrigger className="rounded-sm">
                                                             <SelectValue placeholder="Select your industry" />
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
                                                         {Industries.map((industry, index) => (
-                                                            <SelectItem key={index} value={industry}>
+                                                            <SelectItem key={index} value={industry} >
                                                                 {industry}
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
-
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
                                 </div>
                             </fieldset>
-                            <fieldset >
+
+                            <fieldset>
                                 <div className="flex flex-row gap-4">
                                     <FormField
                                         control={form.control}
                                         name="address"
                                         render={({ field }) => (
                                             <FormItem className="flex-1">
-                                                <FormLabel className="font-semibold">
+                                                <FormLabel size="tiny">
                                                     Street Address
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <Input type="text" className="rounded-sm" placeholder="Street Address"  {...field} />
+                                                    <Input type="text" className="rounded-sm" placeholder="Street Address" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
+
                                     <FormField
                                         control={form.control}
                                         name="city"
                                         render={({ field }) => (
-                                            <FormItem className="">
-                                                <FormLabel className="font-semibold">
+                                            <FormItem>
+                                                <FormLabel size="tiny">
                                                     City
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <Input type="text" className="rounded-sm" placeholder="City"  {...field} />
+                                                    <Input type="text" className="rounded-sm" placeholder="City" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -326,56 +292,58 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
                                 </div>
                             </fieldset>
 
-                            <fieldset >
+                            <fieldset>
                                 <div className="grid grid-cols-9 gap-4">
                                     <FormField
                                         control={form.control}
                                         name="state"
                                         render={({ field }) => (
                                             <FormItem className="col-span-3">
-                                                <FormLabel className="font-semibold">
+                                                <FormLabel size="tiny">
                                                     State / Prov / Region
                                                 </FormLabel>
                                                 <RegionSelect value={field.value}
                                                     onChange={(value) => field.onChange(value)}
                                                 />
                                                 <FormMessage />
-                                            </FormItem >
+                                            </FormItem>
                                         )}
                                     />
+
                                     <FormField
                                         control={form.control}
                                         name="postal"
                                         render={({ field }) => (
                                             <FormItem className="col-span-3">
-                                                <FormLabel className="font-semibold">
+                                                <FormLabel size="tiny">
                                                     Postal
                                                 </FormLabel>
                                                 <FormControl>
-                                                    <Input type="text" className="rounded-sm" placeholder="City"  {...field} />
+                                                    <Input type="text" className="rounded-sm" placeholder="Postal Code" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
+
                                     <FormField
                                         control={form.control}
                                         name="country"
                                         render={({ field }) => (
                                             <FormItem className="col-span-3">
-                                                <FormLabel className="font-semibold">
+                                                <FormLabel size="tiny">
                                                     Country
                                                 </FormLabel>
                                                 <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                                     <FormControl>
-                                                        <SelectTrigger className="rounded-sm" >
+                                                        <SelectTrigger className="rounded-sm">
                                                             <SelectValue placeholder="Select your country" />
                                                         </SelectTrigger>
                                                     </FormControl>
-                                                    <SelectContent >
-                                                        {CountryCodes.map((t) => (
-                                                            <SelectItem key={t.code} value={t.code}>
-                                                                {t.name}
+                                                    <SelectContent>
+                                                        {CountryCodes.map((country) => (
+                                                            <SelectItem key={country.code} value={country.code}>
+                                                                {country.name}
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>
@@ -386,26 +354,27 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
                                     />
                                 </div>
                             </fieldset>
-                            <fieldset >
+
+                            <fieldset>
                                 <div className="flex flex-row gap-4">
                                     <FormField
                                         control={form.control}
                                         name="timezone"
                                         render={({ field }) => (
                                             <FormItem className="flex-1">
-                                                <FormLabel className="font-semibold">
+                                                <FormLabel size="tiny">
                                                     Timezone
                                                 </FormLabel>
                                                 <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} required>
                                                     <FormControl>
-                                                        <SelectTrigger className="rounded-sm" >
+                                                        <SelectTrigger className="rounded-sm">
                                                             <SelectValue placeholder="Select your timezone" />
                                                         </SelectTrigger>
                                                     </FormControl>
-                                                    <SelectContent >
-                                                        {TimeZones.map((t, index) => (
-                                                            <SelectItem key={index} value={t.split(" ")[1]}>
-                                                                {t}
+                                                    <SelectContent>
+                                                        {TimeZones.map((timezone, index) => (
+                                                            <SelectItem key={index} value={timezone.split(" ")[1]}>
+                                                                {timezone}
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>
@@ -414,17 +383,18 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
                                             </FormItem>
                                         )}
                                     />
-
                                 </div>
                             </fieldset>
-
                         </form>
                     </Form>
                 </div>
+
                 <CardFooter className="px-4 py-3 border-t justify-end">
                     <Button
-                        variant={"foreground"}
-                        className={cn(" children:hidden", { "children:inline-block": loeading })}
+                        variant="foreground"
+                        className={cn("children:hidden", {
+                            "children:inline-block": loading
+                        })}
                         type="submit"
                         onClick={form.handleSubmit(onSubmit)}
                     >
@@ -433,7 +403,6 @@ export default function CompanyInfoForm({ companyInfo, locationId }: CompanyProp
                     </Button>
                 </CardFooter>
             </CardContent>
-        </Card >
-
+        </Card>
     );
 }

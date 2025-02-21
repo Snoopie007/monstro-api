@@ -6,7 +6,7 @@ import Image from "next/image";
 import { postFile } from "@/libs/api";
 
 
-export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: string, setLogoUrl: Function, locationId: string }) {
+export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: string, setLogoUrl: Function, locationId: number }) {
     const fileRef = useRef<HTMLInputElement | null>(null)
     async function uploadLogo() {
         const file = fileRef.current?.files?.[0]
@@ -16,9 +16,9 @@ export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: st
         data.append("fileDirectory", 'business-logo');
         try {
             const upload = await postFile({ url: 's3-upload', data: data, id: locationId });
-            console.log(upload);
+
             setLogoUrl(upload.url);
-            // updateMember({ avatar: avatar.fileUrl })
+
         } catch (error) {
             console.log(error)
         }
@@ -33,24 +33,29 @@ export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: st
 
             <input type='file' ref={fileRef} onInput={uploadLogo} className='hidden' />
             {logo ? (
+                <div className="flex flex-row gap-6 items-center">
+                    <div className='avatar group shrink relative items-end flex'>
+                        <Image src={logo} width={100} height={100} className="aspect-square bg-gray-200 rounded-full" priority={true} alt='company logo' />
+                        <div className="flex">
+                            <div onClick={() => { fileRef.current?.click() }} className='cursor-pointer '>
+                                <UploadCloudIcon size={16} className='mr-2 ' />
+                            </div>
+                            <div onClick={removeLogo} className='cursor-pointer'>
+                                <Trash2Icon size={16} className='mr-2' />
+                            </div>
+                        </div>
 
-                <div className='avatar group shrink relative items-end flex'>
-                    <Image src={logo}
-                        width={100}
-                        height={100}
-                        className="aspect-square"
-                        priority={true}
-                        alt='company logo' />
-                    <div className="flex">
-                        <div onClick={() => { fileRef.current?.click() }} className='cursor-pointer '>
-                            <UploadCloudIcon size={16} className='mr-2 ' />
-                        </div>
-                        <div onClick={removeLogo} className='cursor-pointer'>
-                            <Trash2Icon size={16} className='mr-2' />
-                        </div>
                     </div>
-
+                    <div className="flex-1">
+                        <b className="font-semibold text-base">
+                            Upload Your Company Logo
+                        </b>
+                        <p className="text-xs mt-1 leading-5">
+                            The proposed size is 350px * 180px. No bigger than 2.5 MB. Only PNG, JPG, JPEG are allowed.
+                        </p>
+                    </div>
                 </div>
+
 
 
             ) : (

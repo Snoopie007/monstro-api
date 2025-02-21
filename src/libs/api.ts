@@ -26,7 +26,7 @@ async function fetcher(data: { url: string, id: string }) {
 }
 
 
-async function postFile(props: { url: string, data: any, id: string }) {
+async function postFile(props: { url: string, data: any, id: number }) {
 	let headers = {};
 	headers = {
 		"Content-Type": "multipart/form-data"
@@ -50,7 +50,7 @@ async function getRegister(props: { url: string }) {
 }
 
 
-async function post(props: { url: string, data: any, id: string }) {
+async function post(props: { url: string, data: any, id: number }) {
 	return nextApi.post(`/api/protected/${props.id}/${props.url}`, props.data).then((res) => {
 		return res.data.data;
 	});

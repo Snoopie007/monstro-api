@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'mymonstroapp.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'maps.gstatic.com',
+        pathname: '/**',
       }
     ]
   },

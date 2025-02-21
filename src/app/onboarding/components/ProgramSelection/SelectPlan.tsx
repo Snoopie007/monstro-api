@@ -40,10 +40,10 @@ export function SelectPlan() {
         <div className="flex flex-col gap-4">
             <Tabs defaultValue="plans" >
                 <TabsList className="grid w-full grid-cols-2 rounded-xs bg-gray-200" >
-                    <TabsTrigger value="plans" className="rounded-xs text-sm cursor-pointer">Plans</TabsTrigger>
-                    <TabsTrigger value="packages" className="rounded-xs text-sm cursor-pointer">Packages</TabsTrigger>
+                    <TabsTrigger value="plans" className="rounded-xs text-sm cursor-pointer data-[state=active]:bg-indigo-500 data-[state=active]:text-white">Plans</TabsTrigger>
+                    <TabsTrigger value="packages" className="rounded-xs text-sm cursor-pointer data-[state=active]:bg-indigo-500 data-[state=active]:text-white">Packages</TabsTrigger>
                 </TabsList>
-                <TabsContent value="plans">
+                <TabsContent value="plans" >
                     <PlanList />
                 </TabsContent>
                 <TabsContent value="packages">

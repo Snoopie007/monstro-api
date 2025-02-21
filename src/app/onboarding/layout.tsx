@@ -4,6 +4,8 @@ import { OnboardingHeader } from "./components/OnboardingHeader";
 import { ScrollArea, TooltipProvider } from "@/components/ui";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+
+
 export default async function OnboardingLayout({ children, }: { children: ReactNode }) {
     const session = await auth();
 

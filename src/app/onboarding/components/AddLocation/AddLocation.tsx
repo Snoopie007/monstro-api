@@ -48,7 +48,7 @@ export default function AddLocation() {
 
     function selectAddress(result: Record<string, any>) {
         const { metadata, ...rest } = result;
-
+        console.log(rest)
         form.reset(rest);
         setMetadata(metadata);
         setEdit(true);

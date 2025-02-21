@@ -11,6 +11,7 @@ export async function POST(req: Request) {
     try {
         const [{ lid, name }] = await db.insert(locations).values({
             ...data,
+            phone: data.phone.startsWith('+') ? data.phone.replace(/[^0-9+]/g, '') : `+${data.phone.replace(/[^0-9]/g, '')}`,
             created: new Date(),
             status: "Pending"
         }).returning({ lid: locations.id, name: locations.name });

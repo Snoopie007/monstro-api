@@ -10,8 +10,8 @@ import { vendors } from "./vendors";
 
 export const locations = pgTable("locations", {
     id: serial("id").primaryKey(),
-    name: text("name"),
-    industry: varchar("industry"),
+    name: text("name").notNull(),
+    industry: varchar("industry").notNull(),
     address: text("address"),
     city: text("city"),
     state: text("state"),

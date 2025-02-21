@@ -55,7 +55,6 @@ export default function LoginForm() {
 			if (lid) {
 				localStorage.setItem('locationId', lid);
 			}
-
 			router.push(lid ? `/dashboard/${lid}` : '/onboarding');
 
 		} catch (error) {
@@ -81,7 +80,7 @@ export default function LoginForm() {
 								<FormControl>
 									<Input
 										type="email"
-										className={"bg-white border border-gray-200  rounded-sm py-4 px-4 text-sm "}
+										className={"bg-white border border-gray-200 rounded-sm py-4 px-4 text-sm  "}
 										placeholder="Your email"
 										{...field}
 									/>
@@ -108,13 +107,14 @@ export default function LoginForm() {
 								<FormControl>
 									<Input
 										type="password"
+
 										className={"bg-white border border-gray-200  rounded-sm py-4 px-4 text-sm shadow-none"}
 										placeholder="Your password"
 										{...field}
 									/>
 								</FormControl>
 
-								<FormMessage />
+								<FormMessage className="text-xs" />
 							</FormItem>
 						)}
 					/>

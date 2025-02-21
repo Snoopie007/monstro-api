@@ -36,13 +36,13 @@ function OnboardingHeader() {
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Avatar className="ml-2  h-7 w-7">
-                            <AvatarImage src={`${user.image !== "null" ? user.image : ""}`} alt={user.name} />
+                            <AvatarImage src={`${user.image !== null ? user.image : ""}`} alt={user.name} />
                             <AvatarFallback className="text-xs  bg-gray-200 text-black/80  font-semibold">
                                 {`${user.name.charAt(0)}${user.name.charAt(user.name.indexOf(' ') + 1)}`}
                             </AvatarFallback>
                         </Avatar>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align='end'>
+                    <DropdownMenuContent align='end' className='bg-white'>
 
                         <DropdownMenuItem onClick={logOut} className="bg-red-500 cursor-pointer font-medium text-white hover:bg-red-600">
                             Logout
