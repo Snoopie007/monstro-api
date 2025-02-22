@@ -1,35 +1,33 @@
 
 import React from 'react'
-
-// async function fetchData(): Promise<MonstroPlan[]> {
-//     try {
-//         // const results = await db.transaction(async (tx) => {
-//         //     const plans = await tx.query.plans.findMany({
-//         //         where: (plans, { eq }) => eq(plans.cycle, type),
-//         //         orderBy: (plans, { asc }) => asc(plans.price)
-//         //     });
-//         //     const launchers = await tx.query.launchers.findMany();
-//         //     return { plans, launchers };
-//         // });
-//         return Promise.resolve(plans);
-//     } catch (error) {
-//         console.error(error);
-//         return [];
-//     }
-// }
-
 import { auth } from "@/auth";
-import { VendorPlanBuilder } from "./components";
-
+import { StepBox, StepBoxContent, StepBoxHeader } from "./components";
+import AddLocation from './components/AddLocation/AddLocation';
+import { redirect } from 'next/navigation';
+import { Location } from '@/types/location';
 export default async function VendorOnboarding() {
-
-
     const session = await auth();
-    // const { memberLocation, stripeKey } = await fetchMemberProgress(session?.user.id, params.lid);
 
+    if (session?.user.locations.length > 0) {
+        const pendingLocation = session?.user.locations.find((location: Location) => location.status === "Pending")
+        if (pendingLocation) {
+            return redirect(`/onboarding/${pendingLocation.id}`)
+        }
+    }
 
     return (
-        <VendorPlanBuilder />
+        <div className="space-y-4">
+
+            <StepBox active={true}>
+                <StepBoxHeader
+                    title={"Create your business profile"}
+                    description={"Find your business on Google or manually add your business information below."}
+                />
+                <StepBoxContent>
+                    <AddLocation />
+                </StepBoxContent>
+            </StepBox>
+        </div>
     );
 }
 

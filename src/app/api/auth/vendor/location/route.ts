@@ -17,9 +17,6 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "User not found" }, { status: 404 })
         }
 
-        if (!user.vendor.onboarding.completed) {
-            return NextResponse.json({ lid: null }, { status: 200 });
-        }
 
         let location = null;
 
@@ -29,20 +26,23 @@ export async function POST(req: NextRequest) {
             location = await db.query.locations.findFirst({
                 where: (locations, { eq, and }) => and(eq(locations.vendorId, user.vendor.id), eq(locations.id, decodedId)),
                 columns: {
-                    id: true
+                    id: true,
+                    status: true
                 }
             })
 
         }
 
         if (!location) {
-
-            location = await db.query.locations.findFirst({
-                where: (locations, { eq, and }) => and(eq(locations.vendorId, user.vendor.id), eq(locations.status, 'Active')),
+            const locations = await db.query.locations.findMany({
+                where: (locations, { eq }) => eq(locations.vendorId, user.vendor.id),
                 columns: {
-                    id: true
+                    id: true,
+                    status: true
                 }
             })
+            console.log("locations", locations)
+            location = locations.find(loc => loc.status === "Active") || locations.find(loc => loc.status === "Pending");
         }
 
         if (!location) {
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         }
 
 
-        return NextResponse.json({ lid: encodeId(location.id) }, { status: 200 })
+        return NextResponse.json({ id: encodeId(location.id), status: location.status }, { status: 200 })
 
     } catch (error) {
         console.log(error);

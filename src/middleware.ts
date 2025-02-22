@@ -9,7 +9,6 @@ export default auth(async (req) => {
 		const { pathname } = req.nextUrl;
 		const isLoggedin = !!req.auth;
 		const locations = req.auth?.user?.locations || [];
-		const onboarding = req.auth?.user?.onboarding;
 
 		if (pathname.startsWith("/api/protected")) {
 			if (!isLoggedin) {
@@ -18,7 +17,7 @@ export default auth(async (req) => {
 
 			const [_, encodedId, subpath = ''] = pathname.match(/^\/api\/protected\/([^/]+)(\/.*)?$/) || [];
 
-			if (!encodedId || !isNaN(Number(encodedId)) || encodedId.startsWith("vendor")) {
+			if (!encodedId || !isNaN(Number(encodedId)) || encodedId.startsWith("onboarding")) {
 				return NextResponse.next();
 			}
 
@@ -33,16 +32,39 @@ export default auth(async (req) => {
 			return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
 		}
 
-		// Handle home page redirect for logged in users
-		if (isLoggedin && pathname === "/" && locations.length > 0) {
-			const url = onboarding.completed ? `/dashboard/${locations[0].id}` : `/onboarding`
-			return NextResponse.redirect(new URL(url, req.nextUrl.origin));
-		}
+		// Handle home page and dashboard redirects
+		if (isLoggedin) {
 
-		// Handle dashboard access
-		const [_, dashboardId] = pathname.match(/^\/dashboard\/([^/]+)/) || [];
-		if (dashboardId && !locations.some((loc: { id: string }) => loc.id === dashboardId)) {
-			return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
+			if (locations.length === 0) {
+				console.log("No locations found");
+				return NextResponse.redirect(new URL("/onboarding", req.nextUrl.origin));
+			}
+
+			const activeLocation = locations.find((loc: { status: string }) => loc.status === "Active");
+			if (pathname === "/") {
+
+				const pendingLocation = locations.find((loc: { status: string }) => loc.status === "Pending");
+				const redirectPath = activeLocation
+					? `/dashboard/${activeLocation.id}`
+					: pendingLocation
+						? `/onboarding/${pendingLocation.id}`
+						: "/dashboard";
+				return NextResponse.redirect(new URL(redirectPath, req.nextUrl.origin));
+			}
+
+
+			if (pathname.match(/^\/dashboard\/[^/]+$/)) {
+				const currentLocation = locations.find((loc: { id: string }) => loc.id === pathname.split('/')[2]);
+				console.log(currentLocation)
+				if (!currentLocation) {
+					return NextResponse.redirect(new URL(activeLocation ? `/dashboard/${activeLocation.id}` : '/dashboard', req.nextUrl.origin));
+				}
+
+				if (currentLocation.status === 'Pending') {
+					return NextResponse.redirect(new URL(`/onboarding/${currentLocation.id}`, req.nextUrl.origin));
+				}
+			}
+
 		}
 
 		// Set cache headers for API and dashboard routes

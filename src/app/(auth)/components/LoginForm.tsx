@@ -51,11 +51,13 @@ export default function LoginForm() {
 				method: 'POST',
 				body: JSON.stringify({ ...v, lid: locationId }),
 			});
-			const { lid } = await locationRes.json();
-			if (lid) {
-				localStorage.setItem('locationId', lid);
+			const location = await locationRes.json();
+			if (location.id) {
+				localStorage.setItem('locationId', location.id);
 			}
-			router.push(lid ? `/dashboard/${lid}` : '/onboarding');
+
+			const redirect = location.id ? location.status === "Active" ? `/dashboard/${location.id}` : `/onboarding/${location.id}` : '/onboarding';
+			router.push(redirect);
 
 		} catch (error) {
 			console.error(error);

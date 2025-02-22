@@ -17,15 +17,15 @@ import Link from 'next/link'
 import React from 'react'
 
 import CardList from './components/CardList';
-import Stripe from 'stripe';
 import { cn, formatAmountForDisplay } from '@/libs/utils';
 import { auth } from '@/auth';
 import { StripePayments } from '@/libs/server/stripe';
 import Wallet from './components/Wallet';
+import { LocationProgress } from '@/types/location';
 
 
 
-async function fetchClientStripe(customerId: string, locationId: string) {
+async function fetchClientStripe(customerId: string, locationId: string, progress: LocationProgress) {
 
     try {
         let subscriptions = [{
@@ -37,13 +37,14 @@ async function fetchClientStripe(customerId: string, locationId: string) {
         }]
         const stripe = new StripePayments();
         const methods = await stripe.getPaymentMethods(customerId);
-        if (true) {
+        if (progress.planId !== 0) {
             const res = await stripe.getSubscriptions(customerId);
 
             subscriptions = res.data
                 .filter(sub => sub.metadata.locationId === locationId)
                 .map(sub => {
                     const plan = sub.items.data[0]?.plan;
+
                     const dateFormat: Intl.DateTimeFormatOptions = {
                         year: 'numeric',
                         month: 'short',
@@ -74,7 +75,9 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
     const params = await props.params;
     const sesson = await auth();
 
-    const { paymentMethods, subscriptions } = await fetchClientStripe(sesson?.user.stripeCustomerId, params.id);
+    const location = sesson?.user.locations.find((location: { id: string, progress: LocationProgress }) => location.id === params.id);
+
+    const { paymentMethods, subscriptions } = await fetchClientStripe(sesson?.user.stripeCustomerId, params.id, location?.progress)
 
     function calculateMonthlyTotal() {
         const total = subscriptions.reduce((total, sub) => {

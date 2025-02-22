@@ -17,23 +17,11 @@ export type Vendor = {
     credits: number;
     spendedCredits: number;
     userId: number;
-    onboarding: VendorOnboarding;
     referrals?: VendorReferral[];
     vendorProgress?: VendorProgress;
     created: Date;
     updated: Date | null;
     deleted: Date | null;
-}
-
-export type VendorOnboarding = {
-    plan: number | null;
-    pkg: number | null;
-    agreedToTerms: boolean;
-    paymentPlan: number | null;
-    currentStep: number;
-    completedSteps: number[];
-    vendor?: Vendor;
-    completed: boolean;
 }
 
 export type MonstroPackage = {

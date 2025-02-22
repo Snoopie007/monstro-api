@@ -12,7 +12,10 @@ export async function POST(req: NextRequest) {
     console.log("Stripe webhook received");
     const body = await req.json();
     const signature = (await headers()).get("Stripe-Signature");
-    console.log(body.type);
+    if (body.type === "invoice.payment_failed") {
+        console.log("invoice.payment_failed");
+        console.log(body.data.object.subscription_details);
+    }
 
     if (!signature) return NextResponse.json({ message: "No signature", status: 400 });
 

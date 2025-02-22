@@ -27,14 +27,15 @@ export default {
 								phone: true,
 								icon: true,
 								stripeCustomerId: true,
-								onboarding: true
 							},
 							with: {
 								locations: {
 									where: (locations, { eq, or }) => or(eq(locations.status, 'Active'), eq(locations.status, 'Pending')),
 									columns: {
 										id: true,
-										name: true
+										name: true,
+										progress: true,
+										status: true
 									}
 								}
 							}
@@ -77,7 +78,6 @@ export default {
 					image: vendor?.icon,
 					vendorId: vendor?.id,
 					vendorPhone: vendor?.phone,
-					onboarding: vendor?.onboarding,
 					stripeCustomerId: vendor?.stripeCustomerId,
 					role: 'vendor',
 					token: token,

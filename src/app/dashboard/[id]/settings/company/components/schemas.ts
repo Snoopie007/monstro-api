@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const CompanyInfoSchema = z.object({
     name: z.string(),
-    // legalName: z.string(),
+    legalName: z.string().optional(),
     email: z.string().email("invalid email."),
     phone: z.string(),
     industry: z.string(),

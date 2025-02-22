@@ -18,12 +18,13 @@ import {
 } from "@/components/forms";
 
 import { useSession } from "next-auth/react";
-import { useOnboarding } from "../../provider/OnboardingProvider";
+
 import { toast } from "react-toastify";
 import { Industries } from "@/libs/data";
-
+import { useRouter } from "next/navigation";
 export default function AddLocation() {
-    const { progress, updateProgress } = useOnboarding();
+
+    const router = useRouter();
     const [loading, setLoading] = useState<boolean>(false);
     const [metadata, setMetadata] = useState<Record<string, any>>({});
     const [edit, setEdit] = useState<boolean>(false);
@@ -62,7 +63,7 @@ export default function AddLocation() {
         setLoading(true);
 
         const { result, error } = await tryCatch(
-            fetch("/api/protected/vendor/location", {
+            fetch("/api/protected/onboarding", {
                 method: "POST",
                 body: JSON.stringify({
                     vendorId: session?.user?.vendorId,
@@ -78,17 +79,13 @@ export default function AddLocation() {
             return toast.error("Failed to add location, please try again.");
         }
         const data = await result.json();
-        localStorage.setItem("locationId", data.lid);
-        const updatedProgress = {
-            ...progress,
-            currentStep: 2,
-            completedSteps: [1]
-        }
+        localStorage.setItem("locationId", data.id);
+
         update({
-            locations: [{ id: data.lid, name: data.name }],
-            onboarding: updatedProgress
+            locations: [...session?.user.locations, data],
         })
-        updateProgress(updatedProgress);
+        router.push(`/onboarding/${data.id}`);
+
     }
 
     function remove() {

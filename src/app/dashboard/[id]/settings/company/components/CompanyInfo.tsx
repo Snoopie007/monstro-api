@@ -46,7 +46,7 @@ export default function CompanyInfoForm({ location }: CompanyProps) {
         resolver: zodResolver(CompanyInfoSchema),
         defaultValues: {
             name: location.name || "",
-            // legalName: location.legalName || "",
+            legalName: location.legalName || "",
             email: location.email || "",
             phone: location.phone || "",
             logoUrl: location.logoUrl || "",
@@ -123,7 +123,7 @@ export default function CompanyInfoForm({ location }: CompanyProps) {
 
                                     <FormField
                                         control={form.control}
-                                        name="name"
+                                        name="legalName"
                                         render={({ field }) => (
                                             <FormItem className="flex-1 mt-0">
                                                 <FormLabel size="tiny">

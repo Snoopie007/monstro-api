@@ -1,16 +1,20 @@
 
 
-import { relations } from "drizzle-orm";
-import { integer, boolean, primaryKey, varchar, serial, text, timestamp, pgTable, jsonb } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
+import { integer, boolean, primaryKey, varchar, serial, text, timestamp, pgTable, jsonb, pgEnum } from "drizzle-orm/pg-core";
 import { members } from "./members";
 import { integrations } from "./intergrations";
 import { programs } from "./programs";
 import { transactions } from "./transactions";
 import { vendors } from "./vendors";
+import { LocationProgress } from "@/types/location";
+
+const LocationStatusEnum = pgEnum("location_status", ["Pending", "Active", "Inactive", "Past due", "Cancelled", "Failed Payment"])
 
 export const locations = pgTable("locations", {
     id: serial("id").primaryKey(),
     name: text("name").notNull(),
+    legalName: text("legal_name"),
     email: text("email"),
     industry: varchar("industry").notNull(),
     address: text("address"),
@@ -22,10 +26,10 @@ export const locations = pgTable("locations", {
     phone: text("phone"),
     timezone: varchar("timezone"),
     logoUrl: text("logo_url"),
-    status: text("status").notNull().default("Inactive"),
+    status: LocationStatusEnum("status").notNull().default("Pending"),
     metadata: jsonb("meta_data").$type<Record<string, any>>(),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id),
-    subscriptionPlanId: integer("subscription_plan_id"),
+    progress: jsonb("progress").$type<LocationProgress[]>().notNull().default(sql`'[]'`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })

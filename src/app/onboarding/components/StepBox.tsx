@@ -3,9 +3,9 @@
 import React from 'react'
 import { cn } from '@/libs/utils'
 
-export interface StepBoxContentProps extends React.HTMLAttributes<HTMLDivElement> { }
+interface StepBoxContentProps extends React.HTMLAttributes<HTMLDivElement> { }
 
-export const StepBoxContent: React.FC<StepBoxContentProps> = ({ children, className, ...props }) => {
+const StepBoxContent: React.FC<StepBoxContentProps> = ({ children, className, ...props }) => {
     return (
         <div className={cn("flex flex-col gap-2 group-data-[active=false]:hidden", className)} {...props}>
             <div className="space-y-2 ">
@@ -15,12 +15,12 @@ export const StepBoxContent: React.FC<StepBoxContentProps> = ({ children, classN
     )
 }
 
-export interface StepBoxHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+interface StepBoxHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
     title: string
     description: string
 }
 
-export const StepBoxHeader: React.FC<StepBoxHeaderProps> = ({ title, description, className, ...props }) => {
+const StepBoxHeader: React.FC<StepBoxHeaderProps> = ({ title, description, className, ...props }) => {
     return (
         <div className={cn("flex flex-col items-start space-y-1 text-black cursor-pointer group-data-[active=false]:hidden", className)} {...props}>
 
@@ -30,19 +30,18 @@ export const StepBoxHeader: React.FC<StepBoxHeaderProps> = ({ title, description
     )
 }
 
-export interface StepBoxProps extends React.HTMLAttributes<HTMLDivElement> {
+interface StepBoxProps extends React.HTMLAttributes<HTMLDivElement> {
     active: boolean
-    completed: boolean
     children: React.ReactNode
 }
 
 const StepBox = React.forwardRef<HTMLDivElement, StepBoxProps>(
-    ({ active, completed, children, className, ...props }, ref) => {
+    ({ active, children, className, ...props }, ref) => {
         return (
             <div
                 ref={ref}
                 data-active={active}
-                data-completed={completed}
+
                 className={cn("group text-black space-y-3", className)} {...props}
             >
                 {children}
@@ -54,4 +53,8 @@ const StepBox = React.forwardRef<HTMLDivElement, StepBoxProps>(
 )
 StepBox.displayName = "StepBox"
 
-export default StepBox
+export {
+    StepBox,
+    StepBoxContent,
+    StepBoxHeader
+}

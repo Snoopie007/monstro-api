@@ -4,7 +4,6 @@ import { relations, sql } from "drizzle-orm";
 import { vendorProgress } from "./VendorProgress";
 import { vendorReferrals } from "./VendorReferrals";
 import { locations } from "./locations";
-import { VendorOnboarding } from "@/types/vendor";
 
 export const vendors = pgTable("vendors", {
     id: serial("id").primaryKey(),
@@ -17,7 +16,6 @@ export const vendors = pgTable("vendors", {
     companyWebsite: text("company_website"),
     companyAddress: text("company_address"),
     icon: text("icon"),
-    onboarding: jsonb("onboarding").$type<VendorOnboarding>().notNull().default(sql`'{}'`),
     credits: integer("credits").notNull().default(0),
     spendedCredits: integer("spended_credits").notNull().default(0),
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
