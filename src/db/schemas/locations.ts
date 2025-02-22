@@ -29,7 +29,7 @@ export const locations = pgTable("locations", {
     status: LocationStatusEnum("status").notNull().default("Pending"),
     metadata: jsonb("meta_data").$type<Record<string, any>>(),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id),
-    progress: jsonb("progress").$type<LocationProgress[]>().notNull().default(sql`'[]'`),
+    progress: jsonb("progress").$type<LocationProgress>().notNull().default(sql`'{}'`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })

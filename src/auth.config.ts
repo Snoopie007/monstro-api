@@ -11,6 +11,7 @@ export default {
 			credentials: {
 				email: { label: "Email", type: "email" },
 				password: { label: "Password", type: "password" },
+				currentLocationId: { label: "Current Location Id", type: "text" },
 			},
 			authorize: async (credentials) => {
 
@@ -30,7 +31,6 @@ export default {
 							},
 							with: {
 								locations: {
-									where: (locations, { eq, or }) => or(eq(locations.status, 'Active'), eq(locations.status, 'Pending')),
 									columns: {
 										id: true,
 										name: true,
@@ -70,6 +70,7 @@ export default {
 					...location,
 					id: encodeId(location.id)
 				}));
+				console.log(encodedLocations);
 				return {
 					id: rest.id.toString(),
 					name: rest.name,
@@ -82,7 +83,8 @@ export default {
 					role: 'vendor',
 					token: token,
 					locations: encodedLocations,
-					permissions: {}
+					permissions: {},
+					currentLocationId: credentials.currentLocationId
 				};
 
 			}

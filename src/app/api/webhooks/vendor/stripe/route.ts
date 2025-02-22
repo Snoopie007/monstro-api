@@ -5,8 +5,9 @@ import Stripe from "stripe";
 import { tryCatch } from "@/libs/utils";
 import { waitUntil } from "@vercel/functions";
 import { db } from "@/db/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { locations } from "@/db/schemas";
+import { decodeId } from "@/libs/server/sqids";
 
 export async function POST(req: NextRequest) {
     console.log("Stripe webhook received");
@@ -75,28 +76,62 @@ async function processEvent(event: Stripe.Event) {
     if (event.type.startsWith("customer.subscription")) {
         return await processSubscriptionEvent(event);
     }
-}
 
+    if (event.type.startsWith("invoice")) {
+        return await processInvoiceEvent(event);
+    }
+}
 
 async function processSubscriptionEvent(event: Stripe.Event) {
     const subscription = event.data?.object as Stripe.Subscription;
-    const metadata = subscription.metadata;
-    if (!metadata.locationId) return;
-    let status: string;
-    switch (event.type) {
-        case "customer.subscription.paused":
-            status = "paused";
-            break;
-        case "customer.subscription.resumed":
-            status = "active";
-            break;
-        default:
-            return;
+    const { locationId } = subscription.metadata;
+    if (!locationId) return;
+
+    const statusMap = {
+        'active': 'Active',
+        'paused': 'Inactive',
+        'past_due': 'Past due',
+        'unpaid': 'Failed Payment'
+    } as const;
+
+    const locationStatus = statusMap[subscription.status as keyof typeof statusMap] || 'Inactive';
+
+    if (locationStatus) {
+        await db.update(locations).set({
+            status: locationStatus,
+            updated: new Date(),
+        }).where(eq(locations.id, parseInt(locationId)));
     }
-    await db.update(locations).set({
-        status,
-        updated: new Date(),
-    }).where(eq(locations.id, parseInt(metadata.locationId)));
+}
+
+async function processInvoiceEvent(event: Stripe.Event) {
+    const invoice = event.data?.object as Stripe.Invoice;
+    const subscription = invoice.subscription as Stripe.Subscription;
+
+    if (!subscription) return;
+    const { locationId } = subscription.metadata;
+    if (!locationId) return;
+
+    if (event.type === "invoice.payment_succeeded") {
+        const decodedId = decodeId(locationId);
+        try {
+            const location = await db.query.locations.findFirst({
+                where: (loc, { eq }) => eq(loc.id, decodedId),
+            });
+
+            if (!location || !location.progress.lastRenewalDate) return;
+            const lastRenewalDate = new Date(location.progress.lastRenewalDate).setDate(new Date(location.progress.lastRenewalDate).getDate() + 28);
+            await db.update(locations).set({
+                progress: {
+                    ...location.progress,
+                    lastRenewalDate: new Date(lastRenewalDate).getTime() * 1000,
+                },
+                updated: new Date(),
+            }).where(eq(locations.id, decodedId));
+        } catch (error) {
+
+        }
+    }
 }
 
 

@@ -134,7 +134,7 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
                                 <TableRow key={i}>
                                     <TableCell className='pl-0'>
                                         {sub.name}
-                                        <Badge stripeStatus={sub.status} className='ml-2 rounded-xs'>{sub.status}</Badge>
+                                        <Badge stripeStatus={sub.status} className='ml-2 rounded-xs'>{sub.status?.replace('_', ' ')}</Badge>
                                     </TableCell>
                                     <TableCell>{formatAmountForDisplay((sub.amount / 100), sub.currency, true)}</TableCell>
                                     <TableCell >

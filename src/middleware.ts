@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { auth } from "./auth";
 import { decodeId } from "./libs/server/sqids";
 
-const publicPaths = ['/login', '/api/auth', '/join', '/api/webhooks'];
+const publicPaths = ['/login', '/api/auth', '/api/location', '/join', '/api/webhooks'];
 
 export default auth(async (req) => {
 	try {
+
 		const { pathname } = req.nextUrl;
 		const isLoggedin = !!req.auth;
 		const locations = req.auth?.user?.locations || [];
+		const currentLocationId = req.auth?.user?.currentLocationId;
 
 		if (pathname.startsWith("/api/protected")) {
 			if (!isLoggedin) {
@@ -29,42 +31,43 @@ export default auth(async (req) => {
 
 		// Handle authentication redirects
 		if (!isLoggedin && !publicPaths.some(path => pathname.startsWith(path))) {
+			if (pathname.startsWith("/api/location")) {
+				// Need a token to check traffic source?
+				return NextResponse.next();
+			}
 			return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
 		}
 
 		// Handle home page and dashboard redirects
 		if (isLoggedin) {
 
-			if (locations.length === 0) {
+			if (locations.length === 0 && pathname !== '/onboarding') {
 				console.log("No locations found");
 				return NextResponse.redirect(new URL("/onboarding", req.nextUrl.origin));
 			}
 
-			const activeLocation = locations.find((loc: { status: string }) => loc.status === "Active");
-			if (pathname === "/") {
 
-				const pendingLocation = locations.find((loc: { status: string }) => loc.status === "Pending");
-				const redirectPath = activeLocation
-					? `/dashboard/${activeLocation.id}`
-					: pendingLocation
-						? `/onboarding/${pendingLocation.id}`
-						: "/dashboard";
-				return NextResponse.redirect(new URL(redirectPath, req.nextUrl.origin));
-			}
+			const [_, path, locationId] = pathname.match(/^\/((?:dashboard|onboarding))\/([^/]+)(\/.*)?$/) || [];
 
+			if (locationId) {
+				let nextLocation = locations.find((loc: { id: string }) => loc.id === locationId)
 
-			if (pathname.match(/^\/dashboard\/[^/]+$/)) {
-				const currentLocation = locations.find((loc: { id: string }) => loc.id === pathname.split('/')[2]);
-				console.log(currentLocation)
-				if (!currentLocation) {
-					return NextResponse.redirect(new URL(activeLocation ? `/dashboard/${activeLocation.id}` : '/dashboard', req.nextUrl.origin));
+				if (!nextLocation) {
+					nextLocation = locations.find((loc: { status: string }) => loc.status === "Active") ||
+						locations.find((loc: { status: string }) => loc.status === "Pending");
 				}
 
-				if (currentLocation.status === 'Pending') {
-					return NextResponse.redirect(new URL(`/onboarding/${currentLocation.id}`, req.nextUrl.origin));
+				if (!nextLocation) {
+					nextLocation = locations.find((loc: { id: string }) => loc.id === currentLocationId)
+				}
+
+				const isOnboarding = nextLocation.status === 'Pending';
+				const targetPath = isOnboarding ? 'onboarding' : 'dashboard';
+
+				if (path !== targetPath) {
+					return NextResponse.redirect(new URL(`/${targetPath}/${nextLocation.id}`, req.nextUrl.origin));
 				}
 			}
-
 		}
 
 		// Set cache headers for API and dashboard routes

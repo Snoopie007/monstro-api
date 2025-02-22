@@ -6,7 +6,7 @@ import { memberLocations, members, } from '@/db/schemas';
 
 export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
 	const params = await props.params;
-	console.log("Get Members");
+
 	const { searchParams } = new URL(req.url);
 
 	const pageSize = parseInt(searchParams.get("size") || "10");

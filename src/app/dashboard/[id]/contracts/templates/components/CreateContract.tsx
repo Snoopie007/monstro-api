@@ -6,10 +6,11 @@ import {
     Button,
 
 } from "@/components/ui"
-import { cn, sleep } from "@/libs/utils"
+import { cn, sleep, tryCatch } from "@/libs/utils"
 import { useRouter } from "next/navigation"
 import { MouseEvent, useState } from "react"
-import { createContract as postContract } from "@/libs/api"
+import { fetcher, createContract as postContract } from "@/libs/api"
+import { toast } from "react-toastify"
 
 
 export function CreateContract({ locationId }: { locationId: string }) {
@@ -20,20 +21,28 @@ export function CreateContract({ locationId }: { locationId: string }) {
         setLoading(true);
         sleep(3000);
 
-        const res = await postContract({
-            content: '',
-            title: '',
-            description: '',
-            isDraft: true,
-            editable: true,
-        }, locationId);
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${locationId}/contracts`, {
+                method: "POST",
+                body: JSON.stringify({
+                    content: '',
+                    title: '',
+                    description: '',
+                    isDraft: true,
+                    editable: true,
+                })
+            })
+        );
 
-        const { id } = res;
-        if (!id) {
+        if (error || !result || !result.ok) {
+            return toast.error(error?.message || "Failed to create contract");
 
         }
+
+        const data = await result.json();
         setLoading(false);
-        router.push(`/builder/${locationId}/contract/${id}`);
+
+        router.push(`/builder/${locationId}/contract/${data.id}`);
     }
 
 

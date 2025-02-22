@@ -107,9 +107,16 @@ export async function POST(req: Request) {
             }
         });
 
+
+        const activeDate = new Date().getTime() * 1000
+
         await db.transaction(async (tx) => {
             await tx.update(locations).set({
-                progress,
+                progress: {
+                    ...progress,
+                    activeDate,
+                    lastRenewalDate: activeDate
+                },
                 status: "Active",
                 updated: new Date()
             }).where(eq(locations.id, decodedLocationId))

@@ -4,13 +4,12 @@ export type ExtendedUser = DefaultUser["user"] & {
     role: string;
     stripeCustomerId: string;
     phone: string;
+    currentLocationId: string | null;
     token: string;
     email: string;
     expireTime: Date | null;
-    locations: Array<any> | null;
-    activeLocation: any | null,
+    locations: Array<Record<string, any>> | null;
     vendorId: number | 0,
-    memberId: number | 0,
     staffId: number | 0
 };
 

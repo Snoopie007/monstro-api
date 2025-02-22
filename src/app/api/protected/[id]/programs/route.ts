@@ -8,7 +8,7 @@ import { programs as program } from '@/db/schemas';
 
 export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
 	const params = await props.params;
-	console.log("Get Programs")
+
 	const { searchParams } = new URL(req.url);
 	const pageSize = parseInt(searchParams.get('size') || "10");
 	const page = parseInt(searchParams.get('page') || "1");

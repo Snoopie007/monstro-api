@@ -29,4 +29,6 @@ export type LocationProgress = {
     paymentPlanId: number | null;
     aibotCounts: number | null;
     agreedToTerms: boolean;
+    lastRenewalDate: number | null;
+    activeDate: number | null;
 }
