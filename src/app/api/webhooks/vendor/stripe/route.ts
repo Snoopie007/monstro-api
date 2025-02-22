@@ -4,17 +4,16 @@ import { headers } from "next/headers";
 import Stripe from "stripe";
 import { tryCatch } from "@/libs/utils";
 import { waitUntil } from "@vercel/functions";
+import { db } from "@/db/db";
+import { eq } from "drizzle-orm";
+import { locations } from "@/db/schemas";
 
 export async function POST(req: NextRequest) {
     console.log("Stripe webhook received");
     const body = await req.json();
     const signature = (await headers()).get("Stripe-Signature");
+    console.log(body.type);
 
-    if (body.type === "invoice.payment_failed") {
-        console.log("Invoice payment failed");
-        console.log(body.data.object.customer);
-        console.log(body.data.object.subscription);
-    }
     if (!signature) return NextResponse.json({ message: "No signature", status: 400 });
 
 
@@ -23,9 +22,7 @@ export async function POST(req: NextRequest) {
             throw new Error("Stripe Hook Signature is not a string");
         }
         waitUntil(processEvent(body));
-
     }
-
 
     const { error } = await tryCatch(doEventProcessing());
 
@@ -72,5 +69,31 @@ async function processEvent(event: Stripe.Event) {
         );
     }
 
-    // return await syncStripeDataToKV(customerId);
+    if (event.type.startsWith("customer.subscription")) {
+        return await processSubscriptionEvent(event);
+    }
 }
+
+
+async function processSubscriptionEvent(event: Stripe.Event) {
+    const subscription = event.data?.object as Stripe.Subscription;
+    const metadata = subscription.metadata;
+    if (!metadata.locationId) return;
+    let status: string;
+    switch (event.type) {
+        case "customer.subscription.paused":
+            status = "paused";
+            break;
+        case "customer.subscription.resumed":
+            status = "active";
+            break;
+        default:
+            return;
+    }
+    await db.update(locations).set({
+        status,
+        updated: new Date(),
+    }).where(eq(locations.id, parseInt(metadata.locationId)));
+}
+
+

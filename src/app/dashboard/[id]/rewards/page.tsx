@@ -1,12 +1,12 @@
 'use client';
 import { use, useMemo, useState } from "react";
-
 import { Button, Skeleton } from "@/components/ui"
 import { useRewards } from '@/hooks/use-rewards'
 import { RewardColumns, UpsertReward } from "./components";
 
 import {
-    TablePage, TablePageHeaderSection, TablePageHeaderTitle, TablePageHeader, TablePageContent,
+    TablePage, TablePageHeaderSection,
+    TablePageHeaderTitle, TablePageHeader, TablePageContent,
     TableCell, Table, TableHead, TableHeader, TableRow, TableBody
 } from "@/components/ui";
 import { Reward } from "@/types";

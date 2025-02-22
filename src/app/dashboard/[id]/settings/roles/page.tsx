@@ -1,6 +1,6 @@
 'use client';
 
-import RoleList from "./role-list"
+import RoleList from "./RoleList"
 import { use } from "react";
 import { usePermissions } from "@/hooks/use-roles";
 import SectionLoader from "@/components/section-loading";
