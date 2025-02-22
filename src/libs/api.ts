@@ -223,10 +223,6 @@ async function deleteStaff(rid: number, id: string) {
 	return res;
 }
 
-async function updatePassword(body: any, id: string) {
-	const res = await put({ url: `profile/update-password`, data: body, id: id });
-	return res;
-}
 
 async function updateProfile(body: any, id: string) {
 	const res = await put({ url: `profile`, data: body, id: id });
@@ -281,7 +277,6 @@ export {
 	addStaff,
 	updateStaff,
 	deleteStaff,
-	updatePassword,
 	updateProfile,
 	updatePlan,
 	addTransaction,

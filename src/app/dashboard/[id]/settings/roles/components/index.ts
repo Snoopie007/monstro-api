@@ -1,1 +1,1 @@
-export * from "./upsert-role"
+export * from "./UpsertRole"

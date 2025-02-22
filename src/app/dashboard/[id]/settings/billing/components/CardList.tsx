@@ -14,7 +14,7 @@ interface CardListProps {
     customerId: string
 }
 
-export default function CardList({ paymentMethods, locationId, customerId }: CardListProps) {
+export function CardList({ paymentMethods, locationId, customerId }: CardListProps) {
 
     return (
         <Card className=''>

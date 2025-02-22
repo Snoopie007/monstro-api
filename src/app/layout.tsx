@@ -44,7 +44,7 @@ export default async function RootLayout({
                         {children}
                     </ThemeProvider>
                     <ToastContainer
-
+                        className="customToast"
                         position="top-right"
                         hideProgressBar={false}
                         closeOnClick

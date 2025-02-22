@@ -16,7 +16,7 @@ import { CircleProgress } from '@/components/ui/circle-progress';
 import Stripe from 'stripe';
 import { cva } from 'class-variance-authority';
 import { Clock4Icon } from 'lucide-react';
-import { CreateEnrollment } from './create-enrollment'
+import { CreateEnrollment } from './CreateEnrollment'
 import { useMemberSubscriptions } from '@/hooks/use-members'
 import { useMember } from '../../providers/MemberContext'
 

@@ -176,7 +176,23 @@
 		--chart-3: 30 80% 55%;
 		--chart-4: 280 65% 60%;
 		--chart-5: 340 75% 55%;
+
 		
+	}
+	
+	.customToast {
+		--toastify-toast-min-height: 56px;
+		@apply font-roboto;
+		@apply text-sm;
+		--toastify-toast-padding: 10px;
+	 	--toastify-toast-bd-radius: 2px;
+	 	@apply font-medium;
+	
+	}
+
+	.customToast  svg {
+		width: 18px;
+		height: 18px;
 	}
 }
 

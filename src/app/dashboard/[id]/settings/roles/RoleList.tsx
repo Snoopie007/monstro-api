@@ -1,8 +1,8 @@
 'use client'
 import { Icon } from '@/components/icons'
-import { Card, CardContent, Table, TableCell, TableHead, TableBody, TableHeader, TableRow, Button } from '@/components/ui'
+import { Card, CardContent, Table, TableCell, TableHead, TableBody, TableHeader, TableRow, Button, Skeleton } from '@/components/ui'
 import { UpsertRole } from './components'
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Permission, Role } from '@/types';
 import RoleListActions from './components/actions';
 import { useRoles } from '@/hooks/use-roles';
@@ -17,7 +17,7 @@ export default function RoleList({ permissions, locationId }: { permissions: Arr
     const { roles, isLoading, error } = useRoles(locationId);
 
     function handleCreateRole() {
-        console.log('create role')
+
         setCurrentRole({
             name: '',
             color: "red",
@@ -35,46 +35,47 @@ export default function RoleList({ permissions, locationId }: { permissions: Arr
         })
     }
 
-    if (isLoading) return <SectionLoader />
-    if (roles) {
-        return (
-            <>
-                <UpsertRole role={currentRole} permissions={permissions} setCurrentRole={setCurrentRole} locationId={locationId} />
-                <div className="mb-3">
-                    <div className='flex flex-row  justify-between items-center py-3'>
-                        <div className='relative flex-initial'>
-                            <input placeholder='Search Roles' className='rounded-sm border-foreground text-xs bg-transparent  py-1   pl-7 pr-3 border ' />
-                            <div>
-                                <Icon name="Search" size={15} className="text-gray-400  absolute left-[10px] top-[50%] -translate-y-[51%]" />
-                            </div>
-                        </div>
-                        <div className='flex-initial'>
-                            <Button size={"xs"} variant={"foreground"} onClick={handleCreateRole}>Create</Button>
+
+
+    return (
+        <>
+            <UpsertRole role={currentRole} permissions={permissions} setCurrentRole={setCurrentRole} locationId={locationId} />
+            <div className="mb-3">
+                <div className='flex flex-row  justify-between items-center py-3'>
+                    <div className='relative flex-initial'>
+                        <input placeholder='Search Roles' className='rounded-sm border-foreground text-xs bg-transparent  py-1   pl-7 pr-3 border ' />
+                        <div>
+                            <Icon name="Search" size={15} className="text-gray-400  absolute left-[10px] top-[50%] -translate-y-[51%]" />
                         </div>
                     </div>
+                    <div className='flex-initial'>
+                        <Button size={"xs"} variant={"foreground"} onClick={handleCreateRole}>Create</Button>
+                    </div>
                 </div>
-                <Card className='rounded-xs'>
-                    <CardContent className='p-0'>
-                        <Table className=" w-full ">
-                            <TableHeader >
-                                <TableRow className=' bg-transparent  border-foreground/20' >
-                                    {["Roles", "Staffs", ""].map((title) => (
-                                        <TableHead key={title} className="font-semibold  dark:text-white h-auto py-2.5 " >
-                                            {title}
-                                        </TableHead>
-                                    ))}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
+            </div>
+            <Card className='rounded-xs'>
+                <CardContent className='p-0'>
+                    <Table className=" w-full ">
+                        <TableHeader >
+                            <TableRow className=' bg-transparent  border-foreground/20' >
+                                {["Roles", "Staffs", ""].map((title) => (
+                                    <TableHead key={title} className="font-semibold  dark:text-white h-auto py-2.5 " >
+                                        {title}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
 
-                                {roles.map((role: Role, index: number) => (
+                            {roles && roles.length > 0 ? (
+                                roles.map((role: Role, index: number) => (
                                     <TableRow key={index}
                                         className='cursor-pointer border-foreground/20 text-sm'
                                     >
                                         <TableCell className="py-2 " onClick={() => { setCurrentRole(role); }}>
                                             <div className='flex flex-row  gap-1 items-center text-sm'>
                                                 <Icon name="Shield" size={20} className="text-indigo-600" />
-                                                <span>{role.name}</span>
+                                                <span>{isLoading ? <Skeleton className='w-20 h-4' /> : role.name}</span>
                                             </div>
                                         </TableCell>
 
@@ -91,14 +92,25 @@ export default function RoleList({ permissions, locationId }: { permissions: Arr
                                         </TableCell>
 
                                     </TableRow>
-                                ))}
-                            </TableBody>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center py-4">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <p className="text-sm text-gray-500">No roles found
+                                                <span className='text-white underline cursor-pointer ml-1' onClick={handleCreateRole}>create one</span>
+                                            </p>
 
-                        </Table>
-                    </CardContent>
-                </Card>
-            </>
-        )
-    }
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+
+                    </Table>
+                </CardContent>
+            </Card>
+        </>
+    )
 }
 

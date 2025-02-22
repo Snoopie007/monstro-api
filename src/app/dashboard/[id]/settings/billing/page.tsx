@@ -10,30 +10,43 @@ import {
     TableHeader,
     TableCell,
     TableHead,
-    TableRow
+    TableRow,
+    Badge
 } from '@/components/ui'
 
 import Link from 'next/link'
 import React from 'react'
 
-import CardList from './components/CardList';
 import { cn, formatAmountForDisplay } from '@/libs/utils';
 import { auth } from '@/auth';
 import { StripePayments } from '@/libs/server/stripe';
 import Wallet from './components/Wallet';
 import { LocationProgress } from '@/types/location';
+import { Stripe } from 'stripe';
+import { RetryPayment, CardList } from './components';
 
-
-
+type Subscription = {
+    subscriptionId: string | null;
+    name: string;
+    amount: number;
+    nextInvoice: string;
+    endDate: string;
+    currency: string;
+    status: "active" | "incomplete" | "past_due" | "paused" | "canceled" | "unpaid" | "incomplete_expired" | "trialing" | null;
+    invoiceId: string | Stripe.Invoice | null;
+}
 async function fetchClientStripe(customerId: string, locationId: string, progress: LocationProgress) {
 
     try {
-        let subscriptions = [{
+        let subscriptions: Subscription[] = [{
+            subscriptionId: null,
             name: "Pay as you go",
             amount: 0,
             nextInvoice: "N/A",
             endDate: "N/A",
-            currency: "USD"
+            currency: "USD",
+            status: "active",
+            invoiceId: null
         }]
         const stripe = new StripePayments();
         const methods = await stripe.getPaymentMethods(customerId);
@@ -51,15 +64,19 @@ async function fetchClientStripe(customerId: string, locationId: string, progres
                         day: 'numeric'
                     };
                     return {
+                        subscriptionId: sub.id,
                         name: plan?.nickname || "N/A",
                         amount: plan?.amount || 0,
                         nextInvoice: new Date(sub.current_period_end * 1000).toLocaleString('en-US', dateFormat),
                         endDate: sub.cancel_at ? new Date(sub.cancel_at * 1000).toLocaleString('en-US', dateFormat) : "N/A",
-                        currency: plan?.currency || "USD"
+                        currency: plan?.currency || "USD",
+                        status: sub.status,
+                        invoiceId: sub.latest_invoice
                     }
                 });
 
         }
+
 
 
         return { paymentMethods: methods.data, subscriptions };
@@ -104,8 +121,8 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
                     <Table className='w-full border-b mb-4'>
                         <TableHeader >
                             <TableRow>
-                                {["Plan", "Amount", "Next Invoice", "End Date"].map((header, i) => (
-                                    <TableHead key={header} className={cn('h-auto py-2', i === 0 && 'pl-0')}>
+                                {["Plan", "Amount", "Next Invoice", "End Date", ""].map((header, i) => (
+                                    <TableHead key={header} className={cn('h-auto font-normal  py-2', i === 0 && 'pl-0')}>
                                         {header}
                                     </TableHead>
                                 ))}
@@ -115,13 +132,21 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
                         <TableBody>
                             {subscriptions.length > 0 ? subscriptions.map((sub, i) => (
                                 <TableRow key={i}>
-                                    <TableCell className='pl-0'>{sub.name}</TableCell>
+                                    <TableCell className='pl-0'>
+                                        {sub.name}
+                                        <Badge stripeStatus={sub.status} className='ml-2 rounded-xs'>{sub.status}</Badge>
+                                    </TableCell>
                                     <TableCell>{formatAmountForDisplay((sub.amount / 100), sub.currency, true)}</TableCell>
                                     <TableCell >
                                         {sub.nextInvoice}
                                     </TableCell>
                                     <TableCell >
                                         {sub.endDate}
+                                    </TableCell>
+                                    <TableCell className='text-right'>
+                                        {["past_due", "unpaid"].includes(sub.status || "") && (
+                                            <RetryPayment subscription={sub} invoiceId={sub.invoiceId} paymentMethods={paymentMethods} lid={params.id} />
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             )) : (

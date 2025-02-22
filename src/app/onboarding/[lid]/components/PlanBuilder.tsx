@@ -1,14 +1,13 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useOnboarding } from '../provider/OnboardingProvider'
+
 import { SelectPlan } from './ProgramSelection'
 import VendorPayment from './VendorPayment/VendorPayment'
 import { StepBox, StepBoxHeader, StepBoxContent } from '../../components'
 import { useState } from 'react'
 
 export function VendorPlanBuilder() {
-    const { progress } = useOnboarding()
     const [currentStep, setCurrentStep] = useState(1)
     return (
         <div className="space-y-4">

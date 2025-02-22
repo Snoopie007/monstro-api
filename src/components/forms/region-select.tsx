@@ -4,8 +4,6 @@ import {
 import { Command, Button, CommandInput, CommandItem, CommandEmpty, CommandGroup, CommandList, Popover, PopoverContent, PopoverTrigger } from "@/components/ui";
 import { cn } from "@/libs/utils";
 import { ChevronsUpDown } from "lucide-react";
-import { ScrollArea } from "@radix-ui/react-scroll-area";
-
 import { useEffect, useState } from "react";
 import { Regions } from "@/libs/data";
 
@@ -42,22 +40,20 @@ export function RegionSelect({ value, onChange, className }: RegionSelectProps) 
                     <CommandList >
                         <CommandEmpty>No region found.</CommandEmpty>
                         <CommandGroup>
-                            <ScrollArea className="overflow-y-auto w-[210px] h-52 ">
-                                {Regions.us.regions.map((region) => (
-                                    <CommandItem
-                                        value={region}
-                                        key={region}
-                                        className="rounded-xs text-foreground cursor-pointer"
-                                        onSelect={() => {
-                                            setSelected(region);
-                                            onChange(region);
-                                            setOpen(false);
-                                        }}
-                                    >
-                                        {region}
-                                    </CommandItem>
-                                ))}
-                            </ScrollArea>
+                            {Regions.us.regions.map((region) => (
+                                <CommandItem
+                                    value={region}
+                                    key={region}
+                                    className="rounded-xs text-foreground cursor-pointer"
+                                    onSelect={() => {
+                                        setSelected(region);
+                                        onChange(region);
+                                        setOpen(false);
+                                    }}
+                                >
+                                    {region}
+                                </CommandItem>
+                            ))}
                         </CommandGroup>
                     </CommandList>
                 </Command>

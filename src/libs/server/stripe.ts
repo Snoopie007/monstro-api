@@ -152,6 +152,10 @@ class StripePayments {
         const res = await this._stripe.charges.list({ customer: customerId, limit: 10 });
         return res.data;
     }
+
+    async retryPayment(invoiceId: string, paymentMethod: string) {
+        return await this._stripe.invoices.pay(invoiceId, { payment_method: paymentMethod });
+    }
 }
 
 export { StripePayments };

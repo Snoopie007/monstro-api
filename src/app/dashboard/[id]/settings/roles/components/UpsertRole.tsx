@@ -18,7 +18,7 @@ import { cn } from '@/libs/utils';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useForm } from 'react-hook-form';
-import { Permission, PermissionGroup, Role, RoleColor, RoleHasPermission } from '@/types';
+import { Permission, Role } from '@/types';
 import { CreateRoleSchema } from '../schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -53,7 +53,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                 color: role.color,
                 permissions: permissionNames
             });
-            console.log(role.color)
+
         }
     }, [role]);
 
@@ -87,7 +87,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
     }
 
     async function handleSubmit(v: z.infer<typeof CreateRoleSchema>) {
-        console.log(v)
+
         const body = {
             ...v
         };
@@ -120,14 +120,14 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                 </SheetHeader>
                 <div className='border-t p-4 border-foreground/10'>
                     <Form  {...form} >
-                        <form>
+                        <form className='space-y-4'>
                             <fieldset className='space-y-4'>
                                 <FormField
                                     control={form.control}
                                     name="name"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Role Name</FormLabel>
+                                            <FormLabel size="tiny">Role Name</FormLabel>
                                             <FormControl>
                                                 <Input placeholder="Enter role name" {...field} />
                                             </FormControl>
@@ -136,20 +136,14 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                                     )}
                                 />
                             </fieldset>
-                            <fieldset className='space-y-4 my-6'>
-
+                            <fieldset className='space-y-1'>
                                 <FormField
                                     control={form.control}
                                     name="color"
                                     render={({ field }) => (
                                         <FormItem>
 
-                                            <div className="mb-4">
-                                                <FormLabel >Role Color</FormLabel>
-                                                <FormDescription>
-                                                    Select the items you want to display in the sidebar.
-                                                </FormDescription>
-                                            </div>
+                                            <FormLabel size="tiny">Role Color</FormLabel>
                                             <div className='flex flex-row gap-1 justify-start'>
                                                 {RoleColors && RoleColors.map((color) => (
                                                     <FormControl key={color}>
@@ -237,9 +231,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                 </div>
                 <SheetFooter className='border-foreground/10 border-t w-full p-4 absolute bottom-0 left-0'>
                     <SheetClose asChild>
-                        <Button
-                            onClick={closeEdit}
-                            variant={"outline"}
+                        <Button onClick={closeEdit} variant={"outline"}
                             size={"sm"}
                         >
                             Cancel
@@ -258,6 +250,6 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
 
                 </SheetFooter>
             </SheetContent>
-        </Sheet>
+        </Sheet >
     )
 }

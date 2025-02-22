@@ -7,7 +7,7 @@ import SectionLoader from "@/components/section-loading";
 
 export default function RolesPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
-    const { permissions, error, isLoading } = usePermissions(params.id);
+    const { permissions, isLoading } = usePermissions(params.id);
 
     if (isLoading) {
         return <SectionLoader />

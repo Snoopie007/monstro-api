@@ -34,6 +34,7 @@ import { PopoverTrigger } from "@radix-ui/react-popover";
 import { addDays, format } from "date-fns"
 import { EndDatePresets, StartDatePresets } from "./data";
 import { useMemberPaymentMethods } from "../../providers/MemberContext";
+import React from "react";
 
 export function CreateEnrollment() {
     const [open, setOpen] = useState<boolean>(false);
@@ -136,9 +137,9 @@ export function CreateEnrollment() {
                                                 </FormControl>
                                                 <SelectContent>
                                                     {paymentMethods.map((method, index) => (
-                                                        <>
+                                                        <React.Fragment key={index}>
                                                             {method.card ? (
-                                                                <SelectItem key={index} value={method.id} className="w-full">
+                                                                <SelectItem value={method.id} className="w-full">
                                                                     <div className="flex flex-row items-center justify-between gap-4">
                                                                         <div className="flex flex-row items-center gap-2">
                                                                             <img src={`/images/cards/${method.card.brand}.svg`} alt={method.card.brand} className="h-7 w-7" />
@@ -149,7 +150,7 @@ export function CreateEnrollment() {
                                                                     </div>
                                                                 </SelectItem>
                                                             ) : null}
-                                                        </>
+                                                        </React.Fragment>
                                                     ))}
                                                 </SelectContent>
                                             </Select>

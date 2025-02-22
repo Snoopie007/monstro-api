@@ -28,6 +28,16 @@ const badgeVariants = cva(
         purple: "bg-purple-300 text-purple-800",
         yellow: "bg-yellow-300 text-yellow-800",
       },
+      stripeStatus: {
+        active: "bg-green-300 text-green-800",
+        incomplete: "bg-yellow-300 text-yellow-800",
+        trialing: "bg-blue-300 text-blue-800",
+        past_due: "bg-orange-300 text-orange-800",
+        paused: "bg-gray-300 text-gray-800",
+        canceled: "bg-red-300 text-red-800",
+        unpaid: "bg-red-300 text-red-800",
+        incomplete_expired: "bg-red-300 text-red-800",
+      },
     },
     defaultVariants: {
       roles: "default",
@@ -39,9 +49,9 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
   VariantProps<typeof badgeVariants> { }
 
-function Badge({ className, roles, ...props }: BadgeProps) {
+function Badge({ className, roles, stripeStatus, ...props }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ roles }), className)} {...props} />
+    <div className={cn(badgeVariants({ roles, stripeStatus }), className)} {...props} />
   )
 }
 

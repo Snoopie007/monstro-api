@@ -9,16 +9,18 @@ import {
     FormMessage,
     Input,
 } from "@/components/forms";
-import { cn } from "@/libs/utils";
+import { cn, tryCatch } from "@/libs/utils";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { UpdatePasswordSchema } from "./schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { updatePassword } from "@/libs/api";
 import { toast } from "react-toastify";
+import { useState } from "react";
 
 export function UpdatePassword({ locationId }: { locationId: string }) {
+    const [loading, setLoading] = useState(false)
+
     const form = useForm<z.infer<typeof UpdatePasswordSchema>>({
         resolver: zodResolver(UpdatePasswordSchema),
         defaultValues: {
@@ -28,11 +30,29 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
         }
     })
     async function handleSubmit(v: z.infer<typeof UpdatePasswordSchema>) {
-       await updatePassword(v, locationId).then(() => {
-        toast.success("Password Updated");
-       }).catch((error) => {
-        toast.error("Something went wrong, please try again later");
-       }); 
+
+        if (v.currentPassword === v.password) {
+            toast.error("Please a different password for your new password.")
+            return
+        }
+
+        setLoading(true)
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${locationId}/profile/password`, {
+                method: "PUT",
+                body: JSON.stringify(v)
+            })
+        )
+
+        setLoading(false)
+        if (error || !result || !result.ok) {
+            toast.error("Something went wrong, please try again.")
+        }
+
+        if (result?.ok) {
+            toast.success("Password updated successfully.")
+        }
+
     }
     return (
         <Card className='rounded-sm'>
@@ -46,7 +66,7 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
                             <div className="flex gap-4">
                                 <FormField control={form.control} name="currentPassword" render={({ field }) => (
                                     <FormItem className="flex-1 mt-0">
-                                        <FormLabel className="font-semibold">
+                                        <FormLabel size="tiny">
                                             Current Password
                                         </FormLabel>
                                         <FormControl>
@@ -62,7 +82,7 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
                             <div className="flex gap-4">
                                 <FormField control={form.control} name="password" render={({ field }) => (
                                     <FormItem className="flex-1 mt-0">
-                                        <FormLabel className="font-semibold">
+                                        <FormLabel size="tiny">
                                             New Password
                                         </FormLabel>
                                         <FormControl>
@@ -78,7 +98,7 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
                             <div className="flex gap-4">
                                 <FormField control={form.control} name="confirmPassword" render={({ field }) => (
                                     <FormItem className="flex-1 mt-0">
-                                        <FormLabel className="font-semibold">
+                                        <FormLabel size="tiny">
                                             Confirm Password
                                         </FormLabel>
                                         <FormControl>
@@ -98,7 +118,7 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
                     onClick={form.handleSubmit(handleSubmit)}
                     variant={"foreground"}
                     size={"sm"}
-                    className={cn("children:hidden")}
+                    className={cn("children:hidden", loading && "children:inline-block")}
                     type="submit"
                 >
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
