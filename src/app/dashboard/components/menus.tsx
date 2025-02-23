@@ -83,7 +83,7 @@ function SideNav({ locationId }: { locationId: string }) {
                                         </li>
                                     ) : (
                                         <li className='w-full group-data-[account-status=active]:opacity-100 opacity-50'>
-                                            <Link href={`/dashboard/${locationId}/${item.path}`} className={cn(menuLinkClass)}>
+                                            <Link href={locationState.status === "Active" ? `/dashboard/${locationId}/${item.path}` : "#"} className={cn(menuLinkClass)}>
                                                 <span><Icon name={item.icon} size={16} /></span>
                                                 <b className='group-data-[state=closed]:opacity-0 font-semibold flex-1 text-xs'>{item.name}</b>
                                             </Link>
