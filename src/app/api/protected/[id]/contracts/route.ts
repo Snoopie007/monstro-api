@@ -29,7 +29,6 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 export async function POST(req: Request, props: { params: Promise<{ id: number }> }) {
 	const params = await props.params;
 	const session = await auth();
-	const data = await req.json()
 	try {
 		if (session) {
 

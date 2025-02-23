@@ -5,18 +5,14 @@ import Stripe from "stripe";
 import { tryCatch } from "@/libs/utils";
 import { waitUntil } from "@vercel/functions";
 import { db } from "@/db/db";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { locations } from "@/db/schemas";
 import { decodeId } from "@/libs/server/sqids";
 
 export async function POST(req: NextRequest) {
-    console.log("Stripe webhook received");
+
     const body = await req.json();
     const signature = (await headers()).get("Stripe-Signature");
-    if (body.type === "invoice.payment_failed") {
-        console.log("invoice.payment_failed");
-        console.log(body.data.object.subscription_details);
-    }
 
     if (!signature) return NextResponse.json({ message: "No signature", status: 400 });
 
@@ -58,6 +54,7 @@ const allowedEvents: Stripe.Event.Type[] = [
 ];
 
 async function processEvent(event: Stripe.Event) {
+
     // Skip processing if the event isn't one I'm tracking (list of all events below)
     if (!allowedEvents.includes(event.type)) return;
 
@@ -83,7 +80,9 @@ async function processEvent(event: Stripe.Event) {
 }
 
 async function processSubscriptionEvent(event: Stripe.Event) {
+    console.log("subscription event ", event.type)
     const subscription = event.data?.object as Stripe.Subscription;
+
     const { locationId } = subscription.metadata;
     if (!locationId) return;
 
@@ -105,14 +104,16 @@ async function processSubscriptionEvent(event: Stripe.Event) {
 }
 
 async function processInvoiceEvent(event: Stripe.Event) {
+    console.log("invoice event ", event.type)
     const invoice = event.data?.object as Stripe.Invoice;
-    const subscription = invoice.subscription as Stripe.Subscription;
+    const subscription = invoice.subscription_details as Stripe.Subscription;
 
-    if (!subscription) return;
+    if (!subscription || !subscription.metadata) return;
     const { locationId } = subscription.metadata;
     if (!locationId) return;
 
     if (event.type === "invoice.payment_succeeded") {
+
         const decodedId = decodeId(locationId);
         try {
             const location = await db.query.locations.findFirst({
@@ -129,7 +130,7 @@ async function processInvoiceEvent(event: Stripe.Event) {
                 updated: new Date(),
             }).where(eq(locations.id, decodedId));
         } catch (error) {
-
+            console.error("Error updating location", error)
         }
     }
 }

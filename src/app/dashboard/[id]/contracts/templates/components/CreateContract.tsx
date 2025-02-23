@@ -9,7 +9,6 @@ import {
 import { cn, sleep, tryCatch } from "@/libs/utils"
 import { useRouter } from "next/navigation"
 import { MouseEvent, useState } from "react"
-import { fetcher, createContract as postContract } from "@/libs/api"
 import { toast } from "react-toastify"
 
 
@@ -24,13 +23,6 @@ export function CreateContract({ locationId }: { locationId: string }) {
         const { result, error } = await tryCatch(
             fetch(`/api/protected/${locationId}/contracts`, {
                 method: "POST",
-                body: JSON.stringify({
-                    content: '',
-                    title: '',
-                    description: '',
-                    isDraft: true,
-                    editable: true,
-                })
             })
         );
 
