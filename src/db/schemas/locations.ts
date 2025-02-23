@@ -7,7 +7,7 @@ import { integrations } from "./intergrations";
 import { programs } from "./programs";
 import { transactions } from "./transactions";
 import { vendors } from "./vendors";
-import { LocationProgress } from "@/types/location";
+import { LocationState } from "@/types/location";
 
 const LocationStatusEnum = pgEnum("location_status", ["Pending", "Active", "Inactive", "Past due", "Cancelled", "Failed Payment"])
 
@@ -26,13 +26,25 @@ export const locations = pgTable("locations", {
     phone: text("phone"),
     timezone: varchar("timezone"),
     logoUrl: text("logo_url"),
-    status: LocationStatusEnum("status").notNull().default("Pending"),
     metadata: jsonb("meta_data").$type<Record<string, any>>(),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id),
-    progress: jsonb("progress").$type<LocationProgress>().notNull().default(sql`'{}'`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })
+});
+
+export const locationState = pgTable("location_state", {
+    locationId: integer("location_id").primaryKey().references(() => locations.id, { onDelete: "cascade" }),
+    planId: integer("plan_id"),
+    pkgId: integer("pkg_id"),
+    paymentPlanId: integer("payment_plan_id"),
+    agreeToTerms: boolean("agree_to_terms").notNull().default(false),
+    lastRenewalDate: timestamp('last_renewal_date', { withTimezone: true }),
+    activationDate: timestamp('activation_date', { withTimezone: true }),
+    metadata: jsonb("metadata").$type<Record<string, any>>(),
+    status: LocationStatusEnum("status").notNull().default("Pending"),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
 });
 
 
@@ -61,6 +73,10 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
     memberLocations: many(memberLocations),
     integrations: many(integrations),
     programs: many(programs),
+    locationState: one(locationState, {
+        fields: [locations.id],
+        references: [locationState.locationId],
+    }),
     vendor: one(vendors, {
         fields: [locations.vendorId],
         references: [vendors.id],
@@ -69,6 +85,13 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
         fields: [locations.id],
         references: [wallet.locationId],
     })
+}));
+
+export const locationStateRelations = relations(locationState, ({ one }) => ({
+    location: one(locations, {
+        fields: [locationState.locationId],
+        references: [locations.id],
+    }),
 }));
 
 

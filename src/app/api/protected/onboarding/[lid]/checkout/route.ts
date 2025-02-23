@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { locations, vendors, wallet } from '@/db/schemas';
+import { locations, locationState, vendors, wallet } from '@/db/schemas';
 import { decodeId } from '@/libs/server/sqids';
 import { StripePayments } from '@/libs/server/stripe';
 import { MonstroPackage } from '@/types/vendor';
@@ -19,15 +19,15 @@ sendgrid.setApiKey(process.env.SENDGRID_API_KEY!);
 
 export async function POST(req: Request) {
     const data = await req.json();
-    const { vendorId, locationId, token, progress } = data;
+    const { vendorId, locationId, token, state } = data;
     const decodedLocationId = decodeId(locationId);
 
-    const paymentPlan = progress.pkgId
-        ? packages.find((p: MonstroPackage) => p.id === progress.pkgId)?.paymentPlans.find(p => p.id === progress.paymentPlanId)
+    const paymentPlan = state.pkgId
+        ? packages.find((p: MonstroPackage) => p.id === state.pkgId)?.paymentPlans.find(p => p.id === state.paymentPlanId)
         : undefined;
 
-    const plan = !progress.pkgId
-        ? plans.find(p => p.id === progress.planId)
+    const plan = !state.pkgId
+        ? plans.find(p => p.id === state.planId)
         : undefined;
 
     if (!plan && !paymentPlan) {
@@ -108,18 +108,20 @@ export async function POST(req: Request) {
         });
 
 
-        const activeDate = new Date().getTime() * 1000
-
         await db.transaction(async (tx) => {
             await tx.update(locations).set({
-                progress: {
-                    ...progress,
-                    activeDate,
-                    lastRenewalDate: activeDate
-                },
-                status: "Active",
+
                 updated: new Date()
             }).where(eq(locations.id, decodedLocationId))
+
+            await tx.update(locationState).set({
+                ...state,
+                status: "Active",
+                activationDate: new Date(),
+                lastRenewalDate: new Date(),
+                updated: new Date()
+            }).where(eq(locationState.locationId, decodedLocationId))
+
             await tx.update(vendors).set({
                 stripeCustomerId: customer.id,
                 updated: new Date()

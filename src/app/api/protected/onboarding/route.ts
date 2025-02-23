@@ -1,12 +1,12 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { locations, vendorProgress } from '@/db/schemas';
+import { locations, locationState, vendorProgress } from '@/db/schemas';
 import { encodeId } from '@/libs/server/sqids';
-const DefaultProgress = {
+const DEFAULT_LOCATION_STATE = {
     planId: null,
     paymentPlanId: null,
-    agreedToTerms: false,
+    agreeToTerms: false,
     pkgId: null,
 }
 
@@ -19,9 +19,13 @@ export async function POST(req: Request) {
                 ...data,
                 phone: data.phone.startsWith('+') ? data.phone.replace(/[^0-9+]/g, '') : `+${data.phone.replace(/[^0-9]/g, '')}`,
                 created: new Date(),
-                progress: DefaultProgress,
-                status: "Pending"
-            }).returning({ id: locations.id, name: locations.name, progress: locations.progress });
+            }).returning({ id: locations.id, name: locations.name });
+
+            const [{ status }] = await tx.insert(locationState).values({
+                locationId: location.id,
+                ...DEFAULT_LOCATION_STATE,
+                created: new Date()
+            }).returning({ status: locationState.status })
 
             await tx.insert(vendorProgress).values({
                 vendorId: data.vendorId,

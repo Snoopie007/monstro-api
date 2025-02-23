@@ -2,26 +2,25 @@
 
 import { createContext, useReducer, ReactElement, useCallback, useContext, ReactNode } from "react";
 
-import { LocationProgress } from "@/types/location";
-
+import { LocationState } from "@/types/location";
 
 type StateType = {
-    progress: LocationProgress;
+    locationState: LocationState;
 }
 
 const enum REDUCER_ACTION_TYPE {
-    UPDATE_PROGRESS
+    UPDATE_LOCATION_STATE
 }
 
 type ReducerAction = {
     type: REDUCER_ACTION_TYPE,
-    payload?: number | Record<string, any>
+    payload?: LocationState
 }
 
 const reducer = (state: StateType, action: ReducerAction): StateType => {
     switch (action.type) {
-        case REDUCER_ACTION_TYPE.UPDATE_PROGRESS:
-            return { ...state, progress: action.payload as LocationProgress }
+        case REDUCER_ACTION_TYPE.UPDATE_LOCATION_STATE:
+            return { ...state, locationState: action.payload as LocationState }
         default:
             throw new Error();
     }
@@ -30,14 +29,14 @@ const reducer = (state: StateType, action: ReducerAction): StateType => {
 const useOnboardingContext = (initState: StateType) => {
     const [state, dispatch] = useReducer(reducer, initState);
 
-    const updateProgress = useCallback((progress: Record<string, any>) => {
+    const updateLocationState = useCallback((locationState: LocationState) => {
         dispatch({
-            type: REDUCER_ACTION_TYPE.UPDATE_PROGRESS,
-            payload: progress
+            type: REDUCER_ACTION_TYPE.UPDATE_LOCATION_STATE,
+            payload: locationState
         });
     }, []);
 
-    return { state, updateProgress };
+    return { state, updateLocationState };
 }
 
 type UseOnboardingContextType = ReturnType<typeof useOnboardingContext>
@@ -45,14 +44,14 @@ type UseOnboardingContextType = ReturnType<typeof useOnboardingContext>
 export const OnboardingContext = createContext<UseOnboardingContextType | null>(null)
 
 interface OnboardingProviderProps {
-    progress: LocationProgress;
+    state: LocationState;
     children: ReactNode;
 }
 
-export const OnboardingProvider = ({ children, progress }: OnboardingProviderProps): ReactElement => {
+export const OnboardingProvider = ({ children, state }: OnboardingProviderProps): ReactElement => {
     return (
         <OnboardingContext.Provider value={useOnboardingContext({
-            progress
+            locationState: state
         })}>
             {children}
         </OnboardingContext.Provider>
@@ -60,8 +59,8 @@ export const OnboardingProvider = ({ children, progress }: OnboardingProviderPro
 }
 
 type UseOnboardingHookType = {
-    progress: LocationProgress;
-    updateProgress: (progress: LocationProgress) => void;
+    locationState: LocationState;
+    updateLocationState: (locationState: LocationState) => void;
 }
 
 export const useOnboarding = (): UseOnboardingHookType => {
@@ -69,11 +68,10 @@ export const useOnboarding = (): UseOnboardingHookType => {
     if (!context) {
         throw new Error('useOnboarding must be used within a OnboardingProvider')
     }
-    const { state, updateProgress } = context;
-    const { progress } = state;
+    const { state, updateLocationState } = context;
 
     return {
-        progress,
-        updateProgress
+        locationState: state.locationState,
+        updateLocationState
     };
 }

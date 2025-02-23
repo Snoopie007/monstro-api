@@ -18,24 +18,22 @@ type UserSelection = {
 }
 
 export default function VendorPayment() {
-    const { progress } = useOnboarding();
-    const [loading, setLoading] = useState<boolean>(false);
-    const { data: session } = useSession();
+    const { locationState } = useOnboarding();
     const [userSelection, setUserSelection] = useState<UserSelection>({ plan: undefined, pkg: undefined, paymentPlan: undefined });
 
     useEffect(() => {
-        if (progress.planId) {
-            const plan = plans.find(p => p.id === progress.planId);
+        if (locationState.planId) {
+            const plan = plans.find(p => p.id === locationState.planId);
             setUserSelection({ ...userSelection, plan });
         }
-        if (progress.pkgId) {
-            const pkg = packages.find(p => p.id === progress.pkgId);
-            const paymentPlan = pkg?.paymentPlans.find(pp => pp.id === progress.paymentPlanId);
+        if (locationState.pkgId) {
+            const pkg = packages.find(p => p.id === locationState.pkgId);
+            const paymentPlan = pkg?.paymentPlans.find(pp => pp.id === locationState.paymentPlanId);
             if (pkg && paymentPlan) {
                 setUserSelection({ ...userSelection, pkg, paymentPlan });
             }
         }
-    }, [progress])
+    }, [locationState])
     return (
         <div className='flex flex-col gap-2'>
             <VendorPaymentDetails userSelection={userSelection} />

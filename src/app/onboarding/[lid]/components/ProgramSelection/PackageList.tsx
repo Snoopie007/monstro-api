@@ -6,18 +6,18 @@ import React, { useState, useMemo, useCallback } from "react";
 import { MonstroPackage } from "@/types";
 
 export default function PackageList() {
-    const { progress, updateProgress } = useOnboarding();
+    const { locationState, updateLocationState } = useOnboarding();
     const [expandedPackageId, setExpandedPackageId] = useState<number | null>(null);
 
     const isSelected = useCallback((pkgId: number) => {
-        if (!progress.pkgId) return false;
-        return progress.pkgId === pkgId;
-    }, [progress.pkgId]);
+        if (!locationState.pkgId) return false;
+        return locationState.pkgId === pkgId;
+    }, [locationState.pkgId]);
 
     const isPaymentPlan = useCallback((paymentPlanId: number) => {
-        if (!progress.paymentPlanId) return false;
-        return progress.paymentPlanId === paymentPlanId;
-    }, [progress.paymentPlanId]);
+        if (!locationState.paymentPlanId) return false;
+        return locationState.paymentPlanId === paymentPlanId;
+    }, [locationState.paymentPlanId]);
 
     const isExpanded = useCallback((pkgId: number) => {
         return expandedPackageId === pkgId;
@@ -29,21 +29,21 @@ export default function PackageList() {
     }, []);
 
     const handlePackageSelect = useCallback((pkgId: number) => {
-        updateProgress({
-            ...progress,
+        updateLocationState({
+            ...locationState,
             pkgId: pkgId,
             planId: null
         });
-    }, [progress, updateProgress]);
+    }, [locationState, updateLocationState]);
 
     const handlePaymentPlanSelect = useCallback((e: React.MouseEvent<HTMLDivElement, MouseEvent>, paymentPlanId: number) => {
         e.stopPropagation();
-        updateProgress({
-            ...progress,
+        updateLocationState({
+            ...locationState,
             paymentPlanId: paymentPlanId,
             planId: null
         });
-    }, [progress, updateProgress]);
+    }, [locationState, updateLocationState]);
 
     const InfoIcon = useMemo(() => (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" >

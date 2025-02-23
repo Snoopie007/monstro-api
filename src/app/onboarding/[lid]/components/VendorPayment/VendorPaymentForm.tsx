@@ -40,7 +40,7 @@ function handlePaymentError(toastRef: string | number, message: string) {
 
 
 export default function VendorPaymentForm() {
-    const { progress, updateProgress } = useOnboarding();
+    const { locationState, updateLocationState } = useOnboarding();
     const [errorMessage, setErrorMessage] = useState("");
     const [locationId, setLocationId] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -88,20 +88,13 @@ export default function VendorPaymentForm() {
                         vendorId: session?.user.vendorId,
                         locationId: locationId,
                         token: tokenRef.token,
-                        progress: progress
+                        state: locationState
                     }),
                 });
                 setLoading(false);
                 if (!res.ok) {
                     return handlePaymentError(toastRef, "An error occurred while processing your payment.");
                 }
-
-                update({
-                    onboarding: {
-                        ...progress,
-                        completed: true
-                    }
-                })
 
                 router.push(`/dashboard/${locationId}`)
             } else {
@@ -219,11 +212,11 @@ export default function VendorPaymentForm() {
 
                     </form>
                 </Form >
-                <TermsAndConditions checked={progress.agreedToTerms}
+                <TermsAndConditions checked={locationState.agreeToTerms}
                     setChecked={(checked) =>
-                        updateProgress({
-                            ...progress,
-                            agreedToTerms: checked
+                        updateLocationState({
+                            ...locationState,
+                            agreeToTerms: checked
                         })
                     }
                 />
@@ -236,7 +229,7 @@ export default function VendorPaymentForm() {
                         "children:hidden": !loading
                     })}
                     onClick={form.handleSubmit(onSubmit)}
-                    disabled={loading || !stripe || !form.formState.isValid || !progress.agreedToTerms || !validCard}
+                    disabled={loading || !stripe || !form.formState.isValid || !locationState.agreeToTerms || !validCard}
 
                 >
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

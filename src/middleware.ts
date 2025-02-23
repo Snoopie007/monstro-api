@@ -10,7 +10,6 @@ export default auth(async (req) => {
 		const { pathname } = req.nextUrl;
 		const isLoggedin = !!req.auth;
 		const locations = req.auth?.user?.locations || [];
-		const currentLocationId = req.auth?.user?.currentLocationId;
 
 		if (pathname.startsWith("/api/protected")) {
 			if (!isLoggedin) {
@@ -42,10 +41,8 @@ export default auth(async (req) => {
 		if (isLoggedin) {
 
 			if (locations.length === 0 && pathname !== '/onboarding') {
-				console.log("No locations found");
 				return NextResponse.redirect(new URL("/onboarding", req.nextUrl.origin));
 			}
-
 
 			const [_, path, locationId] = pathname.match(/^\/((?:dashboard|onboarding))\/([^/]+)(\/.*)?$/) || [];
 
@@ -55,10 +52,6 @@ export default auth(async (req) => {
 				if (!nextLocation) {
 					nextLocation = locations.find((loc: { status: string }) => loc.status === "Active") ||
 						locations.find((loc: { status: string }) => loc.status === "Pending");
-				}
-
-				if (!nextLocation) {
-					nextLocation = locations.find((loc: { id: string }) => loc.id === currentLocationId)
 				}
 
 				const isOnboarding = nextLocation.status === 'Pending';

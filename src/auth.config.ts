@@ -10,8 +10,7 @@ export default {
 		Credentials({
 			credentials: {
 				email: { label: "Email", type: "email" },
-				password: { label: "Password", type: "password" },
-				currentLocationId: { label: "Current Location Id", type: "text" },
+				password: { label: "Password", type: "password" }
 			},
 			authorize: async (credentials) => {
 
@@ -31,11 +30,16 @@ export default {
 							},
 							with: {
 								locations: {
+									with: {
+										locationState: {
+											columns: {
+												status: true,
+											}
+										}
+									},
 									columns: {
 										id: true,
 										name: true,
-										progress: true,
-										status: true
 									}
 								}
 							}
@@ -66,11 +70,15 @@ export default {
 				const { data: { token } } = await result.json();
 
 				const { vendor: { locations, ...vendor }, ...rest } = user;
-				const encodedLocations = locations.map(location => ({
-					...location,
-					id: encodeId(location.id)
-				}));
-				console.log(encodedLocations);
+				const encodedLocations = locations.map(location => {
+					const { locationState, ...restData } = location;
+					return {
+						...restData,
+						id: encodeId(location.id),
+						status: locationState.status
+					}
+				});
+
 				return {
 					id: rest.id.toString(),
 					name: rest.name,
@@ -83,8 +91,6 @@ export default {
 					role: 'vendor',
 					token: token,
 					locations: encodedLocations,
-					permissions: {},
-					currentLocationId: credentials.currentLocationId
 				};
 
 			}

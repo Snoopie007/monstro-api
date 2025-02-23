@@ -4,12 +4,11 @@ import { auth } from "@/auth";
 import { StepBox, StepBoxContent, StepBoxHeader } from "./components";
 import AddLocation from './components/AddLocation/AddLocation';
 import { redirect } from 'next/navigation';
-import { Location } from '@/types/location';
 export default async function VendorOnboarding() {
     const session = await auth();
 
     if (session?.user.locations.length > 0) {
-        const pendingLocation = session?.user.locations.find((location: Location) => location.status === "Pending")
+        const pendingLocation = session?.user.locations.find((location: { id: string, status: string }) => location.status === "Pending")
         if (pendingLocation) {
             return redirect(`/onboarding/${pendingLocation.id}`)
         }

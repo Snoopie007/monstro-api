@@ -27,7 +27,6 @@ export async function POST(req: NextRequest) {
                 where: (locations, { eq, and }) => and(eq(locations.vendorId, user.vendor.id), eq(locations.id, decodedId)),
                 columns: {
                     id: true,
-                    status: true
                 }
             })
 
@@ -36,21 +35,25 @@ export async function POST(req: NextRequest) {
         if (!location) {
             const locations = await db.query.locations.findMany({
                 where: (locations, { eq }) => eq(locations.vendorId, user.vendor.id),
+                with: {
+                    locationState: {
+                        columns: {
+                            status: true
+                        }
+                    }
+                },
                 columns: {
                     id: true,
-                    status: true
                 }
             })
-            console.log("locations", locations)
-            location = locations.find(loc => loc.status === "Active") || locations.find(loc => loc.status === "Pending");
+            location = locations.find(loc => loc.locationState.status === 'Active' || loc.locationState.status === 'Pending') || locations[0];
         }
 
         if (!location) {
             return NextResponse.json({ lid: null }, { status: 200 });
         }
 
-
-        return NextResponse.json({ id: encodeId(location.id), status: location.status }, { status: 200 })
+        return NextResponse.json({ id: encodeId(location.id) }, { status: 200 })
 
     } catch (error) {
         console.log(error);

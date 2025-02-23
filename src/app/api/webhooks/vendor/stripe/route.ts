@@ -6,7 +6,7 @@ import { tryCatch } from "@/libs/utils";
 import { waitUntil } from "@vercel/functions";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
-import { locations } from "@/db/schemas";
+import { locations, locationState } from "@/db/schemas";
 import { decodeId } from "@/libs/server/sqids";
 
 export async function POST(req: NextRequest) {
@@ -96,13 +96,23 @@ async function processSubscriptionEvent(event: Stripe.Event) {
     const locationStatus = statusMap[subscription.status as keyof typeof statusMap] || 'Inactive';
 
     if (locationStatus) {
-        await db.update(locations).set({
+        await db.update(locationState).set({
             status: locationStatus,
             updated: new Date(),
-        }).where(eq(locations.id, parseInt(locationId)));
+        }).where(eq(locationState.locationId, parseInt(locationId)));
     }
 }
-
+/**
+* Checks if a given date is today
+* @param date - Date to check, can be null
+* @returns boolean - true if date is today, false otherwise or if null
+*/
+function isToday(date: Date | null, today: Date) {
+    if (!date) return false;
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() === today.getTime();
+}
 async function processInvoiceEvent(event: Stripe.Event) {
     console.log("invoice event ", event.type)
     const invoice = event.data?.object as Stripe.Invoice;
@@ -116,19 +126,31 @@ async function processInvoiceEvent(event: Stripe.Event) {
 
         const decodedId = decodeId(locationId);
         try {
-            const location = await db.query.locations.findFirst({
-                where: (loc, { eq }) => eq(loc.id, decodedId),
+            const state = await db.query.locationState.findFirst({
+                where: (locState, { eq }) => eq(locState.locationId, decodedId),
             });
 
-            if (!location || !location.progress.lastRenewalDate) return;
-            const lastRenewalDate = new Date(location.progress.lastRenewalDate).setDate(new Date(location.progress.lastRenewalDate).getDate() + 28);
-            await db.update(locations).set({
-                progress: {
-                    ...location.progress,
-                    lastRenewalDate: new Date(lastRenewalDate).getTime() * 1000,
-                },
+            if (!state || !state.lastRenewalDate) return;
+            /** 
+             * Set today's date to midnight for consistent date comparison
+             * This removes any time component when checking dates
+             */
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            /**
+             * Guard clause to prevent duplicate invoice processing
+             * We only want to process the renewal if either:
+             * - It's the initial activation date
+             * - It's the scheduled renewal date
+             */
+            if (!isToday(state.activationDate, today) && !isToday(state.lastRenewalDate, today)) {
+                return;
+            }
+            const lastRenewalDate = new Date(state.lastRenewalDate).setDate(new Date(state.lastRenewalDate).getDate() + 28);
+            await db.update(locationState).set({
+                lastRenewalDate: new Date(lastRenewalDate),
                 updated: new Date(),
-            }).where(eq(locations.id, decodedId));
+            }).where(eq(locationState.locationId, decodedId));
         } catch (error) {
             console.error("Error updating location", error)
         }

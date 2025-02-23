@@ -2,6 +2,7 @@
 export type Location = {
     id: number;
     name: string;
+    vendorId: number;
     legalName: string | null;
     industry: string | null;
     address: string | null;
@@ -15,20 +16,22 @@ export type Location = {
     metadata: Record<string, any> | null;
     logoUrl: string | null;
     timezone: string | null;
-    status: string | null;
-    vendorId: number;
-    progress: LocationProgress;
+    locationState: LocationState;
     created: Date;
     updated: Date | null;
     deleted: Date | null;
 };
 
-export type LocationProgress = {
+export type LocationState = {
+    locationId: number;
     planId: number | null;
     pkgId: number | null;
     paymentPlanId: number | null;
-    aibotCounts: number | null;
-    agreedToTerms: boolean;
-    lastRenewalDate: number | null;
-    activeDate: number | null;
+    agreeToTerms: boolean;
+    lastRenewalDate: Date | null;
+    activationDate: Date | null;
+    metadata: Record<string, any> | null;
+    status: string;
+    created: Date;
+    updated: Date | null;
 }
