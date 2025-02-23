@@ -1,52 +1,41 @@
 
 import { auth } from "@/auth";
-import { NextResponse } from "next/server";
 import { db } from "@/db/db";
+import { roles } from "@/db/schemas";
+import { NextResponse } from "next/server";
 
-export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
+type RoleProps = {
+    id: number
+}
+export async function GET(req: Request, props: { params: Promise<RoleProps> }) {
     const params = await props.params;
-    const session = await auth();
+
     try {
-        if (session) {
-            const roles = await db.query.roles.findMany({
-                where: (roles, {eq}) => eq(roles.locationId,params.id),
-                with: {
-                    permissions: true
-                }
-            })
-            return NextResponse.json(roles, { status: 200 });
-        }
+        const roles = await db.query.roles.findMany({
+            where: (roles, { eq }) => eq(roles.locationId, params.id),
+            with: {
+                permissions: true
+            }
+        })
+        return NextResponse.json(roles, { status: 200 });
     } catch (err) {
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
 
-export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, props: { params: Promise<RoleProps> }) {
     const params = await props.params;
-    const session = await auth();
     const data = await req.json()
+
     try {
+        const role = await db.insert(roles).values({
+            ...data,
+            locationId: params.id
+        }).returning({ id: roles.id })
+        return NextResponse.json(role, { status: 200 })
 
-		if (session) {
-
-			const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/roles`, {
-				method: 'POST',
-				headers: {
-					'Authorization': `Bearer ${session.user.token}`,
-					"locationId": `${params.id}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(data)
-			})
-            console.log(res)
-			if (!res.ok) {
-				return NextResponse.json({ message: "An error occurred saving role." }, { status: 400 });
-			}
-
-			return NextResponse.json({ message: "Success" }, { status: 200 });
-		}
-	} catch (err) {
-		// console.log(err)
-		return NextResponse.json({ error: err }, { status: 500 })
-	}
+    } catch (err) {
+        // console.log(err)
+        return NextResponse.json({ error: err }, { status: 500 })
+    }
 }

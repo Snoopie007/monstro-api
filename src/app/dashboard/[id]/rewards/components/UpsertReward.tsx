@@ -93,7 +93,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 
 	async function submitForm(v: z.infer<typeof RewardsSchema>) {
 		setLoading(true);
-		const body = v;
+
 		try {
 			const data = new FormData()
 			for (const file of rewardImages) {
@@ -102,13 +102,13 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 			data.append("fileDirectory", 'reward-images');
 			if (rewardImages.length > 0) {
 				const images = await postFile({ url: 's3-upload/multiple', data: data, id: locationId });
-				body.images = images.map((image: Record<string, any>) => image.url);
+				v.images = images.map((image: Record<string, any>) => image.url);
 			}
 
 
 			const res = await fetch(`/api/protected/${locationId}/rewards`, {
 				method: reward?.id ? 'PUT' : 'POST',
-				body: JSON.stringify(body),
+				body: JSON.stringify(v),
 			})
 
 

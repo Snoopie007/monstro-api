@@ -1,4 +1,3 @@
-import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { locations } from "@/db/schemas";
 import { eq } from "drizzle-orm";

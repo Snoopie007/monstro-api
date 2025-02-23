@@ -100,7 +100,6 @@ async function getVendorStripePublishableKey(programId: string) {
 }
 
 
-
 async function getContractByPlan(planId: string) {
 	const res = await nextApi.get(`/api/auth/register/sign-contract/${planId}`);
 	const data = res.data;
@@ -134,16 +133,6 @@ async function addProgramLevel(body: any, pId: number, id: string) {
 }
 
 
-// async function updateReward(rid: number, body: any, id: string) {
-// 	const res = await put({ url: `rewards/${rid}`, data: body, id: id });
-// 	return res;
-// }
-
-// async function addReward(body: any, id: string) {
-// 	const res = await post({ url: `rewards`, data: body, id: id });
-// 	return res;
-// }
-
 async function addMemberManually(body: any, id: string) {
 	const res = await post({ url: `members`, data: body, id: id });
 	return res;
@@ -165,20 +154,7 @@ async function updateContract(contractId: number, body: any, id: string) {
 	return res;
 }
 
-async function addRole(body: any, id: string) {
-	const res = await post({ url: `roles`, data: body, id: id });
-	return res;
-}
 
-async function updateRole(rid: number, body: any, id: string) {
-	const res = await put({ url: `roles/${rid}`, data: body, id: id });
-	return res;
-}
-
-async function deleteRole(rid: number, id: string) {
-	const res = await del({ url: `roles/${rid}`, id: id });
-	return res;
-}
 
 async function addStaff(body: any, id: string) {
 	const res = await post({ url: `staffs`, data: body, id: id });
@@ -226,26 +202,15 @@ export {
 	getPlansByProgramId,
 	inviteMember,
 	addPlan,
-	registerMember,
 	getContractByPlan,
 	getContractVariables,
 	fillContract,
 	getVendorStripePublishableKey,
-	createContract,
 	updateContract,
-	registerVendor,
 	updateProgramLevel,
 	addProgramLevel,
-	updateAchievment,
-	addAchievment,
-	deleteAchievement,
-	updateReward,
-	addReward,
 	deleteReward,
 	addMemberManually,
-	addRole,
-	updateRole,
-	deleteRole,
 	addStaff,
 	updateStaff,
 	deleteStaff,

@@ -14,7 +14,7 @@ import {
 
 } from '@/components/ui'
 import { Form, FormField, FormLabel, FormItem, FormControl, FormDescription, FormMessage, Input, Checkbox, } from '@/components/forms'
-import { cn } from '@/libs/utils';
+import { cn, tryCatch } from '@/libs/utils';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useForm } from 'react-hook-form';
@@ -22,7 +22,6 @@ import { Permission, Role } from '@/types';
 import { CreateRoleSchema } from '../schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { addRole, updateRole } from '@/libs/api';
 
 type CheckboxVarients = 'red' | 'green' | 'blue' | 'pink' | 'cyan' | 'lime' | 'orange' | 'fuchsia' | 'sky' | 'lemon' | 'purple' | 'yellow'
 const RoleColors: CheckboxVarients[] = [
@@ -46,7 +45,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
         setFilteredPermissions(permissions);
         if (role) {
             const ids = role.permissions.map((permission: any) => permission.permissionId);
-            console.log(ids)
+
             const permissionNames = permissions.filter((permission: Permission) => ids.includes(Number(permission.id))).map((permission) => permission.name);
             form.reset({
                 name: role.name,
@@ -57,14 +56,6 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
         }
     }, [role]);
 
-    function closeEdit() {
-        form.reset({
-            name: "",
-            color: "red",
-            permissions: []
-        });
-        setCurrentRole(null);
-    }
 
     const form = useForm<z.infer<typeof CreateRoleSchema>>({
         resolver: zodResolver(CreateRoleSchema),
@@ -89,24 +80,19 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
 
     async function handleSubmit(v: z.infer<typeof CreateRoleSchema>) {
 
-        const body = {
-            ...v
-        };
-        try {
-            if (role && role.id) {
-                // Await the updateProgramLevel call
-                await updateRole(Number(role.id), body, locationId);
-                toast.success("Role Updated");
-            } else {
-                // Await the addProgramLevel call
-                await addRole(body, locationId);
-                toast.success("Role Added");
-            }
-            closeEdit();
-        } catch (error) {
-            console.error("Error:", error); // Add logging for debugging
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${locationId}/roles`, {
+                method: role && role.id ? 'PUT' : 'POST',
+                body: JSON.stringify(v)
+            })
+        )
+        if (error || !result || !result.ok) {
             toast.error("Something went wrong, please try again later");
         }
+        toast.success("Role Updated");
+        form.reset();
+        setCurrentRole(null);
+
     };
 
     return (
@@ -232,9 +218,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                 </div>
                 <SheetFooter className='border-foreground/10 border-t w-full p-4 absolute bottom-0 left-0'>
                     <SheetClose asChild>
-                        <Button onClick={closeEdit} variant={"outline"}
-                            size={"sm"}
-                        >
+                        <Button variant={"outline"} size={"sm"}                        >
                             Cancel
                         </Button>
 
@@ -246,7 +230,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                             form.handleSubmit(handleSubmit)
                         }
                     >
-                        Save Changes
+                        Save
                     </Button>
 
                 </SheetFooter>
