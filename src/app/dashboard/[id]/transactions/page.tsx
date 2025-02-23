@@ -2,7 +2,7 @@
 
 import { decodeId } from "@/libs/server/sqids";
 import { db } from "@/db/db";
-import { TransactionsList } from "./components/transactions-list";
+import { TransactionsList } from "./components/TransactionsList";
 import { Transaction } from "@/types";
 
 async function fetchTransactions(id: string): Promise<Transaction[]> {

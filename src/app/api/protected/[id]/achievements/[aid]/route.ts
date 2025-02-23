@@ -1,81 +1,49 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
+import { db } from '@/db/db';
+import { achievements } from '@/db/schemas';
+import { eq } from 'drizzle-orm';
 
-export async function GET(req: Request, props: { params: Promise<{ aid: string, id: string }> }) {
-  const params = await props.params;
-  const session = await auth();
-  try {
-    if (session) {
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/achievements/${params.aid}`, {
-        headers: {
-          'Authorization': `Bearer ${session.user.token}`,
-          "locationId": `${params.id}`
-        }
-      });
-      if (!res.ok) {
-        return NextResponse.json({ message: "An error occurred while fetching the data." }, { status: 400 });
-      }
-      const { data } = await res.json();
-      return NextResponse.json(data, { status: 200 });
-    }
-  } catch (err) {
-    return NextResponse.json({ error: err }, { status: 500 })
-  }
+export async function GET(req: Request, props: { params: Promise<{ aid: number, id: number }> }) {
+	const params = await props.params;
+	const session = await auth();
+	try {
+		const achievement = await db.query.achievements.findFirst({
+			where: (achievement, { eq }) => eq(achievement.id, params.aid),
+			with: {
+				actions: true
+			}
+		})
+		return NextResponse.json(achievement, { status: 200 })
+	} catch (err) {
+		return NextResponse.json({ error: err }, { status: 500 })
+	}
 }
 
-export async function PUT(req: Request, props: { params: Promise<{ aid: string, id: string }> }) {
-  const params = await props.params;
-  const session = await auth();
-  const data = await req.json()
-  try {
+export async function PUT(req: Request, props: { params: Promise<{ aid: number, id: number }> }) {
+	const params = await props.params;
+	const session = await auth();
+	const data = await req.json()
+	try {
+		const achievement = await db.update(achievements).set(data)
+			.where(eq(achievements.id, params.aid))
+			.returning({ id: achievements.id });
+		return NextResponse.json(achievement, { status: 200 })
 
-    if (session) {
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/achievements/${params.aid}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${session.user.token}`,
-          "locationId": `${params.id}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-
-      if (!res.ok) {
-        return NextResponse.json({ message: "An error occurred saving achievement." }, { status: 400 });
-      }
-
-      return NextResponse.json({ message: 'Success' }, { status: 200 });
-    }
-  } catch (err) {
-    console.log(err)
-    return NextResponse.json({ error: err }, { status: 500 })
-  }
+	} catch (err) {
+		console.log(err)
+		return NextResponse.json({ error: err }, { status: 500 })
+	}
 }
 
-export async function DELETE(req: Request, props: { params: Promise<{ aid: string, id: string }> }) {
-  const params = await props.params;
-  const session = await auth();
-  try {
-    if (session) {
+export async function DELETE(req: Request, props: { params: Promise<{ aid: number, id: number }> }) {
+	const params = await props.params;
+	try {
+		await db.delete(achievements).where(eq(achievements.id, params.aid));
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/achievements/${params.aid}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.user.token}`,
-          "locationId": `${params.id}`
-        }
-      });
-
-      if (!res.ok) {
-        return NextResponse.json({ message: "An error occurred deleting achievement." }, { status: 400 });
-      }
-
-      return NextResponse.json({ message: "Success" }, { status: 200 });
-    }
-  } catch (err) {
-    console.log(err)
-    return NextResponse.json({ error: err }, { status: 500 })
-  }
+		return NextResponse.json({ success: true }, { status: 200 })
+	} catch (err) {
+		console.log(err)
+		return NextResponse.json({ error: err }, { status: 500 })
+	}
 }

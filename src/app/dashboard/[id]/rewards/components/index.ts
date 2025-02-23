@@ -1,2 +1,2 @@
-export * from './upsert-reward';
-export * from './reward-columns';
+export * from './UpsertReward';
+export * from './RewardColumns';

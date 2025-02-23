@@ -75,6 +75,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
         },
         mode: "onChange",
     });
+
     function permissionFilter(query: string) {
         if (query === '') {
             setFilteredPermissions(permissions); // Show all permissions if query is empty

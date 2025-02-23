@@ -45,7 +45,6 @@ function SideNav({ locationId }: { locationId: string }) {
                         setIsOpen(false)
                     }}
                     data-state={isOpen ? 'open' : 'closed'}
-
                 >
                     <div className='w-full py-6 px-2'>
                         <ul className='space-y-2'>

@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui";
 import { Achievement } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 
-export const AchievementColumns = (locationId: string): ColumnDef<Achievement, any>[] => [
+export const AchievementColumns = (): ColumnDef<Achievement, any>[] => [
     {
         accessorKey: "title",
         header: "Title",

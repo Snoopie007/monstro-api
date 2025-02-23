@@ -1,2 +1,2 @@
-export * from '../../rewards/components/upsert-reward';
-export * from './upsert-achievement';
+export * from '../../rewards/components/UpsertReward';
+export * from './UpsertAchievement';

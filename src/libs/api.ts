@@ -26,7 +26,7 @@ async function fetcher(data: { url: string, id: string }) {
 }
 
 
-async function postFile(props: { url: string, data: any, id: number }) {
+async function postFile(props: { url: string, data: any, id: string }) {
 	let headers = {};
 	headers = {
 		"Content-Type": "multipart/form-data"
@@ -99,17 +99,7 @@ async function getVendorStripePublishableKey(programId: string) {
 	return data;
 }
 
-async function registerMember(body: any) {
-	const res = await nextApi.post(`/api/auth/register/register`, body);
-	const data = res.data;
-	return data;
-}
 
-async function registerVendor(body: any) {
-	const res = await nextApi.post(`/api/auth/register/vendor`, body);
-	const data = res.data;
-	return data;
-}
 
 async function getContractByPlan(planId: string) {
 	const res = await nextApi.get(`/api/auth/register/sign-contract/${planId}`);
@@ -143,30 +133,16 @@ async function addProgramLevel(body: any, pId: number, id: string) {
 	return res;
 }
 
-async function updateAchievment(aid: number, body: any, id: string) {
-	const res = await put({ url: `achievements/${aid}`, data: body, id: id });
-	return res;
-}
 
-async function addAchievment(body: any, id: string) {
-	const res = await post({ url: `achievements/`, data: body, id: id });
-	return res;
-}
+// async function updateReward(rid: number, body: any, id: string) {
+// 	const res = await put({ url: `rewards/${rid}`, data: body, id: id });
+// 	return res;
+// }
 
-async function deleteAchievement(aId: number, id: string) {
-	const res = await del({ url: `achievements/${aId}`, id: id });
-	return res;
-}
-
-async function updateReward(rid: number, body: any, id: string) {
-	const res = await put({ url: `rewards/${rid}`, data: body, id: id });
-	return res;
-}
-
-async function addReward(body: any, id: string) {
-	const res = await post({ url: `rewards`, data: body, id: id });
-	return res;
-}
+// async function addReward(body: any, id: string) {
+// 	const res = await post({ url: `rewards`, data: body, id: id });
+// 	return res;
+// }
 
 async function addMemberManually(body: any, id: string) {
 	const res = await post({ url: `members`, data: body, id: id });
@@ -183,10 +159,6 @@ async function inviteMember(body: any, id: string) {
 	return res;
 }
 
-async function createContract(body: any, id: string) {
-	const res = await post({ url: `contracts`, data: body, id: id });
-	return res;
-}
 
 async function updateContract(contractId: number, body: any, id: string) {
 	const res = await post({ url: `contracts/${contractId}`, data: body, id: id });

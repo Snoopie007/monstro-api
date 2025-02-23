@@ -1,22 +1,21 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose, Button, ScrollArea, SheetFieldSet, SheetFieldLabel, SheetFieldInput, SheetSection } from '@/components/ui';
 import { z } from "zod";
-import React, { SetStateAction, Dispatch, useState, useRef } from 'react'
+import React, { SetStateAction, Dispatch, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Achievement, Reward } from '@/types';
+import { Reward } from '@/types';
 import {
 	Form, FormControl, FormField, FormMessage, FormItem, FormLabel
 } from '@/components/forms';
 import { cn } from '@/libs/utils';
 import { Input } from "@/components/forms/input"
-import { addReward, postFile, updateReward } from '@/libs/api';
+import { postFile } from '@/libs/api';
 import { toast } from 'react-toastify';
 import useSWR from 'swr';
 import { RewardsSchema } from '../schemas';
 import { Textarea } from '@/components/forms/textarea';
-import { RewardImages } from './reward-images';
-import RewardIcon from './reward-icon';
+import { RewardImages } from './RewardImages';
 
 
 const InputStyle = "border bg-transparent w-full rounded-[4px] text-sm text-white py-2 px-4 border-white h-auto  font-roboto";
@@ -105,11 +104,13 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 				const images = await postFile({ url: 's3-upload/multiple', data: data, id: locationId });
 				body.images = images.map((image: Record<string, any>) => image.url);
 			}
-			if (reward?.id) {
-				await updateReward(Number(v.id), body, locationId);
-			} else {
-				await addReward(body, locationId);
-			}
+
+
+			const res = await fetch(`/api/protected/${locationId}/rewards`, {
+				method: reward?.id ? 'PUT' : 'POST',
+				body: JSON.stringify(body),
+			})
+
 
 
 			await mutate();

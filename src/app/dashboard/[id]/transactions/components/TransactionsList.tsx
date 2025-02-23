@@ -14,7 +14,7 @@ import { Reward } from "@/types";
 
 import ErrorComponent from "@/components/error";
 import { ColumnFiltersState, flexRender, getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
-import { TransactionColumns } from "./transactions-columns";
+import { TransactionColumns } from "./TransactionsColumns";
 import { Transaction } from "@/types";
 import { Input } from "@/components/forms";
 

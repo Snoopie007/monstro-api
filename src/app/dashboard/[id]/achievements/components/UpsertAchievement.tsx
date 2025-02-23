@@ -10,7 +10,7 @@ import { SetStateAction, Dispatch, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Achievement, Action, Program } from '@/types';
-import { cn } from '@/libs/utils';
+import { cn, tryCatch } from '@/libs/utils';
 import { Input } from "@/components/forms/input"
 import { addAchievment, updateAchievment } from '@/libs/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Form, FormControl, FormField, FormMessage, FormItem, FormLabel } from '@/components/forms';
@@ -28,8 +28,7 @@ export interface AddAchievementProps {
 	setCurrentAchievement: Dispatch<SetStateAction<Achievement | undefined>>
 }
 
-export function UpsertAchivement({ achievement, locationId,setCurrentAchievement }: AddAchievementProps) {
-
+export function UpsertAchivement({ achievement, locationId, setCurrentAchievement }: AddAchievementProps) {
 	const { mutate } = useSWR(`/api/protected/achievements`);
 	const { data } = usePrograms(locationId);
 	const { actions } = useActions(locationId);
@@ -52,19 +51,21 @@ export function UpsertAchivement({ achievement, locationId,setCurrentAchievement
 
 	async function submitForm(v: z.infer<typeof AchievementSchema>) {
 		const body = v;
-		try {
-			if (achievement?.id) {
-				// Await the updateProgramLevel call
-				await updateAchievment(Number(v.id), body, locationId);
-			} else {
-				await addAchievment(body, locationId);
-			}
-			await mutate();
-			toast.success("Achievement Saved");
-		} catch (error) {
-			console.error("Error:", error); // Add logging for debugging
+
+		const { result, error } = await tryCatch(
+			fetch(`/api/protected/${locationId}/achievements`, {
+				method: achievement?.id ? 'PUT' : 'POST',
+				body: JSON.stringify(body),
+			})
+		)
+
+		if (error || !result || !result.ok) {
 			toast.error("Something went wrong, please try again later");
 		}
+		await mutate();
+		toast.success("Achievement Saved");
+
+
 	};
 	return (
 		<div>
@@ -160,83 +161,83 @@ export function UpsertAchivement({ achievement, locationId,setCurrentAchievement
 										</SheetFieldInput>
 									</SheetFieldSet>
 								</SheetSection>
-									<SheetSection>
+								<SheetSection>
 
 
-										<SheetFieldSet>
-											<SheetFieldLabel>
-												<FormLabel>Action</FormLabel>
-											</SheetFieldLabel>
-											<SheetFieldInput>
-												<FormField
-													control={form.control}
-													name="action"
-													render={({ field }) => (
-														<FormItem>
-															<Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field.value.toString()}>
-																<SelectTrigger className="w-full border rounded-sm bg-transparent font-normal border-white">
-																	<SelectValue placeholder="Select an action" />
-																</SelectTrigger>
-																<SelectContent>
-																	{actions.map((action: Action, index: number) => (
-																		<SelectItem key={index} value={action.id.toString()}>{action.name}</SelectItem>
-																	))}
-																</SelectContent>
-															</Select>
-															<FormMessage />
-														</FormItem>
-													)}
-												/>
-											</SheetFieldInput>
-										</SheetFieldSet>
+									<SheetFieldSet>
+										<SheetFieldLabel>
+											<FormLabel>Action</FormLabel>
+										</SheetFieldLabel>
+										<SheetFieldInput>
+											<FormField
+												control={form.control}
+												name="action"
+												render={({ field }) => (
+													<FormItem>
+														<Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field.value.toString()}>
+															<SelectTrigger className="w-full border rounded-sm bg-transparent font-normal border-white">
+																<SelectValue placeholder="Select an action" />
+															</SelectTrigger>
+															<SelectContent>
+																{actions.map((action: Action, index: number) => (
+																	<SelectItem key={index} value={action.id.toString()}>{action.name}</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+														<FormMessage />
+													</FormItem>
+												)}
+											/>
+										</SheetFieldInput>
+									</SheetFieldSet>
 
-										<SheetFieldSet>
-											<SheetFieldLabel>
-												<FormLabel>Action Count</FormLabel>
-											</SheetFieldLabel>
-											<SheetFieldInput>
-												<FormField
-													control={form.control}
-													name="actionCount"
-													render={({ field }) => (
-														<FormItem>
-															<FormControl>
-																<Input type='number' className={cn()} placeholder="Action Count" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
-															</FormControl>
-															<FormMessage />
-														</FormItem>
-													)}
-												/>
-											</SheetFieldInput>
-										</SheetFieldSet>
+									<SheetFieldSet>
+										<SheetFieldLabel>
+											<FormLabel>Action Count</FormLabel>
+										</SheetFieldLabel>
+										<SheetFieldInput>
+											<FormField
+												control={form.control}
+												name="actionCount"
+												render={({ field }) => (
+													<FormItem>
+														<FormControl>
+															<Input type='number' className={cn()} placeholder="Action Count" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+														</FormControl>
+														<FormMessage />
+													</FormItem>
+												)}
+											/>
+										</SheetFieldInput>
+									</SheetFieldSet>
 
-										<SheetFieldSet>
-											<SheetFieldLabel>
-												<FormLabel>Program</FormLabel>
-											</SheetFieldLabel>
-											<SheetFieldInput>
-												<FormField
-													control={form.control}
-													name="program"
-													render={({ field }) => (
-														<FormItem>
-															<Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field.value.toString()}>
-																<SelectTrigger className="w-full border rounded-sm bg-transparent font-normal border-white">
-																	<SelectValue placeholder="Select a program" />
-																</SelectTrigger>
-																<SelectContent>
-																	{data.map((program: Program, index: number) => (
-																		<SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem>
-																	))}
-																</SelectContent>
-															</Select>
-															<FormMessage />
-														</FormItem>
-													)}
-												/>
-											</SheetFieldInput>
-										</SheetFieldSet>
-									</SheetSection>
+									<SheetFieldSet>
+										<SheetFieldLabel>
+											<FormLabel>Program</FormLabel>
+										</SheetFieldLabel>
+										<SheetFieldInput>
+											<FormField
+												control={form.control}
+												name="program"
+												render={({ field }) => (
+													<FormItem>
+														<Select onValueChange={(value) => field.onChange(Number(value))} defaultValue={field.value.toString()}>
+															<SelectTrigger className="w-full border rounded-sm bg-transparent font-normal border-white">
+																<SelectValue placeholder="Select a program" />
+															</SelectTrigger>
+															<SelectContent>
+																{data.map((program: Program, index: number) => (
+																	<SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+														<FormMessage />
+													</FormItem>
+												)}
+											/>
+										</SheetFieldInput>
+									</SheetFieldSet>
+								</SheetSection>
 							</form>
 						</Form>
 					</ScrollArea>

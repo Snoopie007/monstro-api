@@ -15,7 +15,7 @@ import { Achievement } from '@/types';
 import ErrorComponent from '@/components/error';
 import { useReactTable } from '@tanstack/react-table';
 import { getCoreRowModel } from '@tanstack/react-table';
-import { AchievementColumns } from './components/achievement-columns';
+import { AchievementColumns } from './components/AchievementColumns';
 import { flexRender } from '@tanstack/react-table';
 
 export default function Achievements(props: { params: Promise<{ id: string }> }) {
@@ -23,7 +23,7 @@ export default function Achievements(props: { params: Promise<{ id: string }> })
     const { achievements, isLoading, error } = useAchievements(params.id);
     const [currentAchievement, setCurrentAchievement] = useState<Achievement | undefined>(undefined);
 
-    const columns = AchievementColumns(params.id);
+    const columns = AchievementColumns();
     const table = useReactTable({
         data: achievements,
         columns,

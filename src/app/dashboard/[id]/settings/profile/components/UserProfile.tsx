@@ -17,7 +17,7 @@ import { Select } from "@radix-ui/react-select";
 import { useMemo, useState } from "react";
 import { CountryCode, Staff } from "@/types";
 import PhoneInput from "react-phone-number-input/input";
-import UserAvatar from "./avatar";
+import UserAvatar from "./UserAvatar";
 import { CountryCodes } from "@/libs/data";
 
 export function UserProfile({ staff, locationId }: { staff: Staff, locationId: string }) {
