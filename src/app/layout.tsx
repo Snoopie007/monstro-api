@@ -33,7 +33,7 @@ export default async function RootLayout({
 
     return (
         <SessionProvider session={session}>
-            <html suppressHydrationWarning lang="en" className={`${poppins.variable} ${roboto.variable} group`} >
+            <html suppressHydrationWarning lang="en" className={`${poppins.variable} ${roboto.variable}`} >
 
                 <body className={"font-roboto"}>
                     <ThemeProvider

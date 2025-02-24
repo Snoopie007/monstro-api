@@ -58,7 +58,7 @@ function SideNav({ locationId }: { locationId: string }) {
                                             >
                                                 <CollapsibleTrigger value={item.name}
                                                     disabled={locationState.status !== "Active"}
-                                                    className={'flex flex-row items-center w-full justify-between hover:bg-foreground/10 rounded-sm py-2 px-2'}
+                                                    className={'flex flex-row items-center w-full justify-between hover:bg-foreground/10 inactive:opacity-50 rounded-sm py-2 px-2'}
                                                 >
                                                     <div className={cn(iconContainerClass)}>
                                                         <span><Icon name={item.icon} size={16} /></span>
@@ -69,11 +69,12 @@ function SideNav({ locationId }: { locationId: string }) {
                                                 <CollapsibleContent className='mx-4 border-foreground/20 border-l mt-2'>
                                                     <ul className='px-2 space-y-1'>
                                                         {item.subMenu.map((subItem) => (
-                                                            <li key={subItem.name} className='w-full group-data-[account-status=active]:opacity-100 opacity-50'>
-                                                                <Link href={locationState.status === "Active" ? `/dashboard/${locationId}/${subItem.path}` : "#"}
+                                                            <li key={subItem.name} className='w-full inactive:opacity-50'>
+                                                                <Link href={`/dashboard/${locationId}/${subItem.path}`}
                                                                     className={cn(subMenuItemClass)}>
                                                                     {subItem.name}
                                                                 </Link>
+
                                                             </li>
                                                         ))}
                                                     </ul>
@@ -81,11 +82,15 @@ function SideNav({ locationId }: { locationId: string }) {
                                             </Collapsible>
                                         </li>
                                     ) : (
-                                        <li className='w-full group-data-[account-status=active]:opacity-100 opacity-50'>
-                                            <Link href={locationState.status === "Active" ? `/dashboard/${locationId}/${item.path}` : "#"} className={cn(menuLinkClass)}>
+                                        <li className='w-full inactive:opacity-50'>
+                                            <Link href={`/dashboard/${locationId}/${item.path}`} className={cn(menuLinkClass, 'inactive:hidden')}>
                                                 <span><Icon name={item.icon} size={16} /></span>
                                                 <b className='group-data-[state=closed]:opacity-0 font-semibold flex-1 text-xs'>{item.name}</b>
                                             </Link>
+                                            <div className={cn(menuLinkClass, 'inactive:flex cursor-not-allowed hidden')}>
+                                                <span><Icon name={item.icon} size={16} /></span>
+                                                <b className='group-data-[state=closed]:opacity-0 font-semibold flex-1 text-xs'>{item.name}</b>
+                                            </div>
                                         </li>
                                     )}
                                 </React.Fragment>
