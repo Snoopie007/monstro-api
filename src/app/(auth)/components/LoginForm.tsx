@@ -40,6 +40,12 @@ export default function LoginForm() {
 		setLoading(true);
 		try {
 
+			const res = await signIn("credentials", { ...v, redirect: false });
+			if (res?.error) {
+				toast.error('Invalid email or password.');
+				return;
+			}
+
 			const locationId = localStorage.getItem('locationId');
 			const locationRes = await fetch(`/api/auth/vendor/location`, {
 				method: 'POST',
@@ -51,12 +57,6 @@ export default function LoginForm() {
 			}
 
 			const redirect = location.id ? location.status === "Active" ? `/dashboard/${location.id}` : `/onboarding/${location.id}` : '/onboarding';
-
-			const res = await signIn("credentials", { ...v, currentLocationId: location.id, redirect: false });
-			if (res?.error) {
-				toast.error('Invalid email or password.');
-				return;
-			}
 
 			router.push(redirect);
 
