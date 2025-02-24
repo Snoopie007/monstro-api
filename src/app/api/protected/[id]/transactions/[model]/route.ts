@@ -1,29 +1,77 @@
 
 import { NextResponse } from 'next/server';
-import { auth } from "@/auth";
+import { transactions } from '@/db/schemas';
+import { db } from '@/db/db';
+import { StripePayments } from '@/libs/server/stripe';
+import { Plan } from '@/types';
+import { encodeId } from '@/libs/server/sqids';
 
-export async function POST(req: Request, props: { params: Promise<{ id: string, model: string }> }) {
+//TODO: double check everything is working
+
+export async function POST(req: Request, props: { params: Promise<{ id: number, model: string }> }) {
 	const params = await props.params;
 	const data = await req.json()
-	const session = await auth();
+
 	try {
-		if (session) {
-			const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/transactions/${params.model}`, {
-				method: 'POST',
-				headers: {
-					'Authorization': `Bearer ${session.user.token}`,
-					"locationId": `${params.id}`,
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(data)
-			})
-			console.log(res)
-			if (!res.ok) {
-				return NextResponse.json({ message: "An error occurred saving program." }, { status: 400 });
-			}
-			const response = await res.json();
-			return NextResponse.json(response, { status: 200 });
+		let newTransaction = {
+			...data,
+			model: params.model,
+			locationId: params.id,
+			paymentType: 'one-time'
 		}
+
+		let plan: Plan | undefined = undefined;
+		if (data.chargeFor === 'Program') {
+			plan = await db.query.memberPlans.findFirst({
+				where: (memberPlans, { eq }) => eq(memberPlans.id, data.planId),
+				with: {
+					pricing: true
+				}
+			})
+			newTransaction = {
+				...newTransaction,
+				amount: plan?.pricing.amount,
+				paymentType: plan?.pricing.billingPeriod === 'One Time' ? 'one-time' : 'recurring'
+			}
+		}
+
+		if (data.paymentMethod === 'stripe') {
+			const stripeIntegration = await db.query.integrations.findFirst({
+				where: (integration, { eq, and }) => and(eq(integration.locationId, params.id), eq(integration.service, "Stripe"))
+			})
+
+			if (!stripeIntegration || !stripeIntegration.secretKey) {
+				return NextResponse.json({ error: "Stripe integration not found" }, { status: 404 })
+			}
+
+			const stripe = new StripePayments(stripeIntegration.secretKey);
+
+			const customer = await stripe.getCustomer(data.customerId);
+			if (!customer) {
+				return NextResponse.json({ error: "Customer not found" }, { status: 404 })
+			}
+			if (plan && data.planId) {
+				if (newTransaction.paymentType === 'recurring') {
+					await stripe.createMemberSubscription(
+						plan?.pricing?.stripePriceId, customer.id,
+						data.memberId, encodeId(params.id)
+					);
+				} else {
+					await stripe.createMemberPaymentIntent(plan.pricing.amount * 100, customer.id, undefined);
+				}
+			} else {
+				await stripe.createPaymentIntent(newTransaction.amount * 100, customer.id, undefined);
+			}
+
+
+			newTransaction = {
+				...newTransaction,
+			}
+		}
+
+		const transaction = await db.insert(transactions).values(newTransaction).returning({ id: transactions.id });
+
+		return NextResponse.json(transaction, { status: 200 });
 	} catch (err) {
 		console.log(err)
 		return NextResponse.json({ error: err }, { status: 500 })

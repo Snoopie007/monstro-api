@@ -12,7 +12,7 @@ export type Plan = {
     pricing: Pricing;
     contractId?: number | null;
     contract?: Contract | undefined;
-    created: Date | null;
+    created: Date;
     updated: Date | null;
     deleted: Date | null;
 };

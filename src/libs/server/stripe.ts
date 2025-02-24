@@ -28,6 +28,9 @@ class StripePayments {
         });
     }
 
+    public async getCustomer(customerId: string) {
+        return await this._stripe.customers.retrieve(customerId);
+    }
 
     async updatePaymentMethod(
         id: string,
@@ -75,6 +78,30 @@ class StripePayments {
         return { clientSecret: paymentIntent.client_secret as string };
     }
 
+
+    async createMemberPaymentIntent(
+        amount: number,
+        customerId: string,
+        cardId: string | undefined,
+        options?: {
+            authorizeOnly?: boolean,
+            statement?: string,
+            description?: string
+        }
+    ) {
+        const option: Stripe.PaymentIntentCreateParams = {
+            amount,
+            description: options?.description,
+            automatic_payment_methods: { enabled: true },
+            currency: "usd",
+            confirm: true,
+            customer: customerId,
+            setup_future_usage: "off_session",
+            statement_descriptor: "",
+            ...(cardId && { payment_method: cardId }),
+            return_url: "",
+        }
+    }
     async retrievePaymentMethod(customerId: string, paymentId: string) {
         return await this._stripe.customers.retrievePaymentMethod(
             customerId,
@@ -119,6 +146,19 @@ class StripePayments {
             trial_period_days: trial || 0,
             metadata: {
                 vendorId: vendorId,
+                locationId: locationId
+            }
+        };
+        return this._stripe.subscriptions.create(options);
+    }
+
+    async createMemberSubscription(priceId: string, customer: string, memberId: number, locationId: string, trial?: number) {
+        const options: Stripe.SubscriptionCreateParams = {
+            customer,
+            description: `Member Subscription`,
+            items: [{ price: priceId }],
+            metadata: {
+                memberId: memberId,
                 locationId: locationId
             }
         };

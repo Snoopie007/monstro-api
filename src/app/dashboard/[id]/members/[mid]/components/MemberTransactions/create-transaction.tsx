@@ -20,12 +20,12 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { NewMemberPaymentSchema } from "../../schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { cn } from "@/libs/utils";
+import { cn, tryCatch } from "@/libs/utils";
 import { Loader2 } from "lucide-react";
 import { useMemberPaymentMethods } from "../../providers/MemberContext";
 import { useMemberPrograms } from "@/hooks/use-members";
 import { Plan, Program } from "@/types";
-import { addTransaction } from "@/libs/api";
+
 import { toast } from "react-toastify";
 
 
@@ -54,17 +54,31 @@ export default function NewMemberTransaction({ params }: { params: { id: string,
     const method = form.watch("paymentMethod")
     const chargeFor = form.watch("chargeFor")
     const programId = form.watch("programId")
+
     async function onSubmit(data: z.infer<typeof NewMemberPaymentSchema>) {
         setLoading(true);
-        addTransaction({ ...data, memberId: params.mid }, params.id, 'member').then(response => {
-            setOpen(false);
-            setLoading(false);
-            toast.success("Level Updated Successfully");
-            form.reset();
-        }).catch(error => {
+
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${params.id}/transactions/member`, {
+                method: "POST",
+                body: JSON.stringify({
+                    ...data,
+                    memberId: params.mid
+                })
+            })
+        )
+
+        if (error || !result || !result.ok) {
             setLoading(false);
             toast.error("Something went wrong, please try again later");
-        });
+            return;
+        }
+
+        setOpen(false);
+        setLoading(false);
+        toast.success("Transaction Added Successfully");
+        form.reset();
+
     }
 
     return (
