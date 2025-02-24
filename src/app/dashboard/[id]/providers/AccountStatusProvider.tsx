@@ -41,7 +41,7 @@ export const AccountStatusProvider = ({ children, locationState }: AccountStatus
 
         if (!locationState) return;
 
-        const channel = supabase.channel('db-changes')
+        const channel = supabase.channel('LocationChanges')
             .on('postgres_changes',
                 {
                     event: 'UPDATE',

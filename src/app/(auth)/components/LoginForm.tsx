@@ -26,7 +26,6 @@ import { Loader2 } from "lucide-react";
 export default function LoginForm() {
 	const [loading, setLoading] = useState<boolean>(false);
 	const router = useRouter();
-	const { data: session } = useSession();
 	const form = useForm<z.infer<typeof LoginSchema>>({
 		resolver: zodResolver(LoginSchema),
 		defaultValues: {

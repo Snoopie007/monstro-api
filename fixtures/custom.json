@@ -1,97 +1,97 @@
 {
-    "_meta": {
-      "template_version": 0
-    },
-    "fixtures": [
-       {
-        "name": "customer",
-        "path": "/v1/customers",
-        "method": "post",
-        "params": {
-          "name": "Test Customer",
-          "description": "Test Customer",
-          "payment_method": "pm_card_visa",
-          "invoice_settings": {
-            "default_payment_method": "pm_card_visa"
-          },
-          "metadata": {
-            "locationId": "s78ojkCQvXglZo"
-          }
-        }
-      },
-      {
-        "name": "payment_method",
-        "path": "/v1/payment_methods/pm_card_visa/attach",
-        "method": "post",
-        "params": {
-          "customer": "${customer:id}"
-        }
-      },
-      {
-        "name": "product",
-        "path": "/v1/products",
-        "method": "post",
-        "params": {
-            "name": "Monstro Scale",
-            "description": "Subscription to Monstro Scale"
-        }
-      },
-      {
-        "name": "price",
-        "path": "/v1/prices",
-        "method": "post",
-        "params": {
-          "product": "${product:id}",
-          "unit_amount": "1500",
-          "currency": "usd",
-          "recurring[interval]": "month"
-        }
-      },
-      {
-        "name": "subscription",
-        "path": "/v1/subscriptions",
-        "method": "post",
-        "params": {
-          "customer": "${customer:id}",
-          "items": [
-            {
-              "price": "${price:id}"
-            }
-          ],
-          "metadata": {
-            "locationId": "s78ojkCQvXglZo"
-          }
-        }
-      },
-      {
-        "name": "invoiceitem",
-        "path": "/v1/invoiceitems",
-        "method": "post",
-        "params": {
-          "amount": 1500,
-          "subscription": "${subscription:id}",
-          "currency": "usd",
-          "customer": "${customer:id}",
-          "description": "Subscription to Monstro Scale"
-        }
-      },
-      {
-        "name": "invoice",
-        "path": "/v1/invoices",
-        "method": "post",
-        "params": {
-          "customer": "${customer:id}",
-          "description": "Subscription to Monstro Scale",
-          "pending_invoice_items_behavior": "include"
-        }
-      },
-      {
-        "name": "invoice_pay",
-        "path": "/v1/invoices/${invoice:id}/pay",
-        "method": "post",
-        "params": {
-          "payment_method": "${payment_method:id}"
+  "_meta": {
+    "template_version": 0
+  },
+  "fixtures": [
+     {
+      "name": "customer",
+      "path": "/v1/customers",
+      "method": "post",
+      "params": {
+        "name": "Test Customer",
+        "description": "Test Customer",
+        "payment_method": "pm_card_visa",
+        "invoice_settings": {
+          "default_payment_method": "pm_card_visa"
+        },
+        "metadata": {
+          "locationId": "s78ojkCQvXglZo"
         }
       }
-    ]
-  }
+    },
+    {
+      "name": "payment_method",
+      "path": "/v1/payment_methods/pm_card_visa/attach",
+      "method": "post",
+      "params": {
+        "customer": "${customer:id}"
+      }
+    },
+    {
+      "name": "product",
+      "path": "/v1/products",
+      "method": "post",
+      "params": {
+          "name": "Monstro Scale",
+          "description": "Subscription to Monstro Scale"
+      }
+    },
+    {
+      "name": "price",
+      "path": "/v1/prices",
+      "method": "post",
+      "params": {
+        "product": "${product:id}",
+        "unit_amount": "1500",
+        "currency": "usd",
+        "recurring[interval]": "month"
+      }
+    },
+    {
+      "name": "subscription",
+      "path": "/v1/subscriptions",
+      "method": "post",
+      "params": {
+        "customer": "${customer:id}",
+        "items": [
+          {
+            "price": "${price:id}"
+          }
+        ],
+        "metadata": {
+          "locationId": "s78ojkCQvXglZo"
+        }
+      }
+    },
+    {
+      "name": "invoiceitem",
+      "path": "/v1/invoiceitems",
+      "method": "post",
+      "params": {
+        "amount": 1500,
+        "subscription": "${subscription:id}",
+        "currency": "usd",
+        "customer": "${customer:id}",
+        "description": "Subscription to Monstro Scale"
+      }
+    },
+    {
+      "name": "invoice",
+      "path": "/v1/invoices",
+      "method": "post",
+      "params": {
+        "customer": "${customer:id}",
+        "description": "Subscription to Monstro Scale",
+        "pending_invoice_items_behavior": "include"
+      }
+    },
+    {
+      "name": "invoice_pay",
+      "path": "/v1/invoices/${invoice:id}/pay",
+      "method": "post",
+      "params": {
+        "payment_method": "${payment_method:id}"
+      }
+    }
+  ]
+}

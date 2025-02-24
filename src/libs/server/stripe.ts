@@ -101,7 +101,10 @@ class StripePayments {
             ...(cardId && { payment_method: cardId }),
             return_url: "",
         }
+        const paymentIntent = await this._stripe.paymentIntents.create(option);
+        return { clientSecret: paymentIntent.client_secret as string };
     }
+
     async retrievePaymentMethod(customerId: string, paymentId: string) {
         return await this._stripe.customers.retrievePaymentMethod(
             customerId,
