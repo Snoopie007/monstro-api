@@ -69,13 +69,15 @@ export default {
 
 				const { data: { token } } = await result.json();
 
-				const { vendor: { locations, ...vendor }, ...rest } = user;
+				const { vendor: { locations, ...v }, ...rest } = user;
+
 				const encodedLocations = locations.map(location => {
 					const { locationState, ...restData } = location;
+
 					return {
 						...restData,
 						id: encodeId(location.id),
-						status: locationState.status
+						status: locationState ? locationState.status : "Pending"
 					}
 				});
 
@@ -83,11 +85,11 @@ export default {
 					id: rest.id.toString(),
 					name: rest.name,
 					email: rest.email,
-					phone: vendor.phone,
-					image: vendor?.icon,
-					vendorId: vendor?.id,
-					vendorPhone: vendor?.phone,
-					stripeCustomerId: vendor?.stripeCustomerId,
+					phone: v.phone,
+					image: v?.icon,
+					vendorId: v?.id,
+					vendorPhone: v?.phone,
+					stripeCustomerId: v?.stripeCustomerId,
 					role: 'vendor',
 					token: token,
 					locations: encodedLocations,
