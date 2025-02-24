@@ -20,10 +20,12 @@ import React from 'react'
 import { cn, formatAmountForDisplay } from '@/libs/utils';
 import { auth } from '@/auth';
 import { StripePayments } from '@/libs/server/stripe';
-import Wallet from './components/Wallet';
-import { LocationProgress } from '@/types/location';
+import { LocationState } from '@/types';
 import { Stripe } from 'stripe';
-import { RetryPayment, CardList } from './components';
+import { RetryPayment, CardList, Wallet } from './components';
+import { db } from '@/db/db';
+import { decodeId } from '@/libs/server/sqids';
+import { AlertCircleIcon } from 'lucide-react';
 
 type Subscription = {
     subscriptionId: string | null;
@@ -35,7 +37,7 @@ type Subscription = {
     status: "active" | "incomplete" | "past_due" | "paused" | "canceled" | "unpaid" | "incomplete_expired" | "trialing" | null;
     invoiceId: string | Stripe.Invoice | null;
 }
-async function fetchClientStripe(customerId: string, locationId: string, progress: LocationProgress) {
+async function fetchClientStripe(customerId: string, locationId: string, locationState: LocationState) {
 
     try {
         let subscriptions: Subscription[] = [{
@@ -50,7 +52,7 @@ async function fetchClientStripe(customerId: string, locationId: string, progres
         }]
         const stripe = new StripePayments();
         const methods = await stripe.getPaymentMethods(customerId);
-        if (progress.planId !== 0) {
+        if (locationState.planId && locationState.planId !== 0) {
             const res = await stripe.getSubscriptions(customerId);
 
             subscriptions = res.data
@@ -78,7 +80,6 @@ async function fetchClientStripe(customerId: string, locationId: string, progres
         }
 
 
-
         return { paymentMethods: methods.data, subscriptions };
     } catch (error) {
         console.log("Error ", error);
@@ -87,14 +88,25 @@ async function fetchClientStripe(customerId: string, locationId: string, progres
 }
 
 
+async function getLocationState(id: string) {
+    const lid = decodeId(id)
+
+    try {
+        const locationState = await db.query.locationState.findFirst({
+            where: (state, { eq }) => eq(state.locationId, lid)
+        })
+        return locationState
+    } catch (error) {
+        console.log("Error ", error);
+    }
+}
 
 export default async function BillingPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     const sesson = await auth();
+    const locationState = await getLocationState(params.id)
 
-    const location = sesson?.user.locations.find((location: { id: string, progress: LocationProgress }) => location.id === params.id);
-
-    const { paymentMethods, subscriptions } = await fetchClientStripe(sesson?.user.stripeCustomerId, params.id, location?.progress)
+    const { paymentMethods, subscriptions } = await fetchClientStripe(sesson?.user.stripeCustomerId, params.id, locationState!)
 
     function calculateMonthlyTotal() {
         const total = subscriptions.reduce((total, sub) => {
@@ -109,8 +121,14 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
     }
 
     return (
-        <div>
-            <Card className=' mb-6'>
+        <div className='space-y-4'>
+            {locationState?.status !== "Active" && (
+                <div className='border border-red-500 rounded-sm py-3 px-4 flex items-center gap-2'>
+                    <AlertCircleIcon size={16} className='text-red-500' />
+                    <p className='text-white text-sm'>Your account is not active. Please clear your balance or contact support.</p>
+                </div>
+            )}
+            <Card >
                 <CardHeader className='border-b p-0 space-y-0  justify-between flex flex-row items-center'>
                     <CardTitle className='text-base py-2 px-4 '>Your Monstro Subscriptions</CardTitle>
                     <Link href={"#"} className='text-sm bg-transparent hover:bg-accent inline-flex p-2.5 font-medium  h-full border-l'>

@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useWallet } from '@/hooks/use-wallet'
 import { toast } from 'react-toastify'
 
-export default function Wallet({ lid }: { lid: string }) {
+export function Wallet({ lid }: { lid: string }) {
+
     const { wallet, isLoading, error, mutate } = useWallet(lid)
     const [open, setOpen] = useState(false)
     const [rechargeAmount, setRechargeAmount] = useState(25)

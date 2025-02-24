@@ -53,9 +53,15 @@ export default auth(async (req) => {
 					nextLocation = locations.find((loc: { status: string }) => loc.status === "Active") ||
 						locations.find((loc: { status: string }) => loc.status === "Pending");
 				}
+				const allowedInactivePaths = [`/dashboard/${nextLocation.id}`, `/dashboard/${nextLocation.id}/settings/billing`]
+				if (path.startsWith('dashboard') && !allowedInactivePaths.includes(pathname) && !['Pending', 'Active'].includes(nextLocation.status)) {
+					return NextResponse.redirect(new URL(`/dashboard/${nextLocation.id}`, req.nextUrl.origin));
+				}
 
 				const isOnboarding = nextLocation.status === 'Pending';
 				const targetPath = isOnboarding ? 'onboarding' : 'dashboard';
+
+
 
 				if (path !== targetPath) {
 					return NextResponse.redirect(new URL(`/${targetPath}/${nextLocation.id}`, req.nextUrl.origin));

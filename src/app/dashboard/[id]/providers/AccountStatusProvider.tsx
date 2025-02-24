@@ -78,6 +78,7 @@ export const AccountStatusProvider = ({ children, locationState }: AccountStatus
 
 type UseAccountStatusHookType = {
     locationState: LocationState;
+    updateLocationState: (newState: LocationState) => void;
 }
 
 export const useAccountStatus = (): UseAccountStatusHookType => {
@@ -86,9 +87,14 @@ export const useAccountStatus = (): UseAccountStatusHookType => {
         throw new Error('useAccountStatus must be used within a AccountStatusProvider')
     }
 
-    const { state } = context;
+    const { state, dispatch } = context;
+
+    const updateLocationState = (newState: LocationState) => {
+        dispatch({ type: 'UPDATE_LOCATION_STATE', payload: newState });
+    };
 
     return {
-        locationState: state.locationState
+        locationState: state.locationState,
+        updateLocationState
     };
 }

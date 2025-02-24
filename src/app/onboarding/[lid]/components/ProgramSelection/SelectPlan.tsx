@@ -6,14 +6,15 @@ import {
     Button
 } from "@/components/ui"
 import PlanList from "./PlanList"
-import { useOnboarding } from "../../provider/OnboardingProvider"
 import { Loader2 } from "lucide-react";
 import { cn, sleep } from "@/libs/utils";
 import PackageList from "./PackageList";
 import { useState } from "react";
 
+
+import { useOnboarding } from "../../provider/OnboardingProvider";
 export function SelectPlan({ setCurrentStep }: { setCurrentStep: (step: number) => void }) {
-    const { progress, updateProgress } = useOnboarding();
+    const { locationState, updateLocationState } = useOnboarding()
     const [loading, setLoading] = useState(false);
 
     async function next() {
@@ -24,12 +25,12 @@ export function SelectPlan({ setCurrentStep }: { setCurrentStep: (step: number) 
     }
 
     function clear() {
-        updateProgress({
-            ...progress,
+        updateLocationState({
+            ...locationState,
             planId: null,
             pkgId: null,
             paymentPlanId: null
-        });
+        })
     }
     return (
         <div className="flex flex-col gap-4">
@@ -52,7 +53,7 @@ export function SelectPlan({ setCurrentStep }: { setCurrentStep: (step: number) 
                         "children:inline-block": loading,
                     })}
                     onClick={next}
-                    disabled={!progress.planId && !progress.paymentPlanId}
+                    disabled={!locationState.planId && !locationState.paymentPlanId}
                 >
                     <Loader2 className="w-4 h-4 animate-spin mr-1" />
                     Continue
