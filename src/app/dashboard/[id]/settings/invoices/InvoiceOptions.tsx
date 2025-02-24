@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 export default function InvoiceOptions({ invoiceUrl }: { invoiceUrl: string | null }) {
-    console.log(invoiceUrl)
+
     const [open, setOpen] = useState(false);
     return (
         <DropdownMenu open={open} onOpenChange={setOpen}>

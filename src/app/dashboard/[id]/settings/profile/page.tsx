@@ -26,7 +26,7 @@ export default async function ProfilePage(props: { params: Promise<{ id: string 
     const staff = await getStaff(1)
     return (
         <div>
-            <UserProfile staff={staff} locationId={params.id} />
+            <UserProfile user={staff} locationId={params.id} />
         </div>
     )
 }

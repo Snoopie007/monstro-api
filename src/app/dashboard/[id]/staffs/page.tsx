@@ -4,19 +4,21 @@ import { use, useMemo, useState } from "react";
 import ErrorComponent from "@/components/error"
 import { useStaffs } from "@/hooks/use-staffs"
 import { StaffProfile } from "./components"
-import Loading from "@/components/loading";
-import { Skeleton, TableHead, TableHeader, Table, TablePage, TablePageContent, TablePageFooter, TablePageHeader, TablePageHeaderSection, TableBody, TableCell, TableRow, TablePageHeaderTitle } from "@/components/ui";
+import {
+    Skeleton, TableHead, TableHeader, Table, TablePage, TablePageContent, TablePageFooter,
+    TablePageHeader, TablePageHeaderSection, TableBody, TableCell, TableRow, TablePageHeaderTitle
+} from "@/components/ui";
 import { useRoles } from "@/hooks/use-roles";
-import InviteStaff from "./components/invite-staff";
+import InviteStaff from "./components/InviteStaff";
 import { Input } from "@/components/forms";
 import { Staff } from "@/types";
-import { deleteStaff } from "@/libs/api";
 import useSWR from "swr";
 import { toast } from "react-toastify";
 import { flexRender } from "@tanstack/react-table";
 import { getCoreRowModel } from "@tanstack/react-table";
 import { useReactTable } from "@tanstack/react-table";
-import { StaffColumns } from "./components/staff-columns";
+import { StaffColumns } from "./components/StaffColumn";
+import { tryCatch } from "@/libs/utils";
 
 
 interface StaffsPageProps {
@@ -50,12 +52,19 @@ export default function StaffsPage(props: StaffsPageProps) {
     }, [currentStaff])
 
     async function removeStaff(staffId: number) {
-        await deleteStaff(staffId, params.id).then(() => {
-            mutate();
-            toast.success("Staff Deleted");
-        }).catch(() => {
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${params.id}/staffs/${staffId}`, {
+                method: "DELETE",
+            })
+        )
+
+        if (error || !result || !result.ok) {
             toast.error("Something went wrong.");
-        })
+            return;
+        }
+
+        toast.success("Staff deleted successfully.");
+        mutate();
     }
 
     return (

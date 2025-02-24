@@ -1,2 +1,2 @@
-export * from './staff-profile';
-export * from './staff-list';
+export * from './StaffProfile';
+export * from './StaffList';

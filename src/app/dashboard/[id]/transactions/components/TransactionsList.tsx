@@ -2,9 +2,7 @@
 'use client'
 import { useMemo, useState } from "react";
 
-import { Button, Skeleton } from "@/components/ui"
-
-import { useRewards } from '@/hooks/use-rewards'
+import { Skeleton } from "@/components/ui"
 
 import {
     TablePage, TablePageHeaderSection, TablePageHeaderTitle, TablePageHeader, TablePageContent,
@@ -22,8 +20,6 @@ export function TransactionsList({ params, transactions }: { params: { id: strin
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [currentReward, setCurrentReward] = useState<Reward | undefined>(undefined);
 
-
-
     const columns = useMemo(() => TransactionColumns(params.id), [params.id])
     const table = useReactTable<Transaction>({
         data: transactions,
@@ -36,6 +32,7 @@ export function TransactionsList({ params, transactions }: { params: { id: strin
             columnFilters
         },
     });
+
     return (
         <TablePage>
             <TablePageHeader>
@@ -110,7 +107,6 @@ export function TransactionsList({ params, transactions }: { params: { id: strin
 
             </TablePageContent>
         </TablePage>
-
     )
 }
 

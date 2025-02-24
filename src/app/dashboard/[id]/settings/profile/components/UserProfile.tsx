@@ -9,7 +9,7 @@ import {
     FormMessage,
     Input, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/forms";
-import { cn } from "@/libs/utils";
+import { cn, tryCatch } from "@/libs/utils";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
@@ -19,13 +19,26 @@ import { CountryCode, Staff } from "@/types";
 import PhoneInput from "react-phone-number-input/input";
 import UserAvatar from "./UserAvatar";
 import { CountryCodes } from "@/libs/data";
+import { toast } from "react-toastify";
 
-export function UserProfile({ staff, locationId }: { staff: Staff, locationId: string }) {
-    const [avatar, setAvatar] = useState<string>(staff.image);
+export function UserProfile({ user, locationId }: { user: Staff, locationId: string }) {
+    const [avatar, setAvatar] = useState<string>(user.image);
     const [phoneRegion, setPhoneRegion] = useState<CountryCode | undefined>("US");
     const form = useForm()
-    function handleSubmit(v: any) {
-        console.log(v)
+
+    async function handleSubmit(v: any) {
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${locationId}/profile/${user.id}`, {
+                method: "PUT",
+                body: JSON.stringify(v)
+            })
+        )
+
+        if (error || !result || !result.ok) {
+            toast.error("Something went wrong.");
+            return;
+        }
+
     }
 
     const userAvatar = useMemo(() => {

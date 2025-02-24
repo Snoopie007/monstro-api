@@ -138,10 +138,6 @@ async function addMemberManually(body: any, id: string) {
 	return res;
 }
 
-async function deleteReward(rId: number, id: string) {
-	const res = await del({ url: `rewards/${rId}`, id: id });
-	return res;
-}
 
 async function inviteMember(body: any, id: string) {
 	const res = await post({ url: `invite-member`, data: body, id: id });
@@ -155,37 +151,36 @@ async function updateContract(contractId: number, body: any, id: string) {
 }
 
 
+// async function addStaff(body: any, id: string) {
+// 	const res = await post({ url: `staffs`, data: body, id: id });
+// 	return res;
+// }
 
-async function addStaff(body: any, id: string) {
-	const res = await post({ url: `staffs`, data: body, id: id });
-	return res;
-}
+// async function updateStaff(rid: number, body: any, id: string) {
+// 	const res = await put({ url: `staffs/${rid}`, data: body, id: id });
+// 	return res;
+// }
 
-async function updateStaff(rid: number, body: any, id: string) {
-	const res = await put({ url: `staffs/${rid}`, data: body, id: id });
-	return res;
-}
-
-async function deleteStaff(rid: number, id: string) {
-	const res = await del({ url: `staffs/${rid}`, id: id });
-	return res;
-}
+// async function deleteStaff(rid: number, id: string) {
+// 	const res = await del({ url: `staffs/${rid}`, id: id });
+// 	return res;
+// }
 
 
-async function updateProfile(body: any, id: string) {
-	const res = await put({ url: `profile`, data: body, id: id });
-	return res;
-}
+// async function updateProfile(body: any, id: string) {
+// 	const res = await put({ url: `profile`, data: body, id: id });
+// 	return res;
+// }
 
-async function addTransaction(body: any, id: string, model: string) {
-	const res = await post({ url: `transactions/${model}`, data: body, id: id });
-	return res;
-}
+// async function addTransaction(body: any, id: string, model: string) {
+// 	const res = await post({ url: `transactions/${model}`, data: body, id: id });
+// 	return res;
+// }
 
-async function updateTransaction(tid: number, body: any, id: string, model: string) {
-	const res = await put({ url: `transactions/${model}/${tid}`, data: body, id: id });
-	return res;
-}
+// async function updateTransaction(tid: number, body: any, id: string, model: string) {
+// 	const res = await put({ url: `transactions/${model}/${tid}`, data: body, id: id });
+// 	return res;
+// }
 
 
 export {
@@ -209,14 +204,7 @@ export {
 	updateContract,
 	updateProgramLevel,
 	addProgramLevel,
-	deleteReward,
 	addMemberManually,
-	addStaff,
-	updateStaff,
-	deleteStaff,
-	updateProfile,
 	updatePlan,
-	addTransaction,
-	updateTransaction,
 	fetcher
 };

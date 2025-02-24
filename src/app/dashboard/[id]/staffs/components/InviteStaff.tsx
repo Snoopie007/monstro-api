@@ -17,7 +17,7 @@ import {
     SelectItem,
 } from '@/components/forms';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/forms/form'
-import { cn } from '@/libs/utils'
+import { cn, tryCatch } from '@/libs/utils'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -25,7 +25,6 @@ import z from 'zod'
 import { InviteStaffSchema } from '../schema'
 import { DialogClose, DialogDescription } from '@radix-ui/react-dialog'
 import { Role } from '@/types';
-import { addStaff } from '@/libs/api';
 import { toast } from 'react-toastify';
 
 export default function InviteStaff({ roles, locationId }: { roles: Array<Role>, locationId: string }) {
@@ -44,9 +43,16 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
 
     async function onSubmit(v: z.infer<typeof InviteStaffSchema>) {
 
-        const body = { ...v };
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${locationId}/staffs`, {
+                method: "POST",
+                body: JSON.stringify(v)
+            })
+        )
+
+
         try {
-            await addStaff(body, locationId);
+
             toast.success("Staff Added");
             setOpen(false);
         } catch (error) {
