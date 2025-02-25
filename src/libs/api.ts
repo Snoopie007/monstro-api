@@ -26,15 +26,15 @@ async function fetcher(data: { url: string, id: string }) {
 }
 
 
-async function postFile(props: { url: string, data: any, id: string }) {
-	let headers = {};
-	headers = {
-		"Content-Type": "multipart/form-data"
-	}
-	return nextApi.post(`/api/protected/${props.id}/${props.url}`, props.data, { headers }).then((res) => {
-		return res.data.data;
-	});
-}
+// async function postFile(props: { url: string, data: any, id: string }) {
+// 	let headers = {};
+// 	headers = {
+// 		"Content-Type": "multipart/form-data"
+// 	}
+// 	return nextApi.post(`/api/protected/${props.id}/${props.url}`, props.data, { headers }).then((res) => {
+// 		return res.data.data;
+// 	});
+// }
 
 
 async function postRegister(props: { url: string, data: any }) {
@@ -151,44 +151,12 @@ async function updateContract(contractId: number, body: any, id: string) {
 }
 
 
-// async function addStaff(body: any, id: string) {
-// 	const res = await post({ url: `staffs`, data: body, id: id });
-// 	return res;
-// }
-
-// async function updateStaff(rid: number, body: any, id: string) {
-// 	const res = await put({ url: `staffs/${rid}`, data: body, id: id });
-// 	return res;
-// }
-
-// async function deleteStaff(rid: number, id: string) {
-// 	const res = await del({ url: `staffs/${rid}`, id: id });
-// 	return res;
-// }
-
-
-// async function updateProfile(body: any, id: string) {
-// 	const res = await put({ url: `profile`, data: body, id: id });
-// 	return res;
-// }
-
-// async function addTransaction(body: any, id: string, model: string) {
-// 	const res = await post({ url: `transactions/${model}`, data: body, id: id });
-// 	return res;
-// }
-
-// async function updateTransaction(tid: number, body: any, id: string, model: string) {
-// 	const res = await put({ url: `transactions/${model}/${tid}`, data: body, id: id });
-// 	return res;
-// }
-
 
 export {
 	api,
 	nextApi,
 	post,
 	put,
-	postFile,
 	del,
 	postRegister,
 	getRegister,

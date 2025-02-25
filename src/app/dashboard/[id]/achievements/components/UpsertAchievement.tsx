@@ -12,7 +12,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Achievement, Action, Program } from '@/types';
 import { cn, tryCatch } from '@/libs/utils';
 import { Input } from "@/components/forms/input"
-import { addAchievment, updateAchievment } from '@/libs/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Form, FormControl, FormField, FormMessage, FormItem, FormLabel } from '@/components/forms';
 import { toast } from 'react-toastify';
 import { usePrograms } from '@/hooks/use-programs';
@@ -36,17 +35,17 @@ export function UpsertAchivement({ achievement, locationId, setCurrentAchievemen
 	const form = useForm<z.infer<typeof AchievementSchema>>({
 		resolver: zodResolver(AchievementSchema),
 		defaultValues: {
-			id: achievement?.id || 0,
-			title: achievement?.title || '',
-			description: achievement?.description || '',
-			icon: achievement?.icon || '',
-			badge: achievement?.badge || '',
-			points: Number(achievement?.points) || 0,
-			actionCount: (Array.isArray(achievement?.actions) && achievement?.actions.length ? achievement?.actions[0].count : 0) || 0,
-			action: (Array.isArray(achievement?.actions) && achievement?.actions.length ? achievement?.actions[0].id : 0) || 0,
-			program: achievement?.program?.id || 0
+			id: achievement?.id ?? 0,
+			title: achievement?.title ?? '',
+			description: achievement?.description ?? '',
+			icon: achievement?.icon ?? '',
+			badge: achievement?.badge ?? '',
+			points: Number(achievement?.points) ?? 0,
+			actionCount: achievement?.actions?.[0]?.count ?? 0,
+			action: achievement?.actions?.[0]?.id ?? 0,
+			program: achievement?.program?.id ?? 0
 		},
-		mode: "onChange",
+		mode: "onChange"
 	})
 
 	async function submitForm(v: z.infer<typeof AchievementSchema>) {

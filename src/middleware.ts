@@ -55,6 +55,7 @@ export default auth(async (req) => {
 				}
 				const allowedInactivePaths = [`/dashboard/${nextLocation.id}`, `/dashboard/${nextLocation.id}/settings/billing`]
 				if (path.startsWith('dashboard') && !allowedInactivePaths.includes(pathname) && !['Pending', 'Active'].includes(nextLocation.status)) {
+
 					return NextResponse.redirect(new URL(`/dashboard/${nextLocation.id}`, req.nextUrl.origin));
 				}
 

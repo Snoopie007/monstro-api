@@ -1,10 +1,9 @@
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui";
 import { Reward } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
+import { Pencil } from "lucide-react";
 
-export const RewardColumns = (locationId: string): ColumnDef<Reward, any>[] => [
-
+export const RewardColumns = (locationId: string, onEdit: (reward: Reward) => void): ColumnDef<Reward, any>[] => [
     {
         accessorKey: "name",
         header: "Name",
@@ -13,18 +12,12 @@ export const RewardColumns = (locationId: string): ColumnDef<Reward, any>[] => [
             const reward = row.original
             return (
 
-                <div className="flex flex-row items-center gap-2">
-
-                    <Avatar className="group-hover:bg-violet-600 max-w-full flex items-center justify-center text-black-100 w-5 h-5 mr-2 bg-gray-200 rounded-full">
-                        <AvatarImage
-                            src={reward.images[0]}
-                        />
-                        <AvatarFallback className=" bg-gray-200 text-gray-400 text-xs ">
-                            {reward.name.charAt(0)}
-                        </AvatarFallback>
-                    </Avatar>
+                <div className="flex flex-row items-center gap-2 group">
                     <span className="text-sm">
                         {reward.name}
+                    </span>
+                    <span>
+                        <Pencil size={12} className="cursor-pointer opacity-30 group-hover:opacity-100" onClick={() => onEdit(reward)} />
                     </span>
                 </div>
             )

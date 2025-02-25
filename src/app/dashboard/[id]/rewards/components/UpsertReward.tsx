@@ -1,21 +1,23 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose, Button, ScrollArea, SheetFieldSet, SheetFieldLabel, SheetFieldInput, SheetSection } from '@/components/ui';
 import { z } from "zod";
-import React, { SetStateAction, Dispatch, useState } from 'react'
+import React, { SetStateAction, Dispatch, useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Reward } from '@/types';
 import {
 	Form, FormControl, FormField, FormMessage, FormItem, FormLabel
 } from '@/components/forms';
-import { cn } from '@/libs/utils';
+import { cn, tryCatch } from '@/libs/utils';
 import { Input } from "@/components/forms/input"
-import { postFile } from '@/libs/api';
+
 import { toast } from 'react-toastify';
 import useSWR from 'swr';
 import { RewardsSchema } from '../schemas';
 import { Textarea } from '@/components/forms/textarea';
 import { RewardImages } from './RewardImages';
+import { Loader2 } from 'lucide-react';
+import { set } from 'date-fns';
 
 
 const InputStyle = "border bg-transparent w-full rounded-[4px] text-sm text-white py-2 px-4 border-white h-auto  font-roboto";
@@ -29,94 +31,74 @@ export interface AddrewardProps {
 
 export function UpsertReward({ reward, locationId, setCurrentReward }: AddrewardProps) {
 
-	const { mutate } = useSWR(`/api/protected/rewards`);
+	const { mutate } = useSWR(`/api/protected/${locationId}/rewards`);
 	const [loading, setLoading] = useState(false);
-
-	const [rewardImages, setRewardImages] = useState<File[]>([]);
-
-
+	const [removedImages, setRemovedImages] = useState<string[]>([]);
 	const form = useForm<z.infer<typeof RewardsSchema>>({
 		resolver: zodResolver(RewardsSchema),
 		defaultValues: {
-			id: reward?.id || 0,
 			name: reward?.name || '',
 			description: reward?.description || '',
 			requiredPoints: reward?.requiredPoints || 0,
-			images: reward?.images || [],
-			// icon: reward?.icon || "",
-			limitTotal: reward?.limitTotal || "0",
+			totalLimit: reward?.totalLimit || 0,
 			limitPerMember: reward?.limitPerMember || 0,
 		},
-		mode: "onChange",
+		mode: "onSubmit",
 	})
 
-	// async function uploadImages() {
-	// 	if (!selectedRewardImages) return;
-	// 	setLoading(true);
-	// 	const files = selectedRewardImages;
-	// const data = new FormData()
-	// for (const file of files) {
-	// 	data.append("files", file)
-	// }
-	// data.append("fileDirectory", 'reward-images');
-	// 	try {
-	// 		const upload = await postFile({ url: 's3-upload/multiple', data: data, id: locationId });
-	// 		const urls = upload.map((data: Record<string, any>) => data.url);
-	// 		setRewardImages(urls);
-
-	// 		setLoading(false);
-	// 	} catch (error) {
-	// 		console.log(error)
-	// 		setLoading(false);
-	// 	}
-	// }
-
-	// async function uploadIcon() {
-	// 	if (!selectedRewardIcon) return;
-	// 	setLoading(true);
-	// 	const file = selectedRewardIcon;
-	// 	const data = new FormData()
-	// 	data.append("file", file)
-	// 	data.append("fileDirectory", 'reward-icons');
-	// 	try {
-	// 		const upload = await postFile({ url: 's3-upload', data: data, id: locationId });
-	// 		// setRewardIcon(upload.url);
-	// 		// updateMember({ avatar: avatar.fileUrl })
-	// 		setLoading(false)
-	// 	} catch (error) {
-	// 		console.log(error)
-	// 		setLoading(false)
-	// 	}
-	// }
+	useEffect(() => {
+		if (reward) {
+			form.reset(reward);
+		}
+	}, [reward]);
 
 
+	async function submit(e: React.FormEvent<HTMLFormElement>) {
+		e.preventDefault();
 
-	async function submitForm(v: z.infer<typeof RewardsSchema>) {
+
+		if (!form.formState.isValid) return form.trigger();
+
 		setLoading(true);
+		const formData = new FormData(e.currentTarget);
+		const files = formData.get('files') || formData.getAll('files');
+		if (!files || (Array.isArray(files) && files.length === 0)) {
+			toast.error("Please upload at least one image");
+			setLoading(false);
+			return;
+		}
+
+		if (removedImages.length > 0) {
+			for (const image of removedImages) {
+				formData.append('removedImages', image);
+			}
+		}
+
+		if (reward?.images) {
+			for (const image of reward.images) {
+				formData.append('images', image);
+			}
+		}
 
 		try {
-			const data = new FormData()
-			for (const file of rewardImages) {
-				data.append("files", file)
-			}
-			data.append("fileDirectory", 'reward-images');
-			if (rewardImages.length > 0) {
-				const images = await postFile({ url: 's3-upload/multiple', data: data, id: locationId });
-				v.images = images.map((image: Record<string, any>) => image.url);
-			}
 
+			const { result, error } = await tryCatch(
+				fetch(`/api/protected/${locationId}/rewards${reward?.id ? `/${reward.id}` : ''}`, {
+					method: reward?.id ? 'PUT' : 'POST',
+					body: formData,
+				})
+			)
+			console.log(result, error);
+			setLoading(false);
+			// if (error || !result) {
+			// 	toast.error("Something went wrong, please try again later");
+			// 	return;
+			// }
 
-			const res = await fetch(`/api/protected/${locationId}/rewards`, {
-				method: reward?.id ? 'PUT' : 'POST',
-				body: JSON.stringify(v),
-			})
-
-
-
-			await mutate();
-			toast.success("Reward Updated");
-			form.reset();
-			setCurrentReward(undefined);
+			// await mutate();
+			// toast.success("Reward Updated");
+			// form.reset();
+			// setCurrentReward(undefined);
 		} catch (error) {
 			console.error("Error:", error);
 			setCurrentReward(undefined);
@@ -133,7 +115,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 				</SheetHeader>
 				<ScrollArea className="h-[calc(100vh-150px)] w-full ">
 					<Form {...form}>
-						<form  >
+						<form onSubmit={submit} id='reward' >
 							<SheetSection>
 								<SheetFieldSet>
 									<SheetFieldLabel>
@@ -144,7 +126,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 											control={form.control}
 											name="name"
 											render={({ field }) => (
-												<FormItem className="mb-4">
+												<FormItem className='space-y-0'>
 
 													<FormControl>
 														<Input type='text' className={cn(InputStyle)} placeholder="Reward Name" {...field} />
@@ -165,7 +147,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 											control={form.control}
 											name="description"
 											render={({ field }) => (
-												<FormItem>
+												<FormItem className='space-y-0'>
 													<FormControl>
 														<Textarea className={cn(InputStyle)} placeholder="Description" {...field} />
 													</FormControl>
@@ -184,7 +166,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 											control={form.control}
 											name="limitPerMember"
 											render={({ field }) => (
-												<FormItem>
+												<FormItem className='space-y-0'>
 													<FormControl>
 														<Input type='text' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
 													</FormControl>
@@ -201,9 +183,9 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 									<SheetFieldInput>
 										<FormField
 											control={form.control}
-											name="limitTotal"
+											name="totalLimit"
 											render={({ field }) => (
-												<FormItem>
+												<FormItem className='space-y-0'>
 													<FormControl>
 														<Input type='text' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(e.currentTarget.value)} />
 													</FormControl>
@@ -222,7 +204,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 											control={form.control}
 											name="requiredPoints"
 											render={({ field }) => (
-												<FormItem>
+												<FormItem className='space-y-0'>
 
 													<FormControl>
 														<Input type='text' className={cn(InputStyle)} placeholder="Reward" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
@@ -236,15 +218,10 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 								</SheetFieldSet>
 							</SheetSection>
 							<SheetSection>
-								<div className='flex flex-col'>
-									<div className='text-sm font-semibold'>Upload Images for Reward</div>
-									<div className='text-xs text-gray-500'>
-										Upload up to 5 images for the reward The proposed size is 800px * 800px. No bigger than 1 MB. Only PNG, JPG, JPEG are allowed..
-									</div>
-								</div>
 								<RewardImages
-									value={form.getValues("images")}
-									onFilesChange={setRewardImages}
+									images={reward?.images || []}
+									onRemoveImage={(url) => setRemovedImages([...removedImages, url])}
+									name='files'
 								/>
 							</SheetSection>
 
@@ -255,16 +232,19 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 				</ScrollArea>
 				<SheetFooter className='border-t py-3 px-4'>
 					<SheetClose asChild>
-						<Button variant={'outline'} size={'xs'} onClick={() => setCurrentReward(undefined)}>
+						<Button variant={'outline'} size={'sm'} onClick={() => setCurrentReward(undefined)}>
 							Cancel
 						</Button>
 					</SheetClose>
-					<SheetClose asChild>
-						<Button variant={'foreground'} size={'xs'} onClick={form.handleSubmit(submitForm)}>
-							Save
-						</Button>
-					</SheetClose>
-
+					<Button variant={'foreground'} size={'sm'}
+						form='reward'
+						type='submit'
+						disabled={loading || !form.formState.isValid}
+						className={cn("children:hidden", { "children:block": loading })}
+					>
+						<Loader2 size={16} className={"animate-spin mr-2"} />
+						Save
+					</Button>
 				</SheetFooter>
 
 

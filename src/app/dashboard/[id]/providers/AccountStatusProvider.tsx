@@ -27,54 +27,53 @@ interface AccountStatusProviderProps {
     children: ReactNode;
     locationState: LocationState;
 }
-
 export const AccountStatusProvider = ({ children, locationState }: AccountStatusProviderProps): ReactElement => {
-    const [state, dispatch] = useReducer(reducer, {
-        locationState: locationState
-    });
+    const [state, dispatch] = useReducer(reducer, { locationState });
     const { data: session, update } = useSession();
-    useEffect(() => {
-        document.documentElement.setAttribute('data-account-status', locationState.status.toLowerCase());
-    }, [locationState])
+
+    function updateLocations(newStatus: string) {
+        update({
+            locations: session?.user.locations.map((location: { id: string, status: string }) => {
+                const decodedId = decodeId(location.id);
+                return decodedId === locationState.locationId
+                    ? { ...location, status: newStatus }
+                    : location
+            })
+        });
+        document.documentElement.setAttribute('data-account-status', newStatus.toLowerCase());
+    };
 
     useEffect(() => {
+        updateLocations(locationState.status);
+    }, [locationState]);
 
+    useEffect(() => {
         if (!locationState) return;
 
         const channel = supabase.channel('LocationChanges')
-            .on('postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'location_state',
-                    filter: `location_id=eq.${(locationState.locationId)}`,
-                },
-                (payload) => {
-                    const newStatus = payload.new.status;
-                    update({
-                        locations: session?.user.locations.map((location: { id: string, status: string }) => {
-                            const decodedId = decodeId(location.id);
-                            return decodedId === locationState.locationId
-                                ? { ...location, status: newStatus }
-                                : location
-                        })
-                    })
-                    document.documentElement.setAttribute('data-account-status', newStatus.toLowerCase());
-                    dispatch({ type: 'UPDATE_LOCATION_STATE', payload: payload.new as LocationState })
-                }
-            ).subscribe()
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'location_state',
+                filter: `location_id=eq.${locationState.locationId}`,
+            }, (payload) => {
+                const newStatus = payload.new.status;
+                updateLocations(newStatus);
+                dispatch({ type: 'UPDATE_LOCATION_STATE', payload: payload.new as LocationState });
+            })
+            .subscribe();
 
         return () => {
             channel.unsubscribe();
-        }
-    }, [supabase, locationState])
+        };
+    }, [locationState]);
 
     return (
         <AccountStatusContext.Provider value={{ state, dispatch }}>
             {children}
         </AccountStatusContext.Provider>
     );
-}
+};
 
 type UseAccountStatusHookType = {
     locationState: LocationState;

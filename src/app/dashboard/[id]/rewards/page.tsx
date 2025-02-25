@@ -21,7 +21,7 @@ export default function Rewards(props: { params: Promise<{ id: string }> }) {
 
     if (error) return <ErrorComponent error={error} />
 
-    const columns = useMemo(() => RewardColumns(params.id), [params.id])
+    const columns = useMemo(() => RewardColumns(params.id, setCurrentReward), [params.id])
     const table = useReactTable<Reward>({
         data: !isLoading && rewards ? rewards : [], // Only use data when it's available
         columns,
@@ -49,8 +49,7 @@ export default function Rewards(props: { params: Promise<{ id: string }> }) {
                                 limitPerMember: 0,
                                 images: [],
                                 description: "",
-                                // icon: "",
-                                limitTotal: ""
+                                totalLimit: 0,
                             })}
                         >
                             + Reward

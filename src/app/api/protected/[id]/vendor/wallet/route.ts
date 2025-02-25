@@ -6,7 +6,7 @@ import { wallet } from '@/db/schemas';
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: number }> }) {
     const params = await props.params;
-    console.log("Params ", params)
+
     try {
         const wallet = await db.query.wallet.findFirst({
             where: (wallet, { eq }) => eq(wallet.locationId, params.id),
