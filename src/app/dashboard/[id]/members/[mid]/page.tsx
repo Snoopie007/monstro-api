@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui"
 
 import {
     MemberAchievements,
-    MemberEnrollments,
+    MemberSubs,
     MemberTransactions,
     MemberRewards,
     MemberAttedance,
@@ -76,7 +76,7 @@ async function fetchStripePyamentMethods(accessToken: string, customerId: string
 const MemberDetailsMenu = [
     "Achievements",
     "Attendance",
-    "Enrollments",
+    "Subscriptions",
     "Transactions",
     "Rewards"
 ]
@@ -116,8 +116,8 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
                         <TabsContent value="Attendance">
                             <MemberAttedance params={params} />
                         </TabsContent>
-                        <TabsContent value="Enrollments">
-                            <MemberEnrollments params={params} />
+                        <TabsContent value="Subscriptions">
+                            <MemberSubs params={params} />
                         </TabsContent>
                         <TabsContent value="Transactions">
                             <MemberTransactions params={params} />

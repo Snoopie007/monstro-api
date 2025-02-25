@@ -19,6 +19,7 @@ import { Clock4Icon } from 'lucide-react';
 import { CreateEnrollment } from './CreateSubscription'
 import { useMemberSubscriptions } from '@/hooks/use-members'
 import { useMember } from '../../providers/MemberContext'
+import { MemberSubscription } from '@/types'
 
 
 
@@ -34,9 +35,9 @@ function calculateProgressPercentage(start: number, end: number) {
     return Math.min(Math.max(parseFloat(progressPercentage.toFixed(2)), 0), 100);
 }
 
-export function MemberEnrollments({ params }: { params: { id: string, mid: number }, }) {
+export function MemberSubs({ params }: { params: { id: string, mid: number }, }) {
     const { member } = useMember();
-    const { subscriptions, isLoading, error } = useMemberSubscriptions(params.id, params.mid, member.stripeCustomerId);
+    const { subscriptions, isLoading, error } = useMemberSubscriptions(params.id, params.mid);
 
     return (
         <div className='py-4'>
@@ -82,9 +83,9 @@ export function MemberEnrollments({ params }: { params: { id: string, mid: numbe
     )
 }
 
-function SubscriptionRow({ subscriptions }: { subscriptions: Stripe.Subscription[] }) {
+function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[] }) {
 
-    if (subscriptions.length === 0) {
+    if (subscriptions.length < 1) {
         return (
             <TableRow>
                 <TableCell colSpan={6} className='text-center'>
@@ -98,37 +99,37 @@ function SubscriptionRow({ subscriptions }: { subscriptions: Stripe.Subscription
 
         <>
 
-            {subscriptions.map((enrollment: any) => (
-                <TableRow key={enrollment.id}>
+            {subscriptions.map((sub: MemberSubscription) => (
+                <TableRow key={sub.id}>
 
                     <TableCell>
                         <div className='flex flex-row gap-2 items-center'>
                             <div className="relative flex items-center justify-center w-5 h-5">
-                                <CircleProgress progress={calculateProgressPercentage(enrollment.current_period_start, enrollment.current_period_end)} />
+                                <CircleProgress progress={calculateProgressPercentage(new Date(sub.currentPeriodStart).getTime(), sub.currentPeriodEnd)} />
                             </div>
-                            <span>{enrollment.items.data[0].plan.nickname}</span>
+                            <span>{sub.plan?.name}</span>
                         </div>
                     </TableCell>
                     <TableCell>
-                        {formatDateTime(enrollment.created * 1000)} - {enrollment.ended_at ? formatDateTime(enrollment.ended_at) : 'Never'}
+                        {formatDateTime(sub.created * 1000)} - {sub.endedAt ? formatDateTime(sub.endedAt) : 'Never'}
                     </TableCell>
                     <TableCell>
-                        {formatAmountForDisplay(enrollment.items.data[0].plan.amount / 100, enrollment.currency, true)} / {enrollment.items.data[0].plan.interval}
+                        {formatAmountForDisplay(sub.plan?.pricing.amount! / 100, 'USD', true)} / {sub.plan?.pricing.billingPeriod}
                     </TableCell>
                     <TableCell>
                     </TableCell>
                     <TableCell>
-                        {(enrollment.status !== 'active' || enrollment.cancel_at) ? (
+                        {(sub.status !== 'Active' || sub.cancelAt) ? (
                             "No future invoices"
                         ) : (
-                            formatDateTime(enrollment.current_period_end, {
+                            formatDateTime(sub.currentPeriodEnd, {
                                 month: 'short',
                                 day: 'numeric',
                             })
                         )}
                     </TableCell>
                     <TableCell>
-                        <EnrollmentStatusComponent enrollment={enrollment} />
+                        <SubscriptionStatus sub={sub} />
                     </TableCell>
                     <TableCell className='flex flex-row items-center'>
                         <MemberEnrollmentActions />
@@ -140,7 +141,7 @@ function SubscriptionRow({ subscriptions }: { subscriptions: Stripe.Subscription
 }
 
 
-const EnrollmentStatusVarients = cva("py-0.5 px-2 rounded-sm capitalize text-xs font-medium",
+const SubsStatusVarients = cva("py-0.5 px-2 rounded-sm capitalize text-xs font-medium",
     {
         variants: {
             status: {
@@ -157,38 +158,38 @@ const EnrollmentStatusVarients = cva("py-0.5 px-2 rounded-sm capitalize text-xs 
     }
 )
 
-function EnrollmentStatusComponent({ enrollment }: { enrollment: Stripe.Subscription }) {
+function SubscriptionStatus({ sub }: { sub: MemberSubscription }) {
     const DateFormat: Intl.DateTimeFormatOptions = {
         month: 'short',
         day: 'numeric',
     }
-    if (enrollment.status === 'active') {
+    if (sub.status === 'Active') {
         return (
             <>
-                {enrollment.cancel_at || enrollment.cancel_at_period_end ? (
+                {sub.cancelAt || sub.cancelAtPeriodEnd ? (
                     <div className='flex flex-row items-center gap-2'>
-                        <span className={cn(EnrollmentStatusVarients({ status: enrollment.status }))}> {enrollment.status} </span>
-                        <span className={cn(EnrollmentStatusVarients(), "flex flex-row items-center gap-1")}>
+                        <span className={cn(SubsStatusVarients({ status: sub.status }))}> {sub.status} </span>
+                        <span className={cn(SubsStatusVarients(), "flex flex-row items-center gap-1")}>
                             Cancels {" "}
-                            {formatDateTime((enrollment.cancel_at || 0) * 1000, DateFormat)}
+                            {formatDateTime((sub.cancelAt || 0) * 1000, DateFormat)}
                             <Clock4Icon size={13} />
                         </span>
                     </div>
                 ) : (
-                    <span className={cn(EnrollmentStatusVarients({ status: enrollment.status }))}> {enrollment.status} </span>
+                    <span className={cn(SubsStatusVarients({ status: sub.status }))}> {sub.status} </span>
                 )}
             </>
         )
     }
 
-    if (enrollment.trial_end) {
+    if (sub.trialEnd) {
         return (
-            <span className={cn(EnrollmentStatusVarients({ status: "trialing" }))}>Trail ends {formatDateTime(enrollment.trial_end * 1000, DateFormat)} </span>
+            <span className={cn(SubsStatusVarients({ status: "trialing" }))}>Trail ends {formatDateTime(sub.trialEnd * 1000, DateFormat)} </span>
         )
     }
 
     return (
-        <span className={cn(EnrollmentStatusVarients())}> {enrollment.status}</span>
+        <span className={cn(SubsStatusVarients())}> {sub.status}</span>
     )
 
 }

@@ -86,8 +86,10 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     activationDate: timestamp("activation_date", { withTimezone: true }).notNull(),
     currentPeriodStart: timestamp("current_period_start", { withTimezone: true }).notNull(),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
-    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-    cancelledAtPeriodEnd: boolean("cancelled_at_period_end").notNull().default(false),
+    cancelAt: timestamp("cancel_at", { withTimezone: true }),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    trialEnd: timestamp("trial_end", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });

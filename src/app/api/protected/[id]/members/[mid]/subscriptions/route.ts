@@ -25,7 +25,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
                 }
             }
         })
-
+        console.log(subscriptions)
         // if (session && customerId) {
         //     const integrations = await db.query.integrations.findFirst({
         //         where: (integration, { eq }) => (and(eq(integration.locationId, params.id), eq(integration.service, "Stripe"))),

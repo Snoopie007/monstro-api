@@ -32,11 +32,14 @@ export type MemberSubscription = {
     activationDate: Date;
     currentPeriodStart: Date;
     currentPeriodEnd: Date;
-    cancelledAt: Date | null;
-    cancelledAtPeriodEnd: boolean;
+    cancelAt: Date | null;
+    cancelAtPeriodEnd: boolean;
+    trialEnd: Date | null;
+    endedAt: Date | null;
     created: Date;
     updated: Date | null;
     plan?: Plan;
     payer?: Member;
     beneficiary?: Member;
+    status: string
 }

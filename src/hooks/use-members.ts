@@ -11,10 +11,9 @@ function useMembers(id: string, query: string = "", page: number = 1, size: numb
 	};
 }
 
-function useMemberSubscriptions(id: string, mid: number, customerId: string | undefined) {
+function useMemberSubscriptions(id: string, mid: number) {
 
-	if (!customerId) return { subscriptions: [], error: { message: "No Customer ID" }, isLoading: false };
-	const { data, error, isLoading } = useSWR({ url: `members/${mid}/subscriptions?customerId=${customerId}`, id: id }, fetcher);
+	const { data, error, isLoading } = useSWR({ url: `members/${mid}/subscriptions`, id: id }, fetcher);
 	return {
 		subscriptions: data,
 		error,
@@ -55,7 +54,7 @@ function useAttedance(id: string, mId: number) {
 	};
 }
 
-function useMemberPrograms(id: string, mId: number){
+function useMemberPrograms(id: string, mId: number) {
 	const { data, error, isLoading } = useSWR({ url: `members/${mId}/programs`, id: id }, fetcher);
 	return {
 		programs: data,
