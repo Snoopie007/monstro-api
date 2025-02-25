@@ -79,8 +79,8 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     id: serial("id").primaryKey(),
     payerId: integer("payer_id").references(() => members.id, { onDelete: "cascade" }),
     beneficiaryId: integer("beneficiary_id").references(() => members.id, { onDelete: "cascade" }),
-    programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
     planId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
     stripeSubscriptionId: text("stripe_subscription_id"),
     status: MemberSubscriptionStatusEnum("status").notNull().default("Pending"),
     activationDate: timestamp("activation_date", { withTimezone: true }).notNull(),
@@ -208,12 +208,12 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
         fields: [memberSubscriptions.beneficiaryId],
         references: [members.id],
     }),
-    program: one(programs, {
-        fields: [memberSubscriptions.programId],
-        references: [programs.id],
-    }),
     plan: one(memberPlans, {
         fields: [memberSubscriptions.planId],
         references: [memberPlans.id],
+    }),
+    location: one(locations, {
+        fields: [memberSubscriptions.locationId],
+        references: [locations.id],
     }),
 }));
