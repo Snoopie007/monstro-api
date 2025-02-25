@@ -3,8 +3,7 @@
 import { CameraIcon, Trash2Icon, UploadCloudIcon } from "lucide-react";
 import React, { useRef } from 'react'
 import Image from "next/image";
-import { postFile } from "@/libs/api";
-
+import { tryCatch } from "@/libs/utils";
 
 interface UserAvatarProps {
     currentAvatar: string | null;
@@ -18,17 +17,18 @@ export default function UserAvatar({ currentAvatar, onChange, locationId }: User
     async function uploadLogo() {
         const file = fileRef.current?.files?.[0]
         if (!file) return;
-        const data = new FormData()
-        data.append("file", file)
-        data.append("fileDirectory", 'business-logo');
-        try {
-            const upload = await postFile({ url: 's3-upload', data: data, id: locationId });
-            console.log(upload);
-            onChange(upload.url);
-            // updateMember({ avatar: avatar.fileUrl })
-        } catch (error) {
-            console.log(error)
-        }
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("fileDirectory", 'user-avatar');
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${locationId}/upload`, {
+                method: "POST",
+                body: formData
+            })
+        )
+        if (error || !result) throw error;
+        const data = await result.json();
+        onChange(data.url);
     }
 
     async function removeLogo() {
@@ -42,12 +42,12 @@ export default function UserAvatar({ currentAvatar, onChange, locationId }: User
             {currentAvatar ? (
 
                 <div className='avatar group shrink relative items-end flex'>
-                    {/* <Image src={currentAvatar ? currentAvatar : ''}
+                    <Image src={currentAvatar ? currentAvatar : ''}
                         width={100}
                         height={100}
                         className="aspect-square"
                         priority={true}
-                        alt='member avatar' /> */}
+                        alt='member avatar' />
                     <div className="flex">
                         <div onClick={() => { fileRef.current?.click() }} className='cursor-pointer'>
                             <UploadCloudIcon size={16} className='mr-2 ' />

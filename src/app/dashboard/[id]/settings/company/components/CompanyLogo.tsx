@@ -1,8 +1,8 @@
 import { CameraIcon, Trash2Icon, UploadCloudIcon } from "lucide-react";
 import React, { useRef } from 'react'
 import Image from "next/image";
-import { postFile } from "@/libs/api";
 import { Button } from "@/components/ui";
+import { tryCatch } from "@/libs/utils";
 
 export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: string, setLogoUrl: Function, locationId: number }) {
     const fileRef = useRef<HTMLInputElement | null>(null)
@@ -11,16 +11,19 @@ export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: st
         const file = fileRef.current?.files?.[0]
         if (!file) return;
 
-        const data = new FormData()
-        data.append("file", file)
-        data.append("fileDirectory", 'business-logo');
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("fileDirectory", 'business-logo');
 
-        try {
-            const upload = await postFile({ url: 's3-upload', data, id: locationId });
-            setLogoUrl(upload.url);
-        } catch (error) {
-            console.log(error)
-        }
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${locationId}/upload`, {
+                method: "POST",
+                body: formData
+            })
+        )
+        if (error || !result) throw error;
+        const data = await result.json();
+        setLogoUrl(data.url);
     }
 
     const LogoUploadInfo = () => (
