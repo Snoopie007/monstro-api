@@ -4,7 +4,7 @@ import { relations } from "drizzle-orm";
 import { members } from "./members";
 import { memberPlans } from "./MemberPlans";
 import { achievements } from "./achievements";
-import { sessions } from "./enrollments";
+import { sessions } from "./reservations";
 
 export const programs = pgTable("programs", {
     id: serial("id").primaryKey(),

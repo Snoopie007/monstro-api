@@ -6,14 +6,13 @@ export const UpdateMemberSchema = z.object({
     reedemPoints: z.number().int().min(0, 'Reedem points must be a positive number'),
 }).merge(MemberGeneralInfoSchema);
 
-export const NewMemberPaymentSchema = z.object({
+export const TransactionSchema = z.object({
     amount: z.number().multipleOf(0.01),
     paymentMethod: z.string(),
     card: z.string().optional(),
     statement: z.string(),
     description: z.string(),
-    programId: z.number().optional(),
-    planId: z.number().optional(),
+    memberSubscriptionId: z.number(),
     item: z.string().optional(),
     chargeFor: z.string().optional(),
 });

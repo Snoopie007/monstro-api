@@ -2,7 +2,7 @@
 import { desc, relations } from "drizzle-orm";
 import { integer, serial, text, timestamp, pgTable } from "drizzle-orm/pg-core";
 
-import { enrollments } from "./enrollments";
+import { enrollments } from "./reservations";
 
 
 export const attendances = pgTable("check_ins", {

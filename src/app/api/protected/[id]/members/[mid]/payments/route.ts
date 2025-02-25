@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/db/db";
-import { getStripe } from "@/libs/server-utils";
+import { StripePayments } from "@/libs/server/stripe";
 import { and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
@@ -19,21 +19,16 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
                 }
             })
 
-            if (integrations?.accessToken) {
-                const stripe = getStripe(integrations?.accessToken);
-                const charges = await stripe.charges.list(
-                    {
-                        limit: 25,
-                        customer: customerId
-                    }
-                );
-                return NextResponse.json(charges.data, { status: 200 });
-            } else {
+            if (!integrations || !integrations.accessToken) {
                 return NextResponse.json({ error: "Stripe integration required." }, { status: 500 })
             }
+            const stripe = new StripePayments(integrations.accessToken);
+
+            const charges = await stripe.getCharges(customerId, 25);
+            return NextResponse.json(charges, { status: 200 });
         }
     } catch (err) {
-        // console.log(err)
+        console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }

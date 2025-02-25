@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/forms'
 import { cn, formatAmountForDisplay, formatDateTime } from '@/libs/utils'
 import MemberPaymentActions from './actions'
-import NewMemberTransaction from './create-transaction'
+import NewMemberTransaction from './CreateTransaction'
 import { useMemberPayments } from '@/hooks/use-members'
 import { useMember } from '../../providers/MemberContext'
 import Stripe from 'stripe'

@@ -1,5 +1,6 @@
 import { Achievement } from "./achievement";
 import { FamilyMember } from "./family-member";
+import { Plan } from "./plan";
 import { Reward } from "./reward";
 
 export type Member = {
@@ -22,3 +23,20 @@ export type Member = {
     updated: Date | null;
     deleted: Date | null;
 };
+
+export type MemberSubscription = {
+    id: number;
+    payerId: number;
+    beneficiaryId: number;
+    planId: number;
+    activationDate: Date;
+    currentPeriodStart: Date;
+    currentPeriodEnd: Date;
+    cancelledAt: Date | null;
+    cancelledAtPeriodEnd: boolean;
+    created: Date;
+    updated: Date | null;
+    plan?: Plan;
+    payer?: Member;
+    beneficiary?: Member;
+}

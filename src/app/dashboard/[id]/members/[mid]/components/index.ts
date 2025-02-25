@@ -1,7 +1,7 @@
 
 export * from './MemberProfile';
 export * from './PaymentMethods';
-export * from './MemberEnrollments';
+export * from './MemberSubs';
 export * from './MemberAchievements';
 export * from './MemberAttedance';
 export * from './MemberRewards';

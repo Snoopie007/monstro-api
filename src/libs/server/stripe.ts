@@ -187,12 +187,17 @@ class StripePayments {
         return await this._stripe.setupIntents.create(option);
     }
 
-    async getSubscriptions(customerId: string) {
+    async getSubscriptions(customerId: string, limit?: number) {
         return await this._stripe.subscriptions.list({ customer: customerId, limit: 10 });
     }
 
-    async getInvoices(customerId: string) {
-        const res = await this._stripe.charges.list({ customer: customerId, limit: 10 });
+    async getCharges(customerId: string, limit?: number) {
+        const res = await this._stripe.charges.list({ limit: limit || 10 });
+        return res.data;
+    }
+
+    async getInvoices(customerId: string, limit?: number) {
+        const res = await this._stripe.invoices.list({ customer: customerId, limit: limit || 10 });
         return res.data;
     }
 

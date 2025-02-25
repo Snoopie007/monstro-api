@@ -6,7 +6,7 @@ import { members } from "./members";
 import { attendances } from "./attendances";
 
 
-export const enrollments = pgTable("reservations", {
+export const reservations = pgTable("reservations", {
     id: serial("id").primaryKey(),
     sessionId: integer("session_id").references(() => sessions.id, { onDelete: "cascade" }),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
@@ -40,14 +40,14 @@ export const sessions = pgTable("sessions", {
 });
 
 
-export const enrollmentsRelations = relations(enrollments, ({ one, many }) => ({
+export const reservationsRelations = relations(reservations, ({ one, many }) => ({
     attendances: many(attendances),
     session: one(sessions, {
-        fields: [enrollments.sessionId],
+        fields: [reservations.sessionId],
         references: [sessions.id],
     }),
     member: one(members, {
-        fields: [enrollments.memberId],
+        fields: [reservations.memberId],
         references: [members.id],
     })
 }))
@@ -62,5 +62,5 @@ export const sessionsRelations = relations(sessions, ({ one, many }) => ({
         fields: [sessions.programLevelId],
         references: [programLevels.id],
     }),
-    enrollments: many(enrollments)
+    reservations: many(reservations)
 }))

@@ -35,11 +35,14 @@ import { addDays, format } from "date-fns"
 import { EndDatePresets, StartDatePresets } from "./data";
 import { useMemberPaymentMethods } from "../../providers/MemberContext";
 import React from "react";
+import { Program, Plan } from "@/types";
 
 export function CreateEnrollment() {
     const [open, setOpen] = useState<boolean>(false);
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods()
+    const [programs, setPrograms] = useState<Program[]>([]);
+    const [plans, setPlans] = useState<Plan[]>([]);
 
     const form = useForm<z.infer<typeof NewEnrollmentSchema>>({
         resolver: zodResolver(NewEnrollmentSchema),
@@ -52,10 +55,13 @@ export function CreateEnrollment() {
     })
 
     const startDate = form.watch("startDate")
+    const programId = form.watch("programId")
+    const method = form.watch("paymentMethod")
 
     async function onSubmit(data: z.infer<typeof NewEnrollmentSchema>) {
         console.log(data)
     }
+
     return (
         <Dialog>
             <DialogTrigger asChild>
@@ -77,17 +83,16 @@ export function CreateEnrollment() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Program</FormLabel>
-
-                                            <Select onValueChange={field.onChange} >
+                                            <Select onValueChange={(value) => field.onChange(Number(value))}>
                                                 <FormControl>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Select a program" />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="m@example.com">m@example.com</SelectItem>
-                                                    <SelectItem value="m@google.com">m@google.com</SelectItem>
-                                                    <SelectItem value="m@support.com">m@support.com</SelectItem>
+                                                    {!programIsLoading && programs.map((program: Program, index: number) => (
+                                                        program.plans.length ? <SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem> : null
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
 
@@ -103,16 +108,16 @@ export function CreateEnrollment() {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Plan</FormLabel>
-
-                                            <Select onValueChange={field.onChange} disabled={!form.getValues("programId")}>
+                                            <Select onValueChange={(value) => field.onChange(Number(value))}>
                                                 <FormControl>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Select a plan" />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="m@example.com">m@example.com</SelectItem>
-
+                                                    {programId && programs.find((program: Program) => program.id == programId).plans.map((plan: Plan, index: number) => (
+                                                        (plan.contractId && plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
 

@@ -8,8 +8,8 @@ export async function GET(req: Request, props: { params: Promise<{ mid: number, 
     try {
         const session = await auth();
         if (session) {
-            const enrollments = await db.query.enrollments.findMany({
-                where: (enrollments, { eq }) => eq(enrollments.memberId, params.mid),
+            const enrollments = await db.query.reservations.findMany({
+                where: (reservations, { eq }) => eq(reservations.memberId, params.mid),
                 with: {
                     attendances: true,
                     session: {

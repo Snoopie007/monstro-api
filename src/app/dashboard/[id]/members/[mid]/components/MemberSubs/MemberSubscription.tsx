@@ -16,7 +16,7 @@ import { CircleProgress } from '@/components/ui/circle-progress';
 import Stripe from 'stripe';
 import { cva } from 'class-variance-authority';
 import { Clock4Icon } from 'lucide-react';
-import { CreateEnrollment } from './CreateEnrollment'
+import { CreateEnrollment } from './CreateSubscription'
 import { useMemberSubscriptions } from '@/hooks/use-members'
 import { useMember } from '../../providers/MemberContext'
 
@@ -140,8 +140,7 @@ function SubscriptionRow({ subscriptions }: { subscriptions: Stripe.Subscription
 }
 
 
-const EnrollmentStatusVarients = cva(
-    "py-0.5 px-2 rounded-sm capitalize text-xs font-medium",
+const EnrollmentStatusVarients = cva("py-0.5 px-2 rounded-sm capitalize text-xs font-medium",
     {
         variants: {
             status: {

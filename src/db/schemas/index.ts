@@ -7,7 +7,7 @@ export * from "./MemberPlans";
 export * from "./rewards";
 export * from "./ContractTemplates";
 export * from "./achievements";
-export * from "./enrollments";
+export * from "./reservations";
 export * from "./attendances";
 export * from "./permissions"
 export * from "./staffs"
