@@ -11,7 +11,7 @@ import {
 
 import { ChevronLeft, Mail, PhoneCall } from "lucide-react";
 import { useRouter } from 'next/navigation'
-import UpdateMemberProfile from "./update-profile";
+import UpdateMemberProfile from "./UpdateProfile";
 import { formatDateTime } from "@/libs/utils";
 import { useMember } from "../../providers/MemberContext";
 
@@ -34,7 +34,7 @@ export function MemberProfile({ params }: MemberProfileProps) {
                     </div>
                     <div>
 
-                        {/* <UpdateMemberProfile member={member} /> */}
+                        <UpdateMemberProfile member={member} />
                     </div>
                 </div>
 
@@ -77,9 +77,7 @@ export function MemberProfile({ params }: MemberProfileProps) {
                                 </span>
 
                             </div>
-                            <div className="flex flex-row gap-2 items-center">
-                                <strong> Status:</strong> {member.activityStatus}
-                            </div>
+
                         </div>
                     </div>
                     <div className='flex-1 flex flex-col text-sm gap-2'>
@@ -87,14 +85,12 @@ export function MemberProfile({ params }: MemberProfileProps) {
                             <strong>Points Earned</strong>
                             <span>
                                 {member.currentPoints}
-
                             </span>
                         </div>
                         <div className="flex flex-col">
                             <strong className=''>Points Reedemed</strong>
                             <span>
                                 {member.reedemPoints}
-
                             </span>
 
                         </div>

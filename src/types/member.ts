@@ -25,7 +25,7 @@ export type Member = {
 };
 
 
-type MemberSubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'past_due' | 'pending'
+type MemberSubscriptionStatus = 'active' | 'incomplete' | 'canceled' | 'past_due' | 'incomplete' | 'trialing' | 'unpaid'
 
 export type MemberSubscription = {
     id: number;

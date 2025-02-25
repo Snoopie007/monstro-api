@@ -85,8 +85,6 @@ export function MemberSubs({ params }: { params: { id: string, mid: number }, })
 
 function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[] }) {
 
-
-
     if (subscriptions.length < 1) {
         return (
             <TableRow>
@@ -142,52 +140,51 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
 }
 
 
-const SubsStatusVarients = cva("py-0.5 px-2 rounded-sm capitalize text-xs font-medium",
+const SubsStatusVarients = cva("py-0.5 px-2 rounded-sm capitalize text-xs font-medium capitalize",
     {
         variants: {
             status: {
                 active: "bg-green-300  text-green-800",
-                inactive: "bg-red-300  text-red-800",
                 unpaid: "bg-red-300  text-red-800",
                 trialing: "bg-blue-300  text-blue-800",
                 past_due: "bg-red-300  text-red-800",
+                incomplete: "bg-yellow-300  text-yellow-800",
+                canceled: "bg-gray-300  text-gray-800",
             }
         }
     }
 )
 
 function SubscriptionStatus({ sub }: { sub: MemberSubscription }) {
-    const DateFormat: Intl.DateTimeFormatOptions = {
-        month: 'short',
-        day: 'numeric',
-    }
-    if (sub.status === 'active') {
-        return (
-            <>
-                {sub.cancelAt && sub.cancelAtPeriodEnd ? (
-                    <div className='flex flex-row items-center gap-2'>
-                        <span className={cn(SubsStatusVarients({ status: `${sub.status}` }))}> {sub.status} </span>
-                        <span className={cn(SubsStatusVarients(), "flex flex-row items-center gap-1")}>
-                            Cancels {" "}
-                            {formatDateTime((toUTC(sub.cancelAt) || 0), DateFormat)}
-                            <Clock4Icon size={13} />
-                        </span>
-                    </div>
-                ) : (
-                    <span className={cn(SubsStatusVarients({ status: sub.status }))}> {sub.status} </span>
-                )}
-            </>
-        )
-    }
+    const dateFormat: Intl.DateTimeFormatOptions = {
+        month: 'short' as const,
+        day: 'numeric' as const
+    };
 
-    if (sub.trialEnd) {
-        return (
-            <span className={cn(SubsStatusVarients({ status: "trialing" }))}>Trail ends {formatDateTime(toUTC(sub.trialEnd), DateFormat)} </span>
-        )
-    }
+    const getStatusText = () => {
+        if (sub.trialEnd) {
+            return `Trial ends ${formatDateTime(toUTC(sub.trialEnd), dateFormat)}`;
+        }
+
+        const status = sub.status.replace('_', ' ');
+        if (sub.status === 'active' && sub.cancelAt && sub.cancelAtPeriodEnd) {
+            return (
+                <div className='flex flex-row items-center gap-2'>
+                    <span className={cn(SubsStatusVarients({ status: sub.status }))}>{status}</span>
+                    <span className={cn(SubsStatusVarients(), "flex flex-row items-center gap-1")}>
+                        Cancels {formatDateTime(toUTC(sub.cancelAt), dateFormat)}
+                        <Clock4Icon size={13} />
+                    </span>
+                </div>
+            );
+        }
+
+        return status;
+    };
 
     return (
-        <span className={cn(SubsStatusVarients())}> {sub.status}</span>
-    )
-
+        <span className={cn(SubsStatusVarients({ status: sub.status }))}>
+            {getStatusText()}
+        </span>
+    );
 }
