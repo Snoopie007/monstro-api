@@ -7,7 +7,6 @@ import { integrations } from "./intergrations";
 import { programs } from "./programs";
 import { transactions } from "./transactions";
 import { vendors } from "./vendors";
-import { LocationState } from "@/types/location";
 
 const LocationStatusEnum = pgEnum("location_status", ["Pending", "Active", "Inactive", "Past due", "Cancelled", "Failed Payment"])
 

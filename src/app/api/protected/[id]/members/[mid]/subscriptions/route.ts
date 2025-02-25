@@ -13,7 +13,10 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
 
     try {
         const subscriptions = await db.query.memberSubscriptions.findMany({
-            where: (memberSubscriptions, { eq }) => eq(memberSubscriptions.beneficiaryId, params.mid),
+            where: (memberSubscriptions, { eq, and }) => and(
+                eq(memberSubscriptions.beneficiaryId, params.mid),
+                eq(memberSubscriptions.locationId, params.id)
+            ),
             with: {
                 plan: {
                     with: {
