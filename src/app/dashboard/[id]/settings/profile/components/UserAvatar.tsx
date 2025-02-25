@@ -64,7 +64,9 @@ export default function UserAvatar({ currentAvatar, onChange, locationId }: User
                 <div className="flex flex-row gap-6 items-center">
                     <div className='flex-1  border h-[80px] border-dashed rounded-sm cursor-pointer group:hover:border-white  flex flex-row items-center justify-center'
                         onClick={() => { fileRef.current?.click() }}>
-                        <span><CameraIcon size={30} className='inline-block stroke-accent' /></span>
+                        <span>
+                            <CameraIcon size={30} className='inline-block stroke-accent' />
+                        </span>
                     </div>
                     <div className="flex-1">
                         <b className="font-semibold text-base">
@@ -74,7 +76,6 @@ export default function UserAvatar({ currentAvatar, onChange, locationId }: User
                             The proposed size is 350px * 180px. No bigger than 2.5 MB. Only PNG, JPG, JPEG are allowed.
                         </p>
                     </div>
-
                 </div>
             )}
         </div>
