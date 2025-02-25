@@ -20,11 +20,12 @@ import { CreateEnrollment } from './CreateSubscription'
 import { useMemberSubscriptions } from '@/hooks/use-members'
 import { useMember } from '../../providers/MemberContext'
 import { MemberSubscription } from '@/types'
+import { useEffect, useState } from 'react'
 
 
 
 
-function calculateProgressPercentage(start: number, end: number) {
+function calculateProgress(start: number, end: number) {
     const currentDate: Date = new Date();
     const startDate = new Date(start * 1000);
     const endDate = new Date(end * 1000);
@@ -85,6 +86,11 @@ export function MemberSubs({ params }: { params: { id: string, mid: number }, })
 
 function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[] }) {
 
+    function toUTC(date: Date) {
+        if (!date) 0
+        return Math.floor(new Date(date).getTime() / 1000);
+    }
+
     if (subscriptions.length < 1) {
         return (
             <TableRow>
@@ -98,20 +104,19 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
     return (
 
         <>
-
             {subscriptions.map((sub: MemberSubscription) => (
                 <TableRow key={sub.id}>
 
                     <TableCell>
                         <div className='flex flex-row gap-2 items-center'>
                             <div className="relative flex items-center justify-center w-5 h-5">
-                                <CircleProgress progress={calculateProgressPercentage(new Date(sub.currentPeriodStart).getTime(), sub.currentPeriodEnd)} />
+                                <CircleProgress progress={calculateProgress(toUTC(sub.currentPeriodStart), toUTC(sub.currentPeriodEnd))} />
                             </div>
                             <span>{sub.plan?.name}</span>
                         </div>
                     </TableCell>
                     <TableCell>
-                        {formatDateTime(sub.created * 1000)} - {sub.endedAt ? formatDateTime(sub.endedAt) : 'Never'}
+                        {formatDateTime(toUTC(sub.created) * 1000)} - {sub.endedAt ? formatDateTime(toUTC(sub.endedAt)) : 'Never'}
                     </TableCell>
                     <TableCell>
                         {formatAmountForDisplay(sub.plan?.pricing.amount! / 100, 'USD', true)} / {sub.plan?.pricing.billingPeriod}
@@ -122,7 +127,7 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
                         {(sub.status !== 'Active' || sub.cancelAt) ? (
                             "No future invoices"
                         ) : (
-                            formatDateTime(sub.currentPeriodEnd, {
+                            formatDateTime(toUTC(sub.currentPeriodEnd), {
                                 month: 'short',
                                 day: 'numeric',
                             })
@@ -168,7 +173,7 @@ function SubscriptionStatus({ sub }: { sub: MemberSubscription }) {
             <>
                 {sub.cancelAt || sub.cancelAtPeriodEnd ? (
                     <div className='flex flex-row items-center gap-2'>
-                        <span className={cn(SubsStatusVarients({ status: sub.status }))}> {sub.status} </span>
+                        <span className={cn(SubsStatusVarients({ status: `${sub.status.toLocaleLowerCase()}` }))}> {sub.status} </span>
                         <span className={cn(SubsStatusVarients(), "flex flex-row items-center gap-1")}>
                             Cancels {" "}
                             {formatDateTime((sub.cancelAt || 0) * 1000, DateFormat)}
