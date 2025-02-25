@@ -68,11 +68,11 @@ export const memberContracts = pgTable("member_contracts", {
 });
 
 const MemberSubscriptionStatusEnum = pgEnum('member_subscription_status', [
-    'Active',
-    'Inactive',
-    'Cancelled',
-    'Past due',
-    'Pending',
+    'active',
+    'inactive',
+    'cancelled',
+    'past_due',
+    'pending',
 ]);
 
 export const memberSubscriptions = pgTable("member_subscriptions", {
@@ -82,7 +82,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     planId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
     stripeSubscriptionId: text("stripe_subscription_id"),
-    status: MemberSubscriptionStatusEnum("status").notNull().default("Pending"),
+    status: MemberSubscriptionStatusEnum("status").notNull().default("pending"),
     activationDate: timestamp("activation_date", { withTimezone: true }).notNull(),
     currentPeriodStart: timestamp("current_period_start", { withTimezone: true }).notNull(),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),

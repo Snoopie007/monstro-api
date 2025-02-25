@@ -24,6 +24,9 @@ export type Member = {
     deleted: Date | null;
 };
 
+
+type MemberSubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'past_due' | 'pending'
+
 export type MemberSubscription = {
     id: number;
     payerId: number;
@@ -41,5 +44,5 @@ export type MemberSubscription = {
     plan?: Plan;
     payer?: Member;
     beneficiary?: Member;
-    status: string
+    status: MemberSubscriptionStatus
 }

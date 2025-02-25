@@ -1,6 +1,5 @@
 'use client'
 import {
-    Button,
     Skeleton,
     Table,
     TableBody,
@@ -13,22 +12,23 @@ import { Input } from '@/components/forms'
 import { cn, formatAmountForDisplay, formatDateTime } from '@/libs/utils'
 import MemberEnrollmentActions from './actions'
 import { CircleProgress } from '@/components/ui/circle-progress';
-import Stripe from 'stripe';
 import { cva } from 'class-variance-authority';
 import { Clock4Icon } from 'lucide-react';
 import { CreateEnrollment } from './CreateSubscription'
 import { useMemberSubscriptions } from '@/hooks/use-members'
-import { useMember } from '../../providers/MemberContext'
 import { MemberSubscription } from '@/types'
-import { useEffect, useState } from 'react'
 
 
 
+function toUTC(date: Date) {
+    if (!date) 0
+    return Math.floor(new Date(date).getTime());
+}
 
 function calculateProgress(start: number, end: number) {
     const currentDate: Date = new Date();
-    const startDate = new Date(start * 1000);
-    const endDate = new Date(end * 1000);
+    const startDate = new Date(start);
+    const endDate = new Date(end);
     const totalDuration: number = endDate.getTime() - startDate.getTime();
     const elapsedTime: number = currentDate.getTime() - startDate.getTime();
     const progressPercentage: number = (elapsedTime / totalDuration) * 100;
@@ -37,11 +37,10 @@ function calculateProgress(start: number, end: number) {
 }
 
 export function MemberSubs({ params }: { params: { id: string, mid: number }, }) {
-    const { member } = useMember();
     const { subscriptions, isLoading, error } = useMemberSubscriptions(params.id, params.mid);
 
     return (
-        <div className='py-4'>
+        <div className='py-4 space-y-4'>
             <div className='w-full flex flex-row items-center  gap-2'>
                 <div className='flex-initial'>
                     <Input placeholder='Search enrollments...' className='w-[250px] h-auto py-1  text-xs rounded-xs' />
@@ -50,13 +49,13 @@ export function MemberSubs({ params }: { params: { id: string, mid: number }, })
                     <CreateEnrollment />
                 </div>
             </div>
-            <div className='border rounded-xs mt-4'>
+            <div className='border rounded-sm'>
                 <Table className=''>
                     <TableHeader>
                         <TableRow >
                             {['Plan', 'Length', 'Amount', 'Total Collected', 'Next Invoice', 'Status', ''].map((header, i) => (
 
-                                <TableHead key={i} className='text-sm h-auto  py-2'>{header}</TableHead>
+                                <TableHead key={i} className='text-sm font-normal h-auto  py-2'>{header}</TableHead>
 
                             ))}
                         </TableRow>
@@ -86,16 +85,13 @@ export function MemberSubs({ params }: { params: { id: string, mid: number }, })
 
 function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[] }) {
 
-    function toUTC(date: Date) {
-        if (!date) 0
-        return Math.floor(new Date(date).getTime() / 1000);
-    }
+
 
     if (subscriptions.length < 1) {
         return (
             <TableRow>
                 <TableCell colSpan={6} className='text-center'>
-                    <p className='text-sm text-gray-500'>No enrollments found</p>
+                    <p className='text-sm text-gray-500'>No subscriptions found</p>
                 </TableCell>
             </TableRow>
         )
@@ -116,7 +112,7 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
                         </div>
                     </TableCell>
                     <TableCell>
-                        {formatDateTime(toUTC(sub.created) * 1000)} - {sub.endedAt ? formatDateTime(toUTC(sub.endedAt)) : 'Never'}
+                        {formatDateTime(toUTC(sub.activationDate))} - {sub.endedAt ? formatDateTime(toUTC(sub.endedAt)) : 'Never'}
                     </TableCell>
                     <TableCell>
                         {formatAmountForDisplay(sub.plan?.pricing.amount! / 100, 'USD', true)} / {sub.plan?.pricing.billingPeriod}
@@ -124,7 +120,7 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
                     <TableCell>
                     </TableCell>
                     <TableCell>
-                        {(sub.status !== 'Active' || sub.cancelAt) ? (
+                        {(sub.status !== 'active' || sub.cancelAt) ? (
                             "No future invoices"
                         ) : (
                             formatDateTime(toUTC(sub.currentPeriodEnd), {
@@ -150,16 +146,13 @@ const SubsStatusVarients = cva("py-0.5 px-2 rounded-sm capitalize text-xs font-m
     {
         variants: {
             status: {
-                default: "bg-gray-300  text-gray-800",
                 active: "bg-green-300  text-green-800",
                 inactive: "bg-red-300  text-red-800",
                 unpaid: "bg-red-300  text-red-800",
                 trialing: "bg-blue-300  text-blue-800",
+                past_due: "bg-red-300  text-red-800",
             }
-        },
-        defaultVariants: {
-            status: "default",
-        },
+        }
     }
 )
 
@@ -168,15 +161,15 @@ function SubscriptionStatus({ sub }: { sub: MemberSubscription }) {
         month: 'short',
         day: 'numeric',
     }
-    if (sub.status === 'Active') {
+    if (sub.status === 'active') {
         return (
             <>
-                {sub.cancelAt || sub.cancelAtPeriodEnd ? (
+                {sub.cancelAt && sub.cancelAtPeriodEnd ? (
                     <div className='flex flex-row items-center gap-2'>
-                        <span className={cn(SubsStatusVarients({ status: `${sub.status.toLocaleLowerCase()}` }))}> {sub.status} </span>
+                        <span className={cn(SubsStatusVarients({ status: `${sub.status}` }))}> {sub.status} </span>
                         <span className={cn(SubsStatusVarients(), "flex flex-row items-center gap-1")}>
                             Cancels {" "}
-                            {formatDateTime((sub.cancelAt || 0) * 1000, DateFormat)}
+                            {formatDateTime((toUTC(sub.cancelAt) || 0), DateFormat)}
                             <Clock4Icon size={13} />
                         </span>
                     </div>
@@ -189,7 +182,7 @@ function SubscriptionStatus({ sub }: { sub: MemberSubscription }) {
 
     if (sub.trialEnd) {
         return (
-            <span className={cn(SubsStatusVarients({ status: "trialing" }))}>Trail ends {formatDateTime(sub.trialEnd * 1000, DateFormat)} </span>
+            <span className={cn(SubsStatusVarients({ status: "trialing" }))}>Trail ends {formatDateTime(toUTC(sub.trialEnd), DateFormat)} </span>
         )
     }
 
