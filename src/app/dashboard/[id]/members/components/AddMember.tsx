@@ -35,7 +35,7 @@ import { CountryCode, MemberPlan, Program } from '@/types';
 import { RadioGroup, RadioGroupItem } from '@/components/forms';
 import NewMemberPaymentForm from './MemberPaymentForm';
 import { Elements } from '@stripe/react-stripe-js';
-import { getStripe } from '@/libs/stripe';
+import { getStripe } from '@/libs/client/stripe';
 import { usePrograms } from '@/hooks/use-programs';
 import { addMemberManually } from '@/libs/api';
 import paymentmethods from "@/jsons/payment-methods.json";

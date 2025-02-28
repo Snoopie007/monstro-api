@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { memberInvoices, memberSubscriptions, transactions } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
-import { calculateCurrentPeriodEnd, createInvoice } from "@/libs/utils";
+import { calculateCurrentPeriodEnd, calculateInvoice } from "../../utils";
 import { MemberSubscription } from "@/types";
 import { isAfter } from "date-fns";
 
@@ -126,8 +126,10 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             }).returning({ sid: memberSubscriptions.id })
             const [{ invoiceId }] = await tx.insert(memberInvoices)
                 .values({
-                    ...createInvoice(params, [plan], { tax: 0, discount: 0 }),
+                    ...calculateInvoice([plan], { taxRate: 0, discount: 0 }),
                     memberSubscriptionId: sid,
+                    locationId: params.id,
+                    memberId: params.mid,
                 })
                 .returning({ invoiceId: memberInvoices.id })
             const transaction = await tx.insert(transactions).values({

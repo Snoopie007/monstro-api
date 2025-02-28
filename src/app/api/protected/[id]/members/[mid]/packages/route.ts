@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { memberInvoices, memberPackages, transactions } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
-import { calculateCurrentPeriodEnd, calculateInvoice } from "@/libs/utils";
+import { calculateCurrentPeriodEnd, calculateInvoice, createPackage } from "../../utils";
 import { MemberPackage, MemberPlan } from "@/types/member";
 import { MemberInvoice } from "@/types";
 import { NextResponse } from "next/server";
@@ -102,8 +102,6 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
                 invoiceId: iid,
                 packageId: mpid
             })
-
-
         })
 
         return NextResponse.json({ success: true }, { status: 200 })
@@ -111,75 +109,4 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
     }
-}
-
-type createPackageReturnType = {
-    newTransaction: Transaction,
-    newPkg: MemberPackage,
-    newInvoice: MemberInvoice
-}
-
-type PackageData = {
-    memberPlanId: number,
-    startDate: Date,
-    expireDate?: Date,
-    paymentMethod: string,
-    totalClassLimit?: number,
-}
-
-
-function createPackage(
-    data: PackageData,
-    plan: MemberPlan,
-    params: PackageProps,
-): createPackageReturnType {
-
-    const today = new Date();
-
-    const startDate = new Date(data.startDate)
-    const endDate = calculateCurrentPeriodEnd(startDate, plan)
-    const expireDate = data.expireDate ? new Date(data.expireDate) : plan.expireDate ? new Date(plan.expireDate) : null
-
-    const ids = {
-        memberId: params.mid,
-        locationId: params.id,
-    }
-
-    const newPkg: MemberPackage = {
-        ...data,
-        startDate: startDate,
-        endDate: endDate,
-        expireDate: expireDate,
-        payerId: params.mid,
-        beneficiaryId: params.mid,
-        locationId: params.id,
-        memberPlanId: data.memberPlanId,
-        totalClassLimit: plan.totalClassLimit || 0,
-        created: today,
-        status: "incomplete",
-    }
-
-    const newTransaction: Transaction = {
-        ...data,
-        ...ids,
-        item: `${plan.name}`,
-        description: `One time payment for ${plan.name}`,
-        amount: plan.price,
-        currency: plan.currency,
-        paymentType: plan.type,
-        chargeDate: today,
-        status: "incomplete",
-        transactionType: "incoming",
-    };
-
-    const newInvoice: MemberInvoice = {
-        ...calculateInvoice([plan], { taxRate: 0, discount: 0 }),
-        ...ids,
-        description: `Payment for ${plan.name}`,
-        currency: plan.currency,
-        paid: false,
-        status: "draft",
-    }
-
-    return { newTransaction, newPkg, newInvoice }
 }

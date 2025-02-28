@@ -19,54 +19,6 @@ export const StripeCardOptions = {
 
 
 
-function calculateCurrentPeriodEnd(startDate: Date, plan: MemberPlan): Date {
-    const endDate = new Date(startDate); // Initialize endDate with startDate
-    const threshold = plan.intervalThreshold || 1;
-
-    switch (plan.interval) {
-        case "day":
-            endDate.setDate(endDate.getDate() + threshold);
-            break;
-        case "week":
-            endDate.setDate(endDate.getDate() + threshold * 7);
-            break;
-        case "month":
-            endDate.setMonth(endDate.getMonth() + threshold);
-            break;
-        case "year":
-            endDate.setFullYear(endDate.getFullYear() + threshold);
-            break;
-        default:
-            throw new Error("Invalid plan interval");
-    }
-    return endDate;
-}
-
-function calculateInvoice(plans: MemberPlan[], rest: { taxRate: number, discount: number }) {
-    const items: { name: string, quantity: number, price: number }[] = []
-    let subtotal = 0
-    
-    plans.forEach(plan => {
-        items.push({
-            name: plan.name,
-            quantity: 1,
-            price: plan.price,
-        })
-        subtotal += plan.price
-    })
-    const tax = (subtotal * rest.taxRate) / 100
-    const total = subtotal - rest.discount + tax
-    return {
-      
-        items,
-        tax: rest.taxRate,
-        total,
-        discount: rest.discount,
-        subtotal,
-    
-    }
-}
-
  const formatAmountForDisplay = (
 	amount: number,
 	currency: string,
@@ -134,12 +86,12 @@ async function tryCatch<T, E = Error>(
 
 
 export {
-    calculateInvoice,
+  
   convertToCurrency,
   sleep,
   tryCatch,
   formatAmountForDisplay,
-  calculateCurrentPeriodEnd,
+ 
   cn,
 }
 
