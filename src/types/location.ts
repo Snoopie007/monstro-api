@@ -18,7 +18,7 @@ export type Location = {
     metadata: Record<string, any> | null;
     logoUrl: string | null;
     timezone: string | null;
-    locationState: LocationState;
+    locationState?: LocationState;
     memberInvoices?: MemberInvoice[];
     memberSubscriptions?: MemberSubscription[];
     transactions?: Transaction[];

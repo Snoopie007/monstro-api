@@ -88,24 +88,22 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
         }
 
 
-
-
-
         await db.transaction(async (tx) => {
             /** Create Member Package */
             const [{ mpid }] = await tx.insert(memberPackages).values(newPkg).returning({ mpid: memberPackages.id })
-
+            /** Create Invoice */
+            const [{ iid }] = await tx.insert(memberInvoices).values({
+                ...newInvoice,
+                memberPackageId: mpid
+            }).returning({ iid: memberInvoices.id })
             /** Create Transaction */
             await tx.insert(transactions).values({
                 ...newTransaction,
+                invoiceId: iid,
                 packageId: mpid
             })
 
-            /** Create Invoice */
-            await tx.insert(memberInvoices).values({
-                ...newInvoice,
-                memberPackageId: mpid
-            })
+
         })
 
         return NextResponse.json({ success: true }, { status: 200 })

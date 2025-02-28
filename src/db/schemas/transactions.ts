@@ -17,7 +17,7 @@ export const transactions = pgTable("transactions", {
     status: transactionStatus("status").notNull().default("incomplete"),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    invoiceId: integer("invoice_id").unique().references(() => memberInvoices.id, { onDelete: "cascade" }),
+    invoiceId: uuid("invoice_id").unique().references(() => memberInvoices.id, { onDelete: "cascade" }),
     subscriptionId: integer("subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
     packageId: uuid("package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
     chargeDate: timestamp("charge_date", { withTimezone: true }).notNull(),

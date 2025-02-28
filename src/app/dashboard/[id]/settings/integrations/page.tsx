@@ -3,7 +3,7 @@ import { use } from "react";
 import { cn } from '@/libs/utils'
 import Link from 'next/link'
 import IntegrationList from './integrations'
-import { useIntegrations } from '@/hooks/use-integrations'
+import { useIntegrations } from '@/hooks'
 import { Button, Skeleton } from '@/components/ui'
 import SectionLoader from '@/components/section-loading'
 import { useRouter } from "next/navigation";

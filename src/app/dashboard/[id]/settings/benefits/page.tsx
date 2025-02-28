@@ -8,7 +8,7 @@ import { cn } from '@/libs/utils'
 import { VendorBadges, VendorRewards } from './components'
 import { VendorReferrals } from './components/referrals'
 import { VendorProgressOverview } from './components/overview'
-import ReferralBanner from './components/referral-banner'
+import ReferralBanner from './components/ReferralBanner'
 
 async function fetchVendor(id: number, lid: string): Promise<Vendor> {
     const decodedId = decodeId(lid);

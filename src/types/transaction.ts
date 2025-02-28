@@ -21,7 +21,7 @@ export type Transaction = {
     currency: string;
     metadata?: Record<string, any>;
     refunded?: boolean;
-    invoiceId?: number;
+    invoiceId?: string | null;
     invoice?: MemberInvoice;
     created?: Date;
     updated?: Date | null;

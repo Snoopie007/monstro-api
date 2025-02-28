@@ -24,14 +24,14 @@ import {
 } from '@/components/forms';
 import { cn, sleep } from "@/libs/utils";
 import { z } from "zod";
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Icon } from '@/components/icons';
 import { CreateMemberSchema } from '../schema';
 import PhoneInput from 'react-phone-number-input/input';
 import { CountryCodes } from '@/libs/data';
-import { CountryCode, Plan, Program } from '@/types';
+import { CountryCode, MemberPlan, Program } from '@/types';
 import { RadioGroup, RadioGroupItem } from '@/components/forms';
 import NewMemberPaymentForm from './MemberPaymentForm';
 import { Elements } from '@stripe/react-stripe-js';
@@ -54,7 +54,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
     const { mutate } = useSWR(`/api/protected/members`);
     const { data: programs, isLoading: programIsLoading } = usePrograms(locationId);
     const [open, setOpen] = useState(false);
-
+    const [plans, setPlans] = useState<MemberPlan[]>([]);
     const [loading, setLoading] = useState(false);
 
     const form = useForm<z.infer<typeof CreateMemberSchema>>({
@@ -75,11 +75,20 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
         },
         mode: "onChange",
     })
-    const watchPaymentMethod = form.watch("paymentMethod"); // Watch for changes
+
+    const watchPaymentMethod = form.watch("paymentMethod");
+    const watchProgramId = form.watch("programId");
+
+    useEffect(() => {
+        if (watchProgramId) {
+            setPlans(programs.find((program: Program) => program.id == watchProgramId).plans);
+        }
+    }, [watchProgramId]);
+
     async function onSubmit(v: z.infer<typeof CreateMemberSchema>) {
         // console.log(v);
-        const member = await addMemberManually(v, locationId);
-        console.log(member);
+        // const member = await addMemberManually(v, locationId);
+
         await mutate();
         form.reset();
     }
@@ -246,8 +255,12 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
-                                                        {form.getValues("programId") && programs.find((program: Program) => program.id == form.getValues("programId")).plans.map((plan: Plan, index: number) => (
-                                                            (plan.contractId && plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
+                                                        {plans.map((plan: MemberPlan, index: number) => (
+                                                            (plan.contractId && plan.id) ? (
+                                                                <SelectItem key={index} value={plan.id?.toString()}>
+                                                                    {plan.name}
+                                                                </SelectItem>
+                                                            ) : null
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
