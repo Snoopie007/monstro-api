@@ -23,7 +23,7 @@ export type Transaction = {
     refunded?: boolean;
     invoiceId?: number;
     invoice?: MemberInvoice;
-    created: Date;
+    created?: Date;
     updated?: Date | null;
     deleted?: Date | null;
 };

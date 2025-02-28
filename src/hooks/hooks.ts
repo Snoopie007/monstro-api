@@ -108,6 +108,18 @@ function useMemberPackages(id: string, mid: number) {
         mutate
     };
 }
+
+function useMemberInvoices(id: string, mid: number) {
+    const { data, error, isLoading, mutate } = useSWR({ url: `members/${mid}/invoices`, id: id }, fetcher);
+    return {
+        invoices: data,
+        error,
+        isLoading,
+        mutate
+    };
+}
+
+
 export {
     useMembers,
     useMemberAchievements,
@@ -119,5 +131,6 @@ export {
     useAchievements,
     useWallet,
     useMemberPackages,
-    useActions
+    useActions,
+    useMemberInvoices
 };

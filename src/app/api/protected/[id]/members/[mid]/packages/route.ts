@@ -102,7 +102,10 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
             })
 
             /** Create Invoice */
-            await tx.insert(memberInvoices).values(newInvoice)
+            await tx.insert(memberInvoices).values({
+                ...newInvoice,
+                memberPackageId: mpid
+            })
         })
 
         return NextResponse.json({ success: true }, { status: 200 })
@@ -169,19 +172,15 @@ function createPackage(
         chargeDate: today,
         status: "incomplete",
         transactionType: "incoming",
-        created: today,
     };
 
     const newInvoice: MemberInvoice = {
         ...calculateInvoice([plan], { taxRate: 0, discount: 0 }),
         ...ids,
         description: `Payment for ${plan.name}`,
-        created: today,
         currency: plan.currency,
         paid: false,
-        dueDate: new Date(),
-        attemptCount: 0,
-        status: "unpaid",
+        status: "draft",
     }
 
     return { newTransaction, newPkg, newInvoice }

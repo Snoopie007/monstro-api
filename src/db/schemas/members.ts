@@ -18,6 +18,14 @@ export const MemberRelationshipEnum = pgEnum('relationship', [
     'other'
 ]);
 
+export const MemberInvoiceStatusEnum = pgEnum('invoice_status', [
+    'draft',
+    'paid',
+    'unpaid',
+    'uncollectible',
+    'void'
+]);
+
 export const members = pgTable("members", {
     id: serial("id").primaryKey(),
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
@@ -73,20 +81,21 @@ export const memberInvoices = pgTable("member_invoices", {
     currency: text("currency"),
     memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    memberPackageId: uuid("member_package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
     memberSubscriptionId: integer("member_subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
     description: text("description"),
     items: jsonb("items").$type<Record<string, any>>().array().default(sql`'{}'::jsonb[]`),
-    paid: boolean("paid").default(false),
+    paid: boolean("paid").notNull().default(false),
     tax: integer("tax").notNull().default(0),
     total: integer("total").notNull().default(0),
     discount: integer("discount").notNull().default(0),
     subtotal: integer("subtotal").notNull().default(0),
-    dueDate: timestamp("due_date", { withTimezone: true }),
-    attemptCount: integer("attempt_count").default(0),
+    dueDate: timestamp("due_date", { withTimezone: true }).notNull().defaultNow(),
+    attemptCount: integer("attempt_count").notNull().default(0),
     invoicePdf: text("invoice_pdf"),
-    status: text("status").notNull().default('draft'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    status: MemberInvoiceStatusEnum("status").notNull().default('draft'),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
 });
 
 

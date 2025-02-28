@@ -95,7 +95,7 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
                                         </TableCell>
 
                                         <TableCell>
-                                            {format(t.created, 'MMM d, yyyy')}
+                                            {format(t.created!, 'MMM d, yyyy')}
                                         </TableCell>
 
                                         <TableCell className='flex flex-row items-center'>

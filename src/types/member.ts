@@ -119,14 +119,14 @@ export type MemberInvoice = {
     total: number;
     discount: number;
     subtotal: number;
-    dueDate: Date | null;
-    attemptCount: number;
+    dueDate?: Date;
+    attemptCount?: number;
     invoicePdf?: string | null;
     memberPackageId?: string | null;
     memberPackage?: MemberPackage | null;
     memberSubscriptionId?: number | null;
     memberSubscription?: MemberSubscription | null;
-    status: string;
-    created: Date;
+    status: 'draft' | 'paid' | 'unpaid' | 'uncollectible' | 'void';
+    created?: Date;
     updated?: Date | null;
 };

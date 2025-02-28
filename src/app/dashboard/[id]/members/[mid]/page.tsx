@@ -20,6 +20,7 @@ import { Member } from "@/types"
 import Stripe from "stripe"
 import { MemberStripePayments } from "@/libs/server/stripe"
 import { MemberPackages } from "./components/MemberPackages/MemberPackages"
+import { MemberInvoices } from "./components/MemberInvoices/MemberInvoices"
 
 
 type PromiseReturnType = {
@@ -139,7 +140,7 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
                             <MemberAttedance params={params} />
                         </TabsContent>
                         <TabsContent value="Invoices">
-
+                            <MemberInvoices params={params} />
                         </TabsContent>
                         <TabsContent value="Transactions">
                             <MemberTransactions params={params} />
