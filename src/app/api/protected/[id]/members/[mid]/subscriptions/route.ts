@@ -42,7 +42,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
 
 export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
     const params = await props.params;
-    const { paymentMethod, ...data } = await req.json();
+    const { stripePaymentMethod, other, trialDays, ...data } = await req.json();
 
     const today = new Date();
     const startDate = new Date(data.startDate);
@@ -55,8 +55,8 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
         chargeDate: today,
         status: "incomplete",
         transactionType: "incoming",
-        paymentMethod: data.paymentType,
-        ...(paymentMethod && { metadata: { card: { brand: paymentMethod.card?.brand, last4: paymentMethod.card?.last4 } } }),
+        paymentMethod: data.paymentMethod,
+        ...(stripePaymentMethod && { metadata: { card: { brand: stripePaymentMethod.card?.brand, last4: stripePaymentMethod.card?.last4 } } }),
         created: today,
     };
 
@@ -92,8 +92,8 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 priceId: plan.stripePriceId,
                 startDate,
                 endDate,
-                trialDays: data.trialDays,
-                paymentMethod: paymentMethod.id,
+                trialDays: trialDays || data.trialDays,
+                paymentMethod: stripePaymentMethod.id,
                 metadata: {
                     memberId: params.mid,
                     locationId: params.id

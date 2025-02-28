@@ -41,9 +41,11 @@ function calculateCurrentPeriodEnd(startDate: Date, plan: MemberPlan): Date {
     }
     return endDate;
 }
-function createInvoice(params: { id: number, mid: number }, plans: MemberPlan[], rest: { tax: number, discount: number }) {
+
+function calculateInvoice(plans: MemberPlan[], rest: { taxRate: number, discount: number }) {
     const items: { name: string, quantity: number, price: number }[] = []
     let subtotal = 0
+    
     plans.forEach(plan => {
         items.push({
             name: plan.name,
@@ -52,17 +54,16 @@ function createInvoice(params: { id: number, mid: number }, plans: MemberPlan[],
         })
         subtotal += plan.price
     })
-    const total = (subtotal * (1 + rest.tax)) - rest.discount
+    const tax = (subtotal * rest.taxRate) / 100
+    const total = subtotal - rest.discount + tax
     return {
-        memberId: params.mid,
-        locationId: params.id,
-        description: `Subscription for ${plans[0].name}`,
+      
         items,
-        tax: rest.tax,
+        tax: rest.taxRate,
         total,
         discount: rest.discount,
         subtotal,
-        created: new Date(),
+    
     }
 }
 
@@ -133,7 +134,7 @@ async function tryCatch<T, E = Error>(
 
 
 export {
-  createInvoice,
+    calculateInvoice,
   convertToCurrency,
   sleep,
   tryCatch,

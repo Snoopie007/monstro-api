@@ -167,7 +167,7 @@ export default function ChargeItem({ params }: { params: { id: string, mid: numb
                                                 <SelectValue placeholder="Select a payment method" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {["cash", "zelle", "bank payment", "cheque", 'card'].map((method) => (
+                                                {['card', "cash", "zelle", "bank payment", "cheque"].map((method) => (
                                                     <SelectItem key={method} value={method.toLowerCase()} className="capitalize">
                                                         {method}
                                                     </SelectItem>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMembers } from "@/hooks/use-members";
+import { useMembers } from "@/hooks";
 import {
     ColumnFiltersState,
     getCoreRowModel,

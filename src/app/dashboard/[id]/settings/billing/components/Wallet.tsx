@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react'
 import React, { useState, useCallback, useMemo } from 'react'
 import { cn, formatAmountForDisplay, tryCatch } from '@/libs/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/forms'
-import { useWallet } from '@/hooks/use-wallet'
+import { useWallet } from '@/hooks'
 import { toast } from 'react-toastify'
 
 export function Wallet({ lid }: { lid: string }) {

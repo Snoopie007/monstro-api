@@ -73,13 +73,14 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 export const memberPackages = pgTable("member_packages", {
     id: uuid("id").primaryKey().defaultRandom(),
     memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     payerId: integer("payer_id").references(() => members.id, { onDelete: "set null" }),
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     endDate: timestamp("end_date", { withTimezone: true }),
     expireDate: timestamp("expire_date", { withTimezone: true }),
     status: PackageStatusEnum("status").notNull(),
-    paymentType: text("payment_type"),
+    paymentMethod: text("payment_method").notNull(),
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     totalClassAttended: integer("total_class_attended").notNull().default(0),
     totalClassLimit: integer("total_class_limit").notNull().default(0),
@@ -127,6 +128,10 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
     plan: one(memberPlans, {
         fields: [memberPackages.memberPlanId],
         references: [memberPlans.id],
+    }),
+    location: one(locations, {
+        fields: [memberPackages.locationId],
+        references: [locations.id],
     }),
     payer: one(members, {
         fields: [memberPackages.payerId],

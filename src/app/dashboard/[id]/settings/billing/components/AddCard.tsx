@@ -54,8 +54,8 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
         const cardElement = elements.getElement(CardElement);
 
         try {
-            const tokenRef = await stripe.createToken(cardElement!);
-            console.log(tokenRef)
+            const tokenRef = await stripe.createToken(cardElement!, { ...v });
+
             setLoading(false);
             if (tokenRef.token) {
 
@@ -65,11 +65,8 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-
                         token: tokenRef.token.id,
-                        name: v.name,
                         customerId: customerId,
-                        address: v.address
 
                     }),
                 });
@@ -151,7 +148,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                                     <fieldset>
                                         <FormField
                                             control={form.control}
-                                            name="address.line1"
+                                            name="address_line1"
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>
@@ -171,7 +168,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                                     <fieldset className="grid grid-cols-3 items-center gap-2">
                                         <FormField
                                             control={form.control}
-                                            name="address.city"
+                                            name="address_city"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-1">
 
@@ -184,7 +181,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="address.state"
+                                            name="address_state"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-1">
 
@@ -199,7 +196,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="address.postal_code"
+                                            name="address_zip"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-1">
 

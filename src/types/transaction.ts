@@ -1,8 +1,8 @@
-import { Member, MemberInvoice, MemberSubscription } from "./member";
+import { Member, MemberInvoice, MemberPackage, MemberSubscription } from "./member";
 
 
 export type Transaction = {
-    id: number;
+    id?: number;
     description: string | null;
     transactionType: string;
     paymentMethod: string;
@@ -11,14 +11,17 @@ export type Transaction = {
     locationId: number;
     memberId?: number | null;
     member?: Member;
-    status: 'paid' | 'failed' | 'incomplete';
+    status: 'paid' | 'incomplete' | 'failed';
     item: string;
+    subscriptionId?: number | null;
     subscription?: MemberSubscription;
+    packageId?: string | null;
+    package?: MemberPackage;
     chargeDate: Date;
     currency: string;
-    metadata: Record<string, any>;
-    refunded: boolean;
-    invoiceId: number;
+    metadata?: Record<string, any>;
+    refunded?: boolean;
+    invoiceId?: number;
     invoice?: MemberInvoice;
     created: Date;
     updated?: Date | null;

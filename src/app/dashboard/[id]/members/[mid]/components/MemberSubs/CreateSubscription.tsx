@@ -48,20 +48,22 @@ export function CreateSubscription({ params }: { params: { id: string, mid: numb
     const { paymentMethods } = useMemberPaymentMethods()
     const [programs, setPrograms] = useState<Program[]>([]);
     const [plans, setPlans] = useState<MemberPlan[]>([]);
-    const [paymentMethod, setPaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
+    const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
 
     const form = useForm<z.infer<typeof NewSubscriptionSchema>>({
         resolver: zodResolver(NewSubscriptionSchema),
         defaultValues: {
             startDate: new Date(),
             endDate: undefined,
-            trail: 0,
-            paymentType: undefined,
+            trailDays: undefined,
+            paymentMethod: undefined,
             memberPlanId: undefined,
-            programId: undefined,
-            cardId: undefined,
             billingAnchor: undefined,
             allowProration: false,
+            other: {
+                programId: undefined,
+                cardId: undefined,
+            },
         },
         mode: "onSubmit",
     })
@@ -83,7 +85,7 @@ export function CreateSubscription({ params }: { params: { id: string, mid: numb
     }
 
 
-    const paymentType = form.watch("paymentType")
+    const paymentMethod = form.watch("paymentMethod")
     async function onSubmit(v: z.infer<typeof NewSubscriptionSchema>) {
 
         setLoading(true)
@@ -92,7 +94,7 @@ export function CreateSubscription({ params }: { params: { id: string, mid: numb
                 method: "POST",
                 body: JSON.stringify({
                     ...v,
-                    paymentMethod
+                    stripePaymentMethod
                 })
             })
         )
@@ -131,7 +133,7 @@ export function CreateSubscription({ params }: { params: { id: string, mid: numb
                             <fieldset>
                                 <FormField
                                     control={form.control}
-                                    name="programId"
+                                    name="other.programId"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size="tiny">Select a Program</FormLabel>
@@ -162,7 +164,7 @@ export function CreateSubscription({ params }: { params: { id: string, mid: numb
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size="tiny">Select a Plan</FormLabel>
-                                            <Select disabled={!form.getValues("programId")}
+                                            <Select disabled={!form.getValues("other.programId")}
                                                 onValueChange={(value) => field.onChange(Number(value))} >
                                                 <FormControl>
                                                     <SelectTrigger className="rounded-sm">
@@ -186,17 +188,17 @@ export function CreateSubscription({ params }: { params: { id: string, mid: numb
                                 <div className="col-span-2">
                                     <FormField
                                         control={form.control}
-                                        name="paymentType"
+                                        name="paymentMethod"
                                         render={({ field }) => (
                                             <FormItem className="">
                                                 <FormLabel size="tiny">Payment Method</FormLabel>
                                                 <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!form.getValues("memberPlanId")}>
-                                                    <SelectTrigger className="rounded-sm">
+                                                    <SelectTrigger className="rounded-sm capitalize">
                                                         <SelectValue placeholder="Select a payment method" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {["Cash", "Card"].map((method) => (
-                                                            <SelectItem key={method} value={method.toLowerCase()}>
+                                                        {['card', "cash", "zelle", "bank payment", "cheque"].map((method) => (
+                                                            <SelectItem key={method} value={method.toLowerCase()} className="capitalize">
                                                                 {method}
                                                             </SelectItem>
                                                         ))}
@@ -219,20 +221,20 @@ export function CreateSubscription({ params }: { params: { id: string, mid: numb
                                 </div>
 
                             </fieldset>
-                            {paymentType === "card" && (
+                            {paymentMethod === "card" && (
                                 <>
                                     <fieldset className="grid grid-cols-6 gap-2">
 
                                         <FormField
                                             control={form.control}
-                                            name="cardId"
+                                            name="other.cardId"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-4">
                                                     <FormLabel size="tiny">Select a Card</FormLabel>
                                                     <Select onValueChange={(value) => {
                                                         field.onChange(value)
 
-                                                        setPaymentMethod(paymentMethods.find((method) => method.id === value) || null)
+                                                        setStripePaymentMethod(paymentMethods.find((method) => method.id === value) || null)
                                                     }} defaultValue={field.value} >
                                                         <FormControl>
                                                             <SelectTrigger>
@@ -265,12 +267,12 @@ export function CreateSubscription({ params }: { params: { id: string, mid: numb
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="trail"
+                                            name="trailDays"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-2">
                                                     <FormLabel size="tiny">Trial days</FormLabel>
                                                     <FormControl>
-                                                        <Input disabled={form.getValues("paymentType") !== "card"} type="number" placeholder="0" {...field} />
+                                                        <Input disabled={paymentMethod !== "card"} type="number" placeholder="0" {...field} />
                                                     </FormControl>
                                                     <FormMessage />
                                                 </FormItem>

@@ -60,7 +60,7 @@ export function MemberPackages({ params }: { params: { id: string, mid: number }
                                         {format(p.startDate, 'MMM d, yyyy')} - {p.endDate ? format(p.endDate, 'MMM d, yyyy') : 'Never'}
                                     </TableCell>
                                     <TableCell>
-                                        {formatAmountForDisplay(p.plan?.price || 0, p.plan?.currency || 'USD')}
+                                        {formatAmountForDisplay((p.plan?.price || 0) / 100, p.plan?.currency || 'USD')}
                                     </TableCell>
                                     <TableCell>
                                         {p.totalClassAttended}

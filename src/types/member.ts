@@ -57,24 +57,25 @@ export type MemberSubscription = {
 }
 
 export type MemberPackage = {
-    id: string;
+    id?: string;
     memberPlanId: number;
+    locationId: number;
     payerId: number | null;
     beneficiaryId: number;
     startDate: Date;
     endDate: Date | null;
     expireDate: Date | null;
     status: 'active' | 'expired' | 'incomplete' | 'completed';
-    paymentType: string | null;
-    totalClassAttended: number;
+    paymentMethod: string;
+    totalClassAttended?: number;
     totalClassLimit: number;
-    metadata: Record<string, any>;
+    metadata?: Record<string, any>;
     plan?: MemberPlan;
     payer?: Member;
     beneficiary?: Member;
     transactions?: Transaction[];
     created: Date;
-    updated: Date;
+    updated?: Date;
 };
 
 export type MemberPlan = {
@@ -106,8 +107,8 @@ export type MemberPlan = {
 
 
 export type MemberInvoice = {
-    id: string;
-    settings: Record<string, any>;
+    id?: string;
+    settings?: Record<string, any>;
     currency: string | null;
     memberId: number;
     locationId: number;
@@ -120,10 +121,12 @@ export type MemberInvoice = {
     subtotal: number;
     dueDate: Date | null;
     attemptCount: number;
-    invoicePdf: string | null;
-    memberSubscriptionId: number | null;
+    invoicePdf?: string | null;
+    memberPackageId?: string | null;
+    memberPackage?: MemberPackage | null;
+    memberSubscriptionId?: number | null;
     memberSubscription?: MemberSubscription | null;
     status: string;
-    createdAt: Date;
-    updatedAt: Date;
+    created: Date;
+    updated?: Date | null;
 };

@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Permission, Role } from '@/types';
 import RoleListActions from './components/actions';
 import { useRoles } from '@/hooks/use-roles';
-import { deleteRole } from '@/libs/api';
+// import { deleteRole } from '@/libs/api';
 import { toast } from 'react-toastify';
 import useSWR from 'swr';
 import SectionLoader from '@/components/section-loading';
@@ -27,12 +27,12 @@ export default function RoleList({ permissions, locationId }: { permissions: Arr
     }
 
     async function removeRole(roleId: number) {
-        await deleteRole(roleId, locationId).then(() => {
-            mutate();
-            toast.success("Role Deleted");
-        }).catch(() => {
-            toast.error("Something went wrong.");
-        })
+        // await deleteRole(roleId, locationId).then(() => {
+        //     mutate();
+        //     toast.success("Role Deleted");
+        // }).catch(() => {
+        //     toast.error("Something went wrong.");
+        // })
     }
 
 

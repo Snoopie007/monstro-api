@@ -50,18 +50,20 @@ export function CreatePackage({ params }: { params: { id: string, mid: number } 
     const { paymentMethods } = useMemberPaymentMethods()
     const [programs, setPrograms] = useState<Program[]>([]);
     const [plans, setPlans] = useState<MemberPlan[]>([]);
-    const [paymentMethod, setPaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
+    const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
 
     const form = useForm<z.infer<typeof NewPackageSchema>>({
         resolver: zodResolver(NewPackageSchema),
         defaultValues: {
             startDate: new Date(),
             expireDate: undefined,
-            paymentType: undefined,
+            paymentMethod: undefined,
             memberPlanId: undefined,
-            programId: undefined,
-            cardId: undefined,
             totalClassLimit: undefined,
+            other: {
+                programId: undefined,
+                cardId: undefined,
+            }
         },
         mode: "onSubmit",
     })
@@ -83,7 +85,7 @@ export function CreatePackage({ params }: { params: { id: string, mid: number } 
     }
 
 
-    const paymentType = form.watch("paymentType")
+    const paymentType = form.watch("paymentMethod")
 
     async function onSubmit(v: z.infer<typeof NewPackageSchema>) {
         setLoading(true)
@@ -92,7 +94,7 @@ export function CreatePackage({ params }: { params: { id: string, mid: number } 
                 method: "POST",
                 body: JSON.stringify({
                     ...v,
-                    paymentMethod
+                    stripePaymentMethod: stripePaymentMethod
                 })
             })
         )
@@ -129,7 +131,7 @@ export function CreatePackage({ params }: { params: { id: string, mid: number } 
                             <fieldset>
                                 <FormField
                                     control={form.control}
-                                    name="programId"
+                                    name="other.programId"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size="tiny">Select a Program</FormLabel>
@@ -160,7 +162,7 @@ export function CreatePackage({ params }: { params: { id: string, mid: number } 
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size="tiny">Select a Plan</FormLabel>
-                                            <Select disabled={!form.getValues("programId")}
+                                            <Select disabled={!form.getValues("other.programId")}
                                                 onValueChange={(value) => field.onChange(Number(value))} >
                                                 <FormControl>
                                                     <SelectTrigger className="rounded-sm">
@@ -183,7 +185,7 @@ export function CreatePackage({ params }: { params: { id: string, mid: number } 
                             <fieldset className="grid grid-cols-6 gap-2 ">
                                 <FormField
                                     control={form.control}
-                                    name="paymentType"
+                                    name="paymentMethod"
                                     render={({ field }) => (
                                         <FormItem className="col-span-2">
                                             <FormLabel size="tiny">Payment Method</FormLabel>
@@ -192,7 +194,7 @@ export function CreatePackage({ params }: { params: { id: string, mid: number } 
                                                     <SelectValue placeholder="Select a payment method" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {["cash", "zelle", "bank payment", "cheque", 'card'].map((method) => (
+                                                    {['card', "cash", "zelle", "bank payment", "cheque"].map((method) => (
                                                         <SelectItem key={method} value={method.toLowerCase()} className="capitalize">
                                                             {method}
                                                         </SelectItem>
@@ -236,14 +238,14 @@ export function CreatePackage({ params }: { params: { id: string, mid: number } 
                                 <fieldset >
                                     <FormField
                                         control={form.control}
-                                        name="cardId"
+                                        name="other.cardId"
                                         render={({ field }) => (
                                             <FormItem >
                                                 <FormLabel size="tiny">Select a Card</FormLabel>
                                                 <Select onValueChange={(value) => {
                                                     field.onChange(value)
 
-                                                    setPaymentMethod(paymentMethods.find((method) => method.id === value) || null)
+                                                    setStripePaymentMethod(paymentMethods.find((method) => method.id === value) || null)
                                                 }} defaultValue={field.value} >
                                                     <FormControl>
                                                         <SelectTrigger>
