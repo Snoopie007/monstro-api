@@ -1,1 +1,1 @@
-export * from './member-rewards';
+export * from './MemberRewards';

@@ -4,10 +4,10 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/libs/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center  px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center px-2.5 py-0.5  text-xs uppercase rounded-xs font-medium transition-colors focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
-      roles: {
+      variant: {
         default:
           "border-transparent bg-primary text-primary-foreground ",
         secondary:
@@ -15,6 +15,14 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground",
         outline: "text-foreground",
+      },
+      size: {
+        tiny: "text-[0.65rem]",
+        small: "text-xs",
+        medium: "text-sm",
+        large: "text-base",
+      },
+      roles: {
         red: "bg-red-300  text-red-800",
         green: "bg-green-300 text-green-800",
         blue: "bg-blue-300 text-blue-800",
@@ -28,7 +36,7 @@ const badgeVariants = cva(
         purple: "bg-purple-300 text-purple-800",
         yellow: "bg-yellow-300 text-yellow-800",
       },
-      stripeStatus: {
+      sub: {
         active: "bg-green-300 text-green-800",
         incomplete: "bg-yellow-300 text-yellow-800",
         trialing: "bg-blue-300 text-blue-800",
@@ -38,9 +46,20 @@ const badgeVariants = cva(
         unpaid: "bg-red-300 text-red-800",
         incomplete_expired: "bg-red-300 text-red-800",
       },
+      pkg: {
+        active: "bg-green-300 text-green-800",
+        expired: "bg-red-300 text-red-800",
+        incomplete: "bg-yellow-300 text-yellow-800",
+        completed: "bg-blue-300 text-blue-800",
+      },
+      transaction: {
+        paid: "bg-green-300 text-green-800",
+        failed: "bg-red-300 text-red-800",
+        incomplete: "bg-yellow-300 text-yellow-800",
+      },
     },
     defaultVariants: {
-      roles: "default",
+      variant: "default",
     },
   }
 )
@@ -49,9 +68,9 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
   VariantProps<typeof badgeVariants> { }
 
-function Badge({ className, roles, stripeStatus, ...props }: BadgeProps) {
+function Badge({ className, variant, roles, sub, pkg, transaction, size, ...props }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ roles, stripeStatus }), className)} {...props} />
+    <div className={cn(badgeVariants({ variant, roles, sub, pkg, transaction, size }), className)} {...props} />
   )
 }
 

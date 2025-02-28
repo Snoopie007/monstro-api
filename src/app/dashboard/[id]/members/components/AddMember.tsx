@@ -201,13 +201,11 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                 </fieldset>
                             </SheetSection>
                             <SheetSection >
-                                <div className='mb-4'>
+                                <div className='mb-2 border-b border-foreground/20  pb-2'>
                                     <FormLabel className='text-sm font-bold'>
-                                        Enroll in a Program
+                                        Subscription Details
                                     </FormLabel>
-                                    <FormDescription>
-                                        Check this box to enroll the member in a program and plan.
-                                    </FormDescription>
+
                                 </div>
                                 <fieldset>
                                     <FormField

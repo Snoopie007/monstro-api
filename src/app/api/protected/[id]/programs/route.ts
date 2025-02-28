@@ -12,6 +12,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 	const { searchParams } = new URL(req.url);
 	const pageSize = parseInt(searchParams.get('size') || "10");
 	const page = parseInt(searchParams.get('page') || "1");
+	const type = searchParams.get('type');
 
 	const session = await auth();
 
@@ -22,7 +23,9 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 				offset: (page - 1) * pageSize,
 				where: (program, { eq }) => eq(program.locationId, params.id),
 				with: {
-					plans: true
+					plans: type ? {
+						where: (plan, { eq }) => eq(plan.type, type as "recurring" | "one-time")
+					} : true
 				},
 				extras: {
 					counts: db.$count(program, eq(program.locationId, params.id)).as("counts"),

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { locations, locationState, vendors, wallet } from '@/db/schemas';
 import { decodeId } from '@/libs/server/sqids';
-import { StripePayments } from '@/libs/server/stripe';
+import { VendorStripePayments } from '@/libs/server/stripe';
 import { MonstroPackage } from '@/types/vendor';
 
 import { eq } from 'drizzle-orm';
@@ -14,7 +14,7 @@ import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { packages, plans } from "@/libs/data";
 
 
-const stripe = new StripePayments();
+const stripe = new VendorStripePayments();
 sendgrid.setApiKey(process.env.SENDGRID_API_KEY!);
 
 export async function POST(req: Request) {
@@ -44,10 +44,16 @@ export async function POST(req: Request) {
                 phone: true,
             }
         });
+
         if (!vendor) {
             return NextResponse.json({ error: "Vendor not found" }, { status: 404 })
         }
-        const customer = await stripe.createCustomer(vendor, token.id, {
+        const customer = await stripe.createCustomer({
+            firstName: vendor.firstName!,
+            lastName: vendor.lastName!,
+            email: vendor.companyEmail!,
+            phone: vendor.phone!
+        }, token.id, {
             locationId: locationId,
             vendorId: vendorId
         });

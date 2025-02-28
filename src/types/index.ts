@@ -6,7 +6,6 @@ export * from './other';
 export * from './achievement';
 export * from './attedance';
 export * from './location';
-export * from './plan';
 export * from './program';
 export * from './member';
 export * from './partner';

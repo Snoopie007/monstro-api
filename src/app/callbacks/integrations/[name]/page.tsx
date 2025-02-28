@@ -1,28 +1,61 @@
 import { auth } from '@/auth';
-import { Button } from '@/components/ui';
+import { db } from '@/db/db';
+import { integrations } from '@/db/schemas';
 import { decodeId } from '@/libs/server/sqids';
+import { VendorStripePayments } from '@/libs/server/stripe';
+import { ExtendedUser } from '@/types/next-auth';
 import { BadgeCheck, CircleSlash } from 'lucide-react';
-import { redirect } from 'next/navigation';
 
-async function completeIntegerationConnection(name: string, token: string, searchParams: { code: string, scope: string, state: string }): Promise<boolean> {
+
+interface IntegrationSearchParams {
+	code: string,
+	scope: string,
+	state: string
+}
+
+async function completeIntegration(name: string, user: ExtendedUser, searchParams: IntegrationSearchParams): Promise<boolean> {
+
 	const decodedId = decodeId(searchParams.state);
-	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/integrations/${name}`, {
-		method: "POST",
-		headers: {
-			"Authorization": `Bearer ${token}`,
-			"locationId": `${decodedId}`,
-			"content-type": "application/json"
-		},
-		body: JSON.stringify({
-			scope: searchParams.scope || "",
-			code: searchParams.code || ""
-		})
-	})
-	if (!res.ok) {
+	const stripe = new VendorStripePayments();
+	try {
+		const location = await db.query.locations.findFirst({
+			where: (loc, { eq }) => eq(loc.id, decodedId)
+		});
+		if (!location) {
+			return false;
+		}
+		const token = await stripe.connectOAuth(searchParams.code, searchParams.scope);
+
+		await db.insert(integrations).values({
+			locationId: location.id,
+			service: name,
+			apiKey: token.stripe_publishable_key,
+			secretKey: token.access_token,
+			accessToken: token.access_token,
+			refreshToken: token.refresh_token,
+			integrationId: token.stripe_user_id,
+			vendorId: location.vendorId,
+			additionalSettings: { ...token },
+			created: new Date(),
+		}).onConflictDoUpdate({
+			target: [integrations.locationId, integrations.service],
+			set: {
+				secretKey: token.access_token,
+				accessToken: token.access_token,
+				refreshToken: token.refresh_token,
+				integrationId: token.stripe_user_id,
+			}
+		});
+
+		return true;
+	} catch (error) {
+		console.log(error);
 		return false;
 	}
-	return true;
+
+
 }
+
 
 export default async function CompleteIntegeration(props: { params: Promise<{ name: string }>, searchParams: Promise<any> }) {
 	const searchParams = await props.searchParams;
@@ -34,7 +67,7 @@ export default async function CompleteIntegeration(props: { params: Promise<{ na
 		return null;
 	}
 
-	const connection = await completeIntegerationConnection(params.name, session.user.token, searchParams);
+	const connection = await completeIntegration(params.name, session.user, searchParams);
 	return (
 		<div className=" h-[100svh] bg-white dark:bg-white text-black dark:text-black w-full ">
 

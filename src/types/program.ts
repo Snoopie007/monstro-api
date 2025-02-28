@@ -1,4 +1,4 @@
-import { Plan } from "./plan";
+import { MemberPlan } from "./member";
 
 export type Program = {
     id: number;
@@ -6,13 +6,13 @@ export type Program = {
     description: string | null;
     icon?: string | null | File;
     // benefits?: string[];
-    plans: Plan[];
+    plans: MemberPlan[];
     programLevels?: Level[];
     locationId?: number;
     // status: string | null;
     location?: Location;
     planCounts?: string;
-    lastSyncAt: Date | null;
+    // lastSyncAt: Date | null;
     created: Date;
     updated: Date | null;
     deleted: Date | null;

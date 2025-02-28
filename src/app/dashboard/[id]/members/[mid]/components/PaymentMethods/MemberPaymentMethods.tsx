@@ -5,7 +5,7 @@ import {
     CardContent,
     CardTitle,
 } from "@/components/ui"
-import AddPaymentMethod from "./add-method"
+import AddPaymentMethod from "./AddMethod"
 
 import { Elements } from "@stripe/react-stripe-js"
 import { getStripe } from "@/libs/stripe"

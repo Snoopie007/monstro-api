@@ -9,7 +9,7 @@ import { CustomerLTVChart } from './components/ltv-chart'
 import { topCustomerSpendersData } from './dummy-data'
 import { Badge } from '@/components/ui'
 import ReportDatePicker from './components/report-date-picker'
-import { ReportProvider } from './provider/report-context'
+import { ReportProvider } from './provider/ReportContext'
 
 
 export default function Reporting() {

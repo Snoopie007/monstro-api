@@ -5,13 +5,14 @@ import { members } from "./members";
 import { memberPlans } from "./MemberPlans";
 import { achievements } from "./achievements";
 import { sessions } from "./reservations";
+import { Icon } from "lucide-react";
 
 export const programs = pgTable("programs", {
     id: serial("id").primaryKey(),
     name: text("name").notNull(),
     description: text("description"),
-    avatar: varchar("avatar"),
-    lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
+    icon: varchar("icon"),
+    // lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),

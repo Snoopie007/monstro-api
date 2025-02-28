@@ -1,3 +1,4 @@
+import { MemberPlan } from "@/types";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -15,10 +16,54 @@ export const StripeCardOptions = {
       },
   },
 };
-const DateFormateOptions: Intl.DateTimeFormatOptions = {
-	month: 'short',
-	day: 'numeric',
-	year: 'numeric',
+
+
+
+function calculateCurrentPeriodEnd(startDate: Date, plan: MemberPlan): Date {
+    const endDate = new Date(startDate); // Initialize endDate with startDate
+    const threshold = plan.intervalThreshold || 1;
+
+    switch (plan.interval) {
+        case "day":
+            endDate.setDate(endDate.getDate() + threshold);
+            break;
+        case "week":
+            endDate.setDate(endDate.getDate() + threshold * 7);
+            break;
+        case "month":
+            endDate.setMonth(endDate.getMonth() + threshold);
+            break;
+        case "year":
+            endDate.setFullYear(endDate.getFullYear() + threshold);
+            break;
+        default:
+            throw new Error("Invalid plan interval");
+    }
+    return endDate;
+}
+function createInvoice(params: { id: number, mid: number }, plans: MemberPlan[], rest: { tax: number, discount: number }) {
+    const items: { name: string, quantity: number, price: number }[] = []
+    let subtotal = 0
+    plans.forEach(plan => {
+        items.push({
+            name: plan.name,
+            quantity: 1,
+            price: plan.price,
+        })
+        subtotal += plan.price
+    })
+    const total = (subtotal * (1 + rest.tax)) - rest.discount
+    return {
+        memberId: params.mid,
+        locationId: params.id,
+        description: `Subscription for ${plans[0].name}`,
+        items,
+        tax: rest.tax,
+        total,
+        discount: rest.discount,
+        subtotal,
+        created: new Date(),
+    }
 }
 
  const formatAmountForDisplay = (
@@ -53,9 +98,6 @@ function convertToCurrency(amount: number, symbol: string, currency: string): st
   	return `${symbol}${amount} ${currency}`;
 }
 
-function formatDateTime(date: number, format?:  Intl.DateTimeFormatOptions ): string {
-  	return new Date(date).toLocaleString('en-US', format || DateFormateOptions);
-}
 
 function ErrorHandler<T, E extends new (message?: string) => Error>(
 	promise: Promise<T>,
@@ -91,12 +133,12 @@ async function tryCatch<T, E = Error>(
 
 
 export {
-  formatDateTime,
+  createInvoice,
   convertToCurrency,
   sleep,
   tryCatch,
   formatAmountForDisplay,
-  DateFormateOptions,
+  calculateCurrentPeriodEnd,
   cn,
 }
 

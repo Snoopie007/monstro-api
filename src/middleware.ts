@@ -44,6 +44,12 @@ export default auth(async (req) => {
 				return NextResponse.redirect(new URL("/onboarding", req.nextUrl.origin));
 			}
 
+			if (pathname === '/') {
+				const nextLocation = locations.find((loc: { status: string }) => loc.status === "Active") ||
+					locations.find((loc: { status: string }) => loc.status === "Pending");
+				return NextResponse.redirect(new URL(`/${nextLocation.status === "Active" ? "dashboard" : "onboarding"}/${nextLocation.id}`, req.nextUrl.origin));
+			}
+
 			const [_, path, locationId] = pathname.match(/^\/((?:dashboard|onboarding))\/([^/]+)(\/.*)?$/) || [];
 
 			if (locationId) {
@@ -65,6 +71,7 @@ export default auth(async (req) => {
 
 
 				if (path !== targetPath) {
+					console.log(`a`)
 					return NextResponse.redirect(new URL(`/${targetPath}/${nextLocation.id}`, req.nextUrl.origin));
 				}
 			}
@@ -82,6 +89,17 @@ export default auth(async (req) => {
 		return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
 	}
 });
+
+
+function getNextLocation(locations: { id: string, status: string }[], locationId: string) {
+	const nextLocation = locations.find((loc: { id: string }) => loc.id === locationId)
+
+	if (!nextLocation) {
+		return locations.find((loc: { status: string }) => loc.status === "Active") ||
+			locations.find((loc: { status: string }) => loc.status === "Pending");
+	}
+	return nextLocation
+}
 
 export const config = {
 	matcher: [

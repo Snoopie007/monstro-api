@@ -8,8 +8,7 @@ import {
     TableHeader,
     TableRow
 } from '@/components/ui'
-import { formatDateTime } from '@/libs/utils'
-
+import { format } from 'date-fns'
 const Dummy: Array<any> = []
 
 export function MemberRewards({ params }: { params: { id: string, mid: number } }) {
@@ -45,13 +44,7 @@ export function MemberRewards({ params }: { params: { id: string, mid: number } 
 
 
                                 <TableCell>
-                                    {formatDateTime(reward.created, {
-                                        month: 'short',
-                                        day: 'numeric',
-
-                                        hour: 'numeric',
-                                        minute: 'numeric'
-                                    })}
+                                    {format(reward.created, 'MMM d, yyyy')}
                                 </TableCell>
 
                                 <TableCell className='flex flex-row items-center'>

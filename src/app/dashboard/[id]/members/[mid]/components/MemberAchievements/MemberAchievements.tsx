@@ -8,9 +8,8 @@ import {
     TableHeader,
     TableRow
 } from '@/components/ui'
-import { useMemberAchievements } from '@/hooks/use-members'
-import { formatDateTime } from '@/libs/utils'
-
+import { useMemberAchievements } from '@/hooks/hooks'
+import { format } from 'date-fns'
 export function MemberAchievements({ params }: { params: { id: string, mid: number } }) {
     const { achievements, error, isLoading } = useMemberAchievements(params.id, params.mid)
 
@@ -48,12 +47,7 @@ export function MemberAchievements({ params }: { params: { id: string, mid: numb
                                         </TableCell>
 
                                         <TableCell>
-                                            {formatDateTime(achievement.dateAchieved, {
-                                                month: 'short',
-                                                day: 'numeric',
-                                                hour: 'numeric',
-                                                minute: 'numeric'
-                                            })}
+                                            {format(achievement.dateAchieved, 'MMM d, yyyy')}
                                         </TableCell>
 
                                         <TableCell className='flex flex-row items-center'>

@@ -4,7 +4,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { customerLTVData } from '../dummy-data'
 import { TrendingUp } from 'lucide-react'
 import ChartYAxis from './y-axis'
-import { useReportFilters } from '../provider/report-context'
+import { useReportFilters } from '../provider/ReportContext'
 
 const chartConfig = {
     desktop: {

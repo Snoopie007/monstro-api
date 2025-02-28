@@ -9,21 +9,15 @@ import {
     TableRow
 } from '@/components/ui'
 import { Input } from '@/components/forms'
-import { cn, formatAmountForDisplay, formatDateTime } from '@/libs/utils'
-import MemberEnrollmentActions from './actions'
+import { formatAmountForDisplay } from '@/libs/utils'
+import MemberSubscriptionActions from './actions'
 import { CircleProgress } from '@/components/ui/circle-progress';
-import { cva } from 'class-variance-authority';
-import { Clock4Icon } from 'lucide-react';
-import { CreateEnrollment } from './CreateSubscription'
-import { useMemberSubscriptions } from '@/hooks/use-members'
+
+import { CreateSubscription } from './CreateSubscription'
 import { MemberSubscription } from '@/types'
-
-
-
-function toUTC(date: Date) {
-    if (!date) 0
-    return Math.floor(new Date(date).getTime());
-}
+import { useMember } from '../../providers/MemberContext'
+import { SubscriptionStatus } from './SubscriptionStatus'
+import { getUnixTime, format } from 'date-fns'
 
 function calculateProgress(start: number, end: number) {
     const currentDate: Date = new Date();
@@ -32,21 +26,19 @@ function calculateProgress(start: number, end: number) {
     const totalDuration: number = endDate.getTime() - startDate.getTime();
     const elapsedTime: number = currentDate.getTime() - startDate.getTime();
     const progressPercentage: number = (elapsedTime / totalDuration) * 100;
-    // Return the result, limited to 2 decimal places
     return Math.min(Math.max(parseFloat(progressPercentage.toFixed(2)), 0), 100);
 }
 
 export function MemberSubs({ params }: { params: { id: string, mid: number }, }) {
-    const { subscriptions, isLoading, error } = useMemberSubscriptions(params.id, params.mid);
-
+    const { member } = useMember();
     return (
         <div className='py-4 space-y-4'>
             <div className='w-full flex flex-row items-center  gap-2'>
                 <div className='flex-initial'>
-                    <Input placeholder='Search enrollments...' className='w-[250px] h-auto py-1  text-xs rounded-xs' />
+                    <Input placeholder='Search subs...' className='w-[250px] h-8 py-2  text-xs rounded-sm' />
                 </div>
                 <div>
-                    <CreateEnrollment />
+                    <CreateSubscription params={params} />
                 </div>
             </div>
             <div className='border rounded-sm'>
@@ -61,21 +53,7 @@ export function MemberSubs({ params }: { params: { id: string, mid: number }, })
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {isLoading ? (
-                            <>
-                                <TableRow >
-                                    {Array.from({ length: 6 }).map((_, i) => {
-                                        return (
-                                            <TableCell key={i}>
-                                                <Skeleton className="w-full h-4 bg-gray-100" />
-                                            </TableCell>
-                                        )
-                                    })}
-                                </TableRow>
-                            </>
-                        ) : (
-                            <SubscriptionRow subscriptions={subscriptions} />
-                        )}
+                        <SubscriptionRow subscriptions={member?.subscriptions || []} />
                     </TableBody>
                 </Table>
             </div>
@@ -104,16 +82,18 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
                     <TableCell>
                         <div className='flex flex-row gap-2 items-center'>
                             <div className="relative flex items-center justify-center w-5 h-5">
-                                <CircleProgress progress={calculateProgress(toUTC(sub.currentPeriodStart), toUTC(sub.currentPeriodEnd))} />
+                                <CircleProgress progress={calculateProgress(
+                                    getUnixTime(Number(sub.currentPeriodStart) * 1000), getUnixTime(Number(sub.currentPeriodEnd) * 1000)
+                                )} />
                             </div>
                             <span>{sub.plan?.name}</span>
                         </div>
                     </TableCell>
                     <TableCell>
-                        {formatDateTime(toUTC(sub.activationDate))} - {sub.endedAt ? formatDateTime(toUTC(sub.endedAt)) : 'Never'}
+                        {format(sub.startDate, "MMM d, yyyy")} - {sub.endedAt ? format(sub.endedAt, "MMM d, yyyy") : 'Never'}
                     </TableCell>
                     <TableCell>
-                        {formatAmountForDisplay(sub.plan?.pricing.amount! / 100, 'USD', true)} / {sub.plan?.pricing.billingPeriod}
+                        {formatAmountForDisplay(sub.plan?.price! / 100, 'USD', true)} / {sub.plan?.interval}
                     </TableCell>
                     <TableCell>
                     </TableCell>
@@ -121,17 +101,14 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
                         {(sub.status !== 'active' || sub.cancelAt) ? (
                             "No future invoices"
                         ) : (
-                            formatDateTime(toUTC(sub.currentPeriodEnd), {
-                                month: 'short',
-                                day: 'numeric',
-                            })
+                            format(sub.currentPeriodEnd, "MMM d, yyyy")
                         )}
                     </TableCell>
                     <TableCell>
                         <SubscriptionStatus sub={sub} />
                     </TableCell>
                     <TableCell className='flex flex-row items-center'>
-                        <MemberEnrollmentActions />
+                        <MemberSubscriptionActions />
                     </TableCell>
                 </TableRow>
             ))}
@@ -139,52 +116,3 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
     )
 }
 
-
-const SubsStatusVarients = cva("py-0.5 px-2 rounded-sm capitalize text-xs font-medium capitalize",
-    {
-        variants: {
-            status: {
-                active: "bg-green-300  text-green-800",
-                unpaid: "bg-red-300  text-red-800",
-                trialing: "bg-blue-300  text-blue-800",
-                past_due: "bg-red-300  text-red-800",
-                incomplete: "bg-yellow-300  text-yellow-800",
-                canceled: "bg-gray-300  text-gray-800",
-            }
-        }
-    }
-)
-
-function SubscriptionStatus({ sub }: { sub: MemberSubscription }) {
-    const dateFormat: Intl.DateTimeFormatOptions = {
-        month: 'short' as const,
-        day: 'numeric' as const
-    };
-
-    const getStatusText = () => {
-        if (sub.trialEnd) {
-            return `Trial ends ${formatDateTime(toUTC(sub.trialEnd), dateFormat)}`;
-        }
-
-        const status = sub.status.replace('_', ' ');
-        if (sub.status === 'active' && sub.cancelAt && sub.cancelAtPeriodEnd) {
-            return (
-                <div className='flex flex-row items-center gap-2'>
-                    <span className={cn(SubsStatusVarients({ status: sub.status }))}>{status}</span>
-                    <span className={cn(SubsStatusVarients(), "flex flex-row items-center gap-1")}>
-                        Cancels {formatDateTime(toUTC(sub.cancelAt), dateFormat)}
-                        <Clock4Icon size={13} />
-                    </span>
-                </div>
-            );
-        }
-
-        return status;
-    };
-
-    return (
-        <span className={cn(SubsStatusVarients({ status: sub.status }))}>
-            {getStatusText()}
-        </span>
-    );
-}

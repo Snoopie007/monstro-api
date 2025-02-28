@@ -1,9 +1,6 @@
 
-import { auth } from '@/auth'
 
-
-async function DashboardRoot() {
-    const session = await auth();
+function DashboardRoot() {
 
 }
 

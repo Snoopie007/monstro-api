@@ -2,11 +2,13 @@
 
 import { relations, sql } from "drizzle-orm";
 import { integer, boolean, primaryKey, varchar, serial, text, timestamp, pgTable, jsonb, pgEnum } from "drizzle-orm/pg-core";
-import { members, memberSubscriptions } from "./members";
+import { memberInvoices, members } from "./members";
 import { integrations } from "./intergrations";
 import { programs } from "./programs";
 import { transactions } from "./transactions";
 import { vendors } from "./vendors";
+import { memberSubscriptions } from "./MemberPlans";
+import { LocationSettings } from "@/types";
 
 const LocationStatusEnum = pgEnum("location_status", ["Pending", "Active", "Inactive", "Past due", "Cancelled", "Failed Payment"])
 
@@ -15,7 +17,7 @@ export const locations = pgTable("locations", {
     name: text("name").notNull(),
     legalName: text("legal_name"),
     email: text("email"),
-    industry: varchar("industry").notNull(),
+    industry: text("industry").notNull(),
     address: text("address"),
     city: text("city"),
     state: text("state"),
@@ -23,7 +25,7 @@ export const locations = pgTable("locations", {
     website: text("website"),
     country: text("country"),
     phone: text("phone"),
-    timezone: varchar("timezone"),
+    timezone: text("timezone"),
     logoUrl: text("logo_url"),
     metadata: jsonb("meta_data").$type<Record<string, any>>(),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id),
@@ -39,8 +41,8 @@ export const locationState = pgTable("location_state", {
     paymentPlanId: integer("payment_plan_id"),
     agreeToTerms: boolean("agree_to_terms").notNull().default(false),
     lastRenewalDate: timestamp('last_renewal_date', { withTimezone: true }),
-    activationDate: timestamp('activation_date', { withTimezone: true }),
-    metadata: jsonb("metadata").$type<Record<string, any>>(),
+    startDate: timestamp('start_date', { withTimezone: true }),
+    settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),
     status: LocationStatusEnum("status").notNull().default("Pending"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
@@ -50,7 +52,7 @@ export const locationState = pgTable("location_state", {
 export const memberLocations = pgTable("member_locations", {
     memberId: integer("member_id").notNull().references(() => members.id),
     locationId: integer("location_id").notNull().references(() => locations.id),
-    stripeCustomerId: varchar("stripe_customer_id"),
+    stripeCustomerId: text("stripe_customer_id"),
     created: timestamp('created_at', { withTimezone: true }),
     updated: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);
@@ -73,6 +75,7 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
     integrations: many(integrations),
     programs: many(programs),
     memberSubscriptions: many(memberSubscriptions),
+    memberInvoices: many(memberInvoices),
     locationState: one(locationState, {
         fields: [locations.id],
         references: [locationState.locationId],

@@ -9,7 +9,7 @@ import {
 } from '@/components/ui'
 
 
-export default function MemberEnrollmentActions() {
+export default function MemberSubscriptionActions() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>

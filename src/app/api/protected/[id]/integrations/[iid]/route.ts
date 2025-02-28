@@ -8,13 +8,13 @@ export async function DELETE(req: Request, props: { params: Promise<{ iid: strin
   const session = await auth();
   try {
     if (session) {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/integrations/${params.iid}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.user.token}`,
-          "locationId": `${params.id}`
-        }
-      });
+      // await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/integrations/${params.iid}`, {
+      //   method: 'DELETE',
+      //   headers: {
+      //     'Authorization': `Bearer ${session.user.token}`,
+      //     "locationId": `${params.id}`
+      //   }
+      // });
       return NextResponse.json({ message: 'Success' }, { status: 200 });
     }
   } catch (err) {

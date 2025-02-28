@@ -3,7 +3,7 @@ import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { totalGrossRevenueData } from '../dummy-data'
 import { TrendingUp } from 'lucide-react'
-import { useReportFilters } from '../provider/report-context'
+import { useReportFilters } from '../provider/ReportContext'
 
 const chartConfig = {
     desktop: {

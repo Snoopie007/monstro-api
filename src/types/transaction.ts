@@ -1,22 +1,25 @@
-import { Member } from "./member";
-import { Vendor } from "./vendor";
+import { Member, MemberInvoice, MemberSubscription } from "./member";
+
 
 export type Transaction = {
     id: number;
-    description: string;
-    statementDescription: string;
+    description: string | null;
+    transactionType: string;
     paymentMethod: string;
-    direction: string;
-    type: string;
-    amount: string;
+    paymentType: string;
+    amount: number;
     locationId: number;
-    status: string;
-    model: string;
-    memberPlanId?: number | null;
     memberId?: number | null;
-    vendorId?: number | null;
-    vendor?: Vendor;
     member?: Member;
+    status: 'paid' | 'failed' | 'incomplete';
+    item: string;
+    subscription?: MemberSubscription;
+    chargeDate: Date;
+    currency: string;
+    metadata: Record<string, any>;
+    refunded: boolean;
+    invoiceId: number;
+    invoice?: MemberInvoice;
     created: Date;
     updated?: Date | null;
     deleted?: Date | null;
