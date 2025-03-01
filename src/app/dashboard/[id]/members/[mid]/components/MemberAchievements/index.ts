@@ -1,1 +1,1 @@
-export * from './member-achievements';
+export * from './MemberAchievements';

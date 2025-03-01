@@ -1,6 +1,6 @@
 import { Elements } from '@stripe/react-stripe-js';
 import { Skeleton } from '@/components/ui';
-import { getStripe } from '@/libs/stripe';
+import { getStripe } from '@/libs/client/stripe';
 import { useEffect, useState } from 'react';
 import { formatAmountForDisplay } from '@/libs/utils';
 import { useOnboarding } from '../../provider/OnboardingProvider';

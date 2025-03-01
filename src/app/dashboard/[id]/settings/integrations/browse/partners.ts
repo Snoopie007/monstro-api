@@ -7,7 +7,7 @@ export const IntergrationPartners = [
         tags: ["Marketing"],
         options: {
             response_type: "code",
-            redirect_uri: "https://mymonstroapp.com/dashboard/settings/intergrations/ghl",
+            redirect_uri: "https://mymonstroapp.com/dashboard/settings/integrations/ghl",
             client_id: "65850b0d2525182171c0e69d-lqg41p93",
             scope: ["oauth.write", "oauth.readonly"]
         }
@@ -20,9 +20,9 @@ export const IntergrationPartners = [
         tags: ["Payment"],
         options: {
             response_type: "code",
-            client_id: "ca_QBCPLtQoO8cpmakOwVzCPUCg16GbCGwv",
+            client_id: "ca_R9oj3AotaNhPhnWRyfOMQbdsGKtlIM0B",
             scope: "read_write",
-            redirect_uri: "https://localhost:3000/callbacks/intergrations/stripe",
+            redirect_uri: "http://localhost:3000/callbacks/integrations/stripe",
             state: ""
         }
     }

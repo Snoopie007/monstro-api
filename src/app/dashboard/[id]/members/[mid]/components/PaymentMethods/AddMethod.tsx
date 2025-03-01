@@ -9,9 +9,10 @@ import {
     DialogBody,
     CollapsibleContent,
     Collapsible,
-    CollapsibleTrigger
+    CollapsibleTrigger,
+    Switch
 } from "@/components/ui";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input } from "@/components/forms";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription, Input } from "@/components/forms";
 import { Member } from "@/types";
 
 import { DialogDescription, DialogTrigger } from "@radix-ui/react-dialog";
@@ -26,6 +27,7 @@ import { RegionSelect } from "@/components/forms";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "react-toastify";
+import { useMemberPaymentMethods } from "../../providers/MemberContext";
 
 interface AddPaymentMethodProps {
     member: Member;
@@ -34,15 +36,19 @@ interface AddPaymentMethodProps {
 
 export default function AddPaymentMethod({ member, locationId }: AddPaymentMethodProps) {
     const [open, setOpen] = useState(false)
+
     const [loading, setLoading] = useState(false)
     const [validCard, setValidCard] = useState(false)
+    const { addPaymentMethods } = useMemberPaymentMethods()
     const { theme } = useTheme();
     const stripe = useStripe();
     const elements = useElements();
+
     const form = useForm<z.infer<typeof AddCreditCardSchema>>({
         resolver: zodResolver(AddCreditCardSchema),
         defaultValues: {
             name: "",
+            default: false,
         },
         mode: "onChange",
     });
@@ -55,8 +61,8 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
         const cardElement = elements.getElement(CardElement);
 
         try {
-            const tokenRef = await stripe.createToken(cardElement!);
-            console.log(tokenRef)
+            const tokenRef = await stripe.createToken(cardElement!, { ...v });
+
             setLoading(false);
             if (tokenRef.token) {
 
@@ -67,12 +73,19 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                     },
                     body: JSON.stringify({
                         token: tokenRef.token.id,
-                        name: v.name,
-                        address: v.address,
-                        mid: member.id
+                        default: v.default,
+                        member: {
+                            email: member.email,
+                            firstName: member.firstName,
+                            lastName: member.lastName,
+                            phone: member.phone
+                        }
                     }),
                 });
                 if (res.ok) {
+                    const data = await res.json()
+                    addPaymentMethods(data)
+
                     toast.success("Card added successfully", { theme: "dark" });
                     setOpen(false);
                 }
@@ -90,10 +103,10 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
             <DialogTrigger asChild>
                 <Button variant={"ghost"} className="border-l text-lg rounded-none">+</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px] rounded-sm">
+            <DialogContent className="sm:max-w-[525px] rounded-sm">
                 <DialogHeader>
                     <DialogTitle>Add a Card</DialogTitle>
-                    <DialogDescription>Add a card to management your monthly payments.</DialogDescription>
+                    <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <DialogBody>
                     <Form {...form}>
@@ -103,8 +116,8 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                                     control={form.control}
                                     name="name"
                                     render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>
+                                        <FormItem >
+                                            <FormLabel size="tiny">
                                                 Cardholder Name
                                             </FormLabel>
                                             <FormControl>
@@ -117,7 +130,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                             </fieldset>
                             <fieldset>
                                 <FormItem className="flex-1">
-                                    <FormLabel className="font-semibold">
+                                    <FormLabel size="tiny">
                                         Card Info
                                     </FormLabel>
                                     <CardElement
@@ -129,35 +142,54 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                                                     color: theme === "dark" || theme === "system" ? "#fff" : "#000",
                                                     iconColor: theme === "dark" || theme === "system" ? "#fff" : "#000",
                                                 }
-
                                             },
                                             hidePostalCode: true
                                         }}
-
-
                                         onChange={(e) => {
                                             setValidCard(e.complete);
-                                            if (e.error) {
-                                            }
                                         }}
                                     />
                                     <FormMessage />
 
                                 </FormItem>
                             </fieldset>
-
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="default"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center gap-2 rounded-sm border border-foreground/10 py-2 px-3 ">
+                                            <FormControl>
+                                                <Switch
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <div className="space-y-0.5">
+                                                <FormLabel className="text-sm">
+                                                    Make this default payment method
+                                                </FormLabel>
+                                                <FormDescription className="text-xs">
+                                                    This will override the current subscription plan proration setting.
+                                                </FormDescription>
+                                            </div>
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
                             <Collapsible >
-                                <CollapsibleTrigger className="flex group flex-row items-center  text-indigo-600">
-                                    <ChevronRight size={18} className="group-data-[state=open]:rotate-90" /> <span className="font-medium">More options</span>
+                                <CollapsibleTrigger className="flex group flex-row items-center gap-1  text-sm text-indigo-500">
+                                    <ChevronRight size={16} className="group-data-[state=open]:rotate-90" />
+                                    <span className="font-medium">More options</span>
                                 </CollapsibleTrigger>
                                 <CollapsibleContent className="p-4 bg-foreground/10 rounded-sm mt-4 space-y-2">
                                     <fieldset>
                                         <FormField
                                             control={form.control}
-                                            name="address.line1"
+                                            name="address_line1"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>
+                                                    <FormLabel size="tiny">
                                                         Billing Address
                                                     </FormLabel>
 
@@ -174,7 +206,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                                     <fieldset className="grid grid-cols-3 items-center gap-2">
                                         <FormField
                                             control={form.control}
-                                            name="address.city"
+                                            name="address_city"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-1">
 
@@ -187,7 +219,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="address.state"
+                                            name="address_state"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-1">
 
@@ -202,7 +234,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="address.postal_code"
+                                            name="address_zip"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-1">
 

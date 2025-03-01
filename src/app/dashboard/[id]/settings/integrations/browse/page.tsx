@@ -5,10 +5,12 @@ import Image from "next/image"
 import Link from "next/link";
 import { Partner } from "@/types";
 import { ChangeEvent, useState, use } from "react";
-import {IntergrationPartners} from './partners';
+import { IntergrationPartners } from './partners';
+import { Badge, Button } from "@/components/ui";
 
 
 export default function BrowseIntergrationPage(props: { params: Promise<{ id: string }> }) {
+
     const params = use(props.params);
     const [filteredPartners, setFilteredPartners] = useState<Partner[]>(IntergrationPartners);
 
@@ -50,17 +52,17 @@ export default function BrowseIntergrationPage(props: { params: Promise<{ id: st
     }
 
     return (
-        <div>
-            <div className="mb-8">
-                <input placeholder='Search...' onChange={filterPartner} className='w-full rounded-sm text-sm bg-white/5 py-3  px-4 border font-roboto ' />
+        <div className="space-y-4">
+            <div >
+                <input placeholder='Search Intergrations' className='flex-1 w-full rounded-xs text-sm bg-transparent py-1.5 px-4 border-foreground/60 border ' />
             </div>
             <div className="grid grid-cols-2 gap-4">
                 {filteredPartners.map((partner, index) => (
-                    <Link key={index} href={generateURL(partner)} className="border rounded-sm py-6 px-4">
-                        <div className="flex flex-row mb-4 gap-4 items-center justify-center">
+                    <Link key={index} href={generateURL(partner)} className="border border-foreground/20 rounded-sm py-6 px-4 space-y-4">
+                        <div className="flex flex-row gap-4 items-center justify-center">
                             <div className="">
-                                <div className="rounded-full overflow-hidden w-[40px] h-[40px] flex ">
-                                    <Image src={`/images/partners/${partner.logo}`} alt={partner.name} width={40} height={40} />
+                                <div className="rounded-full overflow-hidden w-[45px] h-[45px] flex ">
+                                    <Image src={`/images/partners/${partner.logo}`} alt={partner.name} width={45} height={45} />
                                 </div>
                             </div>
 
@@ -68,15 +70,15 @@ export default function BrowseIntergrationPage(props: { params: Promise<{ id: st
                                 {partner.name}
                                 <div className="text-xs">
                                     {partner.tags.map((tag, i) => (
-                                        <span key={i} className="bg-indigo-500 text-white px-2 rounded-sm py-0.5">{tag}</span>
+                                        <Badge key={i} className="bg-indigo-500 rounded-xs">{tag}</Badge>
 
                                     ))}
                                 </div>
                             </div>
                         </div>
                         <div>
-                            <p className='text-base text-foreground mb-2'>{partner.description}</p>
-                            <span className="inline-flex items-center px-3 py-1 font-semibold text-sm mt-2 gap-2 rounded-sm text-background bg-foreground"> Connect</span>
+                            <p className='text-sm text-foreground mb-2'>{partner.description}</p>
+                            <Button variant="foreground" size="xs">Connect</Button>
                         </div>
                     </Link>
                 ))}

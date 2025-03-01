@@ -1,4 +1,3 @@
-
 import {
     Button,
     Dialog,
@@ -12,6 +11,8 @@ import {
     Popover,
     PopoverContent,
     Calendar,
+    Switch,
+    DialogDescription,
 } from "@/components/ui";
 import {
     Form, FormControl, FormField, FormMessage, FormItem, FormLabel,
@@ -21,213 +22,308 @@ import {
     SelectContent,
     SelectItem,
     Input,
+    FormDescription,
 } from '@/components/forms';
 
-import { useState } from "react";
-import { NewEnrollmentSchema } from "../../schema";
-import { ControllerRenderProps, useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { NewSubscriptionSchema } from "../../schema";
+import { ControllerRenderProps, useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CalendarIcon, Loader2 } from "lucide-react";
-import { cn } from "@/libs/utils";
-import { PopoverTrigger } from "@radix-ui/react-popover";
-import { addDays, format } from "date-fns"
-import { EndDatePresets, StartDatePresets } from "./data";
+import { cn, tryCatch } from "@/libs/utils";
+
+
+
 import { useMemberPaymentMethods } from "../../providers/MemberContext";
 import React from "react";
-import { Program, Plan } from "@/types";
+import { Program, MemberPlan } from "@/types";
+import { Stripe } from "stripe";
+import DurationPicker from "./DurationPicker";
+import { toast } from "react-toastify";
 
-export function CreateEnrollment() {
+export function CreateSubscription({ params }: { params: { id: string, mid: number } }) {
     const [open, setOpen] = useState<boolean>(false);
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods()
     const [programs, setPrograms] = useState<Program[]>([]);
-    const [plans, setPlans] = useState<Plan[]>([]);
+    const [plans, setPlans] = useState<MemberPlan[]>([]);
+    const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
 
-    const form = useForm<z.infer<typeof NewEnrollmentSchema>>({
-        resolver: zodResolver(NewEnrollmentSchema),
+    const form = useForm<z.infer<typeof NewSubscriptionSchema>>({
+        resolver: zodResolver(NewSubscriptionSchema),
         defaultValues: {
             startDate: new Date(),
             endDate: undefined,
-            trail: 0,
+            trailDays: undefined,
+            paymentMethod: undefined,
+            memberPlanId: undefined,
+            billingAnchor: undefined,
+            allowProration: false,
+            other: {
+                programId: undefined,
+                cardId: undefined,
+            },
         },
         mode: "onSubmit",
     })
 
-    const startDate = form.watch("startDate")
-    const programId = form.watch("programId")
-    const method = form.watch("paymentMethod")
 
-    async function onSubmit(data: z.infer<typeof NewEnrollmentSchema>) {
-        console.log(data)
+    useEffect(() => {
+        fetchPrograms()
+    }, [])
+
+    async function fetchPrograms() {
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${params.id}/programs?type=recurring`)
+        )
+
+        if (error || !result?.ok) return;
+        const data = await result.json()
+        const filteredPrograms = data.filter((program: Program) => program.plans.length > 0)
+        setPrograms(filteredPrograms)
+    }
+
+
+    const paymentMethod = form.watch("paymentMethod")
+    async function onSubmit(v: z.infer<typeof NewSubscriptionSchema>) {
+
+        setLoading(true)
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${params.id}/members/${params.mid}/subscriptions`, {
+                method: "POST",
+                body: JSON.stringify({
+                    ...v,
+                    stripePaymentMethod
+                })
+            })
+        )
+        setLoading(false)
+        if (error || !result?.ok) return;
+        const data = await result.json()
+        form.reset()
+        setOpen(false)
+
+        toast.success("Subscription created successfully")
+
+    }
+
+    function handleOpenChange(open: boolean) {
+        setOpen(open)
+        if (!open) {
+            form.reset()
+        }
     }
 
     return (
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant={"foreground"} size={"xs"} className='border'>+ Enrollment</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Add Enrollment</DialogTitle>
-                </DialogHeader>
-                <DialogBody>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
 
+            <DialogTrigger asChild>
+                <Button variant={"foreground"} size={"sm"} className='border'>+ Subscription</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[450px]">
+                <DialogHeader>
+                    <DialogTitle>Create Subscription</DialogTitle>
+                    <DialogDescription></DialogDescription>
+                </DialogHeader>
+                <DialogBody >
                     <Form {...form}>
-                        <form className='space-y-2' >
+                        <form className='space-y-1' >
 
                             <fieldset>
                                 <FormField
                                     control={form.control}
-                                    name="programId"
+                                    name="other.programId"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Program</FormLabel>
-                                            <Select onValueChange={(value) => field.onChange(Number(value))}>
+                                            <FormLabel size="tiny">Select a Program</FormLabel>
+                                            <Select onValueChange={(value) => {
+                                                field.onChange(Number(value))
+                                                setPlans(programs.find((program: Program) => program.id == Number(value))?.plans || [])
+                                            }}>
                                                 <FormControl>
-                                                    <SelectTrigger>
+                                                    <SelectTrigger className="rounded-sm">
                                                         <SelectValue placeholder="Select a program" />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    {!programIsLoading && programs.map((program: Program, index: number) => (
+                                                    {programs && programs.map((program: Program, index: number) => (
                                                         program.plans.length ? <SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem> : null
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </fieldset>
-                            <fieldset>
+                            <fieldset className="">
                                 <FormField
                                     control={form.control}
-                                    name="planId"
+                                    name="memberPlanId"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Plan</FormLabel>
-                                            <Select onValueChange={(value) => field.onChange(Number(value))}>
+                                            <FormLabel size="tiny">Select a Plan</FormLabel>
+                                            <Select disabled={!form.getValues("other.programId")}
+                                                onValueChange={(value) => field.onChange(Number(value))} >
                                                 <FormControl>
-                                                    <SelectTrigger>
+                                                    <SelectTrigger className="rounded-sm">
                                                         <SelectValue placeholder="Select a plan" />
                                                     </SelectTrigger>
                                                 </FormControl>
                                                 <SelectContent>
-                                                    {programId && programs.find((program: Program) => program.id == programId).plans.map((plan: Plan, index: number) => (
+                                                    {plans && plans.map((plan: MemberPlan, index: number) => (
                                                         (plan.contractId && plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
+
                             </fieldset>
-                            <fieldset className="flex flex-row items-center gap-2">
-                                <FormField
-                                    control={form.control}
-                                    name="paymentMethod"
-                                    render={({ field }) => (
-                                        <FormItem className="flex-1">
-                                            <FormLabel>Payment Method</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!form.getValues("planId")}>
-                                                <FormControl>
-                                                    <SelectTrigger>
+
+                            <fieldset className="grid grid-cols-6 gap-2 items-center">
+                                <div className="col-span-2">
+                                    <FormField
+                                        control={form.control}
+                                        name="paymentMethod"
+                                        render={({ field }) => (
+                                            <FormItem className="">
+                                                <FormLabel size="tiny">Payment Method</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!form.getValues("memberPlanId")}>
+                                                    <SelectTrigger className="rounded-sm capitalize">
                                                         <SelectValue placeholder="Select a payment method" />
-
                                                     </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {paymentMethods.map((method, index) => (
-                                                        <React.Fragment key={index}>
-                                                            {method.card ? (
-                                                                <SelectItem value={method.id} className="w-full">
-                                                                    <div className="flex flex-row items-center justify-between gap-4">
-                                                                        <div className="flex flex-row items-center gap-2">
-                                                                            <img src={`/images/cards/${method.card.brand}.svg`} alt={method.card.brand} className="h-7 w-7" />
-
-                                                                            <span className="text-sm capitalize">{method.card.brand} •••• {method.card.last4}</span>
-                                                                        </div>
-                                                                        <span className="text-sm">{method.card.exp_month} / {method.card.exp_year}</span>
-                                                                    </div>
-                                                                </SelectItem>
-                                                            ) : null}
-                                                        </React.Fragment>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </fieldset>
-                            <fieldset className="grid grid-cols-5 gap-2">
-                                <FormField
-                                    control={form.control}
-                                    name="trail"
-                                    render={({ field }) => (
-                                        <FormItem className="col-span-2">
-                                            <FormLabel>Trial days</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" placeholder="0" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <div className="space-y-2 col-span-3">
-                                    <FormLabel>Duration</FormLabel>
-                                    <div className="border rounded-md  px-3 py-2  flex flex-row items-center bg-background">
-                                        <CalendarIcon size={16} className="-mt-0.5 mr-1" />
-                                        <div className="flex flex-row items-center gap-1">
-
-                                            <FormField
-                                                control={form.control}
-                                                name="startDate"
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-col">
-                                                        <DatePicker field={field} presets={StartDatePresets} />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                            <span className="text-foreground/80">-</span>
-                                            <FormField
-                                                control={form.control}
-                                                name="endDate"
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-col">
-                                                        <DatePicker field={field} presets={EndDatePresets} startDate={startDate} />
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-                                    </div>
-
+                                                    <SelectContent>
+                                                        {['card', "cash", "zelle", "bank payment", "cheque"].map((method) => (
+                                                            <SelectItem key={method} value={method.toLowerCase()} className="capitalize">
+                                                                {method}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <div className="col-span-4 flex flex-col gap-1.5">
+                                    <FormLabel size="tiny">Duration</FormLabel>
+                                    <DurationPicker
+                                        onChange={(date) => {
+                                            console.log(date)
+                                            form.setValue("startDate", date.from || new Date())
+                                            form.setValue("endDate", date.to)
+                                        }}
+                                    />
                                 </div>
 
                             </fieldset>
+                            {paymentMethod === "card" && (
+                                <>
+                                    <fieldset className="grid grid-cols-6 gap-2">
 
+                                        <FormField
+                                            control={form.control}
+                                            name="other.cardId"
+                                            render={({ field }) => (
+                                                <FormItem className="col-span-4">
+                                                    <FormLabel size="tiny">Select a Card</FormLabel>
+                                                    <Select onValueChange={(value) => {
+                                                        field.onChange(value)
 
+                                                        setStripePaymentMethod(paymentMethods.find((method) => method.id === value) || null)
+                                                    }} defaultValue={field.value} >
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select a payment method" />
 
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {paymentMethods.map((method, index) => (
+                                                                <React.Fragment key={index}>
+                                                                    {method.card ? (
+                                                                        <SelectItem value={method.id} className="w-full">
+                                                                            <div className="flex flex-row items-center justify-between gap-4">
+                                                                                <div className="flex flex-row items-center gap-2">
+                                                                                    <img src={`/images/cards/${method.card.brand}.svg`} alt={method.card.brand} className="h-7 w-7" />
+
+                                                                                    <span className="text-sm capitalize">{method.card.brand} •••• {method.card.last4}</span>
+                                                                                </div>
+                                                                                <span className="text-sm">{method.card.exp_month} / {method.card.exp_year}</span>
+                                                                            </div>
+                                                                        </SelectItem>
+                                                                    ) : null}
+                                                                </React.Fragment>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="trailDays"
+                                            render={({ field }) => (
+                                                <FormItem className="col-span-2">
+                                                    <FormLabel size="tiny">Trial days</FormLabel>
+                                                    <FormControl>
+                                                        <Input disabled={paymentMethod !== "card"} type="number" placeholder="0" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </fieldset>
+
+                                    <fieldset>
+                                        <FormField
+                                            control={form.control}
+                                            name="allowProration"
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-row items-center gap-2 rounded-sm border border-foreground/10 py-2 px-3 ">
+
+                                                    <FormControl>
+                                                        <Switch
+                                                            checked={field.value}
+                                                            onCheckedChange={field.onChange}
+                                                        />
+                                                    </FormControl>
+                                                    <div className="space-y-0.5">
+                                                        <FormLabel className="text-sm">
+                                                            Allow proration
+                                                        </FormLabel>
+                                                        <FormDescription className="text-xs">
+                                                            This will override the current subscription plan proration setting.
+                                                        </FormDescription>
+                                                    </div>
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </fieldset>
+                                </>
+                            )}
                         </form>
                     </Form>
                 </DialogBody>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button type="button" variant="outline" size={"xs"}>Cancel</Button>
+                        <Button type="button" variant="outline" size={"sm"}>Cancel</Button>
                     </DialogClose>
                     <Button
-                        className={cn("",)}
+                        className={cn("children:hidden", loading && "children:block")}
                         variant={"foreground"}
-                        size={"xs"}
+                        size={"sm"}
                         type="submit"
+                        disabled={loading || !form.formState.isValid}
                         onClick={form.handleSubmit(onSubmit)}
                     >
-                        <Loader2 className="mr-2 h-4 w-4 hidden animate-spin" />
-                        Add Enrollment
+                        <Loader2 className="mr-2 h-4 w-4  animate-spin" />
+                        Create
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -235,58 +331,3 @@ export function CreateEnrollment() {
     )
 }
 
-interface DatePickerProps<K extends "startDate" | "endDate"> {
-    field: ControllerRenderProps<z.infer<typeof NewEnrollmentSchema>, K>
-    presets: { name: string, days: number }[]
-    startDate?: Date
-
-}
-
-function DatePicker<K extends "startDate" | "endDate">({ field, presets, startDate }: DatePickerProps<K>) {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button variant={"ghost"} className={cn("w-full text-left h-auto p-0 leading-2  px-1.5 rounded-sm  font-normal")} >
-
-                    {field.value ? format(field.value, "LLL dd, y") : "Never"}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto flex flex-row p-0" align="start">
-                <Calendar
-                    initialFocus
-                    fromDate={startDate ? addDays(startDate, 30) : new Date()}
-                    mode="single"
-                    selected={field.value}
-                    onSelect={(date) => {
-                        field.onChange(date)
-                        setOpen(false)
-                    }}
-
-                />
-                <div className="bg-foreground/5 p-4 w-[150px]">
-                    <ul className="space-y-1">
-                        {presets.map((preset) => (
-                            <li key={`${preset.name}`}
-                                onClick={() => {
-
-                                    if (preset.name === "Never") {
-                                        field.onChange(undefined)
-                                    } else {
-                                        field.onChange(addDays(new Date(), preset.days))
-                                    }
-                                    setOpen(false)
-
-                                }}
-                                className="text-sm cursor-pointer hover:text-indigo-500 font-medium"
-                            >
-                                {preset.name}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </PopoverContent>
-        </Popover>
-    )
-}

@@ -1,5 +1,6 @@
 'use client'
 import {
+    Badge,
     Skeleton,
     Table,
     TableBody,
@@ -9,16 +10,18 @@ import {
     TableRow
 } from '@/components/ui'
 import { Input } from '@/components/forms'
-import { cn, formatAmountForDisplay, formatDateTime } from '@/libs/utils'
+import { cn, formatAmountForDisplay } from '@/libs/utils'
 import MemberPaymentActions from './actions'
-import NewMemberTransaction from './CreateTransaction'
-import { useMemberPayments } from '@/hooks/use-members'
+// import NewMemberTransaction from './CreateTransaction'
+import { useMemberTransactions } from '@/hooks/hooks'
 import { useMember } from '../../providers/MemberContext'
-import Stripe from 'stripe'
+
+import { format } from 'date-fns'
+import { Transaction } from '@/types/transaction'
 
 export function MemberTransactions({ params }: { params: { id: string, mid: number } }) {
     const { member } = useMember();
-    const { payments, error, isLoading } = useMemberPayments(params.id, params.mid, member.stripeCustomerId);
+    const { transactions, error, isLoading } = useMemberTransactions(params.id, params.mid);
     return (
         <div className='py-4'>
             <div className='w-full flex flex-row items-center  gap-2'>
@@ -26,7 +29,7 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
                     <Input placeholder='Search transactions...' className='w-[250px] text-xs h-auto py-1 rounded-xs' />
                 </div>
                 <div>
-                    <NewMemberTransaction params={params} />
+
                 </div>
             </div>
             <div className='border rounded-sm mt-4'>
@@ -55,39 +58,48 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
                             </>
                         ) : (
                             <>
-                                {payments && payments.map((payment: Stripe.Charge) => (
-                                    <TableRow key={payment.id}>
+                                {transactions && transactions.map((t: Transaction) => (
+                                    <TableRow key={t.id}>
 
                                         <TableCell>
-                                            <ChargeAmount amount={payment.amount} currency={payment.currency} status={payment.status} refunded={payment.refunded} />
+                                            <div className='flex flex-row items-center gap-2'>
+                                                <span className='font-bold'>{formatAmountForDisplay(t.amount / 100, t.currency, true)}</span>
+                                                <span className='uppercase'>{t.currency}</span>
+                                                {t.refunded ? (
+                                                    <Badge roles='red' size={"tiny"}>Refunded</Badge>
+                                                ) : (
+                                                    <Badge transaction={t.status} size={"tiny"}>
+                                                        {t.status}
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell>
-                                            {payment.description == null ? "Payment for membership" : payment.description}
+                                            {t.description}
                                         </TableCell>
                                         <TableCell>
-                                            {payment.payment_method_details?.type === 'card' && (
+                                            {t.paymentMethod === 'card' ? (
                                                 <div className='flex flex-row items-center gap-1'>
                                                     <span className='capitalize'>
-                                                        {payment.payment_method_details.card?.brand}
+                                                        {t.metadata?.card.brand}
                                                     </span>
                                                     <span>
-                                                        •••• {payment.payment_method_details.card?.last4}
+                                                        •••• {t.metadata?.card.last4}
                                                     </span>
                                                 </div>
+                                            ) : (
+                                                <span className='capitalize'>
+                                                    {t.paymentMethod}
+                                                </span>
                                             )}
                                         </TableCell>
 
                                         <TableCell>
-                                            {formatDateTime(payment.created, {
-                                                month: 'short',
-                                                day: 'numeric',
-                                                hour: 'numeric',
-                                                minute: 'numeric'
-                                            })}
+                                            {format(t.created!, 'MMM d, yyyy')}
                                         </TableCell>
 
                                         <TableCell className='flex flex-row items-center'>
-                                            <MemberPaymentActions payment={payment} memberId={params.mid} locationId={params.id} />
+                                            <MemberPaymentActions transaction={t} memberId={params.mid} locationId={params.id} />
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -101,25 +113,3 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
     )
 }
 
-
-function ChargeAmount({ amount, currency, status, refunded }: { amount: number, currency: string, status: string, refunded: boolean }) {
-    return (
-        <div className='flex flex-row items-center gap-2'>
-            <span className='font-bold inline-block leading-5 align-middle'>{formatAmountForDisplay(amount / 100, currency, true)}</span>
-            <span className='uppercase  inline-block leading-5 align-middle'>{currency}</span>
-            <span className={cn("capitalize text-xs leading-5 inline-block font-medium px-2 rounded-sm", {
-                'bg-green-300 text-green-800': status === 'succeeded',
-                'bg-red-300 text-red-800': status === 'failed',
-                'bg-yellow-300 text-yellow-800': status === 'pending',
-            })} data-state={status}>
-                {status === 'succeeded' ? 'Paid' : status}
-
-            </span>
-            <span className={cn("capitalize text-xs leading-5 inline-block font-medium px-2 rounded-sm", {
-                'bg-red-300 text-red-800': refunded === true,
-            })} data-state={status}>
-                {refunded ? 'Refunded' : ''}
-            </span>
-        </div>
-    )
-}

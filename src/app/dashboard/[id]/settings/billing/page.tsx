@@ -19,7 +19,7 @@ import React from 'react'
 
 import { cn, formatAmountForDisplay } from '@/libs/utils';
 import { auth } from '@/auth';
-import { StripePayments } from '@/libs/server/stripe';
+import { VendorStripePayments } from '@/libs/server/stripe';
 import { LocationState } from '@/types';
 import { Stripe } from 'stripe';
 import { RetryPayment, CardList, Wallet } from './components';
@@ -50,7 +50,7 @@ async function fetchClientStripe(customerId: string, locationId: string, locatio
             status: "active",
             invoiceId: null
         }]
-        const stripe = new StripePayments();
+        const stripe = new VendorStripePayments();
         const methods = await stripe.getPaymentMethods(customerId);
         if (locationState.planId && locationState.planId !== 0) {
             const res = await stripe.getSubscriptions(customerId);
@@ -152,7 +152,7 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
                                 <TableRow key={i}>
                                     <TableCell className='pl-0'>
                                         {sub.name}
-                                        <Badge stripeStatus={sub.status} className='ml-2 rounded-xs'>{sub.status?.replace('_', ' ')}</Badge>
+                                        <Badge sub={sub.status} className='ml-2 rounded-xs'>{sub.status?.replace('_', ' ')}</Badge>
                                     </TableCell>
                                     <TableCell>{formatAmountForDisplay((sub.amount / 100), sub.currency, true)}</TableCell>
                                     <TableCell >

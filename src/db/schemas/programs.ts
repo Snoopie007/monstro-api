@@ -5,6 +5,7 @@ import { members } from "./members";
 import { memberPlans } from "./MemberPlans";
 import { achievements } from "./achievements";
 import { classSessions } from "./reservations";
+import { Icon } from "lucide-react";
 
 export const programs = pgTable("programs", {
     id: serial("id").primaryKey(),

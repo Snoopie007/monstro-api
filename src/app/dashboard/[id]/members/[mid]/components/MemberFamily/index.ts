@@ -1,1 +1,1 @@
-export * from './member-families'
+export * from './MemberFamilies'

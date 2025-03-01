@@ -1,13 +1,13 @@
-import { relations } from "drizzle-orm";
-import { integer, primaryKey, serial, text, timestamp, pgTable, boolean, varchar, pgEnum } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
+import { integer, primaryKey, serial, text, timestamp, pgTable, boolean, varchar, pgEnum, jsonb, uuid, doublePrecision } from "drizzle-orm/pg-core";
 import { locations, memberLocations } from "./locations";
 import { users } from "./users";
 import { achievements } from "./achievements";
 import { rewards } from "./rewards";
-import { programMembers, programs } from "./programs";
+import { programMembers } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
-import { memberPlans } from "./MemberPlans";
-
+import { memberPackages, memberPlans } from "./MemberPlans";
+import { memberSubscriptions } from "./MemberPlans";
 
 
 export const MemberRelationshipEnum = pgEnum('relationship', [
@@ -16,6 +16,14 @@ export const MemberRelationshipEnum = pgEnum('relationship', [
     'child',
     'sibling',
     'other'
+]);
+
+export const MemberInvoiceStatusEnum = pgEnum('invoice_status', [
+    'draft',
+    'paid',
+    'unpaid',
+    'uncollectible',
+    'void'
 ]);
 
 export const members = pgTable("members", {
@@ -67,36 +75,31 @@ export const memberContracts = pgTable("member_contracts", {
     deleted: timestamp('deleted_at', { withTimezone: true }),
 });
 
-const MemberSubscriptionStatusEnum = pgEnum('member_subscription_status', [
-    'active',
-    'inactive',
-    'canceled',
-    'past_due',
-    'incomplete',
-    'trialing',
-    'unpaid',
-    'incomplete_expired',
-    'paused'
-]);
-
-export const memberSubscriptions = pgTable("member_subscriptions", {
-    id: serial("id").primaryKey(),
-    payerId: integer("payer_id").references(() => members.id, { onDelete: "cascade" }),
-    beneficiaryId: integer("beneficiary_id").references(() => members.id, { onDelete: "cascade" }),
-    planId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
-    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
-    stripeSubscriptionId: text("stripe_subscription_id"),
-    status: MemberSubscriptionStatusEnum("status").notNull().default("incomplete"),
-    activationDate: timestamp("activation_date", { withTimezone: true }).notNull(),
-    currentPeriodStart: timestamp("current_period_start", { withTimezone: true }).notNull(),
-    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
-    cancelAt: timestamp("cancel_at", { withTimezone: true }),
-    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
-    trialEnd: timestamp("trial_end", { withTimezone: true }),
-    endedAt: timestamp("ended_at", { withTimezone: true }),
+export const memberInvoices = pgTable("member_invoices", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    settings: jsonb("settings").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+    currency: text("currency"),
+    memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    memberPackageId: uuid("member_package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
+    memberSubscriptionId: integer("member_subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
+    description: text("description"),
+    items: jsonb("items").$type<Record<string, any>>().array().default(sql`'{}'::jsonb[]`),
+    paid: boolean("paid").notNull().default(false),
+    tax: integer("tax").notNull().default(0),
+    total: integer("total").notNull().default(0),
+    discount: integer("discount").notNull().default(0),
+    subtotal: integer("subtotal").notNull().default(0),
+    dueDate: timestamp("due_date", { withTimezone: true }).notNull().defaultNow(),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    invoicePdf: text("invoice_pdf"),
+    status: MemberInvoiceStatusEnum("status").notNull().default('draft'),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });
+
+
+
 
 export const familyMembers = pgTable("family_members", {
     id: serial("id").primaryKey(),
@@ -109,23 +112,13 @@ export const familyMembers = pgTable("family_members", {
     deleted: timestamp('deleted_at', { withTimezone: true }),
 });
 
-export const memberPayments = pgTable("member_payments", {
-    id: serial("id").primaryKey(),
-    memberId: integer("payer_id").references(() => members.id, { onDelete: "cascade" }),
-    beneficiaryId: integer("beneficiary_id").references(() => members.id, { onDelete: "cascade" }),
-    programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
-    planId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
-    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp('updated_at', { withTimezone: true }),
-});
-
 export const membersRelations = relations(members, ({ many, one }) => ({
     memberLocations: many(memberLocations),
     achievements: many(memberAchievements),
     rewards: many(memberRewards),
     contracts: many(memberContracts),
     programMembers: many(programMembers),
-    subscriptions: many(memberSubscriptions),
+    subscriptions: many(memberSubscriptions, { relationName: "beneficiary" }),
     user: one(users, {
         fields: [members.userId],
         references: [users.id],
@@ -136,15 +129,18 @@ export const membersRelations = relations(members, ({ many, one }) => ({
     relatedByFamily: many(familyMembers, {
         relationName: "relatedMemberFamily",
     }),
-    paymentsMade: many(memberPayments, {
-        relationName: "paymentsMade",
+    payers: many(memberSubscriptions, {
+        relationName: "payer",
     }),
-    paymentsReceived: many(memberPayments, {
-        relationName: "paymentsReceived",
+    packages: many(memberPackages, {
+        relationName: "packageBeneficiary",
+    }),
+    packagePayers: many(memberPackages, {
+        relationName: "packagePayer",
     }),
 }));
 
-export const familyMemberRelations = relations(familyMembers, ({ one }) => ({
+export const familyMemberRelations = relations(familyMembers, ({ one, many }) => ({
     member: one(members, {
         relationName: "memberFamilyMembers",
         fields: [familyMembers.memberId],
@@ -154,27 +150,11 @@ export const familyMemberRelations = relations(familyMembers, ({ one }) => ({
         relationName: "relatedMemberFamily",
         fields: [familyMembers.relatedMemberId],
         references: [members.id],
-    }),
+    })
+
 }));
 
-export const memberPaymentRelations = relations(memberPayments, ({ one }) => ({
-    payer: one(members, {
-        fields: [memberPayments.memberId],
-        references: [members.id],
-    }),
-    beneficiary: one(members, {
-        fields: [memberPayments.beneficiaryId],
-        references: [members.id],
-    }),
-    program: one(programs, {
-        fields: [memberPayments.programId],
-        references: [programs.id],
-    }),
-    plan: one(memberPlans, {
-        fields: [memberPayments.planId],
-        references: [memberPlans.id],
-    }),
-}));
+
 
 export const memberAchievementsRelations = relations(memberAchievements, ({ one }) => ({
     member: one(members, {
@@ -205,21 +185,17 @@ export const memberContractsRelations = relations(memberContracts, ({ many, one 
 }));
 
 
-export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one }) => ({
-    payer: one(members, {
-        fields: [memberSubscriptions.payerId],
+export const memberInvoicesRelations = relations(memberInvoices, ({ one }) => ({
+    member: one(members, {
+        fields: [memberInvoices.memberId],
         references: [members.id],
     }),
-    beneficiary: one(members, {
-        fields: [memberSubscriptions.beneficiaryId],
-        references: [members.id],
-    }),
-    plan: one(memberPlans, {
-        fields: [memberSubscriptions.planId],
-        references: [memberPlans.id],
+    subscription: one(memberSubscriptions, {
+        fields: [memberInvoices.memberSubscriptionId],
+        references: [memberSubscriptions.id],
     }),
     location: one(locations, {
-        fields: [memberSubscriptions.locationId],
+        fields: [memberInvoices.locationId],
         references: [locations.id],
     }),
 }));

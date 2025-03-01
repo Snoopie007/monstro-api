@@ -1,83 +1,63 @@
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { memberLocations } from "@/db/schemas";
-import { getStripe } from "@/libs/server-utils";
+import { MemberStripePayments } from "@/libs/server/stripe";
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
     const params = await props.params;
     const session = await auth();
-    const data = await req.json();
+    const { token, member, default: isDefault } = await req.json();
 
     try {
-
         if (session) {
             const integrations = await db.query.integrations.findFirst({
-                where: (integration, { eq }) => (and(eq(integration.locationId, params.id), eq(integration.service, "Stripe"))),
+                where: (integration, { eq }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
                 columns: {
-                    accessToken: true
+                    accessToken: true,
+                    secretKey: true
                 }
             })
 
-            if (integrations?.accessToken) {
-                const stripe = getStripe(integrations?.accessToken);
-                const member = await db.query.members.findFirst({
-                    where: (members, { eq }) => eq(members.id, data.mid),
+            if (!integrations || !integrations.secretKey) {
+                return NextResponse.json({ error: "Stripe integration not found" }, { status: 404 })
+            }
+            const memberLocation = await db.query.memberLocations.findFirst({
+                where: (memberLocation, { eq, and }) => and(eq(memberLocation.memberId, params.mid), eq(memberLocation.locationId, params.id))
+            })
 
-                });
-                const customers = await stripe.customers.list({
-                    email: member?.email,
-                    limit: 1,
-                });
-                let customer = customers.data.length ? customers.data[0] : null;
-                if (!member) {
-                    return NextResponse.json({ error: "Something Went Wrong" }, { status: 500 })
-                }
-
-                if (!customer) {
-                    customer = await stripe.customers.create({
-                        name: member.firstName + ' ' + member.lastName,
-                        email: member.email,
-                        phone: `${member.phone}`
-                    });
-
-                    const memberUpdate = await db.update(memberLocations)
-                        .set({ stripeCustomerId: customer.id, updated: new Date() })
-                        .where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mid)));
-                    console.log(memberUpdate);
-                } else {
-                    console.log("issue", params.id, params.mid);
-                    await db.update(memberLocations)
-                        .set({ stripeCustomerId: "test", updated: new Date() })
-                        .where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mid)))
-
-                }
-                console.log(customer)
-
-                const paymentMethod = await stripe.paymentMethods.create(
-                    {
-                        type: "card",
-                        card: {
-                            token: data.token
-                        }
-                    }
-                );
-                console.log(paymentMethod)
-                if (paymentMethod) {
-                    await stripe.paymentMethods.attach(
-                        paymentMethod.id,
-                        {
-                            customer: customer.id,
-                        }
-                    );
-                }
-                return NextResponse.json(paymentMethod, { status: 200 });
-            } else {
-                return NextResponse.json({ error: "Something Went Wrong" }, { status: 500 })
+            if (!memberLocation) {
+                return NextResponse.json({ error: "Member location not found" }, { status: 404 })
             }
 
+
+            const stripe = new MemberStripePayments(integrations?.secretKey);
+            if (!memberLocation.stripeCustomerId) {
+                const customer = await stripe.createCustomer(member, token, {
+                    locationId: params.id,
+                    memberId: params.mid
+                });
+                memberLocation.stripeCustomerId = customer.id;
+
+                await db.update(memberLocations).set({ stripeCustomerId: customer.id, updated: new Date() })
+                    .where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mid)))
+            }
+
+            stripe.setCustomer(memberLocation.stripeCustomerId);
+            const { paymentMethod } = await stripe.setupIntent(token);
+            if (isDefault) {
+                await stripe.updateCustomer(memberLocation.stripeCustomerId, {
+                    invoice_settings: {
+                        default_payment_method: paymentMethod?.id
+                    }
+                })
+            }
+            return NextResponse.json(paymentMethod, { status: 200 });
+        } else {
+            return NextResponse.json({ error: "Something Went Wrong" }, { status: 500 })
         }
+
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })

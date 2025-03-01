@@ -1,8 +1,23 @@
-import { integer, boolean, text, timestamp, pgTable, serial, doublePrecision } from "drizzle-orm/pg-core";
+import { integer, boolean, text, timestamp, pgTable, serial, doublePrecision, pgEnum, jsonb, uuid } from "drizzle-orm/pg-core";
 import { programs } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { vendors } from "./vendors";
+import { memberInvoices, members } from "./members";
+import { locations } from "./locations";
+import { transactions } from "./transactions";
+
+const PlanPaymentType = pgEnum("plan_payment_type", ["recurring", "one-time"]);
+const PlanInterval = pgEnum("plan_interval", ["day", "week", "month", "year"]);
+const PackageStatusEnum = pgEnum("package_status", ["active", "incomplete", "expired", "completed"]);
+const MemberSubscriptionStatusEnum = pgEnum('member_subscription_status', [
+    'active',
+    'canceled',
+    'past_due',
+    'incomplete',
+    'trialing',
+    'unpaid',
+]);
 
 export const memberPlans = pgTable("member_plans", {
     id: serial("id").primaryKey(),
@@ -10,49 +25,124 @@ export const memberPlans = pgTable("member_plans", {
     description: text("description").notNull().default(""),
     family: boolean("family").notNull().default(false),
     familyMemberLimit: integer("family_member_limit").notNull().default(0),
-    status: boolean("status").notNull().default(false),
-    vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+    // status: boolean("status").notNull().default(false),
+    // vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     contractId: integer("contract_id").references(() => contractTemplates.id),
+    interval: PlanInterval("interval").default("month"),
+    intervalThreshold: integer("interval_threshold").default(1),
+    type: PlanPaymentType("type").notNull().default("recurring"),
+    currency: text("currency").notNull().default("USD"),
+    price: integer("price").notNull().default(0),
+    stripePriceId: text("stripe_price_id"),
+    expireDate: timestamp("expire_date", { withTimezone: true }),
+    totalClassLimit: integer("total_class_limit"),
+    intervalClassLimit: integer("interval_class_limit"),
+    billingAnchorConfig: jsonb("billing_anchor_config").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+    allowProration: boolean("allow_proration").notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })
 });
 
 
-export const memberPlanPricings = pgTable("member_plan_pricings", {
+
+export const memberSubscriptions = pgTable("member_subscriptions", {
     id: serial("id").primaryKey(),
-    amount: doublePrecision("amount").notNull(),
-    billingPeriod: text("billing_period").notNull(),
-    stripePriceId: text("stripe_price_id").notNull(),
-    memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id),
+    payerId: integer("payer_id").references(() => members.id, { onDelete: "cascade" }),
+    beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    planId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    stripeSubscriptionId: text("stripe_subscription_id"),
+    status: MemberSubscriptionStatusEnum("status").notNull().default("incomplete"),
+    startDate: timestamp("start_date", { withTimezone: true }).notNull(),
+    currentPeriodStart: timestamp("current_period_start", { withTimezone: true }).notNull(),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }).notNull(),
+    cancelAt: timestamp("cancel_at", { withTimezone: true }),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+    trialEnd: timestamp("trial_end", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    paymentType: text("payment_type").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
-
 });
 
-export const memberPlanPricingsRelations = relations(memberPlanPricings, ({ one }) => ({
-    plan: one(memberPlans, {
-        fields: [memberPlanPricings.memberPlanId],
-        references: [memberPlans.id],
-    }),
-}))
 
+
+export const memberPackages = pgTable("member_packages", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    payerId: integer("payer_id").references(() => members.id, { onDelete: "set null" }),
+    beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    startDate: timestamp("start_date", { withTimezone: true }).notNull(),
+    endDate: timestamp("end_date", { withTimezone: true }),
+    expireDate: timestamp("expire_date", { withTimezone: true }),
+    status: PackageStatusEnum("status").notNull(),
+    paymentMethod: text("payment_method").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+    totalClassAttended: integer("total_class_attended").notNull().default(0),
+    totalClassLimit: integer("total_class_limit").notNull().default(0),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
     program: one(programs, {
         fields: [memberPlans.programId],
         references: [programs.id],
     }),
-
     contract: one(contractTemplates, {
         fields: [memberPlans.contractId],
         references: [contractTemplates.id],
     }),
-    pricing: one(memberPlanPricings, {
-        fields: [memberPlans.id],
-        references: [memberPlanPricings.memberPlanId],
-    })
+    packages: many(memberPackages),
+    subscriptions: many(memberSubscriptions),
+}));
 
+export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one, many }) => ({
+    payer: one(members, {
+        fields: [memberSubscriptions.payerId],
+        references: [members.id],
+        relationName: "payer",
+    }),
+    beneficiary: one(members, {
+        fields: [memberSubscriptions.beneficiaryId],
+        references: [members.id],
+        relationName: "beneficiary",
+    }),
+    plan: one(memberPlans, {
+        fields: [memberSubscriptions.planId],
+        references: [memberPlans.id],
+    }),
+    location: one(locations, {
+        fields: [memberSubscriptions.locationId],
+        references: [locations.id],
+    }),
+    transactions: many(transactions),
+    invoices: many(memberInvoices),
+}));
 
-}))
+export const memberPackagesRelations = relations(memberPackages, ({ one, many }) => ({
+    plan: one(memberPlans, {
+        fields: [memberPackages.memberPlanId],
+        references: [memberPlans.id],
+    }),
+    location: one(locations, {
+        fields: [memberPackages.locationId],
+        references: [locations.id],
+    }),
+    payer: one(members, {
+        fields: [memberPackages.payerId],
+        references: [members.id],
+        relationName: "packagePayer",
+    }),
+    beneficiary: one(members, {
+        fields: [memberPackages.beneficiaryId],
+        references: [members.id],
+        relationName: "packageBeneficiary",
+    }),
+    transactions: many(transactions),
+
+}));

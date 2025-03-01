@@ -7,19 +7,26 @@ import {
     Button,
     DropdownMenuSeparator
 } from '@/components/ui'
-import { put } from '@/libs/api';
-import Stripe from 'stripe';
+import { tryCatch } from '@/libs/utils';
+import { Transaction } from '@/types/transaction';
 
 interface MemberPaymentActionsProps {
-    payment: Stripe.Charge,
+    transaction: Transaction,
     memberId: number,
     locationId: string
 }
 
-export default function MemberPaymentActions({ payment, memberId, locationId }: MemberPaymentActionsProps) {
+export default function MemberPaymentActions({ transaction, memberId, locationId }: MemberPaymentActionsProps) {
 
-    async function makeARefund(id: string) {
-        await put({ url: `members/${memberId}/payments`, data: { chargeId: id }, id: locationId });
+    async function makeARefund(id: number) {
+
+
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${locationId}/members/${memberId}/transactions`, {
+                method: 'PUT',
+                body: JSON.stringify({ chargeId: id })
+            })
+        )
     }
 
     return (
@@ -33,8 +40,8 @@ export default function MemberPaymentActions({ payment, memberId, locationId }: 
                 <DropdownMenuSeparator className='mb-2' />
                 <DropdownMenuItem
                     className='cursor-pointer bg-red-500 hover:bg-red-800 text-white font-semibold '
-                    disabled={(payment.status === 'failed')}
-                    onClick={() => makeARefund(payment.id)}
+                    disabled={(transaction.status === 'past_due')}
+                    onClick={() => makeARefund(transaction.id)}
                 >
                     Refund
                 </DropdownMenuItem>

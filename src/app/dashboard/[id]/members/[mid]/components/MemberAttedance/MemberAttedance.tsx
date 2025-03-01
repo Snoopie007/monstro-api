@@ -18,11 +18,9 @@ import {
     TableRow,
 } from "@/components/ui"
 
-
-import { useState } from 'react'
 import { Attendance } from '@/types';
 import { Card } from '@/components/ui/card';
-import { useAttedance, } from "@/hooks/use-members";
+import { useAttedance } from "@/hooks";
 
 
 function FormatCheckInDateTime(date: Date) {
@@ -86,13 +84,11 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
     const { attendances, error, isLoading } = useAttedance(params.id, params.mid);
 
     const table = useReactTable({
-        data: attendances,
+        data: attendances || [],
         columns,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
     })
-
-
 
     return (
         <div className="py-4">

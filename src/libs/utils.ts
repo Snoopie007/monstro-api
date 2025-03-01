@@ -26,11 +26,8 @@ export const StripeCardOptions = {
       },
   },
 };
-const DateFormateOptions: Intl.DateTimeFormatOptions = {
-	month: 'short',
-	day: 'numeric',
-	year: 'numeric',
-}
+
+
 
  const formatAmountForDisplay = (
 	amount: number,
@@ -64,9 +61,6 @@ function convertToCurrency(amount: number, symbol: string, currency: string): st
   	return `${symbol}${amount} ${currency}`;
 }
 
-function formatDateTime(date: number, format?:  Intl.DateTimeFormatOptions ): string {
-  	return new Date(date).toLocaleString('en-US', format || DateFormateOptions);
-}
 
 function ErrorHandler<T, E extends new (message?: string) => Error>(
 	promise: Promise<T>,
@@ -189,12 +183,12 @@ function getCurrentStatus(sessionData: any, userTimezone: any) {
 }
 
 export {
-  formatDateTime,
+  
   convertToCurrency,
   sleep,
   tryCatch,
   formatAmountForDisplay,
-  DateFormateOptions,
+ 
   cn,
 	decodeJWT,
 	getCurrentTimeDetails,

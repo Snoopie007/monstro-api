@@ -32,11 +32,10 @@ import { RegionSelect } from "@/components/forms";
 import { CompanyInfoSchema } from "./schemas";
 import { Industries, CountryCodes, TimeZones } from "@/libs/data";
 import { Location } from "@/types";
-interface CompanyProps {
-    location: Location;
-}
 
-export default function CompanyInfoForm({ location }: CompanyProps) {
+
+
+export default function CompanyInfoForm({ location }: { location: Location }) {
 
     const [logoUrl, setLogoUrl] = useState(location.logoUrl || "");
     const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");

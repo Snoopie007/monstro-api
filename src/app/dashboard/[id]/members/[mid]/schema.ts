@@ -6,25 +6,62 @@ export const UpdateMemberSchema = z.object({
     reedemPoints: z.number().int().min(0, 'Reedem points must be a positive number'),
 }).merge(MemberGeneralInfoSchema);
 
-export const TransactionSchema = z.object({
-    amount: z.number().multipleOf(0.01),
-    paymentMethod: z.string(),
-    card: z.string().optional(),
-    statement: z.string(),
-    description: z.string(),
-    memberSubscriptionId: z.number(),
-    item: z.string().optional(),
-    chargeFor: z.string().optional(),
+
+export const ChargeItemSchema = z.object({
+    amount: z.number().min(1, "Amount is required"),
+    paymentMethod: z.string().min(1, "Payment method is required"),
+    description: z.string().optional(),
+    item: z.string().min(1, "Item is required"),
+    cardId: z.string().optional(),
+    chargeDate: z.date().optional(),
+})
+
+// Common fields shared between subscription and package schemas
+const SubsAndPackageFields = {
+
+    memberPlanId: z.number().min(1, "Plan is required"),
+    startDate: z.date().min(new Date(), "Activation date must be in the future"),
+    paymentMethod: z.enum(["card", "cash", "zelle", "bank payment", "cheque"], { message: "Payment type is required" }),
+    other: z.object({
+        programId: z.number().min(1, "Program is required"),
+        cardId: z.string().optional(),
+    }),
+};
+
+export const NewSubscriptionSchema = z.object({
+    ...SubsAndPackageFields,
+    endDate: z.date().optional(),
+    trailDays: z.number().int().optional(),
+    billingAnchor: z.enum(["1st", "15th", "last of month"]).optional(),
+    allowProration: z.boolean().optional(),
+    other: z.object({
+        programId: z.number().min(1, "Program is required"),
+        cardId: z.string().optional(),
+    }),
+}).superRefine((data, ctx) => {
+    if (data.paymentMethod === "card" && !data.other.cardId) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Card ID is required for card payments",
+            path: ["other", "cardId"]
+        })
+    }
 });
 
-export const NewEnrollmentSchema = z.object({
-    programId: z.number(),
-    planId: z.number(),
-    startDate: z.date(),
-    endDate: z.date().optional(),
-    trail: z.number(),
-    paymentMethod: z.string(),
-})
+
+export const NewPackageSchema = z.object({
+    ...SubsAndPackageFields,
+    expireDate: z.date().optional(),
+    totalClassLimit: z.number().min(0, "Total class limit must be greater than 0").max(100, "Total class limit must be less than 100").optional(),
+}).superRefine((data, ctx) => {
+    if (data.paymentMethod === "card" && !data.other.cardId) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Card ID is required for card payments",
+            path: ["other", "cardId"]
+        })
+    }
+});
 
 export const AddChildMemberSchema = z.object({
     firstName: z.string(),

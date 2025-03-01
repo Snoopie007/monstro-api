@@ -11,7 +11,7 @@ export const contractTemplates = pgTable("contracts", {
     vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
     content: text("content"),
-    title: varchar("title"),
+    title: text("title"),
     isDraft: boolean("isDraft").notNull().default(true),
     editable: boolean("editable").notNull().default(true),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

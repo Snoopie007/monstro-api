@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, ScrollArea, Skeleton } from '
 import React from 'react'
 import AddCard from './AddCard';
 import { Elements } from '@stripe/react-stripe-js';
-import { getStripe } from '@/libs/stripe';
+import { getStripe } from '@/libs/client/stripe';
 import Stripe from 'stripe';
 import CardActions from './CardAction';
 

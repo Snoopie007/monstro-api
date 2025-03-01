@@ -1,1 +1,1 @@
-export * from './member-payment-methods';
+export * from './MemberPaymentMethods';

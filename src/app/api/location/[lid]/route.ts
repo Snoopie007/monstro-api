@@ -17,10 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ lid:
         const decodedId = decodeId(lid);
         const location = await db.query.locations.findFirst({
             where: (location, { eq }) => eq(location.id, decodedId),
-            columns: {
-                progress: true,
-                status: true,
-            }
+
         })
 
         return NextResponse.json(location, { status: 200 })

@@ -5,10 +5,10 @@ import {
     CardContent,
     CardTitle,
 } from "@/components/ui"
-import AddPaymentMethod from "./add-method"
+import AddPaymentMethod from "./AddMethod"
 
 import { Elements } from "@stripe/react-stripe-js"
-import { getStripe } from "@/libs/stripe"
+import { getStripe } from "@/libs/client/stripe"
 import PaymentMethodsActions from "./actions"
 import { useMember, useMemberPaymentMethods } from "../../providers/MemberContext"
 

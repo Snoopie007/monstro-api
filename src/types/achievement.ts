@@ -8,7 +8,6 @@ export type Action = {
     count: number
 }
 
-
 export type Achievement = {
     id?: number,
     title: string,
@@ -19,5 +18,5 @@ export type Achievement = {
     actions: Action[] | [],
     program?: Program,
     actionCount: number,
-    members?: Array<Member>
+    members?: Member[]
 }

@@ -1,3 +1,5 @@
+import { MemberInvoice, MemberSubscription } from "./member";
+import { Transaction } from "./transaction";
 
 export type Location = {
     id: number;
@@ -16,7 +18,10 @@ export type Location = {
     metadata: Record<string, any> | null;
     logoUrl: string | null;
     timezone: string | null;
-    locationState: LocationState;
+    locationState?: LocationState;
+    memberInvoices?: MemberInvoice[];
+    memberSubscriptions?: MemberSubscription[];
+    transactions?: Transaction[];
     created: Date;
     updated: Date | null;
     deleted: Date | null;
@@ -29,9 +34,17 @@ export type LocationState = {
     paymentPlanId: number | null;
     agreeToTerms: boolean;
     lastRenewalDate: Date | null;
-    activationDate: Date | null;
-    metadata: Record<string, any> | null;
+    startDate: Date | null;
+    settings: LocationSettings;
     status: string;
     created: Date;
     updated: Date | null;
 }
+
+export type LocationSettings = {
+    applicationFeePercent: number;
+
+    aiBotTotal: number;
+}
+
+
