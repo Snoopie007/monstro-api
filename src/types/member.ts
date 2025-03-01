@@ -67,7 +67,7 @@ export type MemberPackage = {
     expireDate: Date | null;
     status: 'active' | 'expired' | 'incomplete' | 'completed';
     paymentMethod: string;
-    totalClassAttended?: number;
+    totalClassAttended: number;
     totalClassLimit: number;
     metadata?: Record<string, any>;
     plan?: MemberPlan;
@@ -120,6 +120,8 @@ export type MemberInvoice = {
     discount: number;
     subtotal: number;
     dueDate?: Date;
+    forPeriodStart?: Date | null;
+    forPeriodEnd?: Date | null;
     attemptCount?: number;
     invoicePdf?: string | null;
     memberPackageId?: string | null;

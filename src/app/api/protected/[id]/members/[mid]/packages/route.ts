@@ -18,7 +18,10 @@ export async function GET(req: Request, props: { params: Promise<PackageProps> }
 
     try {
         const packages = await db.query.memberPackages.findMany({
-            where: (memberPackage, { eq }) => eq(memberPackage.beneficiaryId, params.mid),
+            where: (memberPackage, { eq, and }) => and(
+                eq(memberPackage.beneficiaryId, params.mid),
+                eq(memberPackage.locationId, params.id)
+            ),
             with: {
                 plan: true,
                 payer: {
@@ -63,7 +66,7 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
         }
 
         let { newTransaction, newPkg, newInvoice } = createPackage(data, plan, params)
-        if (data.paymentType === "card") {
+        if (data.paymentMethod === "card") {
 
             const stripe = await getStripeCustomer(params)
             const { clientSecret } = await stripe.createPaymentIntent(plan.price, {

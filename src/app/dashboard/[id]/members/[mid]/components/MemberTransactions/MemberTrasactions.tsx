@@ -26,7 +26,7 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
         <div className='py-4'>
             <div className='w-full flex flex-row items-center  gap-2'>
                 <div className='flex-initial'>
-                    <Input placeholder='Search transactions...' className='w-[250px] text-xs h-auto py-1 rounded-xs' />
+                    <Input placeholder='Search transactions...' className='w-[250px] text-xs h-8 py-2 rounded-xs' />
                 </div>
                 <div>
 
@@ -78,7 +78,7 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
                                             {t.description}
                                         </TableCell>
                                         <TableCell>
-                                            {t.paymentMethod === 'card' ? (
+                                            {(t.paymentMethod === 'card' && t.metadata?.card) ? (
                                                 <div className='flex flex-row items-center gap-1'>
                                                     <span className='capitalize'>
                                                         {t.metadata?.card.brand}

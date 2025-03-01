@@ -279,12 +279,12 @@ class MemberStripePayments extends BaseStripePayments {
             application_fee_percent: (100 - (applicationFeePercent || 0)) || 100,
             default_payment_method: paymentMethod || undefined,
             cancel_at: endDate ? endDate.getTime() / 1000 : undefined,
-            billing_cycle_anchor: startDate ? startDate.getTime() / 1000 : undefined,
+
             trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
-            // ...(isAfter(startDate, today) && {
-            //     billing_cycle_anchor: startDate,
-            //     trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
-            // }),
+            ...(startDate && isAfter(startDate, new Date()) && {
+                billing_cycle_anchor: startDate.getTime() / 1000,
+                trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
+            }),
         };
 
         return this._stripe.subscriptions.create(options);

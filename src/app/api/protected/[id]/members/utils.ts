@@ -1,6 +1,41 @@
-import { MemberPlan, MemberPackage, MemberInvoice, Transaction } from "@/types";
+import { MemberPlan, MemberPackage, MemberInvoice, Transaction, MemberSubscription } from "@/types";
+import { isAfter } from "date-fns";
 
 
+type BaseData = {
+    memberPlanId: number,
+    startDate: Date | string,
+    paymentMethod: string,
+}
+
+type PackageData = BaseData & {
+    expireDate?: Date,
+    totalClassLimit?: number,
+}
+
+type SubscriptionData = {
+    mid: number;
+    id: number;
+    memberPlanId: number;
+    beneficiaryId: number;
+    paymentMethod: string;
+    startDate: string;
+    endDate?: string;
+    trialDays?: number;
+}
+
+type BaseReturnType = {
+    newTransaction: Transaction,
+    newInvoice: MemberInvoice
+}
+
+type CreatePackageReturn = BaseReturnType & {
+    newPkg: MemberPackage,
+}
+
+type CreateSubscriptionReturn = BaseReturnType & {
+    newSubscription: MemberSubscription;
+}
 
 function calculateCurrentPeriodEnd(startDate: Date, plan: MemberPlan): Date {
     const endDate = new Date(startDate); // Initialize endDate with startDate
@@ -51,40 +86,58 @@ function calculateInvoice(plans: MemberPlan[], rest: { taxRate: number, discount
 }
 
 
-type createPackageReturnType = {
-    newTransaction: Transaction,
-    newPkg: MemberPackage,
-    newInvoice: MemberInvoice
-}
-
-type PackageData = {
-    memberPlanId: number,
-    startDate: Date,
-    expireDate?: Date,
+function createTransaction(
+    plan: MemberPlan,
+    ids: { memberId: number, locationId: number },
     paymentMethod: string,
-    totalClassLimit?: number,
+): Transaction {
+    const today = new Date();
+    const description = plan.type === "recurring" ? `Subscription to ${plan.name}` : `One time payment for ${plan.name}`;
+    return {
+        ...ids,
+        chargeDate: today,
+        status: "incomplete",
+        transactionType: "incoming",
+        paymentType: plan.type,
+        paymentMethod,
+        description,
+        amount: plan.price,
+        currency: plan.currency,
+        item: plan.name,
+    };
 }
 
+function createInvoice(plan: MemberPlan, ids: { memberId: number, locationId: number }): MemberInvoice {
+    const description = plan.type === "recurring" ? `Subscription to ${plan.name}` : `Payment for ${plan.name}`;
+    return {
+        ...calculateInvoice([plan], { taxRate: 0, discount: 0 }),
+        ...ids,
+        description,
+        currency: plan.currency,
+        paid: false,
+        status: "draft",
+    };
+}
 
 function createPackage(
     data: PackageData,
     plan: MemberPlan,
     params: { mid: number, id: number },
-): createPackageReturnType {
-
+): CreatePackageReturn {
     const today = new Date();
-
-    const startDate = new Date(data.startDate)
-    const endDate = calculateCurrentPeriodEnd(startDate, plan)
-    const expireDate = data.expireDate ? new Date(data.expireDate) : plan.expireDate ? new Date(plan.expireDate) : null
+    const startDate = new Date(data.startDate);
+    const endDate = calculateCurrentPeriodEnd(startDate, plan);
+    const expireDate = data.expireDate ? new Date(data.expireDate) : plan.expireDate ? new Date(plan.expireDate) : null;
 
     const ids = {
         memberId: params.mid,
         locationId: params.id,
-    }
+        paymentMethod: data.paymentMethod,
+    };
 
     const newPkg: MemberPackage = {
         ...data,
+        totalClassAttended: 0,
         startDate: startDate,
         endDate: endDate,
         expireDate: expireDate,
@@ -95,35 +148,63 @@ function createPackage(
         totalClassLimit: plan.totalClassLimit || 0,
         created: today,
         status: "incomplete",
-    }
-
-    const newTransaction: Transaction = {
-        ...data,
-        ...ids,
-        item: `${plan.name}`,
-        description: `One time payment for ${plan.name}`,
-        amount: plan.price,
-        currency: plan.currency,
-        paymentType: plan.type,
-        chargeDate: today,
-        status: "incomplete",
-        transactionType: "incoming",
     };
 
-    const newInvoice: MemberInvoice = {
-        ...calculateInvoice([plan], { taxRate: 0, discount: 0 }),
-        ...ids,
-        description: `Payment for ${plan.name}`,
-        currency: plan.currency,
-        paid: false,
-        status: "draft",
+    const newTransaction = createTransaction(plan, ids, data.paymentMethod);
+
+    const newInvoice = createInvoice(plan, ids);
+
+    return { newTransaction, newPkg, newInvoice };
+}
+
+function createSubscription(data: SubscriptionData, plan: MemberPlan): CreateSubscriptionReturn {
+    const today = new Date();
+    const startDate = new Date(data.startDate);
+    const endDate = calculateCurrentPeriodEnd(startDate, plan);
+
+    const ids = {
+        memberId: data.mid,
+        locationId: data.id,
+        paymentMethod: data.paymentMethod,
+    };
+
+    let trialEnd: Date | undefined;
+    if (data.trialDays) {
+        if (isAfter(startDate, today)) {
+            trialEnd = new Date(Math.max(startDate.getTime(), (startDate.getTime() + data.trialDays * 24 * 60 * 60 * 1000)));
+        } else {
+            trialEnd = new Date(Math.max(today.getTime(), (today.getTime() + data.trialDays * 24 * 60 * 60 * 1000)));
+        }
     }
 
-    return { newTransaction, newPkg, newInvoice }
+    const newSubscription: MemberSubscription = {
+        payerId: data.mid,
+        beneficiaryId: data.beneficiaryId || data.mid,
+        locationId: data.id,
+        planId: data.memberPlanId,
+        startDate,
+        currentPeriodStart: startDate,
+        currentPeriodEnd: endDate,
+        paymentType: data.paymentMethod,
+        status: "incomplete",
+        trialEnd,
+    };
+
+    const newTransaction = createTransaction(plan, ids, data.paymentMethod);
+    const newInvoice = {
+        ...createInvoice(plan, ids),
+        forPeriodStart: startDate,
+        forPeriodEnd: endDate,
+    }
+
+    return { newSubscription, newTransaction, newInvoice };
 }
+
+
 
 export {
     calculateCurrentPeriodEnd,
     calculateInvoice,
-    createPackage
+    createPackage,
+    createSubscription,
 }
