@@ -222,10 +222,8 @@ type BaseStripeSettings = {
 }
 
 interface MemberSubscriptionSettings extends BaseStripeSettings {
-    priceId: string,
-    startDate: Date,
-    endDate: Date | undefined,
-    trialDays: number,
+    endDate: Date | null | undefined,
+    trialEnd: Date | null | undefined,
 }
 
 interface PaymentIntentSettings extends BaseStripeSettings {
@@ -264,21 +262,13 @@ class MemberStripePayments extends BaseStripePayments {
 
 
 
-    async createSubscription(settings: MemberSubscriptionSettings) {
+    async createSubscription(priceId: string, startDate: Date | undefined, settings: MemberSubscriptionSettings) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
-        const { priceId, startDate, endDate, trialDays, paymentMethod, applicationFeePercent, ...rest } = settings;
+        const { endDate, trialEnd, paymentMethod, applicationFeePercent, ...rest } = settings;
 
-        /**
-         * Convert date to Unix timestamp (seconds since epoch)
-         * Math.floor ensures we get a whole number of seconds
-         * Stripe API requires timestamps in seconds, not milliseconds
-         */
 
-        const start = Math.floor(startDate.getTime() / 1000);
-        const today = new Date();
-        // const trialEnd = Math.floor(trialEndDate.getTime() / 1000);
 
         const options: Stripe.SubscriptionCreateParams = {
             ...rest,
@@ -289,20 +279,22 @@ class MemberStripePayments extends BaseStripePayments {
             application_fee_percent: (100 - (applicationFeePercent || 0)) || 100,
             default_payment_method: paymentMethod || undefined,
             cancel_at: endDate ? endDate.getTime() / 1000 : undefined,
-            ...(isAfter(startDate, today) && {
-                billing_cycle_anchor: start,
-                trial_end: trialDays > 0 ? Math.max(start, Math.floor((start + trialDays * 24 * 60 * 60) / 1000)) : undefined,
-            }),
+            billing_cycle_anchor: startDate ? startDate.getTime() / 1000 : undefined,
+            trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
+            // ...(isAfter(startDate, today) && {
+            //     billing_cycle_anchor: startDate,
+            //     trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
+            // }),
         };
 
         return this._stripe.subscriptions.create(options);
     }
 
-    createSubSchedule(settings: MemberSubscriptionSettings): Promise<Stripe.SubscriptionSchedule> {
+    createSubSchedule(priceId: string, startDate: Date, settings: MemberSubscriptionSettings): Promise<Stripe.SubscriptionSchedule> {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
-        const { priceId, startDate, endDate, paymentMethod, applicationFeePercent, ...rest } = settings;
+        const { endDate, paymentMethod, applicationFeePercent, ...rest } = settings;
 
         const options: Stripe.SubscriptionScheduleCreateParams = {
             customer: this._customer,
