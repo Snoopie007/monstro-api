@@ -11,6 +11,7 @@ export const achievements = pgTable("achievements", {
     description: varchar("description").notNull(),
     badge: varchar("badge").notNull(),
     points: integer("points").notNull(),
+    icon: varchar("icon").notNull(),
     programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

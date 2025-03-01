@@ -1,6 +1,6 @@
 
 import { desc, relations } from "drizzle-orm";
-import { integer, varchar, serial, timestamp, pgTable, jsonb, time, text, boolean } from "drizzle-orm/pg-core";
+import { integer, varchar, serial, timestamp, pgTable, jsonb, time, text, boolean, pgEnum, smallint } from "drizzle-orm/pg-core";
 import { programLevels, programs } from "./programs";
 import { members } from "./members";
 import { attendances } from "./attendances";
@@ -8,9 +8,9 @@ import { attendances } from "./attendances";
 
 export const reservations = pgTable("reservations", {
     id: serial("id").primaryKey(),
-    sessionId: integer("session_id").references(() => sessions.id, { onDelete: "cascade" }),
+    sessionId: integer("session_id").references(() => classSessions.id, { onDelete: "cascade" }),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
-    status: varchar("status"),
+    status: integer("status"),
     startDate: timestamp("start_date", { withTimezone: true }),
     endDate: timestamp("end_date", { withTimezone: true }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -18,11 +18,10 @@ export const reservations = pgTable("reservations", {
     deleted: timestamp('deleted_at', { withTimezone: true })
 });
 
-export const sessions = pgTable("sessions", {
+export const classSessions = pgTable("class_sessions", {
     id: serial("id").primaryKey(),
     programLevelId: integer("program_level_id").references(() => programLevels.id, { onDelete: "cascade" }),
     programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
-    // durationTime: text("duration_time"),
     duration_time: text("duration_time"),
     startDate: timestamp("start_date", { withTimezone: true }),
     endDate: timestamp("end_date", { withTimezone: true }),
@@ -33,18 +32,17 @@ export const sessions = pgTable("sessions", {
     friday: time("friday"),
     saturday: time("saturday"),
     sunday: time("sunday"),
-    status: boolean("status"),
+    status: smallint("status"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })
 });
 
-
 export const reservationsRelations = relations(reservations, ({ one, many }) => ({
     attendances: many(attendances),
-    session: one(sessions, {
+    session: one(classSessions, {
         fields: [reservations.sessionId],
-        references: [sessions.id],
+        references: [classSessions.id],
     }),
     member: one(members, {
         fields: [reservations.memberId],
@@ -52,14 +50,14 @@ export const reservationsRelations = relations(reservations, ({ one, many }) => 
     })
 }))
 
-export const sessionsRelations = relations(sessions, ({ one, many }) => ({
+export const sessionsRelations = relations(classSessions, ({ one, many }) => ({
 
     program: one(programs, {
-        fields: [sessions.programId],
+        fields: [classSessions.programId],
         references: [programs.id],
     }),
     level: one(programLevels, {
-        fields: [sessions.programLevelId],
+        fields: [classSessions.programLevelId],
         references: [programLevels.id],
     }),
     reservations: many(reservations)

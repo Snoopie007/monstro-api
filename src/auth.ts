@@ -56,10 +56,7 @@ export const {
 		session: async ({ session, token }: { session: Session, token: ExtendedUser }) => {
 			session.user = token
 			return session;
-		},
-		signIn: async ({ account, profile, user, credentials }) => {
-			return true;
-		},
+		}
 	},
 	secret: process.env.AUTH_SECRET || "monstro@123",
 	// debug: process.env.NODE_ENV === "production",

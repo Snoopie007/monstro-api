@@ -40,7 +40,7 @@ export function UpsertAchivement({ achievement, locationId, setCurrentAchievemen
 			description: achievement?.description ?? '',
 			icon: achievement?.icon ?? '',
 			badge: achievement?.badge ?? '',
-			points: Number(achievement?.points) ?? 0,
+			points: achievement?.points ?? 0,
 			actionCount: achievement?.actions?.[0]?.count ?? 0,
 			action: achievement?.actions?.[0]?.id ?? 0,
 			program: achievement?.program?.id ?? 0

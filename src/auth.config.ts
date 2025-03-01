@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { db } from "./db/db";
 import { tryCatch } from "./libs/utils";
 import { encodeId } from "./libs/server/sqids";
+import { SignJWT } from "jose";
 
 export default {
 	providers: [
@@ -54,26 +55,13 @@ export default {
 
 				if (!match) return null;
 
-				const { result, error } = await tryCatch(
-					fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
-						method: "POST",
-						headers: { "Content-type": "application/json" },
-						body: JSON.stringify({
-							email: credentials.email,
-						}),
-					})
-				)
+				// Create a JWT token
+				const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+				const jwt = new SignJWT(user).setProtectedHeader({alg: "HS256"}).setExpirationTime("1d").setIssuedAt().sign(secret);
 
-
-				if (error || !result || !result.ok) return null;
-
-				const { data: { token } } = await result.json();
-
-				const { vendor: { locations, ...v }, ...rest } = user;
-
+				const { vendor: { locations, ...vendor }, ...rest } = user;
 				const encodedLocations = locations.map(location => {
 					const { locationState, ...restData } = location;
-
 					return {
 						...restData,
 						id: encodeId(location.id),
@@ -85,13 +73,13 @@ export default {
 					id: rest.id.toString(),
 					name: rest.name,
 					email: rest.email,
-					phone: v.phone,
-					image: v?.icon,
-					vendorId: v?.id,
-					vendorPhone: v?.phone,
-					stripeCustomerId: v?.stripeCustomerId,
+					phone: vendor.phone,
+					image: vendor?.icon,
+					vendorId: vendor?.id,
+					vendorPhone: vendor?.phone,
+					stripeCustomerId: vendor?.stripeCustomerId,
 					role: 'vendor',
-					token: token,
+					token: jwt,
 					locations: encodedLocations,
 				};
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
-import { achievements } from '@/db/schemas';
+import { achievements, achievementsActions } from '@/db/schemas';
 
 export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
 	const params = await props.params;
@@ -37,14 +37,26 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
 	const params = await props.params;
 	const session = await auth();
-	const data = await req.json()
+	const data: any = await req.json()
 	try {
-
-		const achievement = await db.insert(achievements).values({
-			...data,
-			locationId: params.id
-		}).returning({ id: achievements.id });
-		return NextResponse.json(achievement, { status: 200 });
+		await db.transaction(async (trx) => {
+			const [achievement] = await trx.insert(achievements).values({
+				badge: data.badge,
+				title: data.title,
+				description: data.description,
+				icon: data.icon,
+				points: Number(data.points),
+				programId: data.program ? Number(data.program) : null,
+				locationId: Number(params.id),
+			}).returning({ id: achievements.id });
+		
+			await trx.insert(achievementsActions).values({
+				count: Number(data.actionCount),
+				achievementId: achievement.id,
+				actionId: Number(data.action),
+			}).returning();
+		});
+		return NextResponse.json("added", { status: 200 });
 		// if (session) {
 		// 	const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/achievements`, {
 		// 		method: 'POST',
