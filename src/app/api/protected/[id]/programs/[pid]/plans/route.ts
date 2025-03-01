@@ -2,6 +2,9 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
+import { memberPlans } from '@/db/schemas';
+import { and } from 'drizzle-orm';
+import { MemberStripePayments } from '@/libs/server/stripe';
 
 
 export async function GET(req: Request, props: { params: Promise<{ pid: number, id: number }> }) {
@@ -22,26 +25,54 @@ export async function GET(req: Request, props: { params: Promise<{ pid: number, 
 }
 
 
-export async function POST(req: Request, props: { params: Promise<{ id: string, pid: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ id: number, pid: number }> }) {
     const params = await props.params;
     const session = await auth();
     const data = await req.json()
     try {
         if (session) {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/add-member-plan/${params.pid}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session.user.token}`,
-                    "locationId": `${params.id}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-            if (!res.ok) {
-                return NextResponse.json({ message: "An error occurred saving plan." }, { status: 400 });
+            let stripePiceId = "";
+            if(data.pricing.billingPeriod != "One Time") {
+                const interation = await db.query.integrations.findFirst({
+                    where: (interations, { eq }) => and(
+                        eq(interations.locationId, params.id),
+                        eq(interations.service, "stripe")
+                    )
+                });
+                
+                if(interation && interation.secretKey) {
+                    const stripe = new MemberStripePayments(interation.secretKey);
+                    const stripePrice = await stripe.createStripeProduct(
+                        {
+                            name: data.name,
+                            description: data.description,
+                            amount: (data.pricing.amount * 100),
+                            billingPeriod: data.pricing.billingPeriod,
+                            currency: "usd"
+                        }
+                    );
+                    console.log(stripePrice);
+                    stripePiceId = stripePrice.id;
+                }
+
             }
-            const response = await res.json();
-            return NextResponse.json(response, { status: 200 });
+            const newPlan = db.transaction(async (trx) => {
+                const [plan] = await trx.insert(memberPlans).values({
+                    name: data.name,
+                    programId: params.pid,
+                    created: new Date(),
+                    stripePriceId: stripePiceId,
+                    description: data.description,
+                    currency: "usd",
+                    price: (data.pricing.amount * 100),
+                    family: data.family,
+                    familyMemberLimit: data.familyMemberLimit,
+                    contractId: data.contractId ?? null,
+                    interval: data.pricing.billingPeriod
+                }).returning({ id: memberPlans.id });
+                console.log(plan)
+            });
+            return NextResponse.json("Added", { status: 200 });
         }
     } catch (err) {
         console.log(err)

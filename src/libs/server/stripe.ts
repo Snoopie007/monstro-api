@@ -323,6 +323,22 @@ class MemberStripePayments extends BaseStripePayments {
         return this._stripe.subscriptionSchedules.create(options);
     }
 
+    async createStripeProduct(data: { name: string, description: string, currency: string, amount: number, billingPeriod: Stripe.PriceCreateParams.Recurring.Interval }): Promise<Stripe.Price> {
+        const product = await this._stripe.products.create({
+            name: data.name,
+            description: data.description
+        });
+        return await this._stripe.prices.create({
+            currency: data.currency,
+            recurring: {
+                interval: data.billingPeriod
+            },
+            unit_amount: data.amount,
+            product: product.id,
+            nickname: data.description
+        });
+    }
+
 }
 async function getStripeCustomer(params: { id: number, mid: number }) {
 

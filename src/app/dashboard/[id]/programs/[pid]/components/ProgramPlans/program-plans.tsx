@@ -152,10 +152,10 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
                                                     <p className="text-xs">{plan.description}</p>
                                                 </TableCell>
                                                 <TableCell className={CellStyle}>
-                                                    {plan.pricing.billingPeriod}
+                                                    {plan.interval}
                                                 </TableCell>
                                                 <TableCell className={CellStyle}>
-                                                    {convertToCurrency(plan.pricing.amount, '$', 'USD')}
+                                                    {convertToCurrency(plan.price, '$', 'USD')}
                                                 </TableCell>
                                                 <TableCell className={CellStyle}>
                                                     {plan.family ? 'Allowed' : 'N/A'}
