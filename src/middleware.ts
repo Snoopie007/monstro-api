@@ -73,25 +73,12 @@ export default auth(async (req) => {
       if (locations.length === 0 && pathname !== "/onboarding") {
         return NextResponse.redirect(new URL("/onboarding", req.nextUrl.origin))
       }
-		// Handle home page and dashboard redirects
-		if (isLoggedin) {
-
-			if (locations.length === 0 && pathname !== '/onboarding') {
-				return NextResponse.redirect(new URL("/onboarding", req.nextUrl.origin));
-			}
-
-			if (pathname === '/') {
-				const nextLocation = locations.find((loc: { status: string }) => loc.status === "Active") ||
-					locations.find((loc: { status: string }) => loc.status === "Pending");
-				return NextResponse.redirect(new URL(`/${nextLocation.status === "Active" ? "dashboard" : "onboarding"}/${nextLocation.id}`, req.nextUrl.origin));
-			}
 
       const [_, path, locationId] = pathname.match(/^\/((?:dashboard|onboarding))\/([^/]+)(\/.*)?$/) || []
 
       if (locationId) {
         let nextLocation = locations.find((loc: { id: string }) => loc.id === locationId)
 
-<<<<<<< HEAD
         if (!nextLocation) {
           nextLocation =
             locations.find((loc: { status: string }) => loc.status === "Active") ||
@@ -105,15 +92,6 @@ export default auth(async (req) => {
         ) {
           return NextResponse.redirect(new URL(`/dashboard/${nextLocation.id}`, req.nextUrl.origin))
         }
-=======
-			if (pathname === '/') {
-				const nextLocation = locations.find((loc: { status: string }) => loc.status === "Active") ||
-					locations.find((loc: { status: string }) => loc.status === "Pending");
-				return NextResponse.redirect(new URL(`/${nextLocation.status === "Active" ? "dashboard" : "onboarding"}/${nextLocation.id}`, req.nextUrl.origin));
-			}
-
-			const [_, path, locationId] = pathname.match(/^\/((?:dashboard|onboarding))\/([^/]+)(\/.*)?$/) || [];
->>>>>>> origin/vendor3
 
         const isOnboarding = nextLocation.status === "Pending"
         const targetPath = isOnboarding ? "onboarding" : "dashboard"
@@ -124,7 +102,6 @@ export default auth(async (req) => {
       }
     }
 
-<<<<<<< HEAD
     // Set cache headers for API and dashboard routes
     const response = NextResponse.next()
     if (pathname.startsWith("/api/") || pathname.startsWith("/dashboard/")) {
@@ -136,48 +113,7 @@ export default auth(async (req) => {
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 })
   }
 })
-=======
-					return NextResponse.redirect(new URL(`/dashboard/${nextLocation.id}`, req.nextUrl.origin));
-				}
-
-				const isOnboarding = nextLocation.status === 'Pending';
-				const targetPath = isOnboarding ? 'onboarding' : 'dashboard';
-
-
-
-				if (path !== targetPath) {
-					console.log(`a`)
-					return NextResponse.redirect(new URL(`/${targetPath}/${nextLocation.id}`, req.nextUrl.origin));
-				}
-			}
-		}
-
-		// Set cache headers for API and dashboard routes
-		const response = NextResponse.next();
-		if (pathname.startsWith("/api/") || pathname.startsWith("/dashboard/")) {
-			response.headers.set('Cache-Control', 'no-store, max-age=0');
-		}
-		return response;
-
-	} catch (error) {
-		console.error("Middleware error:", error);
-		return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
-	}
-});
->>>>>>> origin/vendor3
-
-
-function getNextLocation(locations: { id: string, status: string }[], locationId: string) {
-	const nextLocation = locations.find((loc: { id: string }) => loc.id === locationId)
-
-	if (!nextLocation) {
-		return locations.find((loc: { status: string }) => loc.status === "Active") ||
-			locations.find((loc: { status: string }) => loc.status === "Pending");
-	}
-	return nextLocation
-}
 
 export const config = {
   matcher: ["/((?!sign-in|_next/static|_next/image|images|favicon.ico).*)"],
 }
-
