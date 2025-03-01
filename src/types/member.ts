@@ -52,7 +52,7 @@ export type MemberSubscription = {
     metadata?: Record<string, any>;
     invoices?: MemberInvoice[];
     status: MemberSubscriptionStatus;
-    created: Date;
+    created?: Date;
     updated?: Date | null;
 }
 
