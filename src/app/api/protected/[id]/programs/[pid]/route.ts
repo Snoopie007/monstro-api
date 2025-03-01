@@ -19,16 +19,12 @@ export async function GET(req: Request, props: { params: Promise<{ id: string, p
 						with: {
 							sessions: {
 								with: {
-									enrollments: true
+									reservations: true
 								}
 							},
 						}
 					},
-					plans: {
-						with: {
-							pricing: true
-						}
-					},
+					plans: true,
 				},
 				extras: {
 					memberCount: sql<number>`(SELECT count(*) FROM member_programs WHERE member_programs.program_id = programs.id)`.as("memberCount")
