@@ -20,7 +20,7 @@ import {
 } from "@/components/forms";
 import { toast } from "react-toastify";
 import { LucideLoader2 } from "lucide-react";
-import { ForgotPasswordSchema } from "../../schema";
+import { ForgotPasswordSchema } from "@/libs/schemas";
 
 
 export default function ForgotPassword() {

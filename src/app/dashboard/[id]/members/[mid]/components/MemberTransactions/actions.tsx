@@ -40,8 +40,8 @@ export default function MemberPaymentActions({ transaction, memberId, locationId
                 <DropdownMenuSeparator className='mb-2' />
                 <DropdownMenuItem
                     className='cursor-pointer bg-red-500 hover:bg-red-800 text-white font-semibold '
-                    disabled={(transaction.status === 'past_due')}
-                    onClick={() => makeARefund(transaction.id)}
+                    disabled={(transaction.status === 'incomplete')}
+                    onClick={() => makeARefund(Number(transaction.id))}
                 >
                     Refund
                 </DropdownMenuItem>

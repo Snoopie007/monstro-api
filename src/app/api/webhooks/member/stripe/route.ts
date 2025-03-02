@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { db } from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
 import { eq } from "drizzle-orm";
+import { MemberSubscription } from "@/types";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
   apiVersion: "2025-01-27.acacia",
@@ -78,7 +79,7 @@ async function processEvent(event: Stripe.Event) {
 async function handleSubscriptionUpdated(event: Stripe.Event) {
   const subscription = event.data.object as Stripe.Subscription;
   const localSubscription = db.update(memberSubscriptions).set({
-    status: subscription.status
+    status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
   }).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
 
   console.log("Subscription updated:", localSubscription);
@@ -88,7 +89,7 @@ async function handleSubscriptionUpdated(event: Stripe.Event) {
 async function handleSubscriptionDeleted(event: Stripe.Event) {
   const subscription = event.data.object as Stripe.Subscription;
   const localSubscription = db.update(memberSubscriptions).set({
-    status: subscription.status
+    status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
   }).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
 
   console.log("Subscription updated:", localSubscription);
@@ -97,7 +98,7 @@ async function handleSubscriptionDeleted(event: Stripe.Event) {
 async function handleSubscriptionPaused(event: Stripe.Event) {
   const subscription = event.data.object as Stripe.Subscription;
   const localSubscription = db.update(memberSubscriptions).set({
-    status: subscription.status
+    status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
   }).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
 
   console.log("Subscription updated:", localSubscription);
@@ -107,7 +108,7 @@ async function handleSubscriptionPaused(event: Stripe.Event) {
 async function handleSubscriptionResumed(event: Stripe.Event) {
   const subscription = event.data.object as Stripe.Subscription;
   const localSubscription = db.update(memberSubscriptions).set({
-    status: subscription.status
+    status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
   }).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
 
   console.log("Subscription updated:", localSubscription);

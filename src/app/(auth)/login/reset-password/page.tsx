@@ -19,8 +19,8 @@ import {
 } from "@/components/forms/form";
 import { Input } from "@/components/forms";
 import { toast } from "react-toastify";
-import { ResetPasswordSchema } from "../../schema";
 import { LucideLoader2 } from "lucide-react";
+import { ResetPasswordSchema } from "@/libs/schemas";
 const InputStyle =
     "bg-white rounded-sm p-6 border border-gray-200 text-black shadow-none";
 

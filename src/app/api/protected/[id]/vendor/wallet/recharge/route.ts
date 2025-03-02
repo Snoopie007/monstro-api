@@ -1,10 +1,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { StripePayments } from '@/libs/server/stripe';
 import { auth } from '@/auth';
 import { eq, sql } from 'drizzle-orm';
 import { wallet } from '@/db/schemas';
+import { VendorStripePayments } from '@/libs/server/stripe';
 
 export async function POST(req: NextRequest, props: { params: Promise<{ id: number }> }) {
 
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
 
     const { amount, id } = body;
 
-    const stripe = new StripePayments();
+    const stripe = new VendorStripePayments();
     const session = await auth();
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

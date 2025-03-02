@@ -8,7 +8,7 @@ import {
 } from "@/components/ui";
 import { cn } from "@/libs/utils";
 import { z } from "zod";
-import { Contract, Plan } from '@/types'
+import { Contract, MemberPlan } from '@/types'
 import {
     Checkbox,
     Form,
@@ -37,8 +37,8 @@ import paymentmethods from "@/jsons/payment-methods.json"
 
 
 interface CreatePlanProps {
-    plan: Plan | null
-    onChange: (plan: Plan | null) => void,
+    plan: MemberPlan | null
+    onChange: (plan: MemberPlan | null) => void,
     locationId: string,
     programId: number
 }
@@ -62,11 +62,10 @@ export default function UpsertPlan({ plan, onChange, locationId, programId }: Cr
             name: plan?.name ?? "",
             description: plan?.description ?? "",
             family: plan?.family ?? false,
-            // programId: Number(programId),
             familyMemberLimit: plan?.familyMemberLimit ?? 0,
             pricing: {
-                amount: plan?.pricing.amount ?? 0.00,
-                billingPeriod: plan?.pricing.billingPeriod ?? ""
+                amount: plan?.price ?? 0.00,
+                billingPeriod: plan?.interval ?? ""
             },
             contractId: plan?.contractId ?? 0,
         },

@@ -12,7 +12,6 @@ import {
 import { ChevronLeft, Mail, PhoneCall } from "lucide-react";
 import { useRouter } from 'next/navigation'
 import UpdateMemberProfile from "./UpdateProfile";
-import { formatDateTime } from "@/libs/utils";
 import { useMember } from "../../providers/MemberContext";
 
 interface MemberProfileProps {

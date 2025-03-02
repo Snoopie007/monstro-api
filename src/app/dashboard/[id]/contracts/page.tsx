@@ -12,7 +12,6 @@ import {
 } from "@/components/ui";
 import { useSignedContracts } from '@/hooks/use-contracts';
 import { fetcher } from '@/libs/api';
-import { formatDateTime } from '@/libs/utils';
 
 import Loading from '@/components/loading';
 import Link from 'next/link';
@@ -86,7 +85,7 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                                             </TableCell>
 
                                             <TableCell className="text-sm py-1 border border-foreground/10">
-                                                {formatDateTime(contract.created)}
+                                                {contract.created}
                                             </TableCell>
 
                                             <TableCell className="text-sm flex flex-row items-center justify-center  py-1 border border-foreground/10">

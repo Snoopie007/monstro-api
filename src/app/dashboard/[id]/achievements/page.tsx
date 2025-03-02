@@ -1,7 +1,7 @@
 'use client'
 import React, { use, useState } from 'react';
 
-import { useAchievements } from '@/hooks/use-achievements'
+import { useAchievements } from '@/hooks'
 import { UpsertAchivement } from './components'
 import {
     TablePage, TablePageHeaderSection, TablePageHeaderTitle, TablePageHeader, TablePageContent,

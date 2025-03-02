@@ -1,10 +1,10 @@
 
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
-import { StripePayments } from '@/libs/server/stripe';
+import { VendorStripePayments } from '@/libs/server/stripe';
 
 
-const stripe = new StripePayments()
+const stripe = new VendorStripePayments()
 export async function POST(req: Request) {
     const session = await auth();
     const data = await req.json()

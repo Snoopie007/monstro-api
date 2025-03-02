@@ -1,4 +1,4 @@
-import { Member } from '@/types/member';
+import { Member, MemberPlan } from '@/types/member';
 import { SetStateAction, Dispatch, useState } from 'react'
 import {
     Button,
@@ -24,7 +24,6 @@ import { CountryCodes } from '@/libs/data';
 import PhoneInput from 'react-phone-number-input/input';
 import { usePrograms } from '@/hooks/use-programs';
 import { Program } from '@/types/program';
-import { Plan } from '@/types/plan';
 
 interface AddChildMemberProps {
     open: boolean;
@@ -255,7 +254,7 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
-                                                            {form.getValues("family.programId") && programs.find((program: Program) => program.id == form.getValues("family.programId")).plans.map((plan: Plan, index: number) => (
+                                                            {form.getValues("family.programId") && programs.find((program: Program) => program.id == form.getValues("family.programId")).plans.map((plan: MemberPlan, index: number) => (
                                                                 (plan.contractId && plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
                                                             ))}
                                                         </SelectContent>
