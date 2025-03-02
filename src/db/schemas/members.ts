@@ -90,6 +90,8 @@ export const memberInvoices = pgTable("member_invoices", {
     total: integer("total").notNull().default(0),
     discount: integer("discount").notNull().default(0),
     subtotal: integer("subtotal").notNull().default(0),
+    forPeriodStart: timestamp("for_period_start", { withTimezone: true }),
+    forPeriodEnd: timestamp("for_period_end", { withTimezone: true }),
     dueDate: timestamp("due_date", { withTimezone: true }).notNull().defaultNow(),
     attemptCount: integer("attempt_count").notNull().default(0),
     invoicePdf: text("invoice_pdf"),

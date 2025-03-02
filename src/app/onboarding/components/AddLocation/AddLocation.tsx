@@ -49,7 +49,7 @@ export default function AddLocation() {
 
     function selectAddress(result: Record<string, any>) {
         const { metadata, ...rest } = result;
-        console.log(rest)
+
         form.reset(rest);
         setMetadata(metadata);
         setEdit(true);
@@ -79,6 +79,7 @@ export default function AddLocation() {
             return toast.error("Failed to add location, please try again.");
         }
         const data = await result.json();
+        console.log(data)
         localStorage.setItem("locationId", data.id);
 
         update({

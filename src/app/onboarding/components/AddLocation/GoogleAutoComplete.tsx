@@ -55,12 +55,9 @@ export function AutoComplete({ onSelectChange }: AutoCompleteProps) {
             !place.name
         ) return;
 
-
-
         const fullAddress = place.address_components;
         const getAddressComponent = (type: string, shortName: boolean = false) =>
             fullAddress.find(comp => comp.types.includes(type))?.[shortName ? "short_name" : "long_name"] || "";
-
 
         onSelectChange({
             name: place.name,

@@ -10,7 +10,7 @@ import { vendors } from "./vendors";
 import { memberSubscriptions } from "./MemberPlans";
 import { LocationSettings } from "@/types";
 
-const LocationStatusEnum = pgEnum("location_status", ["Pending", "Active", "Inactive", "Past due", "Cancelled", "Failed Payment"])
+const LocationStatusEnum = pgEnum("location_status", ["incomplete", "active", "inactive", "past_due", "canceled", "archived", "paused", "trailing"])
 
 export const locations = pgTable("locations", {
     id: serial("id").primaryKey(),
@@ -43,7 +43,8 @@ export const locationState = pgTable("location_state", {
     lastRenewalDate: timestamp('last_renewal_date', { withTimezone: true }),
     startDate: timestamp('start_date', { withTimezone: true }),
     settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),
-    status: LocationStatusEnum("status").notNull().default("Pending"),
+    usagePercent: integer("usage_percent").notNull().default(0),
+    status: LocationStatusEnum("status").notNull().default("incomplete"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });

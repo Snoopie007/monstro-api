@@ -7,6 +7,7 @@ import { format } from "date-fns"
 import { Badge } from "@/components/ui"
 import { MemberInvoice } from "@/types/member"
 import { formatAmountForDisplay } from "@/libs/utils"
+import Link from "next/link"
 
 export function MemberInvoices({ params }: { params: { id: string, mid: number } }) {
     const { invoices, isLoading, error } = useMemberInvoices(params.id, params.mid)
@@ -24,7 +25,7 @@ export function MemberInvoices({ params }: { params: { id: string, mid: number }
                 <Table className=''>
                     <TableHeader>
                         <TableRow>
-                            {["Amount", "Description", "Payment Method", "Date", ""].map((header, index) => (
+                            {["ID", "Description", "Total", "Date", "Status", ''].map((header, index) => (
                                 <TableHead key={index} className='text-xs h-auto py-2'>
                                     {header}
                                 </TableHead>
@@ -50,20 +51,23 @@ export function MemberInvoices({ params }: { params: { id: string, mid: number }
                                     invoices.map((invoice: MemberInvoice) => (
                                         <TableRow key={invoice.id}>
                                             <TableCell>
-                                                {formatAmountForDisplay(invoice.total / 100, invoice.currency!)}
+                                                {invoice.id}
                                             </TableCell>
                                             <TableCell>
                                                 {invoice.description}
                                             </TableCell>
+
                                             <TableCell>
+                                                {formatAmountForDisplay(invoice.total / 100, invoice.currency!)}
 
                                             </TableCell>
                                             <TableCell>
-                                                {format(invoice.created!, "MMM d, yyyy")}
+                                                {format(invoice.created!, "MMM d, yyyy, h:mm a")}
                                             </TableCell>
                                             <TableCell>
-                                                {/* <Badge size="tiny" s={invoice.status}>{invoice.status}</Badge> */}
+                                                <Badge size="tiny" inv={invoice.status}>{invoice.status}</Badge>
                                             </TableCell>
+
                                         </TableRow>
                                     ))
                                 ) : (

@@ -3,11 +3,13 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { locations, locationState, vendorProgress } from '@/db/schemas';
 import { encodeId } from '@/libs/server/sqids';
+
 const DEFAULT_LOCATION_STATE = {
     planId: null,
     paymentPlanId: null,
     agreeToTerms: false,
     pkgId: null,
+    usagePercent: 0,
 }
 
 export async function POST(req: Request) {
@@ -17,23 +19,20 @@ export async function POST(req: Request) {
         const location = await db.transaction(async (tx) => {
             const [location] = await tx.insert(locations).values({
                 ...data,
-                phone: data.phone.startsWith('+') ? data.phone.replace(/[^0-9+]/g, '') : `+${data.phone.replace(/[^0-9]/g, '')}`,
-                created: new Date(),
+                phone: data.phone.startsWith('+') ? data.phone.replace(/[^0-9+]/g, '') : `+${data.phone.replace(/[^0-9]/g, '')}`
             }).returning({ id: locations.id, name: locations.name });
 
-            const [{ status }] = await tx.insert(locationState).values({
+            await tx.insert(locationState).values({
                 locationId: location.id,
-                ...DEFAULT_LOCATION_STATE,
-                created: new Date()
-            }).returning({ status: locationState.status })
+                ...DEFAULT_LOCATION_STATE
+            })
 
             await tx.insert(vendorProgress).values({
                 vendorId: data.vendorId,
-                locationId: location.id,
-                created: new Date()
+                locationId: location.id
             })
 
-            return { ...location, status: "Pending" }
+            return { ...location, status: "incomplete" }
         });
 
         const encodedId = encodeId(location.id)
