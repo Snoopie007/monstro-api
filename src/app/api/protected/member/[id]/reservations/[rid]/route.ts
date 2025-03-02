@@ -30,7 +30,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, r
         }
       });
       // If no reservation found, return null
-      if (!reservation) return null;
+      if (!reservation) return NextResponse.json({ error: "something went wrong" }, { status: 500 });
 
       const todaysAttendance = await getTodaysAttendanceStatus(reservation.id);      
       if(reservation) {

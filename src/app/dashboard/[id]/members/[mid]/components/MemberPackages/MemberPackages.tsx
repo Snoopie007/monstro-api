@@ -66,7 +66,7 @@ export function MemberPackages({ params }: { params: { id: string, mid: number }
                                         {p.totalClassAttended}
                                     </TableCell>
                                     <TableCell>
-                                        {p.totalClassLimit - p.totalClassAttended}
+                                        {p.totalClassLimit - (p.totalClassAttended ?? 0)}
                                     </TableCell>
                                     <TableCell>
                                         {p.expireDate ? format(p.expireDate, 'MMM d, yyyy') : 'N/A'}

@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { and, eq, sql } from 'drizzle-orm';
+import { and } from 'drizzle-orm';
 import { decodeJWT, getCurrentTimeDetails } from '@/libs/utils';
 import { getTodaysAttendanceStatus } from '@/libs/server/db';
 import dayjs from 'dayjs';
@@ -25,7 +25,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number }
         }
       });
       // If no reservation found, return null
-      if (!reservation) return null;
+      if (!reservation) return NextResponse.json({ status: 400 });
       let currentDayOfWeek: string = "monday";
 
       let startTime: dayjs.Dayjs = dayjs();
@@ -56,6 +56,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number }
       });
       return NextResponse.json("Marked", { status: 200 })
     }
+    return NextResponse.json({ status: 400 })
   } catch (err) {
     console.log(err)
     return NextResponse.json({ error: err }, { status: 500 })

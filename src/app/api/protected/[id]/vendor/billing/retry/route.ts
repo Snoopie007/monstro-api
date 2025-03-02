@@ -1,13 +1,13 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { StripePayments } from '@/libs/server/stripe';
+import { VendorStripePayments } from '@/libs/server/stripe';
 
 export async function POST(req: Request, props: { params: Promise<{ id: number }> }) {
 
     const data = await req.json()
 
-    const stripe = new StripePayments()
+    const stripe = new VendorStripePayments()
 
     try {
 

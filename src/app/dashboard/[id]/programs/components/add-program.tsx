@@ -28,7 +28,7 @@ import { Session } from '@/types';
 
 
 
-export function AddProgram({ locationId }: { locationId: number }) {
+export function AddProgram({ locationId }: { locationId: string }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const form = useForm<z.infer<typeof NewProgramSchema>>({

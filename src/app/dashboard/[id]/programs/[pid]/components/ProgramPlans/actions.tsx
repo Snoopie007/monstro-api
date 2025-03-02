@@ -8,12 +8,12 @@ import {
     Button,
     DropdownMenuSeparator
 } from '@/components/ui'
-import { Plan } from '@/types'
+import { MemberPlan } from '@/types'
 
 
 interface PlanActionsProps {
-    plan: Plan | null
-    onChange: (plan: Plan | null) => void
+    plan: MemberPlan | null
+    onChange: (plan: MemberPlan | null) => void
 }
 
 export default function PlanActions({ plan, onChange }: PlanActionsProps) {

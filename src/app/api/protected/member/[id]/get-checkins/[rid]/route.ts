@@ -21,7 +21,6 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, r
           attendances: true
         }
       });
-      console.log(reservation)
 			return NextResponse.json({checkIns: reservation?.attendances}, { status: 200 });
 		}
 	} catch (err) {

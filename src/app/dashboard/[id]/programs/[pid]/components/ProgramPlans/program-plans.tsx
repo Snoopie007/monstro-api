@@ -9,10 +9,11 @@ import {
 } from "@/components/ui";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useMemo, useState } from "react";
-import { Plan } from "@/types";
 import UpsertPlan from "./upsert-plan";
 import { convertToCurrency } from "@/libs/utils";
 import { PencilIcon } from "lucide-react";
+import { MemberPlan } from "@/types";
+import { Plaster } from "next/font/google";
 
 const CellStyle = "text-sm py-4 px-6 ";
 
@@ -24,18 +25,18 @@ interface ProgramPlansProps {
 }
 
 export default function ProgramPlans({ programPlans, programId, vendorId, locationId }: ProgramPlansProps) {
-    const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
+    const [currentPlan, setCurrentPlan] = useState<MemberPlan | null>(null);
 
     const editPlanOptions = useMemo(() => {
         return {
             currentPlan,
-            onChange(plan: Plan | null) {
+            onChange(plan: MemberPlan | null) {
                 setCurrentPlan(plan);
             },
         };
     }, [currentPlan]);
 
-    async function create(plan: Plan | null) {
+    async function create(plan: MemberPlan | null) {
         if (plan && plan.id) {
             setCurrentPlan({
                 id: plan.id,
@@ -43,15 +44,20 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
                 description: plan.description,
                 family: plan.family,
                 programId: plan.programId,
-                vendorId: plan.vendorId,
                 familyMemberLimit: plan.familyMemberLimit,
                 contractId: plan.contractId,
-                pricing: {
-                    amount: plan.pricing.amount,
-                    billingPeriod: plan.pricing.billingPeriod,
-                    memberPlanId: plan.id,
-                    stripePriceId: plan.pricing.stripePriceId,
-                },
+                price: plan.price,
+                currency: plan.currency ?? "usd",
+                stripePriceId: plan.stripePriceId,
+                type: plan.type,
+                contract: plan.contract,
+                totalClassLimit: plan.totalClassLimit,
+                allowProration: plan.allowProration,
+                billingAnchorConfig: plan.billingAnchorConfig,
+                expireDate: plan.expireDate,
+                interval: plan.interval,
+                intervalClassLimit: plan.intervalClassLimit,
+                intervalThreshold: plan.intervalThreshold,
                 created: plan.created,
                 updated: plan.updated,
                 deleted: null,
@@ -62,14 +68,19 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
                 description: '',
                 family: false,
                 programId: programId,
-                vendorId: vendorId,
                 familyMemberLimit: 0,
-                pricing: {
-                    amount: 0.00,
-                    billingPeriod: '',
-                    memberPlanId: 0,
-                    stripePriceId: ''
-                },
+                price: 0,
+                currency: 'usd',
+                interval: null,
+                type: "recurring",
+                totalClassLimit: 0,
+                allowProration: false,
+                expireDate: new Date(),
+                billingAnchorConfig: null,
+                intervalClassLimit: 0,
+                intervalThreshold: 0,
+                stripePriceId: null,
+                contractId: null,
                 created: new Date(),
                 updated: new Date(),
                 deleted: new Date(),

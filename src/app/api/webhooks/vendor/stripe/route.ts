@@ -143,7 +143,7 @@ async function processInvoiceEvent(event: Stripe.Event) {
              * - It's the initial activation date
              * - It's the scheduled renewal date
              */
-            if (!isToday(state.activationDate, today) && !isToday(state.lastRenewalDate, today)) {
+            if (!isToday(state.startDate, today) && !isToday(state.lastRenewalDate, today)) {
                 return;
             }
             const lastRenewalDate = new Date(state.lastRenewalDate).setDate(new Date(state.lastRenewalDate).getDate() + 28);

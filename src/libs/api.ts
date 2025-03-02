@@ -41,7 +41,7 @@ async function getRegister(props: { url: string }) {
 }
 
 
-async function post(props: { url: string, data: any, id: number }) {
+async function post(props: { url: string, data: any, id: string }) {
 	return nextApi.post(`/api/protected/${props.id}/${props.url}`, props.data).then((res) => {
 		return res.data.data;
 	});

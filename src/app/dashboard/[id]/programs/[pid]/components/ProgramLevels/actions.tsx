@@ -8,7 +8,6 @@ import {
     Button,
     DropdownMenuSeparator
 } from '@/components/ui'
-import { enrollments } from '@/db/schemas'
 import { Level, Session } from '@/types'
 
 

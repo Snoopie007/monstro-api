@@ -8,7 +8,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { formatDateTime } from '@/libs/utils';
 import { CreateContract } from './components';
 import { useContracts } from '@/hooks/use-contracts';
 import SectionLoading from '@/components/section-loading';
@@ -69,7 +68,7 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                                         {contract.plans?.length}
                                                     </TableCell>
                                                     <TableCell className="text-sm ">
-                                                        {formatDateTime(contract.created)}
+                                                        {contract.created}
                                                     </TableCell>
                                                     <TableCell className="text-sm ">
                                                         {contract.isDraft ? (

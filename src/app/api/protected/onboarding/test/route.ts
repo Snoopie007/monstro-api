@@ -29,4 +29,14 @@
 //         return NextResponse.json({ error: err }, { status: 500 })
 //     }
 // }
+import { NextResponse } from 'next/server';
+export async function GET(req: Request) {
+	try {
+
+		return NextResponse.json({ status: 200 });
+	} catch (err) {
+		// console.log(err)
+		return NextResponse.json({ error: err }, { status: 500 })
+	}
+} 
 
