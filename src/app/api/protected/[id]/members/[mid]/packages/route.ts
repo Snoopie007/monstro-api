@@ -66,28 +66,30 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
         }
 
         let { newTransaction, newPkg, newInvoice } = createPackage(data, plan, params)
+        let clientSecret: string | undefined;
         if (data.paymentMethod === "card") {
 
             const stripe = await getStripeCustomer(params)
-            const { clientSecret } = await stripe.createPaymentIntent(plan.price, {
+            const res = await stripe.createPaymentIntent(plan.price, {
                 paymentMethod: stripePaymentMethod.id,
                 currency: plan.currency,
                 applicationFeePercent: (locationState.usagePercent / 100),
                 description: `One time payment for ${plan.name}`
             })
 
-            if (clientSecret) {
-                newTransaction.status = "paid"
+            if (res.clientSecret) {
+                clientSecret = res.clientSecret
                 newTransaction.metadata = {
                     card: { brand: stripePaymentMethod.card?.brand, last4: stripePaymentMethod.card?.last4 }
                 }
-                newPkg.status = "active"
-                newInvoice.status = "paid"
+
             }
-        } else {
-            newTransaction.status = "incomplete"
-            newPkg.status = "incomplete"
-            newInvoice.status = "unpaid"
+        }
+
+        if (data.paymentType !== "card" || clientSecret) {
+            newTransaction.status = "paid"
+            newPkg.status = "active"
+            newInvoice.status = "paid"
         }
 
 

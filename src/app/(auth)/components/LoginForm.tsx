@@ -55,7 +55,7 @@ export default function LoginForm() {
 			let redirect = '/onboarding';
 			if (location.id && location.status) {
 				localStorage.setItem('locationId', location.id);
-				redirect = location.status === "Pending" ? `/onboarding/${location.id}` : `/dashboard/${location.id}`
+				redirect = location.status === "incomplete" ? `/onboarding/${location.id}` : `/dashboard/${location.id}`
 			}
 
 			router.push(redirect);

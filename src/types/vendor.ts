@@ -50,6 +50,7 @@ export type MonstroPlan = {
     id: number;
     name: string;
     price: number;
+    usagePercent: number;
     interval: string;
     benefits: { name: string, description?: string }[];
     description: string;

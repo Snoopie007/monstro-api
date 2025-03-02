@@ -32,22 +32,18 @@ import { CreateMemberSchema } from '../schema';
 import PhoneInput from 'react-phone-number-input/input';
 import { CountryCodes } from '@/libs/data';
 import { CountryCode, MemberPlan, Program } from '@/types';
-import { RadioGroup, RadioGroupItem } from '@/components/forms';
 import NewMemberPaymentForm from './MemberPaymentForm';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/libs/client/stripe';
 import { usePrograms } from '@/hooks/use-programs';
-import { addMemberManually } from '@/libs/api';
-import paymentmethods from "@/jsons/payment-methods.json";
 import useSWR from 'swr';
-
+import { PaymentMethods } from '@/libs/data';
 
 interface CreateMemberProps {
     locationId: string
     stripeKey: string | null
 }
 
-const paymentMethods: { label: string, value: string }[] = paymentmethods;
 
 export default function AddMember({ locationId, stripeKey }: CreateMemberProps) {
     const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
@@ -65,29 +61,29 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
             email: "",
             phone: "",
             billing: {
-                stripeToken: "",
-                cardHolderName: ""
+                name: ""
             },
-            planId: 0,
-            programId: 0,
+            planId: undefined,
+            programId: undefined,
             paymentMethod: "",
             paymentMode: ""
         },
         mode: "onChange",
     })
 
-    const watchPaymentMethod = form.watch("paymentMethod");
-    const watchProgramId = form.watch("programId");
+    const paymentMethod = form.watch("paymentMethod");
+    const programId = form.watch("programId");
+    const planId = form.watch("planId");
 
     useEffect(() => {
-        if (watchProgramId) {
-            setPlans(programs.find((program: Program) => program.id == watchProgramId).plans);
+        if (programId) {
+            setPlans(programs.find((program: Program) => program.id == programId).plans);
         }
-    }, [watchProgramId]);
+    }, [programId]);
 
     async function onSubmit(v: z.infer<typeof CreateMemberSchema>) {
-        // console.log(v);
-        // const member = await addMemberManually(v, locationId);
+
+
 
         await mutate();
         form.reset();
@@ -212,16 +208,16 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                             <SheetSection >
                                 <div className='mb-2 border-b border-foreground/20  pb-2'>
                                     <FormLabel className='text-sm font-bold'>
-                                        Subscription Details
+                                        Subscription or Package Details
                                     </FormLabel>
 
                                 </div>
-                                <fieldset>
+                                <fieldset className='flex flex-row gap-2'>
                                     <FormField
                                         control={form.control}
                                         name="programId"
                                         render={({ field }) => (
-                                            <FormItem>
+                                            <FormItem className='flex-1'>
                                                 <FormLabel size='tiny'>Select a Program</FormLabel>
                                                 <Select onValueChange={(value) => field.onChange(Number(value))}>
                                                     <FormControl>
@@ -240,17 +236,15 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                             </FormItem>
                                         )}
                                     />
-                                </fieldset>
-                                <fieldset>
                                     <FormField
                                         control={form.control}
                                         name="planId"
                                         render={({ field }) => (
-                                            <FormItem>
+                                            <FormItem className='flex-1'>
                                                 <FormLabel size='tiny'>Select a Plan</FormLabel>
                                                 <Select onValueChange={(value) => field.onChange(Number(value))}>
                                                     <FormControl>
-                                                        <SelectTrigger>
+                                                        <SelectTrigger disabled={!programId}>
                                                             <SelectValue placeholder="Select a plan" />
                                                         </SelectTrigger>
                                                     </FormControl>
@@ -270,95 +264,52 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                                         )}
                                     />
                                 </fieldset>
-                                <fieldset>
-                                    <FormField
-                                        control={form.control}
-                                        name="paymentMethod"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormLabel size='tiny'>Payment Method</FormLabel>
 
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select Payment Method" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {paymentMethods.map((interval, index) => (
-                                                            <SelectItem key={index} value={interval.value}>{interval.label}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
 
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </fieldset>
 
                             </SheetSection>
                             <SheetSection>
-                                {watchPaymentMethod === "stripe" && (
+                                {!!planId && (
                                     <React.Fragment>
                                         <div className='mb-4'>
                                             <FormLabel size='tiny'>
-                                                Payment Mode
+                                                Payment Method
                                             </FormLabel>
                                             <FormDescription>
-                                                Select whether you want to add a payment mode for the member or send an invite link via email for them to add their own payment method.
+                                                Select the payment method for the member. You can also choose to send an invite link via email for them to add their own payment method.
                                             </FormDescription>
                                         </div>
                                         <fieldset>
                                             <FormField
                                                 control={form.control}
-                                                name="paymentMode"
+                                                name="paymentMethod"
                                                 render={({ field }) => (
-                                                    <FormItem className="space-y-3">
+                                                    <FormItem className="flex-1">
 
-                                                        <FormControl>
-                                                            <RadioGroup
-                                                                onValueChange={field.onChange}
-                                                                defaultValue={field.value}
-                                                                className="flex flex-col space-y-1"
-                                                            >
-                                                                <FormItem className="flex items-center space-x-2 space-y-0 ">
-                                                                    <FormControl>
-                                                                        <RadioGroupItem value="free" />
-                                                                    </FormControl>
-                                                                    <FormLabel >
-                                                                        Add member without payment.
-                                                                    </FormLabel>
-                                                                </FormItem>
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                            <FormControl>
+                                                                <SelectTrigger className="capitalize">
+                                                                    <SelectValue placeholder="Select Payment Method" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                {[...PaymentMethods, "email_invite"].map((method: string, i: number) => (
+                                                                    <SelectItem key={i} value={method} className="capitalize"
+                                                                        disabled={method === "card" && !stripeKey}
+                                                                    >
+                                                                        {method.replace("_", " ")}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
 
-                                                                <FormItem className="flex items-center space-x-2 space-y-0 ">
-                                                                    <FormControl>
-                                                                        <RadioGroupItem value="invite" />
-                                                                    </FormControl>
-                                                                    <FormLabel >
-                                                                        Email invoice to the customer to pay manually.
-                                                                    </FormLabel>
-                                                                </FormItem>
-                                                                <FormItem className="flex items-center space-x-2 space-y-0 ">
-                                                                    <FormControl>
-                                                                        <RadioGroupItem disabled={!stripeKey} value="card" />
-                                                                    </FormControl>
-                                                                    <FormLabel >
-                                                                        Add a payment method on behave of the customer .
-                                                                    </FormLabel>
-
-                                                                </FormItem>
-
-                                                            </RadioGroup>
-                                                        </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
                                                 )}
                                             />
-
                                         </fieldset>
 
-                                        {stripeKey && (
+                                        {(stripeKey && paymentMethod === "card") && (
                                             <Elements
                                                 stripe={getStripe(stripeKey)}
                                                 options={{
@@ -391,6 +342,7 @@ export default function AddMember({ locationId, stripeKey }: CreateMemberProps) 
                     <Button
                         variant={"foreground"}
                         size={"sm"}
+                        disabled={loading || form.formState.isSubmitting || !form.formState.isValid}
                         onClick={form.handleSubmit(onSubmit)}
                         className={cn("children:hidden", (loading && "children:inline-block"))}
                     >

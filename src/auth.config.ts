@@ -78,7 +78,7 @@ export default {
 					vendorPhone: vendor?.phone,
 					stripeCustomerId: vendor?.stripeCustomerId,
 					role: 'vendor',
-					token: jwt,
+					fasdfasdfs: jwt,
 					locations: encodedLocations,
 				};
 

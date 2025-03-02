@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
                     }
                 }
             })
-            location = locations.find(loc => loc.locationState.status === 'Active' || loc.locationState.status === 'Pending') || locations[0];
+            location = locations.find(loc => loc.locationState.status === 'incomplete' || loc.locationState.status === 'active') || locations[0];
         }
 
         if (!location) {

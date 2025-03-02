@@ -11,7 +11,7 @@ async function fetchStripeKeys(id: string, session: Session | null): Promise<str
     const decodedId = decodeId(id);
     try {
         const integrations = await db.query.integrations.findFirst({
-            where: (integration, { eq }) => (and(eq(integration.locationId, decodedId), eq(integration.service, "Stripe"))),
+            where: (integration, { eq }) => (and(eq(integration.locationId, decodedId), eq(integration.service, "stripe"))),
             columns: {
                 apiKey: true
             }

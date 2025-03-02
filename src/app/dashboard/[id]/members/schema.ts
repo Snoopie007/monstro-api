@@ -13,9 +13,21 @@ export const CreateMemberSchema = z.object({
     paymentMethod: z.string(),
     paymentMode: z.string().default("manual"),
     billing: z.object({
-        cardHolderName: z.string().optional(),
-        stripeToken: z.string().optional(),
+        tokenId: z.string().optional(),
+        name: z.string().optional(),
+        address_line1: z.string().optional(),
+        address_city: z.string().optional(),
+        address_state: z.string().optional(),
+        address_zip: z.string().optional(),
     }),
-}).merge(MemberGeneralInfoSchema);
-
+})
+    .merge(MemberGeneralInfoSchema)
+    .superRefine((data, ctx) => {
+        if (data.paymentMethod === "card" && !data.billing.tokenId) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Card token is required",
+            });
+        }
+    });
 

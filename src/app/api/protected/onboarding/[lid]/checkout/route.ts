@@ -58,7 +58,7 @@ export async function POST(req: Request) {
             vendorId: vendorId
         });
 
-        const walletPayment = 20 * 100;
+        const walletPayment = 10 * 100;
         const { clientSecret } = await stripe.createPaymentIntent(
             walletPayment,
             customer.id,
@@ -81,7 +81,6 @@ export async function POST(req: Request) {
         }).onConflictDoNothing({ target: [wallet.locationId] });
 
         if (paymentPlan) {
-
             const downPayment = Number(paymentPlan.downPayment - paymentPlan.discount) * 100;
             if (paymentPlan.downPayment > 0) {
                 await stripe.createPaymentIntent(downPayment, customer.id, token.card.id)
@@ -116,14 +115,14 @@ export async function POST(req: Request) {
 
         await db.transaction(async (tx) => {
             await tx.update(locations).set({
-
                 updated: new Date()
             }).where(eq(locations.id, decodedLocationId))
 
             await tx.update(locationState).set({
                 ...state,
-                status: "Active",
-                activationDate: new Date(),
+                status: "active",
+                usagePercent: plan?.usagePercent,
+                startDate: new Date(),
                 lastRenewalDate: new Date(),
                 updated: new Date()
             }).where(eq(locationState.locationId, decodedLocationId))

@@ -61,7 +61,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
 
         let { newSubscription, newTransaction, newInvoice } = createSubscription({ ...data, ...params, trialDays }, plan)
 
-
+        let sub: Stripe.Subscription | Stripe.SubscriptionSchedule | undefined;
         if (data.paymentMethod === "card") {
             const stripe = await getStripeCustomer(params)
             const settings = {
@@ -74,7 +74,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                     locationId: params.id
                 },
             }
-            let sub: Stripe.Subscription | Stripe.SubscriptionSchedule;
+
             if (isAfter(newSubscription.currentPeriodStart, new Date()) && !data.allowProration) {
                 sub = await stripe.createSubSchedule(plan.stripePriceId, newSubscription.currentPeriodStart, settings)
             } else {
@@ -86,17 +86,19 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                     card: { brand: stripePaymentMethod.card?.brand, last4: stripePaymentMethod.card?.last4 }
                 }
                 newSubscription.stripeSubscriptionId = sub.id
-                newSubscription.status = "active"
-                newTransaction.status = "paid"
             }
         }
 
+        if (data.paymentType !== "card" || sub && sub.id) {
+            newSubscription.status = "active"
+            newTransaction.status = "paid"
+            newInvoice.status = "paid"
+        }
 
         // Create invoice
         await db.transaction(async (tx) => {
             const [{ sid }] = await tx.insert(memberSubscriptions).values({
-                ...newSubscription,
-                status: "active",
+                ...newSubscription
             }).returning({ sid: memberSubscriptions.id })
             const [{ invoiceId }] = await tx.insert(memberInvoices).values({
                 ...newInvoice,
@@ -120,76 +122,3 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
-
-
-// type SubscriptionData = {
-//     mid: number;
-//     id: number;
-//     memberPlanId: number;
-//     beneficiaryId: number;
-//     paymentMethod: string;
-//     startDate: string;
-//     endDate?: string;
-//     trialDays?: number;
-// }
-
-// type CreateSubscriptionReturn = {
-//     newSubscription: MemberSubscription;
-//     newTransaction: Transaction;
-//     newInvoice: MemberInvoice;
-// }
-
-
-// function createSubscription(data: SubscriptionData, plan: MemberPlan): CreateSubscriptionReturn {
-
-//     const today = new Date();
-//     const startDate = new Date(data.startDate);
-//     const endDate = data.endDate ? new Date(data.endDate) : undefined;
-//     const ids = {
-//         memberId: data.mid,
-//         locationId: data.id,
-//     }
-//     /**
-//      * Convert date to Unix timestamp (seconds since epoch)
-//      * Math.floor ensures we get a whole number of seconds
-//      * Stripe API requires timestamps in seconds, not milliseconds
-//      */
-//     let trialEnd: Date | undefined;
-//     if (data.trialDays) {
-//         if (isAfter(startDate, today)) {
-//             trialEnd = new Date(Math.max(startDate.getTime(), (startDate.getTime() + data.trialDays * 24 * 60 * 60 * 1000)))
-//         } else {
-//             trialEnd = new Date(Math.max(today.getTime(), (today.getTime() + data.trialDays * 24 * 60 * 60 * 1000)))
-//         }
-//     }
-
-//     let newSubscription: MemberSubscription = {
-//         payerId: data.mid,
-//         beneficiaryId: data.beneficiaryId,
-//         locationId: data.id,
-//         planId: data.memberPlanId,
-//         startDate,
-//         currentPeriodStart: startDate,
-//         currentPeriodEnd: calculateCurrentPeriodEnd(startDate, plan),
-//         paymentType: data.paymentMethod,
-//         status: "incomplete",
-//         trialEnd,
-//     }
-
-//     let newTransaction: Transaction = {
-//         ...ids,
-//         chargeDate: today,
-//         status: "incomplete",
-//         transactionType: "incoming",
-//         paymentType: 'recurring',
-//         paymentMethod: data.paymentMethod,
-//         description: `Subscription to ${plan.name}`,
-//         amount: plan.price,
-//         currency: plan.currency,
-//         item: plan.name,
-//     };
-
-//     return { newSubscription, newTransaction }
-// }
-
-

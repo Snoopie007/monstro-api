@@ -18,6 +18,13 @@ const MonstroData = {
     logoUrl: 'https://mymonstro.com/logo.png',
 }
 
+const PaymentMethods: string[] = [
+    "card",
+    "cash",
+    "zelle",
+    "bank payment",
+    "cheque"
+]
 
 const TimeZones = [
     "GMT-04:00 America/New_York (EDT)",
@@ -248,6 +255,7 @@ const plans: MonstroPlan[] = [
         id: 1,
         name: "Pay as you go",
         price: 0,
+        usagePercent: 2,
         interval: "mo.",
         benefits: [{
             name: "$10 per new member",
@@ -268,6 +276,7 @@ const plans: MonstroPlan[] = [
         name: "Basic",
         price: 99,
         interval: "mo.",
+        usagePercent: 2,
         benefits: [{
             name: "$10 per new member",
             description: "You'll be charged $10 per new member (once), and 1% per transaction on top of the standard stripe transaction fee (2.9% + $0.30)."
@@ -285,6 +294,7 @@ const plans: MonstroPlan[] = [
         name: "Premium",
         price: 299,
         interval: "mo.",
+        usagePercent: 0,
         benefits: [
             {
                 name: "No new member fee",
@@ -361,5 +371,5 @@ export {
     TimeZones,
     Industries,
     MonstroData,
-    plans, packages, dummyContract
+    plans, packages, dummyContract, PaymentMethods
 }

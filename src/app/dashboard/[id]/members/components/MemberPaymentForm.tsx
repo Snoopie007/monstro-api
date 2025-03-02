@@ -3,7 +3,7 @@ import {
     CollapsibleContent,
 
 } from '@/components/ui'
-import { FormField, FormItem, FormLabel, FormMessage, FormControl, Input } from '@/components/forms'
+import { FormField, FormItem, FormLabel, FormMessage, FormControl, Input, RegionSelect } from '@/components/forms'
 import { useEffect, useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
@@ -16,17 +16,13 @@ interface NewMemberPaymentFormProps {
 }
 
 export default function NewMemberPaymentForm({ form }: NewMemberPaymentFormProps) {
-    const [open, setOpen] = useState<boolean>(false);
-    const paymentMethod = form.watch('paymentMode')
+
+
     const { theme } = useTheme();
     const stripe = useStripe();
     const elements = useElements();
 
-    useEffect(() => {
-        if (paymentMethod) {
-            setOpen(paymentMethod === 'card')
-        }
-    }, [paymentMethod])
+
 
     async function handleCardChange(event: any) {
 
@@ -35,55 +31,117 @@ export default function NewMemberPaymentForm({ form }: NewMemberPaymentFormProps
 
             const tokenRef = await stripe.createToken(elements.getElement(CardElement)!);
             if (tokenRef.token) {
-                form.setValue('billing.stripeToken', tokenRef.token.id)
+                form.setValue('billing.tokenId', tokenRef.token.id)
             }
         }
     }
 
     return (
-        <Collapsible open={open} onOpenChange={setOpen} >
-            <CollapsibleContent className='bg-foreground/5 p-4 rounded-sm mt-4 space-y-2'>
-                <fieldset>
-                    <FormField
-                        control={form.control}
-                        name="billing.cardHolderName"
-                        render={({ field }) => (
-                            <FormItem>
+        <div className='bg-foreground/5 p-4 rounded-sm mt-4 space-y-2'>
+            <fieldset>
+                <FormField
+                    control={form.control}
+                    name="billing.name"
+                    render={({ field }) => (
+                        <FormItem>
 
-                                <FormLabel>Card Holder Name</FormLabel>
-                                <FormControl>
-                                    <Input type='text' placeholder="Card Holder Name" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </fieldset>
-                <fieldset >
-                    <FormItem className="flex-1">
-                        <FormLabel className="font-semibold">
-                            Card Info
-                        </FormLabel>
-                        <CardElement
-                            className=" bg-background  rounded-sm  p-3 w-full"
-                            options={{
-                                ...StripeCardOptions,
-                                style: {
-                                    base: {
-                                        color: theme === "dark" ? "#fff" : "#000",
-                                        iconColor: theme === "dark" ? "#fff" : "#000",
-                                    }
+                            <FormLabel size='tiny'>Name on card</FormLabel>
+                            <FormControl>
+                                <Input type='text' className='w-full border-none' placeholder="Name on card" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </fieldset>
+            <fieldset>
+                <FormField
+                    control={form.control}
+                    name="billing.address_line1"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel size="tiny">
+                                Billing Address
+                            </FormLabel>
+
+                            <FormControl>
+                                <Input type="text" placeholder="Billing Address" className=" border-none rounded-sm  p-3 w-full" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+
+            </fieldset>
+            <fieldset className="grid grid-cols-3 items-center gap-2">
+                <FormField
+                    control={form.control}
+                    name="billing.address_city"
+                    render={({ field }) => (
+                        <FormItem className="col-span-1">
+
+                            <FormControl>
+                                <Input type="text" className="border-none  rounded-sm" placeholder="City" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem >
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="billing.address_state"
+                    render={({ field }) => (
+                        <FormItem className="col-span-1">
+
+                            <FormControl>
+                                <RegionSelect value={field.value}
+                                    onChange={(value) => field.onChange(value)}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem >
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="billing.address_zip"
+                    render={({ field }) => (
+                        <FormItem className="col-span-1">
+
+                            <FormControl>
+                                <Input type="text" className="border-none rounded-sm" placeholder="Zipcode" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </fieldset>
+            <fieldset >
+                <FormItem className="flex-1">
+                    <FormLabel size='tiny'>
+                        Card Info
+                    </FormLabel>
+                    <CardElement
+                        className=" bg-background  rounded-sm  p-3 w-full"
+                        options={{
+                            ...StripeCardOptions,
+                            hidePostalCode: true,
+                            style: {
+                                base: {
+                                    color: theme === "dark" ? "#fff" : "#000",
+                                    iconColor: theme === "dark" ? "#fff" : "#000",
                                 }
-                            }}
+                            }
+                        }}
 
 
-                            onChange={handleCardChange}
-                        />
-                        <FormMessage />
+                        onChange={handleCardChange}
+                    />
+                    <FormMessage />
 
-                    </FormItem>
-                </fieldset>
-            </CollapsibleContent>
-        </Collapsible>
+                </FormItem>
+            </fieldset>
+        </div>
     )
 }

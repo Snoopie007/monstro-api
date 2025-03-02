@@ -44,6 +44,7 @@ export const {
 	},
 	callbacks: {
 		jwt: async ({ user, token, session, trigger }) => {
+
 			if (trigger === "update") {
 				return { ...token, ...session };
 			}
