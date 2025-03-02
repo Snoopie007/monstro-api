@@ -2,7 +2,6 @@ import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "./db/db";
-import { tryCatch } from "./libs/utils";
 import { encodeId } from "./libs/server/sqids";
 import { SignJWT } from "jose";
 
@@ -57,7 +56,7 @@ export default {
 
 				// Create a JWT token
 				const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-				const jwt = new SignJWT(user).setProtectedHeader({alg: "HS256"}).setExpirationTime("1d").setIssuedAt().sign(secret);
+				const jwt = new SignJWT(user).setProtectedHeader({ alg: "HS256" }).setExpirationTime("1d").setIssuedAt().sign(secret);
 
 				const { vendor: { locations, ...vendor }, ...rest } = user;
 				const encodedLocations = locations.map(location => {

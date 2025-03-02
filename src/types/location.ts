@@ -36,14 +36,13 @@ export type LocationState = {
     lastRenewalDate: Date | null;
     startDate: Date | null;
     settings: LocationSettings;
-    status: string;
+    usagePercent: number;
+    status: 'incomplete' | 'active' | 'inactive' | 'past_due' | 'canceled' | 'archived' | 'paused' | 'trailing';
     created: Date;
     updated: Date | null;
 }
 
 export type LocationSettings = {
-    applicationFeePercent: number;
-
     aiBotTotal: number;
 }
 

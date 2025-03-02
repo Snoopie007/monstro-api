@@ -240,7 +240,7 @@ class MemberStripePayments extends BaseStripePayments {
             throw new Error("Customer not set");
         }
 
-        const applicationFeeAmount = Math.floor(((amount / 100) * (settings?.applicationFeePercent || 0)) * 100);
+        const applicationFeeAmount = Math.floor((amount * ((settings?.applicationFeePercent || 0) / 100)));
 
         const option: Stripe.PaymentIntentCreateParams = {
             amount,
@@ -268,15 +268,13 @@ class MemberStripePayments extends BaseStripePayments {
         }
         const { endDate, trialEnd, paymentMethod, applicationFeePercent, ...rest } = settings;
 
-
-
         const options: Stripe.SubscriptionCreateParams = {
             ...rest,
             customer: this._customer,
             description: `Member Subscription`,
             items: [{ price: priceId }],
             collection_method: "charge_automatically",
-            application_fee_percent: (100 - (applicationFeePercent || 0)) || 100,
+            application_fee_percent: (applicationFeePercent || 0),
             default_payment_method: paymentMethod || undefined,
             cancel_at: endDate ? endDate.getTime() / 1000 : undefined,
 
@@ -304,7 +302,7 @@ class MemberStripePayments extends BaseStripePayments {
             phases: [{
                 items: [{ price: priceId }],
                 billing_cycle_anchor: 'automatic',
-                application_fee_percent: (100 - (applicationFeePercent || 0)) || 100,
+                application_fee_percent: (applicationFeePercent || 0),
                 ...(endDate && { end_date: new Date(endDate).getTime() / 1000 }),
                 currency: 'usd',
                 collection_method: 'charge_automatically',

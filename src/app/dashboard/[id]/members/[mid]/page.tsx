@@ -92,10 +92,10 @@ const MemberDetailsMenu = [
     "Subscriptions",
     "Packages",
     "Invoices",
-    "Achievements",
-    "Attendance",
     "Transactions",
-    "Rewards"
+    "Achievements",
+    "Rewards",
+    "Attendance"
 ]
 
 export default async function MemberProfilePage(props: { params: Promise<{ id: string, mid: number }> }) {

@@ -72,7 +72,7 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
             const { clientSecret } = await stripe.createPaymentIntent(plan.price, {
                 paymentMethod: stripePaymentMethod.id,
                 currency: plan.currency,
-                applicationFeePercent: (locationState.settings?.applicationFeePercent / 100),
+                applicationFeePercent: (locationState.usagePercent / 100),
                 description: `One time payment for ${plan.name}`
             })
 

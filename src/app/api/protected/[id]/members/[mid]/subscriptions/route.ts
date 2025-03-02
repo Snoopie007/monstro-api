@@ -1,13 +1,11 @@
 import { db } from "@/db/db";
 import { memberInvoices, memberSubscriptions, transactions } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
-import { calculateCurrentPeriodEnd, calculateInvoice, createSubscription } from "../../utils";
-import { MemberPlan, MemberSubscription, Transaction } from "@/types";
+import { createSubscription } from "../../utils";
 import { isAfter } from "date-fns";
 
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { is } from "drizzle-orm";
 
 export async function GET(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
     const params = await props.params;
@@ -70,7 +68,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 endDate: newSubscription.cancelAt,
                 trialEnd: newSubscription.trialEnd,
                 paymentMethod: stripePaymentMethod.id,
-                applicationFeePercent: locationState?.settings?.applicationFeePercent,
+                applicationFeePercent: locationState?.usagePercent,
                 metadata: {
                     memberId: params.mid,
                     locationId: params.id

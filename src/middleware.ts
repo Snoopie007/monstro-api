@@ -81,19 +81,19 @@ export default auth(async (req) => {
 
         if (!nextLocation) {
           nextLocation =
-            locations.find((loc: { status: string }) => loc.status === "Active") ||
-            locations.find((loc: { status: string }) => loc.status === "Pending")
+            locations.find((loc: { status: string }) => loc.status === "active") ||
+            locations.find((loc: { status: string }) => loc.status === "incomplete")
         }
         const allowedInactivePaths = [`/dashboard/${nextLocation.id}`, `/dashboard/${nextLocation.id}/settings/billing`]
         if (
           path.startsWith("dashboard") &&
           !allowedInactivePaths.includes(pathname) &&
-          !["Pending", "Active"].includes(nextLocation.status)
+          !["active", "incomplete"].includes(nextLocation.status)
         ) {
           return NextResponse.redirect(new URL(`/dashboard/${nextLocation.id}`, req.nextUrl.origin))
         }
 
-        const isOnboarding = nextLocation.status === "Pending"
+        const isOnboarding = nextLocation.status === "incomplete"
         const targetPath = isOnboarding ? "onboarding" : "dashboard"
 
         if (path !== targetPath) {
