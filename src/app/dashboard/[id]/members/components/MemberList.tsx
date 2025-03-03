@@ -14,7 +14,7 @@ import { MemberColumns } from "./MemberColumns";
 import { Input } from "@/components/forms/input";
 import { MemberTable } from "./MemberTable";
 import ErrorComponent from "@/components/error";
-import AddMember from "./AddMember";
+import { AddMember } from "./CreateMember";
 import { Member } from "@/types/member";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
@@ -100,8 +100,8 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
                         }}
                         className="border text-xs h-auto py-1 border-foreground/10 rounded-xs"
                     />
-                    <AddMember locationId={params.id} stripeKey={stripeKey} />
-                    <ImportMembers locationId={params.id} />
+                    <AddMember lid={params.id} stripeKey={stripeKey} />
+                    <ImportMembers lid={params.id} />
                 </TablePageHeaderSection>
             </TablePageHeader>
             <TablePageContent>

@@ -11,6 +11,7 @@ import { memberSubscriptions } from "./MemberPlans";
 import { LocationSettings } from "@/types";
 
 const LocationStatusEnum = pgEnum("location_status", ["incomplete", "active", "inactive", "past_due", "canceled", "archived", "paused", "trailing"])
+const MemberLocationStatusEnum = pgEnum("member_location_status", ["incomplete", "active", "inactive", "archived"])
 
 export const locations = pgTable("locations", {
     id: serial("id").primaryKey(),
@@ -54,6 +55,7 @@ export const memberLocations = pgTable("member_locations", {
     memberId: integer("member_id").notNull().references(() => members.id),
     locationId: integer("location_id").notNull().references(() => locations.id),
     stripeCustomerId: text("stripe_customer_id"),
+    status: MemberLocationStatusEnum("status").notNull().default("incomplete"),
     created: timestamp('created_at', { withTimezone: true }),
     updated: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);

@@ -30,14 +30,16 @@ abstract class BaseStripePayments {
         return this
     }
 
-    public async createCustomer(customer: Customer, token: string, metadata?: Record<string, any>) {
-        return await this._stripe.customers.create({
+    public async createCustomer(customer: Customer, token: string | undefined, metadata?: Record<string, any>) {
+        const c = await this._stripe.customers.create({
             name: `${customer.firstName} ${customer.lastName}`,
             email: customer.email,
             phone: customer.phone,
-            source: token,
+            ...(token && { source: token }),
             ...(metadata && { metadata })
         });
+        this.setCustomer(c.id)
+        return c
     }
 
 
@@ -257,7 +259,7 @@ class MemberStripePayments extends BaseStripePayments {
             expand: ["payment_method"]
         }
         const { client_secret, payment_method } = await this._stripe.paymentIntents.create(option);
-        return { clientSecret: client_secret as string, paymentMethod: payment_method };
+        return { clientSecret: client_secret as string, paymentMethod: payment_method as Stripe.PaymentMethod };
     }
 
 
@@ -346,6 +348,7 @@ async function getStripeCustomer(params: { id: number, mid: number }) {
             secretKey: true
         }
     })
+
     if (!integrations?.secretKey) {
         throw new Error("Stripe integration not found")
     }

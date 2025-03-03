@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import React, { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 import Papa from 'papaparse';
 import { FileDown, FileIcon } from 'lucide-react';
-import { cn,tryCatch } from '@/libs/utils';
+import { cn, tryCatch } from '@/libs/utils';
 import { Table, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/forms/select';
 import { toast } from 'react-toastify';
@@ -19,14 +19,14 @@ type FilePreviewType = {
     rows: Record<string, string>[];
 };
 
-export default function ImportMembers({ locationId }: { locationId: string }) {
+export default function ImportMembers({ lid }: { lid: string }) {
     const [step, setStep] = useState(0);
     const [file, setFile] = useState<File | undefined>(undefined);
     const [programId, setProgramId] = useState<Number | null>(null);
     const [planId, setPlanId] = useState<Number | null>(null);
     const [preview, setPreview] = useState<FilePreviewType | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const { data: programs, isLoading: programIsLoading } = usePrograms(locationId);
+    const { data: programs, isLoading: programIsLoading } = usePrograms(lid);
 
     const requiredHeaders = ['first_name', 'last_name', 'email', 'phone', 'last_renewal_day', 'terms', 'term_count', 'status'];
     const normalizedRequiredHeaders = requiredHeaders.map(header => header.toLowerCase());
@@ -37,13 +37,13 @@ export default function ImportMembers({ locationId }: { locationId: string }) {
     useEffect(() => {
         if (!file) return;
 
-        setError(null); 
-        setPreview(null); 
+        setError(null);
+        setPreview(null);
 
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
-            preview: 5, 
+            preview: 5,
             complete: (results) => {
                 if (!results.meta.fields || results.meta.fields.length === 0) {
                     setError("Invalid CSV: No headers found.");
@@ -65,7 +65,7 @@ export default function ImportMembers({ locationId }: { locationId: string }) {
 
 
                 const validationErrors: string[] = [];
-                
+
                 const validRows = results.data.filter((row: any, index) => {
                     if (!row.last_renewal_day.match(dateFormatRegex)) {
                         validationErrors.push(`Row ${index + 1}: Invalid date format (YYYY-MM-DD) for 'last_renewal_day'.`);
@@ -109,12 +109,12 @@ export default function ImportMembers({ locationId }: { locationId: string }) {
         const formData = new FormData();
 
         formData.append('file', file as File);
-        if(programId && planId) {
+        if (programId && planId) {
             formData.append('programId', programId.toString());
             formData.append('planId', planId.toString());
         }
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${locationId}/members/import`, {
+            fetch(`/api/protected/${lid}/members/import`, {
                 method: 'POST',
                 body: formData,
             })
@@ -130,7 +130,7 @@ export default function ImportMembers({ locationId }: { locationId: string }) {
         setPreview(null);
         setStep(0);
     }
-    
+
 
     function next() {
         setStep(step + 1);
@@ -160,9 +160,9 @@ export default function ImportMembers({ locationId }: { locationId: string }) {
                     {preview && <ImportPreview preview={preview} />}
                     {step === 1 && (
                         <div className='space-y-2'>
-                            <SelectField data={programs.filter((p: Program) => p.plans.length) } onChange={setProgramId}  label="Select a Program" />
-                            {programId && 
-                                <SelectField data={programs.find((p: Program) => p.id == programId).plans } onChange={setPlanId} label="Select a Plan" />
+                            <SelectField data={programs.filter((p: Program) => p.plans.length)} onChange={setProgramId} label="Select a Program" />
+                            {programId &&
+                                <SelectField data={programs.find((p: Program) => p.id == programId).plans} onChange={setPlanId} label="Select a Plan" />
                             }
                             <p className='text-xs text-yellow-400'>If no selection is made, members will be added without a program or plan. You can assign one later.</p>
                         </div>
@@ -265,7 +265,7 @@ function SelectField({ label, data, onChange }: { label: string, data: Array<any
     return (
         <div className='space-y-1'>
             <label className='text-tiny uppercase font-medium'>{label}</label>
-            <Select onValueChange={(value) => {onChange(Number(value)); console.log(value)}}>
+            <Select onValueChange={(value) => { onChange(Number(value)); console.log(value) }}>
                 <SelectTrigger>
                     <SelectValue placeholder={label} />
                 </SelectTrigger>

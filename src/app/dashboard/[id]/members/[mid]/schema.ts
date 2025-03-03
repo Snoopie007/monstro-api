@@ -32,12 +32,7 @@ export const NewSubscriptionSchema = z.object({
     ...SubsAndPackageFields,
     endDate: z.date().optional(),
     trailDays: z.number().int().optional(),
-    billingAnchor: z.enum(["1st", "15th", "last of month"]).optional(),
-    allowProration: z.boolean().optional(),
-    other: z.object({
-        programId: z.number().min(1, "Program is required"),
-        cardId: z.string().optional(),
-    }),
+    allowProration: z.boolean().optional()
 }).superRefine((data, ctx) => {
     if (data.paymentMethod === "card" && !data.other.cardId) {
         ctx.addIssue({

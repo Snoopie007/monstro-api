@@ -1,3 +1,4 @@
+import { PasswordSchema } from '@/libs/schemas';
 import z from 'zod';
 
 export const MemberGeneralInfoSchema = z.object({
@@ -7,27 +8,32 @@ export const MemberGeneralInfoSchema = z.object({
     phone: z.string().min(2, 'Phone number is required'),
 });
 
-export const CreateMemberSchema = z.object({
-    programId: z.number(),
-    planId: z.number(),
-    paymentMethod: z.string(),
-    paymentMode: z.string().default("manual"),
-    billing: z.object({
-        tokenId: z.string().optional(),
-        name: z.string().optional(),
-        address_line1: z.string().optional(),
-        address_city: z.string().optional(),
-        address_state: z.string().optional(),
-        address_zip: z.string().optional(),
+export const MemberProgramSchema = z.object({
+    startDate: z.date(),
+    memberPlanId: z.number(),
+    other: z.object({
+        programId: z.number().min(1, "Program is required"),
+        cardId: z.string().optional(),
     }),
-})
-    .merge(MemberGeneralInfoSchema)
-    .superRefine((data, ctx) => {
-        if (data.paymentMethod === "card" && !data.billing.tokenId) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "Card token is required",
-            });
-        }
-    });
 
+    pkg: z.object({
+        expireDate: z.date().optional(),
+        totalClassLimit: z.number().min(0, "Total class limit must be greater than 0").max(100, "Total class limit must be less than 100").optional(),
+    }),
+    sub: z.object({
+        endDate: z.date().optional(),
+        trailDays: z.number().int().optional(),
+        allowProration: z.boolean().optional(),
+    })
+})
+
+export const NewMemberPaymentSchema = z.object({
+    tokenId: z.string().optional(),
+    name: z.string().optional(),
+    address_line1: z.string().optional(),
+    address_city: z.string().optional(),
+    address_state: z.string().optional(),
+    address_zip: z.string().optional(),
+})
+
+export const CreateMemberSchema = z.object({}).merge(MemberGeneralInfoSchema).merge(PasswordSchema)

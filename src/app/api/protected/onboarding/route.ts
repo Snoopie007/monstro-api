@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { locations, locationState, vendorProgress } from '@/db/schemas';
 import { encodeId } from '@/libs/server/sqids';
+import { formatPhoneNumber } from '@/libs/server/db';
 
 const DEFAULT_LOCATION_STATE = {
     planId: null,
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
         const location = await db.transaction(async (tx) => {
             const [location] = await tx.insert(locations).values({
                 ...data,
-                phone: data.phone.startsWith('+') ? data.phone.replace(/[^0-9+]/g, '') : `+${data.phone.replace(/[^0-9]/g, '')}`
+                phone: formatPhoneNumber(data.phone)
             }).returning({ id: locations.id, name: locations.name });
 
             await tx.insert(locationState).values({

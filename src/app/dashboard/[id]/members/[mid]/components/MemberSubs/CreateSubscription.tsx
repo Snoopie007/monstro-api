@@ -8,9 +8,6 @@ import {
     DialogTrigger,
     DialogFooter,
     DialogClose,
-    Popover,
-    PopoverContent,
-    Calendar,
     Switch,
     DialogDescription,
 } from "@/components/ui";
@@ -27,19 +24,16 @@ import {
 
 import { useEffect, useState } from "react";
 import { NewSubscriptionSchema } from "../../schema";
-import { ControllerRenderProps, useForm, UseFormReturn } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn, tryCatch } from "@/libs/utils";
-
-
-
 import { useMemberPaymentMethods } from "../../providers/MemberContext";
 import React from "react";
 import { Program, MemberPlan } from "@/types";
 import { Stripe } from "stripe";
-import DurationPicker from "./DurationPicker";
+import DurationPicker from "../../../components/DurationPicker";
 import { toast } from "react-toastify";
 
 export function CreateSubscription({ params }: { params: { id: string, mid: number } }) {
@@ -58,7 +52,6 @@ export function CreateSubscription({ params }: { params: { id: string, mid: numb
             trailDays: undefined,
             paymentMethod: undefined,
             memberPlanId: undefined,
-            billingAnchor: undefined,
             allowProration: false,
             other: {
                 programId: undefined,
@@ -213,7 +206,6 @@ export function CreateSubscription({ params }: { params: { id: string, mid: numb
                                     <FormLabel size="tiny">Duration</FormLabel>
                                     <DurationPicker
                                         onChange={(date) => {
-                                            console.log(date)
                                             form.setValue("startDate", date.from || new Date())
                                             form.setValue("endDate", date.to)
                                         }}

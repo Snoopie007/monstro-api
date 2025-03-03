@@ -7,56 +7,55 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
     const params = await props.params;
-    const session = await auth();
-    const { token, member, default: isDefault } = await req.json();
 
+    const { token, member, default: isDefault } = await req.json();
+    console.log(member)
+    console.log(params)
+    console.log(token)
+    console.log(isDefault)
     try {
-        if (session) {
-            const integrations = await db.query.integrations.findFirst({
-                where: (integration, { eq }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
-                columns: {
-                    accessToken: true,
-                    secretKey: true
+        const integrations = await db.query.integrations.findFirst({
+            where: (integration, { eq }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
+            columns: {
+                accessToken: true,
+                secretKey: true
+            }
+        })
+
+        if (!integrations || !integrations.secretKey) {
+            return NextResponse.json({ error: "Stripe integration not found" }, { status: 404 })
+        }
+        const memberLocation = await db.query.memberLocations.findFirst({
+            where: (memberLocation, { eq, and }) => and(eq(memberLocation.memberId, params.mid), eq(memberLocation.locationId, params.id))
+        })
+
+        if (!memberLocation) {
+            return NextResponse.json({ error: "Member location not found" }, { status: 404 })
+        }
+
+
+        const stripe = new MemberStripePayments(integrations?.secretKey);
+        if (!memberLocation.stripeCustomerId) {
+            const customer = await stripe.createCustomer(member, undefined, {
+                locationId: params.id,
+                memberId: params.mid
+            });
+            memberLocation.stripeCustomerId = customer.id;
+
+            await db.update(memberLocations).set({ stripeCustomerId: customer.id, updated: new Date() })
+                .where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mid)))
+        }
+
+
+        const { paymentMethod } = await stripe.setupIntent(token);
+        if (isDefault) {
+            await stripe.updateCustomer(memberLocation.stripeCustomerId, {
+                invoice_settings: {
+                    default_payment_method: paymentMethod?.id
                 }
             })
-
-            if (!integrations || !integrations.secretKey) {
-                return NextResponse.json({ error: "Stripe integration not found" }, { status: 404 })
-            }
-            const memberLocation = await db.query.memberLocations.findFirst({
-                where: (memberLocation, { eq, and }) => and(eq(memberLocation.memberId, params.mid), eq(memberLocation.locationId, params.id))
-            })
-
-            if (!memberLocation) {
-                return NextResponse.json({ error: "Member location not found" }, { status: 404 })
-            }
-
-
-            const stripe = new MemberStripePayments(integrations?.secretKey);
-            if (!memberLocation.stripeCustomerId) {
-                const customer = await stripe.createCustomer(member, token, {
-                    locationId: params.id,
-                    memberId: params.mid
-                });
-                memberLocation.stripeCustomerId = customer.id;
-
-                await db.update(memberLocations).set({ stripeCustomerId: customer.id, updated: new Date() })
-                    .where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mid)))
-            }
-
-            stripe.setCustomer(memberLocation.stripeCustomerId);
-            const { paymentMethod } = await stripe.setupIntent(token);
-            if (isDefault) {
-                await stripe.updateCustomer(memberLocation.stripeCustomerId, {
-                    invoice_settings: {
-                        default_payment_method: paymentMethod?.id
-                    }
-                })
-            }
-            return NextResponse.json(paymentMethod, { status: 200 });
-        } else {
-            return NextResponse.json({ error: "Something Went Wrong" }, { status: 500 })
         }
+        return NextResponse.json(paymentMethod, { status: 200 });
 
     } catch (err) {
         console.log(err)
