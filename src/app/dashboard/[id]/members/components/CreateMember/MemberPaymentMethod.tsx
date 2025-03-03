@@ -54,6 +54,7 @@ export default function NewMemberPayment({ lid, stripeKey, progress, setProgress
         setProgress({
             ...progress,
             step: 3,
+            paymentMethod: selectedMethod,
             stripePaymentMethod: stripePayment
         });
     };
@@ -62,6 +63,7 @@ export default function NewMemberPayment({ lid, stripeKey, progress, setProgress
         // Skip payment method step
         setProgress({
             ...progress,
+            paymentMethod: selectedMethod,
             step: 3
         });
     };
