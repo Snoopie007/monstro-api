@@ -4,7 +4,7 @@
 @plugin 'tailwindcss-animate';
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
-@custom-variant inactive (&:where([data-account-status="inactive"], [data-account-status="past due"] *));
+@custom-variant inactive (&:where([data-account-status="inactive"], [data-account-status="past_due"] *));
 		
 @theme {
     --font-poppins: var(--font-poppins), sans-serif;

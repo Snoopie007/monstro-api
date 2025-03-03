@@ -57,7 +57,7 @@ function SideNav({ locationId }: { locationId: string }) {
                                                 onOpenChange={(open) => open ? setCurrentMenuToggle(item.name) : setCurrentMenuToggle(null)}
                                             >
                                                 <CollapsibleTrigger value={item.name}
-                                                    disabled={locationState.status !== "Active"}
+                                                    disabled={locationState.status !== "active"}
                                                     className={'flex flex-row items-center w-full justify-between hover:bg-foreground/10 inactive:opacity-50 rounded-sm py-2 px-2'}
                                                 >
                                                     <div className={cn(iconContainerClass)}>

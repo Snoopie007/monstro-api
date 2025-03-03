@@ -40,7 +40,7 @@ export const AccountStatusProvider = ({ children, locationState }: AccountStatus
                     : location
             })
         });
-        document.documentElement.setAttribute('data-account-status', newStatus.toLowerCase());
+        document.documentElement.setAttribute('data-account-status', newStatus);
     };
 
     useEffect(() => {

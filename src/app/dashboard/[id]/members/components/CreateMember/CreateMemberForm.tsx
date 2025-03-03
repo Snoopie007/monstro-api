@@ -83,7 +83,7 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
         }
 
         const { existing, member } = await result.json();
-        console.log(existing, member)
+
         if (existing) {
             setExistingMember(true);
             setProgress({
@@ -100,6 +100,7 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
             member,
         })
     }
+
     function generatePassword() {
         // Define character sets
         const chars = {
