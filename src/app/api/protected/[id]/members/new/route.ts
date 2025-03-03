@@ -4,13 +4,18 @@ import { encodeReferralCode } from "@/libs/server/sqids";
 import { formatPhoneNumber } from "@/libs/server/db";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { exists, eq, sql } from "drizzle-orm";
 
 type PackageProps = {
     id: number
 }
 
-
-
+const DEFAULT_MEMBER_PROGRESS = {
+    selectProgramId: null,
+    selectPlanId: null,
+    currentStep: 2,
+    completedSteps: [1]
+}
 export async function POST(req: Request, props: { params: Promise<PackageProps> }) {
     const params = await props.params;
     const { progress, ...data } = await req.json();
@@ -26,6 +31,21 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
             return NextResponse.json({ error: "No valid location not found" }, { status: 404 })
         }
 
+        // const [{ exists }] = await db.execute<{ exists: boolean }>(
+        //     sql`select exists(${db.select({ n: sql`1` }).from(members).where(eq(members.email, data.email))}) as exists`
+        // )
+
+        const existing = await db.query.members.findFirst({
+            where: (member, { eq }) => eq(member.email, data.email),
+            with: {
+                memberLocations: true
+            }
+        })
+
+        if (existing) {
+            return NextResponse.json({ existing: true, member: existing }, { status: 200 })
+        }
+
         let user = await db.query.users.findFirst({
             where: (user, { eq }) => eq(user.email, data.email),
             columns: {
@@ -33,38 +53,42 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
             }
         })
 
-        if (user) {
-
-            return NextResponse.json({ error: "Member already exists with this email." }, { status: 404 })
-        }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword: string = await bcrypt.hash(data.password, salt);
 
-        /** Create User */
-        const member = await db.transaction(async (tx) => {
-            const [{ uid }] = await tx.insert(users).values({
+        if (!user) {
+            /** Create User if there isn't one */
+            const res = await db.insert(users).values({
                 name: `${data.firstName} ${data.lastName}`,
                 email: data.email,
                 password: hashedPassword,
-            }).returning({ uid: users.id })
+            }).returning()
+
+            user = res[0]
+        }
+
+
+        const member = await db.transaction(async (tx) => {
+
             const [member] = await tx.insert(members).values({
-                userId: uid,
+                userId: user.id,
                 email: data.email,
                 firstName: data.firstName,
                 lastName: data.lastName,
                 phone: formatPhoneNumber(data.phone),
-                referralCode: encodeReferralCode(uid),
+                referralCode: encodeReferralCode(user.id),
             }).returning({ id: members.id, firstName: members.firstName, lastName: members.lastName, email: members.email, phone: members.phone })
             await tx.insert(memberLocations).values({
                 locationId: params.id,
                 memberId: member.id,
                 status: "incomplete",
+                progress: DEFAULT_MEMBER_PROGRESS
             })
             return member
         })
 
 
-        return NextResponse.json(member, { status: 200 })
+        return NextResponse.json({ existing: false, member }, { status: 200 })
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })

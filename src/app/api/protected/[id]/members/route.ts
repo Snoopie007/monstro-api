@@ -9,7 +9,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 
 	const { searchParams } = new URL(req.url);
 
-	const pageSize = parseInt(searchParams.get("size") || "10");
+	const pageSize = parseInt(searchParams.get("size") || "100");
 	const page = parseInt(searchParams.get("page") || "1");
 	const query = searchParams.get("query") || ""; // Search string
 
@@ -37,6 +37,10 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 					email: members.email,
 					phone: members.phone,
 					avatar: members.avatar,
+					memberLocation: {
+						status: memberLocations.status,
+						progress: memberLocations.progress
+					}
 				})
 				.from(memberLocations)
 				.innerJoin(members, eq(memberLocations.memberId, members.id)) // Join with members table

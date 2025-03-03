@@ -20,6 +20,7 @@ export type Member = {
     rewards?: Reward[];
     familyMembers?: FamilyMember[];
     relatedByFamily?: FamilyMember[];
+    memberLocation?: MemberLocation;
     subscriptions?: MemberSubscription[];
     payers?: MemberSubscription[];
     packages?: MemberPackage[];
@@ -137,3 +138,14 @@ export type MemberInvoice = {
     created?: Date;
     updated?: Date | null;
 };
+
+export type MemberLocation = {
+    id?: number;
+    memberId: number;
+    locationId: number;
+    status: 'incomplete' | 'active' | 'inactive' | 'canceled' | 'paused' | 'archived';
+    progress: MemberOnboarding;
+    created: Date;
+    updated: Date | null;
+    deleted: Date | null;
+}

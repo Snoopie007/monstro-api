@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { db } from '@/db/db';
 import { memberLocations } from '@/db/schemas';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 
 
@@ -15,12 +15,9 @@ export async function POST(req: Request) {
     try {
 
         await db.update(memberLocations).set({
-            progress: {
-                selectProgramId: null,
-                selectPlanId: null,
-                currentStep: 2,
-                completedSteps: [1]
-            }
+            progress: sql`COALESCE(${memberLocations.progress}, '[]')::jsonb || ${JSON.stringify({
+                inviteDate: new Date().toISOString()
+            })}jsonb`
         }).where(and(eq(memberLocations.memberId, data.mid), eq(memberLocations.locationId, data.id)));
 
         const emailSender = new EmailSender();

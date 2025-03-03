@@ -14,7 +14,7 @@ import {
     DropdownMenuItem,
     DropdownMenuContent,
 } from "@/components/ui"
-import AttachFamilyMember from "./attach-family"
+import AttachFamilyMember from "./AttachFamily"
 import { useMember } from "../../providers/MemberContext"
 import { FamilyMember } from "@/types/family-member"
 import { useState } from "react"

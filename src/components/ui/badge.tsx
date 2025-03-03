@@ -22,6 +22,14 @@ const badgeVariants = cva(
         medium: "text-sm",
         large: "text-base",
       },
+      member: {
+        incomplete: "bg-yellow-300 text-yellow-800",
+        active: "bg-green-300 text-green-800",
+        inactive: "bg-gray-300 text-gray-800",
+        canceled: "bg-red-300 text-red-800",
+        paused: "bg-gray-300 text-gray-800",
+        archived: "bg-gray-300 text-gray-800",
+      },
       roles: {
         red: "bg-red-300  text-red-800",
         green: "bg-green-300 text-green-800",
@@ -75,9 +83,9 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
   VariantProps<typeof badgeVariants> { }
 
-function Badge({ className, variant, roles, sub, pkg, transaction, size, inv, ...props }: BadgeProps) {
+function Badge({ className, variant, roles, sub, pkg, transaction, size, inv, member, ...props }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ variant, roles, sub, pkg, transaction, size, inv }), className)} {...props} />
+    <div className={cn(badgeVariants({ variant, roles, sub, pkg, transaction, size, inv, member }), className)} {...props} />
   )
 }
 

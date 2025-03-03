@@ -1,4 +1,5 @@
 import { Checkbox } from "@/components/forms/checkbox";
+import { Badge } from "@/components/ui";
 import { Member } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
@@ -49,8 +50,17 @@ export const MemberColumns = (locationId: string): ColumnDef<Member, any>[] => [
     accessorKey: "phone",
     header: "Phone",
   },
-  // {
-  //   accessorKey: "status",
-  //   header: "Status",
-  // },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => {
+      const member = row.original
+
+      return (
+        <Badge member={member.memberLocation?.status} size="tiny">
+          {member.memberLocation?.status}
+        </Badge>
+      )
+    }
+  },
 ];

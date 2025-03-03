@@ -28,7 +28,7 @@ const paymentMethods = [
     {
         id: 'cash',
         name: 'Manual',
-        description: 'Manually add a payment method for this member.'
+        description: 'This is for any cash, check, or zeal payments.'
     },
 
     {

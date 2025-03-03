@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db/db';
 
-import { getStripeCustomer } from '@/libs/server/stripe';
-
-import { eq } from 'drizzle-orm';
-import { transactions } from '@/db/schemas';
 
 type InvoiceProps = {
     mid: number,
