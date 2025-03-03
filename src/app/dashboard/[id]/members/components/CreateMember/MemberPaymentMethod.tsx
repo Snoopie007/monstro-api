@@ -7,10 +7,10 @@ import {
 import { Elements } from "@stripe/react-stripe-js";
 import { Stripe } from 'stripe';
 import { CreateMemberProgress } from './AddMember';
-import { Dispatch, useState } from 'react';
+import { Dispatch, useEffect, useState } from 'react';
 import { SetStateAction } from 'react';
 
-import { cn } from '@/libs/utils';
+import { cn, tryCatch } from '@/libs/utils';
 import { getStripe } from '@/libs/client/stripe';
 import NewMemberPaymentForm from './NewMemberPaymentForm';
 
@@ -32,7 +32,7 @@ const paymentMethods = [
     },
 
     {
-        id: 'email',
+        id: 'invite',
         name: 'Send Email Invite',
         description: 'Send an email invitation for the member to add their own payment method.'
     },
@@ -44,29 +44,53 @@ const paymentMethods = [
 ]
 
 export default function NewMemberPayment({ lid, stripeKey, progress, setProgress }: NewMemberPaymentProps) {
-    const [selectedMethod, setSelectedMethod] = useState<string>("1");
+    const [selectedMethod, setSelectedMethod] = useState<string>();
     const [stripePayment, setStripePayment] = useState<Stripe.PaymentMethod | undefined>(undefined);
-    const handleContinue = () => {
+    const [loading, setLoading] = useState(false);
+
+
+    async function handleContinue() {
+        setLoading(true);
         if (progress.paymentMethod === "card" && !stripePayment) {
             toast.error("You must add a valid credit card to continue.");
             return;
         }
+
+        if (selectedMethod === "invite") {
+            const { result, error } = await tryCatch(
+                fetch(`/api/protected/${lid}/members/${progress.member?.id}/invite`, { method: "POST" })
+            )
+            setLoading(false);
+            if (error || !result || !result.ok) {
+                toast.error("Something went wrong, please try again.");
+                return;
+            }
+
+        }
+        setLoading(false);
         setProgress({
             ...progress,
             step: 3,
-            paymentMethod: selectedMethod,
             stripePaymentMethod: stripePayment
         });
     };
 
-    const handleSkip = () => {
+    function handleSkip() {
         // Skip payment method step
         setProgress({
             ...progress,
-            paymentMethod: selectedMethod,
             step: 3
         });
     };
+
+    useEffect(() => {
+        if (selectedMethod) {
+            setProgress({
+                ...progress,
+                paymentMethod: selectedMethod
+            });
+        }
+    }, [selectedMethod]);
 
 
     return (

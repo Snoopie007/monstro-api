@@ -222,8 +222,11 @@ export default function NewMemberPaymentForm({ member, lid, setStripePayment }: 
                 </fieldset>
 
                 <div className="flex justify-end">
-                    <Button type="submit" variant={"continue"} size="sm" className="" disabled={!validCard || loading}>
-                        {loading ? <Loader2 className="animate-spin" /> : "Add Card"}
+                    <Button type="submit" variant={"continue"} size="sm"
+                        className={cn("children:hidden", loading && "children:block")}
+                        disabled={!validCard || loading}>
+                        <Loader2 className="animate-spin w-4 h-4 mr-2" />
+                        Add Card
                     </Button>
                 </div>
             </form>

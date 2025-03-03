@@ -12,6 +12,7 @@ export const MemberProgramSchema = z.object({
     startDate: z.date(),
     memberPlanId: z.number(),
     other: z.object({
+        skipContract: z.boolean().optional(),
         programId: z.number().min(1, "Program is required"),
         cardId: z.string().optional(),
     }),

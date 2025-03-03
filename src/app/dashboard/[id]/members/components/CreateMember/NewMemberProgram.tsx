@@ -12,7 +12,8 @@ import { Button, DialogBody, DialogClose, DialogFooter } from '@/components/ui';
 import { Loader2 } from 'lucide-react';
 import {
     Form, FormField, FormItem, FormLabel, FormMessage,
-    FormControl, Select, SelectTrigger, SelectValue, SelectContent, SelectItem
+    FormControl, Select, SelectTrigger, SelectValue,
+    SelectContent, SelectItem, FormDescription
 } from '@/components/forms';
 
 import { SubFields } from './SubFields';
@@ -40,6 +41,7 @@ export default function NewMemberProgram({ lid, progress, setProgress }: NewMemb
             other: {
                 programId: undefined,
                 cardId: undefined,
+                skipContract: false,
             },
             pkg: {
                 expireDate: undefined,
@@ -56,7 +58,6 @@ export default function NewMemberProgram({ lid, progress, setProgress }: NewMemb
 
 
     useEffect(() => {
-        console.log(progress)
         fetchPrograms()
     }, [progress])
 
@@ -166,7 +167,34 @@ export default function NewMemberProgram({ lid, progress, setProgress }: NewMemb
                                 )}
                             />
                         </fieldset>
+                        {plan && plan.contractId && (
+                            <fieldset className='mb-2'>
+                                <FormField
+                                    control={form.control}
+                                    name="other.skipContract"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center gap-2 rounded-sm border border-foreground/10 py-2 px-3 ">
 
+                                            <FormControl>
+                                                <Switch
+                                                    disabled={!plan?.contractId}
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <div className="space-y-0.5">
+                                                <FormLabel className="text-sm">
+                                                    Skip contract
+                                                </FormLabel>
+                                                <FormDescription className="text-xs">
+                                                    This will skip the contract step and create the subscription immediately.
+                                                </FormDescription>
+                                            </div>
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
+                        )}
                         {plan && plan.type === "recurring" && (
                             <SubFields form={form} paymentMethod={progress.paymentMethod} />
                         )}
@@ -178,7 +206,7 @@ export default function NewMemberProgram({ lid, progress, setProgress }: NewMemb
             </DialogBody>
             <DialogFooter>
                 <DialogClose asChild>
-                    <Button type="button" variant="outline" size={"sm"}>Skip</Button>
+                    <Button type="button" variant="outline" size={"sm"}>Cancel</Button>
                 </DialogClose>
                 <Button
                     className={cn("children:hidden", loading && "children:block")}

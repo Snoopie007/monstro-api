@@ -17,6 +17,7 @@ import NewMemberPayment from './MemberPaymentMethod';
 import NewMemberProgram from './NewMemberProgram';
 import { Member } from '@/types';
 import { Stripe } from 'stripe';
+
 interface CreateMemberProps {
     lid: string
     stripeKey: string | null
@@ -31,16 +32,17 @@ export type CreateMemberProgress = {
     stripePaymentMethod: Stripe.PaymentMethod | undefined
 }
 
+const DEFAULT_PROGRESS: CreateMemberProgress = {
+    member: undefined,
+    paymentMethod: undefined,
+    programId: undefined,
+    planId: undefined,
+    step: 1,
+    stripePaymentMethod: undefined
+}
 export function AddMember({ lid, stripeKey }: CreateMemberProps) {
     const [open, setOpen] = useState(false);
-    const [progress, setProgress] = useState<CreateMemberProgress>({
-        member: undefined,
-        paymentMethod: undefined,
-        programId: undefined,
-        planId: undefined,
-        step: 1,
-        stripePaymentMethod: undefined
-    });
+    const [progress, setProgress] = useState<CreateMemberProgress>(DEFAULT_PROGRESS);
 
     const steps = ['Create Account', 'Payment Method', 'Select Program'];
 
