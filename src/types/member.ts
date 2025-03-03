@@ -28,7 +28,12 @@ export type Member = {
     updated: Date | null;
     deleted: Date | null;
 };
-
+export type MemberOnboarding = {
+    selectProgramId: number | null;
+    selectPlanId: number | null;
+    completedSteps: number[];
+    currentStep: number;
+};
 type MemberSubscriptionStatus = 'active' | 'incomplete' | 'canceled' | 'past_due' | 'incomplete' | 'trialing' | 'unpaid'
 
 export type MemberSubscription = {

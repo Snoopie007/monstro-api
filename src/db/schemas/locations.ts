@@ -8,7 +8,7 @@ import { programs } from "./programs";
 import { transactions } from "./transactions";
 import { vendors } from "./vendors";
 import { memberSubscriptions } from "./MemberPlans";
-import { LocationSettings } from "@/types";
+import { LocationSettings, MemberOnboarding } from "@/types";
 
 const LocationStatusEnum = pgEnum("location_status", ["incomplete", "active", "inactive", "past_due", "canceled", "archived", "paused", "trailing"])
 const MemberLocationStatusEnum = pgEnum("member_location_status", ["incomplete", "active", "inactive", "archived"])
@@ -56,6 +56,7 @@ export const memberLocations = pgTable("member_locations", {
     locationId: integer("location_id").notNull().references(() => locations.id),
     stripeCustomerId: text("stripe_customer_id"),
     status: MemberLocationStatusEnum("status").notNull().default("incomplete"),
+    progress: jsonb("progress").$type<MemberOnboarding>().notNull().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }),
     updated: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);
