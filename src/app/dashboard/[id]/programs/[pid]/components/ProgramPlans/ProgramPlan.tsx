@@ -9,13 +9,11 @@ import {
 } from "@/components/ui";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useMemo, useState } from "react";
-import UpsertPlan from "./upsert-plan";
-import { convertToCurrency } from "@/libs/utils";
-import { PencilIcon } from "lucide-react";
+import UpsertPlan from "./UpsertPlan";
+import { formatAmountForDisplay } from "@/libs/utils";
 import { MemberPlan } from "@/types";
-import { Plaster } from "next/font/google";
+import { Input } from "@/components/forms/input";
 
-const CellStyle = "text-sm py-4 px-6 ";
 
 interface ProgramPlansProps {
     programPlans: any[];
@@ -122,33 +120,33 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
     };
 
     const { isCopied, copyToClipboard } = useCopyToClipboard();
-    const columns: Array<string> = ["Name", "Billing Period", "Amount", "Family", "Member Limit"];
-    // const columns: Array<string> = ["Name", "Billing Period", "Amount", "Family", "Member Limit", "Action"];
+
 
     return (
-        <>
+        <div className="space-y-4">
             <UpsertPlan plan={editPlanOptions.currentPlan} onChange={editPlanOptions.onChange} locationId={locationId} programId={programId} />
+
+
+            <div className='w-full flex flex-row items-center  gap-2'>
+                <div className='flex-initial'>
+                    <Input placeholder='Search subs...' className='w-[250px] h-8 py-2  text-xs rounded-sm' />
+                </div>
+                <div>
+                    <Button variant={"foreground"} size={"sm"} onClick={() => create(null)} >
+                        + Plan
+                    </Button>
+                </div>
+            </div>
             <Card className="rounded-sm shadow-none ">
-                <CardHeader className="p-0">
-                    <div className="flex flex-row items-center justify-between border-b ">
-                        <div className="flex-initial inline-block text-sm font-poppins px-5 font-bold  capitalize ">
-                            Plans
-                        </div>
-                        <div className="flex">
-                            <Button variant={"ghost"} className={"border-l rounded-none"} onClick={() => create(null)} >
-                                Create Plan
-                            </Button>
-                        </div>
-                    </div>
-                </CardHeader>
+
                 <CardContent className="p-0 shadow-none">
                     <div>
                         {programPlans.length > 0 ?
                             <Table className=" w-full">
-                                <TableHeader className="bg-white/10 text-xs">
+                                <TableHeader className="bg-white/10">
                                     <TableRow >
-                                        {columns.map((title, index) => (
-                                            <TableHead key={index} className="font-semibold  text-xs" >
+                                        {["Name", "Type", "Amount", "Family Plan", "Member Limit"].map((title, index) => (
+                                            <TableHead key={index} className="h-auto font- py-2" >
                                                 {title}
                                             </TableHead>
                                         ))}
@@ -158,20 +156,20 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
                                     {programPlans?.map((plan: any, index: number) => {
                                         return (
                                             <TableRow className="border-t group cursor-pointer border-gray-200" key={plan?.id}>
-                                                <TableCell className={CellStyle}>
-                                                    <h1>{plan.name}</h1>
-                                                    <p className="text-xs">{plan.description}</p>
+                                                <TableCell>
+                                                    {plan.name}
                                                 </TableCell>
-                                                <TableCell className={CellStyle}>
-                                                    {plan.interval}
+                                                <TableCell>
+                                                    {plan.type === "recurring" ? "Subscription" : "Package"}
                                                 </TableCell>
-                                                <TableCell className={CellStyle}>
-                                                    {convertToCurrency(plan.price, '$', 'USD')}
+                                                <TableCell>
+                                                    {formatAmountForDisplay(plan.price / 100, plan.currency)}
+                                                    {plan.type === "recurring" ? ` / ${plan.interval}` : ""}
                                                 </TableCell>
-                                                <TableCell className={CellStyle}>
-                                                    {plan.family ? 'Allowed' : 'N/A'}
+                                                <TableCell>
+                                                    {plan.family ? 'Yes' : 'No'}
                                                 </TableCell>
-                                                <TableCell className={CellStyle}>
+                                                <TableCell>
                                                     {plan.familyMemberLimit}
                                                 </TableCell>
                                                 {/* <TableCell className={CellStyle}>
@@ -197,7 +195,7 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
                     </div>
                 </CardContent>
             </Card>
-        </>
+        </div>
 
     )
 }

@@ -26,8 +26,6 @@ export interface UpdateProgramProps {
     locationId: string
 }
 export default function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
-    const { data: session } = useSession();
-
     const [loading, setLoading] = useState<boolean>(false);
     const { program, mutate } = useProgram(locationId, programId);
     const [open, setOpen] = useState<boolean>(false);
@@ -51,7 +49,7 @@ export default function UpdateProgram({ programId, locationId }: UpdateProgramPr
         setLoading(true)
         try {
             // Why withOutToken?
-            const res = await post({url: `programs/${program.id}`, id: locationId, data: data});
+            const res = await post({ url: `programs/${program.id}`, id: locationId, data: data });
             await sleep(2000)
             setLoading(false)
             setOpen(false)
@@ -83,13 +81,12 @@ export default function UpdateProgram({ programId, locationId }: UpdateProgramPr
                                     name="name"
                                     render={({ field }) => (
                                         <FormItem className="mb-4">
-                                            <FormLabel>Program Name</FormLabel>
+                                            <FormLabel size={"tiny"}>Program Name</FormLabel>
                                             <FormControl>
                                                 <Input type='text' className={cn("")} placeholder="Program Name" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
-
                                     )}
                                 />
                                 <FormField
@@ -97,7 +94,7 @@ export default function UpdateProgram({ programId, locationId }: UpdateProgramPr
                                     name="description"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Program Description</FormLabel>
+                                            <FormLabel size={"tiny"}>Program Description</FormLabel>
                                             <FormControl>
                                                 <Textarea
                                                     placeholder="Program Description"

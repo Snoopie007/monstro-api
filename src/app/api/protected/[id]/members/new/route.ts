@@ -4,7 +4,6 @@ import { encodeReferralCode } from "@/libs/server/sqids";
 import { formatPhoneNumber } from "@/libs/server/db";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { exists, eq, sql } from "drizzle-orm";
 
 type PackageProps = {
     id: number
@@ -16,6 +15,7 @@ const DEFAULT_MEMBER_PROGRESS = {
     currentStep: 2,
     completedSteps: [1]
 }
+
 export async function POST(req: Request, props: { params: Promise<PackageProps> }) {
     const params = await props.params;
     const { progress, ...data } = await req.json();

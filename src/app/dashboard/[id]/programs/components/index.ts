@@ -1,2 +1,2 @@
-export * from './add-program';
-export * from './program-list';
+export * from './AddProgram';
+export * from './ProgramList';

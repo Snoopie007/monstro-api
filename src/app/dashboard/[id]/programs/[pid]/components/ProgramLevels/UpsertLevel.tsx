@@ -46,17 +46,17 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 		sessions.forEach((session: Session) => {
 			for (const [key, value] of Object.entries(session)) {
 				const day = DaysOfWeek.find(d => d.toLowerCase() === key);
-				
+
 				if (day && value !== undefined && typeof value === 'string') {
-					
+
 					const time = value.split(':');
 					// console.log("Time ", time, time[0], time[1])
-						schedules.push({
-							day: day,
-							durationTime: session.duration_time ? JSON.parse(session.duration_time as string)[day.toLowerCase()] : 0,
-							time: new Time(parseInt(time[0]), parseInt(time[1]))
-						});
-					
+					schedules.push({
+						day: day,
+						durationTime: session.duration_time ? JSON.parse(session.duration_time as string)[day.toLowerCase()] : 0,
+						time: new Time(parseInt(time[0]), parseInt(time[1]))
+					});
+
 				}
 			}
 		});
@@ -161,14 +161,14 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 				</DialogHeader>
 				<DialogBody>
 					<Form {...form}>
-						<form  >
+						<form className="space-y-2" >
 							<fieldset>
 								<FormField
 									control={form.control}
 									name="name"
 									render={({ field }) => (
 										<FormItem >
-											<FormLabel>Name</FormLabel>
+											<FormLabel size={"tiny"}>Name</FormLabel>
 											<FormControl>
 												<Input type='text' className={cn()} placeholder={'Level Name'} {...field} />
 											</FormControl>
@@ -184,7 +184,7 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 									name="capacity"
 									render={({ field }) => (
 										<FormItem >
-											<FormLabel>Capacity</FormLabel>
+											<FormLabel size={"tiny"}>Capacity</FormLabel>
 											<FormControl>
 												<Input type='number' className={cn()} placeholder={'Capacity'}  {...field} />
 											</FormControl>
@@ -198,7 +198,7 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 									name="minAge"
 									render={({ field }) => (
 										<FormItem className="flex-1">
-											<FormLabel >Min Age</FormLabel>
+											<FormLabel size={"tiny"}>Min Age</FormLabel>
 											<FormControl>
 												<Input type='number' className={cn()} placeholder={'Min Age'} {...field} />
 											</FormControl>
@@ -212,7 +212,7 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 									name="maxAge"
 									render={({ field }) => (
 										<FormItem className="flex-1">
-											<FormLabel >Max Age</FormLabel>
+											<FormLabel size={"tiny"}>Max Age</FormLabel>
 											<FormControl>
 												<Input type='number' className={cn()} placeholder={'Max Age'} {...field} />
 											</FormControl>
@@ -228,12 +228,12 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 									<div>
 										<Button
 											variant={"foreground"}
+											size={"xs"}
 											onClick={(e) => {
 												e.preventDefault();
 												e.stopPropagation();
 												append({ day: "", time: new Time(12, 0), durationTime: 30 });
 											}}
-											className="text-xs py-1 h-auto rounded-sm"
 										>
 											+ Add
 										</Button>
@@ -242,21 +242,18 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 								<div className="border-foreground/10 mx-3 h-1 block border-b rounded-sm mt-2 mb-4 "></div>
 
 								<ScrollArea className="h-[250px] w-full px-3  ">
-									<div className='inline-flex flex-row items-left gap-2 '>
-										{['Day', 'Time', 'Duration(mins)'].map((item) => (
-											<div key={item} className={cn('font-medium flex-initial  w-[120px] text-sm')}>
-												{item}
-											</div>
+									<div className="space-y-1">
+										<div className='inline-flex flex-row items-left gap-2 '>
+											{['Day', 'Time', 'Duration(mins)'].map((item) => (
+												<div key={item} className={cn('font-medium flex-initial  w-[120px] text-xs uppercase')}>
+													{item}
+												</div>
+											))}
+										</div>
+										{fields.map((field, i) => (
+											<SessionComponents key={field.id} form={form} index={i} onRemove={() => remove(i)} />
 										))}
 									</div>
-									{fields.map((field, i) => (
-  <SessionComponents
-    key={field.id}
-    form={form}
-    index={i}
-    onRemove={() => remove(i)}
-  />
-))}
 								</ScrollArea>
 
 
@@ -288,85 +285,85 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 }
 
 interface SessionComponentsProps {
-  form: UseFormReturn<z.infer<typeof UpdateLevelsSchema>>;
-  index: number;
-  onRemove: () => void;
+	form: UseFormReturn<z.infer<typeof UpdateLevelsSchema>>;
+	index: number;
+	onRemove: () => void;
 }
 
 function SessionComponents({ form, index, onRemove }: SessionComponentsProps) {
-  return (
-    <div className="inline-flex flex-row items-center gap-2 mb-2">
-      {/* Day Selector */}
-      <FormField
-        control={form.control}
-        name={`sessions.${index}.day`}
-        render={({ field }) => (
-          <FormItem className="flex-initial w-[120px]">
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <SelectTrigger className="w-full border rounded-sm">
-                <SelectValue placeholder="Select a day" />
-              </SelectTrigger>
-              <SelectContent>
-                {DaysOfWeek.map((day, index) => (
-                  <SelectItem key={index} value={day}>
-                    {day}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormItem>
-        )}
-      />
+	return (
+		<div className="inline-flex flex-row  gap-2 mb-2">
+			{/* Day Selector */}
+			<FormField
+				control={form.control}
+				name={`sessions.${index}.day`}
+				render={({ field }) => (
+					<FormItem className="flex-initial w-[120px]">
+						<Select onValueChange={field.onChange} defaultValue={field.value}>
+							<SelectTrigger className="w-full border rounded-sm">
+								<SelectValue placeholder="Select a day" />
+							</SelectTrigger>
+							<SelectContent>
+								{DaysOfWeek.map((day, index) => (
+									<SelectItem key={index} value={day}>
+										{day}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</FormItem>
+				)}
+			/>
 
-      {/* Time Picker */}
-      <FormField
-        control={form.control}
-        name={`sessions.${index}.time`}
-        render={({ field }) => (
-          <FormItem className="flex-initial w-[120px]">
-            <FormControl>
-              <TimePicker
-                label="Time"
-                value={field.value}
-                onChange={(date) => {
-                  field.onChange(date ? new Time(date.hour, date.minute) : new Time(12, 0));
-                }}
-              />
-            </FormControl>
-          </FormItem>
-        )}
-      />
+			{/* Time Picker */}
+			<FormField
+				control={form.control}
+				name={`sessions.${index}.time`}
+				render={({ field }) => (
+					<FormItem className="flex-initial w-[120px] ">
+						<FormControl>
+							<TimePicker
+								label="Time"
+								value={field.value}
+								onChange={(date) => {
+									field.onChange(date ? new Time(date.hour, date.minute) : new Time(12, 0));
+								}}
+							/>
+						</FormControl>
+					</FormItem>
+				)}
+			/>
 
-      {/* Duration Input */}
-      <FormField
-        control={form.control}
-        name={`sessions.${index}.durationTime`}
-        render={({ field }) => (
-          <FormItem className="flex-initial w-[120px]">
-            <FormControl>
-              <Input type="number" placeholder="Duration" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+			{/* Duration Input */}
+			<FormField
+				control={form.control}
+				name={`sessions.${index}.durationTime`}
+				render={({ field }) => (
+					<FormItem className="flex-initial w-[120px]">
+						<FormControl>
+							<Input type="number" placeholder="Duration" {...field} />
+						</FormControl>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
 
-      {/* Remove Button */}
-      {index > 0 && (
-        <div className="flex flex-row items-center gap-2">
-          <div>
-            <Icon name="Copy" size={16} className="cursor-pointer stroke-gray-500" />
-          </div>
-          <div onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onRemove();
-          }}>
-            <Icon name="Trash2" size={16} className="cursor-pointer stroke-red-500" />
-          </div>
-        </div>
-      )}
-    </div>
-  );
+			{/* Remove Button */}
+			{index > 0 && (
+				<div className="flex flex-row pt-3 gap-2">
+					<div>
+						<Icon name="Copy" size={14} className="cursor-pointer stroke-white" />
+					</div>
+					<div onClick={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						onRemove();
+					}}>
+						<Icon name="Trash2" size={14} className="cursor-pointer stroke-red-500" />
+					</div>
+				</div>
+			)}
+		</div>
+	);
 }
 

@@ -19,7 +19,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem, FormLabel, FormDescription } from '@/components/forms';
 import { cn, sleep } from "@/libs/utils";
 
-import AddProgramSchedules from './program-schedules';
+import AddProgramSchedules from './ProgramSchedules';
 import { Time } from '@internationalized/date';
 import { nextApi, post } from '@/libs/api';
 import { NewProgramSchema } from './schemas';

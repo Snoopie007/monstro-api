@@ -110,11 +110,17 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 invoiceId,
                 subscriptionId: sid,
             })
+
             // Add to reservation
         })
 
         if (data.paymentType === "cash") {
-            // add schedule hook
+            // to check if there is the end period has increased
+            // it means the vendor has accepted a payment end period
+            // then not then need to mark the create invoice mark as draft
+            // that invoice will be for the next period
+            // forPeriod Start and forPeriodEnd
+            // add schedule hook.
         }
         return NextResponse.json({ success: true }, { status: 200 })
     } catch (err) {

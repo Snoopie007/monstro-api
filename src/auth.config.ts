@@ -64,7 +64,7 @@ export default {
 					return {
 						...restData,
 						id: encodeId(location.id),
-						status: locationState ? locationState.status : "Pending"
+						status: locationState ? locationState.status : "incomplete"
 					}
 				});
 

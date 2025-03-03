@@ -57,9 +57,7 @@ function sleep(ms: number) {
   	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function convertToCurrency(amount: number, symbol: string, currency: string): string {
-  	return `${symbol}${amount} ${currency}`;
-}
+
 
 
 function ErrorHandler<T, E extends new (message?: string) => Error>(
@@ -180,7 +178,6 @@ function getCurrentStatus(sessionData: any, userTimezone: any) {
 }
 
 export {
-	convertToCurrency,
 	sleep,
 	tryCatch,
 	formatAmountForDisplay,

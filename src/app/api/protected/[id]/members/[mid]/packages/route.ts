@@ -103,6 +103,8 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
                 invoiceId: iid,
                 packageId: mpid
             })
+
+            // Add to reservation
         })
 
         return NextResponse.json({ success: true }, { status: 200 })

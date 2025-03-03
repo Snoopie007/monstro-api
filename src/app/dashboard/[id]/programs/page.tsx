@@ -10,7 +10,7 @@ import Loading from "@/components/loading";
 import { flexRender } from "@tanstack/react-table";
 import { getCoreRowModel } from "@tanstack/react-table";
 import { useReactTable } from "@tanstack/react-table";
-import { ProgramColumns } from "./components/program-columns";
+import { ProgramColumns } from "./components/ProgramColumns";
 
 
 export default function Programs(props: { params: Promise<{ id: string }> }) {
@@ -51,10 +51,10 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
                 <Table className="w-auto border-r border-b border-foreground/5" >
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id} className="align-middle text-sm  bg-foreground/5">
+                            <TableRow key={headerGroup.id} className="align-middle text-sm bg-foreground/5">
                                 {headerGroup.headers.map((header) => {
                                     return (
-                                        <TableHead key={header.id} className="h-auto  border-foreground/5  py-1  text-foreground" >
+                                        <TableHead key={header.id} className="h-auto border-foreground/5 py-1 text-foreground" >
                                             {header.isPlaceholder ? null : flexRender(
                                                 header.column.columnDef.header,
                                                 header.getContext()

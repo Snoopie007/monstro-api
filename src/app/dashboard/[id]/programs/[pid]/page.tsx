@@ -9,14 +9,15 @@ import {
     TabsList,
     TabsTrigger,
 } from "@/components/ui/tabs"
-import UpdateProgram from './components/update-program';
+import UpdateProgram from './components/UpdateProgram';
 import { ProgramLevels } from './components/ProgramLevels';
 import { ProgramMembers } from './components/ProgramMembers';
-import ProgramPlans from './components/ProgramPlans/program-plans';
+import ProgramPlans from './components/ProgramPlans/ProgramPlan';
 import useSWR from 'swr';
 
 import LoadingComponent from '@/components/loading';
 import ErrorComponent from '@/components/error';
+import { Card, CardContent, CardHeader } from '@/components/ui';
 
 export default function Program(props: { params: Promise<{ id: string, pid: number }> }) {
     const params = use(props.params);
@@ -29,81 +30,45 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
 
     if (program) {
         return (
-            <div className="m-auto p-5 grid grid-cols-10 gap-4">
-                <div className='col-span-3'>
-                    <div className=" mb-4 w-full   overflow-hidden border rounded-sm">
-                        <div className="border-b flex flex-row justify-between ">
-                            <div className="flex-initial flex flex-row items-center px-4">
-                                <button onClick={() => { }} className="group" >
-                                    <ArrowLeft size={18} className="stroke-white" />
-                                </button>
-                            </div>
-                            <div className="flex-1 flex flex-row items-center justify-end ">
-                                <div className="flex ">
-                                    <UpdateProgram programId={program.id} locationId={params.id} />
+            <div className="m-auto p-5 grid grid-cols-10 gap-4 ">
+
+                <div className='col-span-3 space-y-4'>
+                    <Card>
+                        <CardHeader className="p-0">
+                            <div className="border-b flex flex-row justify-between ">
+                                <div className="flex-initial flex flex-row items-center px-4">
+
                                 </div>
-
-                            </div>
-                        </div>
-                        <div className="flex flex-row  gap-6 w-full py-5 px-3">
-                            <div className="">
-                                <Avatar className="group-hover:bg-violet-600 max-w-full flex items-center justify-center text-black-100 w-16 h-16 bg-white/50">
-                                    <AvatarImage className="w-full h-full rounded-full border" src={program.avatar} />
-                                    <AvatarFallback className="  bg-gray-200 text-gray-400 text-4xl font-bold">
-                                        {program.name.charAt(0)}
-                                    </AvatarFallback>
-                                    <div className="absolute align-middle file-upload flex h-full hover:opacity-100 items-center justify-center opacity-0 w-full text-3xl">
-
-
-                                    </div>
-                                </Avatar>
-                            </div>
-                            <div className="flex flex-col gap-3">
-                                <div className='flex flex-col gap-4'>
-                                    <div className="text-sm ">
-                                        <strong>Name</strong>
-                                        <div className='text-gray-400 '> {program.name}</div>
+                                <div className="flex-1 flex flex-row items-center justify-end ">
+                                    <div className="flex ">
+                                        <UpdateProgram programId={program.id} locationId={params.id} />
                                     </div>
 
-                                    <div className="text-sm ">
-                                        <strong>Description</strong>
-                                        <p className=" text-gray-400 font-roboto">
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className='p-4'>
+                            <div className="flex flex-col ">
+                                <div className="flex flex-row gap-3 items-center">
+                                    <Avatar className="flex items-center justify-center text-black-100 w-[45px] h-[45px]  bg-white/50">
+                                        <AvatarImage className="rounded-full " src={program.avatar} />
+                                        <AvatarFallback className=" bg-gray-200 text-gray-400 text-lg font-black">
+                                            {program.name.charAt(0)}
+                                        </AvatarFallback>
+
+                                    </Avatar>
+                                    <div className='space-y-0'>
+                                        <div className='text-foreground text-sm font-semibold'> {program.name}</div>
+                                        <p className=" text-foreground/80 text-xs font-roboto">
                                             {program.description}
                                         </p>
+
                                     </div>
 
-                                </div>
-                                <div className='grid grid-cols-3 '>
-                                    <div className="text-sm  py-2">
-                                        <strong>
-                                            Total Enrolled
-                                        </strong>
-                                        <div className='text-gray-400 '>
-                                            {program.memberCount}
-                                        </div>
-                                    </div>
-                                    <div className="text-sm  py-2">
-                                        <strong>
-                                            Total Active
-                                        </strong>
-                                        <div className='text-gray-400 '>
-                                            {0}
-                                        </div>
-                                    </div>
-                                    <div className="text-sm py-2">
-                                        <strong>
-                                            Retention Rate
-                                        </strong>
-                                        <div className='text-gray-400 '>
-                                            {0}
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
-
-                        </div>
-                    </div>
-
+                        </CardContent>
+                    </Card>
                     <div className='mb-4'>
                         <ProgramLevels levels={program.levels} programId={params.pid} locationId={params.id} />
                     </div>
@@ -111,27 +76,19 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
 
                 <div className="col-span-7">
                     <Tabs defaultValue="members" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-
-                            {["members", "plans"].map((tab) => (
-                                <TabsTrigger key={tab} value={tab} className='capitalize'>{tab}</TabsTrigger>
+                        <TabsList className='bg-foreground/10 rounded-sm p-1'>
+                            {["members", "subscriptions & packages"].map((tab) => (
+                                <TabsTrigger key={tab} value={tab} className='capitalize'>
+                                    {tab}
+                                </TabsTrigger>
                             ))}
-
                         </TabsList>
-
-                        <TabsContent value="members" className='p-0'>
+                        <TabsContent value="members" >
                             <ProgramMembers programId={program.id} locationId={params.id} />
                         </TabsContent>
-
-                        <TabsContent value="plans">
-                            <ProgramPlans
-                                programPlans={program.plans}
-                                programId={params.pid}
-                                vendorId={program.vendorId}
-                                locationId={params.id}
-                            />
+                        <TabsContent value="subscriptions & packages">
+                            <ProgramPlans programPlans={program.plans} programId={params.pid} vendorId={program.vendorId} locationId={params.id} />
                         </TabsContent>
-
                     </Tabs>
                 </div>
             </div>

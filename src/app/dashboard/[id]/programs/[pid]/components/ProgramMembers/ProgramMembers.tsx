@@ -11,8 +11,8 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/forms/input";
 
-import { ProgramMemberColumns } from "./program-member-columns";
-import { ProgramMemberTable } from "./program-member-table";
+import { ProgramMemberColumns } from "./ProgramMemberColumns";
+import { ProgramMemberTable } from "./ProgramMemberTable";
 
 import { Member } from "@/types";
 import { useProgramMembers } from "@/hooks/use-programs";

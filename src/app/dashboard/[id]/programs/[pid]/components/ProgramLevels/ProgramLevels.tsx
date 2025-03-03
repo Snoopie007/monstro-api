@@ -9,15 +9,14 @@ import {
     Button,
 } from "@/components/ui";
 
-import { cn } from "@/libs/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { UpsertLevel } from "./upsert-level";
+import { UpsertLevel } from "./UpsertLevel";
 
 import { useMemo, useState } from "react";
 import LevelActions from "./actions";
 import { del } from "@/libs/api";
 import useSWR from "swr";
-const CellStyle = "text-sm px-4 py-2 font-roboto";
+
 
 export function ProgramLevels({ levels, programId, locationId }: { levels: Level[], programId: number, locationId: string }) {
     const [currentLevel, setCurrentLevel] = useState<Level | null>(null);
@@ -31,7 +30,7 @@ export function ProgramLevels({ levels, programId, locationId }: { levels: Level
                 setCurrentLevel(level);
             },
             async onDelete(id: number) {
-                await del({url: `programs/${programId}/levels/${id}`, id: locationId}).then(() => {
+                await del({ url: `programs/${programId}/levels/${id}`, id: locationId }).then(() => {
                     mutate();
                 });
             }
@@ -69,7 +68,7 @@ export function ProgramLevels({ levels, programId, locationId }: { levels: Level
                                 Archived
                             </Toggle> */}
                             <Button onClick={create} variant={"ghost"} className={" h-full border-l  rounded-none"}>
-                                Add Level
+                                +
                             </Button>
 
                         </div>
@@ -81,7 +80,7 @@ export function ProgramLevels({ levels, programId, locationId }: { levels: Level
                             <TableHeader className="bg-foreground/5 ">
                                 <TableRow >
                                     {["Name", "Capacity", "Age Range", ""].map((title, index) => (
-                                        <TableHead key={index} className="h-auto  py-2 font-medium  text-sm" >
+                                        <TableHead key={index} className="h-auto  py-2 font-medium  text-xs" >
                                             {title}
                                         </TableHead>
                                     ))}
@@ -90,18 +89,18 @@ export function ProgramLevels({ levels, programId, locationId }: { levels: Level
                             <TableBody>
                                 {levels?.map((level: Level, i: number) => {
                                     return (
-                                        <TableRow key={i} className="border-t group cursor-pointer  ">
-                                            <TableCell className={CellStyle}>
+                                        <TableRow key={i} className="border-t  group cursor-pointer  ">
+                                            <TableCell className={"text-xs"}>
                                                 {level.name}
                                             </TableCell>
-                                            <TableCell className={CellStyle}>
+                                            <TableCell className={"text-xs"}>
                                                 {level?.capacity}
                                             </TableCell>
-                                            <TableCell className={CellStyle}>
+                                            <TableCell className={"text-xs"}>
                                                 {level?.minAge} - {level?.maxAge}
                                             </TableCell>
 
-                                            <TableCell className={cn(CellStyle)}>
+                                            <TableCell className={"text-xs"}>
                                                 <LevelActions level={level} onChange={editLevelOptions.onChange} onDelete={editLevelOptions.onDelete} />
                                             </TableCell>
                                         </TableRow>
