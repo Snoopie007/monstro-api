@@ -17,6 +17,7 @@ import { NewProgramSchema } from './schemas';
 import { Icon } from '@/components/icons';
 import { Button } from '@/components/ui';
 import { cn } from '@/libs/utils';
+import { X } from 'lucide-react';
 
 
 interface AddProgramSchedulesProps {
@@ -113,7 +114,7 @@ export default function AddProgramSchedules({ scheduleIndex, control }: AddProgr
                                     )}
                                 />
                                 {k > 0 ? <div onClick={() => remove(k)} className='cursor-pointer pt-3'>
-                                    <Icon name="Trash2" size={14} className=" stroke-red-500" />
+                                    <X className='w-4 h-4 stroke-red-500' />
                                 </div> : null}
                             </div>
                         );

@@ -6,12 +6,12 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    Switch,
 } from "@/components/ui";
-import { cn } from "@/libs/utils";
+import { cn, tryCatch } from "@/libs/utils";
 import { z } from "zod";
 import { Contract, MemberPlan } from '@/types'
 import {
-    Checkbox,
     Form,
     FormField,
     FormLabel,
@@ -25,16 +25,19 @@ import {
     SelectValue,
     Input,
     Textarea,
+    FormDescription,
 } from "@/components/forms";
 import { useForm } from "react-hook-form";
-import { PlanSchema } from "./schemas";
+import { NewPlanSchema, PlanType, PresetIntervals } from "./schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useEffect, useState } from "react";
 import { DialogClose, DialogDescription } from "@radix-ui/react-dialog";
 import { useContractsByLocationId } from "@/hooks/use-contracts";
-import { addPlan, updatePlan } from "@/libs/api";
-import { Loader2 } from "lucide-react";
 
+import { Loader2 } from "lucide-react";
+import { toast } from "react-toastify";
+import { PlanSubFields } from "./SubFields";
+import { PlanPkgFields } from "./PkgFields";
 
 interface CreatePlanProps {
     plan: MemberPlan | null
@@ -42,215 +45,156 @@ interface CreatePlanProps {
     locationId: string,
     programId: number
 }
-const Intervals: { label: string, value: string }[] = [
-    { label: "One Time", value: "One Time" },
-    { label: "Daily", value: "day" },
-    { label: "Weekly", value: "week" },
-    { label: "Monthly", value: "month" },
-    { label: "Yearly", value: "year" }
-];
-
 
 export default function UpsertPlan({ plan, onChange, locationId, programId }: CreatePlanProps) {
     const { contracts, isLoading: isContractsLoading } = useContractsByLocationId(locationId, false);
     const [loading, setLoading] = useState(false);
 
-    const form = useForm<z.infer<typeof PlanSchema>>({
-        resolver: zodResolver(PlanSchema),
+    const form = useForm<z.infer<typeof NewPlanSchema>>({
+        resolver: zodResolver(NewPlanSchema),
         defaultValues: {
-            name: plan?.name ?? "",
-            description: plan?.description ?? "",
-            family: plan?.family ?? false,
-            familyMemberLimit: plan?.familyMemberLimit ?? 0,
-            pricing: {
-                amount: plan?.price ?? 0.00,
-                billingPeriod: plan?.interval ?? ""
+            name: "",
+            description: "",
+            family: false,
+            familyMemberLimit: 0,
+            interval: "month",
+            intervalCount: 1,
+            amount: 0,
+            subscription: {
+                allowProration: false,
+                billingAnchor: undefined
             },
-            contractId: plan?.contractId ?? 0,
+            pkg: {
+                expireDate: new Date(),
+                totalClassLimit: 0,
+                intervalClassLimit: 0
+            },
+            contractId: 0,
         },
         mode: 'onSubmit'
     })
 
-    useEffect(() => {
-        if (plan) { form.reset({ ...plan, contractId: 0 }) }
-    }, [plan])
+    const type = form.watch('type')
+    // useEffect(() => {
+    //     if (plan) { form.reset({ ...plan, contractId: 0, interval: plan.interval }) }
+    // }, [plan])
 
-    async function submitForm(v: z.infer<typeof PlanSchema>) {
-        console.log(v)
-        if (plan && plan.id) {
-            const response = await updatePlan(v, programId, plan.id, locationId).then((response) => {
-                onChange(null);
-                return response
-            });
-            return response;
-        } else {
-            const response = await addPlan(v, programId, locationId).then((response) => {
-                onChange(null);
-                return response
-            });
-            return response;
+
+    async function getContracts() {
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${locationId}/contracts`)
+        )
+        if (error || !result || !result.ok) {
+
+            return
         }
+        return result.json()
+    }
+
+    async function submitForm(v: z.infer<typeof NewPlanSchema>) {
+        console.log(v)
+
     }
 
     return (
-        <Dialog open={!!plan} onOpenChange={(open: boolean) => { !open && onChange(null) }} >
-            <DialogContent className="p-0">
-                <DialogHeader className="p-4 border-b  border-foreground/10">
+        <Dialog open={!!plan} onOpenChange={(open) => { !open && onChange(null) }} >
+            <DialogContent className="max-w-lg">
+                <DialogHeader className="space-y-0" >
                     <DialogTitle>{plan?.name === "" ? "Create" : "Update"} Plan</DialogTitle>
-                    <DialogDescription>
-
-                    </DialogDescription>
+                    <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <DialogBody>
                     <Form {...form}>
-                        <form action="" className="space-y-2 py-2 px-4">
+                        <form action="" className="space-y-2">
                             <fieldset>
                                 <FormField
                                     control={form.control}
-                                    name="name"
-                                    render={({ field }) => (
-                                        <FormItem >
-                                            <FormLabel size={"tiny"}>Plan Name</FormLabel>
-                                            <FormControl>
-                                                <Input type='text' className={cn("")} placeholder="Plan Name" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-
-                                    )}
-                                />
-                            </fieldset>
-                            <fieldset>
-                                <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem >
-                                            <FormLabel size={"tiny"}>Plan Description</FormLabel>
-                                            <FormControl>
-                                                <Textarea className={"resize-none"} placeholder="Short description" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-
-                                    )}
-                                />
-                            </fieldset>
-                            <fieldset className="flex flex-row items-center gap-2">
-                                <FormField
-                                    control={form.control}
-                                    name="pricing.amount"
-                                    render={({ field }) => (
-                                        <FormItem className="flex-1">
-                                            <FormLabel size={"tiny"}>Price</FormLabel>
-                                            <FormControl>
-                                                <Input type='number' className={cn("")} placeholder="Enter price"
-                                                    step="0.01"
-                                                    {...field}
-                                                    onChange={(e) => e.target.value && field.onChange(parseFloat(e.target.value))}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="pricing.billingPeriod"
-                                    render={({ field }) => (
-                                        <FormItem className="flex-1">
-                                            <FormLabel>Billing Period</FormLabel>
-
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select Billing Period" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {Intervals.map((interval, index) => (
-                                                        <SelectItem key={index} value={interval.value}>{interval.label}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </fieldset>
-                            <fieldset>
-                                <FormField
-                                    control={form.control}
-                                    name="contractId"
+                                    name="type"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Attach a Contract</FormLabel>
+                                            {field.value && (
+                                                <div className=" text-xs ">
+                                                    Plan type: <span className=" capitalize">{field.value} </span>
+                                                    <span className="text-indigo-500 cursor-pointer" onClick={() => field.onChange(null)}>(Change)</span>
+                                                </div>
+                                            )}
+                                            {!field.value && PlanType.map((type, index) => (
+                                                <div key={index} className={cn(
+                                                    'col-span-1    border bg-background border-foreground/20 rounded-sm p-4 cursor-pointer',
+                                                    'hover:border-indigo-500 hover:text-indigo-500',
 
-                                            <Select onValueChange={(e) => field.onChange(parseInt(e))} defaultValue={`${field.value}`}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select a contract" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {!isContractsLoading && contracts && contracts.map((contract: Contract, index: number) => (
-                                                        <SelectItem key={index} value={`${contract.id}`}>{contract.title}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
+                                                )}
+                                                    onClick={() => field.onChange(type.value)}
+                                                >
+                                                    <div className='space-y-1'>
+                                                        <div className='text-sm font-medium leading-none'>{type.label}</div>
+                                                        <p className="text-xs text-muted-foreground">{type.description}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </fieldset>
-
-                            <fieldset >
-                                <FormField
-                                    control={form.control}
-                                    name="family"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-row items-center justify-start gap-2 my-4 space-y-0">
-
-                                            <FormControl>
-                                                <Checkbox
-                                                    className="border-foreground"
-                                                    checked={field.value}
-                                                    onCheckedChange={field.onChange}
-                                                />
-                                            </FormControl>
-                                            <FormLabel className="flex flex-row items-center cursor-pointer space-y-0 leading-none">
-                                                Allow Additional Family Members to Be Added.
-                                            </FormLabel>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </fieldset>
-                            {form.getValues('family') && (
-                                <>
+                            <div className={cn({ "hidden": !type }, 'space-y-2  ')}>
+                                <fieldset className="grid grid-cols-2 gap-2">
                                     <FormField
                                         control={form.control}
-                                        name="familyMemberLimit"
+                                        name="name"
                                         render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Number of Family</FormLabel>
+                                            <FormItem >
+                                                <FormLabel size={"tiny"}>Plan Name</FormLabel>
                                                 <FormControl>
-                                                    <Input type='number' className={cn("")}
+                                                    <Input type='text' className={cn("")} placeholder="Plan Name" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="amount"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel size={"tiny"}>Price</FormLabel>
+                                                <FormControl>
+                                                    <Input type='number' className={cn("")} placeholder="Enter price"
+                                                        step="0.01"
                                                         {...field}
-                                                        onChange={(e) => e.target.value && field.onChange(parseInt(e.target.value))}
+                                                        onChange={(e) => e.target.value && field.onChange(parseFloat(e.target.value))}
                                                     />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
-                                </>
-                            )}
+                                </fieldset>
+                                <fieldset >
+                                    <FormField
+                                        control={form.control}
+                                        name="description"
+                                        render={({ field }) => (
+                                            <FormItem >
+                                                <FormLabel size={"tiny"}>Plan Description</FormLabel>
+                                                <FormControl>
+                                                    <Textarea className={"resize-none"} placeholder="Short description" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
 
+                                        )}
+                                    />
+                                </fieldset>
+
+                                {type === "recurring" && <PlanSubFields contracts={contracts} form={form} />}
+                                {type === "one-time" && <PlanPkgFields contracts={contracts} form={form} />}
+
+                            </div>
                         </form>
-                    </Form>
-                </DialogBody>
+                    </Form >
+                </DialogBody >
                 <DialogFooter>
                     <div className="flex flex-row gap-2 items-center">
                         <DialogClose asChild>
@@ -267,7 +211,7 @@ export default function UpsertPlan({ plan, onChange, locationId, programId }: Cr
                         </Button>
                     </div>
                 </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </DialogContent >
+        </Dialog >
     )
 }

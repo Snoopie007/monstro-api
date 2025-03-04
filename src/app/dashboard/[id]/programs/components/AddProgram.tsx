@@ -25,6 +25,7 @@ import { NewProgramSchema } from './schemas';
 import { Icon } from '@/components/icons';
 
 import { toast } from 'react-toastify';
+import { X } from 'lucide-react';
 
 
 
@@ -166,8 +167,8 @@ export function AddProgram({ lid }: { lid: string }) {
                                                 {index !== 0 && (
                                                     <div className="flex flex-row items-center justify-end ">
 
-                                                        <button onClick={() => { remove(index) }} className="text-red-500"                                                            >
-                                                            <Icon name='Trash2' size={17} />
+                                                        <button onClick={() => { remove(index) }}                                                            >
+                                                            <X className='w-4 h-4 stroke-red-500' />
                                                         </button>
                                                     </div>
                                                 )}

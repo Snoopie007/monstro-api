@@ -76,7 +76,7 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
 
                 <div className="col-span-7">
                     <Tabs defaultValue="members" className="w-full">
-                        <TabsList className='bg-foreground/10 rounded-sm p-1'>
+                        <TabsList className='bg-foreground/10 rounded-sm  h-auto'>
                             {["members", "subscriptions & packages"].map((tab) => (
                                 <TabsTrigger key={tab} value={tab} className='capitalize'>
                                     {tab}
