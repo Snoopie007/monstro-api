@@ -49,7 +49,6 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
             description: "",
             family: false,
             familyMemberLimit: 0,
-
             amount: 0,
             subscription: {
                 interval: 'month',

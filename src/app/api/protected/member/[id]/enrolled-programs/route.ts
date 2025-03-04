@@ -18,8 +18,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 						eq(reservations.memberId, Number(authMember.member?.id || 0)), // Ensure valid number
 						eq(reservations.status, 1),
 						exists(
-							db
-								.select({ id: programLevels.id }) // Ensure `exists()` has a single column
+							db.select({ id: programLevels.id }) // Ensure `exists()` has a single column
 								.from(programLevels)
 								.innerJoin(classSessions, eq(programLevels.id, classSessions.programLevelId))
 								.where(isNull(programLevels.deleted)) // Ensure `deleted_at` is null
@@ -58,7 +57,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 					reservation?.session &&
 					reservation?.session?.durationTime
 				) {
-					const durationDetails = getCurrentTimeDetails(reservation.session.durationTime as string, "UTC");
+					const durationDetails = getCurrentTimeDetails(reservation.session.durationTime, "UTC");
 					const currentDayOfWeek = durationDetails.currentDayOfWeek;
 
 					newReservation.session["durationTime"] = durationDetails.duration[currentDayOfWeek];

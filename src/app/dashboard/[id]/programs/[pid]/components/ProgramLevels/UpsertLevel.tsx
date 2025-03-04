@@ -17,7 +17,7 @@ import { addProgramLevel, updateProgramLevel } from '@/libs/api';
 import { useFieldArray, useForm, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Level, Session } from "@/types";
+import { ProgramLevel, ProgranSession, } from "@/types";
 import { TimeValue } from "react-aria";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms/select";
@@ -29,8 +29,8 @@ import { Icon } from "@/components/icons";
 
 
 interface UpdateProgramLevelProps {
-	level: Level | null;
-	onChange: (level: Level | null) => void;
+	level: ProgramLevel | null;
+	onChange: (level: ProgramLevel | null) => void;
 	programId: number;
 	locationId: string
 }
@@ -40,10 +40,10 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 	const { mutate } = useSWR(`/api/protected/${locationId}/programs/`);
 	const [loading, setLoading] = useState<boolean>(false);
 
-	const mapScheduleArray = (sessions: Session[]): { day: string, time: TimeValue }[] => {
+	const mapScheduleArray = (sessions: ProgranSession[]): { day: string, time: TimeValue }[] => {
 		const schedules: { day: string, durationTime: number, time: TimeValue }[] = [];
 
-		sessions.forEach((session: Session) => {
+		sessions.forEach((session: ProgranSession) => {
 			for (const [key, value] of Object.entries(session)) {
 				const day = DaysOfWeek.find(d => d.toLowerCase() === key);
 
@@ -100,7 +100,7 @@ export function UpsertLevel({ level, onChange, programId, locationId }: UpdatePr
 
 	async function submitForm(v: z.infer<typeof UpdateLevelsSchema>) {
 		const sessions = [];
-		const session: Session = { status: true };
+		const session: ProgranSession = { status: 1 };
 		setLoading(true);
 		// Why do we need this?
 		if (level) {

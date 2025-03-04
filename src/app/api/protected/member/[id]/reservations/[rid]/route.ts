@@ -1,50 +1,48 @@
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { and, eq, sql } from 'drizzle-orm';
-import { decodeJWT } from '@/libs/utils';
 import { getTodaysAttendanceStatus } from '@/libs/server/db';
+import { authenticateMember } from '../../../utils';
+
+type MemberReservationProps = {
+	params: Promise<{ id: number, rid: number }>
+}
+
+export async function GET(req: NextRequest, props: MemberReservationProps) {
+	const params = await props.params;
 
 
-export async function GET(req: Request, props: { params: Promise<{ id: number, rid: number }> }) {
 	try {
-    const params = await props.params;
-		const token = req.headers.get("Authorization")?.split(" ")[1]
-		const authMember = decodeJWT(token ?? "");
-		if (authMember) {
-      const reservation = await db.query.reservations.findFirst({
-        where: (reservations, {eq}) => and(
-          eq(reservations.id, params.rid),
-          eq(reservations.memberId, Number(authMember.member?.id || 0))
-        ),
-        with: {
-          session: {
-            with: {
-              level: {
-                with: {
-                  program: true
-                }
-              }
-            }
-          }
-        }
-      });
-      // If no reservation found, return null
-      if (!reservation) return NextResponse.json({ error: "something went wrong" }, { status: 500 });
+		const authMember = authenticateMember(req);
 
-      const todaysAttendance = await getTodaysAttendanceStatus(reservation.id);      
-      if(reservation) {
-        const newreservation: any = {
-          id: reservation.id,
-          startDate: reservation.startDate,
-          endDate: reservation.endDate,
-          status: reservation.status,
-          session: reservation.session,
-          isMarkedAttendence: todaysAttendance
-        };
-        return NextResponse.json({newreservation}, { status: 200 });
-      }
-		}
+		const reservation = await db.query.reservations.findFirst({
+			where: (reservations, { eq }) => and(
+				eq(reservations.memberId, Number(authMember.member.id))
+			),
+			with: {
+				session: {
+					with: {
+						level: {
+							with: {
+								program: true
+							}
+						}
+					}
+				}
+			}
+		});
+		if (!reservation) {
+			return NextResponse.json({ error: "No reservation found" }, { status: 404 });
+		};
+
+		const todaysAttendance = await getTodaysAttendanceStatus(reservation.id);
+
+		const newReservation: any = {
+			...reservation,
+			isMarkedAttendence: todaysAttendance
+		};
+		return NextResponse.json({ newReservation }, { status: 200 });
 	} catch (err) {
 		console.log(err)
 		return NextResponse.json({ error: err }, { status: 500 })
