@@ -5,12 +5,10 @@ import {
     DialogContent,
     DialogFooter,
     DialogHeader,
-    DialogTitle,
-    Switch,
+    DialogTitle
 } from "@/components/ui";
 import { cn, tryCatch } from "@/libs/utils";
 import { z } from "zod";
-import { Contract, MemberPlan } from '@/types'
 import {
     Form,
     FormField,
@@ -18,38 +16,30 @@ import {
     FormMessage,
     FormItem,
     FormControl,
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
     Input,
     Textarea,
-    FormDescription,
 } from "@/components/forms";
 import { useForm } from "react-hook-form";
-import { NewPlanSchema, PlanType, PresetIntervals } from "./schemas";
+import { NewPlanSchema, PlanType } from "./schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useEffect, useState } from "react";
-import { DialogClose, DialogDescription } from "@radix-ui/react-dialog";
-import { useContractsByLocationId } from "@/hooks/use-contracts";
+import { DialogClose, DialogDescription, DialogTrigger } from "@radix-ui/react-dialog";
 
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { PlanSubFields } from "./SubFields";
 import { PlanPkgFields } from "./PkgFields";
+import { Contract } from "@/types";
 
 interface CreatePlanProps {
-    plan: MemberPlan | null
-    onChange: (plan: MemberPlan | null) => void,
-    locationId: string,
-    programId: number
+    lid: string,
+    pid: number
 }
 
-export default function UpsertPlan({ plan, onChange, locationId, programId }: CreatePlanProps) {
-    const { contracts, isLoading: isContractsLoading } = useContractsByLocationId(locationId, false);
-    const [loading, setLoading] = useState(false);
+export function CreatePlan({ lid, pid }: CreatePlanProps) {
 
+    const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
     const form = useForm<z.infer<typeof NewPlanSchema>>({
         resolver: zodResolver(NewPlanSchema),
         defaultValues: {
@@ -75,21 +65,7 @@ export default function UpsertPlan({ plan, onChange, locationId, programId }: Cr
     })
 
     const type = form.watch('type')
-    // useEffect(() => {
-    //     if (plan) { form.reset({ ...plan, contractId: 0, interval: plan.interval }) }
-    // }, [plan])
 
-
-    async function getContracts() {
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/${locationId}/contracts`)
-        )
-        if (error || !result || !result.ok) {
-
-            return
-        }
-        return result.json()
-    }
 
     async function submitForm(v: z.infer<typeof NewPlanSchema>) {
         console.log(v)
@@ -97,10 +73,15 @@ export default function UpsertPlan({ plan, onChange, locationId, programId }: Cr
     }
 
     return (
-        <Dialog open={!!plan} onOpenChange={(open) => { !open && onChange(null) }} >
+        <Dialog open={open} onOpenChange={setOpen} >
+            <DialogTrigger asChild>
+                <Button variant={"foreground"} size={"sm"}  >
+                    + Plan
+                </Button>
+            </DialogTrigger>
             <DialogContent className="max-w-lg">
                 <DialogHeader className="space-y-0" >
-                    <DialogTitle>{plan?.name === "" ? "Create" : "Update"} Plan</DialogTitle>
+                    <DialogTitle>Create Plan</DialogTitle>
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <DialogBody>
@@ -188,8 +169,8 @@ export default function UpsertPlan({ plan, onChange, locationId, programId }: Cr
                                     />
                                 </fieldset>
 
-                                {type === "recurring" && <PlanSubFields contracts={contracts} form={form} />}
-                                {type === "one-time" && <PlanPkgFields contracts={contracts} form={form} />}
+                                {type === "recurring" && <PlanSubFields lid={lid} form={form} />}
+                                {type === "one-time" && <PlanPkgFields lid={lid} form={form} />}
 
                             </div>
                         </form>

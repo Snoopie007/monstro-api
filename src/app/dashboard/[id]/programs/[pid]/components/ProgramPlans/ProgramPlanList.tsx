@@ -5,102 +5,23 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-    Button
 } from "@/components/ui";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useMemo, useState } from "react";
-import UpsertPlan from "./UpsertPlan";
+import { CreatePlan } from "./CreatePlan/CreatePlan";
 import { formatAmountForDisplay } from "@/libs/utils";
 import { MemberPlan } from "@/types";
 import { Input } from "@/components/forms/input";
 
 
 interface ProgramPlansProps {
-    programPlans: any[];
-    programId: number
-    vendorId: number,
-    locationId: string
+    programPlans: MemberPlan[];
+    pid: number,
+    lid: string
 }
 
-export default function ProgramPlans({ programPlans, programId, vendorId, locationId }: ProgramPlansProps) {
-    const [currentPlan, setCurrentPlan] = useState<MemberPlan | null>(null);
+export default function ProgramPlans({ programPlans, pid, lid }: ProgramPlansProps) {
 
-    const editPlanOptions = useMemo(() => {
-        return {
-            currentPlan,
-            onChange(plan: MemberPlan | null) {
-                setCurrentPlan(plan);
-            },
-        };
-    }, [currentPlan]);
-
-    async function create(plan: MemberPlan | null) {
-        if (plan && plan.id) {
-            setCurrentPlan({
-                id: plan.id,
-                name: plan.name,
-                description: plan.description,
-                family: plan.family,
-                programId: plan.programId,
-                familyMemberLimit: plan.familyMemberLimit,
-                contractId: plan.contractId,
-                price: plan.price,
-                currency: plan.currency ?? "usd",
-                stripePriceId: plan.stripePriceId,
-                type: plan.type,
-                contract: plan.contract,
-                totalClassLimit: plan.totalClassLimit,
-                allowProration: plan.allowProration,
-                billingAnchorConfig: plan.billingAnchorConfig,
-                expireDate: plan.expireDate,
-                interval: plan.interval,
-                intervalClassLimit: plan.intervalClassLimit,
-                intervalThreshold: plan.intervalThreshold,
-                created: plan.created,
-                updated: plan.updated,
-                deleted: null,
-            });
-        } else {
-            setCurrentPlan({
-                name: '',
-                description: '',
-                family: false,
-                programId: programId,
-                familyMemberLimit: 0,
-                price: 0,
-                currency: 'usd',
-                interval: null,
-                type: "recurring",
-                totalClassLimit: 0,
-                allowProration: false,
-                expireDate: new Date(),
-                billingAnchorConfig: null,
-                intervalClassLimit: 0,
-                intervalThreshold: 0,
-                stripePriceId: null,
-                contractId: null,
-                created: new Date(),
-                updated: new Date(),
-                deleted: new Date(),
-            });
-        }
-    }
-
-    const removeProgramPlan = (params: { id: string, index: number }) => {
-        // const { id } = params;
-        //    deleteProgramPlan (id, locationId)
-        //         .then((response: any) => {
-        //             toast({
-        //                 title: response.message,
-        //             });
-        //         })
-        //         .catch((error) => {
-        //             toast({
-        //                 variant: "destructive",
-        //                 title: error.response.data.message,
-        //             });
-        //         });
-    };
 
     const useCopyToClipboard = () => {
         const [isCopied, setIsCopied] = useState(false);
@@ -124,7 +45,6 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
 
     return (
         <div className="space-y-4">
-            <UpsertPlan plan={editPlanOptions.currentPlan} onChange={editPlanOptions.onChange} locationId={locationId} programId={programId} />
 
 
             <div className='w-full flex flex-row items-center  gap-2'>
@@ -132,9 +52,7 @@ export default function ProgramPlans({ programPlans, programId, vendorId, locati
                     <Input placeholder='Search subs...' className='w-[250px] h-8 py-2  text-xs rounded-sm' />
                 </div>
                 <div>
-                    <Button variant={"foreground"} size={"sm"} onClick={() => create(null)} >
-                        + Plan
-                    </Button>
+                    <CreatePlan lid={lid} pid={pid} />
                 </div>
             </div>
             <Card className="rounded-sm shadow-none ">

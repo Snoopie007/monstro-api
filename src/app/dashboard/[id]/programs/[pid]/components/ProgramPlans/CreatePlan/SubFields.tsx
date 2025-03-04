@@ -16,16 +16,19 @@ import { UseFormReturn } from 'react-hook-form';
 import { Switch } from '@/components/ui';
 import { BillingAnchorConfigSchema, NewPlanSchema, PresetIntervals } from './schemas';
 import { cn } from '@/libs/utils';
-import { Contract } from '@/types';
+import { SelectContract } from './SelectContract';
 
 
 interface SubFieldsProps {
     form: UseFormReturn<z.infer<typeof NewPlanSchema>>,
-    contracts: Contract[],
+    lid: string
 }
 
-export function PlanSubFields({ contracts, form }: SubFieldsProps) {
+export function PlanSubFields({ lid, form }: SubFieldsProps) {
     const [billingThreshold, setBillingThreshold] = useState<{ label: string, interval: string, intervalCount: number } | undefined>();
+
+
+
     function handleBillingThresholdChange(e: string) {
         const preset = PresetIntervals.find(p => p.label === e);
         if (preset) {
@@ -103,36 +106,7 @@ export function PlanSubFields({ contracts, form }: SubFieldsProps) {
 
                 <div className="bg-background rounded-sm p-4 space-y-2">
 
-                    <fieldset>
-                        <FormField
-                            control={form.control}
-                            name="contractId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel size={"tiny"}>Attach a Contract</FormLabel>
-                                    <FormDescription className="text-xs">Leave blank to not attach a contract.</FormDescription>
-                                    <Select onValueChange={(e) => field.onChange(parseInt(e))}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select a contract" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {contracts && contracts.map((contract: Contract) => (
-                                                <SelectItem key={contract.id} value={`${contract.id}`}>
-                                                    <div className='flex flex-col items-start leading-none space-y-0 cursor-pointer'>
-                                                        <span className='text-xs font-medium'>{contract.title}</span>
-                                                        <span className='text-xs text-muted-foreground'>{contract.description ? `${contract.description.substring(0, 30)}...` : "No description..."}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </fieldset>
+                    <SelectContract lid={lid} form={form} />
                     <fieldset >
                         <FormField
                             control={form.control}
@@ -240,7 +214,7 @@ export function PlanSubFields({ contracts, form }: SubFieldsProps) {
             </div>
 
 
-        </div>
+        </div >
     )
 }
 

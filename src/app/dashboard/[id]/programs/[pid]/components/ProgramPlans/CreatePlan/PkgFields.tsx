@@ -16,17 +16,16 @@ import { UseFormReturn } from 'react-hook-form';
 import { Calendar, Button, PopoverTrigger, Popover, Switch, PopoverContent } from '@/components/ui';
 import { NewPlanSchema } from './schemas';
 import { cn } from '@/libs/utils';
-import { Contract } from '@/types';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { SelectContract } from './SelectContract';
 
 interface SubFieldsProps {
     form: UseFormReturn<z.infer<typeof NewPlanSchema>>,
-    contracts: Contract[],
+    lid: string
 }
 
-export function PlanPkgFields({ contracts, form }: SubFieldsProps) {
-
+export function PlanPkgFields({ lid, form }: SubFieldsProps) {
 
     return (
         <div className='space-y-2'>
@@ -118,31 +117,7 @@ export function PlanPkgFields({ contracts, form }: SubFieldsProps) {
                         />
                     </fieldset>
 
-                    <fieldset>
-                        <FormField
-                            control={form.control}
-                            name="contractId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel size={"tiny"}>Attach a Contract</FormLabel>
-
-                                    <Select onValueChange={(e) => field.onChange(parseInt(e))}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select a contract" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {contracts && contracts.map((contract: Contract) => (
-                                                <SelectItem key={contract.id} value={`${contract.id}`}>{contract.title}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </fieldset>
+                    <SelectContract lid={lid} form={form} />
                     <fieldset >
                         <FormField
                             control={form.control}

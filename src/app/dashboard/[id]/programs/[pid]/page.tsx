@@ -12,7 +12,7 @@ import {
 import UpdateProgram from './components/UpdateProgram';
 import { ProgramLevels } from './components/ProgramLevels';
 import { ProgramMembers } from './components/ProgramMembers';
-import ProgramPlans from './components/ProgramPlans/ProgramPlan';
+import ProgramPlans from './components/ProgramPlans/ProgramPlanList';
 import useSWR from 'swr';
 
 import LoadingComponent from '@/components/loading';
@@ -87,7 +87,7 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
                             <ProgramMembers programId={program.id} locationId={params.id} />
                         </TabsContent>
                         <TabsContent value="subscriptions & packages">
-                            <ProgramPlans programPlans={program.plans} programId={params.pid} vendorId={program.vendorId} locationId={params.id} />
+                            <ProgramPlans programPlans={program.plans} lid={params.id} pid={params.pid} />
                         </TabsContent>
                     </Tabs>
                 </div>
