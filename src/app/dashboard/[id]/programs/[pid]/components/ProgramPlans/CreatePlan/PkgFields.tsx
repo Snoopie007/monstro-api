@@ -37,15 +37,19 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                         <FormItem className="">
                             <FormLabel size={"tiny"}>Total Classes</FormLabel>
                             <FormControl>
-                                <Input type='number' placeholder="1" {...field} />
+                                <Input type='number' placeholder="1" onChange={(e) => field.onChange(parseInt(e.target.value))} />
                             </FormControl>
+                            <FormMessage />
                         </FormItem>
                     )}
                 />
 
             </fieldset>
             <div className='space-y-1'>
-                <div className='text-[0.7rem] uppercase font-medium'>Package Options <span className='text-xs text-yellow-300'   >(Optional)</span></div>
+                <div className='text-[0.7rem] uppercase font-medium'>
+                    Package Options
+                    <span className='text-xs text-yellow-300'   >(Optional)</span>
+                </div>
 
                 <div className="bg-background rounded-sm p-4 space-y-2">
                     <fieldset className='flex flex-row gap-2 items-baseline'>
@@ -55,16 +59,21 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                                 name="pkg.intervalClassLimit"
                                 render={({ field }) => (
                                     <FormItem className="col-span-1">
-                                        <FormLabel size={"tiny"}>Classes</FormLabel>
+                                        <FormLabel size={"tiny"}>Class Limit</FormLabel>
                                         <FormControl>
-                                            <Input type='number' placeholder="1" {...field} />
+                                            <Input type='number' placeholder="" onChange={(e) => {
+                                                if (e.target.value) {
+                                                    field.onChange(parseInt(e.target.value))
+                                                    form.setValue("pkg.intervalCount", 1)
+                                                }
+                                            }} value={field.value || ""} />
                                         </FormControl>
                                     </FormItem>
                                 )}
                             />
                             <FormField
                                 control={form.control}
-                                name="interval"
+                                name="pkg.interval"
                                 render={({ field }) => (
                                     <FormItem className="col-span-2">
                                         <FormLabel size={"tiny"} >Per</FormLabel>

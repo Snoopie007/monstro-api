@@ -29,7 +29,8 @@ import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { PlanSubFields } from "./SubFields";
 import { PlanPkgFields } from "./PkgFields";
-import { Contract } from "@/types";
+
+import useSWR from "swr";
 
 interface CreatePlanProps {
     lid: string,
@@ -37,6 +38,7 @@ interface CreatePlanProps {
 }
 
 export function CreatePlan({ lid, pid }: CreatePlanProps) {
+    const { mutate } = useSWR(`/api/protected/${lid}/programs/${pid}`);
 
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
@@ -47,19 +49,22 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
             description: "",
             family: false,
             familyMemberLimit: 0,
-            interval: "month",
-            intervalCount: 1,
+
             amount: 0,
             subscription: {
+                interval: 'month',
+                intervalCount: 1,
                 allowProration: false,
                 billingAnchor: undefined
             },
             pkg: {
-                expireDate: new Date(),
+                interval: undefined,
+                intervalCount: undefined,
+                expireDate: undefined,
                 totalClassLimit: 0,
-                intervalClassLimit: 0
+                intervalClassLimit: undefined
             },
-            contractId: 0,
+            contractId: undefined,
         },
         mode: 'onSubmit'
     })
@@ -68,8 +73,27 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
 
 
     async function submitForm(v: z.infer<typeof NewPlanSchema>) {
-        console.log(v)
+        setLoading(true)
+        const { pkg, subscription, ...rest } = v
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${lid}/programs/${pid}/plans`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    ...rest,
+                    ...(type === 'recurring' ? { ...subscription } : { ...pkg })
+                })
+            })
+        )
+        if (error || !result || !result.ok) {
+            toast.error(error?.message || "Something went wrong")
+            setLoading(false)
+            return
+        }
 
+        toast.success("Plan created successfully")
+        setLoading(false)
+        mutate()
+        setOpen(false)
     }
 
     return (
@@ -141,11 +165,15 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
                                             <FormItem className="flex-1">
                                                 <FormLabel size={"tiny"}>Price</FormLabel>
                                                 <FormControl>
-                                                    <Input type='number' className={cn("")} placeholder="Enter price"
-                                                        step="0.01"
-                                                        {...field}
-                                                        onChange={(e) => e.target.value && field.onChange(parseFloat(e.target.value))}
-                                                    />
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-[50%] -translate-y-[50%] text-sm text-foreground/50">$</span>
+                                                        <Input {...field} type="number" step="0.01" min="0.00" className="pl-6" placeholder="0.00" value={field.value || ""}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value ? Math.floor(parseFloat(e.target.value) * 100) / 100 : "";
+                                                                field.onChange(value);
+                                                            }}
+                                                        />
+                                                    </div>
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -183,13 +211,14 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
                                 Cancel
                             </Button>
                         </DialogClose>
-                        <Button size={"sm"} onClick={form.handleSubmit(submitForm)} variant={"foreground"}
-                            className={cn("children:hidden", { "children:inline-block": loading })}
-                            disabled={form.formState.isSubmitting || !form.formState.isValid}
-                        >
-                            <Loader2 className="mr-2 animate-spin" size={14} />
-                            Save
-                        </Button>
+                        <DialogClose asChild>
+                            <Button size={"sm"} onClick={form.handleSubmit(submitForm)} variant={"foreground"}
+                                className={cn("children:hidden", { "children:inline-block": loading })}
+                                disabled={form.formState.isSubmitting || !form.formState.isValid || loading}
+                            >
+                                Save
+                            </Button>
+                        </DialogClose>
                     </div>
                 </DialogFooter>
             </DialogContent >

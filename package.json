@@ -90,7 +90,7 @@
     "reactflow": "^11.11.4",
     "recharts": "^2.15.1",
     "sqids": "^0.3.0",
-    "stripe": "^17.6.0",
+    "stripe": "^17.7.0",
     "supabase": "^1.223.10",
     "swr": "^2.3.2",
     "use-debounce": "^10.0.4",

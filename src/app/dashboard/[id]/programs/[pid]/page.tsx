@@ -22,7 +22,6 @@ import { Card, CardContent, CardHeader } from '@/components/ui';
 export default function Program(props: { params: Promise<{ id: string, pid: number }> }) {
     const params = use(props.params);
     const { program, error, isLoading } = useProgram(params.id, params.pid);
-    const { mutate } = useSWR(`/api/protected/${params.id}/programs/${params.pid}`);
 
     if (error) { return (<ErrorComponent error={error} />) }
 

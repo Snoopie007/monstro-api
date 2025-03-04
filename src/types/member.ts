@@ -88,8 +88,7 @@ export type MemberPlan = {
     id?: number;
     name: string;
     description: string;
-    // status?: boolean;
-    // vendorId: number;
+    archived: boolean;
     family: boolean;
     programId: number;
     familyMemberLimit: number;

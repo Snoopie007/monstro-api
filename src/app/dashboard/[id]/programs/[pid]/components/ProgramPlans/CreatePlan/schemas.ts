@@ -4,33 +4,63 @@ const NewPlanSchema = z.object({
     type: z.enum(["recurring", "one-time"], { message: "Required" }),
     name: z.string().min(2, { message: "Required" }),
     description: z.string().min(2, { message: "Required" }),
-    contractId: z.number().optional(),
     amount: z.number().gt(1, { message: "Price must be at least $1." }),
-    interval: z.enum(["day", "week", "month", "year"], { message: "Required" }),
-    intervalCount: z.number().min(1, { message: "Required" }),
+
     family: z.boolean().optional(),
-    familyMemberLimit: z.number().multipleOf(1).lt(10, { message: "Enter a number between 1 and 10." }).optional(),
+    familyMemberLimit: z.number().optional(),
+    contractId: z.number().optional(),
     pkg: z.object({
+        interval: z.enum(["day", "week", "month", "year"]).optional(),
+        intervalCount: z.number().optional(),
         expireDate: z.date().optional(),
-        totalClassLimit: z.number(),
+        totalClassLimit: z.number().optional(),
         intervalClassLimit: z.number().optional(),
     }),
     subscription: z.object({
+        interval: z.enum(["day", "week", "month", "year"], { message: "Required" }),
+        intervalCount: z.number().min(1, { message: "Required" }).max(365, { message: "Max 31" }),
         allowProration: z.boolean().optional(),
-        billingAnchor: z.enum(["1st", "1st & 15th"], { message: "Required" })
+        billingAnchor: z.enum(["1st", "1st & 15th"]).optional()
     }),
 }).superRefine((data, ctx) => {
-    if (data.type === 'one-time' && data.pkg.totalClassLimit === 0) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Required"
-        });
+
+    if (data.type === 'one-time') {
+
+        if (!data.pkg.totalClassLimit || data.pkg.totalClassLimit < 1) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Required",
+                path: ["pkg", "totalClassLimit"]
+            });
+        }
+        if (data.pkg.intervalClassLimit && !data.pkg.interval) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Required",
+                path: ["pkg", "interval"]
+            });
+        }
     }
-    if (data.family && data.familyMemberLimit === 0) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Required"
-        });
+    if (data.family) {
+        if (!data.familyMemberLimit) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Required",
+                path: ["familyMemberLimit"]
+            });
+        } else if (data.familyMemberLimit < 1) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "At least 1 family member.",
+                path: ["familyMemberLimit"]
+            });
+        } else if (data.familyMemberLimit > 10) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Max 10 family members",
+                path: ["familyMemberLimit"]
+            });
+        }
     }
 });
 

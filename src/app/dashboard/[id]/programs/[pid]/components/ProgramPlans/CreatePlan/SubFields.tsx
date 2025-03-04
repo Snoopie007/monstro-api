@@ -31,10 +31,11 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
 
     function handleBillingThresholdChange(e: string) {
         const preset = PresetIntervals.find(p => p.label === e);
+        console.log(preset)
         if (preset) {
             setBillingThreshold(preset);
-            form.setValue("intervalCount", preset.intervalCount);
-            form.setValue("interval", preset.interval as "day" | "week" | "month" | "year");
+            form.setValue("subscription.intervalCount", preset.intervalCount);
+            form.setValue("subscription.interval", preset.interval as "day" | "week" | "month" | "year");
         }
     }
     return (
@@ -42,7 +43,7 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
             <fieldset className='flex flex-row gap-2 items-baseline'>
                 <div className='flex-1'>
                     <FormLabel size={"tiny"} >Billing Threshold</FormLabel>
-                    <Select onValueChange={handleBillingThresholdChange} defaultValue='Monthly' value={billingThreshold?.label}  >
+                    <Select onValueChange={handleBillingThresholdChange} value={billingThreshold?.label}  >
 
                         <SelectTrigger>
                             <SelectValue placeholder="Select..." />
@@ -62,7 +63,7 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
                     <div className=' flex-1 grid grid-cols-3 gap-2 items-baseline'>
                         <FormField
                             control={form.control}
-                            name="intervalCount"
+                            name="subscription.intervalCount"
                             render={({ field }) => (
                                 <FormItem className="col-span-1">
 
@@ -74,16 +75,16 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
                         />
                         <FormField
                             control={form.control}
-                            name="interval"
+                            name="subscription.interval"
                             render={({ field }) => (
                                 <FormItem className="col-span-2">
 
-                                    <Select onValueChange={field.onChange} value={field.value} defaultValue={'month'} >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select..." />
-                                            </SelectTrigger>
-                                        </FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}  >
+
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select interval..." />
+                                        </SelectTrigger>
+
                                         <SelectContent>
                                             {['day', 'week', 'month', 'year'].map((preset, index) => (
                                                 <SelectItem key={index} value={preset}>
@@ -164,7 +165,7 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
                                         <b className='text-red-500'> If allow protation is turn on the customer will be bill a proated amount before the started day if the start date is not today.</b>
                                     </FormDescription>
                                     <FormControl>
-                                        <Select onValueChange={field.onChange} value={field.value} defaultValue={'1st'} >
+                                        <Select onValueChange={field.onChange} value={field.value} >
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Select..." />

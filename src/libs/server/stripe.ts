@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { Member, MonstroPlan, PackagePaymentPlan, Vendor } from "@/types";
-import { isAfter, isBefore, isSameDay } from "date-fns";
+import { Member, MemberPlan, MonstroPlan, PackagePaymentPlan, Vendor } from "@/types";
+import { isAfter } from "date-fns";
 import Stripe from "stripe";
 
 type Customer = {
@@ -17,7 +17,7 @@ abstract class BaseStripePayments {
 
     constructor(key: string) {
         this._stripe = new Stripe(key, {
-            apiVersion: "2025-01-27.acacia",
+            apiVersion: "2025-02-24.acacia",
             appInfo: {
                 name: "My Monstro",
                 url: "https://mymonstro.com",
@@ -315,20 +315,32 @@ class MemberStripePayments extends BaseStripePayments {
         return this._stripe.subscriptionSchedules.create(options);
     }
 
-    async createStripeProduct(data: { name: string, description: string, currency: string, amount: number, billingPeriod: Stripe.PriceCreateParams.Recurring.Interval }): Promise<Stripe.Price> {
+    async createStripeProduct(data: MemberPlan, locationId: string): Promise<Stripe.Price> {
+        const { interval, price, intervalThreshold } = data
         const product = await this._stripe.products.create({
             name: data.name,
-            description: data.description
-        });
-        return await this._stripe.prices.create({
-            currency: data.currency,
-            recurring: {
-                interval: data.billingPeriod
+            description: data.description,
+            active: true,
+            default_price_data: {
+
+                currency: data.currency || "usd",
+                recurring: {
+                    interval: interval as Stripe.PriceCreateParams.Recurring.Interval,
+                    interval_count: intervalThreshold || 1
+                },
+                unit_amount: price,
+                metadata: {
+                    locationId: locationId,
+                    programId: data.programId
+                }
             },
-            unit_amount: data.amount,
-            product: product.id,
-            nickname: data.description
+            metadata: {
+                locationId: locationId,
+            },
+            expand: ["default_price"]
         });
+
+        return product.default_price as Stripe.Price
     }
 
 }
