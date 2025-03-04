@@ -16,40 +16,39 @@ import { z } from "zod";
 import { useState } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem, FormLabel, FormDescription } from '@/components/forms';
-import { cn, sleep } from "@/libs/utils";
+import { Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem, FormLabel } from '@/components/forms';
+import { cn, sleep, tryCatch } from "@/libs/utils";
 
 import AddProgramSchedules from './ProgramSchedules';
 import { Time } from '@internationalized/date';
-import { nextApi, post } from '@/libs/api';
 import { NewProgramSchema } from './schemas';
 import { Icon } from '@/components/icons';
-import { Session } from '@/types';
+
+import { toast } from 'react-toastify';
 
 
 
-export function AddProgram({ locationId }: { locationId: string }) {
+export function AddProgram({ lid }: { lid: string }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const form = useForm<z.infer<typeof NewProgramSchema>>({
         resolver: zodResolver(NewProgramSchema),
         defaultValues: {
             description: "",
-            programName: "",
+            name: "",
             levels: [
                 {
                     name: "",
-                    sessions: [
-                        {
-                            day: "",
-                            time: new Time(12, 0),
-                            durationTime: 30,
-                        }
-                    ],
                     capacity: 0,
                     minAge: 0,
                     maxAge: 0,
-
+                    sessions: [
+                        {
+                            day: undefined,
+                            time: "12:00",
+                            durationTime: 30,
+                        }
+                    ],
                 }
             ]
         },
@@ -63,42 +62,21 @@ export function AddProgram({ locationId }: { locationId: string }) {
 
 
     async function submitForm(v: z.infer<typeof NewProgramSchema>) {
-        // Formatting because of backend api format
-        const sessions: Session[] = [];
+
         setLoading(true);
-        v.levels.forEach((level, levelIndex) => {
-            const session: Session = { status: true };
-            level.sessions.forEach((s) => {
-                if (!s.day || !s.time) return; // Handle undefined or null values for day and time
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${lid}/programs`, {
+                method: "POST",
+                body: JSON.stringify(v)
+            })
+        )
 
-                const day = s.day.toLowerCase();
-                session[day] = s.time.toString(); // Assign time to the corresponding day
-
-                // Safely handle and update `duration_time` with the correct structure
-                session.duration_time = JSON.stringify({
-                    ...(session.duration_time ? JSON.parse(session.duration_time) : {}),
-                    [day]: s.durationTime || null // Assign durationTime or null if undefined
-                });
-            });
-            session["program_level_name"] = level.name;
-            session["capacity"] = level.capacity;
-            session["min_age"] = level.minAge;
-            session["max_age"] = level.maxAge;
-
-            sessions.push(session);
-        });
-        const body = {
-            // location_id: "kxsCgZcTUell5zwFkTUc",
-            program_name: v.programName,
-            description: v.description,
-            sessions: sessions
-        };
-
-        const res = await post({ url: `programs`, id: locationId, data: body });
+        if (error || !result || !result.ok) {
+            toast.error(error?.message || "Something went wrong");
+            return;
+        }
         await sleep(3000);
         setLoading(false);
-
-        setOpen(false)
     };
 
     function appendLevel() {
@@ -107,7 +85,7 @@ export function AddProgram({ locationId }: { locationId: string }) {
             sessions: [
                 {
                     day: "",
-                    time: new Time(12, 0),
+                    time: "12:00",
                     durationTime: 30,
                 }
             ],
@@ -125,13 +103,10 @@ export function AddProgram({ locationId }: { locationId: string }) {
                 </Button>
             </SheetTrigger>
             <SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0">
-                <SheetHeader >
+                <SheetHeader className='space-y-0'>
                     <SheetTitle>Add a New Program</SheetTitle>
-                    <SheetDescription >
-                        Add a new program to your location below. Make sure  you add levels.
-                    </SheetDescription>
                 </SheetHeader>
-                <ScrollArea className="h-[calc(100vh-150px)] w-full ">
+                <ScrollArea className="h-[calc(100vh-95px)] w-full ">
 
                     <Form {...form}>
                         <form >
@@ -139,10 +114,10 @@ export function AddProgram({ locationId }: { locationId: string }) {
                                 <fieldset>
                                     <FormField
                                         control={form.control}
-                                        name="programName"
+                                        name="name"
                                         render={({ field }) => (
                                             <FormItem >
-                                                <FormLabel>Program Name</FormLabel>
+                                                <FormLabel size="tiny">Program Name</FormLabel>
                                                 <FormControl>
                                                     <Input type='text' placeholder="Program Name" {...field} />
                                                 </FormControl>
@@ -160,11 +135,11 @@ export function AddProgram({ locationId }: { locationId: string }) {
                                         name="description"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Program Description</FormLabel>
+                                                <FormLabel size="tiny">Program Description</FormLabel>
                                                 <FormControl>
                                                     <Textarea
                                                         placeholder="Program Description"
-                                                        className="resize-none border border-gray-200 dark:border-white"
+                                                        className="resize-none"
                                                         {...field}
                                                     />
                                                 </FormControl>
@@ -177,12 +152,12 @@ export function AddProgram({ locationId }: { locationId: string }) {
                             </SheetSection>
                             <SheetSection>
                                 <div className="mb-4 ">
-                                    <FormLabel >
+                                    <div className='text-sm  font-medium'>
                                         Add Levels
-                                    </FormLabel>
-                                    <FormDescription>
+                                    </div>
+                                    <p className='text-xs  text-muted-foreground leading-none'>
                                         Your program may have different levels, add as many level as you like.
-                                    </FormDescription>
+                                    </p>
                                 </div>
                                 <div>
                                     {fields.map((item, index) => (
@@ -202,7 +177,7 @@ export function AddProgram({ locationId }: { locationId: string }) {
                                                         name={`levels.${index}.name`}
                                                         render={({ field }) => (
                                                             <FormItem >
-                                                                <FormLabel>Level Name</FormLabel>
+                                                                <FormLabel size="tiny">Level Name</FormLabel>
                                                                 <FormControl>
                                                                     <Input type='text' placeholder={'Level Name'} {...field} />
                                                                 </FormControl>
@@ -220,7 +195,7 @@ export function AddProgram({ locationId }: { locationId: string }) {
                                                         name={`levels.${index}.capacity`}
                                                         render={({ field }) => (
                                                             <FormItem >
-                                                                <FormLabel>Capacity</FormLabel>
+                                                                <FormLabel size="tiny">Capacity</FormLabel>
                                                                 <FormControl>
                                                                     <Input type='number' placeholder={'Capacity'}  {...field} />
                                                                 </FormControl>
@@ -234,7 +209,7 @@ export function AddProgram({ locationId }: { locationId: string }) {
                                                         name={`levels.${index}.minAge`}
                                                         render={({ field }) => (
                                                             <FormItem className="flex-1">
-                                                                <FormLabel >Min Age</FormLabel>
+                                                                <FormLabel size="tiny">Min Age</FormLabel>
                                                                 <FormControl>
                                                                     <Input type='number' placeholder={'Min Age'} {...field} />
                                                                 </FormControl>
@@ -248,7 +223,7 @@ export function AddProgram({ locationId }: { locationId: string }) {
                                                         name={`levels.${index}.maxAge`}
                                                         render={({ field }) => (
                                                             <FormItem className="flex-1">
-                                                                <FormLabel >Max Age</FormLabel>
+                                                                <FormLabel size="tiny">Max Age</FormLabel>
                                                                 <FormControl>
                                                                     <Input type='number' placeholder={'Max Age'} {...field} />
                                                                 </FormControl>
@@ -272,18 +247,21 @@ export function AddProgram({ locationId }: { locationId: string }) {
                         </form>
                     </Form>
                 </ScrollArea>
-                <SheetFooter className='border-t py-4 px-5'>
+                <SheetFooter className='border-t py-2 px-4'>
                     <SheetClose asChild>
-                        <Button variant={"outline"} className="bg-transparent">Cancel</Button>
+                        <Button variant={"outline"} size={"sm"}>Cancel</Button>
                     </SheetClose>
-                    <Button
-                        variant={"foreground"}
-                        onClick={form.handleSubmit(submitForm)}
-                        className={cn("py-2.5  children:hidden  px-4 rounded-sm text-sm flex flex-row h-auto", (loading && "children:inline-block"))}
-                    >
-                        <Icon name="LoaderCircle" className="mr-2  animate-spin" />
-                        Save
-                    </Button>
+                    <SheetClose asChild>
+                        <Button
+                            variant={"foreground"}
+                            size={"sm"}
+                            onClick={form.handleSubmit(submitForm)}
+                            className={cn("children:hidden  ", (loading && "children:inline-block"))}
+                        >
+                            <Icon name="LoaderCircle" className="mr-2  animate-spin" />
+                            Save
+                        </Button>
+                    </SheetClose>
                 </SheetFooter>
 
 

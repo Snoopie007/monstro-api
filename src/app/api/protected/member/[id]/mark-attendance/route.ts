@@ -31,15 +31,15 @@ export async function POST(req: Request, props: { params: Promise<{ id: number }
       let startTime: dayjs.Dayjs = dayjs();
       if (
         reservation?.session &&
-        reservation?.session?.duration_time
+        reservation?.session?.durationTime
       ) {
-        const durationDetails = getCurrentTimeDetails(reservation.session.duration_time, "UTC");
+        const durationDetails = getCurrentTimeDetails(reservation.session.durationTime, "UTC");
         currentDayOfWeek = durationDetails.currentDayOfWeek as keyof typeof reservation.session;
         startTime = dayjs(`${dayjs().format("YYYY-MM-DD")} ${reservation.session[currentDayOfWeek as keyof typeof reservation.session]}`, "YYYY-MM-DD HH:mm:ss");
       }
 
       const existingCheckin = await getTodaysAttendanceStatus(reservation.id);
-      if(existingCheckin) {
+      if (existingCheckin) {
         return NextResponse.json({ error: "Attendence for today already recorded for this program." }, { status: 500 })
       }
       console.log(startTime.toDate())

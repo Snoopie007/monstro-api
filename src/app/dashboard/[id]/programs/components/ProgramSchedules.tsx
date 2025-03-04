@@ -31,7 +31,9 @@ export default function AddProgramSchedules({ scheduleIndex, control }: AddProgr
         control,
         name: `levels.${scheduleIndex}.sessions`
     });
-
+    function stringToTime(time: string) {
+        return new Time(parseInt(time.split(":")[0]), parseInt(time.split(":")[1]));
+    }
     return (
         <div className="py-3  ">
             <div className="border-b flex flex-row items-center justify-between border-foreground/5 mb-4 pb-2">
@@ -40,79 +42,84 @@ export default function AddProgramSchedules({ scheduleIndex, control }: AddProgr
                 </span>
                 <Button type='button'
                     variant={"foreground"}
-                    onClick={() => append({ day: "", durationTime: 30, time: new Time(12, 0) })}
+                    onClick={() => append({ day: "", durationTime: 30, time: "12:00" })}
                     className=" font-medium text-[12px]  py-1  px-2 rounded-xs h-auto">
                     + Schedule
                 </Button>
             </div>
-            <div className='inline-flex flex-row items-left gap-2 '>
-                {['Day', 'Time', 'Duration(mins)'].map((item) => (
-                    <div key={item} className={cn('font-medium flex-initial  w-[120px] text-sm')}>
-                        {item}
-                    </div>
-                ))}
-            </div>
-            <div className='space-y-2'>
-                {fields.map((item, k) => {
-                    return (
-                        <div className='flex flex-row items-center gap-2 ' key={item.id}>
-                            <FormField
-                                control={control}
-                                name={`levels.${scheduleIndex}.sessions.${k}.day`}
-                                render={({ field }) => (
-                                    <FormItem className='flex-initial min-w-[120px]'>
-
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <SelectTrigger className="w-full border rounded-sm bg-transparent font-normal border-x-gray-200">
-                                                <SelectValue placeholder="Select a day" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {DaysOfWeek.map((day, index) => (
-                                                    <SelectItem key={index} value={day}>{day}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={control}
-                                name={`levels.${scheduleIndex}.sessions.${k}.time`}
-                                render={({ field }) => (
-                                    <FormItem className='flex-initial min-w-[120px]'>
-
-                                        <FormControl>
-                                            <TimePicker
-                                                label="Time"
-                                                value={field.value}
-                                                onChange={(date) => field.onChange(date ? new Time(date.hour, date.minute) : new Time(12, 0))}
-                                            />
-                                        </FormControl>
-
-                                    </FormItem>
-
-                                )}
-                            />
-                            <FormField
-                                control={control}
-                                name={`levels.${scheduleIndex}.sessions.${k}.durationTime`}
-                                render={({ field }) => (
-                                    <FormItem className="flex-initial w-[120px] ">
-
-                                        <FormControl>
-                                            <Input type='number' className={cn("")} placeholder={'Duration'} {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            {k > 0 ? <div onClick={() => remove(k)}               >
-                                <Icon name="Trash2" size={16} className="cursor-pointer stroke-red-500" />
-                            </div> : null}
+            <div className='space-y-0'>
+                <div className='grid grid-cols-4 gap-2 '>
+                    {['Day', 'Time', 'Duration(mins)'].map((item) => (
+                        <div key={item} className={cn('font-medium grid-cols-1 text-[0.625rem] uppercase')}>
+                            {item}
                         </div>
-                    );
-                })}
+                    ))}
+                </div>
+                <div className='space-y-1'>
+                    {fields.map((item, k) => {
+                        return (
+                            <div className='grid grid-cols-4 gap-2  ' key={item.id}>
+                                <FormField
+                                    control={control}
+                                    name={`levels.${scheduleIndex}.sessions.${k}.day`}
+                                    render={({ field, fieldState }) => (
+                                        <FormItem className='col-span-1'>
 
+                                            <FormControl>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <SelectTrigger className={cn({ "border-red-500": fieldState.error })}>
+                                                        <SelectValue placeholder="Select a day" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {DaysOfWeek.map((day, index) => (
+                                                            <SelectItem key={index} value={day}>{day}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={control}
+                                    name={`levels.${scheduleIndex}.sessions.${k}.time`}
+                                    render={({ field }) => (
+                                        <FormItem className={cn("col-span-1")}>
+                                            <FormControl>
+                                                <TimePicker
+                                                    label="Time"
+                                                    value={stringToTime(field.value)}
+                                                    onChange={(time) =>
+                                                        field.onChange(time ? time.toString() : "12:00")
+                                                    }
+                                                />
+                                            </FormControl>
+
+                                        </FormItem>
+
+                                    )}
+                                />
+                                <FormField
+                                    control={control}
+                                    name={`levels.${scheduleIndex}.sessions.${k}.durationTime`}
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-1 ">
+
+                                            <FormControl>
+                                                <Input type='number' className={cn("")} placeholder={'Duration'} {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                {k > 0 ? <div onClick={() => remove(k)} className='cursor-pointer pt-3'>
+                                    <Icon name="Trash2" size={14} className=" stroke-red-500" />
+                                </div> : null}
+                            </div>
+                        );
+                    })}
+
+                </div>
             </div>
         </div>
     );

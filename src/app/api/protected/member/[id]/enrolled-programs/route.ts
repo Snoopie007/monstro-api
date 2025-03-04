@@ -44,30 +44,30 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 			const data: any = [];
 			for (const reservation of reservationsData) {
 				const attendance = await getTodaysAttendanceStatus(reservation.id);
-		
+
 				const newReservation: any = {
-						id: reservation.id,
-						startDate: reservation.startDate,
-						endDate: reservation.endDate,
-						status: reservation.status,
-						session: reservation.session,
-						isMarkedAttendence: attendance,
+					id: reservation.id,
+					startDate: reservation.startDate,
+					endDate: reservation.endDate,
+					status: reservation.status,
+					session: reservation.session,
+					isMarkedAttendence: attendance,
 				};
-		
+
 				if (
-						reservation?.session &&
-						reservation?.session?.duration_time
+					reservation?.session &&
+					reservation?.session?.durationTime
 				) {
-						const durationDetails = getCurrentTimeDetails(reservation.session.duration_time, "UTC");
-						const currentDayOfWeek = durationDetails.currentDayOfWeek;
-		
-						newReservation.session["durationTime"] = durationDetails.duration[currentDayOfWeek];
-						newReservation.session["currentStatus"] = getCurrentStatus(reservation, "UTC");
+					const durationDetails = getCurrentTimeDetails(reservation.session.durationTime as string, "UTC");
+					const currentDayOfWeek = durationDetails.currentDayOfWeek;
+
+					newReservation.session["durationTime"] = durationDetails.duration[currentDayOfWeek];
+					newReservation.session["currentStatus"] = getCurrentStatus(reservation, "UTC");
 				}
-		
+
 				data.push(newReservation);
-		}
-			return NextResponse.json({reservations: data}, { status: 200 });
+			}
+			return NextResponse.json({ reservations: data }, { status: 200 });
 		}
 	} catch (err) {
 		console.log(err)

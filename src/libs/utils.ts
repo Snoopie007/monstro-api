@@ -94,7 +94,7 @@ function decodeJWT(JWT: string): User {
 	return decodeJwt(JWT); 
 }
 
-const getCurrentTimeDetails = (durationTime: string, timeZone: string) => {
+const getCurrentTimeDetails = (durationTime: Record<string, number>, timeZone: string) => {
   // Get timezone from request header, default to 'UTC'
   const timezone = timeZone;
 
@@ -105,7 +105,7 @@ const getCurrentTimeDetails = (durationTime: string, timeZone: string) => {
   const currentDayOfWeek = currentTime.format("dddd").toLowerCase();
 
   // Assuming `this.duration_time` is a JSON string (similar to Laravel)
-  const duration = JSON.parse(durationTime || "null");
+  const duration = durationTime;
 
   return { currentTime, currentDayOfWeek, duration };
 };

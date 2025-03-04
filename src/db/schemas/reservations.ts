@@ -1,5 +1,5 @@
 
-import { desc, relations } from "drizzle-orm";
+import { desc, relations, sql } from "drizzle-orm";
 import { integer, varchar, serial, timestamp, pgTable, jsonb, time, text, boolean, pgEnum, smallint } from "drizzle-orm/pg-core";
 import { programLevels, programs } from "./programs";
 import { members } from "./members";
@@ -22,9 +22,7 @@ export const classSessions = pgTable("class_sessions", {
     id: serial("id").primaryKey(),
     programLevelId: integer("program_level_id").references(() => programLevels.id, { onDelete: "cascade" }),
     programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
-    duration_time: text("duration_time"),
-    startDate: timestamp("start_date", { withTimezone: true }),
-    endDate: timestamp("end_date", { withTimezone: true }),
+    durationTime: jsonb("duration_time").$type<Record<string, number>>().default(sql`'{}'::jsonb`),
     monday: time("monday"),
     tuesday: time("tuesday"),
     wednesday: time("wednesday"),

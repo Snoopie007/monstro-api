@@ -1,3 +1,4 @@
+import { Reservation } from "./attedance";
 import { MemberPlan } from "./member";
 
 export type Program = {
@@ -7,7 +8,7 @@ export type Program = {
     icon?: string | null | File;
     // benefits?: string[];
     plans: MemberPlan[];
-    programLevels?: Level[];
+    programLevels?: ProgramLevel[];
     locationId?: number;
     // status: string | null;
     location?: Location;
@@ -18,7 +19,7 @@ export type Program = {
     deleted: Date | null;
 };
 
-export type Level = {
+export type ProgramLevel = {
     id?: number;
     name: string;
     capacity: number;
@@ -27,28 +28,19 @@ export type Level = {
     programId?: number;
     program?: Program;
     parentId?: number;
-    sessions: Session[];
+    sessions: ProgranSession[];
     created?: Date | null;
     updated?: Date | null;
     deleted?: Date | null;
 };
 
-export type Enrollments = {
-    id: number;
-    status: number;
-    startDate: string;
-    endDate: string;
-}
 
-
-export type Session = {
-    [key: string]: string | number | undefined | boolean | Array<Enrollments>;
+export type ProgranSession = {
+    [key: string]: string | number | undefined | boolean | Reservation[] | Record<string, number>;
     id?: number,
-    durationTime?: number,
-    status: boolean,
+    durationTime?: Record<string, number>,
+    status: number,
     duration_time?: string,
-    startDate?: string,
-    endDate?: string,
     monday?: string | undefined,
     tuesday?: string | undefined,
     wednesday?: string | undefined,
@@ -56,5 +48,7 @@ export type Session = {
     friday?: string | undefined,
     saturday?: string | undefined,
     sunday?: string | undefined,
-    enrollments?: Array<Enrollments>
+    reservations?: Reservation[]
 }
+
+

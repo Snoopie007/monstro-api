@@ -79,7 +79,7 @@ const FormItem = React.forwardRef<
 
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div ref={ref} className={cn("space-y-2", className)} {...props} />
+      <div ref={ref} className={cn("space-y-1", className)} {...props} />
     </FormItemContext.Provider>
   )
 })
@@ -131,9 +131,9 @@ const FormControl = React.forwardRef<
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
 
   return (
-    <Slot
-      ref={ref}
+    <Slot ref={ref}
       id={formItemId}
+      className={cn({ "border-red-500": error }, props.className)}
       aria-describedby={
         !error
           ? `${formDescriptionId}`

@@ -44,7 +44,7 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
-                    <AddProgram locationId={params.id} />
+                    <AddProgram lid={params.id} />
                 </TablePageHeaderSection>
             </TablePageHeader>
             <TablePageContent>
