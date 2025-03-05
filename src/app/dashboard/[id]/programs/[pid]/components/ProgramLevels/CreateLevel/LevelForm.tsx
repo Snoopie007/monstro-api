@@ -5,21 +5,37 @@ import {
 } from "@/components/ui";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/forms";
 import { Input } from "@/components/forms/input";
-import { cn } from "@/libs/utils";
-import { useFieldArray, UseFormReturn } from "react-hook-form";
+import { cn, tryCatch } from "@/libs/utils";
+import { FieldArrayPath, useFieldArray, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { LevelSchema } from "../../../../components/schemas";
 import { SessionComponents } from "./SessionsComponent";
 
+interface LevelFormProps {
+    form: UseFormReturn<z.infer<typeof LevelSchema>>;
+    lid: string;
+}
 
-
-export function LevelForm({ form }: { form: UseFormReturn<z.infer<typeof LevelSchema>> }) {
+export function LevelForm({ form, lid }: LevelFormProps) {
 
     const { fields, append, remove } = useFieldArray({
         control: form.control, // control props comes from useForm (optional: if you are using FormProvider)
         name: "sessions", // unique name for your Field Array
     });
 
+    async function handleRemove(index: number) {
+        const field = fields[index];
+        if (field.id) {
+            const { result, error } = await tryCatch(
+                fetch(`/api/protected/${lid}/programs/sessions/${field.id}`, {
+                    method: "DELETE",
+                })
+            )
+            if (error || !result?.ok) return;
+
+        }
+        remove(index);
+    }
 
     return (
 
@@ -95,7 +111,7 @@ export function LevelForm({ form }: { form: UseFormReturn<z.infer<typeof LevelSc
                                 onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    append({ day: "", time: "12:00:00", duration: 30 });
+                                    append({ id: undefined, day: "", time: "12:00:00", duration: 30 });
                                 }}
                             >
                                 + Add
@@ -114,7 +130,7 @@ export function LevelForm({ form }: { form: UseFormReturn<z.infer<typeof LevelSc
                                 ))}
                             </div>
                             {fields.map((field, i) => (
-                                <SessionComponents key={field.id} form={form} index={i} onRemove={() => remove(i)} />
+                                <SessionComponents key={field.id} form={form} index={i} onRemove={() => handleRemove(i)} />
                             ))}
                         </div>
                     </ScrollArea>

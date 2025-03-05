@@ -49,7 +49,7 @@ export const programSessions = pgTable("program_sessions", {
     status: smallint("status"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
-});
+}, (t) => [primaryKey({ columns: [t.programLevelId, t.day, t.time] })]);
 
 
 export const programsRelations = relations(programs, ({ one, many }) => ({

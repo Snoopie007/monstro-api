@@ -86,7 +86,6 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
                 </Button>
             </DialogTrigger>
             <DialogContent>
-
                 <DialogHeader>
                     <DialogTitle>
                         Create Level
@@ -94,7 +93,7 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <DialogBody>
-                    <LevelForm form={form} />
+                    <LevelForm form={form} lid={lid} />
                 </DialogBody>
                 <DialogFooter >
                     <DialogClose asChild>
@@ -107,6 +106,7 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
                         size={"sm"}
                         className={cn("  children:hidden flex flex-row ", (loading && "children:inline-block"))}
                         onClick={form.handleSubmit(submitForm)}
+                        disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
                     >
                         <Icon name="LoaderCircle" size={14} className="mr-2  animate-spin" />
                         Save

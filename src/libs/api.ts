@@ -66,17 +66,17 @@ async function getProgramsByVendorId(vendorId: number) {
 	return data;
 }
 
-async function getPlansByProgramId(programId: number) {
-	const res = await nextApi.get(`/api/auth/register/plans/${programId}`);
-	const data = res.data;
-	return data;
-}
+// async function getPlansByProgramId(programId: number) {
+// 	const res = await nextApi.get(`/api/auth/register/plans/${programId}`);
+// 	const data = res.data;
+// 	return data;
+// }
 
-async function getContractVariables(contractId: string) {
-	const res = await nextApi.get(`/api/auth/register/sign-contract/variables/${contractId}`);
-	const data = res.data;
-	return data;
-}
+// async function getContractVariables(contractId: string) {
+// 	const res = await nextApi.get(`/api/auth/register/sign-contract/variables/${contractId}`);
+// 	const data = res.data;
+// 	return data;
+// }
 
 async function fillContract(body: any) {
 	const res = await nextApi.post(`/api/auth/register/sign-contract`, body);
@@ -84,11 +84,11 @@ async function fillContract(body: any) {
 	return data;
 }
 
-async function getVendorStripePublishableKey(programId: string) {
-	const res = await nextApi.get(`/api/auth/register/checkout/stripe-publishable-key/${programId}`);
-	const data = res.data;
-	return data;
-}
+// async function getVendorStripePublishableKey(programId: string) {
+// 	const res = await nextApi.get(`/api/auth/register/checkout/stripe-publishable-key/${programId}`);
+// 	const data = res.data;
+// 	return data;
+// }
 
 
 async function getContractByPlan(planId: string) {
@@ -97,31 +97,31 @@ async function getContractByPlan(planId: string) {
 	return data;
 }
 
-async function addProgram(body: any, id: string) {
-	const res = await post({ url: 'programs', data: body, id: id });
-	return res;
-}
+// async function addProgram(body: any, id: string) {
+// 	const res = await post({ url: 'programs', data: body, id: id });
+// 	return res;
+// }
 
-async function addPlan(body: any, pId: number, id: string) {
-	const res = await post({ url: `programs/${pId}/plans/`, data: body, id: id });
-	return res;
-}
+// async function addPlan(body: any, pId: number, id: string) {
+// 	const res = await post({ url: `programs/${pId}/plans/`, data: body, id: id });
+// 	return res;
+// }
 
-async function updatePlan(body: any, pId: number, planId: number, id: string) {
-	const res = await put({ url: `programs/${pId}/plans/${planId}`, data: body, id: id });
-	return res;
-}
+// async function updatePlan(body: any, pId: number, planId: number, id: string) {
+// 	const res = await put({ url: `programs/${pId}/plans/${planId}`, data: body, id: id });
+// 	return res;
+// }
 
 
-async function updateProgramLevel(lId: number, body: any, pId: number, id: string) {
-	const res = await put({ url: `programs/${pId}/levels/${lId}`, data: body, id: id });
-	return res;
-}
+// async function updateProgramLevel(lId: number, body: any, pId: number, id: string) {
+// 	const res = await put({ url: `programs/${pId}/levels/${lId}`, data: body, id: id });
+// 	return res;
+// }
 
-async function addProgramLevel(body: any, pId: number, id: string) {
-	const res = await post({ url: `programs/${pId}/levels/`, data: body, id });
-	return res;
-}
+// async function addProgramLevel(body: any, pId: number, id: string) {
+// 	const res = await post({ url: `programs/${pId}/levels/`, data: body, id });
+// 	return res;
+// }
 
 
 async function addMemberManually(body: any, id: string) {
@@ -151,19 +151,9 @@ export {
 	del,
 	postRegister,
 	getRegister,
-	addProgram,
 	getProgramsByVendorId,
-	getPlansByProgramId,
 	inviteMember,
-	addPlan,
-	getContractByPlan,
-	getContractVariables,
-	fillContract,
-	getVendorStripePublishableKey,
 	updateContract,
-	updateProgramLevel,
-	addProgramLevel,
 	addMemberManually,
-	updatePlan,
 	fetcher
 };

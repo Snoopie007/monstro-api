@@ -14,6 +14,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ProgramLevel } from "@/types";
+import { tryCatch } from "@/libs/utils";
+import { toast } from "react-toastify";
+
 
 import { SetStateAction, Dispatch, useEffect, useState } from "react";
 import useSWR from "swr";
@@ -25,10 +28,11 @@ import { LevelForm } from "../CreateLevel/LevelForm";
 interface UpdateProgramLevelProps {
     level: ProgramLevel | null;
     setCurrentLevel: Dispatch<SetStateAction<ProgramLevel | null>>;
+    lid: string;
 }
 
-export function UpsertLevel({ level, setCurrentLevel }: UpdateProgramLevelProps) {
-    const { mutate } = useSWR(`/api/protected/${level?.id}/programs/${level?.programId}/levels`);
+export function UpsertLevel({ level, setCurrentLevel, lid }: UpdateProgramLevelProps) {
+    const { mutate } = useSWR(`/api/protected/${lid}/programs/${level?.programId}`);
     const [loading, setLoading] = useState<boolean>(false);
 
     const form = useForm<z.infer<typeof LevelSchema>>({
@@ -59,8 +63,15 @@ export function UpsertLevel({ level, setCurrentLevel }: UpdateProgramLevelProps)
 
     async function submitForm(v: z.infer<typeof LevelSchema>) {
         setLoading(true)
-
-        await mutate()
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${lid}/programs/${level?.programId}/levels/${level?.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(v)
+            })
+        )
+        if (error || !result || !result.ok) {
+            toast.error(error?.message || 'Failed to update level')
+        }
         setLoading(false)
         setCurrentLevel(null)
     };
@@ -77,7 +88,7 @@ export function UpsertLevel({ level, setCurrentLevel }: UpdateProgramLevelProps)
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <DialogBody>
-                    <LevelForm form={form} />
+                    <LevelForm form={form} lid={lid} />
                 </DialogBody>
                 <DialogFooter >
                     <DialogClose asChild>
@@ -88,11 +99,12 @@ export function UpsertLevel({ level, setCurrentLevel }: UpdateProgramLevelProps)
                     <Button type="submit"
                         variant={"foreground"}
                         size={"sm"}
-                        className={cn("  children:hidden flex flex-row ", (loading && "children:inline-block"))}
+                        disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
+                        className={cn("  children:hidden ", (loading && "children:inline-block"))}
                         onClick={form.handleSubmit(submitForm)}
                     >
                         <Icon name="LoaderCircle" size={14} className="mr-2  animate-spin" />
-                        Save
+                        Update
                     </Button>
                 </DialogFooter>
             </DialogContent>

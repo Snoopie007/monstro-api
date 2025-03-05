@@ -1,8 +1,8 @@
 'use client'
 import { useProgram } from '@/hooks/use-programs';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import React, { useState, use } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import React, { use } from 'react';
+
 import {
     Tabs,
     TabsContent,
@@ -13,7 +13,7 @@ import UpdateProgram from './components/UpdateProgram';
 import { ProgramLevels } from './components/ProgramLevels';
 import { ProgramMembers } from './components/ProgramMembers';
 import ProgramPlans from './components/ProgramPlans/ProgramPlanList';
-import useSWR from 'swr';
+
 
 import LoadingComponent from '@/components/loading';
 import ErrorComponent from '@/components/error';
@@ -69,7 +69,7 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
                         </CardContent>
                     </Card>
                     <div className='mb-4'>
-                        <ProgramLevels levels={program.levels} programId={params.pid} locationId={params.id} />
+                        <ProgramLevels levels={program.levels} pid={params.pid} lid={params.id} />
                     </div>
                 </div>
 

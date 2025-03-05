@@ -3,25 +3,34 @@ import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { programLevels, programSessions } from "@/db/schemas";
 import { eq } from "drizzle-orm";
-
+import { ProgramSession } from "@/types";
+import { buildConflictUpdateColumns } from "@/libs/server/db";
 export async function PUT(req: Request, props: { params: Promise<{ id: string, pid: number, lid: number }> }) {
     const params = await props.params;
 
     const { sessions, ...data } = await req.json()
     try {
-        console.log(params)
-        const res = await db.transaction(async (tx) => {
+
+        await db.transaction(async (tx) => {
             await tx.update(programLevels).set({
                 ...data
             }).where(eq(programLevels.id, params.lid))
 
-            await tx.insert(programSessions).values(sessions.map((session: any) => ({
+
+            const uniqueSessions = sessions.filter((session: ProgramSession, index: number, self: ProgramSession[]) =>
+                index === self.findIndex((t: ProgramSession) => t.day === session.day && t.time === session.time)
+            )
+
+            const updatedSessions = uniqueSessions.map((session: ProgramSession) => ({
                 ...session,
+                programId: params.pid,
                 programLevelId: params.lid,
                 status: 1
-            })).onConflictDoUpdate({
+            }));
+            await tx.insert(programSessions).values(updatedSessions).onConflictDoUpdate({
                 target: [programSessions.id],
-            }))
+                set: buildConflictUpdateColumns(programSessions, ['day', 'time', 'duration'])
+            })
         })
 
         return NextResponse.json({ success: true }, { status: 200 });

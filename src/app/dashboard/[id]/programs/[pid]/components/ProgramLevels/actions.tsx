@@ -18,11 +18,11 @@ import { Loader2 } from 'lucide-react'
 
 interface LevelActionsProps {
     level: ProgramLevel
-    lid: number
+    lid: string
 }
 
 export default function LevelActions({ level, lid }: LevelActionsProps) {
-    const [currentLevel, setCurrentLevel] = useState<ProgramLevel | null>(level)
+    const [currentLevel, setCurrentLevel] = useState<ProgramLevel | null>(null)
     const [loading, setLoading] = useState<boolean>(false)
     function isDisabled() {
         if (!level || !level.sessions) return true
@@ -44,7 +44,7 @@ export default function LevelActions({ level, lid }: LevelActionsProps) {
     }
     return (
         <div>
-            <UpsertLevel level={currentLevel} setCurrentLevel={setCurrentLevel} />
+            <UpsertLevel level={currentLevel} setCurrentLevel={setCurrentLevel} lid={lid} />
 
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>

@@ -7,6 +7,7 @@ export function stringToTime(time: string) {
 }
 
 export const SessionSchema = z.object({
+    id: z.number().optional(),
     day: z.string().min(1, { message: " required" }),
     time: z.string().min(1, { message: "required" }),
     duration: z.number().min(1, { message: "required" }),

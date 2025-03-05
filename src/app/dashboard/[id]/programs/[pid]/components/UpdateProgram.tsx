@@ -115,7 +115,9 @@ export default function UpdateProgram({ programId, locationId }: UpdateProgramPr
                 <DialogFooter>
                     <Button onClick={form.handleSubmit(submitForm)}
                         variant={"foreground"}
-                        className={cn("py-2.5  children:hidden  px-4 rounded-sm text-sm flex flex-row h-auto", (loading && "children:inline-block"))}>
+                        size={"sm"}
+                        disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
+                        className={cn("children:hidden", (loading && "children:inline-block"))}>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Update
                     </Button>

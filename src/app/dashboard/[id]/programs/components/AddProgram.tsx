@@ -255,6 +255,7 @@ export function AddProgram({ lid }: { lid: string }) {
                             variant={"foreground"}
                             size={"sm"}
                             onClick={form.handleSubmit(submitForm)}
+                            disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
                             className={cn("children:hidden  ", (loading && "children:inline-block"))}
                         >
                             <Icon name="LoaderCircle" className="mr-2  animate-spin" />

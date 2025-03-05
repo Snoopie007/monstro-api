@@ -1,13 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
 
-import { isNull, sql } from 'drizzle-orm';
+import { eq, isNull, sql } from 'drizzle-orm';
+import { programs } from '@/db/schemas';
 
 export async function GET(req: Request, props: { params: Promise<{ id: string, pid: number }> }) {
-    const params = await props.params;
-    console.log("Get Program by ID ", params.pid)
-    try {
+	const params = await props.params;
+	console.log("Get Program by ID ", params.pid)
+	try {
 		const session = await auth();
 
 		if (session) {
@@ -38,30 +39,16 @@ export async function GET(req: Request, props: { params: Promise<{ id: string, p
 	}
 }
 
-export async function POST(req: Request, props: { params: Promise<{ id: string, pid: number }> }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string, pid: number }> }) {
 	const params = await props.params;
 	const data = await req.json()
-	const session = await auth();
 	try {
-	if (session) {
-		const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/program/${params.pid}`, {
-			method: 'POST',
-			headers: {
-				'Authorization': `Bearer ${session.user.token}`,
-				"locationId": `${params.id}`,
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify(data)
-		})
-		console.log(res)
-		if (!res.ok) {
-			return NextResponse.json({ message: "An error occurred saving program." }, { status: 400 });
-		}
-		const response = await res.json();
-		return NextResponse.json(response, { status: 200 });
+		await db.update(programs).set({
+			...data
+		}).where(eq(programs.id, params.pid))
+		return NextResponse.json({ success: true }, { status: 200 })
+	} catch (err) {
+		console.log(err)
+		return NextResponse.json({ error: err }, { status: 500 })
 	}
-} catch (err) {
-	console.log(err)
-	return NextResponse.json({ error: err }, { status: 500 })
-}
 }

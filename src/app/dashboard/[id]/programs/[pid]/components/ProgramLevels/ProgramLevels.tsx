@@ -14,10 +14,15 @@ import LevelActions from "./actions";
 import { CreateLevel } from "./CreateLevel";
 import useSWR from "swr";
 
+interface ProgramLevelsProps {
+    levels: ProgramLevel[];
+    pid: number;
+    lid: string;
+}
 
-export function ProgramLevels({ levels, programId, locationId }: { levels: ProgramLevel[], programId: number, locationId: string }) {
+export function ProgramLevels({ levels, pid, lid }: ProgramLevelsProps) {
     const [currentLevel, setCurrentLevel] = useState<ProgramLevel | null>(null);
-    const { mutate } = useSWR(`/api/protected/${locationId}/programs/${programId}`);
+    const { mutate } = useSWR(`/api/protected/${lid}/programs/${pid}`);
 
     const editLevelOptions = useMemo(() => {
         return {
@@ -36,9 +41,9 @@ export function ProgramLevels({ levels, programId, locationId }: { levels: Progr
                         <div className="flex-1 inline-block text-sm  px-4 font-semibold capitalize ">
                             Levels
                         </div>
-                        <div className="flex-initial flex flex-row items-center h-full">
+                        <div className="flex-initial fl ex flex-row items-center h-full">
 
-                            <CreateLevel pid={programId} lid={locationId} />
+                            <CreateLevel pid={pid} lid={lid} />
 
                         </div>
                     </div>
@@ -70,7 +75,7 @@ export function ProgramLevels({ levels, programId, locationId }: { levels: Progr
                                             </TableCell>
 
                                             <TableCell className={"text-xs"}>
-                                                <LevelActions level={level} lid={level.id} />
+                                                <LevelActions level={level} lid={lid} />
                                             </TableCell>
                                         </TableRow>
                                     );

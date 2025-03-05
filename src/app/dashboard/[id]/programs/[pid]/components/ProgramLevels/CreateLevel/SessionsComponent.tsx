@@ -15,8 +15,14 @@ interface SessionComponentsProps {
 const DaysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export function SessionComponents({ form, index, onRemove }: SessionComponentsProps) {
+
+
+
     return (
-        <div className="grid grid-cols-4     gap-2 mb-2">
+        <div className="grid grid-cols-4 gap-2 mb-2">
+            {form.getValues(`sessions.${index}.id`) && (
+                <input type="hidden" {...form.register(`sessions.${index}.id`)} />
+            )}
             <FormField
                 control={form.control}
                 name={`sessions.${index}.day`}
@@ -57,7 +63,7 @@ export function SessionComponents({ form, index, onRemove }: SessionComponentsPr
                 )}
             />
 
-            {/* Duration Input */}
+
             <FormField
                 control={form.control}
                 name={`sessions.${index}.duration`}
@@ -70,7 +76,6 @@ export function SessionComponents({ form, index, onRemove }: SessionComponentsPr
                     </FormItem>
                 )}
             />
-
             {/* Remove Button */}
             {index > 0 && (
                 <div className="col-span-1 flex flex-row pt-3 gap-2">
