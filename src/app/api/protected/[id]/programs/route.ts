@@ -2,8 +2,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { eq, sql } from 'drizzle-orm';
-import { classSessions, programs as program, programLevels, programs } from '@/db/schemas';
-import { ProgranSession } from '@/types';
+import { programSessions, programs as program, programLevels, programs } from '@/db/schemas';
+import { ProgramSession } from '@/types';
 
 
 export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
@@ -56,24 +56,10 @@ export async function POST(req: Request, props: { params: Promise<{ id: number }
 
 			for (const level of levels) {
 				/** Initialize session object with active status (1) */
-				const session: ProgranSession = { status: 1 };
+				// const session: ProgranSession = { status: 1 };
 				const { sessions, ...rest } = level;
 
-				/** 
-				 * Process each session's schedule information:
-				 * - Extract day and time
-				 * - Store duration times in a structured format by day
-				 */
-				sessions?.forEach((s: Record<string, any>) => {
-					if (!s.day || !s.time) return;
-					const day = s.day.toLowerCase();
-					session[day] = s.time.toString();
 
-					if (s.durationTime) {
-						session.durationTime = session.durationTime || {};
-						session.durationTime[day] = s.durationTime;
-					}
-				});
 
 				/** Create program level record linked to the main program */
 				const [newLevel] = await tx.insert(programLevels).values({
@@ -82,15 +68,17 @@ export async function POST(req: Request, props: { params: Promise<{ id: number }
 					parentId: null,
 				}).returning({ id: programLevels.id });
 
+
 				/** 
 				 * Create class session with references to both program and level
 				 * This stores the actual schedule information
 				 */
-				await tx.insert(classSessions).values({
-					...session,
+				await tx.insert(programSessions).values(sessions.map((s: ProgramSession) => ({
+					...s,
+					status: 1,
 					programLevelId: newLevel.id,
 					programId: program.id,
-				});
+				})));
 			}
 		});
 

@@ -48,17 +48,17 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
                         </CardHeader>
                         <CardContent className='p-4'>
                             <div className="flex flex-col ">
-                                <div className="flex flex-row gap-3 items-center">
-                                    <Avatar className="flex items-center justify-center text-black-100 w-[45px] h-[45px]  bg-white/50">
+                                <div className="flex flex-row gap-4 items-start">
+                                    <Avatar className="flex items-center justify-center text-black w-[45px] h-[45px]  bg-white/50">
                                         <AvatarImage className="rounded-full " src={program.avatar} />
                                         <AvatarFallback className=" bg-gray-200 text-gray-400 text-lg font-black">
                                             {program.name.charAt(0)}
                                         </AvatarFallback>
 
                                     </Avatar>
-                                    <div className='space-y-0'>
+                                    <div className='space-y-1'>
                                         <div className='text-foreground text-sm font-semibold'> {program.name}</div>
-                                        <p className=" text-foreground/80 text-xs font-roboto">
+                                        <p className=" text-foreground/80 text-xs leading-4">
                                             {program.description}
                                         </p>
 

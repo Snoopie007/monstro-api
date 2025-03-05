@@ -1,34 +1,34 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { db } from "@/db/db";
+import { programLevels, programSessions } from "@/db/schemas";
 
-export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
-  const session = await auth();
-  const data = await req.json()
-  try {
+export async function POST(req: Request, props: { params: Promise<{ id: string, pid: string }> }) {
+	const params = await props.params;
 
-    if (session) {
+	const { sessions, ...data } = await req.json()
+	try {
 
+		const level = await db.transaction(async (tx) => {
+			const [level] = await tx.insert(programLevels).values({
+				...data,
+				programId: params.pid,
+			}).returning()
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/add-program-level`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.user.token}`,
-          "locationId": `${params.id}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-      console.log(res);
-      if (!res.ok) {
-        return NextResponse.json({ message: "An error occurred saving program level." }, { status: 400 });
-      }
+			await tx.insert(programSessions).values(sessions.map((session: any) => ({
+				...session,
+				programLevelId: level.id,
+				status: 1
+			})))
 
-      return NextResponse.json({ message: "Success" }, { status: 200 });
-    }
-  } catch (err) {
-    console.log(err)
-    return NextResponse.json({ error: err }, { status: 500 })
-  }
+			return level
+		})
+
+		return NextResponse.json({ success: true, level }, { status: 200 });
+	} catch (err) {
+		console.log(err)
+		return NextResponse.json({ success: false }, { status: 500 })
+	}
 }
+
 

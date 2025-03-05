@@ -18,7 +18,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem, FormLabel } from '@/components/forms';
 import { cn, sleep, tryCatch } from "@/libs/utils";
 
-import AddProgramSchedules from './ProgramSchedules';
+import SessionComponent from './ProgramSessions';
 import { NewProgramSchema } from './schemas';
 import { Icon } from '@/components/icons';
 
@@ -45,7 +45,7 @@ export function AddProgram({ lid }: { lid: string }) {
                         {
                             day: undefined,
                             time: "12:00",
-                            durationTime: 30,
+                            duration: 30,
                         }
                     ],
                 }
@@ -85,7 +85,7 @@ export function AddProgram({ lid }: { lid: string }) {
                 {
                     day: "",
                     time: "12:00",
-                    durationTime: 30,
+                    duration: 30,
                 }
             ],
             capacity: 0,
@@ -232,7 +232,7 @@ export function AddProgram({ lid }: { lid: string }) {
                                                         )}
                                                     />
                                                 </fieldset>
-                                                <AddProgramSchedules scheduleIndex={index} control={form.control} />
+                                                <SessionComponent scheduleIndex={index} control={form.control} />
                                             </div>
                                         </div>
                                     ))}

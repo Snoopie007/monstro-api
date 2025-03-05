@@ -8,47 +8,68 @@ import {
     Button,
     DropdownMenuSeparator
 } from '@/components/ui'
-import { Level, Session } from '@/types'
+import { ProgramLevel, ProgramSession } from '@/types'
+import { UpsertLevel } from './UpdateLevel'
+import { useState } from 'react'
+import { tryCatch } from '@/libs/utils'
+import { toast } from 'react-toastify'
+import { Loader2 } from 'lucide-react'
 
 
 interface LevelActionsProps {
-    level: Level | null
-    onChange: (level: Level | null) => void
-    onDelete: (id: number) => void
+    level: ProgramLevel
+    lid: number
 }
 
-export default function LevelActions({ level, onChange, onDelete }: LevelActionsProps) {
+export default function LevelActions({ level, lid }: LevelActionsProps) {
+    const [currentLevel, setCurrentLevel] = useState<ProgramLevel | null>(level)
+    const [loading, setLoading] = useState<boolean>(false)
+    function isDisabled() {
+        if (!level || !level.sessions) return true
+        return level.sessions.filter((session: ProgramSession) => {
+            return session.reservations && session.reservations.length > 0
+        }).length > 0
+    }
+    async function onDelete(sid: number) {
+        if (!sid) return
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${lid}/programs/session`, {
+                method: 'DELETE',
+                body: JSON.stringify({ sessionId: sid })
+            })
+        )
+        if (error || !result || !result.ok) {
+            toast.error(error?.message || 'Failed to delete session')
+        }
+    }
     return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant={"ghost"} className='h-auto px-0 hover:bg-transparent'>
-                    <Icon name="EllipsisVertical" size={16} className="dark:text-white" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className='w-[180px] border-foreground/20 p-2'>
+        <div>
+            <UpsertLevel level={currentLevel} setCurrentLevel={setCurrentLevel} />
 
-                <DropdownMenuItem
-                    onClick={() => onChange(level)}
-                    className='cursor-pointer hover:bg-indigo-500 text-sm py-2 leading-5'
-                >
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant={"ghost"} className='h-auto px-0 hover:bg-transparent'>
+                        <Icon name="EllipsisVertical" size={16} className="dark:text-white" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className='w-[180px] border-foreground/20 p-2'>
 
-                    <span>Edit</span>
-
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className='mb-2' />
-                <DropdownMenuItem className='cursor-pointer bg-red-500 ' 
-                onClick={() => onDelete(level && level.id ? level.id : 0)}
-                disabled={level && level.sessions ? level.sessions.filter((session: Session) => {
-                        if(session.status) {
-                            return session.enrollments?.length ? session.enrollments?.filter((enrollment) => enrollment.status === 1).length > 0 : false
-                        }
-                        return false
-                    }).length > 0 : true}
+                    <DropdownMenuItem className='cursor-pointer hover:bg-indigo-500 text-sm py-2 leading-5'
+                        onClick={() => setCurrentLevel(level)}
                     >
-                    <span>Delete</span>
+                        <span>Edit</span>
 
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className='mb-2' />
+                    <DropdownMenuItem
+                        className='cursor-pointer bg-red-500 children:'
+                        onClick={() => onDelete(level.id)}
+                        disabled={isDisabled()}
+                    >
+                        {loading ? <Loader2 size={16} className="animate-spin" /> : <span>Delete</span>}
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
     )
 }

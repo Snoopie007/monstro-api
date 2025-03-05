@@ -20,7 +20,7 @@ export type Program = {
 };
 
 export type ProgramLevel = {
-    id?: number;
+    id: number;
     name: string;
     capacity: number;
     minAge: number;
@@ -28,26 +28,21 @@ export type ProgramLevel = {
     programId?: number;
     program?: Program;
     parentId?: number;
-    sessions: ProgranSession[];
+    sessions: ProgramSession[];
     created?: Date | null;
     updated?: Date | null;
     deleted?: Date | null;
 };
 
 
-export type ProgranSession = {
-    [key: string]: string | number | undefined | boolean | Reservation[] | Record<string, number>;
+export type ProgramSession = {
     id?: number,
-    durationTime?: Record<string, number>,
+    duration: number,
     status: number,
-    duration_time?: string,
-    monday?: string | undefined,
-    tuesday?: string | undefined,
-    wednesday?: string | undefined,
-    thursday?: string | undefined,
-    friday?: string | undefined,
-    saturday?: string | undefined,
-    sunday?: string | undefined,
+    day: string,
+    time: string | undefined,
+    created: Date,
+    updated?: Date | null,
     reservations?: Reservation[]
 }
 

@@ -13,39 +13,37 @@ import {
 } from "@/components/forms";
 import { Time } from '@internationalized/date';
 import { z } from 'zod';
-import { NewProgramSchema } from './schemas';
-import { Icon } from '@/components/icons';
+import { NewProgramSchema, stringToTime } from './schemas';
 import { Button } from '@/components/ui';
 import { cn } from '@/libs/utils';
 import { X } from 'lucide-react';
 
 
-interface AddProgramSchedulesProps {
+interface AddProgramSessionsProps {
     scheduleIndex: number, control: Control<z.infer<typeof NewProgramSchema>>,
 
 };
 
 const DaysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-export default function AddProgramSchedules({ scheduleIndex, control }: AddProgramSchedulesProps) {
+export default function SessionComponent({ scheduleIndex, control }: AddProgramSessionsProps) {
+
     const { fields, remove, append } = useFieldArray({
         control,
         name: `levels.${scheduleIndex}.sessions`
     });
-    function stringToTime(time: string) {
-        return new Time(parseInt(time.split(":")[0]), parseInt(time.split(":")[1]));
-    }
+
     return (
         <div className="py-3  ">
             <div className="border-b flex flex-row items-center justify-between border-foreground/5 mb-4 pb-2">
                 <span className="text-sm">
-                    Add a Schedules
+                    Add a Session
                 </span>
                 <Button type='button'
                     variant={"foreground"}
-                    onClick={() => append({ day: "", durationTime: 30, time: "12:00" })}
+                    onClick={() => append({ day: "", duration: 30, time: "12:00" })}
                     className=" font-medium text-[12px]  py-1  px-2 rounded-xs h-auto">
-                    + Schedule
+                    + Session
                 </Button>
             </div>
             <div className='space-y-0'>
@@ -95,19 +93,25 @@ export default function AddProgramSchedules({ scheduleIndex, control }: AddProgr
                                                     }
                                                 />
                                             </FormControl>
-
                                         </FormItem>
-
                                     )}
                                 />
                                 <FormField
                                     control={control}
-                                    name={`levels.${scheduleIndex}.sessions.${k}.durationTime`}
+                                    name={`levels.${scheduleIndex}.sessions.${k}.duration`}
                                     render={({ field }) => (
                                         <FormItem className="col-span-1 ">
 
                                             <FormControl>
-                                                <Input type='number' className={cn("")} placeholder={'Duration'} {...field} />
+                                                <Input type='number' className={cn("")} placeholder={'Duration'}
+                                                    value={field.value}
+                                                    onChange={(e) => {
+                                                        const value = parseInt(e.target.value);
+                                                        if (value) {
+                                                            field.onChange(value);
+                                                        }
+                                                    }}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

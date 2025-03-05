@@ -3,16 +3,13 @@ import { auth } from "@/auth";
 import { db } from '@/db/db';
 
 export async function GET(req: Request, props: { params: Promise<{ pid: number, id: number }> }) {
-    const params = await props.params;
-    console.log("Get Members By ID ", params.pid)
-    const session = await auth();
-    try {
+	const params = await props.params;
+	console.log("Get Members By ID ", params.pid)
+	const session = await auth();
+	try {
 		if (session) {
 			const items = await db.query.programMembers.findMany({
 				where: (members, { eq }) => eq(members.programId, params.pid),
-				columns: {
-
-				},
 				with: {
 					member: {
 						with: {

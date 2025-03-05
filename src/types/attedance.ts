@@ -1,5 +1,5 @@
 import { Member } from "./member";
-import { Program, ProgranSession } from "./program";
+import { Program, ProgramSession } from "./program";
 
 export type Attendance = {
     id: number;
@@ -14,6 +14,6 @@ export type Reservation = {
     status: number;
     startDate: string;
     endDate: string;
-    session: ProgranSession;
+    session: ProgramSession;
     member: Member;
 };
