@@ -7,7 +7,6 @@ import dayjs from 'dayjs';
 import { attendances } from '@/db/schemas';
 import { authenticateMember } from '../../utils';
 
-
 export async function POST(req: NextRequest, props: { params: Promise<{ id: number }> }) {
 	const params = await props.params;
 
@@ -31,8 +30,8 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
 		let currentDayOfWeek: string = "monday";
 
 		let startTime: dayjs.Dayjs = dayjs();
-		if (reservation?.session && reservation?.session?.durationTime) {
-			const durationDetails = getCurrentTimeDetails(reservation.session.durationTime, "UTC");
+		if (reservation?.session && reservation?.session?.duration) {
+			const durationDetails = getCurrentTimeDetails(reservation.session.duration, "UTC");
 			currentDayOfWeek = durationDetails.currentDayOfWeek as keyof typeof reservation.session;
 			startTime = dayjs(`${dayjs().format("YYYY-MM-DD")} ${reservation.session[currentDayOfWeek as keyof typeof reservation.session]}`, "YYYY-MM-DD HH:mm:ss");
 		}

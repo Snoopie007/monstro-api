@@ -1,5 +1,5 @@
 import { Reservation } from "./attedance";
-import { MemberPlan } from "./member";
+import { MemberPackage, MemberPlan, MemberSubscription } from "./member";
 
 export type Program = {
     id: number;
@@ -13,7 +13,8 @@ export type Program = {
     // status: string | null;
     location?: Location;
     planCounts?: string;
-    // lastSyncAt: Date | null;
+    memberSubscriptions: MemberSubscription[];
+    memberPackages: MemberPackage[];
     created: Date;
     updated: Date | null;
     deleted: Date | null;
@@ -29,6 +30,8 @@ export type ProgramLevel = {
     program?: Program;
     parentId?: number;
     sessions: ProgramSession[];
+    memberSubscriptions: MemberSubscription[];
+    memberPackages: MemberPackage[];
     created?: Date | null;
     updated?: Date | null;
     deleted?: Date | null;

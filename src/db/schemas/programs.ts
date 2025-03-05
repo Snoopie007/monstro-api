@@ -2,7 +2,7 @@ import { integer, varchar, serial, text, timestamp, pgTable, time, primaryKey, s
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { members } from "./members";
-import { memberPlans } from "./MemberPlans";
+import { memberPackages, memberPlans, memberSubscriptions } from "./MemberPlans";
 import { achievements } from "./achievements";
 import { reservations } from "./reservations";
 
@@ -57,6 +57,8 @@ export const programsRelations = relations(programs, ({ one, many }) => ({
         fields: [programs.locationId],
         references: [locations.id],
     }),
+    memberSubscriptions: many(memberSubscriptions),
+    memberPackages: many(memberPackages),
     levels: many(programLevels),
     programMembers: many(programMembers),
     plans: many(memberPlans),
@@ -83,7 +85,8 @@ export const programLevelsRelations = relations(programLevels, ({ one, many }) =
         references: [programs.id],
     }),
     sessions: many(programSessions),
-
+    memberSubscriptions: many(memberSubscriptions),
+    memberPackages: many(memberPackages),
 }))
 
 export const programSessionsRelations = relations(programSessions, ({ one, many }) => ({

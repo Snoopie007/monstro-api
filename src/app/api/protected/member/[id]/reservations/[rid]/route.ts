@@ -38,7 +38,7 @@ export async function GET(req: NextRequest, props: MemberReservationProps) {
 
 		const todaysAttendance = await getTodaysAttendanceStatus(reservation.id);
 
-		const newReservation: any = {
+		const newReservation: Record<string, any> = {
 			...reservation,
 			isMarkedAttendence: todaysAttendance
 		};

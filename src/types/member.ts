@@ -1,6 +1,8 @@
 import { Achievement } from "./achievement";
 import { Contract } from "./contract";
 import { FamilyMember } from "./family-member";
+import { ProgramLevel } from "./program";
+import { Program } from "./program";
 import { Reward } from "./reward";
 import { Transaction } from "./transaction";
 
@@ -48,10 +50,14 @@ export type MemberSubscription = {
     cancelAt?: Date | null;
     cancelAtPeriodEnd?: boolean;
     locationId: number;
+    programId: number;
+    programLevelId: number;
     stripeSubscriptionId?: string | null;
     trialEnd?: Date | null;
     endedAt?: Date | null;
     paymentType: string;
+    program?: Program;
+    programLevel?: ProgramLevel;
     plan?: MemberPlan | null;
     payer?: Member | null;
     beneficiary?: Member;
@@ -76,6 +82,10 @@ export type MemberPackage = {
     totalClassAttended: number;
     totalClassLimit: number;
     metadata?: Record<string, any>;
+    programId: number;
+    programLevelId: number;
+    program?: Program;
+    programLevel?: ProgramLevel;
     plan?: MemberPlan;
     payer?: Member;
     beneficiary?: Member;
