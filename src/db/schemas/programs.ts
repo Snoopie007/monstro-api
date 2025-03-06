@@ -46,7 +46,6 @@ export const programSessions = pgTable("program_sessions", {
     time: time("time").notNull(),
     duration: integer("duration").notNull().default(0),
     day: integer("day").notNull(),
-    limit: integer("limit"),
     status: smallint("status"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),

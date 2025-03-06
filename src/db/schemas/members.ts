@@ -100,9 +100,6 @@ export const memberInvoices = pgTable("member_invoices", {
     updated: timestamp('updated_at', { withTimezone: true }),
 });
 
-
-
-
 export const familyMembers = pgTable("family_members", {
     id: serial("id").primaryKey(),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),

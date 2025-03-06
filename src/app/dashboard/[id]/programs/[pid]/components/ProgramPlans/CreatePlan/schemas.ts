@@ -5,13 +5,12 @@ const NewPlanSchema = z.object({
     name: z.string().min(2, { message: "Required" }),
     description: z.string().min(2, { message: "Required" }),
     amount: z.number().gt(1, { message: "Price must be at least $1." }),
-
+    classLimitInterval: z.enum(["week", "month", "year"]).optional(),
+    classLimitThreshold: z.number().optional(),
     family: z.boolean().optional(),
     familyMemberLimit: z.number().optional(),
     contractId: z.number().optional(),
     pkg: z.object({
-        interval: z.enum(["day", "week", "month", "year"]).optional(),
-        intervalCount: z.number().optional(),
         expireDate: z.date().optional(),
         totalClassLimit: z.number().optional(),
         intervalClassLimit: z.number().optional(),
@@ -33,11 +32,11 @@ const NewPlanSchema = z.object({
                 path: ["pkg", "totalClassLimit"]
             });
         }
-        if (data.pkg.intervalClassLimit && !data.pkg.interval) {
+        if (data.classLimitThreshold && !data.classLimitInterval) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: "Required",
-                path: ["pkg", "interval"]
+                path: ["classLimitInterval"]
             });
         }
     }

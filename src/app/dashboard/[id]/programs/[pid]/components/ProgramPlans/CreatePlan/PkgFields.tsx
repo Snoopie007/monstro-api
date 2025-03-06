@@ -1,11 +1,7 @@
 
 import {
     FormControl, FormField, FormMessage, FormItem, FormLabel,
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem,
+
     Input,
     FormDescription,
 } from '@/components/forms';
@@ -13,10 +9,15 @@ import {
 import { z } from "zod";
 import React from "react";
 import { UseFormReturn } from 'react-hook-form';
-import { Calendar, Button, PopoverTrigger, Popover, Switch, PopoverContent } from '@/components/ui';
+import {
+    Calendar, Button, PopoverTrigger, Popover, Switch, PopoverContent,
+    CollapsibleContent,
+    Collapsible,
+    CollapsibleTrigger,
+} from '@/components/ui';
 import { NewPlanSchema } from './schemas';
 import { cn } from '@/libs/utils';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { SelectContract } from './SelectContract';
 
@@ -28,6 +29,7 @@ interface SubFieldsProps {
 export function PlanPkgFields({ lid, form }: SubFieldsProps) {
 
     return (
+
         <div className='space-y-2'>
             <fieldset className=''>
                 <FormField
@@ -45,57 +47,17 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                 />
 
             </fieldset>
-            <div className='space-y-1'>
-                <div className='text-[0.7rem] uppercase font-medium'>
-                    Package Options
-                    <span className='text-xs text-yellow-300'   >(Optional)</span>
-                </div>
-
-                <div className="bg-background rounded-sm p-4 space-y-2">
+            <Collapsible >
+                <CollapsibleTrigger className="flex group flex-row items-center gap-1">
+                    <ChevronRight size={15} className="group-data-[state=open]:rotate-90" />
+                    <span className="text-[0.7rem] uppercase font-medium cursor-pointer">
+                        Package Options {" "}
+                        <span className=' text-yellow-300'>(Optional)</span>
+                    </span>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="bg-background rounded-sm p-4 space-y-2">
                     <fieldset className='flex flex-row gap-2 items-baseline'>
-                        <div className=' flex-1 grid grid-cols-3 gap-2 items-baseline'>
-                            <FormField
-                                control={form.control}
-                                name="pkg.intervalClassLimit"
-                                render={({ field }) => (
-                                    <FormItem className="col-span-1">
-                                        <FormLabel size={"tiny"}>Class Limit</FormLabel>
-                                        <FormControl>
-                                            <Input type='number' placeholder="" onChange={(e) => {
-                                                if (e.target.value) {
-                                                    field.onChange(parseInt(e.target.value))
-                                                    form.setValue("pkg.intervalCount", 1)
-                                                }
-                                            }} value={field.value || ""} />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="pkg.interval"
-                                render={({ field }) => (
-                                    <FormItem className="col-span-2">
-                                        <FormLabel size={"tiny"} >Per</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value} defaultValue={'month'} >
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select..." />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {['day', 'week', 'month', 'year'].map((preset, index) => (
-                                                    <SelectItem key={index} value={preset}>
-                                                        {preset}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
 
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
                         <FormField
                             control={form.control}
                             name="pkg.expireDate"
@@ -173,11 +135,12 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                         </fieldset>
                     )}
 
-                </div>
-            </div>
+                </CollapsibleContent>
+            </Collapsible>
 
 
         </div>
+
     )
 }
 

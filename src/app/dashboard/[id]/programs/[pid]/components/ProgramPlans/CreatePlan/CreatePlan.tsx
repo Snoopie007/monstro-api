@@ -18,6 +18,11 @@ import {
     FormControl,
     Input,
     Textarea,
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem
 } from "@/components/forms";
 import { useForm } from "react-hook-form";
 import { NewPlanSchema, PlanType } from "./schemas";
@@ -50,6 +55,8 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
             family: false,
             familyMemberLimit: 0,
             amount: 0,
+            classLimitInterval: undefined,
+            classLimitThreshold: undefined,
             subscription: {
                 interval: 'month',
                 intervalCount: 1,
@@ -57,8 +64,6 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
                 billingAnchor: undefined
             },
             pkg: {
-                interval: undefined,
-                intervalCount: undefined,
                 expireDate: undefined,
                 totalClassLimit: 0,
                 intervalClassLimit: undefined
@@ -195,7 +200,49 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
                                         )}
                                     />
                                 </fieldset>
+                                <fieldset className=' flex-1 grid grid-cols-3 gap-2 items-baseline'>
+                                    <FormField
+                                        control={form.control}
+                                        name="pkg.intervalClassLimit"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-1">
+                                                <FormLabel size={"tiny"}>Class Limit(Optional)</FormLabel>
+                                                <FormControl>
+                                                    <Input type='number' placeholder="" onChange={(e) => {
+                                                        if (e.target.value) {
+                                                            field.onChange(parseInt(e.target.value))
+                                                            form.setValue("classLimitThreshold", 1)
+                                                        }
+                                                    }} value={field.value || ""} />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="classLimitInterval"
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-2">
+                                                <FormLabel size={"tiny"} >Per(Optional)</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value} defaultValue={'month'} >
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select..." />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {['week', 'month', 'year'].map((preset, index) => (
+                                                            <SelectItem key={index} value={preset}>
+                                                                {preset}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
 
+                                            </FormItem>
+                                        )}
+                                    />
+                                </fieldset>
                                 {type === "recurring" && <PlanSubFields lid={lid} form={form} />}
                                 {type === "one-time" && <PlanPkgFields lid={lid} form={form} />}
 

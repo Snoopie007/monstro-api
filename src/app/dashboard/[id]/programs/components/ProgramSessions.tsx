@@ -11,11 +11,10 @@ import {
     SelectValue,
     FormControl, FormField, FormItem, FormMessage, TimePicker
 } from "@/components/forms";
-import { Time } from '@internationalized/date';
 import { z } from 'zod';
-import { NewProgramSchema, stringToTime } from './schemas';
+import { NewProgramSchema } from './schemas';
 import { Button } from '@/components/ui';
-import { cn } from '@/libs/utils';
+import { cn, stringToTime } from '@/libs/utils';
 import { X } from 'lucide-react';
 
 
