@@ -1,10 +1,10 @@
 import { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
-import { LevelSchema, stringToTime } from "../../../../components/schemas";
+import { LevelSchema } from "../../../../components/schemas";
 import { FormField, FormItem, FormControl, FormMessage, TimePicker, Input } from "@/components/forms";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms/select";
 import { Icon } from "@/components/icons";
-import { cn } from "@/libs/utils";
+import { cn, stringToTime } from "@/libs/utils";
 
 interface SessionComponentsProps {
     form: UseFormReturn<z.infer<typeof LevelSchema>>;

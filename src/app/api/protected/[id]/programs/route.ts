@@ -23,7 +23,8 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 			with: {
 				plans: type ? {
 					where: (plan, { eq }) => eq(plan.type, type as "recurring" | "one-time")
-				} : true
+				} : true,
+				levels: true
 			},
 			extras: {
 				counts: db.$count(program, eq(program.locationId, params.id)).as("counts"),

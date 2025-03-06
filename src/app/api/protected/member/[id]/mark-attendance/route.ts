@@ -5,7 +5,7 @@ import { and } from 'drizzle-orm';
 import { getTodaysAttendanceStatus } from '@/libs/server/db';
 import dayjs from 'dayjs';
 import { attendances } from '@/db/schemas';
-import { authenticateMember } from '../../utils';
+import { authenticateMember, getCurrentTimeDetails } from '../../utils';
 
 export async function POST(req: NextRequest, props: { params: Promise<{ id: number }> }) {
 	const params = await props.params;

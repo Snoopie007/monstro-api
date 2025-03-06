@@ -8,13 +8,11 @@ export type Program = {
     icon?: string | null | File;
     // benefits?: string[];
     plans: MemberPlan[];
-    programLevels?: ProgramLevel[];
+    levels: ProgramLevel[];
     locationId?: number;
     // status: string | null;
     location?: Location;
     planCounts?: string;
-    memberSubscriptions: MemberSubscription[];
-    memberPackages: MemberPackage[];
     created: Date;
     updated: Date | null;
     deleted: Date | null;
@@ -42,11 +40,12 @@ export type ProgramSession = {
     id?: number,
     duration: number,
     status: number,
-    day: string,
+    day: number,
     time: string | undefined,
     created: Date,
     updated?: Date | null,
     reservations?: Reservation[]
+    reservationsCount?: number | null
 }
 
 

@@ -4,6 +4,7 @@ import { isAfter } from "date-fns";
 
 type BaseData = {
     memberPlanId: number,
+    programLevelId: number,
     startDate: Date | string,
     paymentMethod: string,
 }
@@ -13,7 +14,7 @@ type PackageData = BaseData & {
     totalClassLimit?: number,
 }
 
-type SubscriptionData = {
+type SubscriptionData = BaseData & {
     mid: number;
     id: number;
     memberPlanId: number;
@@ -93,6 +94,7 @@ function createTransaction(
 ): Transaction {
     const today = new Date();
     const description = plan.type === "recurring" ? `Subscription to ${plan.name}` : `One time payment for ${plan.name}`;
+
     return {
         ...ids,
         chargeDate: today,
@@ -151,9 +153,7 @@ function createPackage(
     };
 
     const newTransaction = createTransaction(plan, ids, data.paymentMethod);
-
     const newInvoice = createInvoice(plan, ids);
-
     return { newTransaction, newPkg, newInvoice };
 }
 
@@ -182,6 +182,7 @@ function createSubscription(data: SubscriptionData, plan: MemberPlan): CreateSub
         beneficiaryId: data.beneficiaryId || data.mid,
         locationId: data.id,
         planId: data.memberPlanId,
+        programLevelId: data.programLevelId,
         startDate,
         currentPeriodStart: startDate,
         currentPeriodEnd: endDate,

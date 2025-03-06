@@ -1,10 +1,5 @@
-import { TimeValue } from "react-aria";
-import { z } from "zod";
-import { Time } from '@internationalized/date';
 
-export function stringToTime(time: string) {
-    return new Time(parseInt(time.split(":")[0]), parseInt(time.split(":")[1]));
-}
+import { z } from "zod";
 
 export const SessionSchema = z.object({
     id: z.number().optional(),

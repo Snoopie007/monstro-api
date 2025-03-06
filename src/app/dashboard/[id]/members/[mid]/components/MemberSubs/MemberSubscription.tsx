@@ -1,6 +1,5 @@
 'use client'
 import {
-    Skeleton,
     Table,
     TableBody,
     TableCell,
@@ -13,7 +12,7 @@ import { formatAmountForDisplay } from '@/libs/utils'
 import MemberSubscriptionActions from './actions'
 import { CircleProgress } from '@/components/ui/circle-progress';
 
-import { CreateSubscription } from './CreateSubscription'
+import { CreateSubscription } from './CreateSub/CreateSubscription'
 import { MemberSubscription } from '@/types'
 import { useMember } from '../../providers/MemberContext'
 import { SubscriptionStatus } from './SubscriptionStatus'

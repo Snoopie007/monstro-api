@@ -50,13 +50,11 @@ export type MemberSubscription = {
     cancelAt?: Date | null;
     cancelAtPeriodEnd?: boolean;
     locationId: number;
-    programId: number;
     programLevelId: number;
     stripeSubscriptionId?: string | null;
     trialEnd?: Date | null;
     endedAt?: Date | null;
     paymentType: string;
-    program?: Program;
     programLevel?: ProgramLevel;
     plan?: MemberPlan | null;
     payer?: Member | null;
@@ -82,9 +80,7 @@ export type MemberPackage = {
     totalClassAttended: number;
     totalClassLimit: number;
     metadata?: Record<string, any>;
-    programId: number;
     programLevelId: number;
-    program?: Program;
     programLevel?: ProgramLevel;
     plan?: MemberPlan;
     payer?: Member;
@@ -110,7 +106,8 @@ export type MemberPlan = {
     currency: string;
     price: number;
     totalClassLimit: number | null;
-    intervalClassLimit: number | null;
+    classLimitInterval: 'week' | 'month' | 'year' | null;
+    classLimitThreshold: number | null;
     stripePriceId: string | null;
     expireDate: Date | null;
     allowProration: boolean;

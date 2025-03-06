@@ -2,13 +2,14 @@ import { integer, boolean, text, timestamp, pgTable, serial, doublePrecision, pg
 import { programLevels, programs } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { relations, sql } from "drizzle-orm";
-import { vendors } from "./vendors";
+
 import { memberInvoices, members } from "./members";
 import { locations } from "./locations";
 import { transactions } from "./transactions";
 
 const PlanPaymentType = pgEnum("plan_payment_type", ["recurring", "one-time"]);
 const PlanInterval = pgEnum("plan_interval", ["day", "week", "month", "year"]);
+const PlanClassLimitInterval = pgEnum("plan_class_limit_interval", ["week", "month", "year"]);
 const PackageStatusEnum = pgEnum("package_status", ["active", "incomplete", "expired", "completed"]);
 const MemberSubscriptionStatusEnum = pgEnum('member_subscription_status', [
     'active',
@@ -36,7 +37,8 @@ export const memberPlans = pgTable("member_plans", {
     stripePriceId: text("stripe_price_id"),
     expireDate: timestamp("expire_date", { withTimezone: true }),
     totalClassLimit: integer("total_class_limit"),
-    intervalClassLimit: integer("interval_class_limit"),
+    classLimitInterval: PlanClassLimitInterval("class_limit_interval"),
+    classLimitThreshold: integer("class_limit_threshold"),
     billingAnchorConfig: jsonb("billing_anchor_config").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     allowProration: boolean("allow_proration").notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -52,7 +54,6 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     planId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
     stripeSubscriptionId: text("stripe_subscription_id"),
     status: MemberSubscriptionStatusEnum("status").notNull().default("incomplete"),
@@ -77,7 +78,6 @@ export const memberPackages = pgTable("member_packages", {
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     payerId: integer("payer_id").references(() => members.id, { onDelete: "set null" }),
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     endDate: timestamp("end_date", { withTimezone: true }),
@@ -100,7 +100,6 @@ export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
         fields: [memberPlans.contractId],
         references: [contractTemplates.id],
     }),
-
     packages: many(memberPackages),
     subscriptions: many(memberSubscriptions),
 }));
@@ -116,10 +115,7 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
         references: [members.id],
         relationName: "beneficiary",
     }),
-    program: one(programs, {
-        fields: [memberSubscriptions.programId],
-        references: [programs.id],
-    }),
+
     programLevel: one(programLevels, {
         fields: [memberSubscriptions.programLevelId],
         references: [programLevels.id],
@@ -140,10 +136,6 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
     plan: one(memberPlans, {
         fields: [memberPackages.memberPlanId],
         references: [memberPlans.id],
-    }),
-    program: one(programs, {
-        fields: [memberPackages.programId],
-        references: [programs.id],
     }),
     programLevel: one(programLevels, {
         fields: [memberPackages.programLevelId],

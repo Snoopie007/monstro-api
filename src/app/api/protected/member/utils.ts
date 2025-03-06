@@ -15,7 +15,7 @@ dayjs.extend(duration);
 
 
 
-export function authenticateMember(req: NextRequest): { member: Member } {
+function authenticateMember(req: NextRequest): { member: Member } {
     const token = req.headers.get("Authorization")?.split(" ")[1]
     const authMember = decodeJwt(token ?? "");
     if (!authMember) {
@@ -107,3 +107,5 @@ function getCurrentStatus(sessionData: any, userTimezone: any) {
     return `Next session starts on ${nextSessionDay} at ${convertedTime}`;
 
 }
+
+export { authenticateMember, getCurrentTimeDetails, getCurrentStatus };

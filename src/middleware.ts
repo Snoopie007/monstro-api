@@ -77,13 +77,17 @@ export default auth(async (req) => {
 			const [_, path, locationId] = pathname.match(/^\/((?:dashboard|onboarding))\/([^/]+)(\/.*)?$/) || []
 
 			if (locationId) {
+				/** Check if locationId is a valid location */
 				let nextLocation = locations.find((loc: { id: string }) => loc.id === locationId)
 
+				/** If locationId is not a valid location, redirect to the first active location */
 				if (!nextLocation) {
 					nextLocation =
 						locations.find((loc: { status: string }) => loc.status === "active") ||
 						locations.find((loc: { status: string }) => loc.status === "incomplete")
 				}
+
+				/** If the path is not allowed for the current location, redirect to the dashboard of the next location */
 				const allowedInactivePaths = [`/dashboard/${nextLocation.id}`, `/dashboard/${nextLocation.id}/settings/billing`]
 				if (
 					path.startsWith("dashboard") &&

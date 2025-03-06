@@ -85,7 +85,7 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
                     +
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="w-[600px] max-w-[600px]">
                 <DialogHeader>
                     <DialogTitle>
                         Create Level

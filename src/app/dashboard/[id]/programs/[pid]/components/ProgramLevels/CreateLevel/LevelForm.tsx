@@ -122,8 +122,8 @@ export function LevelForm({ form, lid }: LevelFormProps) {
 
                     <ScrollArea className="h-[250px] w-full px-3  ">
                         <div className="space-y-1">
-                            <div className='inline-flex flex-row items-left gap-2 '>
-                                {['Day', 'Time', 'Duration(mins)'].map((item) => (
+                            <div className='grid grid-cols-4 items-start gap-2 '>
+                                {['Day', 'Time', 'Duration(mins)', 'Limit'].map((item) => (
                                     <div key={item} className={cn('font-medium flex-initial w-[120px] text-[0.65rem] uppercase')}>
                                         {item}
                                     </div>

@@ -4,7 +4,7 @@ import { db } from '@/db/db';
 import { and, eq, sql } from 'drizzle-orm';
 import { programSessions, programLevels } from '@/db/schemas';
 import { getTodaysAttendanceStatus } from '@/libs/server/db';
-import { authenticateMember } from '../../utils';
+import { authenticateMember, getCurrentStatus, getCurrentTimeDetails } from '../../utils';
 
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 			};
 
 			if (reservation?.session && reservation?.session?.duration) {
-				const durationDetails = getCurrentTimeDetails(reservation.session.durationTime, "UTC");
+				const durationDetails = getCurrentTimeDetails(reservation.session.duration, "UTC");
 				const currentDayOfWeek = durationDetails.currentDayOfWeek;
 
 				newReservation.session["durationTime"] = durationDetails.duration[currentDayOfWeek];

@@ -1,5 +1,10 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { Time } from '@internationalized/date';
+
+export function stringToTime(time: string) {
+    return new Time(parseInt(time.split(":")[0]), parseInt(time.split(":")[1]));
+}
 
 
 export const StripeCardOptions = {
@@ -80,13 +85,23 @@ async function tryCatch<T, E = Error>(
 
 }
 
+function formatTime(timeString: string | undefined): string {
+	if (!timeString) return '';
 
+	const [hours, minutes] = timeString.split(':').map(Number);
+	const period = hours >= 12 ? 'PM' : 'AM';
+
+	const displayHours = hours % 12 || 12;
+
+	return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
 
 export {
 	sleep,
 	tryCatch,
 	formatAmountForDisplay,
   	cn,
+	formatTime,
 }
 
 
