@@ -16,7 +16,7 @@ import { useMemberPackages } from '@/hooks'
 
 import { format } from 'date-fns'
 import { MemberPackage } from '@/types/member'
-import { CreatePackage } from './CreatePackage'
+import { CreatePackage } from './CreatePkg/CreatePackage'
 import { Badge } from '@/components/ui'
 
 export function MemberPackages({ params }: { params: { id: string, mid: number } }) {

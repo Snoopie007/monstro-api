@@ -7,12 +7,16 @@ export async function GET(req: Request, props: { params: Promise<{ mid: number, 
     try {
 
         const reservations = await db.query.reservations.findMany({
-            where: (reservations, { eq }) => eq(reservations.memberId, params.mid),
+            where: (reservations, { eq }) => eq(reservations.memberSubscriptionId, params.mid),
             with: {
                 attendances: true,
                 session: {
                     with: {
-                        program: true
+                        level: {
+                            with: {
+                                program: true
+                            }
+                        }
                     }
                 }
             }
@@ -21,7 +25,7 @@ export async function GET(req: Request, props: { params: Promise<{ mid: number, 
         const attendances = reservations.flatMap(e =>
             e.attendances.map(att => ({
                 ...att,
-                program: e.session?.program || null
+                program: e.session?.level?.program || null
             }))
         );
 

@@ -1,41 +1,21 @@
 import { NextResponse } from 'next/server';
-import { auth } from "@/auth";
 import { db } from '@/db/db';
-import { familyMembers } from '@/db/schemas';
 
 export async function GET(req: Request, props: { params: Promise<{ mid: number, id: number }> }) {
-    const params = await props.params;
-    console.log("Get Member ", params.mid)
-    try {
-		const session = await auth();
-		if (session) {
-			const member = await db.query.members.findFirst({
-				where: (members, { eq }) => eq(members.id, params.mid)
-			});
+	const params = await props.params;
+	try {
+		const member = await db.query.members.findFirst({
+			where: (members, { eq }) => eq(members.id, params.mid)
+		});
 
-			const family = await db.query.familyMembers.findMany({
-				where: (familyMembers, { eq }) => eq(familyMembers.memberId, params.mid),
-				with: {
-					member: true
-				}
-			});
-			console.log(family)
+		const family = await db.query.familyMembers.findMany({
+			where: (familyMembers, { eq }) => eq(familyMembers.memberId, params.mid),
+			with: {
+				member: true
+			}
+		});
 
-			// const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/member-details/${params.mId}`, {
-			//   headers: {
-			//     'Authorization': `Bearer ${session.user.token}`,
-			//     "locationId": `${params.id}`
-			//   }
-			// })
-
-			// if (!res.ok) {
-			//   return NextResponse.json({ message: "An error occurred while fetching the data." }, { status: 400 });
-			// }
-			// const { data } = await res.json();
-
-
-			return NextResponse.json(member, { status: 200 });
-		}
+		return NextResponse.json(member, { status: 200 });
 	} catch (err) {
 		return NextResponse.json({ error: err }, { status: 500 })
 	}

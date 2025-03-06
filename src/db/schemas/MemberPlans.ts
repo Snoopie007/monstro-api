@@ -6,6 +6,7 @@ import { relations, sql } from "drizzle-orm";
 import { memberInvoices, members } from "./members";
 import { locations } from "./locations";
 import { transactions } from "./transactions";
+import { reservations } from "./reservations";
 
 const PlanPaymentType = pgEnum("plan_payment_type", ["recurring", "one-time"]);
 const PlanInterval = pgEnum("plan_interval", ["day", "week", "month", "year"]);
@@ -54,6 +55,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     planId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
     stripeSubscriptionId: text("stripe_subscription_id"),
     status: MemberSubscriptionStatusEnum("status").notNull().default("incomplete"),
@@ -130,6 +132,7 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
     }),
     transactions: many(transactions),
     invoices: many(memberInvoices),
+    reservations: many(reservations),
 }));
 
 export const memberPackagesRelations = relations(memberPackages, ({ one, many }) => ({
@@ -156,5 +159,6 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
         relationName: "packageBeneficiary",
     }),
     transactions: many(transactions),
-
+    invoices: many(memberInvoices),
+    reservations: many(reservations),
 }));

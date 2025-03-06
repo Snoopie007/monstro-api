@@ -111,7 +111,6 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 subscriptionId: sid,
             })
 
-            // Add to reservation
         })
 
         if (data.paymentType === "cash") {
@@ -122,7 +121,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             // forPeriod Start and forPeriodEnd
             // add schedule hook.
         }
-        return NextResponse.json({ success: true }, { status: 200 })
+        return NextResponse.json({ id: newSubscription.id }, { status: 200 })
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })

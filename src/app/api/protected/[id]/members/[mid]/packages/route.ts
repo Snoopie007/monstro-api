@@ -89,7 +89,7 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
         }
 
 
-        await db.transaction(async (tx) => {
+        const newPackage = await db.transaction(async (tx) => {
             /** Create Member Package */
             const [{ mpid }] = await tx.insert(memberPackages).values(newPkg).returning({ mpid: memberPackages.id })
             /** Create Invoice */
@@ -103,11 +103,10 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
                 invoiceId: iid,
                 packageId: mpid
             })
-
-            // Add to reservation
+            return { id: mpid }
         })
 
-        return NextResponse.json({ success: true }, { status: 200 })
+        return NextResponse.json({ id: newPackage.id }, { status: 200 })
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })

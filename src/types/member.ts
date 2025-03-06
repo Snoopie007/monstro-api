@@ -2,7 +2,6 @@ import { Achievement } from "./achievement";
 import { Contract } from "./contract";
 import { FamilyMember } from "./family-member";
 import { ProgramLevel } from "./program";
-import { Program } from "./program";
 import { Reward } from "./reward";
 import { Transaction } from "./transaction";
 

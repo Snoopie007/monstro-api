@@ -1,19 +1,13 @@
-import { Member } from "./member";
-import { Program, ProgramSession } from "./program";
+import { reservations } from "@/db/schemas/reservations";
+import { MemberSubscription, MemberPackage } from "./member";
+import { ProgramSession } from "./program";
 
 export type Attendance = {
     id: number;
     checkInTime: Date;
     checkOutTime: Date;
-    timeToCheckIn: Date;
-    program?: Program;
+    startTime: Date;
+    endTime: Date;
 };
 
-export type Reservation = {
-    id: number;
-    status: number;
-    startDate: string;
-    endDate: string;
-    session: ProgramSession;
-    member: Member;
-};
+export type Reservation = typeof reservations.$inferInsert

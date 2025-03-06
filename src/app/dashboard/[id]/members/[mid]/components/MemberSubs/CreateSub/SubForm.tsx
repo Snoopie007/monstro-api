@@ -43,7 +43,7 @@ type SubFormProps = {
     setProgress: Dispatch<SetStateAction<SubPackageProgress>>
 }
 
-export function SubForm({ params, setProgress }: SubFormProps) {
+export function SubForm({ params, progress, setProgress }: SubFormProps) {
 
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods()
@@ -92,21 +92,29 @@ export function SubForm({ params, setProgress }: SubFormProps) {
     async function onSubmit(v: z.infer<typeof NewSubscriptionSchema>) {
 
         setLoading(true)
-        // const { result, error } = await tryCatch(
-        //     fetch(`/api/protected/${params.id}/members/${params.mid}/subscriptions`, {
-        //         method: "POST",
-        //         body: JSON.stringify({
-        //             ...v,
-        //             stripePaymentMethod
-        //         })
-        //     })
-        // )
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${params.id}/members/${params.mid}/subscriptions`, {
+                method: "POST",
+                body: JSON.stringify({
+                    ...v,
+                    stripePaymentMethod
+                })
+            })
+        )
         await sleep(1000)
         setLoading(false)
-        // if (error || !result || !result?.ok) return;
+        if (error || !result || !result?.ok) return;
+        const data = await result.json()
+
         const plan = plans.find((plan: MemberPlan) => plan.id === v.memberPlanId)
         const level = levels.find((level: ProgramLevel) => level.id === v.programLevelId)
-        setProgress({ step: 2, plan: plan, level: level })
+        setProgress({
+            ...progress,
+            step: 2,
+            plan: plan,
+            level: level,
+            subscriptionId: data.id
+        })
         form.reset()
         toast.success("Subscription created successfully")
     }

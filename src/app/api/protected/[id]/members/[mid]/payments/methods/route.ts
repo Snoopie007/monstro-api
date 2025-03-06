@@ -9,10 +9,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
     const params = await props.params;
 
     const { token, member, default: isDefault } = await req.json();
-    console.log(member)
-    console.log(params)
-    console.log(token)
-    console.log(isDefault)
+
     try {
         const integrations = await db.query.integrations.findFirst({
             where: (integration, { eq }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),

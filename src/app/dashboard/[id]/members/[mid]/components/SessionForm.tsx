@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { Clock, Loader2 } from "lucide-react";
 import { cn, formatTime, tryCatch } from "@/libs/utils";
 import { useMemo, useCallback } from "react";
-import { MemberPlan, ProgramLevel, ProgramSession } from "@/types";
+import { MemberPackage, MemberPlan, MemberSubscription, ProgramLevel, ProgramSession } from "@/types";
 import { DAYS } from "../schema";
 import { PulsingStatus } from "@/components/ui/PulsingStatus";
 import { toast } from "react-toastify";
@@ -19,6 +19,8 @@ export type SubPackageProgress = {
     step: number,
     plan: MemberPlan | undefined,
     level: ProgramLevel | undefined,
+    packageId: number | undefined,
+    subscriptionId: number | undefined,
 }
 
 export type SessionFormProps = {
@@ -26,19 +28,27 @@ export type SessionFormProps = {
     progress: SubPackageProgress,
 }
 
+export const DEFAULT_PROGRESS: SubPackageProgress = {
+    step: 1,
+    plan: undefined,
+    level: undefined,
+    packageId: undefined,
+    subscriptionId: undefined
+}
+
 
 export function SessionForm({ params, progress }: SessionFormProps) {
 
     const [loading, setLoading] = useState(false);
     const [groupedSessions, setGroupedSessions] = useState<Map<number, ProgramSession[]>>(new Map());
-    const [repeat, setRepeat] = useState<boolean>(false);
+    // const [repeat, setRepeat] = useState<boolean>(false);
     const [selectedSessions, setSelectedSessions] = useState<number[]>([]);
     const [selectedDay, setSelectedDay] = useState<number>(1);
     const [sessions, setSessions] = useState<ProgramSession[]>([]);
 
     useEffect(() => {
         fetchSessions();
-    }, []);
+    }, [progress.level?.programId, progress.level?.id]);
 
     useEffect(() => {
         if (selectedDay) {
@@ -64,7 +74,7 @@ export function SessionForm({ params, progress }: SessionFormProps) {
 
     async function fetchSessions() {
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${params.id}/programs/41/levels/8/sessions`)
+            fetch(`/api/protected/${params.id}/programs/${progress.level?.programId}/levels/${progress.level?.id}/sessions`)
         );
 
         if (error || !result?.ok) return;
@@ -97,11 +107,12 @@ export function SessionForm({ params, progress }: SessionFormProps) {
         }
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${params.id}/members/${params.mid}/subscriptions`, {
+            fetch(`/api/protected/${params.id}/reservations`, {
                 method: "POST",
                 body: JSON.stringify({
-                    sessions: selectedSessions,
-                    repeat
+                    sessionIds: selectedSessions,
+                    packageId: progress.packageId,
+                    subscriptionId: progress.subscriptionId
                 })
             })
         )
@@ -186,7 +197,7 @@ export function SessionForm({ params, progress }: SessionFormProps) {
                             )}
                         </div>
                     </div>
-                    <div className="flex bg-background flex-row items-center gap-4 rounded-sm border border-foreground/10 p-3 ">
+                    {/* <div className="flex bg-background flex-row items-center gap-4 rounded-sm border border-foreground/10 p-3 ">
                         <Switch
                             checked={repeat}
                             onCheckedChange={setRepeat}
@@ -200,26 +211,26 @@ export function SessionForm({ params, progress }: SessionFormProps) {
                                 Automatically add this session to the member's schedule
                             </div>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </DialogBody>
             <DialogFooter>
                 <DialogClose asChild>
                     <Button type="button" variant="outline" size={"sm"}>Skip</Button>
                 </DialogClose>
-                <DialogClose asChild>
-                    <Button
-                        className={cn("children:hidden", loading && "children:block")}
-                        variant={"foreground"}
-                        size={"sm"}
-                        type="submit"
-                        disabled={loading || !progress.plan || !progress.level || selectedSessions.length === 0}
-                        onClick={onSubmit}
-                    >
-                        <Loader2 className="mr-2 h-4 w-4  animate-spin" />
-                        Save
-                    </Button>
-                </DialogClose>
+                {/* <DialogClose asChild> */}
+                <Button
+                    className={cn("children:hidden", loading && "children:block")}
+                    variant={"foreground"}
+                    size={"sm"}
+                    type="submit"
+                    disabled={loading || !progress.plan || !progress.level || selectedSessions.length === 0}
+                    onClick={onSubmit}
+                >
+                    <Loader2 className="mr-2 h-4 w-4  animate-spin" />
+                    Save
+                </Button>
+                {/* </DialogClose> */}
             </DialogFooter>
         </>
     );
