@@ -42,11 +42,9 @@ export const programMembers = pgTable("member_programs", {
 export const programSessions = pgTable("program_sessions", {
     id: serial("id").primaryKey(),
     programLevelId: integer("program_level_id").references(() => programLevels.id, { onDelete: "cascade" }),
-    programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
     time: time("time").notNull(),
     duration: integer("duration").notNull().default(0),
     day: integer("day").notNull(),
-    status: smallint("status"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [primaryKey({ columns: [t.programLevelId, t.day, t.time] })]);
@@ -88,10 +86,7 @@ export const programLevelsRelations = relations(programLevels, ({ one, many }) =
 }))
 
 export const programSessionsRelations = relations(programSessions, ({ one, many }) => ({
-    program: one(programs, {
-        fields: [programSessions.programId],
-        references: [programs.id],
-    }),
+
     level: one(programLevels, {
         fields: [programSessions.programLevelId],
         references: [programLevels.id],

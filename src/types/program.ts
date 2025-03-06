@@ -39,11 +39,12 @@ export type ProgramLevel = {
 export type ProgramSession = {
     id?: number,
     duration: number,
-    status: number,
+    programLevelId?: number,
     day: number,
     time: string | undefined,
     created: Date,
     updated?: Date | null,
+    programLevel?: ProgramLevel,
     reservations?: Reservation[]
     reservationsCount?: number | null
 }
