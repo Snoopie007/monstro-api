@@ -3,13 +3,14 @@ import {
     ScrollArea,
 
 } from "@/components/ui";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/forms";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, SelectItem, SelectValue, SelectTrigger, Select, SelectContent } from "@/components/forms";
 import { Input } from "@/components/forms/input";
 import { cn, tryCatch } from "@/libs/utils";
-import { FieldArrayPath, useFieldArray, UseFormReturn } from "react-hook-form";
+import { useFieldArray, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
-import { LevelSchema } from "../../../../components/schemas";
+import { LevelSchema, PresetSessionInterval, PresetSessionIntervals } from "../../../../schemas";
 import { SessionComponents } from "./SessionsComponent";
+import { useState } from "react";
 
 interface LevelFormProps {
     form: UseFormReturn<z.infer<typeof LevelSchema>>;
@@ -17,15 +18,25 @@ interface LevelFormProps {
 }
 
 export function LevelForm({ form, lid }: LevelFormProps) {
-
+    const [interval, setInterval] = useState<PresetSessionInterval | undefined>();
     const { fields, append, remove } = useFieldArray({
         control: form.control, // control props comes from useForm (optional: if you are using FormProvider)
         name: "sessions", // unique name for your Field Array
     });
 
+    function handleIntervalChange(e: string) {
+        const preset = PresetSessionIntervals.find(p => p.label === e);
+
+        if (preset) {
+            setInterval(preset);
+            form.setValue("intervalThreshold", preset.intervalThreshold);
+            form.setValue("interval", preset.interval as "week" | "month" | "year");
+        }
+    }
+
     async function handleRemove(index: number) {
         const field = fields[index];
-        if (field.id) {
+        if (field.id !== undefined || field.id !== null || field.id !== "") {
             const { result, error } = await tryCatch(
                 fetch(`/api/protected/${lid}/programs/sessions/${field.id}`, {
                     method: "DELETE",
@@ -101,6 +112,67 @@ export function LevelForm({ form, lid }: LevelFormProps) {
                         )}
                     />
                 </fieldset>
+                <fieldset className='flex flex-row gap-2 items-baseline'>
+                    <div className='flex-1'>
+                        <FormLabel size={"tiny"} >Session Interval</FormLabel>
+                        <Select onValueChange={handleIntervalChange} value={interval?.label}  >
+
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select interval..." />
+                            </SelectTrigger>
+
+                            <SelectContent>
+                                {PresetSessionIntervals.map((preset, index) => (
+                                    <SelectItem key={index} value={preset.label}>
+                                        {preset.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className={cn("flex-1", interval?.label !== "Custom" && "hidden")}>
+                        <FormLabel size={"tiny"} >Every</FormLabel>
+                        <div className=' flex-1 grid grid-cols-3 gap-2 items-baseline'>
+                            <FormField
+                                control={form.control}
+                                name="intervalThreshold"
+                                render={({ field }) => (
+                                    <FormItem className="col-span-1">
+
+                                        <FormControl>
+                                            <Input type='number' placeholder="1" {...field} />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="interval"
+                                render={({ field }) => (
+                                    <FormItem className="col-span-2">
+
+                                        <Select onValueChange={field.onChange} value={field.value}  >
+
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select interval..." />
+                                            </SelectTrigger>
+
+                                            <SelectContent>
+                                                {['week', 'month', 'year'].map((preset, index) => (
+                                                    <SelectItem key={index} value={preset}>
+                                                        {preset}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </div>
+
+                </fieldset>
                 <fieldset className="bg-background rounded-sm mt-4 py-4   ">
                     <div className="flex flex-row px-3 items-center justify-between">
                         <div className="text-sm  font-medium">Schedules</div>
@@ -111,7 +183,7 @@ export function LevelForm({ form, lid }: LevelFormProps) {
                                 onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
-                                    append({ id: undefined, day: "", time: "12:00:00", duration: 30 });
+                                    append({ id: undefined, day: 1, time: "12:00:00", duration: 30 });
                                 }}
                             >
                                 + Add
@@ -123,7 +195,7 @@ export function LevelForm({ form, lid }: LevelFormProps) {
                     <ScrollArea className="h-[250px] w-full px-3  ">
                         <div className="space-y-1">
                             <div className='grid grid-cols-4 items-start gap-2 '>
-                                {['Day', 'Time', 'Duration(mins)', 'Limit'].map((item) => (
+                                {['Day', 'Time', 'Duration(mins)'].map((item) => (
                                     <div key={item} className={cn('font-medium flex-initial w-[120px] text-[0.65rem] uppercase')}>
                                         {item}
                                     </div>

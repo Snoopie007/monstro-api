@@ -12,7 +12,7 @@ import {
     FormControl, FormField, FormItem, FormMessage, TimePicker
 } from "@/components/forms";
 import { z } from 'zod';
-import { NewProgramSchema } from './schemas';
+import { DaysOfWeek, NewProgramSchema } from '../schemas';
 import { Button } from '@/components/ui';
 import { cn, stringToTime } from '@/libs/utils';
 import { X } from 'lucide-react';
@@ -20,10 +20,9 @@ import { X } from 'lucide-react';
 
 interface AddProgramSessionsProps {
     scheduleIndex: number, control: Control<z.infer<typeof NewProgramSchema>>,
-
 };
 
-const DaysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
 
 export default function SessionComponent({ scheduleIndex, control }: AddProgramSessionsProps) {
 
@@ -40,7 +39,7 @@ export default function SessionComponent({ scheduleIndex, control }: AddProgramS
                 </span>
                 <Button type='button'
                     variant={"foreground"}
-                    onClick={() => append({ day: "", duration: 30, time: "12:00" })}
+                    onClick={() => append({ day: 1, duration: 30, time: "12:00" })}
                     className=" font-medium text-[12px]  py-1  px-2 rounded-xs h-auto">
                     + Session
                 </Button>
@@ -64,13 +63,13 @@ export default function SessionComponent({ scheduleIndex, control }: AddProgramS
                                         <FormItem className='col-span-1'>
 
                                             <FormControl>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <Select onValueChange={(v) => field.onChange(parseInt(v + 1))} value={field.value.toString()}>
                                                     <SelectTrigger className={cn({ "border-red-500": fieldState.error })}>
                                                         <SelectValue placeholder="Select a day" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {DaysOfWeek.map((day, index) => (
-                                                            <SelectItem key={index} value={day}>{day}</SelectItem>
+                                                        {DaysOfWeek.map((day, i) => (
+                                                            <SelectItem key={i} value={i.toString()}>{day}</SelectItem>
                                                         ))}
                                                     </SelectContent>
                                                 </Select>

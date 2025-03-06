@@ -20,7 +20,7 @@ import {
     CollapsibleTrigger,
     ScrollArea,
 } from '@/components/ui';
-import { BillingAnchorConfigSchema, NewPlanSchema, PresetIntervals } from './schemas';
+import { BillingAnchorConfigSchema, NewPlanSchema, PresetIntervals, PresetInterval } from '../../../../schemas';
 import { cn } from '@/libs/utils';
 import { SelectContract } from './SelectContract';
 import { ChevronRight } from 'lucide-react';
@@ -32,7 +32,7 @@ interface SubFieldsProps {
 }
 
 export function PlanSubFields({ lid, form }: SubFieldsProps) {
-    const [billingThreshold, setBillingThreshold] = useState<{ label: string, interval: string, intervalCount: number } | undefined>();
+    const [billingThreshold, setBillingThreshold] = useState<PresetInterval | undefined>();
 
 
 
@@ -41,7 +41,7 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
 
         if (preset) {
             setBillingThreshold(preset);
-            form.setValue("subscription.intervalCount", preset.intervalCount);
+            form.setValue("subscription.intervalThreshold", preset.intervalThreshold);
             form.setValue("subscription.interval", preset.interval as "day" | "week" | "month" | "year");
         }
     }
@@ -70,7 +70,7 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
                     <div className=' flex-1 grid grid-cols-3 gap-2 items-baseline'>
                         <FormField
                             control={form.control}
-                            name="subscription.intervalCount"
+                            name="subscription.intervalThreshold"
                             render={({ field }) => (
                                 <FormItem className="col-span-1">
 

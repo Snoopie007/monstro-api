@@ -25,12 +25,11 @@ import {
     SelectItem
 } from "@/components/forms";
 import { useForm } from "react-hook-form";
-import { NewPlanSchema, PlanType } from "./schemas";
+import { NewPlanSchema, PlanType } from "../../../../schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useEffect, useState } from "react";
 import { DialogClose, DialogDescription, DialogTrigger } from "@radix-ui/react-dialog";
 
-import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { PlanSubFields } from "./SubFields";
 import { PlanPkgFields } from "./PkgFields";
@@ -59,7 +58,7 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
             classLimitThreshold: undefined,
             subscription: {
                 interval: 'month',
-                intervalCount: 1,
+                intervalThreshold: 1,
                 allowProration: false,
                 billingAnchor: undefined
             },

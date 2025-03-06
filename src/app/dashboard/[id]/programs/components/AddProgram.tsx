@@ -19,11 +19,12 @@ import { Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem, F
 import { cn, sleep, tryCatch } from "@/libs/utils";
 
 import SessionComponent from './ProgramSessions';
-import { NewProgramSchema } from './schemas';
+import { NewProgramSchema } from '../schemas';
 import { Icon } from '@/components/icons';
 
 import { toast } from 'react-toastify';
 import { X } from 'lucide-react';
+import SessionsIntervalSelector from './SessionsIntervalSelector';
 
 
 
@@ -41,9 +42,11 @@ export function AddProgram({ lid }: { lid: string }) {
                     capacity: 0,
                     minAge: 0,
                     maxAge: 0,
+                    interval: "week",
+                    intervalThreshold: 1,
                     sessions: [
                         {
-                            day: undefined,
+                            day: 1,
                             time: "12:00",
                             duration: 30,
                         }
@@ -83,7 +86,7 @@ export function AddProgram({ lid }: { lid: string }) {
             name: "",
             sessions: [
                 {
-                    day: "",
+                    day: 1,
                     time: "12:00",
                     duration: 30,
                 }
@@ -91,6 +94,8 @@ export function AddProgram({ lid }: { lid: string }) {
             capacity: 0,
             minAge: 0,
             maxAge: 0,
+            interval: "month",
+            intervalThreshold: 1,
         });
     }
 
@@ -232,6 +237,7 @@ export function AddProgram({ lid }: { lid: string }) {
                                                         )}
                                                     />
                                                 </fieldset>
+                                                <SessionsIntervalSelector form={form} index={index} />
                                                 <SessionComponent scheduleIndex={index} control={form.control} />
                                             </div>
                                         </div>

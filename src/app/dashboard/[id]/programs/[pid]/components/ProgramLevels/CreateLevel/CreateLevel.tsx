@@ -18,7 +18,7 @@ import { toast } from "react-toastify";
 import { useState } from "react";
 import useSWR from "swr";
 import { Icon } from "@/components/icons";
-import { LevelSchema } from "../../../../components/schemas";
+import { LevelSchema } from "../../../../schemas";
 import { DialogDescription } from "@/components/ui/dialog";
 import { LevelForm } from "./LevelForm";
 
@@ -41,16 +41,17 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
             name: "",
             sessions: [
                 {
-                    day: "",
+                    day: 1,
                     time: "12:00:00",
-                    duration: 0,
+                    duration: 30,
 
                 }
             ],
-            capacity: 0,
-            minAge: 0,
-            maxAge: 0,
-
+            capacity: 1,
+            minAge: 3,
+            maxAge: 5,
+            interval: "week",
+            intervalThreshold: 1,
         },
         mode: "onSubmit",
     })
@@ -58,18 +59,19 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
 
 
     async function submitForm(v: z.infer<typeof LevelSchema>) {
+        console.log(v)
         setLoading(true);
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/${lid}/programs/${pid}/levels`, {
-                method: "POST",
-                body: JSON.stringify(v),
-            })
-        )
+        // const { result, error } = await tryCatch(
+        //     fetch(`/api/protected/${lid}/programs/${pid}/levels`, {
+        //         method: "POST",
+        //         body: JSON.stringify(v),
+        //     })
+        // )
         setLoading(false);
-        if (error || !result || !result.ok) {
-            toast.error(error?.message || "Something went wrong, please try again later")
-            return
-        }
+        // if (error || !result || !result.ok) {
+        //     toast.error(error?.message || "Something went wrong, please try again later")
+        //     return
+        // }
         await sleep(2000)
         await mutate();
         toast.success("Level Created Successfully")
@@ -85,7 +87,7 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
                     +
                 </Button>
             </DialogTrigger>
-            <DialogContent className="w-[600px] max-w-[600px]">
+            <DialogContent className="w-[500px] max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>
                         Create Level
@@ -104,7 +106,7 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
                     <Button type="submit"
                         variant={"foreground"}
                         size={"sm"}
-                        className={cn("  children:hidden flex flex-row ", (loading && "children:inline-block"))}
+                        className={cn("children:hidden flex flex-row ", (loading && "children:inline-block"))}
                         onClick={form.handleSubmit(submitForm)}
                         disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
                     >

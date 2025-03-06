@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { tryCatch } from "@/libs/utils";
 import { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { NewPlanSchema } from "./schemas";
+import { NewPlanSchema } from "../../../../schemas";
 import { z } from "zod";
 import { Skeleton } from "@/components/ui";
 

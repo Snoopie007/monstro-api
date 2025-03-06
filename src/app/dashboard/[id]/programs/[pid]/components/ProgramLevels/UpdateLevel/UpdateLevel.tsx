@@ -21,7 +21,7 @@ import { toast } from "react-toastify";
 import { SetStateAction, Dispatch, useEffect, useState } from "react";
 import useSWR from "swr";
 import { Icon } from "@/components/icons";
-import { LevelSchema } from "../../../../components/schemas";
+import { LevelSchema } from "../../../../schemas";
 import { LevelForm } from "../CreateLevel/LevelForm";
 
 
@@ -41,15 +41,16 @@ export function UpsertLevel({ level, setCurrentLevel, lid }: UpdateProgramLevelP
             name: "",
             sessions: [
                 {
-                    day: "",
+                    day: 1,
                     time: "12:00",
-                    duration: 0,
+                    duration: 30,
                 }
             ],
             capacity: 0,
             minAge: 0,
             maxAge: 0,
-
+            interval: "week",
+            intervalThreshold: 1,
         },
         mode: "onSubmit",
     })

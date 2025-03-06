@@ -1,6 +1,6 @@
 import { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
-import { LevelSchema } from "../../../../components/schemas";
+import { DaysOfWeek, LevelSchema } from "../../../../schemas";
 import { FormField, FormItem, FormControl, FormMessage, TimePicker, Input } from "@/components/forms";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms/select";
 import { Icon } from "@/components/icons";
@@ -12,7 +12,7 @@ interface SessionComponentsProps {
     onRemove: () => void;
 }
 
-const DaysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
 
 export function SessionComponents({ form, index, onRemove }: SessionComponentsProps) {
 
@@ -30,13 +30,13 @@ export function SessionComponents({ form, index, onRemove }: SessionComponentsPr
                     <FormItem className='col-span-1'>
 
                         <FormControl>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={(v) => field.onChange(parseInt(v) + 1)} value={(field.value - 1).toString()}>
                                 <SelectTrigger className={cn({ "border-red-500": fieldState.error })}>
                                     <SelectValue placeholder="Select a day" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {DaysOfWeek.map((day, index) => (
-                                        <SelectItem key={index} value={day}>{day}</SelectItem>
+                                    {DaysOfWeek.map((day, i) => (
+                                        <SelectItem key={i} value={i.toString()}>{day}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -76,7 +76,6 @@ export function SessionComponents({ form, index, onRemove }: SessionComponentsPr
                     </FormItem>
                 )}
             />
-            {/* Remove Button */}
             {index > 0 && (
                 <div className="col-span-1 flex flex-row pt-3 gap-2">
                     <div>

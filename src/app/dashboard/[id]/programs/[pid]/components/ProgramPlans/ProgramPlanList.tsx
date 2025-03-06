@@ -7,7 +7,7 @@ import {
     TableRow,
 } from "@/components/ui";
 import { Card, CardContent } from "@/components/ui/card";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { CreatePlan } from "./CreatePlan/CreatePlan";
 import { formatAmountForDisplay } from "@/libs/utils";
 import { MemberPlan } from "@/types";

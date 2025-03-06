@@ -15,7 +15,7 @@ import {
     Collapsible,
     CollapsibleTrigger,
 } from '@/components/ui';
-import { NewPlanSchema } from './schemas';
+import { NewPlanSchema } from '../../../../schemas';
 import { cn } from '@/libs/utils';
 import { CalendarIcon, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
