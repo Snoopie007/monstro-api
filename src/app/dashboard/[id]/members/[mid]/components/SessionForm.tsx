@@ -6,14 +6,12 @@ import {
     Switch
 } from "@/components/ui";
 
-
 import { useEffect, useState } from "react";
-import { z } from "zod";
 import { Clock, Loader2 } from "lucide-react";
 import { cn, formatTime, tryCatch } from "@/libs/utils";
 import { useMemo, useCallback } from "react";
 import { MemberPlan, ProgramLevel, ProgramSession } from "@/types";
-import { DAYS, NewSubscriptionSchema } from "../schema";
+import { DAYS } from "../schema";
 import { PulsingStatus } from "@/components/ui/PulsingStatus";
 import { toast } from "react-toastify";
 
@@ -32,7 +30,7 @@ export type SessionFormProps = {
 export function SessionForm({ params, progress }: SessionFormProps) {
 
     const [loading, setLoading] = useState(false);
-    const [groupedSessions, setGroupedSessions] = useState<{ day: number, sessions: ProgramSession[] }[]>([]);
+    const [groupedSessions, setGroupedSessions] = useState<Map<number, ProgramSession[]>>(new Map());
     const [repeat, setRepeat] = useState<boolean>(false);
     const [selectedSessions, setSelectedSessions] = useState<number[]>([]);
     const [selectedDay, setSelectedDay] = useState<number>(1);
@@ -44,24 +42,22 @@ export function SessionForm({ params, progress }: SessionFormProps) {
 
     useEffect(() => {
         if (selectedDay) {
-            const day = groupedSessions.find(s => s.day === selectedDay);
-            setSessions(day?.sessions || []);
+            const day = groupedSessions.get(selectedDay);
+            setSessions(day || []);
         }
     }, [groupedSessions, selectedDay]);
 
     function groupSessions(sessions: ProgramSession[]) {
-        return sessions.reduce((acc: { day: number, sessions: ProgramSession[] }[], session: ProgramSession) => {
+        const sessionsByDay = new Map<number, ProgramSession[]>();
 
-            const existingDay = acc.find(item => item.day === session.day);
-
-            if (existingDay) {
-                existingDay.sessions.push(session);
-            } else {
-                acc.push({ day: session.day, sessions: [session] });
+        for (const session of sessions) {
+            if (!sessionsByDay.has(session.day)) {
+                sessionsByDay.set(session.day, []);
             }
+            sessionsByDay.get(session.day)!.push(session);
+        }
 
-            return acc;
-        }, []);
+        return sessionsByDay;
     }
 
 
