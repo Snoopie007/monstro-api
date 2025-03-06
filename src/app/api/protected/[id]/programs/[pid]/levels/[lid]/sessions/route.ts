@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, props: { params: Promise<Params> }) 
     const params = await props.params;
 
     try {
-        const query = sql<number>`(SELECT COUNT(DISTINCT ${reservations.memberId}) FROM ${reservations} WHERE ${reservations.sessionId} = ${programSessions.id})`;
+        const query = sql<number>`(SELECT COUNT(DISTINCT ${reservations.memberSubscriptionId}) FROM ${reservations} WHERE ${reservations.sessionId} = ${programSessions.id})`;
         const sessions = await db.query.programSessions.findMany({
             where: eq(programSessions.programLevelId, params.lid),
             columns: {
@@ -20,7 +20,6 @@ export async function GET(req: NextRequest, props: { params: Promise<Params> }) 
                 day: true,
                 duration: true,
                 time: true,
-                status: true
             },
             extras: {
                 reservationsCount: query.as("reservationsCount")

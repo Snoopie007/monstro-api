@@ -12,8 +12,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
 		const authMember = authenticateMember(req);
 		const reservation = await db.query.reservations.findFirst({
 			where: (reservations, { eq }) => and(
-				eq(reservations.id, params.rid),
-				eq(reservations.memberId, Number(authMember.member?.id || 0))
+				eq(reservations.memberSubscriptionId, Number(authMember.member?.id || 0))
 			),
 			with: {
 				attendances: true
