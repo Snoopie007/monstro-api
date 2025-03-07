@@ -1,8 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    throw new Error('Missing Supabase environment variables')
+}
+
 const supabase = createClient(
-    'https://igkxvndqseedkrmebeih.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlna3h2bmRxc2VlZGtybWViZWloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjg1Njc4MDQsImV4cCI6MjA0NDE0MzgwNH0.bXhPAY9Hgpg-UtMpF4Vb7QbeCdAae8BkhukGAZNoVDQ'
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 )
 
 export default supabase;
