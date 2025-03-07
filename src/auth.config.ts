@@ -56,7 +56,7 @@ export default {
 
 				// Create a JWT token
 				const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-				const jwt = new SignJWT(user).setProtectedHeader({ alg: "HS256" }).setExpirationTime("1d").setIssuedAt().sign(secret);
+				const jwt = await new SignJWT(user).setProtectedHeader({ alg: "HS256" }).setExpirationTime("1d").setIssuedAt().sign(secret);
 
 				const { vendor: { locations, ...vendor }, ...rest } = user;
 				const encodedLocations = locations.map(location => {
@@ -78,7 +78,7 @@ export default {
 					vendorPhone: vendor?.phone,
 					stripeCustomerId: vendor?.stripeCustomerId,
 					role: 'vendor',
-					fasdfasdfs: jwt,
+					token: jwt,
 					locations: encodedLocations,
 				};
 
