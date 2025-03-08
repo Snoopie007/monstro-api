@@ -30,12 +30,6 @@ export type Member = {
     updated: Date | null;
     deleted: Date | null;
 };
-export type MemberOnboarding = {
-    selectProgramId: number | null;
-    selectPlanId: number | null;
-    completedSteps: number[];
-    currentStep: number;
-};
 type MemberSubscriptionStatus = 'active' | 'incomplete' | 'canceled' | 'past_due' | 'incomplete' | 'trialing' | 'unpaid'
 
 export type MemberSubscription = {
@@ -144,13 +138,26 @@ export type MemberInvoice = {
     updated?: Date | null;
 };
 
+
+
 export type MemberLocation = {
     id?: number;
     memberId: number;
     locationId: number;
     status: 'incomplete' | 'active' | 'inactive' | 'canceled' | 'paused' | 'archived';
-    progress: MemberOnboarding;
+    location: Location;
+    inviteDate: Date | null;
+    stripeCustomerId: string | null;
+    inviteAcceptedDate: Date | null;
+    incompletePlan?: IncompletePlan | null;
     created: Date;
     updated: Date | null;
-    deleted: Date | null;
+}
+
+export type IncompletePlan = {
+    programId: number | null;
+    programLevelId: number | null;
+    memberPlanId: number | null;
+    currentStep: number;
+    completedSteps: number[];
 }

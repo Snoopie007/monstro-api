@@ -7,7 +7,7 @@ import { db } from "@/db/db";
 import { and } from "drizzle-orm";
 import { decodeId } from "@/libs/server/sqids";
 
-async function fetchStripeKeys(id: string, session: Session | null): Promise<string | null> {
+async function fetchStripeKeys(id: string): Promise<string | null> {
     const decodedId = decodeId(id);
     try {
         const integrations = await db.query.integrations.findFirst({
@@ -27,7 +27,7 @@ async function fetchStripeKeys(id: string, session: Session | null): Promise<str
 export default async function Members(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     const session = await auth()
-    const stripeKey = await fetchStripeKeys(params.id, session)
+    const stripeKey = await fetchStripeKeys(params.id)
 
     return (
         <MemberList params={params} stripeKey={stripeKey} />

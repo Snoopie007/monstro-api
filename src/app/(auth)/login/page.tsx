@@ -9,7 +9,7 @@ export default async function SignIn() {
         <div className="flex text-black font-roboto h-screen flex-col items-center py-[10%]">
             <div className="w-full max-w-sm border  rounded-sm shadow-xs p-1">
                 <div className="p-6 space-y-6">
-                    <h1 className="text-lg text-gray-600 font-bold ">
+                    <h1 className="text-lg font-bold ">
                         Sign in to Monstro
                     </h1>
                     <LoginForm />
