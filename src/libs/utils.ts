@@ -16,8 +16,8 @@ export const StripeCardOptions = {
           fontSmoothing: "antialiased",
       },
       invalid: {
-          iconColor: "#FFC7EE",
-          color: "#FFC7EE",
+          iconColor: "#fd0034",
+          color: "#fd0034",
       },
   },
 };

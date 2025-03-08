@@ -45,7 +45,7 @@ export default auth(async (req) => {
 
 			const [_, encodedId, subpath = ""] = pathname.match(/^\/api\/protected\/([^/]+)(\/.*)?$/) || []
 
-			if (!encodedId || !isNaN(Number(encodedId)) || encodedId.startsWith("onboarding")) {
+			if (!encodedId || !isNaN(Number(encodedId)) || encodedId.startsWith("vendor")) {
 				return NextResponse.next()
 			}
 

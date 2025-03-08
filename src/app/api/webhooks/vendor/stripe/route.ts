@@ -86,18 +86,10 @@ async function processSubscriptionEvent(event: Stripe.Event) {
     const { locationId } = subscription.metadata;
     if (!locationId) return;
 
-    const statusMap = {
-        'active': 'Active',
-        'paused': 'Inactive',
-        'past_due': 'Past due',
-        'unpaid': 'Failed Payment'
-    } as const;
 
-    const locationStatus = statusMap[subscription.status as keyof typeof statusMap] || 'Inactive';
-
-    if (locationStatus) {
+    if (subscription.status) {
         await db.update(locationState).set({
-            status: locationStatus,
+            status: subscription.status,
             updated: new Date(),
         }).where(eq(locationState.locationId, parseInt(locationId)));
     }

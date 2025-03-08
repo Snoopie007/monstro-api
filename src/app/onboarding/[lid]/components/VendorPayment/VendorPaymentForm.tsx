@@ -26,6 +26,7 @@ import { dummyContract } from "@/libs/data";
 import { DialogTrigger, Dialog, DialogContent, DialogDescription, DialogTitle, DialogHeader, DialogFooter, DialogClose } from "@/components/ui";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSession } from "next-auth/react";
+import { decodeId } from "@/libs/server/sqids";
 
 
 
@@ -82,7 +83,7 @@ export default function VendorPaymentForm() {
 
             if (tokenRef.token) {
 
-                const res = await fetch(`/api/protected/vendor/checkout`, {
+                const res = await fetch(`/api/protected/vendor/${locationId}/checkout`, {
                     method: 'POST',
                     body: JSON.stringify({
                         vendorId: session?.user.vendorId,
@@ -96,6 +97,14 @@ export default function VendorPaymentForm() {
                     return handlePaymentError(toastRef, "An error occurred while processing your payment.");
                 }
 
+                update({
+                    locations: session?.user.locations.map((location: { id: string, status: string }) => {
+                        const decodedId = decodeId(location.id);
+                        return decodedId === locationState.locationId
+                            ? { ...location, status: 'active' }
+                            : location
+                    })
+                });
                 router.push(`/dashboard/${locationId}`)
             } else {
                 setLoading(false);
@@ -191,7 +200,10 @@ export default function VendorPaymentForm() {
                                 </FormLabel>
                                 <CardElement
                                     className={cn("border   focus-visible:ring-0 focus-visible:outline-hidden py-2.5 h-auto rounded-sm  bg-white w-full px-4")}
-                                    options={StripeCardOptions}
+                                    options={{
+                                        ...StripeCardOptions,
+                                        hidePostalCode: true
+                                    }}
                                     onChange={(e) => {
                                         setErrorMessage(
                                             e.error ? (e.error.message ? e.error.message : "An unknown error occured") : ""

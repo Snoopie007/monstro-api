@@ -15,7 +15,6 @@ import { packages, plans } from "@/libs/data";
 
 
 const stripe = new VendorStripePayments();
-sendgrid.setApiKey(process.env.SENDGRID_API_KEY!);
 
 export async function POST(req: Request) {
     const data = await req.json();
@@ -77,7 +76,6 @@ export async function POST(req: Request) {
             rechargeAmount: 20,
             rechargeThreshold: 10,
             lastCharged: new Date(),
-            created: new Date()
         }).onConflictDoNothing({ target: [wallet.locationId] });
 
         if (paymentPlan) {
@@ -98,40 +96,42 @@ export async function POST(req: Request) {
         if (plan && plan.id !== 1) {
             await stripe.createSubscription(plan, customer.id, vendorId, locationId);
         }
-        const emailSender = new EmailSender();
-        await emailSender.send('stevey@simplygrowonline.com', 'Welcome to Monstro', InviteEmailTemplate, {
-            ui: {
-                button: "Join the class."
-            },
-            location: {
-                name: 'Gracie\'s Gym',
-            },
-            monstro: MonstroData,
-            member: {
-                name: 'John Doe',
-            }
-        });
+        // const emailSender = new EmailSender();
+        // await emailSender.send('stevey@simplygrowonline.com', 'Welcome to Monstro', InviteEmailTemplate, {
+        //     ui: {
+        //         button: "Join the class."
+        //     },
+        //     location: {
+        //         name: 'Gracie\'s Gym',
+        //     },
+        //     monstro: MonstroData,
+        //     member: {
+        //         name: 'John Doe',
+        //     }
+        // });
 
-
+        const today = new Date();
         await db.transaction(async (tx) => {
             await tx.update(locations).set({
-                updated: new Date()
+                updated: today
             }).where(eq(locations.id, decodedLocationId))
 
+            const { created, ...rest } = state
             await tx.update(locationState).set({
-                ...state,
+                ...rest,
                 status: "active",
                 usagePercent: plan?.usagePercent,
-                startDate: new Date(),
-                lastRenewalDate: new Date(),
-                updated: new Date()
+                startDate: today,
+                lastRenewalDate: today,
+                updated: today,
+
             }).where(eq(locationState.locationId, decodedLocationId))
 
             await tx.update(vendors).set({
                 stripeCustomerId: customer.id,
-                updated: new Date()
+                updated: today
             }).where(eq(vendors.id, vendorId))
-        })
+        }).catch(err => console.log(err))
 
         return NextResponse.json({ success: true }, { status: 200 })
     } catch (err) {

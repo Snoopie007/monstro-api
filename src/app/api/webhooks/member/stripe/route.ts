@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { MemberSubscription } from "@/types";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
-  apiVersion: "2025-01-27.acacia",
+  apiVersion: "2025-02-24.acacia",
 });
 
 export const config = {
@@ -27,7 +27,7 @@ const allowedEvents: Stripe.Event.Type[] = [
 ];
 
 export async function POST(req: NextRequest) {
-    const signature = (await headers()).get("Stripe-Signature");
+  const signature = (await headers()).get("Stripe-Signature");
 
   if (!signature) {
     return NextResponse.json({ message: "No signature" }, { status: 400 });
@@ -118,12 +118,12 @@ async function handleSubscriptionResumed(event: Stripe.Event) {
 async function handleInvoicePaymentFailed(event: Stripe.Event) {
   const invoice = event.data.object as Stripe.Invoice;
   console.log(event)
-  if(invoice.subscription) {
+  if (invoice.subscription) {
     const localSubscription = db.update(memberSubscriptions).set({
-        status: 'past_due'
-      }).where(eq(memberSubscriptions.stripeSubscriptionId, invoice.subscription as string)).returning();
-    
-      console.log("Subscription updated:", localSubscription);
+      status: 'past_due'
+    }).where(eq(memberSubscriptions.stripeSubscriptionId, invoice.subscription as string)).returning();
+
+    console.log("Subscription updated:", localSubscription);
   }
   // Notify the user about payment failure or handle retries
 }

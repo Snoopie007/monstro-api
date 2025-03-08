@@ -45,3 +45,22 @@ export const vendorsRelations = relations(vendors, ({ one, many }) => ({
 }));
 
 
+export const wallet = pgTable("wallet", {
+    id: serial("id").primaryKey(),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    balance: integer("balance").notNull().default(0),
+    credit: integer("credit").notNull().default(0),
+    rechargeAmount: integer("recharge_amount").notNull().default(20),
+    rechargeThreshold: integer("recharge_threshold").notNull().default(10),
+    lastCharged: timestamp('last_charged', { withTimezone: true }),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
+    deleted: timestamp('deleted_at', { withTimezone: true }),
+});
+
+export const walletRelations = relations(wallet, ({ one }) => ({
+    location: one(locations, {
+        fields: [wallet.locationId],
+        references: [locations.id],
+    })
+}));
