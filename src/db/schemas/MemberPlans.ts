@@ -48,14 +48,12 @@ export const memberPlans = pgTable("member_plans", {
 });
 
 
-
 export const memberSubscriptions = pgTable("member_subscriptions", {
     id: serial("id").primaryKey(),
     payerId: integer("payer_id").references(() => members.id, { onDelete: "cascade" }),
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     planId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
     stripeSubscriptionId: text("stripe_subscription_id"),
     status: MemberSubscriptionStatusEnum("status").notNull().default("incomplete"),

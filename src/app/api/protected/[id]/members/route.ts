@@ -39,7 +39,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 					avatar: members.avatar,
 					memberLocation: {
 						status: memberLocations.status,
-						progress: memberLocations.progress
+						progress: memberLocations.incompletePlan
 					}
 				})
 				.from(memberLocations)
