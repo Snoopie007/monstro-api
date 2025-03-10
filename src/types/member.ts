@@ -1,9 +1,10 @@
-import { Achievement } from "./achievement";
+
 import { Contract } from "./contract";
 import { FamilyMember } from "./family-member";
 import { ProgramLevel } from "./program";
-import { Reward } from "./reward";
 import { Transaction } from "./transaction";
+import { Location } from "./location";
+import Stripe from "stripe";
 
 export type Member = {
     id?: number;
@@ -16,9 +17,7 @@ export type Member = {
     avatar: string | null;
     phone: string | null;
     activityStatus?: string;
-    achievements?: Achievement[];
     stripeCustomerId?: string;
-    rewards?: Reward[];
     familyMembers?: FamilyMember[];
     relatedByFamily?: FamilyMember[];
     memberLocation?: MemberLocation;
@@ -30,13 +29,19 @@ export type Member = {
     updated: Date | null;
     deleted: Date | null;
 };
+export type MemberOnboarding = {
+    selectProgramId: number | null;
+    selectPlanId: number | null;
+    completedSteps: number[];
+    currentStep: number;
+};
 type MemberSubscriptionStatus = 'active' | 'incomplete' | 'canceled' | 'past_due' | 'incomplete' | 'trialing' | 'unpaid'
 
 export type MemberSubscription = {
     id?: number;
     payerId: number | null;
     beneficiaryId: number;
-    planId: number | null;
+    memberPlanId: number | null;
     startDate: Date;
     currentPeriodStart: Date;
     currentPeriodEnd: Date;
@@ -47,7 +52,7 @@ export type MemberSubscription = {
     stripeSubscriptionId?: string | null;
     trialEnd?: Date | null;
     endedAt?: Date | null;
-    paymentType: string;
+    paymentMethod: "card" | "cash" | "check" | "zelle" | "venmo" | "paypal" | "apple" | "google";
     programLevel?: ProgramLevel;
     plan?: MemberPlan | null;
     payer?: Member | null;
@@ -69,8 +74,8 @@ export type MemberPackage = {
     endDate: Date | null;
     expireDate: Date | null;
     status: 'active' | 'expired' | 'incomplete' | 'completed';
-    paymentMethod: string;
-    totalClassAttended: number;
+    paymentMethod: "card" | "cash" | "check" | "zelle" | "venmo" | "paypal" | "apple" | "google";
+    totalClassAttended?: number;
     totalClassLimit: number;
     metadata?: Record<string, any>;
     programLevelId: number;
@@ -82,6 +87,13 @@ export type MemberPackage = {
     created: Date;
     updated?: Date;
 };
+export type BillingCycleAnchorConfig = {
+    day_of_month: number;
+    hour?: number;
+    minute?: number;
+    month?: number;
+    second?: number;
+}
 
 export type MemberPlan = {
     id?: number;
@@ -104,7 +116,7 @@ export type MemberPlan = {
     stripePriceId: string | null;
     expireDate: Date | null;
     allowProration: boolean;
-    billingAnchorConfig: Record<string, any> | null;
+    billingAnchorConfig: BillingCycleAnchorConfig | null;
     created: Date;
     updated: Date | null;
     deleted: Date | null;
@@ -138,8 +150,6 @@ export type MemberInvoice = {
     updated?: Date | null;
 };
 
-
-
 export type MemberLocation = {
     id?: number;
     memberId: number;
@@ -155,9 +165,10 @@ export type MemberLocation = {
 }
 
 export type IncompletePlan = {
-    programId: number | null;
-    programLevelId: number | null;
-    memberPlanId: number | null;
+    programId: number | undefined;
+    programLevelId: number | undefined;
+    memberPlanId: number | undefined;
     currentStep: number;
+    memberContractId: number | undefined;
     completedSteps: number[];
 }

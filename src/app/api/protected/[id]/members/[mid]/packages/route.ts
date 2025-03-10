@@ -61,7 +61,12 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
             return NextResponse.json({ error: "No valid location not found" }, { status: 404 })
         }
 
-        let { newTransaction, newPkg, newInvoice } = createPackage(data, plan, params)
+        let { newTransaction, newPkg, newInvoice } = createPackage({
+            ...data,
+            memberId: params.mid,
+            locationId: params.id,
+        }, plan)
+
         let clientSecret: string | undefined;
         if (data.paymentMethod === "card") {
 

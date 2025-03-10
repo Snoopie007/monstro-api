@@ -28,22 +28,16 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 
 export async function POST(req: Request, props: { params: Promise<{ id: number }> }) {
 	const params = await props.params;
-	const session = await auth();
+	const data = await req.json();
 	try {
-		if (session) {
+		const [{ id }] = await db.insert(contractTemplates).values({
+			...data,
+			locationId: params.id,
+			isDraft: true,
+			editable: true,
+		}).returning({ id: contractTemplates.id });
 
-			const [{ id }] = await db.insert(contractTemplates).values({
-				vendorId: session.user.vendorId,
-				locationId: params.id,
-				content: "",
-				title: "",
-				isDraft: true,
-				editable: true,
-				created: new Date(),
-			}).returning({ id: contractTemplates.id });
-
-			return NextResponse.json({ id }, { status: 200 });
-		}
+		return NextResponse.json({ id }, { status: 200 });
 	} catch (err) {
 		console.log(err)
 		return NextResponse.json({ error: err }, { status: 500 })

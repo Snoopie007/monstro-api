@@ -19,6 +19,7 @@ import { TablePageHeader } from "@/components/ui/table-page";
 import { TablePageHeaderTitle } from "@/components/ui/table-page";
 import { TablePageHeaderSection } from "@/components/ui/table-page";
 import { TablePage, TablePageContent, TablePageFooter } from "@/components/ui/table-page";
+import { format } from "date-fns";
 
 export default function ContractTemplatesPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
@@ -45,7 +46,7 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                             <Table className=" w-auto border border-foreground/10 ">
                                 <TableHeader className=" text-xs">
                                     <TableRow  >
-                                        {["Title", "Plans", "Created", "Status", "Editable", "Action"].map((title) => (
+                                        {["Title", "Plans", "Created", "Type", "Status", "Editable", 'Require Signature', ""].map((title) => (
                                             <TableHead key={title} className="font-semibold h-auto py-3 text-xs" >
                                                 {title}
                                             </TableHead>
@@ -68,7 +69,10 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                                         {contract.plans?.length}
                                                     </TableCell>
                                                     <TableCell className="text-sm ">
-                                                        {contract.created}
+                                                        {format(contract.created, "MM/dd/yyyy")}
+                                                    </TableCell>
+                                                    <TableCell className="text-sm capitalize ">
+                                                        {contract.type}
                                                     </TableCell>
                                                     <TableCell className="text-sm ">
                                                         {contract.isDraft ? (
@@ -77,14 +81,20 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                                             <Badge className="bg-green-300  text-black rounded-xs">Active</Badge>
                                                         )}
                                                     </TableCell>
+
                                                     <TableCell className="text-sm ">
                                                         {contract.editable ? (
-                                                            <div className="group flex flex-row items-center">
-                                                                <Icon name='Check' className="inline-block group-hover:hidden " />
-                                                                <Link href={`/builder/${params.id}/contract/${contract.id}`} className={"group-hover:inline-block hidden hover:text-indigo-500"}>
-                                                                    <Icon name="Pencil" size={14} /></Link>
-                                                            </div>
-                                                        ) : <Icon name='X' className="text-red-500" />}
+                                                            <Badge className="bg-green-300  text-black rounded-xs">Yes</Badge>
+                                                        ) : (
+                                                            <Badge className="bg-red-300  text-black rounded-xs">No</Badge>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-sm ">
+                                                        {contract.requireSignature ? (
+                                                            <Badge className="bg-green-300  text-black rounded-xs">Yes</Badge>
+                                                        ) : (
+                                                            <Badge className="bg-red-300  text-black rounded-xs">No</Badge>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell className="text-sm ">
                                                         <button className={contract.editable ? `` : `disabled:opacity-50`} disabled={!contract.editable} onClick={(e) => { onDelete(contract.id) }}>

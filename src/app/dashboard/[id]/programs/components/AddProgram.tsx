@@ -24,7 +24,6 @@ import { Icon } from '@/components/icons';
 
 import { toast } from 'react-toastify';
 import { X } from 'lucide-react';
-import SessionsIntervalSelector from './SessionsIntervalSelector';
 
 
 
@@ -42,8 +41,6 @@ export function AddProgram({ lid }: { lid: string }) {
                     capacity: 0,
                     minAge: 0,
                     maxAge: 0,
-                    interval: "week",
-                    intervalThreshold: 1,
                     sessions: [
                         {
                             day: 1,
@@ -94,8 +91,6 @@ export function AddProgram({ lid }: { lid: string }) {
             capacity: 0,
             minAge: 0,
             maxAge: 0,
-            interval: "month",
-            intervalThreshold: 1,
         });
     }
 
@@ -237,7 +232,7 @@ export function AddProgram({ lid }: { lid: string }) {
                                                         )}
                                                     />
                                                 </fieldset>
-                                                <SessionsIntervalSelector form={form} index={index} />
+
                                                 <SessionComponent scheduleIndex={index} control={form.control} />
                                             </div>
                                         </div>

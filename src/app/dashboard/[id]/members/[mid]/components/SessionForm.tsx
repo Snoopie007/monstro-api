@@ -218,19 +218,19 @@ export function SessionForm({ params, progress }: SessionFormProps) {
                 <DialogClose asChild>
                     <Button type="button" variant="outline" size={"sm"}>Skip</Button>
                 </DialogClose>
-                {/* <DialogClose asChild> */}
-                <Button
-                    className={cn("children:hidden", loading && "children:block")}
-                    variant={"foreground"}
-                    size={"sm"}
-                    type="submit"
-                    disabled={loading || !progress.plan || !progress.level || selectedSessions.length === 0}
-                    onClick={onSubmit}
-                >
-                    <Loader2 className="mr-2 h-4 w-4  animate-spin" />
-                    Save
-                </Button>
-                {/* </DialogClose> */}
+                <DialogClose asChild>
+                    <Button
+                        className={cn("children:hidden", loading && "children:block")}
+                        variant={"foreground"}
+                        size={"sm"}
+                        type="submit"
+                        disabled={loading || !progress.plan || !progress.level || selectedSessions.length === 0}
+                        onClick={onSubmit}
+                    >
+                        <Loader2 className="mr-2 h-4 w-4  animate-spin" />
+                        Save
+                    </Button>
+                </DialogClose>
             </DialogFooter>
         </>
     );

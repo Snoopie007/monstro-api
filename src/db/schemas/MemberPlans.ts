@@ -7,6 +7,7 @@ import { memberInvoices, members } from "./members";
 import { locations } from "./locations";
 import { transactions } from "./transactions";
 import { reservations } from "./reservations";
+import { BillingCycleAnchorConfig } from "@/types";
 
 const PlanPaymentType = pgEnum("plan_payment_type", ["recurring", "one-time"]);
 const PlanInterval = pgEnum("plan_interval", ["day", "week", "month", "year"]);
@@ -19,7 +20,8 @@ const MemberSubscriptionStatusEnum = pgEnum('member_subscription_status', [
     'incomplete',
     'trialing',
     'unpaid',
-]);
+]); const paymentMethodEnum = pgEnum("payment_method", ["card", "cash", "check", "zelle", "venmo", "paypal", "apple", "google"]);
+
 
 export const memberPlans = pgTable("member_plans", {
     id: serial("id").primaryKey(),
@@ -40,7 +42,7 @@ export const memberPlans = pgTable("member_plans", {
     totalClassLimit: integer("total_class_limit"),
     classLimitInterval: PlanClassLimitInterval("class_limit_interval"),
     classLimitThreshold: integer("class_limit_threshold"),
-    billingAnchorConfig: jsonb("billing_anchor_config").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+    billingAnchorConfig: jsonb("billing_anchor_config").$type<BillingCycleAnchorConfig>().default(sql`'{}'::jsonb`),
     allowProration: boolean("allow_proration").notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
@@ -52,7 +54,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     id: serial("id").primaryKey(),
     payerId: integer("payer_id").references(() => members.id, { onDelete: "cascade" }),
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-    planId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
+    memberPlanId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
     stripeSubscriptionId: text("stripe_subscription_id"),
@@ -64,7 +66,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
     trialEnd: timestamp("trial_end", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
-    paymentType: text("payment_type").notNull(),
+    paymentMethod: paymentMethodEnum("payment_method").notNull(),
     metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
@@ -83,7 +85,7 @@ export const memberPackages = pgTable("member_packages", {
     endDate: timestamp("end_date", { withTimezone: true }),
     expireDate: timestamp("expire_date", { withTimezone: true }),
     status: PackageStatusEnum("status").notNull(),
-    paymentMethod: text("payment_method").notNull(),
+    paymentMethod: paymentMethodEnum("payment_method").notNull(),
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     totalClassAttended: integer("total_class_attended").notNull().default(0),
     totalClassLimit: integer("total_class_limit").notNull().default(0),
@@ -121,7 +123,7 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
         references: [programLevels.id],
     }),
     plan: one(memberPlans, {
-        fields: [memberSubscriptions.planId],
+        fields: [memberSubscriptions.memberPlanId],
         references: [memberPlans.id],
     }),
     location: one(locations, {

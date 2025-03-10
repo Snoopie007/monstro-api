@@ -224,8 +224,9 @@ type BaseStripeSettings = {
 }
 
 interface MemberSubscriptionSettings extends BaseStripeSettings {
-    endDate: Date | null | undefined,
+    cancelAt: Date | null | undefined,
     trialEnd: Date | null | undefined,
+    allowProration?: boolean
 }
 
 interface PaymentIntentSettings extends BaseStripeSettings {
@@ -262,39 +263,45 @@ class MemberStripePayments extends BaseStripePayments {
         return { clientSecret: client_secret as string, paymentMethod: payment_method as Stripe.PaymentMethod };
     }
 
-
-
-    async createSubscription(priceId: string, startDate: Date | undefined, settings: MemberSubscriptionSettings) {
+    async createSubscription(plan: MemberPlan, startDate: Date | undefined, settings: MemberSubscriptionSettings) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
-        const { endDate, trialEnd, paymentMethod, applicationFeePercent, ...rest } = settings;
+        const { trialEnd, paymentMethod, applicationFeePercent, allowProration, cancelAt, ...rest } = settings;
 
+        if (!plan.stripePriceId) {
+            throw new Error("Price not found");
+        }
+        const isAllowProration = plan.interval === "month" || plan.interval === "year"
         const options: Stripe.SubscriptionCreateParams = {
             ...rest,
             customer: this._customer,
-            description: `Member Subscription`,
-            items: [{ price: priceId }],
+            description: `Subscription to ${plan.name}`,
+            items: [{ price: plan.stripePriceId as string }],
             collection_method: "charge_automatically",
             application_fee_percent: (applicationFeePercent || 0),
             default_payment_method: paymentMethod || undefined,
-            cancel_at: endDate ? endDate.getTime() / 1000 : undefined,
-
+            cancel_at: cancelAt ? cancelAt.getTime() / 1000 : undefined,
             trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
-            ...(startDate && isAfter(startDate, new Date()) && {
-                billing_cycle_anchor: startDate.getTime() / 1000,
-                trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
-            }),
         };
+
+        if (isAllowProration) {
+            if (plan.billingAnchorConfig) {
+                options.billing_cycle_anchor_config = plan.billingAnchorConfig;
+            }
+            if (startDate && isAfter(startDate, new Date())) {
+                options.proration_behavior = (allowProration || plan.allowProration) ? "create_prorations" : "none";
+                options.billing_cycle_anchor = startDate.getTime() / 1000;
+            }
+        }
 
         return this._stripe.subscriptions.create(options);
     }
-
     createSubSchedule(priceId: string, startDate: Date, settings: MemberSubscriptionSettings): Promise<Stripe.SubscriptionSchedule> {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
-        const { endDate, paymentMethod, applicationFeePercent, ...rest } = settings;
+        const { cancelAt, trialEnd, paymentMethod, applicationFeePercent, ...rest } = settings;
 
         const options: Stripe.SubscriptionScheduleCreateParams = {
             customer: this._customer,
@@ -305,7 +312,7 @@ class MemberStripePayments extends BaseStripePayments {
                 items: [{ price: priceId }],
                 billing_cycle_anchor: 'automatic',
                 application_fee_percent: (applicationFeePercent || 0),
-                ...(endDate && { end_date: new Date(endDate).getTime() / 1000 }),
+                ...(cancelAt && { end_date: new Date(cancelAt).getTime() / 1000 }),
                 currency: 'usd',
                 collection_method: 'charge_automatically',
 

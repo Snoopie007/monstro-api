@@ -42,9 +42,6 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
 export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
     const params = await props.params;
     const { stripePaymentMethod, other, trialDays, ...data } = await req.json();
-
-
-
     try {
         const plan = await db.query.memberPlans.findFirst({
             where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
@@ -58,16 +55,23 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             where: (locationState, { eq }) => eq(locationState.locationId, params.id),
         })
 
+        let { newSubscription, newTransaction, newInvoice } = createSubscription({
+            ...data,
+            memberId: params.mid,
+            locationId: params.id,
+            trialDays
+        }, plan)
 
-        let { newSubscription, newTransaction, newInvoice } = createSubscription({ ...data, ...params, trialDays }, plan)
 
-        let sub: Stripe.Subscription | Stripe.SubscriptionSchedule | undefined;
+
+
         if (data.paymentMethod === "card") {
             const stripe = await getStripeCustomer(params)
             const settings = {
-                endDate: newSubscription.cancelAt,
+                cancelAt: newSubscription.cancelAt,
                 trialEnd: newSubscription.trialEnd,
                 paymentMethod: stripePaymentMethod.id,
+                allowProration: data.allowProration,
                 applicationFeePercent: locationState?.usagePercent,
                 metadata: {
                     memberId: params.mid,
@@ -75,28 +79,25 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 },
             }
 
-            if (isAfter(newSubscription.currentPeriodStart, new Date()) && !data.allowProration) {
-                sub = await stripe.createSubSchedule(plan.stripePriceId, newSubscription.currentPeriodStart, settings)
-            } else {
-                sub = await stripe.createSubscription(plan.stripePriceId, newSubscription.currentPeriodStart, settings)
+            const sub = await stripe.createSubscription(plan, newSubscription.currentPeriodStart, settings)
+            if (!sub.id) {
+                return NextResponse.json({ error: "Failed to create subscription" }, { status: 500 })
             }
 
-            if (sub.id) {
-                newTransaction.metadata = {
-                    card: { brand: stripePaymentMethod.card?.brand, last4: stripePaymentMethod.card?.last4 }
-                }
-                newSubscription.stripeSubscriptionId = sub.id
+            newTransaction.metadata = {
+                card: { brand: stripePaymentMethod.card?.brand, last4: stripePaymentMethod.card?.last4 }
             }
+            newSubscription.stripeSubscriptionId = sub.id
         }
 
-        if (data.paymentType !== "card" || sub && sub.id) {
+        if (data.paymentType !== "card") {
             newSubscription.status = "active"
             newTransaction.status = "paid"
             newInvoice.status = "paid"
         }
 
-        // Create invoice
-        await db.transaction(async (tx) => {
+
+        const sid = await db.transaction(async (tx) => {
             const [{ sid }] = await tx.insert(memberSubscriptions).values({
                 ...newSubscription
             }).returning({ sid: memberSubscriptions.id })
@@ -105,12 +106,12 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 memberSubscriptionId: sid,
             }).returning({ invoiceId: memberInvoices.id });
 
-            const transaction = await tx.insert(transactions).values({
+            await tx.insert(transactions).values({
                 ...newTransaction,
                 invoiceId,
                 subscriptionId: sid,
             })
-
+            return sid
         })
 
         if (data.paymentType === "cash") {
@@ -121,7 +122,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             // forPeriod Start and forPeriodEnd
             // add schedule hook.
         }
-        return NextResponse.json({ id: newSubscription.id }, { status: 200 })
+        return NextResponse.json({ sid }, { status: 200 })
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })

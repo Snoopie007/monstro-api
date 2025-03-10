@@ -49,8 +49,6 @@ export function UpsertLevel({ level, setCurrentLevel, lid }: UpdateProgramLevelP
             capacity: 0,
             minAge: 0,
             maxAge: 0,
-            interval: "week",
-            intervalThreshold: 1,
         },
         mode: "onSubmit",
     })

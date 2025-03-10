@@ -164,38 +164,40 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
                                 />
                             </fieldset>
                         )}
-                        <fieldset>
-                            <FormField
-                                control={form.control}
-                                name="subscription.billingAnchor"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel size={"tiny"}>Start Date</FormLabel>
-                                        <FormDescription className="text-xs">
-                                            Default will be today, but you can change it to the 1st or 15th of the month.
-                                            <b className='text-red-500'> If allow protation is turn on the customer will be bill a proated amount before the started day if the start date is not today.</b>
-                                        </FormDescription>
-                                        <FormControl>
-                                            <Select onValueChange={field.onChange} value={field.value} >
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select..." />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {BillingAnchorConfigSchema.map((anchor, index) => (
-                                                        <SelectItem key={index} value={anchor.value}>
-                                                            {anchor.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </fieldset>
+                        {form.getValues('subscription.interval') === "month" && (
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="subscription.billingAnchor"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size={"tiny"}>Start Date</FormLabel>
+                                            <FormDescription className="text-xs">
+                                                Default will be today, but you can change it to the 1st or 15th of the month.
+                                                <b className='text-red-500'> If allow protation is turn on the customer will be bill a proated amount before the started day if the start date is not today.</b>
+                                            </FormDescription>
+                                            <FormControl>
+                                                <Select onValueChange={field.onChange} value={field.value} >
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select..." />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {BillingAnchorConfigSchema.map((anchor, index) => (
+                                                            <SelectItem key={index} value={anchor.value}>
+                                                                {anchor.label}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
+                        )}
                         <fieldset >
                             <FormField
                                 control={form.control}

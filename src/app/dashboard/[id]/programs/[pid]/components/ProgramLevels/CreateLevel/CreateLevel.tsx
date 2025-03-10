@@ -50,8 +50,6 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
             capacity: 1,
             minAge: 3,
             maxAge: 5,
-            interval: "week",
-            intervalThreshold: 1,
         },
         mode: "onSubmit",
     })
@@ -59,19 +57,19 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
 
 
     async function submitForm(v: z.infer<typeof LevelSchema>) {
-        console.log(v)
+
         setLoading(true);
-        // const { result, error } = await tryCatch(
-        //     fetch(`/api/protected/${lid}/programs/${pid}/levels`, {
-        //         method: "POST",
-        //         body: JSON.stringify(v),
-        //     })
-        // )
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/${lid}/programs/${pid}/levels`, {
+                method: "POST",
+                body: JSON.stringify(v),
+            })
+        )
         setLoading(false);
-        // if (error || !result || !result.ok) {
-        //     toast.error(error?.message || "Something went wrong, please try again later")
-        //     return
-        // }
+        if (error || !result || !result.ok) {
+            toast.error(error?.message || "Something went wrong, please try again later")
+            return
+        }
         await sleep(2000)
         await mutate();
         toast.success("Level Created Successfully")

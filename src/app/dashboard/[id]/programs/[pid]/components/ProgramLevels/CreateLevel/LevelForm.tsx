@@ -8,9 +8,8 @@ import { Input } from "@/components/forms/input";
 import { cn, tryCatch } from "@/libs/utils";
 import { useFieldArray, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
-import { LevelSchema, PresetSessionInterval, PresetSessionIntervals } from "../../../../schemas";
 import { SessionComponents } from "./SessionsComponent";
-import { useState } from "react";
+import { LevelSchema } from "../../../../schemas";
 
 interface LevelFormProps {
     form: UseFormReturn<z.infer<typeof LevelSchema>>;
@@ -18,21 +17,12 @@ interface LevelFormProps {
 }
 
 export function LevelForm({ form, lid }: LevelFormProps) {
-    const [interval, setInterval] = useState<PresetSessionInterval | undefined>();
     const { fields, append, remove } = useFieldArray({
         control: form.control, // control props comes from useForm (optional: if you are using FormProvider)
         name: "sessions", // unique name for your Field Array
     });
 
-    function handleIntervalChange(e: string) {
-        const preset = PresetSessionIntervals.find(p => p.label === e);
 
-        if (preset) {
-            setInterval(preset);
-            form.setValue("intervalThreshold", preset.intervalThreshold);
-            form.setValue("interval", preset.interval as "week" | "month" | "year");
-        }
-    }
 
     async function handleRemove(index: number) {
         const field = fields[index];
@@ -112,67 +102,7 @@ export function LevelForm({ form, lid }: LevelFormProps) {
                         )}
                     />
                 </fieldset>
-                <fieldset className='flex flex-row gap-2 items-baseline'>
-                    <div className='flex-1'>
-                        <FormLabel size={"tiny"} >Session Interval</FormLabel>
-                        <Select onValueChange={handleIntervalChange} value={interval?.label}  >
 
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select interval..." />
-                            </SelectTrigger>
-
-                            <SelectContent>
-                                {PresetSessionIntervals.map((preset, index) => (
-                                    <SelectItem key={index} value={preset.label}>
-                                        {preset.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className={cn("flex-1", interval?.label !== "Custom" && "hidden")}>
-                        <FormLabel size={"tiny"} >Every</FormLabel>
-                        <div className=' flex-1 grid grid-cols-3 gap-2 items-baseline'>
-                            <FormField
-                                control={form.control}
-                                name="intervalThreshold"
-                                render={({ field }) => (
-                                    <FormItem className="col-span-1">
-
-                                        <FormControl>
-                                            <Input type='number' placeholder="1" {...field} />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="interval"
-                                render={({ field }) => (
-                                    <FormItem className="col-span-2">
-
-                                        <Select onValueChange={field.onChange} value={field.value}  >
-
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select interval..." />
-                                            </SelectTrigger>
-
-                                            <SelectContent>
-                                                {['week', 'month', 'year'].map((preset, index) => (
-                                                    <SelectItem key={index} value={preset}>
-                                                        {preset}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                    </div>
-
-                </fieldset>
                 <fieldset className="bg-background rounded-sm mt-4 py-4   ">
                     <div className="flex flex-row px-3 items-center justify-between">
                         <div className="text-sm  font-medium">Schedules</div>

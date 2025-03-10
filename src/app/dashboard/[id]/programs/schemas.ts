@@ -14,8 +14,6 @@ const LevelSchema = z.object({
     capacity: z.coerce.number().min(1, { message: "Capacity > 0" }),
     minAge: z.coerce.number().min(2, { message: "Min > 2" }),
     maxAge: z.coerce.number().min(3, { message: "Max > 3" }),
-    interval: z.enum(["week", "month", "year"]),
-    intervalThreshold: z.coerce.number().min(1, { message: "Interval count > 0" }),
 }).superRefine((data, ctx) => {
     if (data.maxAge <= data.minAge) {
         ctx.addIssue({
@@ -46,15 +44,6 @@ const InviteMemberSchema = z.object({
 });
 const DaysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-type PresetSessionInterval = { label: string, interval: string, intervalThreshold: number }
-
-const PresetSessionIntervals: PresetSessionInterval[] = [
-
-    { label: "Weekly", interval: "week", intervalThreshold: 1 },
-    { label: "Monthly", interval: "month", intervalThreshold: 1 },
-    { label: "Yearly", interval: "year", intervalThreshold: 1 },
-    { label: "Custom", interval: "custom", intervalThreshold: 1 },
-];
 
 
 
@@ -151,8 +140,6 @@ export {
     UpdateProgramSchema,
     InviteMemberSchema,
     DaysOfWeek,
-    PresetSessionIntervals,
-    type PresetSessionInterval,
     type PresetInterval,
     PresetIntervals,
     PlanType,
