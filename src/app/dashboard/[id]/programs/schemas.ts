@@ -58,7 +58,8 @@ const NewPlanSchema = z.object({
     familyMemberLimit: z.number().optional(),
     contractId: z.number().optional(),
     pkg: z.object({
-        expireDate: z.date().optional(),
+        expireInterval: z.enum(["day", "week", "month", "year"]).optional(),
+        expireThreshold: z.number().optional(),
         totalClassLimit: z.number().optional(),
         intervalClassLimit: z.number().optional(),
     }),

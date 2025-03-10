@@ -63,7 +63,8 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
                 billingAnchor: undefined
             },
             pkg: {
-                expireDate: undefined,
+                expireInterval: undefined,
+                expireThreshold: undefined,
                 totalClassLimit: 0,
                 intervalClassLimit: undefined
             },

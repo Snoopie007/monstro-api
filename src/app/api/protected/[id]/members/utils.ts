@@ -36,11 +36,10 @@ type CreateSubscriptionReturn = BaseReturnType & {
     newSubscription: MemberSubscription;
 }
 
-function calculateCurrentPeriodEnd(startDate: Date, plan: MemberPlan): Date {
+function calculateCurrentPeriodEnd(startDate: Date, interval: string, threshold: number): Date {
     const endDate = new Date(startDate); // Initialize endDate with startDate
-    const threshold = plan.intervalThreshold || 1;
 
-    switch (plan.interval) {
+    switch (interval) {
         case "day":
             endDate.setDate(endDate.getDate() + threshold);
             break;
@@ -124,11 +123,16 @@ function createPackage(
     plan: MemberPlan
 ): CreatePackageReturn {
     const today = new Date();
-    const startDate = new Date(data.startDate);
-    const endDate = calculateCurrentPeriodEnd(startDate, plan);
+    const startDate = data.startDate ? new Date(data.startDate) : today;
+    const { beneficiaryId, totalClassLimit, ...rest } = data;
+    const { expireInterval, expireThreshold } = plan;
 
-    const { beneficiaryId, expireDate, totalClassLimit, ...rest } = data
-    const exDate = expireDate ? new Date(expireDate) : plan.expireDate ? new Date(plan.expireDate) : null;
+    let expireDate: Date | null = null;
+    if (data.expireDate) {
+        expireDate = new Date(data.expireDate);
+    } else if (expireInterval && expireThreshold) {
+        expireDate = calculateCurrentPeriodEnd(startDate, expireInterval, expireThreshold);
+    }
 
     const newPkg: MemberPackage = {
         ...rest,
@@ -136,8 +140,7 @@ function createPackage(
         beneficiaryId: beneficiaryId || rest.memberId,
         locationId: rest.locationId,
         startDate: startDate,
-        endDate: endDate,
-        expireDate: exDate,
+        expireDate,
         totalClassLimit: totalClassLimit || 0,
         created: today,
         status: "incomplete",
@@ -150,8 +153,8 @@ function createPackage(
 
 function createSubscription(data: SubscriptionData, plan: MemberPlan): CreateSubscriptionReturn {
     const today = new Date();
-    const startDate = new Date(data.startDate);
-    const periodEnd = calculateCurrentPeriodEnd(startDate, plan);
+    const startDate = data.startDate ? new Date(data.startDate) : today;
+    const periodEnd = calculateCurrentPeriodEnd(startDate, plan.interval!, plan.intervalThreshold!);
 
     const { trialDays, endDate, beneficiaryId, ...rest } = data;
 

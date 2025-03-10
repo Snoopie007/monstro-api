@@ -71,7 +71,6 @@ export type MemberPackage = {
     payerId: number | null;
     beneficiaryId: number;
     startDate: Date;
-    endDate: Date | null;
     expireDate: Date | null;
     status: 'active' | 'expired' | 'incomplete' | 'completed';
     paymentMethod: "card" | "cash" | "check" | "zelle" | "venmo" | "paypal" | "apple" | "google";
@@ -114,7 +113,8 @@ export type MemberPlan = {
     classLimitInterval: 'week' | 'month' | 'year' | null;
     classLimitThreshold: number | null;
     stripePriceId: string | null;
-    expireDate: Date | null;
+    expireInterval: 'day' | 'week' | 'month' | 'year' | null;
+    expireThreshold: number | null;
     allowProration: boolean;
     billingAnchorConfig: BillingCycleAnchorConfig | null;
     created: Date;

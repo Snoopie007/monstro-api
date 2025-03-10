@@ -1,7 +1,7 @@
 
 import {
     FormControl, FormField, FormMessage, FormItem, FormLabel,
-
+    Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
     Input,
     FormDescription,
 } from '@/components/forms';
@@ -10,15 +10,14 @@ import { z } from "zod";
 import React from "react";
 import { UseFormReturn } from 'react-hook-form';
 import {
-    Calendar, Button, PopoverTrigger, Popover, Switch, PopoverContent,
     CollapsibleContent,
     Collapsible,
     CollapsibleTrigger,
+    Switch,
 } from '@/components/ui';
 import { NewPlanSchema } from '../../../../schemas';
 import { cn } from '@/libs/utils';
-import { CalendarIcon, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { ChevronRight } from 'lucide-react';
 import { SelectContract } from './SelectContract';
 
 interface SubFieldsProps {
@@ -56,36 +55,46 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                     </span>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="bg-background rounded-sm p-4 space-y-2">
-                    <fieldset className='flex flex-row gap-2 items-baseline'>
+                    <fieldset className='flex flex-col gap-1 items-baseline'>
+                        <FormLabel size={"tiny"}>Expires In (From Signup Date)</FormLabel>
+                        <div className='grid grid-cols-3 gap-3 items-baseline'>
+                            <FormField
+                                control={form.control}
+                                name="pkg.expireThreshold"
+                                render={({ field }) => (
+                                    <FormItem className="col-span-1">
 
-                        <FormField
-                            control={form.control}
-                            name="pkg.expireDate"
-                            render={({ field }) => (
-                                <FormItem className="flex-1">
-                                    <FormLabel size={"tiny"}>Expire Date</FormLabel>
-                                    <FormControl>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button variant="outline" className={cn("w-full border pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                    {field.value ? format(field.value, "PPP") : "Pick a date"}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    fromDate={new Date()}
-                                                    selected={field.value}
-                                                    onSelect={field.onChange}
-                                                    initialFocus
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
+                                        <FormControl>
+                                            <Input type='number' placeholder="1" {...field} />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="pkg.expireInterval"
+                                render={({ field }) => (
+                                    <FormItem className="col-span-2">
+
+                                        <Select onValueChange={field.onChange} value={field.value}  >
+
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select interval..." />
+                                            </SelectTrigger>
+
+                                            <SelectContent>
+                                                {['day', 'week', 'month', 'year'].map((preset, index) => (
+                                                    <SelectItem key={index} value={preset}>
+                                                        {preset}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
                     </fieldset>
 
                     <SelectContract lid={lid} form={form} />
