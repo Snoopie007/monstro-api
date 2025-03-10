@@ -143,7 +143,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                                                     iconColor: theme === "dark" || theme === "system" ? "#fff" : "#000",
                                                 }
                                             },
-                                            hidePostalCode: true
+                                            hidePostalCode: false
                                         }}
                                         onChange={(e) => {
                                             setValidCard(e.complete);
