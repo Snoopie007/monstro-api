@@ -62,8 +62,11 @@ abstract class BaseStripePayments {
         return await this._stripe.customers.retrievePaymentMethod(customerId, paymentId);
     }
 
-    async updateCustomer(id: string, updates: Stripe.CustomerUpdateParams) {
-        return await this._stripe.customers.update(id, updates);
+    async updateCustomer(updates: Stripe.CustomerUpdateParams) {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        return await this._stripe.customers.update(this._customer, updates);
     }
 
     async getPaymentMethods(customerId: string, limit?: number) {

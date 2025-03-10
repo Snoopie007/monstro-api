@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { memberLocations } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
-import { and, eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
@@ -12,7 +12,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
 
     try {
         const integrations = await db.query.integrations.findFirst({
-            where: (integration, { eq }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
+            where: (integration, { eq, and }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
             columns: {
                 accessToken: true,
                 secretKey: true
@@ -38,7 +38,6 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 memberId: params.mid
             });
             memberLocation.stripeCustomerId = customer.id;
-
             await db.update(memberLocations).set({ stripeCustomerId: customer.id, updated: new Date() })
                 .where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mid)))
         }
@@ -46,7 +45,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
 
         const { paymentMethod } = await stripe.setupIntent(token);
         if (isDefault) {
-            await stripe.updateCustomer(memberLocation.stripeCustomerId, {
+            await stripe.updateCustomer({
                 invoice_settings: {
                     default_payment_method: paymentMethod?.id
                 }

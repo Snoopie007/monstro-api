@@ -9,9 +9,11 @@ type PackageProps = {
     id: number
 }
 
-const DEFAULT_MEMBER_PROGRESS = {
-    selectProgramId: null,
-    selectPlanId: null,
+const INCOMPLETE_PLAN = {
+    programId: undefined,
+    programLevelId: undefined,
+    memberContractId: undefined,
+    memberPlanId: undefined,
     currentStep: 2,
     completedSteps: [1]
 }
@@ -82,7 +84,7 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
                 locationId: params.id,
                 memberId: member.id,
                 status: "incomplete",
-                progress: DEFAULT_MEMBER_PROGRESS
+                incompletePlan: INCOMPLETE_PLAN
             })
             return member
         })
