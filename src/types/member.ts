@@ -1,4 +1,3 @@
-
 import { Contract } from "./contract";
 import { FamilyMember } from "./FamilyMember";
 import { ProgramLevel } from "./program";
@@ -57,7 +56,7 @@ export type MemberSubscription = {
     plan?: MemberPlan | null;
     payer?: Member | null;
     beneficiary?: Member;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     invoices?: MemberInvoice[];
     status: LocationStatus;
     created?: Date;
@@ -76,7 +75,7 @@ export type MemberPackage = {
     paymentMethod: PaymentMethod;
     totalClassAttended?: number;
     totalClassLimit: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     programLevelId: number;
     programLevel?: ProgramLevel;
     plan?: MemberPlan;
@@ -125,12 +124,12 @@ export type MemberPlan = {
 
 export type MemberInvoice = {
     id?: string;
-    settings?: Record<string, any>;
+    settings?: Record<string, unknown>;
     currency: string | null;
     memberId: number;
     locationId: number;
     description: string | null;
-    items: Record<string, any>[];
+    items: Record<string, unknown>[];
     paid: boolean;
     tax: number;
     total: number;

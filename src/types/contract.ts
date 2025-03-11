@@ -22,7 +22,7 @@ export type MemberContract = {
     memberId: number;
     contractId: number;
     signed: boolean;
-    variables: Record<string, any>;
+    variables: Record<string, unknown>;
     signature: string;
     contract?: Contract;
     created: Date;

@@ -43,7 +43,7 @@ export default auth(async (req) => {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 			}
 
-			const [_, encodedId, subpath = ""] = pathname.match(/^\/api\/protected\/loc\/([^/]+)(\/.*)?$/) || []
+			const [, encodedId, subpath = ""] = pathname.match(/^\/api\/protected\/loc\/([^/]+)(\/.*)?$/) || []
 
 			if (!encodedId || !isNaN(Number(encodedId))) {
 				return NextResponse.next()
@@ -74,7 +74,8 @@ export default auth(async (req) => {
 				return NextResponse.redirect(new URL("/onboarding", req.nextUrl.origin))
 			}
 
-			const [_, path, locationId] = pathname.match(/^\/((?:dashboard|onboarding))\/([^/]+)(\/.*)?$/) || []
+
+			const [, path, locationId] = pathname.match(/^\/((?:dashboard|onboarding))\/([^/]+)(\/.*)?$/) || []
 
 			if (locationId) {
 				/** Check if locationId is a valid location */

@@ -84,7 +84,7 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
                                                         {t.metadata?.card.brand}
                                                     </span>
                                                     <span>
-                                                        •••• {t.metadata?.card.last4}
+                                                        •••• {t.metadata?.card && t.metadata?.card.last4}
                                                     </span>
                                                 </div>
                                             ) : (

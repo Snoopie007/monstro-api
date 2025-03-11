@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { Member, MemberPlan, MonstroPlan, PackagePaymentPlan, Vendor } from "@/types";
+import { MemberPlan, MonstroPlan, PackagePaymentPlan } from "@/types";
 import { isAfter } from "date-fns";
 import Stripe from "stripe";
 
@@ -98,7 +98,7 @@ abstract class BaseStripePayments {
         return await this._stripe.subscriptions.list({ customer: customerId, limit: 10 });
     }
 
-    async getCharges(customerId: string, limit?: number) {
+    async getCharges(limit?: number) {
         const res = await this._stripe.charges.list({ limit: limit || 10 });
         return res.data;
     }
@@ -185,8 +185,6 @@ class VendorStripePayments extends BaseStripePayments {
             customer,
             description: `Monstro ${plan.name} Subscription`,
             items: [{ price: plan.priceId }],
-            trial_end: new Date('2025-03-1').getTime() / 1000,
-            billing_cycle_anchor: new Date('2025-03-1').getTime() / 1000,
             metadata: {
                 vendorId: vendorId,
                 locationId: locationId

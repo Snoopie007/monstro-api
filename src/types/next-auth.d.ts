@@ -8,12 +8,10 @@ export type ExtendedUser = DefaultUser["user"] & {
     token: string;
     email: string;
     expireTime: Date | null;
-    locations: Array<Record<string, any>> | null;
+    locations: Record<string, unknown>[] | null;
     vendorId: number | 0,
     staffId: number | 0
 };
-
-
 
 declare module "next-auth" {
     interface Session {

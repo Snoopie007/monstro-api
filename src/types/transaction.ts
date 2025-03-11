@@ -2,6 +2,13 @@ import { TransactionStatus } from "./enums";
 import { Member, MemberInvoice, MemberPackage, MemberSubscription } from "./member";
 
 
+type TransactionMetadata = {
+    card?: {
+        brand: string;
+        last4: string;
+    };
+} & Record<string, unknown>;
+
 export type Transaction = {
     id?: number;
     description: string | null;
@@ -20,7 +27,7 @@ export type Transaction = {
     package?: MemberPackage;
     chargeDate: Date;
     currency: string;
-    metadata?: Record<string, any>;
+    metadata?: TransactionMetadata;
     refunded?: boolean;
     invoiceId?: string | null;
     invoice?: MemberInvoice;

@@ -88,7 +88,7 @@ export type VendorReward = {
     images: string[];
     description: string;
     requiredPoints: number;
-    meta: Record<string, any>;
+    meta: Record<string, unknown>;
 }
 
 export type VendorClaimedReward = {
