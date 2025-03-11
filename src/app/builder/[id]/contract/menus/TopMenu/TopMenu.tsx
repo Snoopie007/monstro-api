@@ -1,14 +1,13 @@
 
-import EditorToolBar from "./partials/editor-toolbar";
+import EditorToolBar from "./partials/EitorToolbar";
 import { Editor } from "@tiptap/react";
 import { Icon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-import { cn, sleep } from "@/libs/utils";
+import { cn, sleep, tryCatch } from "@/libs/utils";
 import { Contract } from "@/types";
 import { MouseEvent, useState } from "react";
 import { toast } from "react-toastify";
 import Link from "next/link";
-import { updateContract } from "@/libs/api";
 import { useRouter } from "next/navigation";
 
 interface TopMenuProps {
@@ -25,56 +24,60 @@ export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, locati
     const [savingDraft, setSavingDraft] = useState<boolean>(false)
     const [loading, setLoading] = useState<boolean>(false)
     const router = useRouter();
-    async function publish() {
-        setLoading(true);
-        sleep(3000)
+
+    async function saveContract(isDraft: boolean) {
+        const setLoadingState = isDraft ? setSavingDraft : setLoading;
+        setLoadingState(true);
+
+        if (!isDraft && contract.title === "") {
+            toast.error('Contract title is required', { theme: 'dark' });
+            setLoadingState(false);
+            return;
+        }
+
+
+
         try {
             const body = {
-                isDraft: false,
+                isDraft,
                 content: editor.getHTML(),
                 title: contract.title,
                 description: contract.description
+            };
+
+            const { result, error } = await tryCatch(
+                fetch(`/api/protected/loc/${locationId}/contracts/${contract.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(body)
+                })
+            );
+
+            if (error || !result || !result.ok) {
+                toast.error('Something went wrong', { theme: 'dark' });
+                setLoadingState(false);
+                return;
             }
-            const updated = await updateContract(contract.id, body, locationId);
-            console.log(updated)
-            toast.success('Contract saved successfully', { theme: 'dark' })
-            setLoading(false);
-            router.push(`/dashboard/${locationId}/contracts/`);
+            await sleep(2000);
+            toast.success('Contract saved successfully', { theme: 'dark' });
+            setLoadingState(false);
+
+            if (!isDraft) {
+                router.push(`/dashboard/${locationId}/contracts/`);
+            }
         } catch (error) {
             console.log('Error:', error);
-            setLoading(false);
+            setLoadingState(false);
         }
+    }
+
+    async function publish() {
+        saveContract(false);
     }
 
     async function saveDraft(e: MouseEvent) {
-        console.log('Saving Draft');
-
-        setSavingDraft(true)
-        if (contract.title === "") {
-            toast.error('Contract title is required', { theme: 'dark' })
-        }
-
-        await sleep(3000)
-
-
-        try {
-            const body = {
-                isDraft: true,
-                content: editor.getHTML(),
-                title: contract.title,
-                description: contract.description
-            }
-            const updated = await updateContract(contract.id, body, locationId);
-            console.log(updated)
-            toast.success('Contract saved successfully', { theme: 'dark' })
-            setSavingDraft(false)
-
-        } catch (error) {
-            console.log('Error:', error);
-            setSavingDraft(false)
-        }
-
+        saveContract(true);
     }
+
     return (
         <div className="flex-initial   flex items-center h-[50px] px-2 border-b  border-foreground/20 ">
             <div className="flex-initial  h-full flex items-center w-[130px]">

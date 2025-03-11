@@ -1,1 +1,1 @@
-export * from './content-menu'
+export * from './ContentMenu'

@@ -1,1 +1,1 @@
-export * from './dark-mode-switcher';
+export * from './DarkModeSwitcher';

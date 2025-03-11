@@ -22,7 +22,6 @@ export const useTextmenuStates = (editor: Editor) => {
 
 
     return {
-
         ...states,
     }
 }

@@ -14,8 +14,8 @@ import {
 
 import { Icon } from '@/components/icons'
 import { useCallback, useState } from 'react'
-import { Toolbar } from "../tool-bar"
-import { VariableGroups } from "../../extensions/Variables/variable-groups"
+import { Toolbar } from "../ToolBar"
+import { VariableGroups } from "../../extensions/Variables/VariableGroups"
 import { Variable } from "../../extensions/Variables/types"
 
 

@@ -3,7 +3,7 @@ import { Icon } from '@/components/icons'
 import DragHandle from '@tiptap-pro/extension-drag-handle-react'
 import { Editor } from '@tiptap/react'
 
-import { useData } from './hooks/use-data'
+import { useData } from './hooks/useData'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -13,7 +13,7 @@ import {
 import { Toolbar } from '../../components'
 import { useEffect, useState } from 'react'
 import { Commands } from "./commands"
-import useContentMenuActions from "./hooks/use-content-menu-auction"
+import useContentMenuActions from "./hooks/useContentMenuAuction"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 export type ContentMenuProps = {

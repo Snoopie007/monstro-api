@@ -2,9 +2,9 @@
 import { ReactRenderer } from '@tiptap/react'
 import tippy from 'tippy.js'
 import type { MentionOptions } from "@tiptap/extension-mention";
-import { VariableList, VariableListRef } from './variable-list'
+import { VariableList, VariableListRef } from './VariableList'
 import { Variable, TippyInstance } from './types';
-import { VariableGroups } from './variable-groups';
+import { VariableGroups } from './VariableGroups';
 
 
 /**

@@ -1,1 +1,1 @@
-export * from './variable-picker';
+export * from './VariablePicker';

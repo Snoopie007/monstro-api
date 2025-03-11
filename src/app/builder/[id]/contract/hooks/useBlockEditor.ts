@@ -1,7 +1,7 @@
 
 import { useEditor } from '@tiptap/react'
 import type { AnyExtension } from '@tiptap/core'
-import ExtensionKit from '../extensions/extension-kit'
+import ExtensionKit from '../extensions/ExtensionKit'
 
 export const useBlockEditor = (content: string | null) => {
 

@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Editor } from '@tiptap/react'
 import { FontSizePicker } from '../../../components';
-import { Toolbar } from '../../../components/tool-bar';
+import { Toolbar } from '../../../components/ToolBar';
 import { useTextmenuCommands, useTextmenuStates } from '../hooks';
 import { Icon } from '@/components/icons';
 import { VariablePicker } from '../../../components/VariablePicker';

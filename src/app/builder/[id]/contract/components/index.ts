@@ -1,3 +1,3 @@
 export * from './FontSizePicker';
-export * from './tool-bar';
+export * from './ToolBar';
 export * from '../extensions/Variables';

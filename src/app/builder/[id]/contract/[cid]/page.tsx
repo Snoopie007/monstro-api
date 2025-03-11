@@ -1,8 +1,9 @@
 'use client';
 import { use } from "react";
-import ContractEditor from './contract-editor'
+import ContractEditor from './ContractEditor'
 import { useContract } from '@/hooks/use-contracts'
 
+import SectionLoader from '@/components/section-loading'
 export default function ContractBuilder(props: { params: Promise<{ cid: string, id: string }> }) {
     const params = use(props.params);
     const { contract, isLoading } = useContract(params.id, parseInt(params.cid))
@@ -12,7 +13,7 @@ export default function ContractBuilder(props: { params: Promise<{ cid: string, 
     }
 
     if (isLoading) {
-        return <div className='h-screen w-full bg-background text-center'>Loading Contract</div>
+        return <SectionLoader />
     }
 
     return (

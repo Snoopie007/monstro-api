@@ -3,7 +3,7 @@ import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
 import { users } from '@/db/schemas';
 import bcrypt from 'bcryptjs';
-import { authenticateMember } from '../../../utils';
+import { authenticateMember } from '../../utils';
 
 export async function PUT(req: NextRequest, props: { params: Promise<{ id: number }> }) {
 

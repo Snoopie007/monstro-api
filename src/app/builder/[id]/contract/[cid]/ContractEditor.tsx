@@ -1,13 +1,14 @@
 'use client'
 import { EditorContent } from '@tiptap/react'
 import { TopMenu, ContentMenu } from '../menus'
-import { useBlockEditor } from '../hooks/use-block-editor'
+import { useBlockEditor } from '../hooks/useBlockEditor'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sidebar } from '../components/Sidebar'
 import { useMemo, useState } from 'react'
 import { DarkModeSwitcher } from '../components/DarkModeSwitcher'
 import { Contract } from '@/types'
 import { Input } from '@/components/forms'
+import { Skeleton } from '@/components/ui'
 
 interface ContractEditorProps {
     contractRef: Contract,
@@ -27,11 +28,10 @@ export default function ContractEditor({ contractRef, locationId }: ContractEdit
             toggle: () => setIsOpen(prev => !prev),
         }
     }, [isOpen])
+
     if (!editor || !contract) {
         return (
-            <div className='h-full w-full flex items-center justify-center'>
-                <p>Loading...</p>
-            </div>
+            <Skeleton className='h-full w-full' />
         )
     }
 

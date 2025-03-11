@@ -1,1 +1,1 @@
-export * from './font-size-picker';
+export * from './FontSizePicker';

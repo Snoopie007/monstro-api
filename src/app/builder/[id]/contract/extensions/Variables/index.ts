@@ -1,2 +1,2 @@
-export * from './variable-options'
-export * from './variable-command'
+export * from './VariableOptions'
+export * from './VariableCommand'
