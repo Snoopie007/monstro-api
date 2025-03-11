@@ -24,6 +24,6 @@
 		"@public/*": ["./public/*"]
 	  }
 	},
-	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "next.config.ts", "src/app/onboarding/components/VendorPayment"],
+	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "next.config.ts"],
 	"exclude": ["node_modules"]
   }
