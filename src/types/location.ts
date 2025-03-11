@@ -1,5 +1,7 @@
+import { LocationStatus } from "./enums";
 import { MemberInvoice, MemberSubscription } from "./member";
 import { Transaction } from "./transaction";
+
 
 export type Location = {
     id: number;
@@ -37,7 +39,7 @@ export type LocationState = {
     startDate: Date | null;
     settings: LocationSettings;
     usagePercent: number;
-    status: 'incomplete' | 'active' | 'inactive' | 'past_due' | 'canceled' | 'archived' | 'paused' | 'trailing';
+    status: LocationStatus;
     created: Date;
     updated: Date | null;
 }

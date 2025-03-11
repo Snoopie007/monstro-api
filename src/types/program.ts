@@ -1,4 +1,4 @@
-import { Reservation } from "./attedance";
+import { Reservation } from "./attendance";
 import { MemberPackage, MemberPlan, MemberSubscription } from "./member";
 
 export type Program = {

@@ -38,20 +38,20 @@ export default auth(async (req) => {
 			}
 		}
 
-		if (pathname.startsWith("/api/protected")) {
+		if (pathname.startsWith("/api/protected/loc")) {
 			if (!isLoggedin && !(isMobileApp && isMobileAuthenticated)) {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 			}
 
-			const [_, encodedId, subpath = ""] = pathname.match(/^\/api\/protected\/([^/]+)(\/.*)?$/) || []
+			const [_, encodedId, subpath = ""] = pathname.match(/^\/api\/protected\/loc\/([^/]+)(\/.*)?$/) || []
 
-			if (!encodedId || !isNaN(Number(encodedId)) || encodedId.startsWith("vendor")) {
+			if (!encodedId || !isNaN(Number(encodedId))) {
 				return NextResponse.next()
 			}
 
 			const decodedId = decodeId(encodedId)
 			return decodedId
-				? NextResponse.rewrite(new URL(`/api/protected/${decodedId}${subpath}`, req.url))
+				? NextResponse.rewrite(new URL(`/api/protected/loc/${decodedId}${subpath}`, req.url))
 				: NextResponse.json({ message: "Invalid location" }, { status: 400 })
 		}
 

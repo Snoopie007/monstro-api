@@ -3,8 +3,8 @@ import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 import { memberInvoices, members } from "./members";
 import { memberPackages, memberSubscriptions } from "./MemberPlans";
+import { TransactionStatusEnum } from "./Enums";
 
-const transactionStatus = pgEnum("transaction_status", ["paid", "failed", "incomplete"]);
 
 export const transactions = pgTable("transactions", {
     id: serial("id").primaryKey(),
@@ -14,7 +14,7 @@ export const transactions = pgTable("transactions", {
     paymentType: text("payment_type").notNull(),
     paymentMethod: text("payment_method").notNull(),
     amount: integer("amount").notNull().default(0),
-    status: transactionStatus("status").notNull().default("incomplete"),
+    status: TransactionStatusEnum("status").notNull().default("incomplete"),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     invoiceId: uuid("invoice_id").unique().references(() => memberInvoices.id, { onDelete: "cascade" }),

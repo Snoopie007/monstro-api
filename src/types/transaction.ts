@@ -1,3 +1,4 @@
+import { TransactionStatus } from "./enums";
 import { Member, MemberInvoice, MemberPackage, MemberSubscription } from "./member";
 
 
@@ -11,7 +12,7 @@ export type Transaction = {
     locationId: number;
     memberId?: number | null;
     member?: Member;
-    status: 'paid' | 'incomplete' | 'failed';
+    status: TransactionStatus;
     item: string;
     subscriptionId?: number | null;
     subscription?: MemberSubscription;

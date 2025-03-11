@@ -4,7 +4,7 @@ export * from './support';
 export * from './contract'
 export * from './other';
 export * from './achievement';
-export * from './attedance';
+export * from './attendance';
 export * from './location';
 export * from './program';
 export * from './member';
@@ -12,6 +12,6 @@ export * from './partner';
 export * from './reward';
 export * from './user';
 export * from './vendor';
-export * from './vendor-referral';
+export * from './VendorReferral';
 export * from './transaction';
 export * from './wallet';

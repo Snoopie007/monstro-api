@@ -1,5 +1,19 @@
-import { fetcher } from "@/libs/api";
+
 import useSWR from "swr";
+
+
+
+
+async function fetcher(data: { url: string, id: string }) {
+    const res = await fetch(`/api/protected/loc/${data.id}/${data.url}`);
+    if (!res.ok) {
+        throw new Error("An error occurred while fetching the data.");
+    }
+
+    return await res.json();
+}
+
+
 
 function useMembers(id: string, query: string = "", page: number = 1, size: number = 15) {
     const { data, error, isLoading } = useSWR({ url: `members?query=${query}&page=${page}&size=${size}`, id: id }, fetcher);
@@ -121,6 +135,7 @@ function useMemberInvoices(id: string, mid: number) {
 
 
 export {
+    fetcher,
     useMembers,
     useMemberAchievements,
     useAttedance,

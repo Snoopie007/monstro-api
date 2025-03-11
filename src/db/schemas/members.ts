@@ -8,23 +8,9 @@ import { programMembers } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { memberPackages, memberPlans } from "./MemberPlans";
 import { memberSubscriptions } from "./MemberPlans";
+import { InvoiceStatusEnum, MemberRelationshipEnum } from "./Enums";
 
 
-export const MemberRelationshipEnum = pgEnum('relationship', [
-    'parent',
-    'spouse',
-    'child',
-    'sibling',
-    'other'
-]);
-
-export const MemberInvoiceStatusEnum = pgEnum('invoice_status', [
-    'draft',
-    'paid',
-    'unpaid',
-    'uncollectible',
-    'void'
-]);
 
 export const members = pgTable("members", {
     id: serial("id").primaryKey(),
@@ -96,7 +82,7 @@ export const memberInvoices = pgTable("member_invoices", {
     dueDate: timestamp("due_date", { withTimezone: true }).notNull().defaultNow(),
     attemptCount: integer("attempt_count").notNull().default(0),
     invoicePdf: text("invoice_pdf"),
-    status: MemberInvoiceStatusEnum("status").notNull().default('draft'),
+    status: InvoiceStatusEnum("status").notNull().default('draft'),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });

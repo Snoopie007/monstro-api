@@ -5,6 +5,7 @@ import { integer, boolean, varchar, serial, text, timestamp, pgTable } from "dri
 import { locations } from "./locations";
 import { memberContracts } from "./members";
 import { memberPlans } from "./MemberPlans";
+import { ContractTypeEnum } from "./Enums";
 
 export const contractTemplates = pgTable("contracts", {
     id: serial("id").primaryKey(),
@@ -15,7 +16,7 @@ export const contractTemplates = pgTable("contracts", {
     isDraft: boolean("is_draft").notNull().default(true),
     editable: boolean("editable").notNull().default(true),
     requireSignature: boolean("require_signature").notNull().default(false),
-    type: varchar("type", { enum: ["contract", "waiver"] }).notNull().default("contract"),
+    type: ContractTypeEnum("type").notNull().default("contract"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })

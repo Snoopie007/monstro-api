@@ -1,10 +1,10 @@
 
 import { Contract } from "./contract";
-import { FamilyMember } from "./family-member";
+import { FamilyMember } from "./FamilyMember";
 import { ProgramLevel } from "./program";
 import { Transaction } from "./transaction";
 import { Location } from "./location";
-import Stripe from "stripe";
+import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod } from "./enums";
 
 export type Member = {
     id?: number;
@@ -35,7 +35,7 @@ export type MemberOnboarding = {
     completedSteps: number[];
     currentStep: number;
 };
-type MemberSubscriptionStatus = 'active' | 'incomplete' | 'canceled' | 'past_due' | 'incomplete' | 'trialing' | 'unpaid'
+
 
 export type MemberSubscription = {
     id?: number;
@@ -52,14 +52,14 @@ export type MemberSubscription = {
     stripeSubscriptionId?: string | null;
     trialEnd?: Date | null;
     endedAt?: Date | null;
-    paymentMethod: "card" | "cash" | "check" | "zelle" | "venmo" | "paypal" | "apple" | "google";
+    paymentMethod: PaymentMethod;
     programLevel?: ProgramLevel;
     plan?: MemberPlan | null;
     payer?: Member | null;
     beneficiary?: Member;
     metadata?: Record<string, any>;
     invoices?: MemberInvoice[];
-    status: MemberSubscriptionStatus;
+    status: LocationStatus;
     created?: Date;
     updated?: Date | null;
 }
@@ -72,8 +72,8 @@ export type MemberPackage = {
     beneficiaryId: number;
     startDate: Date;
     expireDate: Date | null;
-    status: 'active' | 'expired' | 'incomplete' | 'completed';
-    paymentMethod: "card" | "cash" | "check" | "zelle" | "venmo" | "paypal" | "apple" | "google";
+    status: PackageStatus;
+    paymentMethod: PaymentMethod;
     totalClassAttended?: number;
     totalClassLimit: number;
     metadata?: Record<string, any>;
@@ -104,16 +104,16 @@ export type MemberPlan = {
     familyMemberLimit: number;
     contractId?: number | null;
     contract?: Contract | undefined;
-    interval: 'day' | 'week' | 'month' | 'year' | null;
+    interval: Interval;
     intervalThreshold: number | null;
-    type: 'recurring' | 'one-time';
+    type: PlanType;
     currency: string;
     price: number;
     totalClassLimit: number | null;
-    classLimitInterval: 'week' | 'month' | 'year' | null;
+    classLimitInterval: Interval | null;
     classLimitThreshold: number | null;
     stripePriceId: string | null;
-    expireInterval: 'day' | 'week' | 'month' | 'year' | null;
+    expireInterval: Interval | null;
     expireThreshold: number | null;
     allowProration: boolean;
     billingAnchorConfig: BillingCycleAnchorConfig | null;
@@ -145,7 +145,7 @@ export type MemberInvoice = {
     memberPackage?: MemberPackage | null;
     memberSubscriptionId?: number | null;
     memberSubscription?: MemberSubscription | null;
-    status: 'draft' | 'paid' | 'unpaid' | 'uncollectible' | 'void';
+    status: InvoiceStatus;
     created?: Date;
     updated?: Date | null;
 };
@@ -154,7 +154,7 @@ export type MemberLocation = {
     id?: number;
     memberId: number;
     locationId: number;
-    status: 'incomplete' | 'active' | 'inactive' | 'canceled' | 'paused' | 'archived';
+    status: LocationStatus;
     location: Location;
     inviteDate: Date | null;
     stripeCustomerId: string | null;

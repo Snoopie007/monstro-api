@@ -1,4 +1,4 @@
-export type RoleColor = "default" | "secondary" | "destructive" | "outline" | "red" | "green" | "blue" | "pink" | "cyan" | "lime" | "orange" | "fuchsia" | "sky" | "lemon" | "purple" | "yellow" | null | undefined
+import { RoleColor } from "./enums";
 
 export type Permission = {
     name: string;
@@ -15,9 +15,9 @@ export type PermissionGroup = {
 export type Role = {
     id?: number
     name: string
-    color: RoleColor
+    color: RoleColor | null
     staffs?: number
-    permissions: Array<string> | Array<RoleHasPermission>
+    permissions: Permission[] | string[]
 }
 
 export type RoleHasPermission = {

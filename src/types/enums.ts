@@ -1,0 +1,11 @@
+export type LocationStatus = 'incomplete' | 'active' | 'past_due' | 'canceled' | 'archived' | 'paused' | 'trialing' | 'unpaid';
+export type PlanType = 'recurring' | 'one-time';
+export type Interval = 'day' | 'week' | 'month' | 'year';
+export type PackageStatus = 'active' | 'incomplete' | 'expired' | 'completed';
+export type PaymentMethod = 'card' | 'cash' | 'check' | 'zelle' | 'venmo' | 'paypal' | 'apple' | 'google';
+export type InvoiceStatus = 'draft' | 'paid' | 'unpaid' | 'uncollectible' | 'void';
+export type ReservationStatus = 'active' | 'expired' | 'canceled';
+export type MemberRelationship = 'parent' | 'spouse' | 'child' | 'sibling' | 'other';
+export type ContractType = 'contract' | 'waiver';
+export type RoleColor = "default" | "secondary" | "destructive" | "outline" | "red" | "green" | "blue" | "pink" | "cyan" | "lime" | "orange" | "fuchsia" | "sky" | "lemon" | "purple" | "yellow" | null | undefined
+export type TransactionStatus = 'paid' | 'failed' | 'incomplete';

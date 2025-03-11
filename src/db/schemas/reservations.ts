@@ -1,14 +1,11 @@
 
 import { relations } from "drizzle-orm";
-import { integer, serial, timestamp, pgTable, pgEnum } from "drizzle-orm/pg-core";
+import { integer, serial, timestamp, pgTable } from "drizzle-orm/pg-core";
 import { programSessions } from "./programs";
 import { members } from "./members";
 import { attendances } from "./attendances";
-import { locations } from "./locations";
 import { memberPackages, memberSubscriptions } from "./MemberPlans";
-
-
-const reservationStatus = pgEnum("reservation_status", ["active", "expired", "canceled"])
+import { ReservationStatusEnum } from "./Enums";
 
 export const reservations = pgTable("reservations", {
     id: serial("id").primaryKey(),
@@ -16,7 +13,7 @@ export const reservations = pgTable("reservations", {
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
     memberSubscriptionId: integer("member_subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
     memberPackageId: integer("member_package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
-    status: reservationStatus("status").default("active"),
+    status: ReservationStatusEnum("status").default("active"),
     expiredDate: timestamp("expired_on", { withTimezone: true }),
     canceledDate: timestamp("canceled_on", { withTimezone: true }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

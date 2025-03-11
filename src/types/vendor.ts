@@ -1,5 +1,5 @@
 
-import { VendorReferral } from "./vendor-referral";
+import { VendorReferral } from "./VendorReferral";
 
 
 

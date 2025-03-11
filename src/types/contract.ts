@@ -1,3 +1,4 @@
+import { ContractType } from "./enums";
 import { Location } from "./location";
 export type Contract = {
     id: number;
@@ -8,7 +9,7 @@ export type Contract = {
     location: Location;
     isDraft: boolean;
     requireSignature: boolean;
-    type: "contract" | "waiver";
+    type: ContractType;
     content: string | null;
     created: Date;
     updated?: Date | null;

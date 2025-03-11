@@ -2,11 +2,12 @@ import { integer, varchar, serial, text, timestamp, pgTable, primaryKey } from "
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { users } from "./users";
+import { RoleColorEnum } from "./Enums";
 
 export const roles = pgTable("roles", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
-  color: varchar("color"),
+  color: RoleColorEnum("color"),
   guardName: text("guard_name"),
   locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
   created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

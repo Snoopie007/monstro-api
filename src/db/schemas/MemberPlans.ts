@@ -8,19 +8,7 @@ import { locations } from "./locations";
 import { transactions } from "./transactions";
 import { reservations } from "./reservations";
 import { BillingCycleAnchorConfig } from "@/types";
-
-const PlanPaymentType = pgEnum("plan_payment_type", ["recurring", "one-time"]);
-const PlanInterval = pgEnum("plan_interval", ["day", "week", "month", "year"]);
-const PlanClassLimitInterval = pgEnum("plan_class_limit_interval", ["week", "month", "year"]);
-const PackageStatusEnum = pgEnum("package_status", ["active", "incomplete", "expired", "completed"]);
-const MemberSubscriptionStatusEnum = pgEnum('member_subscription_status', [
-    'active',
-    'canceled',
-    'past_due',
-    'incomplete',
-    'trialing',
-    'unpaid',
-]); const paymentMethodEnum = pgEnum("payment_method", ["card", "cash", "check", "zelle", "venmo", "paypal", "apple", "google"]);
+import { LocationStatusEnum, PackageStatusEnum, PaymentMethodEnum, PlanInterval, PlanType } from "./Enums";
 
 
 export const memberPlans = pgTable("member_plans", {
@@ -34,12 +22,12 @@ export const memberPlans = pgTable("member_plans", {
     contractId: integer("contract_id").references(() => contractTemplates.id),
     interval: PlanInterval("interval").default("month"),
     intervalThreshold: integer("interval_threshold").default(1),
-    type: PlanPaymentType("type").notNull().default("recurring"),
+    type: PlanType("type").notNull().default("recurring"),
     currency: text("currency").notNull().default("USD"),
     price: integer("price").notNull().default(0),
     stripePriceId: text("stripe_price_id"),
     totalClassLimit: integer("total_class_limit"),
-    classLimitInterval: PlanClassLimitInterval("class_limit_interval"),
+    classLimitInterval: PlanInterval("class_limit_interval"),
     classLimitThreshold: integer("class_limit_threshold"),
     expireInterval: PlanInterval("expire_interval"),
     expireThreshold: integer("expire_threshold"),
@@ -59,7 +47,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
     stripeSubscriptionId: text("stripe_subscription_id"),
-    status: MemberSubscriptionStatusEnum("status").notNull().default("incomplete"),
+    status: LocationStatusEnum("status").notNull().default("incomplete"),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     currentPeriodStart: timestamp("current_period_start", { withTimezone: true }).notNull(),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }).notNull(),
@@ -67,7 +55,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
     trialEnd: timestamp("trial_end", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
-    paymentMethod: paymentMethodEnum("payment_method").notNull(),
+    paymentMethod: PaymentMethodEnum("payment_method").notNull(),
     metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
@@ -86,7 +74,7 @@ export const memberPackages = pgTable("member_packages", {
     endDate: timestamp("end_date", { withTimezone: true }),
     expireDate: timestamp("expire_date", { withTimezone: true }),
     status: PackageStatusEnum("status").notNull(),
-    paymentMethod: paymentMethodEnum("payment_method").notNull(),
+    paymentMethod: PaymentMethodEnum("payment_method").notNull(),
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     totalClassAttended: integer("total_class_attended").notNull().default(0),
     totalClassLimit: integer("total_class_limit").notNull().default(0),

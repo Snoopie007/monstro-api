@@ -1,7 +1,5 @@
 
 
-function DashboardRoot() {
+export default function DashboardRoot() {
 
 }
-
-export default DashboardRoot
