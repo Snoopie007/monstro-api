@@ -8,7 +8,7 @@ const PaymentMethodEnum = pgEnum("payment_method", ["card", "cash", "check", "ze
 const InvoiceStatusEnum = pgEnum("invoice_status", ["draft", "paid", "unpaid", "uncollectible", "void"]);
 const ReservationStatusEnum = pgEnum("reservation_status", ["active", "expired", "canceled"]);
 const MemberRelationshipEnum = pgEnum('relationship', ['parent', 'spouse', 'child', 'sibling', 'other']);
-const RoleColorEnum = pgEnum('role_color', ['default', 'secondary', 'destructive', 'outline', 'red', 'green', 'blue', 'pink', 'cyan', 'lime', 'orange', 'fuchsia', 'sky', 'lemon', 'purple', 'yellow']);
+const RoleColorEnum = pgEnum('role_color', ["red", "green", "blue", "pink", "cyan", "lime", "orange", "fuchsia", "sky", "lemon", "purple", "yellow"]);
 const ContractTypeEnum = pgEnum('contract_type', ['contract', 'waiver']);
 const TransactionStatusEnum = pgEnum("transaction_status", ["paid", "failed", "incomplete"]);
 

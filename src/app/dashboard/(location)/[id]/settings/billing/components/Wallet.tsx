@@ -23,7 +23,7 @@ export function Wallet({ lid }: { lid: string }) {
         if (!wallet || !rechargeAmount) return;
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${lid}/vendor/wallet/recharge`, {
+            fetch(`/api/protected/loc/${lid}/vendor/wallet/recharge`, {
                 method: 'POST',
                 body: JSON.stringify({ amount: rechargeAmount, id: wallet.id })
             })

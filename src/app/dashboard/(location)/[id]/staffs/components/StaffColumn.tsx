@@ -39,8 +39,8 @@ export const StaffColumns = (locationId: string): ColumnDef<Staff, any>[] => [
         cell: ({ row }) => {
             const staff = row.original
             return (
-                <Badge roles={staff.role.color} className='border-0 py-0.5 capitalize rounded-sm'>
-                    {staff.role.name}
+                <Badge roles={staff.role?.color} className='border-0 py-0.5 capitalize rounded-sm'>
+                    {staff.role?.name}
                 </Badge>
             )
         },

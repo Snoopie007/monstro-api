@@ -71,7 +71,7 @@ export default function CompanyInfoForm({ location }: { location: Location }) {
         setLoading(true);
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${location.id}/company`, {
+            fetch(`/api/protected/loc/${location.id}/company`, {
                 method: 'POST',
                 body: JSON.stringify(values),
             })

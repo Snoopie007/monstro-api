@@ -21,7 +21,7 @@ export default function UserAvatar({ currentAvatar, onChange, locationId }: User
         formData.append("file", file)
         formData.append("fileDirectory", 'user-avatar');
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${locationId}/upload`, {
+            fetch(`/api/protected/loc/${locationId}/upload`, {
                 method: "POST",
                 body: formData
             })

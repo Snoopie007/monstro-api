@@ -37,7 +37,7 @@ export function RetryPayment({ subscription, invoiceId, paymentMethods, lid }: R
         setLoading(true)
         await sleep(1000)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${lid}/vendor/billing/retry`, {
+            fetch(`/api/protected/loc/${lid}/vendor/billing/retry`, {
                 method: "POST",
                 body: JSON.stringify({ invoiceId, paymentMethod })
             })

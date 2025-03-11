@@ -44,7 +44,7 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
     async function onSubmit(v: z.infer<typeof InviteStaffSchema>) {
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${locationId}/staffs`, {
+            fetch(`/api/protected/loc/${locationId}/staffs`, {
                 method: "POST",
                 body: JSON.stringify(v)
             })

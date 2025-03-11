@@ -28,7 +28,7 @@ export function UserProfile({ user, locationId }: { user: Staff, locationId: str
 
     async function handleSubmit(v: any) {
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${locationId}/profile/${user.id}`, {
+            fetch(`/api/protected/loc/${locationId}/profile/${user.id}`, {
                 method: "PUT",
                 body: JSON.stringify(v)
             })

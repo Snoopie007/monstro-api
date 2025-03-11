@@ -7,7 +7,7 @@ export type Staff = {
     email: string;
     image: string;
     phone: string;
-    role: Role;
+    role: Role | null | undefined;
     status: string;
     created: Date;
     updated: Date;

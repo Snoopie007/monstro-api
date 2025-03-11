@@ -7,5 +7,5 @@ export type InvoiceStatus = 'draft' | 'paid' | 'unpaid' | 'uncollectible' | 'voi
 export type ReservationStatus = 'active' | 'expired' | 'canceled';
 export type MemberRelationship = 'parent' | 'spouse' | 'child' | 'sibling' | 'other';
 export type ContractType = 'contract' | 'waiver';
-export type RoleColor = "default" | "secondary" | "destructive" | "outline" | "red" | "green" | "blue" | "pink" | "cyan" | "lime" | "orange" | "fuchsia" | "sky" | "lemon" | "purple" | "yellow" | null | undefined
+export type RoleColor = "red" | "green" | "blue" | "pink" | "cyan" | "lime" | "orange" | "fuchsia" | "sky" | "lemon" | "purple" | "yellow";
 export type TransactionStatus = 'paid' | 'failed' | 'incomplete';

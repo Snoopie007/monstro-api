@@ -6,14 +6,12 @@ import { useState } from 'react';
 import { Permission, Role } from '@/types';
 import RoleListActions from './components/actions';
 import { useRoles } from '@/hooks/use-roles';
-// import { deleteRole } from '@/libs/api';
 import { toast } from 'react-toastify';
 import useSWR from 'swr';
-import SectionLoader from '@/components/section-loading';
 
 export default function RoleList({ permissions, locationId }: { permissions: Array<Permission>, locationId: string }) {
     const [currentRole, setCurrentRole] = useState<Role | null>(null);
-    const { mutate } = useSWR(`/api/protected/${locationId}/roles`);
+    const { mutate } = useSWR(`/api/protected/loc/${locationId}/roles`);
     const { roles, isLoading, error } = useRoles(locationId);
 
     function handleCreateRole() {
@@ -27,12 +25,7 @@ export default function RoleList({ permissions, locationId }: { permissions: Arr
     }
 
     async function removeRole(roleId: number) {
-        // await deleteRole(roleId, locationId).then(() => {
-        //     mutate();
-        //     toast.success("Role Deleted");
-        // }).catch(() => {
-        //     toast.error("Something went wrong.");
-        // })
+
     }
 
 

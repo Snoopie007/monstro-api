@@ -2,7 +2,6 @@
 import { auth } from '@/auth'
 import { db } from '@/db/db'
 import { Vendor } from '@/types'
-import { decodeId } from '@/libs/server/sqids'
 import { Card, CardContent, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
 import { cn } from '@/libs/utils'
 import { VendorBadges, VendorRewards } from './components'
@@ -11,7 +10,7 @@ import { VendorProgressOverview } from './components/overview'
 import ReferralBanner from './components/ReferralBanner'
 
 async function fetchVendor(id: number, lid: string): Promise<Vendor> {
-    const decodedId = decodeId(lid);
+
     try {
         const vendor = await db.query.vendors.findFirst({
             where: (vendors, { eq }) => eq(vendors.userId, id),

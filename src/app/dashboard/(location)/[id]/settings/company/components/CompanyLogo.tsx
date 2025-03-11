@@ -16,7 +16,7 @@ export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: st
         formData.append("fileDirectory", 'business-logo');
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${locationId}/upload`, {
+            fetch(`/api/protected/loc/${locationId}/upload`, {
                 method: "POST",
                 body: formData
             })

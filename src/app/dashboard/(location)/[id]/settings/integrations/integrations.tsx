@@ -1,8 +1,5 @@
-import { Skeleton } from '@/components/ui';
 import { Button } from '@/components/ui/button'
-import { del } from '@/libs/api';
-import { cn } from '@/libs/utils';
-import { int } from 'drizzle-orm/mysql-core';
+import { cn, tryCatch } from '@/libs/utils';
 import { LucideLoader2, Trash2 } from 'lucide-react';
 import Image from 'next/image'
 import React, { useState } from 'react'
@@ -16,12 +13,17 @@ interface IntergrationProps {
 
 export default function IntegrationList({ integrations, locationId }: IntergrationProps) {
     const [loading, setLoading] = useState<boolean>(false);
-    const { mutate } = useSWR(`/api/protected/${locationId}/integrations/`);
+    const { mutate } = useSWR(`/api/protected/loc/${locationId}/integrations/`);
     const disconnect = async (iId: number) => {
         setLoading(true);
         try {
-            const deleted = await del({ url: `integrations/${iId}`, id: locationId });
-            console.log(deleted)
+            const { result, error } = await tryCatch(
+                fetch(`/api/protected/loc/${locationId}/integrations/`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({ id: iId })
+                })
+            )
+            if (error || !result || !result.ok) throw error;
             await mutate();
             setLoading(false);
         } catch (error: any) {
