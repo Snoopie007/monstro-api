@@ -1,9 +1,10 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { Transaction } from "@/types";
+import { format } from "date-fns";
 
 
-export const TransactionColumns = (locationId: string): ColumnDef<Transaction, any>[] => [
+export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
 
     {
         accessorKey: "item",
@@ -19,7 +20,7 @@ export const TransactionColumns = (locationId: string): ColumnDef<Transaction, a
             const transaction = row.original
             return (
                 <div className="flex flex-row items-center gap-2">
-                    {transaction.description?.length > 100
+                    {transaction.description && transaction.description.length > 100
                         ? transaction.description.slice(0, 97) + '...'
                         : transaction.description}
                 </div>
@@ -73,7 +74,7 @@ export const TransactionColumns = (locationId: string): ColumnDef<Transaction, a
 
             const transaction = row.original
             return (
-                <div className="flex flex-row items-center gap-2">{transaction.created.toLocaleDateString()}</div>
+                <div className="flex flex-row items-center gap-2">{transaction.created ? format(transaction.created, "MMM d, yyyy") : ''}</div>
             )
 
         },

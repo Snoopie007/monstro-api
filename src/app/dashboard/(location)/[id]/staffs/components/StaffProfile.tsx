@@ -27,7 +27,7 @@ export function StaffProfile({ staff, onChange }: StaffListProps) {
         <Dialog open={!!staff} onOpenChange={(open) => !open && onChange(null)}>
 
             <DialogContent className={cn("border-foreground/10 py-4 px-3 sm:max-w-[650px]")}>
-            <DialogTitle>Viewing {staff?.firstName} {staff?.lastName}</DialogTitle>
+                <DialogTitle>Viewing {staff?.firstName} {staff?.lastName}</DialogTitle>
                 <div className='space-y-4'>
                     <div className="flex flex-row items-start py-4 gap-5">
                         <div className="flex-initial relative">
@@ -52,10 +52,12 @@ export function StaffProfile({ staff, onChange }: StaffListProps) {
                                 </div>
                             </div>
                             <div className='flex flex-row items-center gap-2 text-sm'>
-                                <Badge className='border-0 inline-flex flex-row items-center gap-1 py-0.5 rounded-sm'>
-                                    <span>  {staff?.role.name}</span>
-                                    <Icon name='ChevronDown' size={14} />
-                                </Badge>
+                                {staff?.role && (
+                                    <Badge roles={staff?.role.color}>
+                                        <span >  {staff?.role.name}</span>
+                                        <Icon name='ChevronDown' size={14} />
+                                    </Badge>
+                                )}
                                 <div className='text-indigo-400 cursor-pointer'>
                                     Reset password
                                 </div>

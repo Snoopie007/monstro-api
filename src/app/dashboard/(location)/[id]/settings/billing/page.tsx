@@ -122,7 +122,7 @@ export default async function BillingPage(props: { params: Promise<{ id: string 
 
     return (
         <div className='space-y-4'>
-            {locationState?.status !== "Active" && (
+            {locationState?.status !== "active" && (
                 <div className=' bg-red-500 text-white rounded-sm py-3 px-4 flex items-center gap-2'>
                     <AlertCircleIcon size={16} className='' />
                     <p className='text-sm'>Your account is not active. Please clear your balance or contact support.</p>

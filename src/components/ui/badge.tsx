@@ -25,10 +25,12 @@ const badgeVariants = cva(
       member: {
         incomplete: "bg-yellow-300 text-yellow-800",
         active: "bg-green-300 text-green-800",
-        inactive: "bg-gray-300 text-gray-800",
         canceled: "bg-red-300 text-red-800",
         paused: "bg-gray-300 text-gray-800",
-        archived: "bg-gray-300 text-gray-800",
+        past_due: "bg-orange-300 text-orange-800",
+        incomplete_expired: "bg-red-300 text-red-800",
+        unpaid: "bg-red-300 text-red-800",
+        trialing: "bg-blue-300 text-blue-800",
       },
       roles: {
         red: "bg-red-300  text-red-800",

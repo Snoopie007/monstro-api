@@ -15,3 +15,4 @@ export * from './vendor';
 export * from './VendorReferral';
 export * from './transaction';
 export * from './wallet';
+export * from './enums';

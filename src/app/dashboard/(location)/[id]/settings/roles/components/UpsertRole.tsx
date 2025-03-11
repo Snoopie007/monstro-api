@@ -49,7 +49,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
             const permissionNames = permissions.filter((permission: Permission) => ids.includes(Number(permission.id))).map((permission) => permission.name);
             form.reset({
                 name: role.name,
-                color: role.color,
+                color: role.color || 'blue',
                 permissions: permissionNames
             });
 

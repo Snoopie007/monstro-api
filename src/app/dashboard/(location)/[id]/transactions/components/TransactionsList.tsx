@@ -10,7 +10,6 @@ import {
 } from "@/components/ui";
 import { Reward } from "@/types";
 
-import ErrorComponent from "@/components/error";
 import { ColumnFiltersState, flexRender, getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
 import { TransactionColumns } from "./TransactionsColumns";
 import { Transaction } from "@/types";
@@ -20,7 +19,7 @@ export function TransactionsList({ params, transactions }: { params: { id: strin
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [currentReward, setCurrentReward] = useState<Reward | undefined>(undefined);
 
-    const columns = useMemo(() => TransactionColumns(params.id), [params.id])
+    const columns = useMemo(() => TransactionColumns(), [params.id])
     const table = useReactTable<Transaction>({
         data: transactions,
         columns,
