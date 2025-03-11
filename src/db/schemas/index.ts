@@ -2,7 +2,7 @@ export * from "./users";
 export * from "./locations";
 export * from "./programs";
 export * from "./members";
-export * from "./intergrations";
+export * from "./integrations";
 export * from "./MemberPlans";
 export * from "./rewards";
 export * from "./ContractTemplates";

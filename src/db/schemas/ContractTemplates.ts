@@ -5,7 +5,7 @@ import { integer, boolean, varchar, serial, text, timestamp, pgTable } from "dri
 import { locations } from "./locations";
 import { memberContracts } from "./members";
 import { memberPlans } from "./MemberPlans";
-import { ContractTypeEnum } from "./Enums";
+import { ContractTypeEnum } from "./enums";
 
 export const contractTemplates = pgTable("contracts", {
     id: serial("id").primaryKey(),

@@ -2,7 +2,7 @@ import { integer, varchar, serial, text, timestamp, pgTable, primaryKey } from "
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { users } from "./users";
-import { RoleColorEnum } from "./Enums";
+import { RoleColorEnum } from "./enums";
 
 export const roles = pgTable("roles", {
   id: serial("id").primaryKey(),

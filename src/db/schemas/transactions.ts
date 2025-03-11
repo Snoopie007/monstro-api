@@ -3,7 +3,7 @@ import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 import { memberInvoices, members } from "./members";
 import { memberPackages, memberSubscriptions } from "./MemberPlans";
-import { TransactionStatusEnum } from "./Enums";
+import { TransactionStatusEnum } from "./enums";
 
 
 export const transactions = pgTable("transactions", {

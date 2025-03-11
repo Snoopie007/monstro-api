@@ -1,6 +1,6 @@
 
-import { desc, relations } from "drizzle-orm";
-import { integer, serial, timestamp, pgTable, real, text } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { integer, serial, timestamp, pgTable, text } from "drizzle-orm/pg-core";
 
 import { reservations } from "./reservations";
 

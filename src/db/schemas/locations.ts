@@ -3,13 +3,13 @@
 import { relations, sql } from "drizzle-orm";
 import { integer, boolean, primaryKey, varchar, serial, text, timestamp, pgTable, jsonb, pgEnum } from "drizzle-orm/pg-core";
 import { memberInvoices, members } from "./members";
-import { integrations } from "./intergrations";
+import { integrations } from "./integrations";
 import { programs } from "./programs";
 import { transactions } from "./transactions";
 import { vendors, wallet } from "./vendors";
 import { memberSubscriptions } from "./MemberPlans";
 import { LocationSettings, IncompletePlan } from "@/types";
-import { LocationStatusEnum } from "./Enums";
+import { LocationStatusEnum } from "./enums";
 
 
 export const locations = pgTable("locations", {
