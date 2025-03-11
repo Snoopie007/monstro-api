@@ -71,11 +71,14 @@ export const AddChildMemberSchema = z.object({
     }),
 })
 export const DAYS = [
-    { label: "M", value: 1 },
-    { label: "T", value: 2 },
-    { label: "W", value: 3 },
-    { label: "T", value: 4 },
-    { label: "F", value: 5 },
-    { label: "S", value: 6 },
-    { label: "S", value: 7 }
+    { label: "MON", value: 1 },
+    { label: "TUE", value: 2 },
+    { label: "WED", value: 3 },
+    { label: "THU", value: 4 },
+    { label: "FRI", value: 5 },
+    { label: "SAT", value: 6 },
+    { label: "SUN", value: 7 },
+    { label: "ALL", value: 8 }
 ]
+
+

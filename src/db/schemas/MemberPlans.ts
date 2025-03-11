@@ -41,7 +41,7 @@ export const memberPlans = pgTable("member_plans", {
     totalClassLimit: integer("total_class_limit"),
     classLimitInterval: PlanClassLimitInterval("class_limit_interval"),
     classLimitThreshold: integer("class_limit_threshold"),
-    expireInterval: text("expire_interval"),
+    expireInterval: PlanInterval("expire_interval"),
     expireThreshold: integer("expire_threshold"),
     billingAnchorConfig: jsonb("billing_anchor_config").$type<BillingCycleAnchorConfig>().default(sql`'{}'::jsonb`),
     allowProration: boolean("allow_proration").notNull().default(false),
