@@ -1,5 +1,5 @@
-import { fetcher } from "@/libs/api";
 import useSWR from "swr";
+import { fetcher } from "./hooks";
 
 
 

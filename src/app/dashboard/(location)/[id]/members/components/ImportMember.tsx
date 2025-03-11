@@ -8,7 +8,7 @@ import { cn, tryCatch } from '@/libs/utils';
 import { Table, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/forms/select';
 import { toast } from 'react-toastify';
-import { usePrograms } from '@/hooks/use-programs';
+import { usePrograms } from '@/hooks/usePrograms';
 import { Program } from '@/types';
 
 

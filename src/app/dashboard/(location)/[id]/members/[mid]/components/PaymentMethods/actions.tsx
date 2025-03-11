@@ -8,7 +8,7 @@ import {
     Button,
     DropdownMenuSeparator
 } from '@/components/ui'
-import { del, put } from '@/libs/api'
+import { tryCatch } from '@/libs/utils';
 import Stripe from 'stripe';
 
 interface PaymentMethodActionsProps {
@@ -20,11 +20,20 @@ interface PaymentMethodActionsProps {
 
 export default function PaymentMethodsActions({ paymentMethod, memberId, locationId, customerId }: PaymentMethodActionsProps) {
     async function detachPaymentMethod(id: string) {
-        await del({ url: `members/${memberId}/payments/methods?paymentMethodId=${id}`, id: locationId });
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/location/${locationId}/members/${memberId}/payments/methods?paymentMethodId=${id}`, {
+                method: 'DELETE'
+            })
+        )
+
     }
 
     async function makeDefualtPaymentMethod(id: string) {
-        await put({ url: `members/${memberId}/payments/methods`, data: { paymentMethodId: id, customerId: customerId }, id: locationId });
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/location/${locationId}/members/${memberId}/payments/methods?paymentMethodId=${id}`, {
+                method: 'PUT'
+            })
+        )
     }
 
 

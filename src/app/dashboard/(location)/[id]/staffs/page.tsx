@@ -2,13 +2,13 @@
 'use client';
 import { use, useMemo, useState } from "react";
 import ErrorComponent from "@/components/error"
-import { useStaffs } from "@/hooks/use-staffs"
+import { useStaffs } from "@/hooks/useStaffs"
 import { StaffProfile } from "./components"
 import {
     Skeleton, TableHead, TableHeader, Table, TablePage, TablePageContent, TablePageFooter,
     TablePageHeader, TablePageHeaderSection, TableBody, TableCell, TableRow, TablePageHeaderTitle
 } from "@/components/ui";
-import { useRoles } from "@/hooks/use-roles";
+import { useRoles } from "@/hooks/useRoles";
 import InviteStaff from "./components/InviteStaff";
 import { Input } from "@/components/forms";
 import { Staff } from "@/types";

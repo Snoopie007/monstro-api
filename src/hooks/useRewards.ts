@@ -1,5 +1,6 @@
-import { fetcher } from "@/libs/api";
+
 import useSWR from "swr";
+import { fetcher } from "./hooks";
 
 function useRewards(id: string) {
 	const { data, error, isLoading } = useSWR({ url: `rewards`, id: id }, fetcher);

@@ -10,7 +10,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui";
-import { useSignedContracts } from '@/hooks/use-contracts';
+import { useSignedContracts } from '@/hooks/useContracts';
 
 import Loading from '@/components/loading';
 import Link from 'next/link';

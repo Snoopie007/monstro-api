@@ -26,7 +26,7 @@ import { useMemberPaymentMethods } from '../../providers/MemberContext';
 import { CountryCode } from '@/types/other';
 import { CountryCodes } from '@/libs/data';
 import PhoneInput from 'react-phone-number-input/input';
-import { usePrograms } from '@/hooks/use-programs';
+import { usePrograms } from '@/hooks/usePrograms';
 import { Program } from '@/types/program';
 
 interface AddChildMemberProps {

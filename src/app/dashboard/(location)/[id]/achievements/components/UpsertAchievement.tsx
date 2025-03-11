@@ -14,7 +14,7 @@ import { cn, tryCatch } from '@/libs/utils';
 import { Input } from "@/components/forms/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Form, FormControl, FormField, FormMessage, FormItem, FormLabel } from '@/components/forms';
 import { toast } from 'react-toastify';
-import { usePrograms } from '@/hooks/use-programs';
+import { usePrograms } from '@/hooks/usePrograms';
 import useSWR from 'swr';
 import { AchievementSchema } from '../schemas';
 import { useActions } from '@/hooks';

@@ -2,7 +2,7 @@
 
 import RoleList from "./RoleList"
 import { use } from "react";
-import { usePermissions } from "@/hooks/use-roles";
+import { usePermissions } from "@/hooks/useRoles";
 import SectionLoader from "@/components/section-loading";
 
 export default function RolesPage(props: { params: Promise<{ id: string }> }) {

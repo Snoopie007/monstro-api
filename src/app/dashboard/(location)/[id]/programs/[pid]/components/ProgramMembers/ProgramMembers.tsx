@@ -15,7 +15,7 @@ import { ProgramMemberColumns } from "./ProgramMemberColumns";
 import { ProgramMemberTable } from "./ProgramMemberTable";
 
 import { Member } from "@/types";
-import { useProgramMembers } from "@/hooks/use-programs";
+import { useProgramMembers } from "@/hooks/usePrograms";
 
 
 export function ProgramMembers({ programId, locationId }: { programId: number, locationId: string }) {

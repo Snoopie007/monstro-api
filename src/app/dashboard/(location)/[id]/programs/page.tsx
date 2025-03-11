@@ -1,7 +1,7 @@
 'use client';
 import { use, useState } from "react";
 
-import { usePrograms } from '@/hooks/use-programs';
+import { usePrograms } from '@/hooks/usePrograms';
 import { AddProgram } from './components';
 import ErrorComponent from '@/components/error';
 import { Program } from "@/types";

@@ -1,7 +1,7 @@
 'use client';
 import { use } from "react";
 import ContractEditor from './ContractEditor'
-import { useContract } from '@/hooks/use-contracts'
+import { useContract } from '@/hooks/useContracts'
 
 import SectionLoader from '@/components/section-loading'
 export default function ContractBuilder(props: { params: Promise<{ cid: string, id: string }> }) {

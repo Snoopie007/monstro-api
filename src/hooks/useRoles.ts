@@ -1,9 +1,8 @@
 
-import { fetcher } from "@/libs/api";
 import useSWR from "swr";
-
+import { fetcher } from "./hooks";
 function useRoles(id: string) {
-    const { data, error, isLoading } = useSWR({url: `roles`, id: id}, fetcher);
+    const { data, error, isLoading } = useSWR({ url: `roles`, id: id }, fetcher);
     return {
         roles: data,
         error,
@@ -12,7 +11,7 @@ function useRoles(id: string) {
 }
 
 function usePermissions(id: string) {
-    const { data, error, isLoading } = useSWR({url: `roles/permissions`, id: id}, fetcher);
+    const { data, error, isLoading } = useSWR({ url: `roles/permissions`, id: id }, fetcher);
     return {
         permissions: data,
         error,

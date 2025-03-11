@@ -1,37 +1,95 @@
-import { NextResponse } from 'next/server';
-
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
+import { ExtendedAttendance } from '@/types/attendance';
 
-export async function GET(req: Request, props: { params: Promise<{ mid: number, id: number }> }) {
+/**
+ * Retrieves attendance records for a specific member at a location,
+ * enriched with program and level information from both subscriptions and packages.
+ */
+export async function GET(req: NextRequest, props: { params: Promise<{ mid: number, id: number }> }) {
+
     const params = await props.params;
-    try {
 
-        const reservations = await db.query.reservations.findMany({
-            where: (reservations, { eq }) => eq(reservations.memberSubscriptionId, params.mid),
-            with: {
-                attendances: true,
-                session: {
-                    with: {
-                        level: {
-                            with: {
-                                program: true
+    try {
+        const [subs, pkgs] = await Promise.all([
+            db.query.memberSubscriptions.findMany({
+                where: (memberSubscriptions, { eq, and }) => and(
+                    eq(memberSubscriptions.beneficiaryId, params.mid),
+                    eq(memberSubscriptions.locationId, params.id)
+                ),
+                with: {
+                    programLevel: {
+                        columns: {
+                            name: true
+                        },
+                        with: {
+                            program: {
+                                columns: {
+                                    name: true
+                                }
                             }
+                        }
+                    },
+                    reservations: {
+                        with: {
+                            attendances: true
                         }
                     }
                 }
-            }
+            }),
+            db.query.memberPackages.findMany({
+                where: (memberPackages, { eq, and }) => and(
+                    eq(memberPackages.beneficiaryId, params.mid),
+                    eq(memberPackages.locationId, params.id)
+                ),
+                with: {
+                    programLevel: {
+                        columns: {
+                            name: true
+                        },
+                        with: {
+                            program: {
+                                columns: {
+                                    name: true
+                                }
+                            }
+                        }
+                    },
+                    reservations: {
+                        with: {
+                            attendances: true
+                        }
+                    }
+                }
+            })
+        ]);
+
+        const attendances: ExtendedAttendance[] = [];
+        const memberPlans = [...(subs || []), ...(pkgs || [])];
+
+        memberPlans.forEach(plan => {
+            if (!plan.reservations?.length) return;
+
+            const programName = plan.programLevel.program.name;
+            const levelName = plan.programLevel.name;
+
+            plan.reservations.forEach(reservation => {
+                if (!reservation.attendances?.length) return;
+
+                reservation.attendances.forEach(attendance => {
+                    attendances.push({
+                        ...attendance,
+                        programName,
+                        levelName
+                    });
+                });
+            });
         });
 
-        const attendances = reservations.flatMap(e =>
-            e.attendances.map(att => ({
-                ...att,
-                program: e.session?.level?.program || null
-            }))
-        );
 
         return NextResponse.json(attendances, { status: 200 });
     } catch (err) {
-        console.log(err)
-        return NextResponse.json({ error: err }, { status: 500 })
+        console.log(err);
+        return NextResponse.json({ error: err }, { status: 500 });
     }
 }

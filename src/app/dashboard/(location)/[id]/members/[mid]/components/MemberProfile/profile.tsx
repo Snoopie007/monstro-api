@@ -11,7 +11,6 @@ import {
 
 import { ChevronLeft, Mail, PhoneCall } from "lucide-react";
 import { useRouter } from 'next/navigation'
-import UpdateMemberProfile from "./UpdateProfile";
 import { useMember } from "../../providers/MemberContext";
 
 interface MemberProfileProps {
@@ -33,7 +32,7 @@ export function MemberProfile({ params }: MemberProfileProps) {
                     </div>
                     <div>
 
-                        <UpdateMemberProfile member={member} />
+
                     </div>
                 </div>
 

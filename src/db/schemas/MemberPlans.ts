@@ -71,7 +71,6 @@ export const memberPackages = pgTable("member_packages", {
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
-    endDate: timestamp("end_date", { withTimezone: true }),
     expireDate: timestamp("expire_date", { withTimezone: true }),
     status: PackageStatusEnum("status").notNull(),
     paymentMethod: PaymentMethodEnum("payment_method").notNull(),

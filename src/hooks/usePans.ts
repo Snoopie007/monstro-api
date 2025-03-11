@@ -1,8 +1,9 @@
-import { fetcher } from "@/libs/api";
+
 import useSWR from "swr";
+import { fetcher } from "./hooks";
 
 function usePlans(id: string, programId: string) {
-	const { data, error, isLoading } = useSWR({url: `plans/programs/${programId}`, id: id}, fetcher);
+	const { data, error, isLoading } = useSWR({ url: `plans/programs/${programId}`, id: id }, fetcher);
 
 	return {
 		plans: data,
@@ -12,7 +13,7 @@ function usePlans(id: string, programId: string) {
 }
 
 function usePlan(id: string, planId: number) {
-	const { data, error, isLoading } = useSWR({url: `plans/single/${planId}`, id: id}, fetcher);
+	const { data, error, isLoading } = useSWR({ url: `plans/single/${planId}`, id: id }, fetcher);
 
 	return {
 		plan: data,

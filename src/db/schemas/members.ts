@@ -91,7 +91,7 @@ export const familyMembers = pgTable("family_members", {
     id: serial("id").primaryKey(),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
     relatedMemberId: integer("related_member_id").references(() => members.id, { onDelete: "cascade" }),
-    relationship: MemberRelationshipEnum("relationship"),
+    relationship: MemberRelationshipEnum("relationship").notNull().default('other'),
     isPayer: boolean("is_payer").notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),

@@ -1,7 +1,7 @@
 'use client';
 import { use, useMemo, useState } from "react";
 import { Button, Skeleton } from "@/components/ui"
-import { useRewards } from '@/hooks/use-rewards'
+import { useRewards } from '@/hooks/useRewards'
 import { RewardColumns, UpsertReward } from "./components";
 
 import {

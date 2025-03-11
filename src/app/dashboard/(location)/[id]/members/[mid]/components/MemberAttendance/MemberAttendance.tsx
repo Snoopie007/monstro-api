@@ -1,14 +1,8 @@
 'use client'
-import {
-    ColumnDef,
-    Table as TansackTable,
-    flexRender,
-    useReactTable,
-    getCoreRowModel,
-    getFilteredRowModel,
-} from "@tanstack/react-table"
+
 
 import {
+    Button,
     Skeleton,
     Table,
     TableBody,
@@ -18,81 +12,62 @@ import {
     TableRow,
 } from "@/components/ui"
 
-import { Attendance } from '@/types';
+import { ExtendedAttendance } from '@/types';
 import { Card } from '@/components/ui/card';
 import { useAttedance } from "@/hooks";
-
-
-function FormatCheckInDateTime(date: Date) {
-    return new Date(date).toLocaleString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-        month: "short",
-        day: "numeric",
-        year: "numeric"
-    })
-}
-const columns: ColumnDef<Attendance>[] = [
-    {
-        accessorKey: "program",
-        header: "Program",
-        cell: ({ row }) => {
-            const attendance = row.original
-            return (
-                <span>{attendance.program ? attendance.program.name : "No Program"}</span>
-            )
-        },
-
-    },
-    {
-        accessorKey: "checkInTime",
-        header: "Checked In",
-        cell: ({ row }) => {
-            const attendance = row.original
-            return (
-                <span>{attendance.checkInTime ? FormatCheckInDateTime(attendance.checkInTime) : "Not Checked In"}</span>
-            )
-        },
-
-    },
-    {
-        accessorKey: "timeToCheckIn",
-        header: "Start Time",
-        cell: ({ row }) => {
-            const attendance = row.original
-            return (
-                <span>{attendance.timeToCheckIn ? FormatCheckInDateTime(attendance.timeToCheckIn) : "No Start Time"}</span>
-            )
-        },
-    },
-    {
-        accessorKey: "checkOutTime",
-        header: "Check Out",
-        cell: ({ row }) => {
-            const attendance = row.original
-            return (
-                <span>{attendance.checkOutTime ? FormatCheckInDateTime(attendance.checkOutTime) : "Not Checked Out"}</span>
-            )
-        }
-    },
-];
+import { getCoreRowModel, getFilteredRowModel, flexRender, ColumnFiltersState, SortingState } from "@tanstack/react-table";
+import { useReactTable } from "@tanstack/react-table";
+import { MemberAttendanceColumns } from "./MemberAttendanceColumns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
+import { useEffect, useState } from "react";
 
 
 export function MemberAttedance({ params }: { params: { id: string, mid: number } }) {
 
     const { attendances, error, isLoading } = useAttedance(params.id, params.mid);
 
+    const [sorting, setSorting] = useState<SortingState>([])
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
+        []
+    )
+
+    const programs = attendances?.map((attendance: ExtendedAttendance) => attendance.programName)
     const table = useReactTable({
         data: attendances || [],
-        columns,
+        columns: MemberAttendanceColumns,
         getCoreRowModel: getCoreRowModel(),
+        onSortingChange: setSorting,
+        onColumnFiltersChange: setColumnFilters,
         getFilteredRowModel: getFilteredRowModel(),
+        state: {
+            sorting,
+            columnFilters,
+        },
     })
 
+
+
     return (
-        <div className="py-4">
-            <Card className='rounded-sm'>
+        <div className="py-4 space-y-2">
+            <div className="flex flex-row justify-between items-center">
+                <div className="flex flex-row gap-2 items-center">
+                    <Select onValueChange={(value) => {
+                        table.getColumn("programName")?.setFilterValue(value)
+                    }}>
+                        <SelectTrigger >
+                            <SelectValue placeholder="Filter by program" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {programs && programs.map((program: string) => (
+                                <SelectItem key={program} value={program}>
+                                    {program}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            <Card>
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -128,8 +103,6 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
                                         <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} >
                                             {row.getVisibleCells().map((cell) => (
                                                 <TableCell key={cell.id} className="py-2" >
-
-
                                                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
 
                                                 </TableCell>
@@ -138,7 +111,7 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={columns.length} className="h-6 w-full text-center">
+                                        <TableCell colSpan={MemberAttendanceColumns.length} className="h-6 w-full text-center">
                                             No results.
                                         </TableCell>
                                     </TableRow>
@@ -150,6 +123,8 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
                     </TableBody>
                 </Table>
             </Card>
+
         </div>
     )
 }
+

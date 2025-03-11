@@ -1,5 +1,5 @@
 'use client'
-import { useProgram } from '@/hooks/use-programs';
+import { useProgram } from '@/hooks/usePrograms';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import React, { use } from 'react';
 

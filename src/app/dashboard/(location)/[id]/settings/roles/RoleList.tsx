@@ -5,7 +5,7 @@ import { UpsertRole } from './components'
 import { useState } from 'react';
 import { Permission, Role } from '@/types';
 import RoleListActions from './components/actions';
-import { useRoles } from '@/hooks/use-roles';
+import { useRoles } from '@/hooks/useRoles';
 import { toast } from 'react-toastify';
 import useSWR from 'swr';
 

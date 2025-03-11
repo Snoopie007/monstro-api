@@ -104,7 +104,7 @@ export type MemberPlan = {
     familyMemberLimit: number;
     contractId?: number | null;
     contract?: Contract | undefined;
-    interval: Interval;
+    interval: Interval | null;
     intervalThreshold: number | null;
     type: PlanType;
     currency: string;

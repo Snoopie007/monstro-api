@@ -1,6 +1,6 @@
 import { pgEnum } from "drizzle-orm/pg-core"
 
-const LocationStatusEnum = pgEnum("location_status", ["incomplete", "active", "past_due", "canceled", "paused", "trialing", "unpaid"])
+const LocationStatusEnum = pgEnum("location_status", ["incomplete", "active", "past_due", "canceled", "paused", "trialing", "unpaid", "incomplete_expired"])
 const PlanType = pgEnum("plan_type", ["recurring", "one-time"]);
 const PlanInterval = pgEnum("plan_interval", ["day", "week", "month", "year"]);
 const PackageStatusEnum = pgEnum("package_status", ["active", "incomplete", "expired", "completed"]);
