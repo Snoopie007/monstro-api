@@ -40,7 +40,7 @@ export type MemberSubscription = {
     id?: number;
     payerId: number | null;
     beneficiaryId: number;
-    memberPlanId: number | null;
+    memberPlanId: number;
     startDate: Date;
     currentPeriodStart: Date;
     currentPeriodEnd: Date;
@@ -53,7 +53,7 @@ export type MemberSubscription = {
     endedAt?: Date | null;
     paymentMethod: PaymentMethod;
     programLevel?: ProgramLevel;
-    plan?: MemberPlan | null;
+    plan?: MemberPlan;
     payer?: Member | null;
     beneficiary?: Member;
     metadata?: Record<string, unknown>;

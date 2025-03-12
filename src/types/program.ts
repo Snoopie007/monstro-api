@@ -26,7 +26,7 @@ export type ProgramLevel = {
     maxAge: number;
     programId?: number;
     program?: Program;
-    parentId?: number;
+    parentId: number | null;
     sessions: ProgramSession[];
     memberSubscriptions: MemberSubscription[];
     memberPackages: MemberPackage[];
