@@ -36,6 +36,15 @@ export type MemberOnboarding = {
     currentStep: number;
 };
 
+export type PackageSubscriptionMetadata = Record<string, unknown> & {
+    card: {
+        brand: string;
+        last4: string;
+        exp_month: number;
+        exp_year: number;
+    }
+}
+
 
 export type MemberSubscription = {
     id?: number;
@@ -57,7 +66,7 @@ export type MemberSubscription = {
     plan?: MemberPlan;
     payer?: Member | null;
     beneficiary?: Member;
-    metadata?: Record<string, unknown>;
+    metadata?: PackageSubscriptionMetadata;
     invoices?: MemberInvoice[];
     status: LocationStatus;
     created?: Date;
@@ -78,7 +87,7 @@ export type MemberPackage = {
     paymentMethod: PaymentMethod;
     totalClassAttended?: number;
     totalClassLimit: number;
-    metadata?: Record<string, unknown>;
+    metadata?: PackageSubscriptionMetadata;
     programLevelId: number;
     programLevel?: ProgramLevel;
     plan?: MemberPlan;

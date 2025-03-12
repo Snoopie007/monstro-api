@@ -7,7 +7,7 @@ import { memberInvoices, members } from "./members";
 import { locations } from "./locations";
 import { transactions } from "./transactions";
 import { reservations } from "./reservations";
-import { BillingCycleAnchorConfig } from "@/types";
+import { BillingCycleAnchorConfig, PackageSubscriptionMetadata } from "@/types";
 import { LocationStatusEnum, PackageStatusEnum, PaymentMethodEnum, PlanInterval, PlanType } from "./enums";
 
 
@@ -56,7 +56,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     trialEnd: timestamp("trial_end", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     paymentMethod: PaymentMethodEnum("payment_method").notNull(),
-    metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
+    metadata: jsonb("metadata").$type<PackageSubscriptionMetadata>().notNull().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });
@@ -74,7 +74,7 @@ export const memberPackages = pgTable("member_packages", {
     expireDate: timestamp("expire_date", { withTimezone: true }),
     status: PackageStatusEnum("status").notNull(),
     paymentMethod: PaymentMethodEnum("payment_method").notNull(),
-    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+    metadata: jsonb("metadata").$type<PackageSubscriptionMetadata>().notNull().default(sql`'{}'::jsonb`),
     totalClassAttended: integer("total_class_attended").notNull().default(0),
     totalClassLimit: integer("total_class_limit").notNull().default(0),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
