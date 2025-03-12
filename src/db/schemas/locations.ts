@@ -58,11 +58,9 @@ export const memberLocations = pgTable("member_locations", {
     incompletePlan: jsonb("incomplete_plan").$type<IncompletePlan>(),
     inviteDate: timestamp('invite_date', { withTimezone: true }),
     inviteAcceptedDate: timestamp('invite_accepted_date', { withTimezone: true }),
-    created: timestamp('created_at', { withTimezone: true }),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 }, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);
-
-
 
 
 export const locationsRelations = relations(locations, ({ many, one }) => ({
