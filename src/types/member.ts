@@ -8,6 +8,7 @@ import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, Payme
 export type Member = {
     id?: number;
     firstName: string;
+    userId?: number;
     lastName: string | null;
     email: string;
     referralCode: string;
