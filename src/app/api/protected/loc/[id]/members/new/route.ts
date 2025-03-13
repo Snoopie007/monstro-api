@@ -14,8 +14,8 @@ const INCOMPLETE_PLAN = {
     programLevelId: undefined,
     memberContractId: undefined,
     memberPlanId: undefined,
-    currentStep: 2,
-    completedSteps: [1]
+    currentStep: 1,
+    completedSteps: []
 }
 
 export async function POST(req: Request, props: { params: Promise<PackageProps> }) {
@@ -55,15 +55,12 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
             }
         })
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword: string = await bcrypt.hash(data.password, salt);
 
         if (!user) {
             /** Create User if there isn't one */
             const res = await db.insert(users).values({
                 name: `${data.firstName} ${data.lastName}`,
                 email: data.email,
-                password: hashedPassword,
             }).returning()
 
             user = res[0]
@@ -88,7 +85,6 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
             })
             return member
         })
-
 
         return NextResponse.json({ existing: false, member }, { status: 200 })
     } catch (err) {

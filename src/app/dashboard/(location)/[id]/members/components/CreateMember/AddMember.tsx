@@ -32,7 +32,7 @@ export type CreateMemberProgress = {
     stripePaymentMethod: Stripe.PaymentMethod | undefined
 }
 
-const DEFAULT_PROGRESS: CreateMemberProgress = {
+export const DEFAULT_PROGRESS: CreateMemberProgress = {
     member: undefined,
     paymentMethod: undefined,
     programId: undefined,
@@ -56,7 +56,7 @@ export function AddMember({ lid, stripeKey }: CreateMemberProps) {
 
             <DialogContent className="max-w-lg" aria-modal>
                 <DialogHeader className="space-y-0">
-                    <DialogTitle className='text-sm font-medium flex flex-row items-center gap-1'>
+                    <DialogTitle className='text-sm flex flex-row items-center gap-1'>
                         {steps.map((title, index) => (
                             <React.Fragment key={index}>
                                 <span className={progress.step === index + 1 ? 'text-indigo-500' :
@@ -94,7 +94,7 @@ export function AddMember({ lid, stripeKey }: CreateMemberProps) {
                             exit={{ x: -20, opacity: 0 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <NewMemberPayment lid={lid} stripeKey={stripeKey} progress={progress} setProgress={setProgress} />
+                            <NewMemberPayment lid={lid} setOpen={setOpen} stripeKey={stripeKey} progress={progress} setProgress={setProgress} />
                         </motion.div>
                     )}
 

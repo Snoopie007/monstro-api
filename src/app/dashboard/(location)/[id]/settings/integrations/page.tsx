@@ -5,7 +5,7 @@ import Link from 'next/link'
 import IntegrationList from './integrations'
 import { useIntegrations } from '@/hooks'
 import { Button, Skeleton } from '@/components/ui'
-import SectionLoader from '@/components/section-loading'
+import SectionLoader from '@/components/SectionLoading'
 import { useRouter } from "next/navigation";
 
 export default function IntegrationPage(props: { params: Promise<{ id: string }> }) {

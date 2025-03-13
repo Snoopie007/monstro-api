@@ -6,7 +6,7 @@ import {
 
 import { Elements } from "@stripe/react-stripe-js";
 import { Stripe } from 'stripe';
-import { CreateMemberProgress } from './AddMember';
+import { CreateMemberProgress, DEFAULT_PROGRESS } from './AddMember';
 import { Dispatch, useEffect, useState } from 'react';
 import { SetStateAction } from 'react';
 
@@ -15,13 +15,15 @@ import { getStripe } from '@/libs/client/stripe';
 import NewMemberPaymentForm from './NewMemberPaymentForm';
 
 import { toast } from 'react-toastify';
+import { Loader2 } from 'lucide-react';
 
 
 interface NewMemberPaymentProps {
     lid: string,
     stripeKey: string | null,
     progress: CreateMemberProgress,
-    setProgress: Dispatch<SetStateAction<CreateMemberProgress>>
+    setProgress: Dispatch<SetStateAction<CreateMemberProgress>>,
+    setOpen: Dispatch<SetStateAction<boolean>>
 }
 
 const paymentMethods = [
@@ -43,7 +45,7 @@ const paymentMethods = [
     }
 ]
 
-export default function NewMemberPayment({ lid, stripeKey, progress, setProgress }: NewMemberPaymentProps) {
+export default function NewMemberPayment({ lid, setOpen, stripeKey, progress, setProgress }: NewMemberPaymentProps) {
     const [selectedMethod, setSelectedMethod] = useState<string>();
     const [stripePayment, setStripePayment] = useState<Stripe.PaymentMethod | undefined>(undefined);
     const [loading, setLoading] = useState(false);
@@ -57,6 +59,7 @@ export default function NewMemberPayment({ lid, stripeKey, progress, setProgress
         }
 
         if (selectedMethod === "invite") {
+
             const { result, error } = await tryCatch(
                 fetch(`/api/protected/loc/${lid}/members/${progress.member?.id}/invite`, { method: "POST" })
             )
@@ -65,7 +68,9 @@ export default function NewMemberPayment({ lid, stripeKey, progress, setProgress
                 toast.error("Something went wrong, please try again.");
                 return;
             }
-
+            setProgress(DEFAULT_PROGRESS);
+            setOpen(false);
+            return;
         }
         setLoading(false);
         setProgress({
@@ -162,7 +167,9 @@ export default function NewMemberPayment({ lid, stripeKey, progress, setProgress
                     size={"sm"}
                     onClick={handleContinue}
                     disabled={!selectedMethod || (selectedMethod === "card" && !stripePayment)}
+                    className={cn("children:hidden", loading && "children:block")}
                 >
+                    <Loader2 className='size-4 animate-spin mr-2' />
                     Continue
                 </Button>
             </DialogFooter>

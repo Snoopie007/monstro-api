@@ -37,4 +37,4 @@ export const NewMemberPaymentSchema = z.object({
     address_zip: z.string().optional(),
 })
 
-export const CreateMemberSchema = z.object({}).merge(MemberGeneralInfoSchema).merge(PasswordSchema)
+export const CreateMemberSchema = z.object({}).merge(MemberGeneralInfoSchema)
