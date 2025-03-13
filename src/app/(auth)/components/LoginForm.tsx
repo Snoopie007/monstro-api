@@ -1,5 +1,6 @@
 "use client";
-import { signIn, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
+
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,6 +22,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoginSchema } from "@/libs/schemas";
 import { Loader2 } from "lucide-react";
+import { CustomAuthError } from "@/auth.config";
 
 
 export default function LoginForm() {
@@ -41,7 +43,7 @@ export default function LoginForm() {
 
 			const res = await signIn("credentials", { ...v, redirect: false });
 			if (res?.error) {
-				toast.error('Invalid email or password.');
+				toast.error(res.code)
 				return;
 			}
 

@@ -4,7 +4,7 @@ import { ProgramLevel } from "./program";
 import { Transaction } from "./transaction";
 import { Location } from "./location";
 import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod } from "./enums";
-
+import { Program } from "./program";
 export type Member = {
     id?: number;
     firstName: string;
@@ -120,6 +120,7 @@ export type MemberPlan = {
     type: PlanType;
     currency: string;
     price: number;
+    program?: Program;
     totalClassLimit: number | null;
     classLimitInterval: Interval | null;
     classLimitThreshold: number | null;

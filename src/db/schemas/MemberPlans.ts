@@ -3,7 +3,7 @@ import { programLevels, programs } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { relations, sql } from "drizzle-orm";
 
-import { memberInvoices, members } from "./members";
+import { memberInvoices, members, memberContracts } from "./members";
 import { locations } from "./locations";
 import { transactions } from "./transactions";
 import { reservations } from "./reservations";
@@ -46,6 +46,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
+    memberContractId: integer("member_contract_id").references(() => memberContracts.id),
     stripeSubscriptionId: text("stripe_subscription_id"),
     status: LocationStatusEnum("status").notNull().default("incomplete"),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
@@ -72,6 +73,7 @@ export const memberPackages = pgTable("member_packages", {
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     expireDate: timestamp("expire_date", { withTimezone: true }),
+    memberContractId: integer("member_contract_id").references(() => memberContracts.id),
     status: PackageStatusEnum("status").notNull(),
     paymentMethod: PaymentMethodEnum("payment_method").notNull(),
     metadata: jsonb("metadata").$type<PackageSubscriptionMetadata>().notNull().default(sql`'{}'::jsonb`),
@@ -118,6 +120,10 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
         fields: [memberSubscriptions.locationId],
         references: [locations.id],
     }),
+    contract: one(memberContracts, {
+        fields: [memberSubscriptions.memberContractId],
+        references: [memberContracts.id],
+    }),
     transactions: many(transactions),
     invoices: many(memberInvoices),
     reservations: many(reservations),
@@ -145,6 +151,10 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
         fields: [memberPackages.beneficiaryId],
         references: [members.id],
         relationName: "packageBeneficiary",
+    }),
+    contract: one(memberContracts, {
+        fields: [memberPackages.memberContractId],
+        references: [memberContracts.id],
     }),
     transactions: many(transactions),
     invoices: many(memberInvoices),
