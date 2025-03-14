@@ -4,38 +4,33 @@ import { MonstroData } from '@/libs/data';
 import { NextResponse } from 'next/server';
 import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { db } from '@/db/db';
-import { locations, memberLocations, members } from '@/db/schemas';
-import { eq, and } from 'drizzle-orm';
-import { encodeId } from '@/libs/server/sqids';
+import { memberLocations } from '@/db/schemas';
+import { eq, and, sql } from 'drizzle-orm';
 
-export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
 
-    const { id, mid } = await props.params;
+
+export async function POST(req: Request) {
+    const data = await req.json();
 
     try {
 
-        const [memberLocation] = await db.select({
-            location: locations,
-            member: members
-        }).from(memberLocations)
-            .where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, id)))
-            .innerJoin(members, eq(memberLocations.memberId, members.id))
-            .innerJoin(locations, eq(memberLocations.locationId, locations.id));
-
-
-        const emailSender = new EmailSender();
-        await emailSender.send(memberLocation.member.email, `From ${memberLocation.location.name}`, InviteEmailTemplate, {
-            ui: {
-                button: "Accept Invite",
-                buttonUrl: `https://member.mymonstroapp.com/invite/${encodeId(id)}?email=${memberLocation.member.email}`
-            },
-            location: memberLocation.location,
-            monstro: MonstroData,
-            member: memberLocation.member
-        });
         await db.update(memberLocations).set({
             inviteDate: new Date(),
-        }).where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, id))).returning();
+        }).where(and(eq(memberLocations.memberId, data.mid), eq(memberLocations.locationId, data.id)));
+
+        const emailSender = new EmailSender();
+        await emailSender.send('stevey@simplygrowonline.com', 'Welcome to Monstro', InviteEmailTemplate, {
+            ui: {
+                button: "Join the class."
+            },
+            location: {
+                name: 'Gracie\'s Gym',
+            },
+            monstro: MonstroData,
+            member: {
+                name: 'John Doe',
+            }
+        });
 
         return NextResponse.json({ success: true }, { status: 200 })
     } catch (err) {

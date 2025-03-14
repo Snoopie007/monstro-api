@@ -1,40 +1,49 @@
-import { integer, varchar, serial, text, timestamp, pgTable, primaryKey } from "drizzle-orm/pg-core";
+import { bigserial, varchar, bigint, text, timestamp, pgTable, primaryKey, unique, integer } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { users } from "./users";
-import { RoleColorEnum } from "./enums";
+import { RoleColorEnum } from "./Enums";
 
 export const roles = pgTable("roles", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
-  color: RoleColorEnum("color"),
-  guardName: text("guard_name"),
+  id: integer("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  guardName: varchar("guard_name", { length: 255 }).notNull(),
   locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
-  created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updated: timestamp('updated_at', { withTimezone: true }),
+  color: RoleColorEnum("color"),
+  created: timestamp('created_at', { withTimezone: false }).defaultNow(),
+  updated: timestamp('updated_at', { withTimezone: false }),
+}, (table) => {
+  return {
+    uniqueRole: unique().on(table.name, table.guardName),
+  };
 });
 
 export const permissions = pgTable("permissions", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
-  guardName: text("guard_name"),
-  description: text("description"),
-  created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updated: timestamp('updated_at', { withTimezone: true }),
+  id: integer("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  guardName: varchar("guard_name", { length: 255 }).notNull(),
+  description: varchar("description", { length: 255 }),
+  created: timestamp('created_at', { withTimezone: false }).defaultNow(),
+  updated: timestamp('updated_at', { withTimezone: false }).defaultNow(),
+}, (table) => {
+  return {
+    uniquePermission: unique().on(table.name, table.guardName),
+  };
 });
 
 export const roleHasPermissions = pgTable("role_has_permissions", {
   roleId: integer("role_id").references(() => roles.id, { onDelete: "cascade" }),
   permissionId: integer("permission_id").references(() => permissions.id, { onDelete: "cascade" }),
-}, (t) => [primaryKey({ columns: [t.roleId, t.permissionId] })])
-
+}, (t) => [primaryKey({ columns: [t.roleId, t.permissionId] })]);
 
 export const modelHasRoles = pgTable("model_has_roles", {
   roleId: integer("role_id").references(() => roles.id, { onDelete: "cascade" }),
   modelId: integer("model_id").references(() => users.id, { onDelete: "cascade" }),
-  modelType: varchar("model_type").notNull(),
-}, (t) => [primaryKey({ columns: [t.roleId, t.modelId, t.modelType] })])
-
+  modelType: varchar("model_type", { length: 255 }).notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.roleId, t.modelId, t.modelType] }),
+  unique().on(t.modelId, t.modelType),
+]);
 
 export const rolesRelations = relations(roles, ({ many }) => ({
   permissions: many(roleHasPermissions),
@@ -66,4 +75,3 @@ export const modelHasRolesRelations = relations(modelHasRoles, ({ one }) => ({
     references: [users.id],
   }),
 }));
-

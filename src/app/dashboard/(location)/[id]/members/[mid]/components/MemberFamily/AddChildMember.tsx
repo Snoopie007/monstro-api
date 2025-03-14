@@ -1,5 +1,5 @@
 import { Member, MemberPlan } from '@/types/member';
-import { SetStateAction, Dispatch, useState } from 'react'
+import { SetStateAction, Dispatch, useState, useEffect } from 'react';
 import {
     Button,
     Dialog,
@@ -38,7 +38,8 @@ interface AddChildMemberProps {
 
 export default function AddChildMember({ open, setOpen, parent, locationId }: AddChildMemberProps) {
     const [loading, setLoading] = useState(false);
-    const { paymentMethods } = useMemberPaymentMethods()
+    const [error, setError] = useState<string | null>(null);
+    const { paymentMethods } = useMemberPaymentMethods();
     const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
     const { data: programs, isLoading: programIsLoading } = usePrograms(locationId);
     const [plan, setPlan] = useState<string>("existing");
@@ -52,20 +53,65 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
             phone: "",
             family: {
                 relationship: "",
+                existingPlanId: "",
+                programId: "",
+                planId: "",
             },
         },
         mode: "onChange",
-    })
+    });
+
+    useEffect(() => {
+        if (plan === "existing") {
+            form.setValue("family.planId", "");
+        } else {
+            form.setValue("family.existingPlanId", "");
+        }
+    }, [plan]);
 
     async function onSubmit(v: z.infer<typeof AddChildMemberSchema>) {
-        console.log(v);
+        setLoading(true);
+        setError(null);
+
+        try {
+            const payload = {
+                firstName: v.firstName,
+                lastName: v.lastName,
+                email: v.email,
+                locationId: locationId,
+                familyMemberId: parent.id,
+                relation: v.family.relationship,
+                planId: plan === "existing" ? v.family.existingPlanId : v.family.planId,
+                programId: v.family.programId,
+            };
+
+            const response = await fetch('http://localhost:3000/api/familyMembers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to add child member');
+            }
+
+            const data = await response.json();
+            console.log('Child member added successfully:', data);
+
+            setOpen(false); // Close the dialog
+        } catch (error) {
+            console.error('Error adding child member:', error);
+            setError(error instanceof Error ? error.message : 'An unexpected error occurred');
+        } finally {
+            setLoading(false);
+        }
     }
-
-
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-
             <DialogContent className="sm:max-w-[450px] rounded-sm">
                 <DialogHeader className="space-y-0">
                     <DialogTitle className="text-base">Add a Child Member</DialogTitle>
@@ -97,11 +143,12 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                                             <FormControl>
                                                 <Input {...field} />
                                             </FormControl>
+                                            <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </fieldset>
-                            <fieldset >
+                            <fieldset>
                                 <FormField
                                     control={form.control}
                                     name="email"
@@ -111,24 +158,19 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                                             <FormControl>
                                                 <Input {...field} />
                                             </FormControl>
+                                            <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-
                             </fieldset>
-                            <fieldset >
-                                <div className="flex-1  justify-center space-y-2">
-
-                                    <FormLabel className="font-semibold  ">
-                                        Phone
-                                    </FormLabel>
-                                    <div className="flex  flex-row gap-1">
-                                        <Select onValueChange={(value: string) => { setPhoneRegion(value as CountryCode) }} defaultValue={phoneRegion}>
-
-                                            <SelectTrigger className="rounded-sm w-[22%] h-auto" >
+                            <fieldset>
+                                <div className="flex-1 justify-center space-y-2">
+                                    <FormLabel className="font-semibold">Phone</FormLabel>
+                                    <div className="flex flex-row gap-1">
+                                        <Select onValueChange={(value: string) => setPhoneRegion(value as CountryCode)} defaultValue={phoneRegion}>
+                                            <SelectTrigger className="rounded-sm w-[22%] h-auto">
                                                 <SelectValue defaultValue={"US"} />
                                             </SelectTrigger>
-
                                             <SelectContent>
                                                 {CountryCodes.map((country, index) => (
                                                     <SelectItem key={index} value={country.code}>
@@ -142,9 +184,7 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                                             name="phone"
                                             render={({ field: { onChange, value } }) => (
                                                 <FormItem className="flex-1">
-
-                                                    <FormControl >
-
+                                                    <FormControl>
                                                         <PhoneInput
                                                             type="tel"
                                                             className="rounded-sm bg-background inline-block w-full border py-1.5 px-4"
@@ -153,29 +193,24 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                                                             international={true}
                                                             country={phoneRegion}
                                                             onChange={onChange}
-
                                                         />
                                                     </FormControl>
-
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
                                     </div>
-
                                 </div>
                             </fieldset>
                             <fieldset>
                                 <div className='mb-4'>
-                                    <FormLabel className='text-sm font-bold'>
-                                        Select a plan
-                                    </FormLabel>
+                                    <FormLabel className='text-sm font-bold'>Select a plan</FormLabel>
                                     <FormDescription>
                                         You can add the child to a family plan or add it to a different plan.
                                     </FormDescription>
                                 </div>
                                 <RadioGroup
-                                    onValueChange={(value) => { setPlan(value) }}
+                                    onValueChange={(value) => setPlan(value)}
                                     value={plan}
                                     className="flex flex-col space-y-1"
                                 >
@@ -187,8 +222,6 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                                         <RadioGroupItem value="new" id="new" />
                                         <Label htmlFor="new">Add to a different plan.</Label>
                                     </div>
-
-
                                 </RadioGroup>
                             </fieldset>
                             {plan === "existing" && (
@@ -198,8 +231,7 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                                         name="family.existingPlanId"
                                         render={({ field }) => (
                                             <FormItem>
-
-                                                <Select onValueChange={(value) => field.onChange(Number(value))}>
+                                                <Select onValueChange={(value) => field.onChange(value)}>
                                                     <FormControl>
                                                         <SelectTrigger className="rounded-xs">
                                                             <SelectValue placeholder="Select a family plan" />
@@ -211,7 +243,6 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
-
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -219,15 +250,14 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                                 </fieldset>
                             )}
                             {plan === "new" && (
-                                <div className=' bg-foreground/5 p-3 rounded-xs space-y-3'>
+                                <div className='bg-foreground/5 p-3 rounded-xs space-y-3'>
                                     <fieldset className='grid grid-cols-2 gap-4'>
                                         <FormField
                                             control={form.control}
                                             name="family.programId"
                                             render={({ field }) => (
                                                 <FormItem>
-
-                                                    <Select onValueChange={(value) => field.onChange(Number(value))}>
+                                                    <Select onValueChange={(value) => field.onChange(value)}>
                                                         <FormControl>
                                                             <SelectTrigger className="rounded-xs">
                                                                 <SelectValue placeholder="Select a program" />
@@ -239,19 +269,16 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
-
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
-
                                         <FormField
                                             control={form.control}
                                             name="family.planId"
                                             render={({ field }) => (
                                                 <FormItem>
-
-                                                    <Select onValueChange={(value) => field.onChange(Number(value))}>
+                                                    <Select onValueChange={(value) => field.onChange(value)}>
                                                         <FormControl>
                                                             <SelectTrigger className="rounded-xs">
                                                                 <SelectValue placeholder="Select a plan" />
@@ -263,37 +290,16 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
-
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
                                         />
                                     </fieldset>
-
-                                    <fieldset>
-
-                                        <FormField
-                                            control={form.control}
-                                            name="firstName"
-                                            render={({ field }) => (
-                                                <FormItem>
-
-                                                    <FormControl>
-                                                        <Select>
-                                                            <SelectTrigger className="rounded-xs">
-                                                                <SelectValue placeholder="Select payment method" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {paymentMethods.map((pm, i) => (
-                                                                    <SelectItem key={i} value={pm.id}>{pm.id}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </fieldset>
+                                </div>
+                            )}
+                            {error && (
+                                <div className="text-red-500 text-sm mt-2">
+                                    {error}
                                 </div>
                             )}
                         </form>
@@ -301,23 +307,20 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
                 </DialogBody>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button type="button" variant="outline" size={"xs"} >Cancel</Button>
+                        <Button type="button" variant="outline" size={"xs"}>Cancel</Button>
                     </DialogClose>
                     <Button
                         className={cn("children:hidden", { "children:inline-flex": loading })}
                         variant={"foreground"}
-
                         size={"xs"}
                         type="submit"
-
+                        disabled={loading}
                     >
                         <Loader2 className="mr-2 h-4 w-4 hidden animate-spin" />
-                        Add Child
+                        {loading ? 'Adding...' : 'Add Child'}
                     </Button>
                 </DialogFooter>
-
             </DialogContent>
         </Dialog>
-    )
+    );
 }
-

@@ -1,75 +1,80 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
+import { contractTemplates } from '@/db/schemas/ContractTemplates';
+import { eq } from 'drizzle-orm';
+
 
 export async function GET(req: Request, props: { params: Promise<{ cid: number, id: string }> }) {
   const params = await props.params;
-  const session = await auth();
 
   try {
-    if (session) {
+    
       console.log(params);
       const template = await db.query.contractTemplates.findFirst({
         where: (templates, { eq }) => eq(templates.id, params.cid),
       })
       console.log(template);
       return NextResponse.json(template, { status: 200 });
-    }
+    
   } catch (err) {
     return NextResponse.json({ error: err }, { status: 500 })
   }
 }
 
-export async function POST(req: Request, props: { params: Promise<{ cid: string, id: string }> }) {
-  const params = await props.params;
-  const session = await auth();
-  const d = await req.json()
-  try {
-    if (session) {
+export async function PUT(req: Request, props: { params: Promise<{ cid: string, id: string }> }) {
+  const { cid } = await props.params;
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/contracts/${params.cid}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.user.token}`,
-          "locationId": `${params.id}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(d)
-      })
-      if (!res.ok) {
-        return NextResponse.json({ message: "An error occurred saving contract." }, { status: 400 });
-      }
-      const response = await res.json();
-      return NextResponse.json(response, { status: 200 });
+  try {
+
+    if (!cid) {
+      return NextResponse.json({ error: "Contract ID is required" }, { status: 400 });
     }
-  } catch (err) {
-    console.log(err)
-    return NextResponse.json({ error: err }, { status: 500 })
+
+    const result = await db
+      .update(contractTemplates)
+      .set({
+        ...req.body,
+        updated: new Date(),
+      })
+      .where(eq(contractTemplates.id, Number(cid)))
+      .returning();
+
+    if (!result.length) {
+      return NextResponse.json({ error: "Contract not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: "Contract updated successfully", data: result }, { status: 200 });
+
+  } catch (error) {
+
+    console.error("Error updating contract:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+
   }
+
 }
 
-export async function DELETE(req: Request, props: { params: Promise<{ cid: string, id: string }> }) {
-  const params = await props.params;
-  const session = await auth();
+export async function DELETE(req: NextRequest, props: { params: { cid: string } }) {
   try {
-    if (session) {
+      
+      const { cid } = props.params;
+  
+      const result = await db
+          .delete(contractTemplates)
+          .where(eq(contractTemplates.id, Number(cid)))
+          .returning();
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/contracts/${params.cid}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.user.token}`,
-          "locationId": `${params.id}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      if (!res.ok) {
-        return NextResponse.json({ message: "An error occurred deleting contract." }, { status: 400 });
+    
+      if (!result.length) {
+          return NextResponse.json({ error: "Contract not found" }, { status: 404 });
       }
-      const response = await res.json();
-      return NextResponse.json(response, { status: 200 });
-    }
-  } catch (err) {
-    console.log(err)
-    return NextResponse.json({ error: err }, { status: 500 })
+
+      
+      return NextResponse.json({ message: "Contract deleted successfully" }, { status: 200 });
+
+  } catch (error) {
+      console.error("Error deleting contract:", error);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

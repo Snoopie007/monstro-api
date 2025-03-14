@@ -124,7 +124,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: number
             return NextResponse.json({ message: "Success", data: paymentMethod.data }, { status: 200 });
         }
     } catch (err) {
-        // console.log(err)
+        console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }

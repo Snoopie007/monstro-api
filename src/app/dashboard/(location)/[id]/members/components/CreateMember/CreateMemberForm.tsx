@@ -52,6 +52,7 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
             lastName: "",
             email: "",
             phone: "",
+            password: "",
         },
         mode: "onSubmit",
     })
@@ -100,6 +101,32 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
         })
     }
 
+    function generatePassword() {
+        // Define character sets
+        const chars = {
+            lower: "abcdefghijklmnopqrstuvwxyz",
+            upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+            nums: "0123456789",
+            syms: "!@$"
+        };
+
+        // Create initial password with one of each type
+        let pwd = [
+            chars.lower[Math.floor(Math.random() * chars.lower.length)],
+            chars.upper[Math.floor(Math.random() * chars.upper.length)],
+            chars.nums[Math.floor(Math.random() * chars.nums.length)],
+            chars.syms[Math.floor(Math.random() * chars.syms.length)]
+        ];
+
+        // Add 6 more random characters from all types
+        const allChars = chars.lower + chars.upper + chars.nums + chars.syms;
+        for (let i = 0; i < 6; i++) {
+            pwd.push(allChars[Math.floor(Math.random() * allChars.length)]);
+        }
+
+        // Shuffle and return
+        return pwd.sort(() => Math.random() - 0.5).join('');
+    }
 
     return (
         <>
@@ -224,8 +251,37 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
                                                 )}
                                             />
                                         </div>
+
                                     </div>
                                 </fieldset>
+                                <fieldset >
+                                    <div className='flex flex-col gap-2'>
+                                        <FormLabel size='tiny'>Password</FormLabel>
+                                        <div className='flex flex-row gap-2'>
+                                            <FormField
+                                                control={form.control}
+                                                name="password"
+                                                render={({ field }) => (
+                                                    <FormItem className='flex-1'>
+
+                                                        <FormControl>
+                                                            <div className='flex flex-row'>
+                                                                <Input type='password' className={cn("w-full border-r-0 rounded-r-none")} placeholder="Password" {...field} />
+                                                                <div className='flex-initial bg-indigo-500 text-xs flex border border-white border-l-0 rounded-l-none  cursor-pointer items-center justify-center py-1 px-2 text-white rounded-sm'
+                                                                    onClick={() => { form.setValue("password", generatePassword()); form.trigger("password") }}>
+                                                                    Generate
+                                                                </div>
+                                                            </div>
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                        </div>
+                                    </div>
+                                </fieldset>
+
                             </form>
                         </Form>
                     )}

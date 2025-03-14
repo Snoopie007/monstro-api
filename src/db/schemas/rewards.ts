@@ -1,15 +1,16 @@
-import { integer, varchar, serial, text, timestamp, pgTable } from "drizzle-orm/pg-core";
+import { bigint, varchar, bigserial, text, integer, timestamp, pgTable } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 
 export const rewards = pgTable("rewards", {
-    id: serial("id").primaryKey(),
-    name: varchar("name").notNull(),
-    description: text("description"),
-    limitPerMember: integer("limit_per_member").notNull().default(0),
-    totalLimit: integer("limit_total").notNull().default(0),
-    images: text("images").array().notNull().default([]),
+    id: integer("id").primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: varchar("description", { length: 255 }).notNull(),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    icon: varchar("icon", { length: 255 }),
     requiredPoints: integer("required_points").notNull(),
-    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
-    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp('updated_at', { withTimezone: true }),
+    limitPerMember: integer("limit_per_member").notNull(),
+    totalLimit: varchar("limit_total", { length: 255 }).notNull().default("unlimited"),
+    images: text("images").array().notNull(), // No default array (set in app logic)
+    created: timestamp("created_at", { withTimezone: false }),
+    updated: timestamp("updated_at", { withTimezone: false }),
 });

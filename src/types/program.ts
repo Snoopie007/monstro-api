@@ -7,8 +7,8 @@ export type Program = {
     description: string | null;
     icon?: string | null | File;
     // benefits?: string[];
-    plans?: MemberPlan[];
-    levels?: ProgramLevel[];
+    plans: MemberPlan[];
+    levels: ProgramLevel[];
     locationId?: number;
     // status: string | null;
     location?: Location;

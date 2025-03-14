@@ -1,27 +1,34 @@
 import { NextResponse } from 'next/server';
-import { auth } from "@/auth";
+import { db } from '@/db/db';
+import { contractTemplates, members, memberPlans, programs } from '@/db/schemas'; // Import schemas
 
-export async function GET(req: Request, props: { params: Promise<{id: string, sId: number}> }) {
-  const params = await props.params;
-  const session = await auth();
-  try {
-    if (session) {
+export async function GET(
+  req: Request,
+  props: { params: Promise<{ sid: string }> }
+) {
+  const { sid } = await props.params;
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/contracts/signed/${params.sId}`, {
-        headers: {
-          'Authorization': `Bearer ${session.user.token}`,
-          "locationId": `${params.id}`,
-        }
-      });
-
-      if (!res.ok) {
-        return NextResponse.json({ message: "An error occurred while fetching the data." }, { status: 400 });
-      }
-
-      const { data } = await res.json();
-      return NextResponse.json(data, { status: 200 });
-    }
-  } catch (err) {
-    return NextResponse.json({ error: err }, { status: 500 })
+  if (!sid) {
+    return NextResponse.json({ error: 'SID is required' }, { status: 400 });
   }
+
+  
+  const contractList = await db.query.memberContracts.findMany({
+    where: (contract, { eq }) => eq(contract.id, Number(sid)),
+    with: {
+      member: true,
+      memberPlan: {
+        with: {
+          program: true,
+        },
+      } as any,
+      contract: true,
+    }
+  });
+
+  if (!contractList || contractList.length === 0) {
+    return NextResponse.json({ error: 'No contracts found for the provided SID' }, { status: 404 });
+  }
+
+  return NextResponse.json(contractList, { status: 200 });
 }

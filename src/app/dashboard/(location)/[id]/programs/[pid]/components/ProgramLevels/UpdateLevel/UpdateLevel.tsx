@@ -63,7 +63,7 @@ export function UpsertLevel({ level, setCurrentLevel, lid }: UpdateProgramLevelP
     async function submitForm(v: z.infer<typeof LevelSchema>) {
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${lid}/programs/${level?.programId}/levels/${level?.id}`, {
+            fetch(`/api/protected/loc/${lid}/programs/${level?.programId}/levels/${level?.id}`, {
                 method: 'PUT',
                 body: JSON.stringify(v)
             })

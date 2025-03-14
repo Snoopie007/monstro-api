@@ -21,7 +21,7 @@ interface PaymentMethodActionsProps {
 export default function PaymentMethodsActions({ paymentMethod, memberId, locationId, customerId }: PaymentMethodActionsProps) {
     async function detachPaymentMethod(id: string) {
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/location/${locationId}/members/${memberId}/payments/methods?paymentMethodId=${id}`, {
+            fetch(`/api/protected/loc/${locationId}/members/${memberId}/payments/methods?paymentMethodId=${id}`, {
                 method: 'DELETE'
             })
         )
@@ -30,8 +30,15 @@ export default function PaymentMethodsActions({ paymentMethod, memberId, locatio
 
     async function makeDefualtPaymentMethod(id: string) {
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/location/${locationId}/members/${memberId}/payments/methods?paymentMethodId=${id}`, {
-                method: 'PUT'
+            fetch(`/api/protected/loc/${locationId}/members/${memberId}/payments/methods?paymentMethodId=${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    customerId: customerId, 
+                    paymentMethodId: id,
+                }),
             })
         )
     }
