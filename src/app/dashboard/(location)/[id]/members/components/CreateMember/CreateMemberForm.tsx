@@ -24,12 +24,20 @@ import { CreateMemberSchema } from '../../schema';
 import PhoneInput from 'react-phone-number-input/input';
 import { CountryCodes } from '@/libs/data';
 import { CountryCode } from '@/types';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import {
+    Popover, PopoverContent, PopoverTrigger,
+    Avatar,
+    AvatarFallback,
+    AvatarImage
+} from '@/components/ui';
 
 import useSWR from 'swr';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'react-toastify';
 import { CreateMemberProgress } from './AddMember';
 import Link from 'next/link';
+import { CalendarIcon } from 'lucide-react';
 
 
 
@@ -52,7 +60,8 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
             lastName: "",
             email: "",
             phone: "",
-            password: "",
+            dob: undefined,
+            gender: undefined,
         },
         mode: "onSubmit",
     })
@@ -101,33 +110,6 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
         })
     }
 
-    function generatePassword() {
-        // Define character sets
-        const chars = {
-            lower: "abcdefghijklmnopqrstuvwxyz",
-            upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-            nums: "0123456789",
-            syms: "!@$"
-        };
-
-        // Create initial password with one of each type
-        let pwd = [
-            chars.lower[Math.floor(Math.random() * chars.lower.length)],
-            chars.upper[Math.floor(Math.random() * chars.upper.length)],
-            chars.nums[Math.floor(Math.random() * chars.nums.length)],
-            chars.syms[Math.floor(Math.random() * chars.syms.length)]
-        ];
-
-        // Add 6 more random characters from all types
-        const allChars = chars.lower + chars.upper + chars.nums + chars.syms;
-        for (let i = 0; i < 6; i++) {
-            pwd.push(allChars[Math.floor(Math.random() * allChars.length)]);
-        }
-
-        // Shuffle and return
-        return pwd.sort(() => Math.random() - 0.5).join('');
-    }
-
     return (
         <>
 
@@ -137,12 +119,12 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
                         <div className='space-y-3'>
 
                             <div className='space-y-1'>
-                                <p className='text-sm text-foreground font-medium'>This member already exists.
+                                <p className='text-base text-foreground font-medium'>This member already exists.
                                 </p>
-                                <p className='text-xs text-muted-foreground'>
+                                <p className='text-sm text-muted-foreground'>
                                     You can continue or cancel to add a new member.
                                     To add subscription or packages to this member, please go to the {" "}
-                                    <Link href={`/dashboard/${lid}/members/${progress.member?.id}`} className='text-indigo-500 underline'>member profile</Link>
+                                    <Link href={`/dashboard/${lid}/members/${progress.member?.id}`} className='text-indigo-400 underline'>member profile</Link>
                                 </p>
                             </div>
                             <div className="flex flex-row gap-4 items-center border border-indigo-500 rounded-sm px-4 py-3">
@@ -154,8 +136,8 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
                                         </AvatarFallback>
                                     </Avatar>
                                 </div>
-                                <div className="flex flex-col">
-                                    <p className="text-xs font-medium">{progress.member?.firstName} {progress.member?.lastName}</p>
+                                <div className="flex flex-col ">
+                                    <p className="text-sm font-medium leading-none">{progress.member?.firstName} {progress.member?.lastName}</p>
                                     <p className="text-xs text-muted-foreground">{progress.member?.email}</p>
                                 </div>
                             </div>
@@ -254,33 +236,77 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
 
                                     </div>
                                 </fieldset>
-                                <fieldset >
-                                    <div className='flex flex-col gap-2'>
-                                        <FormLabel size='tiny'>Password</FormLabel>
-                                        <div className='flex flex-row gap-2'>
-                                            <FormField
-                                                control={form.control}
-                                                name="password"
-                                                render={({ field }) => (
-                                                    <FormItem className='flex-1'>
+                                <div className='space-y-1'>
+                                    <p className='text-sm text-muted-foreground uppercase '>Optional</p>
+                                    <fieldset className="grid grid-cols-5 gap-2 bg-foreground/10 px-3 py-2 rounded-sm">
 
+                                        <FormField control={form.control} name="gender" render={({ field }) => (
+                                            <FormItem className="col-span-2">
+                                                <FormLabel size="tiny">
+                                                    Gender
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Select value={field.value} onValueChange={field.onChange}>
+                                                        <SelectTrigger className="w-full py-2 px-3 border border-gray-300 rounded-sm focus:outline-none focus:ring focus:border-blue-300">
+                                                            <SelectValue placeholder="Gender" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Male">Male</SelectItem>
+                                                            <SelectItem value="Female">Female</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+
+
+                                                </FormControl>
+
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="dob" render={({ field }) => (
+                                            <FormItem className="col-span-3">
+                                                <FormLabel size="tiny">
+                                                    Date of Birth
+                                                </FormLabel>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
                                                         <FormControl>
-                                                            <div className='flex flex-row'>
-                                                                <Input type='password' className={cn("w-full border-r-0 rounded-r-none")} placeholder="Password" {...field} />
-                                                                <div className='flex-initial bg-indigo-500 text-xs flex border border-white border-l-0 rounded-l-none  cursor-pointer items-center justify-center py-1 px-2 text-white rounded-sm'
-                                                                    onClick={() => { form.setValue("password", generatePassword()); form.trigger("password") }}>
-                                                                    Generate
-                                                                </div>
-                                                            </div>
+                                                            <Button
+                                                                variant={"outline"}
+                                                                className={cn("w-full pl-3 text-left font-normal",
+                                                                    !field.value && "text-muted-foreground"
+                                                                )}
+                                                            >
+                                                                {field.value ? (
+                                                                    format(field.value, "PPP")
+                                                                ) : (
+                                                                    <span>Pick a date</span>
+                                                                )}
+                                                                <CalendarIcon className="ml-auto size-4 opacity-50" />
+                                                            </Button>
                                                         </FormControl>
-                                                        <FormMessage />
-                                                    </FormItem>
-                                                )}
-                                            />
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0" align="start">
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={field.value ? new Date(field.value) : undefined}
+                                                            onSelect={(date) => {
 
-                                        </div>
-                                    </div>
-                                </fieldset>
+                                                                if (date) {
+                                                                    field.onChange(new Date(date).toISOString());
+                                                                }
+                                                            }}
+
+                                                            disabled={(date) =>
+                                                                date > new Date()
+                                                            }
+
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+
+                                            </FormItem>
+                                        )} />
+                                    </fieldset>
+                                </div>
 
                             </form>
                         </Form>

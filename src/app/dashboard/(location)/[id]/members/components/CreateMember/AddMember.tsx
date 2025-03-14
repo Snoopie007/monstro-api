@@ -32,7 +32,7 @@ export type CreateMemberProgress = {
     stripePaymentMethod: Stripe.PaymentMethod | undefined
 }
 
-const DEFAULT_PROGRESS: CreateMemberProgress = {
+export const DEFAULT_PROGRESS: CreateMemberProgress = {
     member: undefined,
     paymentMethod: undefined,
     programId: undefined,
@@ -94,7 +94,7 @@ export function AddMember({ lid, stripeKey }: CreateMemberProps) {
                             exit={{ x: -20, opacity: 0 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <NewMemberPayment lid={lid} stripeKey={stripeKey} progress={progress} setProgress={setProgress} />
+                            <NewMemberPayment lid={lid} stripeKey={stripeKey} progress={progress} setProgress={setProgress} setOpen={setOpen} />
                         </motion.div>
                     )}
 

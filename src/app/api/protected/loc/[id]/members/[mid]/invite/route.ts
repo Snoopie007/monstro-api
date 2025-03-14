@@ -14,23 +14,31 @@ export async function POST(req: Request) {
 
     try {
 
+        const ml = await db.query.memberLocations.findFirst({
+            where: (memberLocations, { eq, and }) => and(eq(memberLocations.memberId, data.mid), eq(memberLocations.locationId, data.id)),
+            with: {
+                member: true,
+                location: true
+            }
+        })
+        if (!ml) {
+            throw new Error('Member not found')
+        }
+
+        const { member, location } = ml
+        const emailSender = new EmailSender();
+        await emailSender.send(member.email, `Welcome to ${location.name}`, InviteEmailTemplate, {
+            ui: {
+                btnText: "Accept Invite",
+                btnUrl: `https://member.mymonstroapp.com/invite/${data.id}?email=${member.email}`
+            },
+            location,
+            monstro: MonstroData,
+            member
+        });
         await db.update(memberLocations).set({
             inviteDate: new Date(),
         }).where(and(eq(memberLocations.memberId, data.mid), eq(memberLocations.locationId, data.id)));
-
-        const emailSender = new EmailSender();
-        await emailSender.send('stevey@simplygrowonline.com', 'Welcome to Monstro', InviteEmailTemplate, {
-            ui: {
-                button: "Join the class."
-            },
-            location: {
-                name: 'Gracie\'s Gym',
-            },
-            monstro: MonstroData,
-            member: {
-                name: 'John Doe',
-            }
-        });
 
         return NextResponse.json({ success: true }, { status: 200 })
     } catch (err) {
