@@ -1,4 +1,4 @@
-import { bigint, bigserial, text, timestamp, pgTable, doublePrecision, integer,serial } from "drizzle-orm/pg-core";
+import { bigint, bigserial, text, timestamp, pgTable, doublePrecision, integer, serial } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { relations } from "drizzle-orm";
 import { vendorProgress } from "./VendorProgress";
@@ -43,7 +43,7 @@ export const vendorsRelations = relations(vendors, ({ one, many }) => ({
 }));
 
 export const wallet = pgTable("wallet", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     balance: doublePrecision("balance").notNull().default(0),
     credit: doublePrecision("credit").notNull().default(0),

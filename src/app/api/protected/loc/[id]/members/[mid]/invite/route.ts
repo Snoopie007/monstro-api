@@ -26,7 +26,6 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
         }
 
         const { member, location } = ml
-        console.log(member, location)
         const emailSender = new EmailSender();
         await emailSender.send(member.email, `Welcome to ${location.name}`, InviteEmailTemplate, {
             ui: {

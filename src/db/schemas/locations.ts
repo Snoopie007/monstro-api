@@ -6,25 +6,25 @@ import { programs } from "./programs";
 import { transactions } from "./transactions";
 import { vendors, wallet } from "./vendors";
 import { memberSubscriptions } from "./MemberPlans";
-import { LocationStatusEnum } from "./Enums";
-import { IncompletePlan } from "@/types";
+import { LocationStatusEnum } from "./enums";
+import { IncompletePlan, LocationSettings } from "@/types";
 
 
 export const locations = pgTable("locations", {
     id: serial("id").primaryKey(),
     name: text("name").notNull().unique(),
     legalName: text("legal_name"),
-    email: varchar("email", { length: 255 }),
-    industry: varchar("industry", { length: 255 }),
+    email: text("email"),
+    industry: text("industry"),
     address: text("address").unique(),
-    city: varchar("city", { length: 255 }),
-    state: varchar("state", { length: 255 }),
-    postalCode: varchar("postal_code", { length: 255 }),
+    city: text("city"),
+    state: LocationStatusEnum("state"),
+    postalCode: text("postal_code"),
     website: text("website"),
-    country: varchar("country", { length: 255 }),
-    phone: varchar("phone", { length: 255 }),
-    timezone: varchar("timezone", { length: 255 }),
-    logoUrl: varchar("logo_url", { length: 255 }),
+    country: text("country"),
+    phone: text("phone"),
+    timezone: text("timezone"),
+    logoUrl: text("logo_url"),
     metadata: jsonb("meta_data"),
     vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "cascade" }).notNull(),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -42,7 +42,7 @@ export const locationState = pgTable("location_state", {
     agreeToTerms: boolean("agree_to_terms").notNull().default(false),
     lastRenewalDate: timestamp("last_renewal_date", { withTimezone: true }).defaultNow(),
     startDate: timestamp("start_date", { withTimezone: true }),
-    settings: jsonb("settings").notNull().default(sql`'{}'::jsonb`),
+    settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),
     usagePercent: integer("usage_percent").notNull().default(0),
     status: LocationStatusEnum("status").notNull().default("incomplete"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

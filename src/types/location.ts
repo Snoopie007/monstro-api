@@ -45,7 +45,7 @@ export type LocationState = {
 }
 
 export type LocationSettings = {
-    aiBotTotal: number;
+    aibotsCount: number;
 }
 
 

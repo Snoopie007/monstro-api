@@ -101,7 +101,7 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
             const data = await response.json();
             console.log('Child member added successfully:', data);
 
-            setOpen(false); 
+            setOpen(false);
         } catch (error) {
             console.error('Error adding child member:', error);
             setError(error instanceof Error ? error.message : 'An unexpected error occurred');

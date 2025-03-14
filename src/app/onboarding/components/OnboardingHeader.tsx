@@ -8,7 +8,6 @@ import {
     Avatar, AvatarFallback, AvatarImage,
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui';
-import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 
 

@@ -7,10 +7,6 @@ import { VendorStripePayments } from '@/libs/server/stripe';
 import { MonstroPackage } from '@/types/vendor';
 
 import { eq } from 'drizzle-orm';
-import * as sendgrid from '@sendgrid/mail';
-import { MonstroData } from '@/libs/data';
-import { EmailSender } from '@/libs/server/emails';
-import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { packages, plans } from "@/libs/data";
 
 
@@ -96,19 +92,6 @@ export async function POST(req: Request) {
         if (plan && plan.id !== 1) {
             await stripe.createSubscription(plan, customer.id, vendorId, locationId);
         }
-        // const emailSender = new EmailSender();
-        // await emailSender.send('stevey@simplygrowonline.com', 'Welcome to Monstro', InviteEmailTemplate, {
-        //     ui: {
-        //         button: "Join the class."
-        //     },
-        //     location: {
-        //         name: 'Gracie\'s Gym',
-        //     },
-        //     monstro: MonstroData,
-        //     member: {
-        //         name: 'John Doe',
-        //     }
-        // });
 
         const today = new Date();
         await db.transaction(async (tx) => {

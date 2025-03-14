@@ -1,4 +1,4 @@
-import { SetStateAction, Dispatch, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import { useForm } from "react-hook-form";
