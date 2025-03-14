@@ -4,11 +4,10 @@ import { ProgramLevel } from "./program";
 import { Transaction } from "./transaction";
 import { Location } from "./location";
 import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod } from "./enums";
-import { Program } from "./program";
+
 export type Member = {
     id?: number;
     firstName: string;
-    userId?: number;
     lastName: string | null;
     email: string;
     referralCode: string;
@@ -36,15 +35,6 @@ export type MemberOnboarding = {
     currentStep: number;
 };
 
-export type PackageSubscriptionMetadata = Record<string, unknown> & {
-    card: {
-        brand: string;
-        last4: string;
-        exp_month: number;
-        exp_year: number;
-    }
-}
-
 
 export type MemberSubscription = {
     id?: number;
@@ -66,7 +56,7 @@ export type MemberSubscription = {
     plan?: MemberPlan;
     payer?: Member | null;
     beneficiary?: Member;
-    metadata?: PackageSubscriptionMetadata;
+    metadata?: Record<string, unknown>;
     invoices?: MemberInvoice[];
     status: LocationStatus;
     created?: Date;
@@ -76,8 +66,6 @@ export type MemberSubscription = {
 export type MemberPackage = {
     id?: string;
     memberPlanId: number;
-    dob: Date | null;
-    gender: string | null;
     locationId: number;
     payerId: number | null;
     beneficiaryId: number;
@@ -87,7 +75,7 @@ export type MemberPackage = {
     paymentMethod: PaymentMethod;
     totalClassAttended?: number;
     totalClassLimit: number;
-    metadata?: PackageSubscriptionMetadata;
+    metadata?: Record<string, unknown>;
     programLevelId: number;
     programLevel?: ProgramLevel;
     plan?: MemberPlan;
@@ -120,7 +108,6 @@ export type MemberPlan = {
     type: PlanType;
     currency: string;
     price: number;
-    program?: Program;
     totalClassLimit: number | null;
     classLimitInterval: Interval | null;
     classLimitThreshold: number | null;

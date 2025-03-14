@@ -8,13 +8,13 @@ import { programMembers } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { memberPackages, memberPlans } from "./MemberPlans";
 import { memberSubscriptions } from "./MemberPlans";
-import { InvoiceStatusEnum, MemberRelationshipEnum } from "./enums";
+import { InvoiceStatusEnum, MemberRelationshipEnum } from "./Enums";
 
 
 
 export const members = pgTable("members", {
     id: serial("id").primaryKey(),
-    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
     firstName: text("first_name").notNull(),
     lastName: text("last_name"),
     email: text("email").notNull(),
@@ -34,7 +34,7 @@ export const memberAchievements = pgTable("member_achievements", {
     achievementId: integer("achievement_id").references(() => achievements.id, { onDelete: "cascade" }),
     note: text("note"),
     status: text("status"),
-    progress: integer("progress"),
+    progress: integer("progress").default(0),
     dateAchieved: timestamp("date_achieved", { withTimezone: true }).notNull().defaultNow(),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.memberId, t.achievementId] })]);
@@ -55,7 +55,7 @@ export const memberContracts = pgTable("member_contracts", {
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
     memberPlanId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     signature: text("signature"),
-    variables: jsonb("variables").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
+    variables: jsonb("variables").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     signed: boolean("signed").notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
@@ -167,14 +167,6 @@ export const memberContractsRelations = relations(memberContracts, ({ many, one 
     contractTemplate: one(contractTemplates, {
         fields: [memberContracts.templateId],
         references: [contractTemplates.id],
-    }),
-    package: one(memberPackages, {
-        fields: [memberContracts.id],
-        references: [memberPackages.memberContractId],
-    }),
-    subscription: one(memberSubscriptions, {
-        fields: [memberContracts.id],
-        references: [memberSubscriptions.memberContractId],
     }),
 }));
 

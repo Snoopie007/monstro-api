@@ -1,32 +1,34 @@
-import { Staff } from "@/types";
+import { Vendor } from "@/types";
 import { UserProfile } from "./components";
+import { db } from "@/db/db"; 
+import { auth } from "@/auth";
 
-async function getStaff(id: number): Promise<Staff> {
-    return {
-        id: 1,
-        firstName: 'Jane',
-        lastName: 'Doe',
-        email: '',
-        phone: '1234567890',
-        image: '#',
-        role: {
-            id: 1,
-            name: 'Staff',
-            color: 'red',
-            permissions: ['read', 'write']
-        },
-        status: 'Active',
-        created: new Date(),
-        updated: new Date()
-    }
+async function getMember(id: number): Promise<Vendor | null> {
+    const vendor = await db.query.vendors.findFirst({
+        where: (vendors, { eq }) => eq(vendors.id, id),
+    });
+
+    return vendor ?? null;
 }
 
-export default async function ProfilePage(props: { params: Promise<{ id: string }> }) {
-    const params = await props.params;
-    const staff = await getStaff(1)
+export default async function ProfilePage(props: { params: { id: string } }) {
+    const { id } = await props.params;
+    const session = await auth();
+    
+    const vendorId = parseInt(session ? session.user.vendorId : 0, 10);
+    if (isNaN(vendorId)) {
+        return <div>Invalid Vendor ID</div>;
+    }
+
+    const vendor = await getMember(vendorId);
+
+    if (!vendor) {
+        return <div>Vendor not found.</div>;
+    }
+
     return (
         <div>
-            <UserProfile user={staff} locationId={params.id} />
+            <UserProfile user={vendor} locationId={id} />
         </div>
-    )
+    );
 }

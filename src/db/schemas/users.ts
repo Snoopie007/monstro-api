@@ -1,5 +1,4 @@
-
-import { serial, text, timestamp, pgTable, boolean } from "drizzle-orm/pg-core";
+import { bigserial, text, timestamp, pgTable, integer } from "drizzle-orm/pg-core";
 import { accounts } from "./accounts";
 import { relations } from "drizzle-orm";
 import { members } from "./members";
@@ -8,15 +7,16 @@ import { modelHasRoles } from "./permissions";
 import { staffs } from "./staffs";
 
 export const users = pgTable("users", {
-    id: serial("id").primaryKey(),
+    id: integer("id").primaryKey(),
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
-    emailVerified: timestamp("email_verified_at", { mode: "date" }),
-    password: text('password'),
+    emailVerified: timestamp("email_verified_at", { withTimezone: true }),
+    password: text("password"),
+    rememberToken: text("remember_token"),
     image: text("image"),
-    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp('updated_at', { withTimezone: true }),
-    deleted: timestamp('deleted_at', { withTimezone: true }),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
+    deleted: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -35,4 +35,3 @@ export const usersRelations = relations(users, ({ many, one }) => ({
     }),
     roles: many(modelHasRoles),
 }));
-

@@ -3,12 +3,12 @@ import { programLevels, programs } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { relations, sql } from "drizzle-orm";
 
-import { memberInvoices, members, memberContracts } from "./members";
+import { memberInvoices, members } from "./members";
 import { locations } from "./locations";
 import { transactions } from "./transactions";
 import { reservations } from "./reservations";
-import { BillingCycleAnchorConfig, PackageSubscriptionMetadata } from "@/types";
-import { LocationStatusEnum, PackageStatusEnum, PaymentMethodEnum, PlanInterval, PlanType } from "./enums";
+import { BillingCycleAnchorConfig } from "@/types";
+import { LocationStatusEnum, PackageStatusEnum, PaymentMethodEnum, PlanInterval, PlanType } from "./Enums";
 
 
 export const memberPlans = pgTable("member_plans", {
@@ -46,7 +46,6 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
-    memberContractId: integer("member_contract_id").references(() => memberContracts.id),
     stripeSubscriptionId: text("stripe_subscription_id"),
     status: LocationStatusEnum("status").notNull().default("incomplete"),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
@@ -57,7 +56,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     trialEnd: timestamp("trial_end", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     paymentMethod: PaymentMethodEnum("payment_method").notNull(),
-    metadata: jsonb("metadata").$type<PackageSubscriptionMetadata>().notNull().default(sql`'{}'::jsonb`),
+    metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });
@@ -73,10 +72,9 @@ export const memberPackages = pgTable("member_packages", {
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     expireDate: timestamp("expire_date", { withTimezone: true }),
-    memberContractId: integer("member_contract_id").references(() => memberContracts.id),
     status: PackageStatusEnum("status").notNull(),
     paymentMethod: PaymentMethodEnum("payment_method").notNull(),
-    metadata: jsonb("metadata").$type<PackageSubscriptionMetadata>().notNull().default(sql`'{}'::jsonb`),
+    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     totalClassAttended: integer("total_class_attended").notNull().default(0),
     totalClassLimit: integer("total_class_limit").notNull().default(0),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -120,10 +118,6 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
         fields: [memberSubscriptions.locationId],
         references: [locations.id],
     }),
-    contract: one(memberContracts, {
-        fields: [memberSubscriptions.memberContractId],
-        references: [memberContracts.id],
-    }),
     transactions: many(transactions),
     invoices: many(memberInvoices),
     reservations: many(reservations),
@@ -151,10 +145,6 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
         fields: [memberPackages.beneficiaryId],
         references: [members.id],
         relationName: "packageBeneficiary",
-    }),
-    contract: one(memberContracts, {
-        fields: [memberPackages.memberContractId],
-        references: [memberContracts.id],
     }),
     transactions: many(transactions),
     invoices: many(memberInvoices),

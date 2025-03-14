@@ -1,29 +1,29 @@
 import { NextResponse } from 'next/server';
-import { auth } from "@/auth";
+import { db } from '@/db/db';
+import {} from '@/db/schemas/programs'
 
 export async function GET(
   req: Request,
   props: { params: Promise<{ programId: string, id: string }> }
 ) {
-  const params = await props.params;
-  const session = await auth();
-  try {
-    if (session) {
+  const programId = await props.params;
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/contracts/program/${params.programId}`, {
-        headers: {
-          'Authorization': `Bearer ${session.user.token}`,
-          "locationId": `${params.id}`
-        }
-      });
-
-      if (!res.ok) {
-        return NextResponse.json({ message: "An error occurred while fetching the data." }, { status: 400 });
-      }
-      const { data } = await res.json();
-      return NextResponse.json(data, { status: 200 });
-    }
-  } catch (err) {
-    return NextResponse.json({ error: err }, { status: 500 })
+  if (!programId)
+  {
+    return NextResponse.json({ error: 'Program ID is required' }, { status: 400 });
   }
+
+  const program = await db.query.programs.findMany({
+    where: (program, { eq }) => eq(program.id, Number(programId.programId)),
+  });
+
+  console.log(program);
+  
+  if (!program)
+  {
+    return NextResponse.json({ error: 'Program not found' }, { status: 404 });
+  }
+
+  return NextResponse.json(program, { status: 200 });
+  
 }

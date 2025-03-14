@@ -3,24 +3,24 @@ import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 import { memberInvoices, members } from "./members";
 import { memberPackages, memberSubscriptions } from "./MemberPlans";
-import { TransactionStatusEnum } from "./enums";
+import { TransactionStatusEnum } from "./Enums";
 
 
 export const transactions = pgTable("transactions", {
-    id: serial("id").primaryKey(),
+    id: integer("id").primaryKey(),
     description: text("description"),
-    item: text("item").notNull(),
-    transactionType: text("transaction_type").notNull(),
+    item: text("item"),
+    ransactionType: text("transaction_type").notNull(),
     paymentType: text("payment_type").notNull(),
     paymentMethod: text("payment_method").notNull(),
-    amount: integer("amount").notNull().default(0),
+    amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
     status: TransactionStatusEnum("status").notNull().default("incomplete"),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     invoiceId: uuid("invoice_id").unique().references(() => memberInvoices.id, { onDelete: "cascade" }),
     subscriptionId: integer("subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
     packageId: uuid("package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
-    chargeDate: timestamp("charge_date", { withTimezone: true }).notNull(),
+    chargeDate: timestamp("charge_date", { withTimezone: true }).notNull().defaultNow(),
     currency: text("currency").notNull().default("USD"),
     metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
     refunded: boolean("refunded").notNull().default(false),
@@ -28,7 +28,6 @@ export const transactions = pgTable("transactions", {
     updated: timestamp("updated_at", { withTimezone: true }),
     deleted: timestamp("deleted_at", { withTimezone: true }),
 });
-
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
     member: one(members, {
@@ -52,4 +51,3 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
         references: [memberPackages.id],
     }),
 }));
-

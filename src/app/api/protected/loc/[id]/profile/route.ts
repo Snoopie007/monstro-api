@@ -1,33 +1,58 @@
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { db } from "@/db/db";
+import { vendors } from "@/db/schemas";
+import { auth } from "@/auth";
+import { eq } from "drizzle-orm";
 
-export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
-  const session = await auth();
-  console.log(session?.user)
-  const data = await req.json()
-  try {
+export async function PUT(req: Request) {
+    try {
+        
+        const session = await auth();
+        if (!session || !session.user.vendorId) {
+            return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+        }
 
-    if (session) {
+        
+        const vendorId = parseInt(session.user.vendorId, 10);
+        if (isNaN(vendorId)) {
+            return NextResponse.json({ error: "Invalid vendor ID." }, { status: 400 });
+        }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/update-profile/`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${session.user.token}`,
-          "locationId": `${params.id}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
+        
+        const body = await req.json();
+        if (!body.firstName || !body.lastName) {
+            return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
+        }
 
-      if (!res.ok) {
-        return NextResponse.json({ message: "An error occurred saving role." }, { status: 400 });
-      }
+        
+        const vendor = await db.query.vendors.findFirst({
+            where: eq(vendors.id, vendorId),
+        });
 
-      return NextResponse.json({ message: 'Success' }, { status: 200 });
+        if (!vendor) {
+            return NextResponse.json({ error: "Vendor not found." }, { status: 404 });
+        }
+
+       
+        const updatedVendor = await db.update(vendors)
+            .set({
+                firstName: body.firstName,
+                lastName: body.lastName,
+            })
+            .where(eq(vendors.id, vendorId))
+            .returning();
+
+        return NextResponse.json({ 
+            success: true, 
+            message: "Vendor profile updated successfully.", 
+            data: updatedVendor 
+        }, {
+            status: 200,
+            headers: { "Content-Type": "application/json" }
+        });
+
+    } catch (error) {
+        console.error("Error updating vendor:", error);
+        return NextResponse.json({ error: "Failed to update vendor." }, { status: 500 });
     }
-  } catch (err) {
-    console.log(err)
-    return NextResponse.json({ error: err }, { status: 500 })
-  }
 }

@@ -1,67 +1,94 @@
-import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { programLevels, programSessions } from "@/db/schemas";
 import { eq } from "drizzle-orm";
-import { ProgramSession } from "@/types";
-import { buildConflictUpdateColumns } from "@/libs/server/db";
-export async function PUT(req: Request, props: { params: Promise<{ id: string, pid: number, lid: number }> }) {
-    const params = await props.params;
 
-    const { sessions, ...data } = await req.json()
+
+export async function PUT(req: Request, { params }: { params: { id: string; pid: string; lid: string } }) {
     try {
+        const { id, pid, lid } = await params;
+        console.log("PUT Request - Params:", { id, pid, lid });
 
-        await db.transaction(async (tx) => {
-            await tx.update(programLevels).set({
-                ...data
-            }).where(eq(programLevels.id, params.lid))
+        const body = await req.json();
 
 
-            const uniqueSessions = sessions.filter((session: ProgramSession, index: number, self: ProgramSession[]) =>
-                index === self.findIndex((t: ProgramSession) => t.day === session.day && t.time === session.time)
-            )
-
-            const updatedSessions = uniqueSessions.map((session: ProgramSession) => ({
-                ...session,
-                programId: params.pid,
-                programLevelId: params.lid,
-                status: 1
-            }));
-            await tx.insert(programSessions).values(updatedSessions).onConflictDoUpdate({
-                target: [programSessions.id],
-                set: buildConflictUpdateColumns(programSessions, ['day', 'time', 'duration'])
+        await db.update(programLevels)
+            .set({
+                name: body.name,
+                capacity: body.capacity,
+                minAge: body.min_age,
+                maxAge: body.max_age,
             })
-        })
+            .where(eq(programLevels.id, Number(lid)));
 
-        return NextResponse.json({ success: true }, { status: 200 });
-    } catch (err) {
-        console.log(err)
-        return NextResponse.json({ error: err }, { status: 500 })
-    }
-}
 
-export async function DELETE(req: Request, props: { params: Promise<{ id: string, pid: number, lid: number }> }) {
-    const params = await props.params;
-    const session = await auth();
-    try {
-
-        if (session) {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/program-level/${params.lid}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${session.user.token}`,
-                    "locationId": `${params.id}`,
-                    'Content-Type': 'application/json'
+        if (body.sessions && Array.isArray(body.sessions)) {
+            for (const session of body.sessions) {
+                if (session.duration_time) {
+                    await db.insert(programSessions)
+                        .values({
+                            day: session.day,
+                            time: session.time,
+                            duration: session.duration_time,
+                            programLevelId: Number(lid),
+                        })
+                        .onConflictDoUpdate({
+                            target: [programSessions.id],
+                            set: {
+                                duration: session.duration_time,
+                            },
+                        });
                 }
-            })
-            if (!res.ok) {
-                return NextResponse.json({ message: "An error occurred deleting program level." }, { status: 400 });
             }
-            return NextResponse.json({ message: "" }, { status: 200 });
         }
-    } catch (err) {
-        console.log(err)
-        return NextResponse.json({ error: err }, { status: 500 })
+
+
+        const updatedProgramLevel = await db.query.programLevels.findFirst({
+            where: eq(programLevels.id, Number(lid)),
+            with: { sessions: true },
+        });
+
+        return NextResponse.json(
+            { message: "Program level updated successfully.", data: updatedProgramLevel },
+            { status: 200 }
+        );
+
+    } catch (error) {
+        console.error("===== Error in programLevelUpdate =====", error);
+        return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
     }
 }
 
+
+export async function DELETE(req: Request) {
+    try {
+        const body = await req.json();
+        const { levelId } = body; 
+
+        if (!levelId) {
+            return NextResponse.json({ error: "Session ID is required." }, { status: 400 });
+        }
+
+        console.log("DELETE Request - level ID:", levelId);
+
+        
+        const level = await db.query.programLevels.findFirst({
+            where: eq(programLevels.id, Number(levelId)),
+        });
+
+        console.log("Session:", level);
+
+        if (!level) {
+            return NextResponse.json({ error: "Session not found." }, { status: 404 });
+        }
+
+        
+        await db.delete(programLevels).where(eq(programLevels.id, Number(levelId)));
+
+        return NextResponse.json({ message: "Session deleted successfully." }, { status: 200 });
+
+    } catch (error) {
+        console.error("===== Error in session DELETE =====", error);
+        return NextResponse.json({ error: "An error occurred while deleting the session." }, { status: 500 });
+    }
+}

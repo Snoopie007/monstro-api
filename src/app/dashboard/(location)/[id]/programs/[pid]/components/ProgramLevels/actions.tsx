@@ -1,4 +1,3 @@
-
 import { Icon } from '@/components/icons'
 import {
     DropdownMenu,
@@ -15,7 +14,6 @@ import { tryCatch } from '@/libs/utils'
 import { toast } from 'react-toastify'
 import { Loader2 } from 'lucide-react'
 
-
 interface LevelActionsProps {
     level: ProgramLevel
     lid: string
@@ -24,24 +22,34 @@ interface LevelActionsProps {
 export default function LevelActions({ level, lid }: LevelActionsProps) {
     const [currentLevel, setCurrentLevel] = useState<ProgramLevel | null>(null)
     const [loading, setLoading] = useState<boolean>(false)
+
     function isDisabled() {
         if (!level || !level.sessions) return true
-        return level.sessions.filter((session: ProgramSession) => {
-            return session.reservations && session.reservations.length > 0
-        }).length > 0
+        return level.sessions.some((session: ProgramSession) => 
+            session.reservations && session.reservations.length > 0
+        )
     }
-    async function onDelete(sid: number) {
-        if (!sid) return
+
+    async function onDelete(lid: number) {
+        if (!lid) return
+
+        setLoading(true) 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${lid}/programs/session`, {
+            fetch(`/api/protected/loc/${lid}/programs/${level?.programId}/levels/${level?.id}`, {
                 method: 'DELETE',
-                body: JSON.stringify({ sessionId: sid })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ levelId: lid })
             })
         )
+        setLoading(false) 
+
         if (error || !result || !result.ok) {
             toast.error(error?.message || 'Failed to delete session')
+        } else {
+            toast.success('Session deleted successfully')
         }
     }
+
     return (
         <div>
             <UpsertLevel level={currentLevel} setCurrentLevel={setCurrentLevel} lid={lid} />
@@ -53,16 +61,17 @@ export default function LevelActions({ level, lid }: LevelActionsProps) {
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className='w-[180px] border-foreground/20 p-2'>
-
-                    <DropdownMenuItem className='cursor-pointer hover:bg-indigo-500 text-sm py-2 leading-5'
+                    <DropdownMenuItem
+                        className='cursor-pointer hover:bg-indigo-500 text-sm py-2 leading-5'
                         onClick={() => setCurrentLevel(level)}
                     >
                         <span>Edit</span>
-
                     </DropdownMenuItem>
+
                     <DropdownMenuSeparator className='mb-2' />
+
                     <DropdownMenuItem
-                        className='cursor-pointer bg-red-500 children:'
+                        className='cursor-pointer bg-red-500'
                         onClick={() => onDelete(level.id)}
                         disabled={isDisabled()}
                     >
