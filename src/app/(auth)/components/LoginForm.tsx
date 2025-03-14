@@ -41,7 +41,7 @@ export default function LoginForm() {
 
 			const res = await signIn("credentials", { ...v, redirect: false });
 			if (res?.error) {
-				toast.error('Invalid email or password.');
+				toast.error(res.code || 'Something went wrong. Please contact support at support@monstro.com.');
 				return;
 			}
 
