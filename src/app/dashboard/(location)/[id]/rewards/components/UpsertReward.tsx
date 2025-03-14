@@ -38,7 +38,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 			name: reward?.name || '',
 			description: reward?.description || '',
 			requiredPoints: reward?.requiredPoints || 0,
-			totalLimit: reward?.totalLimit || 0,
+			totalLimit: reward?.totalLimit || "Unlimited",
 			limitPerMember: reward?.limitPerMember || 0,
 		},
 		mode: "onSubmit",
@@ -88,15 +88,15 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 			)
 			console.log(result, error);
 			setLoading(false);
-			// if (error || !result) {
-			// 	toast.error("Something went wrong, please try again later");
-			// 	return;
-			// }
+			if (error || !result) {
+				toast.error("Something went wrong, please try again later");
+				return;
+			}
 
-			// await mutate();
-			// toast.success("Reward Updated");
-			// form.reset();
-			// setCurrentReward(undefined);
+			await mutate();
+			toast.success("Reward Updated");
+			form.reset();
+			setCurrentReward(undefined);
 		} catch (error) {
 			console.error("Error:", error);
 			setCurrentReward(undefined);
@@ -166,7 +166,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 											render={({ field }) => (
 												<FormItem className='space-y-0'>
 													<FormControl>
-														<Input type='text' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
+														<Input type='text' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(e.currentTarget.value)} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -243,6 +243,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 						<Loader2 size={16} className={"animate-spin mr-2"} />
 						Save
 					</Button>
+					
 				</SheetFooter>
 
 

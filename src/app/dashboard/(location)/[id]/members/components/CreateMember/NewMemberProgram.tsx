@@ -82,7 +82,7 @@ export default function NewMemberProgram({ lid, progress, setProgress }: NewMemb
 
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${lid}/members/${progress.member?.id}/${isOneTime ? 'packages' : 'subscriptions'}`, {
+            fetch(`/api/protected/loc/${lid}/members/${progress.member?.id}/${isOneTime ? 'packages' : 'subscriptions'}`, {
                 method: "POST",
                 body: JSON.stringify({
                     ...rest,

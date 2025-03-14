@@ -41,10 +41,11 @@ export async function POST(req: NextRequest, props: RewardProps) {
 
 		const [{ id }] = await db.insert(rewards).values({
 			name: data.get('name') as string,
+			
 			description: data.get('description') as string,
 			requiredPoints: Number(data.get('requiredPoints')),
 			limitPerMember: Number(data.get('limitPerMember')),
-			totalLimit: Number(data.get('totalLimit')),
+			totalLimit:data.get('totalLimit') as string,
 			images: uploadResults.map((result) => result?.url || ""),
 			locationId: params.id,
 			created: new Date(),

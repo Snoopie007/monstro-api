@@ -1,8 +1,8 @@
-import { bigint, varchar, bigserial, text, integer, timestamp, pgTable } from "drizzle-orm/pg-core";
+import { bigint, varchar, bigserial, text, integer, timestamp, pgTable ,serial} from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 
 export const rewards = pgTable("rewards", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     description: varchar("description", { length: 255 }).notNull(),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),

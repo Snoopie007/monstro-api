@@ -48,7 +48,7 @@ export default function UpdateProgram({ programId, locationId }: UpdateProgramPr
         try {
             await sleep(2000)
             const { result, error } = await tryCatch(
-                fetch(`/api/protected/location/${locationId}/programs/${programId}`, {
+                fetch(`/api/protected/loc/location/${locationId}/programs/${programId}`, {
                     method: 'PUT',
                     body: JSON.stringify(v)
                 })

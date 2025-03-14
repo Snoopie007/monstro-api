@@ -28,7 +28,7 @@ export function LevelForm({ form, lid }: LevelFormProps) {
         const field = fields[index];
         if (field.id !== undefined || field.id !== null || field.id !== "") {
             const { result, error } = await tryCatch(
-                fetch(`/api/protected/${lid}/programs/sessions/${field.id}`, {
+                fetch(`/api/protected/loc/${lid}/programs/sessions/${field.id}`, {
                     method: "DELETE",
                 })
             )

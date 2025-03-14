@@ -81,7 +81,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
     async function handleSubmit(v: z.infer<typeof CreateRoleSchema>) {
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${locationId}/roles`, {
+            fetch(`/api/protected/loc/${locationId}/roles`, {
                 method: role && role.id ? 'PUT' : 'POST',
                 body: JSON.stringify(v)
             })

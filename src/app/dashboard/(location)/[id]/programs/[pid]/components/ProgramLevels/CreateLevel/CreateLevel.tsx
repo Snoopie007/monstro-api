@@ -60,7 +60,7 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
 
         setLoading(true);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${lid}/programs/${pid}/levels`, {
+            fetch(`/api/protected/loc/${lid}/programs/${pid}/levels`, {
                 method: "POST",
                 body: JSON.stringify(v),
             })

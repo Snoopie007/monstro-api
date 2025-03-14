@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { memberLocations } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
+import { error } from "console";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
@@ -69,11 +70,13 @@ export async function PUT(req: Request, props: { params: Promise<{ id: number }>
 
         if (session) {
             const integrations = await db.query.integrations.findFirst({
-                where: (integration, { eq }) => (and(eq(integration.locationId, params.id), eq(integration.service, "Stripe"))),
+                where: (integration, { eq }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
                 columns: {
                     accessToken: true
                 }
             })
+
+           
             let paymentMethod: any;
             if (integrations?.accessToken) {
                 const stripe = require('stripe')(integrations?.accessToken);
@@ -86,12 +89,13 @@ export async function PUT(req: Request, props: { params: Promise<{ id: number }>
                     }
                 );
             } else {
+                
                 return NextResponse.json({ error: "Something Went Wrong" }, { status: 500 })
             }
             return NextResponse.json({ message: "Success", data: paymentMethod.data }, { status: 200 });
         }
     } catch (err) {
-        // console.log(err)
+         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
@@ -107,7 +111,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: number
         }
         if (session) {
             const integrations = await db.query.integrations.findFirst({
-                where: (integration, { eq }) => (and(eq(integration.locationId, params.id), eq(integration.service, "Stripe"))),
+                where: (integration, { eq }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
                 columns: {
                     accessToken: true
                 }

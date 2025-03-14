@@ -45,6 +45,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
         })
 
+        console.log(plan)
         if (!plan || !plan.stripePriceId) {
             return NextResponse.json({ error: "No valid plan not found" }, { status: 404 })
         }

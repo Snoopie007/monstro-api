@@ -4,7 +4,7 @@ export interface Reward {
 	description: string,
 	images: string[],
 	limitPerMember: number,
-	totalLimit: number,
+	totalLimit: string,
 	requiredPoints: number
 	created?: Date,
 	updated?: Date | null

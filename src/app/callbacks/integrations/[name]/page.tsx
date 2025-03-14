@@ -21,13 +21,19 @@ async function completeIntegration(name: string, user: ExtendedUser, searchParam
 		const location = await db.query.locations.findFirst({
 			where: (loc, { eq }) => eq(loc.id, decodedId)
 		});
+		
+		const token = await stripe.connectOAuth(searchParams.code, searchParams.scope);
+
 		if (!location) {
 			return false;
 		}
-		const token = await stripe.connectOAuth(searchParams.code, searchParams.scope);
+		if (!location?.id) {
+			throw new Error("locationId is required");
+	}
+		if(token && token.stripe_user_id) {
 
-		await db.insert(integrations).values({
-			locationId: location.id,
+			await db.insert(integrations).values({
+			locationId: location.id, 
 			service: name,
 			apiKey: token.stripe_publishable_key,
 			secretKey: token.access_token,
@@ -37,15 +43,16 @@ async function completeIntegration(name: string, user: ExtendedUser, searchParam
 			vendorId: location.vendorId,
 			additionalSettings: { ...token },
 			created: new Date(),
-		}).onConflictDoUpdate({
-			target: [integrations.locationId, integrations.service],
-			set: {
-				secretKey: token.access_token,
-				accessToken: token.access_token,
-				refreshToken: token.refresh_token,
-				integrationId: token.stripe_user_id,
-			}
-		});
+			}).onConflictDoUpdate({
+				target: [integrations.locationId, integrations.service],
+				set: {
+					secretKey: token.access_token,
+					accessToken: token.access_token,
+					refreshToken: token.refresh_token,
+					integrationId: token.stripe_user_id,
+				}
+			});
+		}
 
 		return true;
 	} catch (error) {
