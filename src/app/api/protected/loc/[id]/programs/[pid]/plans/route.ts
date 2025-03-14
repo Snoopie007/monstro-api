@@ -1,10 +1,9 @@
 
 import { NextResponse } from 'next/server';
-import { auth } from "@/auth";
 import { db } from '@/db/db';
 import { memberPlans } from '@/db/schemas';
 import { and } from 'drizzle-orm';
-import { getStripeCustomer, MemberStripePayments } from '@/libs/server/stripe';
+import { MemberStripePayments } from '@/libs/server/stripe';
 import { encodeId } from '@/libs/server/sqids';
 
 
@@ -32,7 +31,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
     const formatedAmount = amount * 100
     try {
 
-        let stripePiceId = "";
+        let stripePriceId = "";
 
         if (data.type === "recurring") {
             const interation = await db.query.integrations.findFirst({
@@ -50,7 +49,8 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 { ...data, price: formatedAmount, programId: params.pid },
                 encodeId(params.id)
             )
-            stripePiceId = stripePrice.id || ""
+
+            stripePriceId = stripePrice.id || ""
         }
 
 
@@ -58,7 +58,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             ...data,
             price: formatedAmount,
             programId: params.pid,
-            stripePiceId,
+            stripePriceId,
         }).returning({ id: memberPlans.id });
 
         return NextResponse.json(plan, { status: 200 });

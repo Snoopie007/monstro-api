@@ -348,6 +348,7 @@ class MemberStripePayments extends BaseStripePayments {
             expand: ["default_price"]
         });
 
+
         return product.default_price as Stripe.Price
     }
 

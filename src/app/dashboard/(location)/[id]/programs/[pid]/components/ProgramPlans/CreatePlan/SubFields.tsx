@@ -45,12 +45,22 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
             form.setValue("subscription.interval", preset.interval as "day" | "week" | "month" | "year");
         }
     }
+
+    function matchPresetLabel() {
+        const preset = PresetIntervals.find(
+            p => p.intervalThreshold === form.getValues("subscription.intervalThreshold")
+                && p.interval === form.getValues("subscription.interval")
+        );
+        return preset?.label || "Custom"
+    }
     return (
         <div className='space-y-2'>
             <fieldset className='flex flex-row gap-2 items-baseline'>
                 <div className='flex-1'>
                     <FormLabel size={"tiny"} >Billing Threshold</FormLabel>
-                    <Select onValueChange={handleBillingThresholdChange} value={billingThreshold?.label}  >
+                    <Select onValueChange={handleBillingThresholdChange} value={
+                        matchPresetLabel()
+                    }>
 
                         <SelectTrigger>
                             <SelectValue placeholder="Select..." />

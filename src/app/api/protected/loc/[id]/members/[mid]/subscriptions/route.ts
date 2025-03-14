@@ -1,8 +1,9 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions, transactions } from "@/db/schemas";
+import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
 import { createSubscription } from "../../utils";
 import { NextResponse } from "next/server";
+import { and, eq } from "drizzle-orm";
 
 export async function GET(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
     const params = await props.params;
@@ -107,7 +108,15 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 ...newTransaction,
                 invoiceId,
                 subscriptionId: sid,
-            })
+            });
+
+            // await tx.update(memberLocations).set({
+            //     incompletePlan: null,
+            //     status: "active",
+            // }).where(and(
+            //     eq(memberLocations.memberId, params.mid),
+            //     eq(memberLocations.locationId, params.id)
+            // ))
             return sid
         })
 

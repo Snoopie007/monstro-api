@@ -120,10 +120,6 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
         fields: [memberSubscriptions.locationId],
         references: [locations.id],
     }),
-    contract: one(memberContracts, {
-        fields: [memberSubscriptions.memberContractId],
-        references: [memberContracts.id],
-    }),
     transactions: many(transactions),
     invoices: many(memberInvoices),
     reservations: many(reservations),
@@ -151,10 +147,6 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
         fields: [memberPackages.beneficiaryId],
         references: [members.id],
         relationName: "packageBeneficiary",
-    }),
-    contract: one(memberContracts, {
-        fields: [memberPackages.memberContractId],
-        references: [memberContracts.id],
     }),
     transactions: many(transactions),
     invoices: many(memberInvoices),

@@ -35,6 +35,7 @@ import { PlanSubFields } from "./SubFields";
 import { PlanPkgFields } from "./PkgFields";
 
 import useSWR from "swr";
+import { Loader2 } from "lucide-react";
 
 interface CreatePlanProps {
     lid: string,
@@ -80,7 +81,7 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
         setLoading(true)
         const { pkg, subscription, ...rest } = v
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${lid}/programs/${pid}/plans`, {
+            fetch(`/api/protected/loc/${lid}/programs/${pid}/plans`, {
                 method: 'POST',
                 body: JSON.stringify({
                     ...rest,
@@ -96,6 +97,7 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
 
         toast.success("Plan created successfully")
         setLoading(false)
+        form.reset()
         mutate()
         setOpen(false)
     }
@@ -262,6 +264,7 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
                                 className={cn("children:hidden", { "children:inline-block": loading })}
                                 disabled={form.formState.isSubmitting || !form.formState.isValid || loading}
                             >
+                                <Loader2 className="size-3 mr-2 animate-spin" />
                                 Save
                             </Button>
                         </DialogClose>
