@@ -1,9 +1,9 @@
-import { bigint, bigserial, integer, timestamp, pgTable } from "drizzle-orm/pg-core";
+import { bigint, serial, integer, timestamp, pgTable } from "drizzle-orm/pg-core";
 import { vendors } from "./vendors";
 import { relations } from "drizzle-orm";
 
 export const vendorReferrals = pgTable("vendor_referrals", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     referralId: integer("referral_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     amount: integer("amount").notNull().default(0),

@@ -1,4 +1,4 @@
-import { bigserial, varchar, bigint, text, timestamp, time, primaryKey, smallint, doublePrecision, pgTable, integer } from "drizzle-orm/pg-core";
+import { bigserial, varchar, serial, text, timestamp, time, primaryKey, smallint, doublePrecision, pgTable, integer } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { members } from "./members";
@@ -9,7 +9,7 @@ import { reservations } from "./reservations";
 import { staffs } from "./staffs";  
 
 export const programs = pgTable("programs", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     icon: varchar("icon", { length: 255 }),
@@ -20,7 +20,7 @@ export const programs = pgTable("programs", {
 });
 
 export const programLevels = pgTable("program_levels", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     capacity: doublePrecision("capacity").notNull(),
     minAge: integer("min_age").notNull(),

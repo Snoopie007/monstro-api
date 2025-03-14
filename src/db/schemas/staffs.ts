@@ -1,11 +1,11 @@
-import { bigint, varchar, bigserial, timestamp, pgTable, integer } from "drizzle-orm/pg-core";
+import { serial, varchar, bigserial, timestamp, pgTable, integer } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { users } from "./users";
 import { roles } from "./permissions";
 import { relations } from "drizzle-orm";
 
 export const staffs = pgTable("staffs", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     firstName: varchar("first_name", { length: 255 }).notNull(),
     lastName: varchar("last_name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }).notNull(),

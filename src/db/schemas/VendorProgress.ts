@@ -1,11 +1,11 @@
-import { bigserial, integer, timestamp, pgTable, boolean, text, jsonb, doublePrecision } from "drizzle-orm/pg-core";
+import { serial, integer, timestamp, pgTable, boolean, text, jsonb, doublePrecision } from "drizzle-orm/pg-core";
 import { vendors } from "./vendors";
 import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 
 // Vendor Progress
 export const vendorProgress = pgTable("vendor_progress", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     points: doublePrecision("points").notNull().default(0),
@@ -16,7 +16,7 @@ export const vendorProgress = pgTable("vendor_progress", {
 
 // Vendor Badges
 export const vendorBadges = pgTable("vendor_badges", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     vendorProgressId: integer("vendor_progress_id").notNull().references(() => vendorProgress.id, { onDelete: "cascade" }),
     badgeId: integer("badge_id").notNull(),
     progress: integer("progress").notNull().default(0),
@@ -27,7 +27,7 @@ export const vendorBadges = pgTable("vendor_badges", {
 
 // Vendor Rewards
 export const vendorRewards = pgTable("vendor_rewards", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     name: text("name").notNull(),
     description: text("description").notNull(),
     images: text("images").notNull(), // Matches "images" in SQL
@@ -39,7 +39,7 @@ export const vendorRewards = pgTable("vendor_rewards", {
 
 // Vendor Claimed Rewards
 export const vendorClaimedRewards = pgTable("vendor_claimed_rewards", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     vendorProgressId: integer("vendor_progress_id").notNull().references(() => vendorProgress.id, { onDelete: "cascade" }),
     rewardId: integer("reward_id").notNull().references(() => vendorRewards.id, { onDelete: "cascade" }),
     claimed: timestamp("claimed_at", { withTimezone: true }).notNull(),
