@@ -29,7 +29,7 @@ export type SessionFormProps = {
 }
 
 export const DEFAULT_PROGRESS: SubPackageProgress = {
-    step: 2,
+    step: 1,
     plan: undefined,
     level: undefined,
     packageId: undefined,
@@ -77,8 +77,9 @@ export function SessionForm({ params, progress }: SessionFormProps) {
 
 
     async function fetchSessions() {
+        if (!progress.plan || !progress.level) return;
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${params.id}/programs/14/levels/1/sessions`)
+            fetch(`/api/protected/loc/${params.id}/programs/${progress.plan?.programId}/levels/${progress.level?.id}/sessions`)
         );
 
         if (error || !result?.ok) return;

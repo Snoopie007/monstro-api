@@ -38,11 +38,12 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 locationId: params.id,
                 memberId: params.mid
             });
+
             memberLocation.stripeCustomerId = customer.id;
             await db.update(memberLocations).set({ stripeCustomerId: customer.id, updated: new Date() })
                 .where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mid)))
         }
-
+        stripe.setCustomer(memberLocation.stripeCustomerId)
 
         const { paymentMethod } = await stripe.setupIntent(token);
         if (isDefault) {
