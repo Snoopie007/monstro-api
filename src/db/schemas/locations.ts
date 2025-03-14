@@ -6,7 +6,7 @@ import { programs } from "./programs";
 import { transactions } from "./transactions";
 import { vendors, wallet } from "./vendors";
 import { memberSubscriptions } from "./MemberPlans";
-import { LocationStatusEnum } from "./enums";
+import { LocationStatusEnum } from "./Enums";
 import { IncompletePlan } from "@/types";
 
 

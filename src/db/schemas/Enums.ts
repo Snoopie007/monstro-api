@@ -20,5 +20,6 @@ export {
     MemberRelationshipEnum,
     RoleColorEnum,
     ContractTypeEnum,
+
     TransactionStatusEnum
 }
