@@ -1,15 +1,9 @@
 import {
     Button,
-    Dialog,
     DialogBody,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
     DialogFooter,
     DialogClose,
     Switch,
-    DialogDescription,
 } from "@/components/ui";
 import {
     Form, FormControl, FormField, FormMessage, FormItem, FormLabel,
@@ -137,6 +131,7 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
                                         <Select onValueChange={(value) => {
                                             field.onChange(Number(value))
                                             const program = programs.find((program: Program) => program.id == Number(value))
+
                                             setPlans(program?.plans || [])
                                             setLevels(program?.levels || [])
                                         }}>
@@ -172,7 +167,7 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
                                             </FormControl>
                                             <SelectContent>
                                                 {plans && plans.map((plan: MemberPlan, index: number) => (
-                                                    (plan.contractId && plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
+                                                    (plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
                                                 ))}
                                             </SelectContent>
                                         </Select>

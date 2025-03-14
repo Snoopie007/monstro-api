@@ -226,7 +226,7 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
                                         render={({ field }) => (
                                             <FormItem className="col-span-2">
                                                 <FormLabel size={"tiny"} >Per(Optional)</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value} defaultValue={'month'} >
+                                                <Select onValueChange={field.onChange} value={field.value} >
                                                     <FormControl>
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Select..." />
