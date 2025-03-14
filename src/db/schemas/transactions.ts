@@ -6,8 +6,9 @@ import { memberPackages, memberSubscriptions } from "./MemberPlans";
 import { TransactionStatusEnum } from "./Enums";
 
 
+
 export const transactions = pgTable("transactions", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     description: text("description"),
     item: text("item"),
     ransactionType: text("transaction_type").notNull(),
