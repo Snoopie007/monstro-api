@@ -45,7 +45,7 @@ import { useRouter } from 'next/navigation';
 export default function CreateMemberForm({ lid }: { lid: string }) {
     const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
     const { mutate } = useSWR(`/api/protected/members`);
-    const [existing, setExisting] = useState<boolean>(false);
+    const [existingMember, setExistingMember] = useState<Member | undefined>(undefined);
     const [member, setMember] = useState<Member | undefined>(undefined);
     const [loading, setLoading] = useState(false);
     const [invite, setInvite] = useState(false);
@@ -78,30 +78,32 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                 }),
             })
         )
-        setLoading(false);
+
 
         if (error || !result || !result.ok) {
             toast.error("Something went wrong. Please try again.");
             return;
         }
 
-        const { existing, member } = await result.json();
-        setExisting(existing);
-        setMember(member);
+        const { existing, member: m } = await result.json();
 
-        if (invite) {
-            await sendInvite();
+        setMember(m);
+        if (existing) {
+            setExistingMember(m);
+            return;
         }
 
-        await mutate();
-        form.reset();
+        if (invite) {
+            await sendInvite(m);
+        }
+        setLoading(false);
         router.push(`/dashboard/${lid}/members/${member?.id}`)
     }
 
-    async function sendInvite() {
-        if (!member) return;
+    async function sendInvite(m: Member | undefined) {
+        if (!m) return;
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/members/${member.id}/invite`, { method: "POST" })
+            fetch(`/api/protected/loc/${lid}/members/${m.id}/invite`, { method: "POST" })
         )
         if (error || !result || !result.ok) {
             toast.error("Uh oh, we failed to send the invite. Please try again.");
@@ -110,7 +112,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
         }
         if (retry) {
             toast.success("Invite sent successfully.");
-            setRetry(false);
+            router.push(`/dashboard/${lid}/members/${m.id}`)
         }
     }
 
@@ -119,7 +121,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
 
             <DialogBody>
                 <div>
-                    {existing ? (
+                    {existingMember && member && (
                         <div className='space-y-3'>
 
                             <div className='space-y-1'>
@@ -146,7 +148,8 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                                 </div>
                             </div>
                         </div>
-                    ) : (
+                    )}
+                    {!existingMember && (
                         <Form {...form}>
                             <form className='space-y-3' >
                                 <fieldset className='flex flex-row items-center gap-2'>
@@ -314,7 +317,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                                                             selected={field.value ? new Date(field.value) : undefined}
                                                             onSelect={(date) => {
                                                                 if (date) {
-                                                                    field.onChange(new Date(date).toISOString());
+                                                                    field.onChange(new Date(date));
                                                                 }
                                                             }}
 
@@ -328,19 +331,16 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                                         )} />
                                     </fieldset>
                                 </div>
-
                             </form>
                         </Form>
                     )}
-
-
                 </div>
             </DialogBody>
             <DialogFooter >
                 <DialogClose asChild>
                     <Button variant={"outline"} size={"sm"} className="">Cancel</Button>
                 </DialogClose>
-                {!member && (
+                {(!existingMember && !retry) && (
                     <DialogClose asChild >
                         <Button
                             variant={"foreground"}
@@ -355,9 +355,9 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                     </DialogClose>
 
                 )}
-                {!existing && member && invite && retry && (
+                {retry && (
                     <Button variant={"continue"} size={"sm"}
-                        onClick={() => sendInvite()}
+                        onClick={() => sendInvite(member)}
                         className={cn("children:hidden", (loading && "children:inline-block"))}
                         disabled={loading}
                     >

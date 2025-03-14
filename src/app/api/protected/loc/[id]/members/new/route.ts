@@ -14,8 +14,8 @@ const INCOMPLETE_PLAN = {
     programLevelId: undefined,
     memberContractId: undefined,
     memberPlanId: undefined,
-    currentStep: 2,
-    completedSteps: [1]
+    currentStep: 1,
+    completedSteps: []
 }
 
 export async function POST(req: Request, props: { params: Promise<PackageProps> }) {
@@ -71,6 +71,7 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
 
             const [member] = await tx.insert(members).values({
                 ...data,
+                dob: data.dob ? new Date(data.dob) : null,
                 userId: user.id,
                 phone: formatPhoneNumber(data.phone),
                 referralCode: encodeReferralCode(user.id),
@@ -83,6 +84,7 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
             })
             return member
         })
+
 
 
         return NextResponse.json({ existing: false, member }, { status: 200 })

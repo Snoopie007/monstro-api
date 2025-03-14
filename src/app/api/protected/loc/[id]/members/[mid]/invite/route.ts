@@ -6,13 +6,12 @@ import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { db } from '@/db/db';
 import { memberLocations } from '@/db/schemas';
 import { eq, and } from 'drizzle-orm';
+import { encodeId } from '@/libs/server/sqids';
 
 
 
 export async function POST(req: NextRequest, props: { params: Promise<{ id: number, mid: number }> }) {
     const params = await props.params;
-    const data = await req.json();
-
     try {
 
         const ml = await db.query.memberLocations.findFirst({
@@ -27,11 +26,12 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
         }
 
         const { member, location } = ml
+        console.log(member, location)
         const emailSender = new EmailSender();
         await emailSender.send(member.email, `Welcome to ${location.name}`, InviteEmailTemplate, {
             ui: {
                 btnText: "Accept Invite",
-                btnUrl: `https://member.mymonstroapp.com/invite/${data.id}?email=${member.email}`
+                btnUrl: `https://member.mymonstroapp.com/invite/${encodeId(params.id)}?email=${member.email}`
             },
             location,
             monstro: MonstroData,
@@ -39,7 +39,8 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
         });
         await db.update(memberLocations).set({
             inviteDate: new Date(),
-        }).where(and(eq(memberLocations.memberId, data.mid), eq(memberLocations.locationId, data.id)));
+            status: "incomplete"
+        }).where(and(eq(memberLocations.memberId, params.mid), eq(memberLocations.locationId, params.id)));
 
         return NextResponse.json({ success: true }, { status: 200 })
     } catch (err) {
