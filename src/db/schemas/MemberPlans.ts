@@ -3,12 +3,12 @@ import { programLevels, programs } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { relations, sql } from "drizzle-orm";
 
-import { memberContracts, memberInvoices, members } from "./members";
+import { memberInvoices, members } from "./members";
 import { locations } from "./locations";
 import { transactions } from "./transactions";
 import { reservations } from "./reservations";
 import { BillingCycleAnchorConfig } from "@/types";
-import { LocationStatusEnum, PackageStatusEnum, PaymentMethodEnum, PlanInterval, PlanType } from "./enums";
+import { LocationStatusEnum, PackageStatusEnum, PaymentMethodEnum, PlanInterval, PlanType } from "./Enums";
 
 
 export const memberPlans = pgTable("member_plans", {
@@ -46,7 +46,6 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
-    memberContractId: integer("member_contract_id").references(() => memberContracts.id, { onDelete: "cascade" }),
     stripeSubscriptionId: text("stripe_subscription_id"),
     status: LocationStatusEnum("status").notNull().default("incomplete"),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
@@ -65,13 +64,12 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 
 
 export const memberPackages = pgTable("member_packages", {
-    id: uuid("id").primaryKey().defaultRandom(),
+    id: serial("id").primaryKey(),
     memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     payerId: integer("payer_id").references(() => members.id, { onDelete: "set null" }),
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
-    memberContractId: integer("member_contract_id").references(() => memberContracts.id, { onDelete: "cascade" }),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     expireDate: timestamp("expire_date", { withTimezone: true }),
     status: PackageStatusEnum("status").notNull(),

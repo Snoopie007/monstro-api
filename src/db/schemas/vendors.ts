@@ -1,4 +1,4 @@
-import { bigint, bigserial, text, timestamp, pgTable, doublePrecision, integer } from "drizzle-orm/pg-core";
+import { bigint, bigserial, text, timestamp, pgTable, doublePrecision, integer,serial } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { relations } from "drizzle-orm";
 import { vendorProgress } from "./VendorProgress";
@@ -6,7 +6,7 @@ import { vendorReferrals } from "./VendorReferrals";
 import { locations } from "./locations";
 
 export const vendors = pgTable("vendors", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     firstName: text("first_name").notNull(),
     lastName: text("last_name"),
     stripeCustomerId: text("stripe_customer_id"),

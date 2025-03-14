@@ -5,12 +5,12 @@ import { programSessions } from "./programs";
 import { members } from "./members";
 import { attendances } from "./attendances";
 import { memberPackages, memberSubscriptions } from "./MemberPlans";
-import { ReservationStatusEnum } from "./enums";
+import { ReservationStatusEnum } from "./Enums";
 import { locations } from "./locations";
 
 
 export const reservations = pgTable("reservations", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     sessionId: integer("session_id").notNull().references(() => programSessions.id, { onDelete: "cascade" }),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
     memberSubscriptionId: integer("member_subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),

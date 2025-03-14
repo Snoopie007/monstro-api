@@ -8,7 +8,7 @@ import { programMembers } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { memberPackages, memberPlans } from "./MemberPlans";
 import { memberSubscriptions } from "./MemberPlans";
-import { InvoiceStatusEnum, MemberRelationshipEnum } from "./enums";
+import { InvoiceStatusEnum, MemberRelationshipEnum } from "./Enums";
 
 
 
@@ -63,7 +63,7 @@ export const memberContracts = pgTable("member_contracts", {
 });
 
 export const memberInvoices = pgTable("member_invoices", {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: serial("id").primaryKey(),
     settings: jsonb("settings").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     currency: text("currency"),
     memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
@@ -168,18 +168,6 @@ export const memberContractsRelations = relations(memberContracts, ({ many, one 
         fields: [memberContracts.templateId],
         references: [contractTemplates.id],
     }),
-    location: one(locations, {
-        fields: [memberContracts.locationId],
-        references: [locations.id],
-    }),
-    memberSubscription: one(memberSubscriptions, {
-        fields: [memberContracts.id],
-        references: [memberSubscriptions.memberContractId],
-    }),
-    memberPackage: one(memberPackages, {
-        fields: [memberContracts.id],
-        references: [memberPackages.memberContractId],
-    }),
 }));
 
 
@@ -195,13 +183,5 @@ export const memberInvoicesRelations = relations(memberInvoices, ({ one }) => ({
     location: one(locations, {
         fields: [memberInvoices.locationId],
         references: [locations.id],
-    }),
-    memberPackage: one(memberPackages, {
-        fields: [memberInvoices.memberPackageId],
-        references: [memberPackages.id],
-    }),
-    memberSubscription: one(memberSubscriptions, {
-        fields: [memberInvoices.memberSubscriptionId],
-        references: [memberSubscriptions.id],
     }),
 }));
