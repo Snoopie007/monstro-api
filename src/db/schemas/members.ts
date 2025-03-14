@@ -168,6 +168,18 @@ export const memberContractsRelations = relations(memberContracts, ({ many, one 
         fields: [memberContracts.templateId],
         references: [contractTemplates.id],
     }),
+    location: one(locations, {
+        fields: [memberContracts.locationId],
+        references: [locations.id],
+    }),
+    memberSubscription: one(memberSubscriptions, {
+        fields: [memberContracts.id],
+        references: [memberSubscriptions.memberContractId],
+    }),
+    memberPackage: one(memberPackages, {
+        fields: [memberContracts.id],
+        references: [memberPackages.memberContractId],
+    }),
 }));
 
 
@@ -183,5 +195,13 @@ export const memberInvoicesRelations = relations(memberInvoices, ({ one }) => ({
     location: one(locations, {
         fields: [memberInvoices.locationId],
         references: [locations.id],
+    }),
+    memberPackage: one(memberPackages, {
+        fields: [memberInvoices.memberPackageId],
+        references: [memberPackages.id],
+    }),
+    memberSubscription: one(memberSubscriptions, {
+        fields: [memberInvoices.memberSubscriptionId],
+        references: [memberSubscriptions.id],
     }),
 }));

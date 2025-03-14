@@ -1,4 +1,4 @@
-import { Contract } from "./contract";
+import { Contract, MemberContract } from "./contract";
 import { FamilyMember } from "./FamilyMember";
 import { ProgramLevel } from "./program";
 import { Transaction } from "./transaction";
@@ -41,9 +41,11 @@ export type MemberSubscription = {
     payerId: number | null;
     beneficiaryId: number;
     memberPlanId: number;
+    memberContractId?: number | null;
     startDate: Date;
     currentPeriodStart: Date;
     currentPeriodEnd: Date;
+    invoiceId?: string | null;
     cancelAt?: Date | null;
     cancelAtPeriodEnd?: boolean;
     locationId: number;
@@ -58,6 +60,7 @@ export type MemberSubscription = {
     beneficiary?: Member;
     metadata?: Record<string, unknown>;
     invoices?: MemberInvoice[];
+    contract?: MemberContract | null;
     status: LocationStatus;
     created?: Date;
     updated?: Date | null;
@@ -69,6 +72,8 @@ export type MemberPackage = {
     locationId: number;
     payerId: number | null;
     beneficiaryId: number;
+    invoiceId?: string | null;
+    memberContractId?: number | null;
     startDate: Date;
     expireDate: Date | null;
     status: PackageStatus;
@@ -78,7 +83,9 @@ export type MemberPackage = {
     metadata?: Record<string, unknown>;
     programLevelId: number;
     programLevel?: ProgramLevel;
+    invoice?: MemberInvoice | null;
     plan?: MemberPlan;
+    contract?: MemberContract | null;
     payer?: Member;
     beneficiary?: Member;
     transactions?: Transaction[];
