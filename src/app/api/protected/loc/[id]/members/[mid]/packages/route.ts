@@ -1,8 +1,10 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberPackages, transactions } from "@/db/schemas";
+import { memberInvoices, memberLocations, memberPackages, transactions } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
 import { createPackage } from "../../utils";
 import { NextResponse } from "next/server";
+import { and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 type PackageProps = {
     id: number,
@@ -42,7 +44,7 @@ export async function GET(req: Request, props: { params: Promise<PackageProps> }
 
 export async function POST(req: Request, props: { params: Promise<PackageProps> }) {
     const params = await props.params;
-    const { stripePaymentMethod, other, ...data } = await req.json();
+    const { stripePaymentMethod, hasIncompletePlan, other, ...data } = await req.json();
 
     try {
         const plan = await db.query.memberPlans.findFirst({
@@ -110,7 +112,15 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
             })
             return { id: mpid }
         })
-
+        if (hasIncompletePlan) {
+            await db.update(memberLocations).set({
+                incompletePlan: null,
+                status: "active",
+            }).where(and(
+                eq(memberLocations.memberId, params.mid),
+                eq(memberLocations.locationId, params.id)
+            ))
+        }
         return NextResponse.json({ id: newPackage.id }, { status: 200 })
     } catch (err) {
         console.log(err)

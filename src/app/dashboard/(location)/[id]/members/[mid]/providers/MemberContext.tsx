@@ -1,10 +1,11 @@
 'use client'
-import { Member } from "@/types";
+import { Member, MemberLocation } from "@/types";
 import { createContext, useReducer, ReactElement, useCallback, useContext } from "react"
 import Stripe from "stripe";
 
 type StateType = {
     member: Member;
+    ml: MemberLocation;
     paymentMethods: Stripe.PaymentMethod[];
 }
 
@@ -55,6 +56,7 @@ type UseMemberContextType = ReturnType<typeof useMemberContext>
 export const MemberContext = createContext<UseMemberContextType | null>(null)
 
 type MemberProviderType = {
+    ml: MemberLocation,
     member: Member,
     paymentMethods: Stripe.PaymentMethod[]
     children?: ReactElement | ReactElement[] | undefined
@@ -63,27 +65,29 @@ type MemberProviderType = {
 export const MemberProvider = ({
     member,
     paymentMethods,
+    ml,
     children
 }: MemberProviderType): ReactElement => {
     return (
-        <MemberContext.Provider value={useMemberContext({ member, paymentMethods })}>
+        <MemberContext.Provider value={useMemberContext({ member, paymentMethods, ml })}>
             {children}
         </MemberContext.Provider>
     )
 }
 
-type UseMemberHookType = {
+type UseMemberStatusHookType = {
     member: Member,
+    ml: MemberLocation,
     mutate: (member: Member) => void
 }
 
-export const useMember = (): UseMemberHookType => {
+export const useMemberStatus = (): UseMemberStatusHookType => {
     const context = useContext(MemberContext)
     if (!context) {
-        throw new Error('useMember must be used within a MemberProvider')
+        throw new Error('useMemberStatus must be used within a MemberProvider')
     }
-    const { state: { member }, mutate } = context
-    return { member, mutate }
+    const { state: { member, ml }, mutate } = context
+    return { member, ml, mutate }
 }
 
 

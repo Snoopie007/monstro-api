@@ -1,17 +1,11 @@
 import {
     Button,
-    Dialog,
     DialogBody,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
     DialogFooter,
     DialogClose,
     Popover,
     PopoverContent,
     Calendar,
-    DialogDescription,
     PopoverTrigger,
     Collapsible,
     CollapsibleContent,
@@ -36,7 +30,7 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { Loader2, CalendarIcon, ChevronRight } from "lucide-react";
 import { cn, tryCatch } from "@/libs/utils";
-import { useMemberPaymentMethods } from "../../../providers/MemberContext";
+import { useMemberPaymentMethods, useMemberStatus } from "../../../providers/MemberContext";
 import React from "react";
 import { Program, MemberPlan, ProgramLevel } from "@/types";
 import { Stripe } from "stripe";
@@ -52,7 +46,7 @@ interface PkgFormProps {
 
 export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
     const { mutate } = useMemberPackages(params.id, params.mid)
-
+    const { ml } = useMemberStatus()
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods()
     const [programs, setPrograms] = useState<Program[]>([]);
@@ -102,7 +96,8 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,
-                    stripePaymentMethod: stripePaymentMethod
+                    stripePaymentMethod: stripePaymentMethod,
+                    hasIncompletePlan: ml.status === "incomplete"
                 })
             })
         )
@@ -141,6 +136,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                         <Select onValueChange={(value) => {
                                             field.onChange(Number(value))
                                             setPlans(programs.find((program: Program) => program.id == Number(value))?.plans || [])
+                                            setLevels(programs.find((program: Program) => program.id == Number(value))?.levels || [])
                                         }}>
                                             <FormControl>
                                                 <SelectTrigger className="rounded-sm">
@@ -174,7 +170,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                             </FormControl>
                                             <SelectContent>
                                                 {plans && plans.map((plan: MemberPlan, index: number) => (
-                                                    (plan.contractId && plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
+                                                    (plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
                                                 ))}
                                             </SelectContent>
                                         </Select>

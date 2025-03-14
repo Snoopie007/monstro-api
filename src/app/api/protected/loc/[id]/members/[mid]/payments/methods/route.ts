@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
     const params = await props.params;
 
-    const { token, member, default: isDefault } = await req.json();
+    const { token, member, ...data } = await req.json();
 
     try {
         const integrations = await db.query.integrations.findFirst({
@@ -31,7 +31,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             return NextResponse.json({ error: "Member location not found" }, { status: 404 })
         }
 
-
+        let isDefault = data.default;
         const stripe = new MemberStripePayments(integrations?.secretKey);
         if (!memberLocation.stripeCustomerId) {
             const customer = await stripe.createCustomer(member, undefined, {
@@ -40,6 +40,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             });
 
             memberLocation.stripeCustomerId = customer.id;
+            isDefault = true;
             await db.update(memberLocations).set({ stripeCustomerId: customer.id, updated: new Date() })
                 .where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mid)))
         }
@@ -76,7 +77,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: number }>
                 }
             })
 
-           
+
             let paymentMethod: any;
             if (integrations?.accessToken) {
                 const stripe = require('stripe')(integrations?.accessToken);
@@ -89,13 +90,13 @@ export async function PUT(req: Request, props: { params: Promise<{ id: number }>
                     }
                 );
             } else {
-                
+
                 return NextResponse.json({ error: "Something Went Wrong" }, { status: 500 })
             }
             return NextResponse.json({ message: "Success", data: paymentMethod.data }, { status: 200 });
         }
     } catch (err) {
-         console.log(err)
+        console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }

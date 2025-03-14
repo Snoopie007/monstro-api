@@ -161,7 +161,7 @@ export type MemberLocation = {
     memberId: number;
     locationId: number;
     status: LocationStatus;
-    location: Location;
+    location?: Location;
     inviteDate: Date | null;
     stripeCustomerId: string | null;
     inviteAcceptedDate: Date | null;

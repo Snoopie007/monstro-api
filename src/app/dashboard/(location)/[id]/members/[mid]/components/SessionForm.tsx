@@ -3,7 +3,8 @@ import {
     DialogBody,
     DialogFooter,
     DialogClose,
-    Switch
+    Switch,
+    Skeleton
 } from "@/components/ui";
 
 import { useEffect, useState } from "react";
@@ -40,6 +41,7 @@ export const DEFAULT_PROGRESS: SubPackageProgress = {
 export function SessionForm({ params, progress }: SessionFormProps) {
 
     const [loading, setLoading] = useState(false);
+    const [sessionsLoading, setSessionsLoading] = useState(false);
     const [groupedSessions, setGroupedSessions] = useState<Map<number, ProgramSession[]>>(new Map());
     const [sessionIds, setSessionIds] = useState<number[]>([]);
     const [selectedDay, setSelectedDay] = useState<number>(1);
@@ -78,6 +80,7 @@ export function SessionForm({ params, progress }: SessionFormProps) {
 
     async function fetchSessions() {
         if (!progress.plan || !progress.level) return;
+        setSessionsLoading(true)
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${params.id}/programs/${progress.plan?.programId}/levels/${progress.level?.id}/sessions`)
         );
@@ -87,6 +90,7 @@ export function SessionForm({ params, progress }: SessionFormProps) {
         setOriginalSessions(data);
         const sessionGroups = groupSessions(data);
         setGroupedSessions(sessionGroups);
+        setSessionsLoading(false)
     }
 
 
@@ -157,8 +161,16 @@ export function SessionForm({ params, progress }: SessionFormProps) {
                             ))}
                         </div>
                         <div className="py-2">
-                            {filteredSessions.length > 0 ? (
+                            {sessionsLoading && (
                                 <div className="grid grid-cols-3 gap-2">
+                                    {[...Array(2)].map((_, i) => (
+                                        <Skeleton key={i} className="h-14 w-full" />
+                                    ))}
+                                </div>
+                            )}
+
+                            {!sessionsLoading && filteredSessions.length > 0 && (
+                                <div className="grid grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1">
                                     {filteredSessions.map(session => (
                                         <SessionItem
                                             key={session.id}
@@ -171,9 +183,11 @@ export function SessionForm({ params, progress }: SessionFormProps) {
                                         />
                                     ))}
                                 </div>
-                            ) : (
-                                <div className="text-sm text-center text-foreground/50 min-h-14 flex items-center justify-center">
-                                    No sessions found for this day
+                            )}
+
+                            {!sessionsLoading && filteredSessions.length === 0 && (
+                                <div className="text-sm text-center text-foreground/50 min-h-14 flex items-center justify-center bg-background/50 rounded-md border border-dashed border-foreground/10 p-4">
+                                    No sessions available for {DAYS.find(d => d.value === selectedDay)?.label || 'this day'}
                                 </div>
                             )}
                         </div>

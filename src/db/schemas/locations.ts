@@ -7,6 +7,7 @@ import { transactions } from "./transactions";
 import { vendors, wallet } from "./vendors";
 import { memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./Enums";
+import { IncompletePlan } from "@/types";
 
 
 export const locations = pgTable("locations", {
@@ -54,7 +55,7 @@ export const memberLocations = pgTable("member_locations", {
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     stripeCustomerId: text("stripe_customer_id"),
     status: LocationStatusEnum("status").notNull().default("incomplete"),
-    incompletePlan: jsonb("incomplete_plan"),
+    incompletePlan: jsonb("incomplete_plan").$type<IncompletePlan>(),
     inviteDate: timestamp("invite_date", { withTimezone: true }),
     inviteAcceptedDate: timestamp("invite_accepted_date", { withTimezone: true }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

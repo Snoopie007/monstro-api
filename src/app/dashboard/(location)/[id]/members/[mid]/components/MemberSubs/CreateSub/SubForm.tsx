@@ -30,6 +30,7 @@ import { Stripe } from "stripe";
 import DurationPicker from "../../../../components/DurationPicker";
 import { toast } from "react-toastify";
 import { SubPackageProgress } from "../../SessionForm";
+import { useMemberStatus } from "../../../providers/MemberContext";
 
 type SubFormProps = {
     params: { id: string, mid: number },
@@ -41,6 +42,7 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
 
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods()
+    const { ml } = useMemberStatus()
     const [programs, setPrograms] = useState<Program[]>([]);
     const [plans, setPlans] = useState<MemberPlan[]>([]);
     const [levels, setLevels] = useState<ProgramLevel[]>([]);
@@ -91,7 +93,8 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,
-                    stripePaymentMethod
+                    stripePaymentMethod,
+                    hasIncompletePlan: ml.status === "incomplete"
                 })
             })
         )

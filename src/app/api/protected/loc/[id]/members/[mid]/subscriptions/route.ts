@@ -39,7 +39,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
 
 export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
     const params = await props.params;
-    const { stripePaymentMethod, other, trialDays, ...data } = await req.json();
+    const { stripePaymentMethod, hasIncompletePlan, other, trialDays, ...data } = await req.json();
     try {
         const plan = await db.query.memberPlans.findFirst({
             where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
@@ -111,16 +111,18 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 subscriptionId: sid,
             });
 
-            // await tx.update(memberLocations).set({
-            //     incompletePlan: null,
-            //     status: "active",
-            // }).where(and(
-            //     eq(memberLocations.memberId, params.mid),
-            //     eq(memberLocations.locationId, params.id)
-            // ))
+
             return sid
         })
-
+        if (hasIncompletePlan) {
+            await db.update(memberLocations).set({
+                incompletePlan: null,
+                status: "active",
+            }).where(and(
+                eq(memberLocations.memberId, params.mid),
+                eq(memberLocations.locationId, params.id)
+            ))
+        }
         if (data.paymentType === "cash") {
             // to check if there is the end period has increased
             // it means the vendor has accepted a payment end period
