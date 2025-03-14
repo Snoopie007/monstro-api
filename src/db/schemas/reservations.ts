@@ -5,7 +5,7 @@ import { programSessions } from "./programs";
 import { members } from "./members";
 import { attendances } from "./attendances";
 import { memberPackages, memberSubscriptions } from "./MemberPlans";
-import { ReservationStatusEnum } from "./Enums";
+import { ReservationStatusEnum } from "./enums";
 import { locations } from "./locations";
 
 

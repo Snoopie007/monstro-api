@@ -8,7 +8,7 @@ import { programMembers } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { memberPackages, memberPlans } from "./MemberPlans";
 import { memberSubscriptions } from "./MemberPlans";
-import { InvoiceStatusEnum, MemberRelationshipEnum } from "./Enums";
+import { InvoiceStatusEnum, MemberRelationshipEnum } from "./enums";
 
 
 

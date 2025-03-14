@@ -1,21 +1,22 @@
 
 import { EmailSender } from '@/libs/server/emails';
 import { MonstroData } from '@/libs/data';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse, } from 'next/server';
 import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { db } from '@/db/db';
 import { memberLocations } from '@/db/schemas';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: number, mid: number }> }) {
+    const params = await props.params;
     const data = await req.json();
 
     try {
 
         const ml = await db.query.memberLocations.findFirst({
-            where: (memberLocations, { eq, and }) => and(eq(memberLocations.memberId, data.mid), eq(memberLocations.locationId, data.id)),
+            where: (memberLocations, { eq, and }) => and(eq(memberLocations.memberId, params.mid), eq(memberLocations.locationId, params.id)),
             with: {
                 member: true,
                 location: true

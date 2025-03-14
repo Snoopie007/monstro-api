@@ -3,6 +3,7 @@ import {
     DialogBody,
     DialogClose,
     DialogFooter,
+    Switch,
 } from '@/components/ui';
 
 import {
@@ -23,7 +24,7 @@ import { Icon } from '@/components/icons';
 import { CreateMemberSchema } from '../../schema';
 import PhoneInput from 'react-phone-number-input/input';
 import { CountryCodes } from '@/libs/data';
-import { CountryCode } from '@/types';
+import { CountryCode, Member } from '@/types';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -35,23 +36,21 @@ import {
 
 import useSWR from 'swr';
 import { toast } from 'react-toastify';
-import { CreateMemberProgress } from './AddMember';
 import Link from 'next/link';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Router } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 
 
-type CreateMemberFormProps = {
-    lid: string,
-    progress: CreateMemberProgress,
-    setProgress: Dispatch<SetStateAction<CreateMemberProgress>>
-}
-
-export default function CreateMemberForm({ lid, progress, setProgress }: CreateMemberFormProps) {
+export default function CreateMemberForm({ lid }: { lid: string }) {
     const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
     const { mutate } = useSWR(`/api/protected/members`);
-    const [existingMember, setExistingMember] = useState<boolean>(false);
+    const [existing, setExisting] = useState<boolean>(false);
+    const [member, setMember] = useState<Member | undefined>(undefined);
     const [loading, setLoading] = useState(false);
+    const [invite, setInvite] = useState(false);
+    const [retry, setRetry] = useState(false);
+    const router = useRouter();
 
     const form = useForm<z.infer<typeof CreateMemberSchema>>({
         resolver: zodResolver(CreateMemberSchema),
@@ -68,19 +67,14 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
 
 
     async function onSubmit(v: z.infer<typeof CreateMemberSchema>) {
-        if (existingMember) {
-            return setProgress({
-                ...progress,
-                step: 2
-            })
-        }
+
         setLoading(true)
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/members/new`, {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,
-                    progress
+
                 }),
             })
         )
@@ -92,22 +86,32 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
         }
 
         const { existing, member } = await result.json();
+        setExisting(existing);
+        setMember(member);
 
-        if (existing) {
-            setExistingMember(true);
-            setProgress({
-                ...progress,
-                member,
-            })
-            return;
+        if (invite) {
+            await sendInvite();
         }
+
         await mutate();
         form.reset();
-        setProgress({
-            ...progress,
-            step: 2,
-            member,
-        })
+        router.push(`/dashboard/${lid}/members/${member?.id}`)
+    }
+
+    async function sendInvite() {
+        if (!member) return;
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${lid}/members/${member.id}/invite`, { method: "POST" })
+        )
+        if (error || !result || !result.ok) {
+            toast.error("Uh oh, we failed to send the invite. Please try again.");
+            setRetry(true);
+            return;
+        }
+        if (retry) {
+            toast.success("Invite sent successfully.");
+            setRetry(false);
+        }
     }
 
     return (
@@ -115,30 +119,30 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
 
             <DialogBody>
                 <div>
-                    {existingMember ? (
+                    {existing ? (
                         <div className='space-y-3'>
 
                             <div className='space-y-1'>
                                 <p className='text-base text-foreground font-medium'>This member already exists.
                                 </p>
                                 <p className='text-sm text-muted-foreground'>
-                                    You can continue or cancel to add a new member.
+
                                     To add subscription or packages to this member, please go to the {" "}
-                                    <Link href={`/dashboard/${lid}/members/${progress.member?.id}`} className='text-indigo-400 underline'>member profile</Link>
+                                    <Link href={`/dashboard/${lid}/members/${member?.id}`} className='text-indigo-400 underline'>member profile</Link>
                                 </p>
                             </div>
                             <div className="flex flex-row gap-4 items-center border border-indigo-500 rounded-sm px-4 py-3">
                                 <div>
                                     <Avatar className="w-[35px] h-[35px] rounded-full mx-auto">
-                                        <AvatarImage src={progress.member?.avatar || ""} />
+                                        <AvatarImage src={member?.avatar || ""} />
                                         <AvatarFallback className="text-sm uppercase text-muted bg-foreground font-medium ">
-                                            {progress.member?.firstName?.charAt(0)}{progress.member?.lastName?.charAt(0)}
+                                            {member?.firstName?.charAt(0)}{member?.lastName?.charAt(0)}
                                         </AvatarFallback>
                                     </Avatar>
                                 </div>
                                 <div className="flex flex-col ">
-                                    <p className="text-sm font-medium leading-none">{progress.member?.firstName} {progress.member?.lastName}</p>
-                                    <p className="text-xs text-muted-foreground">{progress.member?.email}</p>
+                                    <p className="text-sm font-medium leading-none">{member?.firstName} {member?.lastName}</p>
+                                    <p className="text-xs text-muted-foreground">{member?.email}</p>
                                 </div>
                             </div>
                         </div>
@@ -236,6 +240,23 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
 
                                     </div>
                                 </fieldset>
+                                <fieldset>
+                                    <div className="flex flex-row items-start gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
+
+                                        <div className='mt-1.5'>
+                                            <Switch checked={invite} onCheckedChange={setInvite} />
+
+                                        </div>
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="text-sm font-medium">
+                                                Send Email Invite
+                                            </FormLabel>
+                                            <FormDescription className="text-xs">
+                                                An email will be sent to the member to complete their account setup.
+                                            </FormDescription>
+                                        </div>
+                                    </div>
+                                </fieldset>
                                 <div className='space-y-1'>
                                     <p className='text-sm text-muted-foreground uppercase '>Optional</p>
                                     <fieldset className="grid grid-cols-5 gap-2 bg-foreground/10 px-3 py-2 rounded-sm">
@@ -251,8 +272,11 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
                                                             <SelectValue placeholder="Gender" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="Male">Male</SelectItem>
-                                                            <SelectItem value="Female">Female</SelectItem>
+                                                            {['Male', 'Female'].map((gender, index) => (
+                                                                <SelectItem key={index} value={gender}>
+                                                                    {gender}
+                                                                </SelectItem>
+                                                            ))}
                                                         </SelectContent>
                                                     </Select>
 
@@ -289,15 +313,12 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
                                                             mode="single"
                                                             selected={field.value ? new Date(field.value) : undefined}
                                                             onSelect={(date) => {
-
                                                                 if (date) {
                                                                     field.onChange(new Date(date).toISOString());
                                                                 }
                                                             }}
 
-                                                            disabled={(date) =>
-                                                                date > new Date()
-                                                            }
+                                                            disabled={(date) => date > new Date()}
 
                                                         />
                                                     </PopoverContent>
@@ -319,19 +340,31 @@ export default function CreateMemberForm({ lid, progress, setProgress }: CreateM
                 <DialogClose asChild>
                     <Button variant={"outline"} size={"sm"} className="">Cancel</Button>
                 </DialogClose>
-                <DialogClose asChild >
-                    <Button
-                        variant={"foreground"}
-                        size={"sm"}
-                        disabled={loading || form.formState.isSubmitting || !form.formState.isValid}
-                        onClick={form.handleSubmit(onSubmit)}
+                {!member && (
+                    <DialogClose asChild >
+                        <Button
+                            variant={"foreground"}
+                            size={"sm"}
+                            disabled={loading || form.formState.isSubmitting || !form.formState.isValid}
+                            onClick={form.handleSubmit(onSubmit)}
+                            className={cn("children:hidden", (loading && "children:inline-block"))}
+                        >
+                            <Icon name="LoaderCircle" className="mr-2  animate-spin" />
+                            Create Account
+                        </Button>
+                    </DialogClose>
+
+                )}
+                {!existing && member && invite && retry && (
+                    <Button variant={"continue"} size={"sm"}
+                        onClick={() => sendInvite()}
                         className={cn("children:hidden", (loading && "children:inline-block"))}
+                        disabled={loading}
                     >
                         <Icon name="LoaderCircle" className="mr-2  animate-spin" />
-                        Continue
+                        Retry Invite
                     </Button>
-                </DialogClose>
-
+                )}
             </DialogFooter>
 
         </>

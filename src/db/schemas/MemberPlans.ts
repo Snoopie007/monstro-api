@@ -8,7 +8,7 @@ import { locations } from "./locations";
 import { transactions } from "./transactions";
 import { reservations } from "./reservations";
 import { BillingCycleAnchorConfig } from "@/types";
-import { LocationStatusEnum, PackageStatusEnum, PaymentMethodEnum, PlanInterval, PlanType } from "./Enums";
+import { LocationStatusEnum, PackageStatusEnum, PaymentMethodEnum, PlanInterval, PlanType } from "./enums";
 
 
 export const memberPlans = pgTable("member_plans", {

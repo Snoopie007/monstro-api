@@ -20,7 +20,7 @@ const INCOMPLETE_PLAN = {
 
 export async function POST(req: Request, props: { params: Promise<PackageProps> }) {
     const params = await props.params;
-    const { progress, ...data } = await req.json();
+    const { invite, ...data } = await req.json();
 
     try {
 
@@ -73,10 +73,8 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
         const member = await db.transaction(async (tx) => {
 
             const [member] = await tx.insert(members).values({
+                ...data,
                 userId: user.id,
-                email: data.email,
-                firstName: data.firstName,
-                lastName: data.lastName,
                 phone: formatPhoneNumber(data.phone),
                 referralCode: encodeReferralCode(user.id),
             }).returning({ id: members.id, firstName: members.firstName, lastName: members.lastName, email: members.email, phone: members.phone })
