@@ -53,7 +53,7 @@ export default function StaffsPage(props: StaffsPageProps) {
 
     async function removeStaff(staffId: number) {
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${params.id}/staffs/${staffId}`, {
+            fetch(`/api/protected/loc/${params.id}/staffs/${staffId}`, {
                 method: "DELETE",
             })
         )

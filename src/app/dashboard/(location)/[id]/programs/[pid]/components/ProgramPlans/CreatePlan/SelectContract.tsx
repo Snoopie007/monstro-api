@@ -22,7 +22,7 @@ export function SelectContract({ lid, form }: SelectContractProps) {
         if (contractsLoading || contracts.length > 0) return
         setContractsLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${lid}/contracts?withDraft=false`)
+            fetch(`/api/protected/loc/${lid}/contracts?withDraft=false`)
         )
         setContractsLoading(false)
         if (error || !result || !result.ok) return

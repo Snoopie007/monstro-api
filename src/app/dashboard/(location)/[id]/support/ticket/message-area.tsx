@@ -47,7 +47,7 @@ export default function MessageArea({ locationId, ticket }: { locationId: string
         if (newReply.length < 10) return;
 
         try {
-            const res = await fetch(`/api/protected/tickets`, {
+            const res = await fetch(`/api/protected/loc/tickets`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

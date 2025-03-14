@@ -137,7 +137,7 @@ const AutoRecharge = React.memo(({ wallet, lid, mutate, rechargeOptions, thresho
         if (rechargeAmount === wallet.rechargeAmount && rechargeThreshold === wallet.rechargeThreshold) return;
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${lid}/vendor/wallet`, {
+            fetch(`/api/protected/loc/${lid}/vendor/wallet`, {
                 method: 'POST',
                 body: JSON.stringify({
                     rechargeAmount: rechargeAmount,

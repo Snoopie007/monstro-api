@@ -80,7 +80,7 @@ export function CreatePlan({ lid, pid }: CreatePlanProps) {
         setLoading(true)
         const { pkg, subscription, ...rest } = v
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/${lid}/programs/${pid}/plans`, {
+            fetch(`/api/protected/loc/${lid}/programs/${pid}/plans`, {
                 method: 'POST',
                 body: JSON.stringify({
                     ...rest,

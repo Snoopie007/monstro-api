@@ -72,7 +72,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<RewardProps
 			description: data.get('description') as string,
 			requiredPoints: Number(data.get('requiredPoints')),
 			limitPerMember: Number(data.get('limitPerMember')),
-			totalLimit: Number(data.get('totalLimit')),
+			totalLimit: data.get('totalLimit') as string,
 			images: newImages,
 			updated: new Date()
 		}).where(eq(rewards.id, params.rid))

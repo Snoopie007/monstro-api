@@ -26,7 +26,7 @@ export const locations = pgTable("locations", {
     timezone: varchar("timezone", { length: 255 }),
     logoUrl: varchar("logo_url", { length: 255 }),
     metadata: jsonb("meta_data"),
-    vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
+    vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "cascade" }).notNull(),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: false }),
     deleted: timestamp("deleted_at", { withTimezone: false }),

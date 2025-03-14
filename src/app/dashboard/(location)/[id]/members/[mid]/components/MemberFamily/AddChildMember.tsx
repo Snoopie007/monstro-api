@@ -53,9 +53,9 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
             phone: "",
             family: {
                 relationship: "",
-                existingPlanId: "",
-                programId: "",
-                planId: "",
+                existingPlanId: 0,
+                programId: 0,
+                planId: 0,
             },
         },
         mode: "onChange",
@@ -63,9 +63,9 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
 
     useEffect(() => {
         if (plan === "existing") {
-            form.setValue("family.planId", "");
+            form.setValue("family.planId", 0);
         } else {
-            form.setValue("family.existingPlanId", "");
+            form.setValue("family.existingPlanId", 0);
         }
     }, [plan]);
 
@@ -101,7 +101,7 @@ export default function AddChildMember({ open, setOpen, parent, locationId }: Ad
             const data = await response.json();
             console.log('Child member added successfully:', data);
 
-            setOpen(false); // Close the dialog
+            setOpen(false); 
         } catch (error) {
             console.error('Error adding child member:', error);
             setError(error instanceof Error ? error.message : 'An unexpected error occurred');

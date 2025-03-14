@@ -1,4 +1,4 @@
-import { bigserial, text, timestamp, pgTable, integer } from "drizzle-orm/pg-core";
+import { bigserial, text, timestamp, pgTable, integer,serial } from "drizzle-orm/pg-core";
 import { accounts } from "./accounts";
 import { relations } from "drizzle-orm";
 import { members } from "./members";
@@ -7,7 +7,7 @@ import { modelHasRoles } from "./permissions";
 import { staffs } from "./staffs";
 
 export const users = pgTable("users", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
     emailVerified: timestamp("email_verified_at", { withTimezone: true }),
