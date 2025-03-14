@@ -6,7 +6,6 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription, Input } from "@/components/forms";
 import { Member } from "@/types";
 
-import { DialogDescription, DialogTrigger } from "@radix-ui/react-dialog";
 import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { SetStateAction, Dispatch, useState } from "react";

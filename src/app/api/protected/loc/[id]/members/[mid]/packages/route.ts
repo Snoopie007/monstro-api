@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import { memberInvoices, memberLocations, memberPackages, transactions } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
 import { createPackage } from "../../utils";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { and } from "drizzle-orm";
 import { eq } from "drizzle-orm";
 
@@ -11,7 +11,7 @@ type PackageProps = {
     mid: number
 }
 
-export async function GET(req: Request, props: { params: Promise<PackageProps> }) {
+export async function GET(req: NextRequest, props: { params: Promise<PackageProps> }) {
     const params = await props.params;
 
     try {
@@ -42,7 +42,7 @@ export async function GET(req: Request, props: { params: Promise<PackageProps> }
 }
 
 
-export async function POST(req: Request, props: { params: Promise<PackageProps> }) {
+export async function POST(req: NextRequest, props: { params: Promise<PackageProps> }) {
     const params = await props.params;
     const { stripePaymentMethod, hasIncompletePlan, other, ...data } = await req.json();
 

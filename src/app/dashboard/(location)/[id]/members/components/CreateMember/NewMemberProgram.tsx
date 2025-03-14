@@ -88,6 +88,7 @@ export default function NewMemberProgram({ lid, progress, setProgress }: NewMemb
                     ...rest,
                     stripePaymentMethod: progress.stripePaymentMethod,
                     paymentMethod: progress.paymentMethod,
+                    hasIncompletePlan: true,
                     pkg: isOneTime ? { ...pkg } : { ...sub }
                 })
             })

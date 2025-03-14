@@ -14,7 +14,7 @@ import { CircleProgress } from '@/components/ui/circle-progress';
 
 import { CreateSubscription } from './CreateSub/CreateSubscription'
 import { MemberSubscription } from '@/types'
-import { useMember } from '../../providers/MemberContext'
+import { useMemberStatus } from '../../providers/MemberContext'
 import { SubscriptionStatus } from './SubscriptionStatus'
 import { getUnixTime, format } from 'date-fns'
 
@@ -29,7 +29,7 @@ function calculateProgress(start: number, end: number) {
 }
 
 export function MemberSubs({ params }: { params: { id: string, mid: number }, }) {
-    const { member } = useMember();
+    const { member } = useMemberStatus();
     return (
         <div className='py-4 space-y-4'>
             <div className='w-full flex flex-row items-center  gap-2'>

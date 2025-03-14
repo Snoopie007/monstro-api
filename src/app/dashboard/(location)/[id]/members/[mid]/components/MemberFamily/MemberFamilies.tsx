@@ -15,7 +15,7 @@ import {
     DropdownMenuContent,
 } from "@/components/ui"
 import AttachFamilyMember from "./AttachFamily"
-import { useMember } from "../../providers/MemberContext"
+import { useMemberStatus } from "../../providers/MemberContext"
 import { FamilyMember } from "@/types/FamilyMember"
 import { useState } from "react"
 import AddChildMember from "./AddChildMember"
@@ -27,7 +27,7 @@ interface MemberFamiliesProps {
 }
 
 export function MemberFamilies({ params, familyMembers }: MemberFamiliesProps) {
-    const { member, mutate } = useMember()
+    const { member } = useMemberStatus()
     const [attachMemberOpen, setAttachMemberOpen] = useState(false)
     const [addChildOpen, setAddChildOpen] = useState(false)
 

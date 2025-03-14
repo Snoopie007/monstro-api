@@ -30,7 +30,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { cn, tryCatch } from "@/libs/utils";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { useMember } from "../../providers/MemberContext";
+import { useMemberStatus } from "../../providers/MemberContext";
 import { format } from "date-fns"
 import { ChargeItemSchema } from "../../schema";
 
@@ -38,7 +38,7 @@ import { ChargeItemSchema } from "../../schema";
 export default function ChargeItem({ params }: { params: { id: string, mid: number } }) {
     const [open, setOpen] = useState<boolean>(false);
     const [loading, setLoading] = useState(false);
-    const { member } = useMember();
+    const { member } = useMemberStatus();
 
 
     const form = useForm<z.infer<typeof ChargeItemSchema>>({

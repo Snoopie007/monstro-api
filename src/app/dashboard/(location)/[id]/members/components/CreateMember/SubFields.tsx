@@ -1,20 +1,12 @@
 
 import {
     FormControl, FormField, FormMessage, FormItem, FormLabel,
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem,
     Input,
     FormDescription,
 } from '@/components/forms';
 
 import { z } from "zod";
-
-
 import React from "react";
-import { Program, MemberPlan } from "@/types";
 
 import DurationPicker from "../DurationPicker";
 import { UseFormReturn } from 'react-hook-form';

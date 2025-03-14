@@ -7,7 +7,6 @@ import { format } from "date-fns"
 import { Badge } from "@/components/ui"
 import { MemberInvoice } from "@/types/member"
 import { formatAmountForDisplay } from "@/libs/utils"
-import Link from "next/link"
 
 export function MemberInvoices({ params }: { params: { id: string, mid: number } }) {
     const { invoices, isLoading, error } = useMemberInvoices(params.id, params.mid)

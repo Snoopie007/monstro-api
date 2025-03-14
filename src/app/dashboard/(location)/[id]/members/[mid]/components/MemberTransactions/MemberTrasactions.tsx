@@ -12,15 +12,14 @@ import {
 import { Input } from '@/components/forms'
 import { cn, formatAmountForDisplay } from '@/libs/utils'
 import MemberPaymentActions from './actions'
-// import NewMemberTransaction from './CreateTransaction'
 import { useMemberTransactions } from '@/hooks/hooks'
-import { useMember } from '../../providers/MemberContext'
+import { useMemberStatus } from '../../providers/MemberContext'
 
 import { format } from 'date-fns'
 import { Transaction } from '@/types/transaction'
 
 export function MemberTransactions({ params }: { params: { id: string, mid: number } }) {
-    const { member } = useMember();
+    const { member } = useMemberStatus();
     const { transactions, error, isLoading } = useMemberTransactions(params.id, params.mid);
     return (
         <div className='py-4'>

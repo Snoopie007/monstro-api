@@ -11,13 +11,13 @@ import {
 
 import { ChevronLeft, Mail, PhoneCall } from "lucide-react";
 import { useRouter } from 'next/navigation'
-import { useMember } from "../../providers/MemberContext";
+import { useMemberStatus } from "../../providers/MemberContext";
 
 interface MemberProfileProps {
     params: { id: string, mid: number }
 }
 export function MemberProfile({ params }: MemberProfileProps) {
-    const { member, mutate } = useMember()
+    const { member } = useMemberStatus()
     const router = useRouter()
 
 

@@ -10,7 +10,7 @@ import AddPaymentMethod from "./AddMethod"
 import { Elements } from "@stripe/react-stripe-js"
 import { getStripe } from "@/libs/client/stripe"
 import PaymentMethodsActions from "./actions"
-import { useMember, useMemberPaymentMethods } from "../../providers/MemberContext"
+import { useMemberStatus, useMemberPaymentMethods } from "../../providers/MemberContext"
 
 interface PaymentMethodsProps {
     stripeKey: string | null
@@ -18,7 +18,7 @@ interface PaymentMethodsProps {
 }
 
 export function PaymentMethods({ stripeKey, params }: PaymentMethodsProps) {
-    const { member, mutate } = useMember()
+    const { member } = useMemberStatus()
     const { paymentMethods, addPaymentMethods } = useMemberPaymentMethods()
 
     return (
