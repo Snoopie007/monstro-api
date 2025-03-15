@@ -31,7 +31,7 @@ export const programs = pgTable("programs", {
 
 export const programSessions = pgTable("program_sessions", {
     id: serial("id").primaryKey(),
-    programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
+    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     time: time("time").notNull(),
     duration: smallint("duration").notNull().default(0),
     day: smallint("day").notNull().default(1),
