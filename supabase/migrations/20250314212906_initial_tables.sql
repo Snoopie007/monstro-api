@@ -124,16 +124,16 @@ CREATE INDEX IF NOT EXISTS idx_locations_vendor_id ON locations (vendor_id);
 CREATE TABLE IF NOT EXISTS contracts (
   id bigserial PRIMARY KEY NOT NULL,
   content text,
-  title text,
-  description text,
+  title text NOT NULL,
+  description text NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   is_draft boolean NOT NULL DEFAULT false,
   editable boolean NOT NULL DEFAULT true,
-  location_id bigint,
+  location_id bigint NOT NULL,
   type contract_type NOT NULL DEFAULT 'contract'::contract_type,
-  require_signature boolean NOT NULL DEFAULT true,
+  require_signature boolean NOT NULL DEFAULT false,
   CONSTRAINT contracts_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON UPDATE CASCADE ON DELETE CASCADE
 );
 
