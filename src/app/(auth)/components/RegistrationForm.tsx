@@ -7,7 +7,7 @@ import {
     SelectContent, SelectValue, SelectTrigger, Select, SelectItem
 } from "@/components/forms";
 import { useSearchParams } from "next/navigation";
-import { cn, sleep, tryCatch } from "@/libs/utils";
+import { cn, sleep } from "@/libs/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
@@ -70,7 +70,7 @@ export function RegisterForm() {
                     <fieldset className="grid grid-cols-2 gap-2">
                         <FormField control={form.control} name="firstName" render={({ field }) => (
                             <FormItem className="col-span-1">
-                                <FormLabel className="text-[0.6rem] uppercase">
+                                <FormLabel size="tiny">
                                     First Name
                                 </FormLabel>
                                 <FormControl>
@@ -81,7 +81,7 @@ export function RegisterForm() {
                         )} />
                         <FormField control={form.control} name="lastName" render={({ field }) => (
                             <FormItem className="col-span-1">
-                                <FormLabel className="text-[0.6rem] uppercase">
+                                <FormLabel size="tiny">
                                     Last Name
                                 </FormLabel>
                                 <FormControl>
@@ -94,7 +94,7 @@ export function RegisterForm() {
                     <fieldset>
                         <FormField control={form.control} name="email" render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-[0.6rem] uppercase">Email</FormLabel>
+                                <FormLabel size="tiny">Email</FormLabel>
                                 <FormControl>
                                     <Input type="email" className="bg-white border border-gray-200  rounded-sm  text-sm " placeholder="Your email" disabled={emailParam ? true : false} {...field} />
                                 </FormControl>
@@ -105,7 +105,7 @@ export function RegisterForm() {
                     <fieldset>
                         <div className="flex-1 justify-center space-y-2">
 
-                            <FormLabel className="text-[0.6rem] uppercase"> Phone </FormLabel>
+                            <FormLabel size="tiny"> Phone </FormLabel>
                             <div className="flex  flex-row gap-1">
                                 <Select onValueChange={(value: string) => { setPhoneRegion(value as CountryCode) }} defaultValue={phoneRegion}>
 
@@ -152,7 +152,7 @@ export function RegisterForm() {
                             <FormItem>
                                 <FormLabel className="text-[0.6rem]  uppercase">Password</FormLabel>
                                 <FormControl>
-                                    <Input type="password" className="bg-white border border-gray-200  rounded-sm  text-sm " placeholder="Your password" {...field} />
+                                    <Input type="password" className="bg-white border border-gray-200  rounded-sm  text-sm " placeholder="••••••••" {...field} />
                                 </FormControl>
                                 <FormMessage className="text-xs" />
                             </FormItem>

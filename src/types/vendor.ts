@@ -8,9 +8,11 @@ export type Vendor = {
     firstName: string;
     lastName: string | null;
     phone: string | null;
+    email: string | null;
     stripeCustomerId: string | null;
-    icon: string | null;
+    avatar: string | null;
     userId: number;
+    accountOwner: boolean;
     referrals?: VendorReferral[];
     vendorProgress?: VendorProgress;
     created: Date;

@@ -12,8 +12,6 @@ export const users = pgTable("users", {
     email: text("email").notNull().unique(),
     emailVerified: timestamp("email_verified_at", { withTimezone: true }),
     password: text("password"),
-    rememberToken: text("remember_token"),
-    image: text("image"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
     deleted: timestamp("deleted_at", { withTimezone: true }),

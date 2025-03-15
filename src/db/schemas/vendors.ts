@@ -1,4 +1,4 @@
-import { bigint, bigserial, text, timestamp, pgTable, doublePrecision, integer, serial } from "drizzle-orm/pg-core";
+import { text, timestamp, pgTable, doublePrecision, integer, serial, boolean } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { relations } from "drizzle-orm";
 import { vendorProgress } from "./VendorProgress";
@@ -10,11 +10,10 @@ export const vendors = pgTable("vendors", {
     firstName: text("first_name").notNull(),
     lastName: text("last_name"),
     stripeCustomerId: text("stripe_customer_id"),
-    phone: text("phone_number"),
-    companyName: text("company_name"),
-    companyAddress: text("company_address"),
-    companyEmail: text("company_email"),
-    icon: text("icon"),
+    phone: text("phone"),
+    email: text("email"),
+    accountOwner: boolean("account_owner").notNull().default(false),
+    avatar: text("avatar"),
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),

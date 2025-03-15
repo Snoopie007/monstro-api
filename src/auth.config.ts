@@ -36,7 +36,7 @@ export default {
 								columns: {
 									id: true,
 									phone: true,
-									icon: true,
+									avatar: true,
 									stripeCustomerId: true,
 								},
 								with: {
@@ -84,7 +84,7 @@ export default {
 						name: rest.name,
 						email: rest.email,
 						phone: vendor.phone,
-						image: vendor?.icon,
+						image: vendor?.avatar,
 						vendorId: vendor?.id,
 						vendorPhone: vendor?.phone,
 						stripeCustomerId: vendor?.stripeCustomerId,

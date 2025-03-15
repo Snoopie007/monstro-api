@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { RegisterForm } from "../components/RegistrationForm";
+import { CircleFadingArrowUp } from "lucide-react";
 
 const MonstroBenefits = [
     {
@@ -20,11 +21,14 @@ export default async function JoinMonstroPage() {
     return (
         <div className="grid grid-cols-2 gap-10 h-full ">
             <div className="col-span-1  space-y-6" >
-                <div className="text-lg text-gray-500 font-bold">Why Monstro?</div>
+                <div className="text-2xl text-gray-900 font-bold">
+                    Turn your member management into a revenue stream!
+                </div>
                 <ul className="space-y-6 ">
                     {MonstroBenefits.map((benefit, index) => (
-                        <li key={index} className="pl-4">
-                            <div className="space-y-2">
+                        <li key={index} className=" flex items-start flex-row gap-2">
+                            <CircleFadingArrowUp className="flex-shrink-0 flex-initial rotate-90 size-4 text-indigo-500" />
+                            <div className="space-y-2 flex-1">
                                 <div className="leading-none text-base font-medium">{benefit.title}</div>
                                 <div className="text-gray-600 text-sm ">{benefit.description}</div>
                             </div>
@@ -33,7 +37,7 @@ export default async function JoinMonstroPage() {
                 </ul>
             </div>
             <div className="shadow-xs min-w-[400px] border bg-white border-gray-200 rounded-sm p-1 space-y-4  ">
-                <div className="space-y-4 p-10">
+                <div className="space-y-4 p-6">
                     <h1 className="text-lg font-bold">
                         Create your Monstro account
                     </h1>

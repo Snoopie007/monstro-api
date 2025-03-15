@@ -77,7 +77,7 @@ export default function LoginForm() {
 						name="email"
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel className="font-semibold text-[0.65rem] uppercase">
+								<FormLabel size="tiny">
 									Email
 								</FormLabel>
 								<FormControl>
@@ -110,9 +110,8 @@ export default function LoginForm() {
 								<FormControl>
 									<Input
 										type="password"
-
-										className={"bg-white border border-gray-200  rounded-sm py-4 px-4 text-sm shadow-none"}
-										placeholder="Your password"
+										className={"bg-white border border-gray-200  rounded-sm p-4 text-sm shadow-none"}
+										placeholder="••••••••"
 										{...field}
 									/>
 								</FormControl>

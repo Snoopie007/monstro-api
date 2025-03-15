@@ -67,7 +67,7 @@ export type MemberSubscription = {
 }
 
 export type MemberPackage = {
-    id?: string;
+    id?: number;
     memberPlanId: number;
     locationId: number;
     payerId: number | null;
@@ -130,7 +130,7 @@ export type MemberPlan = {
 
 
 export type MemberInvoice = {
-    id?: string;
+    id?: number;
     settings?: Record<string, unknown>;
     currency: string | null;
     memberId: number;
@@ -147,7 +147,7 @@ export type MemberInvoice = {
     forPeriodEnd?: Date | null;
     attemptCount?: number;
     invoicePdf?: string | null;
-    memberPackageId?: string | null;
+    memberPackageId?: number | null;
     memberPackage?: MemberPackage | null;
     memberSubscriptionId?: number | null;
     memberSubscription?: MemberSubscription | null;

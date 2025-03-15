@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 
 import { NextRequest, NextResponse } from "next/server";
-import { modelHasRoles, users, vendors } from "@/db/schemas";
+import { users, vendors } from "@/db/schemas";
 import bcrypt from "bcryptjs";
 
 
@@ -20,21 +20,18 @@ export async function POST(req: NextRequest) {
         const hashedPassword: string = await bcrypt.hash(data.password, salt);
         await db.transaction(async (tx) => {
             const [{ id }] = await tx.insert(users).values({
-                name: data.firstName + " " + data.lastName,
+                name: `${data.firstName} ${data.lastName}`,
                 email: data.email,
                 password: hashedPassword,
             }).returning({ id: users.id })
+
             await tx.insert(vendors).values({
-                userId: id,
-                companyEmail: data.email,
                 ...data,
-                created: new Date(),
+                userId: id,
+                accountOwner: true,
+
             })
-            await tx.insert(modelHasRoles).values({
-                roleId: 2,
-                modelId: id,
-                modelType: "App\\Models\\User",
-            })
+
         })
 
 
