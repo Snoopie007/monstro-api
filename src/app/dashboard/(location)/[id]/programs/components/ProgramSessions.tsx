@@ -63,7 +63,7 @@ export default function SessionComponent({ scheduleIndex, control }: AddProgramS
                                         <FormItem className='col-span-1'>
 
                                             <FormControl>
-                                                <Select onValueChange={(v) => field.onChange(parseInt(v + 1))} value={field.value.toString()}>
+                                                <Select onValueChange={(v) => field.onChange(parseInt(v) + 1)} value={(field.value - 1).toString()}>
                                                     <SelectTrigger className={cn({ "border-red-500": fieldState.error })}>
                                                         <SelectValue placeholder="Select a day" />
                                                     </SelectTrigger>

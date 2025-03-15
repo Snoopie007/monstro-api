@@ -22,6 +22,7 @@ export default auth(async (req) => {
 		const { pathname } = req.nextUrl
 		const isLoggedin = !!req.auth
 		const locations = req.auth?.user?.locations || []
+
 		// Check for mobile app requests
 		const isMobileApp = req.headers.get("X-Mobile-App") === "true" && pathname.includes("member")
 		// Verify mobile app token
