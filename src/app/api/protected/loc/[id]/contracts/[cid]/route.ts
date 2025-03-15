@@ -13,7 +13,6 @@ export async function GET(req: Request, props: { params: Promise<{ cid: number, 
     const template = await db.query.contractTemplates.findFirst({
       where: (templates, { eq }) => eq(templates.id, params.cid),
     })
-    console.log(template);
     return NextResponse.json(template, { status: 200 });
 
   } catch (err) {
@@ -21,23 +20,19 @@ export async function GET(req: Request, props: { params: Promise<{ cid: number, 
   }
 }
 
-export async function PUT(req: Request, props: { params: Promise<{ cid: string, id: string }> }) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ cid: number, id: string }> }) {
   const { cid } = await props.params;
-
+  const data = await req.json();
   try {
 
     if (!cid) {
       return NextResponse.json({ error: "Contract ID is required" }, { status: 400 });
     }
 
-    const result = await db
-      .update(contractTemplates)
-      .set({
-        ...req.body,
-        updated: new Date(),
-      })
-      .where(eq(contractTemplates.id, Number(cid)))
-      .returning();
+    const result = await db.update(contractTemplates).set({
+      ...data,
+      updated: new Date(),
+    }).where(eq(contractTemplates.id, cid)).returning();
 
     if (!result.length) {
       return NextResponse.json({ error: "Contract not found" }, { status: 404 });
@@ -54,12 +49,13 @@ export async function PUT(req: Request, props: { params: Promise<{ cid: string, 
 
 }
 
-export async function DELETE(req: NextRequest, props: { params: { cid: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ cid: number }> }) {
+  const { cid } = await props.params;
   try {
 
-    const { cid } = props.params;
 
-    const result = await db.delete(contractTemplates).where(eq(contractTemplates.id, Number(cid))).returning();
+
+    const result = await db.delete(contractTemplates).where(eq(contractTemplates.id, cid)).returning();
 
 
     if (!result.length) {

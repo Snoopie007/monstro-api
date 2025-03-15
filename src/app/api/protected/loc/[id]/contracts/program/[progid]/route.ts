@@ -1,29 +1,25 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import {} from '@/db/schemas/programs'
+import { } from '@/db/schemas/programs'
 
-export async function GET(
-  req: Request,
-  props: { params: Promise<{ programId: string, id: string }> }
+export async function GET(req: Request, props: { params: Promise<{ progid: number, id: string }> }
 ) {
-  const programId = await props.params;
+  const { progid } = await props.params;
 
-  if (!programId)
-  {
+  if (!progid) {
     return NextResponse.json({ error: 'Program ID is required' }, { status: 400 });
   }
 
   const program = await db.query.programs.findMany({
-    where: (program, { eq }) => eq(program.id, Number(programId.programId)),
+    where: (program, { eq }) => eq(program.id, progid),
   });
 
   console.log(program);
-  
-  if (!program)
-  {
+
+  if (!program) {
     return NextResponse.json({ error: 'Program not found' }, { status: 404 });
   }
 
   return NextResponse.json(program, { status: 200 });
-  
+
 }

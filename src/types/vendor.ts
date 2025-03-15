@@ -9,13 +9,7 @@ export type Vendor = {
     lastName: string | null;
     phone: string | null;
     stripeCustomerId: string | null;
-    companyName: string | null;
-    companyEmail: string | null;
-    companyWebsite: string | null;
-    companyAddress: string | null;
     icon: string | null;
-    credits: number;
-    spendedCredits: number;
     userId: number;
     referrals?: VendorReferral[];
     vendorProgress?: VendorProgress;
