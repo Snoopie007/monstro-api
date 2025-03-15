@@ -28,7 +28,7 @@ export const ProgramColumns = (locationId: string): ColumnDef<Program, any>[] =>
         header: "Age Range",
         cell: ({ row }) => {
             const program = row.original
-            return <Badge>{program.minAge} - {program.maxAge}</Badge>
+            return `${program.minAge} - ${program.maxAge}`
         }
     },
     {
