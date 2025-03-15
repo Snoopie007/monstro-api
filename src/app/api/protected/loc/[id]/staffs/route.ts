@@ -16,10 +16,11 @@ type StaffProps = {
 export async function GET(req: Request, props: { params: Promise<StaffProps> }) {
     const params = await props.params;
     try {
-        const staffs = await db.query.staffs.findMany({
-            where: (staffs, { eq }) => and(eq(staffs.locationId, params.id), isNull(staffs.deleted)),
+        const staffs = await db.query.staffsLocations.findMany({
+            where: (staffsLocations, { eq }) => and(eq(staffsLocations.locationId, params.id)),
             with: {
-                role: true
+                staff: true,
+                roles: true                   
             }
         })
         return NextResponse.json(staffs, { status: 200 });

@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { integer, primaryKey, serial, text, timestamp, pgTable, boolean, varchar, jsonb } from "drizzle-orm/pg-core";
+import { integer, primaryKey, serial, text, timestamp, pgTable, boolean, jsonb } from "drizzle-orm/pg-core";
 import { locations, memberLocations } from "./locations";
 import { users } from "./users";
 import { achievements } from "./achievements";
@@ -8,8 +8,6 @@ import { contractTemplates } from "./ContractTemplates";
 import { memberPackages, memberPlans } from "./MemberPlans";
 import { memberSubscriptions } from "./MemberPlans";
 import { InvoiceStatusEnum, MemberRelationshipEnum } from "./enums";
-
-
 
 export const members = pgTable("members", {
     id: serial("id").primaryKey(),

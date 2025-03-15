@@ -18,7 +18,7 @@ export type Location = {
     website: string | null;
     country: string | null;
     phone: string | null;
-    metadata: Record<string, unknown> | null;
+    metadata: unknown;
     logoUrl: string | null;
     timezone: string | null;
     locationState?: LocationState;
