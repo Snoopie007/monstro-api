@@ -35,7 +35,7 @@ function handlePaymentError(toastRef: string | number, message: string) {
         render: message,
         type: "error",
         isLoading: false,
-        autoClose: 3000,
+        autoClose: 1000,
     });
 }
 
@@ -75,7 +75,7 @@ export default function VendorPaymentForm() {
 
         if (!elements || !stripe || !locationId) return;
         setLoading(true);
-        const toastRef = toast.loading("Processing payment...", { className: 'text-sm font-medium ' });
+        const toastRef = toast.loading("Processing payment...", { className: 'text-sm font-medium ', autoClose: 1000 });
         const cardElement = elements!.getElement(CardElement);
         try {
 
@@ -83,7 +83,7 @@ export default function VendorPaymentForm() {
 
             if (tokenRef.token) {
 
-                const res = await fetch(`/api/protected/vendor/${locationId}/checkout`, {
+                const res = await fetch(`/api/protected/vendor/locations/${locationId}/checkout`, {
                     method: 'POST',
                     body: JSON.stringify({
                         vendorId: session?.user.vendorId,
@@ -97,13 +97,19 @@ export default function VendorPaymentForm() {
                     return handlePaymentError(toastRef, "An error occurred while processing your payment.");
                 }
 
-                update({
+                await update({
                     locations: session?.user.locations.map((location: { id: string, status: string }) => {
                         const decodedId = decodeId(location.id);
                         return decodedId === locationState.locationId
                             ? { ...location, status: 'active' }
                             : location
                     })
+                });
+                toast.update(toastRef, {
+                    render: "Payment successful",
+                    type: "success",
+                    isLoading: true,
+                    autoClose: 100,
                 });
                 router.push(`/dashboard/${locationId}`)
             } else {

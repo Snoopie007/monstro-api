@@ -4,7 +4,6 @@ import { locations, memberLocations } from "./locations";
 import { users } from "./users";
 import { achievements } from "./achievements";
 import { rewards } from "./rewards";
-import { programMembers } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { memberPackages, memberPlans } from "./MemberPlans";
 import { memberSubscriptions } from "./MemberPlans";
@@ -103,7 +102,6 @@ export const membersRelations = relations(members, ({ many, one }) => ({
     achievements: many(memberAchievements),
     rewards: many(memberRewards),
     contracts: many(memberContracts),
-    programMembers: many(programMembers),
     subscriptions: many(memberSubscriptions, { relationName: "beneficiary" }),
     user: one(users, {
         fields: [members.userId],

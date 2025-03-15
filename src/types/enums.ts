@@ -9,4 +9,5 @@ export type MemberRelationship = 'parent' | 'spouse' | 'child' | 'sibling' | 'ot
 export type ContractType = 'contract' | 'waiver';
 export type RoleColor = "red" | "green" | "blue" | "pink" | "cyan" | "lime" | "orange" | "fuchsia" | "sky" | "lemon" | "purple" | "yellow";
 export type TransactionStatus = 'paid' | 'failed' | 'incomplete';
-export type StaffStatus = 'active' | 'inactive'; 
+export type StaffStatus = 'active' | 'inactive';
+export type ProgramStatus = 'active' | 'inactive';

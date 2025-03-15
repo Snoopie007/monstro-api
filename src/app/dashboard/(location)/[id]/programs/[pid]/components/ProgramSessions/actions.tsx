@@ -7,41 +7,38 @@ import {
     Button,
     DropdownMenuSeparator
 } from '@/components/ui'
-import { ProgramLevel, ProgramSession } from '@/types'
-import { UpsertLevel } from './UpdateLevel'
+import { ProgramSession } from '@/types'
 import { useState } from 'react'
 import { tryCatch } from '@/libs/utils'
 import { toast } from 'react-toastify'
 import { Loader2 } from 'lucide-react'
 
-interface LevelActionsProps {
-    level: ProgramLevel
+interface SessionActionsProps {
+    session: ProgramSession
     lid: string
 }
 
-export default function LevelActions({ level, lid }: LevelActionsProps) {
-    const [currentLevel, setCurrentLevel] = useState<ProgramLevel | null>(null)
+export default function SessionActions({ session, lid }: SessionActionsProps) {
+    const [currentSession, setCurrentSession] = useState<ProgramSession | null>(null)
     const [loading, setLoading] = useState<boolean>(false)
 
     function isDisabled() {
-        if (!level || !level.sessions) return true
-        return level.sessions.some((session: ProgramSession) => 
-            session.reservations && session.reservations.length > 0
-        )
+        if (!session) return true
+        return session.reservations && session.reservations.length > 0
     }
 
     async function onDelete(lid: number) {
         if (!lid) return
 
-        setLoading(true) 
+        setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/programs/${level?.programId}/levels/${level?.id}`, {
+            fetch(`/api/protected/loc/${lid}/programs/${session?.programId}/sessions/${session?.id}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ levelId: lid })
+                body: JSON.stringify({ sessionId: lid })
             })
         )
-        setLoading(false) 
+        setLoading(false)
 
         if (error || !result || !result.ok) {
             toast.error(error?.message || 'Failed to delete session')
@@ -52,7 +49,6 @@ export default function LevelActions({ level, lid }: LevelActionsProps) {
 
     return (
         <div>
-            <UpsertLevel level={currentLevel} setCurrentLevel={setCurrentLevel} lid={lid} />
 
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -63,7 +59,7 @@ export default function LevelActions({ level, lid }: LevelActionsProps) {
                 <DropdownMenuContent className='w-[180px] border-foreground/20 p-2'>
                     <DropdownMenuItem
                         className='cursor-pointer hover:bg-indigo-500 text-sm py-2 leading-5'
-                        onClick={() => setCurrentLevel(level)}
+                        onClick={() => setCurrentSession(session)}
                     >
                         <span>Edit</span>
                     </DropdownMenuItem>
@@ -72,7 +68,7 @@ export default function LevelActions({ level, lid }: LevelActionsProps) {
 
                     <DropdownMenuItem
                         className='cursor-pointer bg-red-500'
-                        onClick={() => onDelete(level.id)}
+                        onClick={() => onDelete(session.id)}
                         disabled={isDisabled()}
                     >
                         {loading ? <Loader2 size={16} className="animate-spin" /> : <span>Delete</span>}

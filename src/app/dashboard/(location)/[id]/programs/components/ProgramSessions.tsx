@@ -19,24 +19,25 @@ import { X } from 'lucide-react';
 
 
 interface AddProgramSessionsProps {
-    scheduleIndex: number, control: Control<z.infer<typeof NewProgramSchema>>,
+    control: Control<z.infer<typeof NewProgramSchema>>,
 };
 
 
 
-export default function SessionComponent({ scheduleIndex, control }: AddProgramSessionsProps) {
+export default function SessionComponent({ control }: AddProgramSessionsProps) {
 
     const { fields, remove, append } = useFieldArray({
         control,
-        name: `levels.${scheduleIndex}.sessions`
+        name: `sessions`
     });
 
     return (
-        <div className="py-3  ">
-            <div className="border-b flex flex-row items-center justify-between border-foreground/5 mb-4 pb-2">
-                <span className="text-sm">
-                    Add a Session
-                </span>
+        <div className="bg-foreground/5 p-4 rounded-sm">
+            <div className="border-b flex flex-row items-start justify-between border-foreground/5 mb-4 pb-2">
+                <div className="space-y-1">
+                    <div className='font-medium text-sm leading-none'> Add a Session</div>
+                    <div className='text-xs text-foreground/50'>Add a session to the program</div>
+                </div>
                 <Button type='button'
                     variant={"foreground"}
                     onClick={() => append({ day: 1, duration: 30, time: "12:00" })}
@@ -58,7 +59,7 @@ export default function SessionComponent({ scheduleIndex, control }: AddProgramS
                             <div className='grid grid-cols-4 gap-2  ' key={item.id}>
                                 <FormField
                                     control={control}
-                                    name={`levels.${scheduleIndex}.sessions.${k}.day`}
+                                    name={`sessions.${k}.day`}
                                     render={({ field, fieldState }) => (
                                         <FormItem className='col-span-1'>
 
@@ -79,7 +80,7 @@ export default function SessionComponent({ scheduleIndex, control }: AddProgramS
                                 />
                                 <FormField
                                     control={control}
-                                    name={`levels.${scheduleIndex}.sessions.${k}.time`}
+                                    name={`sessions.${k}.time`}
                                     render={({ field }) => (
                                         <FormItem className={cn("col-span-1")}>
                                             <FormControl>
@@ -96,7 +97,7 @@ export default function SessionComponent({ scheduleIndex, control }: AddProgramS
                                 />
                                 <FormField
                                     control={control}
-                                    name={`levels.${scheduleIndex}.sessions.${k}.duration`}
+                                    name={`sessions.${k}.duration`}
                                     render={({ field }) => (
                                         <FormItem className="col-span-1 ">
 

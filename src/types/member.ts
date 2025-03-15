@@ -1,9 +1,9 @@
 import { Contract, MemberContract } from "./contract";
 import { FamilyMember } from "./FamilyMember";
-import { ProgramLevel } from "./program";
 import { Transaction } from "./transaction";
 import { Location } from "./location";
 import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod } from "./enums";
+import { Program } from "./program";
 
 export type Member = {
     id?: number;
@@ -49,12 +49,12 @@ export type MemberSubscription = {
     cancelAt?: Date | null;
     cancelAtPeriodEnd?: boolean;
     locationId: number;
-    programLevelId: number;
+    programId: number;
     stripeSubscriptionId?: string | null;
     trialEnd?: Date | null;
     endedAt?: Date | null;
     paymentMethod: PaymentMethod;
-    programLevel?: ProgramLevel;
+    program?: Program;
     plan?: MemberPlan;
     payer?: Member | null;
     beneficiary?: Member;
@@ -81,8 +81,8 @@ export type MemberPackage = {
     totalClassAttended?: number;
     totalClassLimit: number;
     metadata?: Record<string, unknown>;
-    programLevelId: number;
-    programLevel?: ProgramLevel;
+    programId: number;
+    program?: Program;
     invoice?: MemberInvoice | null;
     plan?: MemberPlan;
     contract?: MemberContract | null;
@@ -172,7 +172,6 @@ export type MemberLocation = {
 
 export type IncompletePlan = {
     programId: number | undefined;
-    programLevelId: number | undefined;
     memberPlanId: number | undefined;
     currentStep: number;
     memberContractId: number | undefined;

@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { db } from "./db/db";
 import { encodeId } from "./libs/server/sqids";
 import { SignJWT } from "jose";
+import { compareHashedPassword } from "./libs/server/db";
 
 class CustomLoginError extends CredentialsSignin {
 	constructor(code: string) {
@@ -61,10 +62,11 @@ export default {
 
 					if (!user || !user.password) throw new CustomLoginError("No user found");
 
-					const match = await bcrypt.compare(`${credentials.password}`, user.password);
+					// const match = await bcrypt.compare(`${credentials.password}`, user.password);
 
+					if (!user) throw new CustomLoginError("User not found");
+					const match = await compareHashedPassword(credentials.password.toString(), user.password);
 					if (!match) throw new CustomLoginError("Invalid password or email.");
-
 					// Create a JWT token
 					const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
 					const jwt = await new SignJWT(user).setProtectedHeader({ alg: "HS256" }).setExpirationTime("1d").setIssuedAt().sign(secret);

@@ -23,41 +23,33 @@ import { NewProgramSchema } from '../schemas';
 import { Icon } from '@/components/icons';
 
 import { toast } from 'react-toastify';
-import { X } from 'lucide-react';
+import { usePrograms } from '@/hooks/usePrograms';
+
 
 
 
 export function AddProgram({ lid }: { lid: string }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const { mutate } = usePrograms(lid);
     const form = useForm<z.infer<typeof NewProgramSchema>>({
         resolver: zodResolver(NewProgramSchema),
         defaultValues: {
             description: "",
             name: "",
-            levels: [
+            capacity: 0,
+            minAge: 0,
+            maxAge: 0,
+            sessions: [
                 {
-                    name: "",
-                    capacity: 0,
-                    minAge: 0,
-                    maxAge: 0,
-                    sessions: [
-                        {
-                            day: 1,
-                            time: "12:00",
-                            duration: 30,
-                        }
-                    ],
+                    day: 1,
+                    time: "12:00",
+                    duration: 30,
                 }
-            ]
+            ],
         },
         mode: "onChange",
     })
-
-    const { fields, append, remove } = useFieldArray({
-        control: form.control, // control props comes from useForm (optional: if you are using FormProvider)
-        name: "levels", // unique name for your Field Array
-    });
 
 
     async function submitForm(v: z.infer<typeof NewProgramSchema>) {
@@ -69,30 +61,16 @@ export function AddProgram({ lid }: { lid: string }) {
                 body: JSON.stringify(v)
             })
         )
-
+        setLoading(false);
         if (error || !result || !result.ok) {
             toast.error(error?.message || "Something went wrong");
             return;
         }
-        await sleep(3000);
-        setLoading(false);
+        await mutate();
+        await sleep(1000);
+        setOpen(false);
     };
 
-    function appendLevel() {
-        append({
-            name: "",
-            sessions: [
-                {
-                    day: 1,
-                    time: "12:00",
-                    duration: 30,
-                }
-            ],
-            capacity: 0,
-            minAge: 0,
-            maxAge: 0,
-        });
-    }
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -148,101 +126,54 @@ export function AddProgram({ lid }: { lid: string }) {
                                         )}
                                     />
                                 </fieldset>
+                                <fieldset className='flex flex-row items-center gap-2  w-full'>
+
+                                    <FormField
+                                        control={form.control}
+                                        name="capacity"
+                                        render={({ field }) => (
+                                            <FormItem >
+                                                <FormLabel size={"tiny"}>Capacity</FormLabel>
+                                                <FormControl>
+                                                    <Input type='number' className={cn()} placeholder={'Capacity'}  {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="minAge"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel size={"tiny"}>Min Age</FormLabel>
+                                                <FormControl>
+                                                    <Input type='number' className={cn()} placeholder={'Min Age'} {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="maxAge"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel size={"tiny"}>Max Age</FormLabel>
+                                                <FormControl>
+                                                    <Input type='number' className={cn()} placeholder={'Max Age'} {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+
+                                        )}
+                                    />
+                                </fieldset>
                             </SheetSection>
                             <SheetSection>
-                                <div className="mb-4 ">
-                                    <div className='text-sm  font-medium'>
-                                        Add Levels
-                                    </div>
-                                    <p className='text-xs  text-muted-foreground leading-none'>
-                                        Your program may have different levels, add as many level as you like.
-                                    </p>
-                                </div>
-                                <div>
-                                    {fields.map((item, index) => (
-                                        <div key={item.id} className="text-foreground px-5 rounded-sm bg-foreground/5 py-4 mb-2"  >
-                                            <div className="relative space-y-2">
-                                                {index !== 0 && (
-                                                    <div className="flex flex-row items-center justify-end ">
-
-                                                        <button onClick={() => { remove(index) }}                                                            >
-                                                            <X className='w-4 h-4 stroke-red-500' />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                                <fieldset className="">
-                                                    <FormField
-                                                        control={form.control}
-                                                        name={`levels.${index}.name`}
-                                                        render={({ field }) => (
-                                                            <FormItem >
-                                                                <FormLabel size="tiny">Level Name</FormLabel>
-                                                                <FormControl>
-                                                                    <Input type='text' placeholder={'Level Name'} {...field} />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-
-                                                        )}
-                                                    />
-
-
-                                                </fieldset>
-                                                <fieldset className='flex flex-row items-center gap-2  w-full'>
-                                                    <FormField
-                                                        control={form.control}
-                                                        name={`levels.${index}.capacity`}
-                                                        render={({ field }) => (
-                                                            <FormItem >
-                                                                <FormLabel size="tiny">Capacity</FormLabel>
-                                                                <FormControl>
-                                                                    <Input type='number' placeholder={'Capacity'}  {...field} />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-
-                                                        )}
-                                                    />
-                                                    <FormField
-                                                        control={form.control}
-                                                        name={`levels.${index}.minAge`}
-                                                        render={({ field }) => (
-                                                            <FormItem className="flex-1">
-                                                                <FormLabel size="tiny">Min Age</FormLabel>
-                                                                <FormControl>
-                                                                    <Input type='number' placeholder={'Min Age'} {...field} />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-
-                                                        )}
-                                                    />
-                                                    <FormField
-                                                        control={form.control}
-                                                        name={`levels.${index}.maxAge`}
-                                                        render={({ field }) => (
-                                                            <FormItem className="flex-1">
-                                                                <FormLabel size="tiny">Max Age</FormLabel>
-                                                                <FormControl>
-                                                                    <Input type='number' placeholder={'Max Age'} {...field} />
-                                                                </FormControl>
-                                                                <FormMessage />
-                                                            </FormItem>
-
-                                                        )}
-                                                    />
-                                                </fieldset>
-
-                                                <SessionComponent scheduleIndex={index} control={form.control} />
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <button type='button'
-                                        onClick={appendLevel}
-                                        className="text-center border-dashed border border-gray-200 w-full py-1.5 rounded-xs text-sm">
-                                        + Level
-                                    </button>
-                                </div>
+                                <SessionComponent control={form.control} />
                             </SheetSection>
                         </form>
                     </Form>

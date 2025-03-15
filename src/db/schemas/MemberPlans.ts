@@ -1,5 +1,5 @@
 import { integer, boolean, text, timestamp, pgTable, serial, jsonb } from "drizzle-orm/pg-core";
-import { programLevels, programs } from "./programs";
+import { programs } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { relations, sql } from "drizzle-orm";
 
@@ -45,7 +45,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
+    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     stripeSubscriptionId: text("stripe_subscription_id"),
     status: LocationStatusEnum("status").notNull().default("incomplete"),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
@@ -69,7 +69,7 @@ export const memberPackages = pgTable("member_packages", {
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     payerId: integer("payer_id").references(() => members.id, { onDelete: "set null" }),
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-    programLevelId: integer("program_level_id").notNull().references(() => programLevels.id, { onDelete: "cascade" }),
+    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     expireDate: timestamp("expire_date", { withTimezone: true }),
     status: PackageStatusEnum("status").notNull(),
@@ -106,9 +106,9 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
         relationName: "beneficiary",
     }),
 
-    programLevel: one(programLevels, {
-        fields: [memberSubscriptions.programLevelId],
-        references: [programLevels.id],
+    program: one(programs, {
+        fields: [memberSubscriptions.programId],
+        references: [programs.id],
     }),
     plan: one(memberPlans, {
         fields: [memberSubscriptions.memberPlanId],
@@ -128,9 +128,9 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
         fields: [memberPackages.memberPlanId],
         references: [memberPlans.id],
     }),
-    programLevel: one(programLevels, {
-        fields: [memberPackages.programLevelId],
-        references: [programLevels.id],
+    program: one(programs, {
+        fields: [memberPackages.programId],
+        references: [programs.id],
     }),
     location: one(locations, {
         fields: [memberPackages.locationId],

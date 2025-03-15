@@ -6,8 +6,8 @@ import { decodeId } from '@/libs/server/sqids';
 import { VendorStripePayments } from '@/libs/server/stripe';
 import { MonstroPackage } from '@/types/vendor';
 
-import { eq } from 'drizzle-orm';
 import { packages, plans } from "@/libs/data";
+import { eq } from 'drizzle-orm';
 
 
 const stripe = new VendorStripePayments();
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
         : undefined;
 
     if (!plan && !paymentPlan) {
-        return NextResponse.json({ error: "Plan not found" }, { status: 404 })
+        throw new Error("Plan not found")
     }
 
     try {
@@ -35,19 +35,19 @@ export async function POST(req: Request) {
             columns: {
                 firstName: true,
                 lastName: true,
-                companyEmail: true,
+                email: true,
                 phone: true,
             }
         });
 
         if (!vendor) {
-            return NextResponse.json({ error: "Vendor not found" }, { status: 404 })
+            throw new Error("Vendor not found")
         }
         const customer = await stripe.createCustomer({
-            firstName: vendor.firstName!,
+            firstName: vendor.firstName,
             lastName: vendor.lastName!,
-            email: vendor.companyEmail!,
-            phone: vendor.phone!
+            email: vendor.email!,
+            phone: vendor.phone!,
         }, token.id, {
             locationId: locationId,
             vendorId: vendorId
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
         );
 
         if (!clientSecret) {
-            return NextResponse.json({ error: "Payment failed" }, { status: 400 })
+            throw new Error("Payment failed")
         }
 
         await db.insert(wallet).values({
@@ -107,7 +107,6 @@ export async function POST(req: Request) {
                 startDate: today,
                 lastRenewalDate: today,
                 updated: today,
-
             }).where(eq(locationState.locationId, decodedLocationId))
 
             await tx.update(vendors).set({

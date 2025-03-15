@@ -16,8 +16,6 @@ export type Attendance = {
 
 export type ExtendedAttendance = Attendance & {
     programName: string;
-    levelName: string;
-
 };
 
 export type Reservation = typeof reservations.$inferInsert

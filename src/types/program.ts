@@ -1,50 +1,42 @@
 import { Reservation } from "./attendance";
-import { MemberPackage, MemberPlan, MemberSubscription } from "./member";
+import { MemberPlan } from "./member";
+import { Location } from "./location";
+import { Interval, ProgramStatus } from "./enums";
 
 export type Program = {
     id: number;
     name: string;
     description: string | null;
     icon?: string | null | File;
-    // benefits?: string[];
+    capacity: number;
+    minAge: number;
+    maxAge: number;
+    instructorId: number;
+    interval: Interval;
+    intervalThreshold: number;
+    benefits?: string[];
     plans: MemberPlan[];
-    levels: ProgramLevel[];
     locationId?: number;
-    // status: string | null;
+    status: ProgramStatus;
     location?: Location;
     planCounts?: string;
+    sessions?: ProgramSession[];
     created: Date;
     updated: Date | null;
     deleted: Date | null;
 };
 
-export type ProgramLevel = {
-    id: number;
-    name: string;
-    capacity: number;
-    minAge: number;
-    maxAge: number;
-    programId?: number;
-    program?: Program;
-    parentId: number | null;
-    sessions: ProgramSession[];
-    memberSubscriptions: MemberSubscription[];
-    memberPackages: MemberPackage[];
-    created?: Date | null;
-    updated?: Date | null;
-    deleted?: Date | null;
-};
 
 
 export type ProgramSession = {
-    id?: number,
+    id: number,
     duration: number,
-    programLevelId?: number,
+    programId: number,
     day: number,
-    time: string | undefined,
+    time: string,
     created: Date,
     updated?: Date | null,
-    programLevel?: ProgramLevel,
+    program?: Program,
     reservations?: Reservation[]
     reservationsCount?: number | null
 }

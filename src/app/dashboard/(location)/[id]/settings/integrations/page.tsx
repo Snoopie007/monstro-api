@@ -1,7 +1,5 @@
 'use client';
 import { use } from "react";
-import { cn } from '@/libs/utils'
-import Link from 'next/link'
 import IntegrationList from './integrations'
 import { useIntegrations } from '@/hooks'
 import { Button, Skeleton } from '@/components/ui'

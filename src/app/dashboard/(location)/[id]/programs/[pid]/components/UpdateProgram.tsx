@@ -32,6 +32,9 @@ export default function UpdateProgram({ programId, locationId }: UpdateProgramPr
         defaultValues: {
             description: "",
             name: "",
+            capacity: 0,
+            minAge: 0,
+            maxAge: 0,
         },
         mode: "onChange",
     });
@@ -116,7 +119,51 @@ export default function UpdateProgram({ programId, locationId }: UpdateProgramPr
                                         </FormItem>
                                     )}
                                 />
+                                <fieldset className='flex flex-row items-center gap-2  w-full'>
 
+                                    <FormField
+                                        control={form.control}
+                                        name="capacity"
+                                        render={({ field }) => (
+                                            <FormItem >
+                                                <FormLabel size={"tiny"}>Capacity</FormLabel>
+                                                <FormControl>
+                                                    <Input type='number' className={cn()} placeholder={'Capacity'}  {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="minAge"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel size={"tiny"}>Min Age</FormLabel>
+                                                <FormControl>
+                                                    <Input type='number' className={cn()} placeholder={'Min Age'} {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="maxAge"
+                                        render={({ field }) => (
+                                            <FormItem className="flex-1">
+                                                <FormLabel size={"tiny"}>Max Age</FormLabel>
+                                                <FormControl>
+                                                    <Input type='number' className={cn()} placeholder={'Max Age'} {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+
+                                        )}
+                                    />
+                                </fieldset>
                             </fieldset>
                         </form>
                     </Form>

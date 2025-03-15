@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, props: { params: Promise<Params> }) 
     try {
         const query = sql<number>`(SELECT COUNT(DISTINCT ${reservations.memberSubscriptionId}) FROM ${reservations} WHERE ${reservations.sessionId} = ${programSessions.id})`;
         const sessions = await db.query.programSessions.findMany({
-            where: eq(programSessions.programLevelId, params.lid),
+            where: eq(programSessions.programId, params.pid),
             columns: {
                 id: true,
                 day: true,

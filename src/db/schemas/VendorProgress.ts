@@ -4,7 +4,7 @@ import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 
 // Vendor Progress
-export const vendorProgress = pgTable("vendor_progress", {
+export const vendorLevels = pgTable("vendor_levels", {
     id: serial("id").primaryKey(),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
@@ -17,7 +17,7 @@ export const vendorProgress = pgTable("vendor_progress", {
 // Vendor Badges
 export const vendorBadges = pgTable("vendor_badges", {
     id: serial("id").primaryKey(),
-    vendorProgressId: integer("vendor_progress_id").notNull().references(() => vendorProgress.id, { onDelete: "cascade" }),
+    vendorLevelId: integer("vendor_level_id").notNull().references(() => vendorLevels.id, { onDelete: "cascade" }),
     badgeId: integer("badge_id").notNull(),
     progress: integer("progress").notNull().default(0),
     completed: boolean("completed").notNull().default(false),
@@ -40,15 +40,15 @@ export const vendorRewards = pgTable("vendor_rewards", {
 // Vendor Claimed Rewards
 export const vendorClaimedRewards = pgTable("vendor_claimed_rewards", {
     id: serial("id").primaryKey(),
-    vendorProgressId: integer("vendor_progress_id").notNull().references(() => vendorProgress.id, { onDelete: "cascade" }),
+    vendorLevelId: integer("vendor_level_id").notNull().references(() => vendorLevels.id, { onDelete: "cascade" }),
     rewardId: integer("reward_id").notNull().references(() => vendorRewards.id, { onDelete: "cascade" }),
     claimed: timestamp("claimed_at", { withTimezone: true }).notNull(),
 });
 
 // Relationships
-export const vendorProgressRelations = relations(vendorProgress, ({ one, many }) => ({
+export const vendorLevelsRelations = relations(vendorLevels, ({ one, many }) => ({
     vendor: one(vendors, {
-        fields: [vendorProgress.vendorId],
+        fields: [vendorLevels.vendorId],
         references: [vendors.id],
     }),
     badges: many(vendorBadges),
@@ -56,16 +56,16 @@ export const vendorProgressRelations = relations(vendorProgress, ({ one, many })
 }));
 
 export const vendorBadgesRelations = relations(vendorBadges, ({ one }) => ({
-    vendorProgress: one(vendorProgress, {
-        fields: [vendorBadges.vendorProgressId],
-        references: [vendorProgress.id],
+    vendorLevel: one(vendorLevels, {
+        fields: [vendorBadges.vendorLevelId],
+        references: [vendorLevels.id],
     }),
 }));
 
 export const vendorClaimedRewardsRelations = relations(vendorClaimedRewards, ({ one }) => ({
-    vendorProgress: one(vendorProgress, {
-        fields: [vendorClaimedRewards.vendorProgressId],
-        references: [vendorProgress.id],
+    vendorLevel: one(vendorLevels, {
+        fields: [vendorClaimedRewards.vendorLevelId],
+        references: [vendorLevels.id],
     }),
     reward: one(vendorRewards, {
         fields: [vendorClaimedRewards.rewardId],

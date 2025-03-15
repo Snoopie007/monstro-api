@@ -20,7 +20,6 @@ export const staffs = pgTable("staffs", {
     deleted: timestamp("deleted_at", { withTimezone: true }),
 });
 
-
 export const staffsLocations = pgTable("staffs_locations", {
     id: serial("id").primaryKey(),
     staffId: integer("staff_id").notNull().references(() => staffs.id, { onDelete: "cascade" }),

@@ -13,7 +13,7 @@ import { cn } from "@/libs/utils";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ProgramLevel } from "@/types";
+import { ProgramSession } from "@/types";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 
@@ -21,13 +21,12 @@ import { toast } from "react-toastify";
 import { SetStateAction, Dispatch, useEffect, useState } from "react";
 import useSWR from "swr";
 import { Icon } from "@/components/icons";
-import { LevelSchema } from "../../../../schemas";
-import { LevelForm } from "../CreateLevel/LevelForm";
+import { SessionSchema } from "../../../../schemas";
 
 
 interface UpdateProgramLevelProps {
-    level: ProgramLevel | null;
-    setCurrentLevel: Dispatch<SetStateAction<ProgramLevel | null>>;
+    level: ProgramSession | null;
+    setCurrentLevel: Dispatch<SetStateAction<ProgramSession | null>>;
     lid: string;
 }
 
@@ -35,20 +34,14 @@ export function UpsertLevel({ level, setCurrentLevel, lid }: UpdateProgramLevelP
     const { mutate } = useSWR(`/api/protected/${lid}/programs/${level?.programId}`);
     const [loading, setLoading] = useState<boolean>(false);
 
-    const form = useForm<z.infer<typeof LevelSchema>>({
-        resolver: zodResolver(LevelSchema),
+    const form = useForm<z.infer<typeof SessionSchema>>({
+        resolver: zodResolver(SessionSchema),
         defaultValues: {
-            name: "",
-            sessions: [
-                {
-                    day: 1,
-                    time: "12:00",
-                    duration: 30,
-                }
-            ],
-            capacity: 0,
-            minAge: 0,
-            maxAge: 0,
+
+            day: 1,
+            time: "12:00",
+            duration: 30,
+
         },
         mode: "onSubmit",
     })
@@ -60,16 +53,16 @@ export function UpsertLevel({ level, setCurrentLevel, lid }: UpdateProgramLevelP
         }
     }, [level])
 
-    async function submitForm(v: z.infer<typeof LevelSchema>) {
+    async function submitForm(v: z.infer<typeof SessionSchema>) {
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/programs/${level?.programId}/levels/${level?.id}`, {
+            fetch(`/api/protected/loc/${lid}/programs/${level?.programId}/sessions/${level?.id}`, {
                 method: 'PUT',
                 body: JSON.stringify(v)
             })
         )
         if (error || !result || !result.ok) {
-            toast.error(error?.message || 'Failed to update level')
+            toast.error(error?.message || 'Failed to update session')
         }
         setLoading(false)
         setCurrentLevel(null)
@@ -87,7 +80,7 @@ export function UpsertLevel({ level, setCurrentLevel, lid }: UpdateProgramLevelP
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <DialogBody>
-                    <LevelForm form={form} lid={lid} />
+
                 </DialogBody>
                 <DialogFooter >
                     <DialogClose asChild>

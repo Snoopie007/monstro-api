@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { Clock, Loader2 } from "lucide-react";
 import { cn, formatTime, tryCatch } from "@/libs/utils";
 import { useMemo, useCallback } from "react";
-import { MemberPackage, MemberPlan, ProgramLevel, ProgramSession } from "@/types";
+import { MemberPackage, MemberPlan, Program, ProgramSession } from "@/types";
 import { DAYS } from "../schema";
 import { PulsingStatus } from "@/components/ui/PulsingStatus";
 import { toast } from "react-toastify";
@@ -19,7 +19,7 @@ import { toast } from "react-toastify";
 export type SubPackageProgress = {
     step: number,
     plan: MemberPlan | undefined,
-    level: ProgramLevel | undefined,
+    program: Program | undefined,
     packageId: number | undefined,
     subscriptionId: number | undefined,
 }
@@ -32,7 +32,7 @@ export type SessionFormProps = {
 export const DEFAULT_PROGRESS: SubPackageProgress = {
     step: 1,
     plan: undefined,
-    level: undefined,
+    program: undefined,
     packageId: undefined,
     subscriptionId: undefined
 }
@@ -50,7 +50,7 @@ export function SessionForm({ params, progress }: SessionFormProps) {
 
     useEffect(() => {
         fetchSessions();
-    }, [progress.level?.programId, progress.level?.id]);
+    }, [progress.program]);
 
     useEffect(() => {
         if (selectedDay) {
@@ -79,10 +79,10 @@ export function SessionForm({ params, progress }: SessionFormProps) {
 
 
     async function fetchSessions() {
-        if (!progress.plan || !progress.level) return;
+        if (!progress.plan) return;
         setSessionsLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${params.id}/programs/${progress.plan?.programId}/levels/${progress.level?.id}/sessions`)
+            fetch(`/api/protected/loc/${params.id}/programs/${progress.program?.id}/sessions`)
         );
 
         if (error || !result?.ok) return;
@@ -140,8 +140,8 @@ export function SessionForm({ params, progress }: SessionFormProps) {
     }, [sessionIds.length]);
 
     const isFull = useCallback((session: ProgramSession): boolean => {
-        return !!session.reservationsCount && session.reservationsCount >= (progress.level?.capacity || 10);
-    }, [progress.level?.capacity]);
+        return !!session.reservationsCount && session.reservationsCount >= (progress.program?.capacity || 10);
+    }, [progress.program?.capacity]);
 
     return (
         <>
@@ -219,7 +219,7 @@ export function SessionForm({ params, progress }: SessionFormProps) {
                         variant={"foreground"}
                         size={"sm"}
                         type="submit"
-                        disabled={loading || !progress.plan || !progress.level || sessionIds.length === 0}
+                        disabled={loading || !progress.plan || !progress.program || sessionIds.length === 0}
                         onClick={onSubmit}
                     >
                         <Loader2 className="mr-2 h-4 w-4  animate-spin" />
@@ -264,7 +264,7 @@ function SessionItem({ session, isFull, handleSessionSelection, sessionIds, prog
                     <PulsingStatus live={!isFull} />
                     <span >
                         <span className="group-data-[full=false]:block hidden">
-                            {session.reservationsCount || 0}/{progress.level?.capacity}
+                            {session.reservationsCount || 0}/{progress.program?.capacity}
                         </span>
                         <span className="group-data-[full=true]:block hidden uppercase">
                             Full

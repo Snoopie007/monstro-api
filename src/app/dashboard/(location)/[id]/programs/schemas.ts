@@ -8,13 +8,18 @@ const SessionSchema = z.object({
     duration: z.coerce.number().min(1, { message: "required" }),
 });
 
-const LevelSchema = z.object({
-    name: z.string().min(1, { message: "required" }),
-    sessions: z.array(SessionSchema),
+
+
+
+const ProgramSchema = z.object({
+    description: z.string().min(3, { message: "Description is required" }),
+    name: z.string().min(3, { message: "Program name is required" }),
     capacity: z.coerce.number().min(1, { message: "Capacity > 0" }),
     minAge: z.coerce.number().min(2, { message: "Min > 2" }),
     maxAge: z.coerce.number().min(3, { message: "Max > 3" }),
-}).superRefine((data, ctx) => {
+})
+
+const UpdateProgramSchema = ProgramSchema.superRefine((data, ctx) => {
     if (data.maxAge <= data.minAge) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -25,15 +30,18 @@ const LevelSchema = z.object({
 });
 
 
-const NewProgramSchema = z.object({
-    description: z.string().min(3, { message: "Description is required" }),
-    name: z.string().min(3, { message: "Program name is required" }),
-    levels: z.array(LevelSchema),
-});
 
-const UpdateProgramSchema = z.object({
-    description: z.string(),
-    name: z.string().min(8),
+
+const NewProgramSchema = z.object({
+    sessions: z.array(SessionSchema),
+}).merge(ProgramSchema).superRefine((data, ctx) => {
+    if (data.maxAge <= data.minAge) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Max > min",
+            path: ["maxAge"],
+        });
+    }
 });
 
 
@@ -43,8 +51,6 @@ const InviteMemberSchema = z.object({
     email: z.string().email(),
 });
 const DaysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-
 
 
 const NewPlanSchema = z.object({
@@ -136,7 +142,6 @@ const BillingAnchorConfigSchema = [
 
 export {
     SessionSchema,
-    LevelSchema,
     NewProgramSchema,
     UpdateProgramSchema,
     InviteMemberSchema,

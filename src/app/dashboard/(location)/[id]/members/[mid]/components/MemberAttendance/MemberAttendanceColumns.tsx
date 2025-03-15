@@ -10,10 +10,6 @@ export const MemberAttendanceColumns: ColumnDef<ExtendedAttendance>[] = [
         header: "Program"
     },
     {
-        accessorKey: "levelName",
-        header: "Level"
-    },
-    {
         accessorKey: "classTime",
         header: "Class Time",
         cell: ({ row }) => {

@@ -13,7 +13,7 @@ export type Vendor = {
     avatar: string | null;
     userId: number;
     referrals?: VendorReferral[];
-    vendorProgress?: VendorProgress;
+    vendorLevel?: VendorLevel;
     created: Date;
     updated: Date | null;
     deleted: Date | null;
@@ -54,7 +54,7 @@ export type MonstroPlan = {
 }
 
 
-export type VendorProgress = {
+export type VendorLevel = {
     id: number;
     vendorId: number;
     locationId: number | null;
@@ -69,7 +69,7 @@ export type VendorProgress = {
 
 
 export type VendorBadge = {
-    vendorProgressId: number;
+    vendorLevelId: number;
     badgeId: number;
     progress: number;
     completed: boolean;
@@ -87,7 +87,7 @@ export type VendorReward = {
 }
 
 export type VendorClaimedReward = {
-    vendorProgressId: number;
+    vendorLevelId: number;
     rewardId: number;
     claimed: Date | null;
     reward?: VendorReward;

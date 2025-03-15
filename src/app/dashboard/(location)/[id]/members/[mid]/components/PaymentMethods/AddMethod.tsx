@@ -63,7 +63,6 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
         try {
             const tokenRef = await stripe.createToken(cardElement!, { ...v });
 
-            setLoading(false);
             if (tokenRef.token) {
 
                 const res = await fetch(`/api/protected/loc/${locationId}/members/${member.id}/payments/methods`, {

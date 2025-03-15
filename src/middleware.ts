@@ -71,7 +71,8 @@ export default auth(async (req) => {
 
 		// Handle home page and dashboard redirects (only for web, not for mobile)
 		if (isLoggedin && !isMobileApp) {
-			if (pathname.startsWith("/api/auth")) {
+			console.log(pathname)
+			if (pathname.startsWith("/api/")) {
 				return NextResponse.next()
 			}
 			if (locations.length === 0 && pathname !== "/onboarding") {

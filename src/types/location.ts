@@ -8,6 +8,7 @@ export type Location = {
     name: string;
     vendorId: number;
     legalName: string | null;
+    slug: string;
     industry: string | null;
     address: string | null;
     email: string | null;

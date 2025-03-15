@@ -22,6 +22,26 @@ export const ProgramColumns = (locationId: string): ColumnDef<Program, any>[] =>
         accessorKey: "planCounts",
         header: "Plans",
 
+    },
+    {
+        accessorKey: "Age Range",
+        header: "Age Range",
+        cell: ({ row }) => {
+            const program = row.original
+            return <Badge>{program.minAge} - {program.maxAge}</Badge>
+        }
+    },
+    {
+        accessorKey: "capacity",
+        header: "Capacity"
+    },
+    {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+            const program = row.original
+            return <Badge variant={program.status} size="tiny">{program.status}</Badge>
+        }
     }
 
     // {

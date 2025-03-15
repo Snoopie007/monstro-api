@@ -1,38 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from "@/auth";
 import { db } from '@/db/db';
 
-import { eq, isNull, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { programs } from '@/db/schemas';
 
-export async function GET(req: Request, props: { params: Promise<{ id: string, pid: number }> }) {
-	const params = await props.params;
-	console.log("Get Program by ID ", params.pid)
-	try {
-		const session = await auth();
+type Params = {
+	id: string;
+	pid: number;
+}
 
-		if (session) {
-			const program = await db.query.programs.findFirst({
-				where: (programs, { eq }) => eq(programs.id, params.pid),
-				with: {
-					levels: {
-						where: (levels, { eq }) => eq(levels.deleted, isNull(levels.deleted)),
-						with: {
-							sessions: {
-								with: {
-									reservations: true
-								}
-							},
-						}
-					},
-					plans: true,
-				},
-				extras: {
-					memberCount: sql<number>`(SELECT count(*) FROM member_programs WHERE member_programs.program_id = programs.id)`.as("memberCount")
-				}
-			});
-			return NextResponse.json(program, { status: 200 });
-		}
+export async function GET(req: Request, props: { params: Promise<Params> }) {
+	const params = await props.params;
+	try {
+
+		const program = await db.query.programs.findFirst({
+			where: (programs, { eq }) => eq(programs.id, params.pid),
+			with: {
+				sessions: true,
+				plans: true,
+			},
+			extras: {
+				memberSubscriptions: sql<number>`(SELECT count(*) FROM member_subscriptions WHERE member_subscriptions.program_id = programs.id)`.as("memberSubscriptions"),
+				memberPackages: sql<number>`(SELECT count(*) FROM member_packages WHERE member_packages.program_id = programs.id)`.as("memberPackages")
+			}
+		});
+		return NextResponse.json(program, { status: 200 });
 	} catch (err) {
 		console.error(err)
 		return NextResponse.json({ error: err }, { status: 500 })

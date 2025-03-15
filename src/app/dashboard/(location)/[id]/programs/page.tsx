@@ -92,7 +92,7 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={columns.length} className="h-6 w-full font-medium text-center">
-                                            No rewards found.
+                                            No programs found.
                                         </TableCell>
                                     </TableRow>
                                 )}

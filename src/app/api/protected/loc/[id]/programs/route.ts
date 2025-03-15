@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { eq, sql } from 'drizzle-orm';
-import { programSessions, programs as program, programLevels, programs } from '@/db/schemas';
+import { programSessions, programs as program, programs } from '@/db/schemas';
 import { ProgramSession } from '@/types';
 
 
@@ -24,7 +24,6 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 				plans: type ? {
 					where: (plan, { eq }) => eq(plan.type, type as "recurring" | "one-time")
 				} : true,
-				levels: true
 			},
 			extras: {
 				counts: db.$count(program, eq(program.locationId, params.id)).as("counts"),
@@ -42,8 +41,8 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 
 export async function POST(req: Request, props: { params: Promise<{ id: number }> }) {
 	const params = await props.params;
-	const { levels, ...data } = await req.json();
-
+	const { sessions, ...data } = await req.json();
+	console.log(sessions, data);
 	try {
 		await db.transaction(async (tx) => {
 			/** 
@@ -55,32 +54,12 @@ export async function POST(req: Request, props: { params: Promise<{ id: number }
 				...data
 			}).returning({ id: programs.id });
 
-			for (const level of levels) {
-				/** Initialize session object with active status (1) */
-				// const session: ProgranSession = { status: 1 };
-				const { sessions, ...rest } = level;
 
-
-
-				/** Create program level record linked to the main program */
-				const [newLevel] = await tx.insert(programLevels).values({
-					...rest,
-					programId: program.id,
-					parentId: null,
-				}).returning({ id: programLevels.id });
-
-
-				/** 
-				 * Create class session with references to both program and level
-				 * This stores the actual schedule information
-				 */
-				await tx.insert(programSessions).values(sessions.map((s: ProgramSession) => ({
-					...s,
-					status: 1,
-					programLevelId: newLevel.id,
-					programId: program.id,
-				})));
-			}
+			await tx.insert(programSessions).values(sessions.map((s: ProgramSession) => ({
+				...s,
+				status: 1,
+				programId: program.id,
+			})));
 		});
 
 		return NextResponse.json({ success: true }, { status: 200 });

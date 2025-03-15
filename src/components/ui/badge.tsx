@@ -15,6 +15,8 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground",
         outline: "text-foreground",
+        active: "bg-green-300 text-green-800",
+        inactive: "bg-red-300 text-red-800",
       },
       size: {
         tiny: "text-[0.65rem]",

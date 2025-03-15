@@ -18,16 +18,9 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
                     eq(memberSubscriptions.locationId, params.id)
                 ),
                 with: {
-                    programLevel: {
+                    program: {
                         columns: {
                             name: true
-                        },
-                        with: {
-                            program: {
-                                columns: {
-                                    name: true
-                                }
-                            }
                         }
                     },
                     reservations: {
@@ -43,16 +36,9 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
                     eq(memberPackages.locationId, params.id)
                 ),
                 with: {
-                    programLevel: {
+                    program: {
                         columns: {
                             name: true
-                        },
-                        with: {
-                            program: {
-                                columns: {
-                                    name: true
-                                }
-                            }
                         }
                     },
                     reservations: {
@@ -70,8 +56,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
         memberPlans.forEach(plan => {
             if (!plan.reservations?.length) return;
 
-            const programName = plan.programLevel.program.name;
-            const levelName = plan.programLevel.name;
+            const programName = plan.program.name;
 
             plan.reservations.forEach(reservation => {
                 if (!reservation.attendances?.length) return;
@@ -80,7 +65,6 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
                     attendances.push({
                         ...attendance,
                         programName,
-                        levelName,
                         created: attendance.created ?? new Date()
                     });
                 });

@@ -12,6 +12,7 @@ const RoleColorEnum = pgEnum('role_color', ["red", "green", "blue", "pink", "cya
 const ContractTypeEnum = pgEnum('contract_type', ['contract', 'waiver']);
 const TransactionStatusEnum = pgEnum("transaction_status", ["paid", "failed", "incomplete"]);
 const StaffStatusEnum = pgEnum("staff_status", ["active", "inactive"]);
+const ProgramStatusEnum = pgEnum("program_status", ["active", "inactive"]);
 export {
     LocationStatusEnum,
     PlanType, PlanInterval,
@@ -21,5 +22,6 @@ export {
     RoleColorEnum,
     ContractTypeEnum,
     TransactionStatusEnum,
-    StaffStatusEnum
+    StaffStatusEnum,
+    ProgramStatusEnum
 }

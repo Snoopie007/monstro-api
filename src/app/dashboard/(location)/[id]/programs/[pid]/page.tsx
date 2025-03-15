@@ -10,7 +10,6 @@ import {
     TabsTrigger,
 } from "@/components/ui/tabs"
 import UpdateProgram from './components/UpdateProgram';
-import { ProgramLevels } from './components/ProgramLevels';
 import { ProgramMembers } from './components/ProgramMembers';
 import ProgramPlans from './components/ProgramPlans/ProgramPlanList';
 
@@ -18,6 +17,7 @@ import ProgramPlans from './components/ProgramPlans/ProgramPlanList';
 import LoadingComponent from '@/components/loading';
 import ErrorComponent from '@/components/error';
 import { Card, CardContent, CardHeader } from '@/components/ui';
+import { ProgramSessions } from './components/ProgramSessions';
 
 export default function Program(props: { params: Promise<{ id: string, pid: number }> }) {
     const params = use(props.params);
@@ -31,7 +31,7 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
         return (
             <div className="m-auto p-5 grid grid-cols-10 gap-4 ">
 
-                <div className='col-span-3 space-y-4'>
+                <div className='col-span-3 space-y-4 '>
                     <Card>
                         <CardHeader className="p-0">
                             <div className="border-b flex flex-row justify-between ">
@@ -57,8 +57,8 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
 
                                     </Avatar>
                                     <div className='space-y-1'>
-                                        <div className='text-foreground text-sm font-semibold'> {program.name}</div>
-                                        <p className=" text-foreground/80 text-xs leading-4">
+                                        <div className='text-foreground text-base font-semibold'> {program.name}</div>
+                                        <p className=" text-muted-foreground text-sm">
                                             {program.description}
                                         </p>
 
@@ -68,9 +68,7 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
                             </div>
                         </CardContent>
                     </Card>
-                    <div className='mb-4'>
-                        <ProgramLevels levels={program.levels} pid={params.pid} lid={params.id} />
-                    </div>
+                    <ProgramSessions sessions={program.sessions} pid={params.pid} lid={params.id} />
                 </div>
 
                 <div className="col-span-7">

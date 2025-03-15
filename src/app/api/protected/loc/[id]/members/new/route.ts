@@ -2,7 +2,6 @@ import { db } from "@/db/db";
 import { memberLocations, members, users } from "@/db/schemas";
 import { encodeReferralCode } from "@/libs/server/sqids";
 import { formatPhoneNumber } from "@/libs/server/db";
-import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
 type PackageProps = {
@@ -11,7 +10,6 @@ type PackageProps = {
 
 const INCOMPLETE_PLAN = {
     programId: undefined,
-    programLevelId: undefined,
     memberContractId: undefined,
     memberPlanId: undefined,
     currentStep: 1,
@@ -58,12 +56,12 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
 
         if (!user) {
             /** Create User if there isn't one */
-            const res = await db.insert(users).values({
+            const [res] = await db.insert(users).values({
                 name: `${data.firstName} ${data.lastName}`,
                 email: data.email,
             }).returning()
 
-            user = res[0]
+            user = res
         }
 
 
@@ -76,6 +74,7 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
                 phone: formatPhoneNumber(data.phone),
                 referralCode: encodeReferralCode(user.id),
             }).returning({ id: members.id, firstName: members.firstName, lastName: members.lastName, email: members.email, phone: members.phone })
+
             await tx.insert(memberLocations).values({
                 locationId: params.id,
                 memberId: member.id,
@@ -85,7 +84,7 @@ export async function POST(req: Request, props: { params: Promise<PackageProps> 
             return member
         })
 
-
+        console.log(member)
 
         return NextResponse.json({ existing: false, member }, { status: 200 })
     } catch (err) {

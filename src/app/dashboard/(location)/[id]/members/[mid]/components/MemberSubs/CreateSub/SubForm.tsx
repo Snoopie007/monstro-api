@@ -25,7 +25,7 @@ import { Loader2 } from "lucide-react";
 import { cn, sleep, tryCatch } from "@/libs/utils";
 import { useMemberPaymentMethods } from "../../../providers/MemberContext";
 import React from "react";
-import { Program, MemberPlan, ProgramLevel } from "@/types";
+import { Program, MemberPlan } from "@/types";
 import { Stripe } from "stripe";
 import DurationPicker from "../../../../components/DurationPicker";
 import { toast } from "react-toastify";
@@ -45,7 +45,6 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
     const { ml } = useMemberStatus()
     const [programs, setPrograms] = useState<Program[]>([]);
     const [plans, setPlans] = useState<MemberPlan[]>([]);
-    const [levels, setLevels] = useState<ProgramLevel[]>([]);
     const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
 
 
@@ -57,10 +56,9 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
             trailDays: undefined,
             paymentMethod: undefined,
             memberPlanId: undefined,
-            programLevelId: undefined,
+            programId: undefined,
             allowProration: false,
             other: {
-                programId: undefined,
                 cardId: undefined,
             },
         },
@@ -104,12 +102,12 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
         const { sid } = await result.json()
 
         const plan = plans.find((plan: MemberPlan) => plan.id === v.memberPlanId)
-        const level = levels.find((level: ProgramLevel) => level.id === v.programLevelId)
+        const program = programs.find((program: Program) => program.id === v.programId)
         setProgress({
             ...progress,
             step: 2,
             plan: plan,
-            level: level,
+            program: program,
             subscriptionId: sid
         })
         form.reset()
@@ -127,16 +125,14 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
                         <fieldset>
                             <FormField
                                 control={form.control}
-                                name="other.programId"
+                                name="programId"
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Program</FormLabel>
                                         <Select onValueChange={(value) => {
                                             field.onChange(Number(value))
                                             const program = programs.find((program: Program) => program.id == Number(value))
-
                                             setPlans(program?.plans || [])
-                                            setLevels(program?.levels || [])
                                         }}>
                                             <FormControl>
                                                 <SelectTrigger className="rounded-sm">
@@ -154,14 +150,14 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
                                 )}
                             />
                         </fieldset>
-                        <fieldset className="grid grid-cols-2 gap-2 items-center">
+                        <fieldset >
                             <FormField
                                 control={form.control}
                                 name="memberPlanId"
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Plan</FormLabel>
-                                        <Select disabled={!form.getValues("other.programId")}
+                                        <Select disabled={!form.getValues("programId")}
                                             onValueChange={(value) => field.onChange(Number(value))} >
                                             <FormControl>
                                                 <SelectTrigger className="rounded-sm">
@@ -178,29 +174,7 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
                                     </FormItem>
                                 )}
                             />
-                            <FormField
-                                control={form.control}
-                                name="programLevelId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel size="tiny">Level</FormLabel>
-                                        <Select disabled={!form.getValues("memberPlanId")}
-                                            onValueChange={(value) => field.onChange(Number(value))} >
-                                            <FormControl>
-                                                <SelectTrigger className="rounded-sm">
-                                                    <SelectValue placeholder="Select a level" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {levels && levels.map((level: ProgramLevel, index: number) => (
-                                                    <SelectItem key={index} value={level.id?.toString()}>{level.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+
                         </fieldset>
 
                         <fieldset className="grid grid-cols-6 gap-2 items-center">

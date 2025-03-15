@@ -63,7 +63,7 @@ export default function AddLocation() {
         setLoading(true);
 
         const { result, error } = await tryCatch(
-            fetch("/api/protected/onboarding", {
+            fetch("/api/protected/vendor/locations", {
                 method: "POST",
                 body: JSON.stringify({
                     vendorId: session?.user?.vendorId,

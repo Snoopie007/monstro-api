@@ -32,7 +32,7 @@ import { Loader2, CalendarIcon, ChevronRight } from "lucide-react";
 import { cn, tryCatch } from "@/libs/utils";
 import { useMemberPaymentMethods, useMemberStatus } from "../../../providers/MemberContext";
 import React from "react";
-import { Program, MemberPlan, ProgramLevel } from "@/types";
+import { Program, MemberPlan } from "@/types";
 import { Stripe } from "stripe";
 import { toast } from "react-toastify";
 import { useMemberPackages } from "@/hooks";
@@ -52,7 +52,6 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
     const [programs, setPrograms] = useState<Program[]>([]);
     const [plans, setPlans] = useState<MemberPlan[]>([]);
     const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
-    const [levels, setLevels] = useState<ProgramLevel[]>([]);
 
     const form = useForm<z.infer<typeof NewPackageSchema>>({
         resolver: zodResolver(NewPackageSchema),
@@ -62,8 +61,8 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
             paymentMethod: undefined,
             memberPlanId: undefined,
             totalClassLimit: undefined,
+            programId: undefined,
             other: {
-                programId: undefined,
                 cardId: undefined,
             }
         },
@@ -104,15 +103,14 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
         setLoading(false)
         if (error || !result?.ok) return;
         const data = await result.json()
-
+        const program = programs.find((program: Program) => program.id === v.programId)
         const plan = plans.find((plan: MemberPlan) => plan.id === v.memberPlanId)
-        const level = levels.find((level: ProgramLevel) => level.id === v.programLevelId)
         setProgress({
             ...progress,
             step: 2,
             packageId: data.id,
             plan: plan,
-            level: level
+            program: program
         })
         form.reset()
         mutate()
@@ -129,14 +127,14 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                         <fieldset>
                             <FormField
                                 control={form.control}
-                                name="other.programId"
+                                name="programId"
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Select a Program</FormLabel>
                                         <Select onValueChange={(value) => {
                                             field.onChange(Number(value))
-                                            setPlans(programs.find((program: Program) => program.id == Number(value))?.plans || [])
-                                            setLevels(programs.find((program: Program) => program.id == Number(value))?.levels || [])
+                                            const program = programs.find((program: Program) => program.id == Number(value))
+                                            setPlans(program?.plans || [])
                                         }}>
                                             <FormControl>
                                                 <SelectTrigger className="rounded-sm">
@@ -154,14 +152,14 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                 )}
                             />
                         </fieldset>
-                        <fieldset className="grid grid-cols-2 gap-2">
+                        <fieldset >
                             <FormField
                                 control={form.control}
                                 name="memberPlanId"
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Select a Plan</FormLabel>
-                                        <Select disabled={!form.getValues("other.programId")}
+                                        <Select disabled={!form.getValues("programId")}
                                             onValueChange={(value) => field.onChange(Number(value))} >
                                             <FormControl>
                                                 <SelectTrigger className="rounded-sm">
@@ -178,29 +176,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                     </FormItem>
                                 )}
                             />
-                            <FormField
-                                control={form.control}
-                                name="programLevelId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel size="tiny">Level</FormLabel>
-                                        <Select disabled={!form.getValues("memberPlanId")}
-                                            onValueChange={(value) => field.onChange(Number(value))} >
-                                            <FormControl>
-                                                <SelectTrigger className="rounded-sm">
-                                                    <SelectValue placeholder="Select a level" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {levels && levels.map((level: ProgramLevel, index: number) => (
-                                                    <SelectItem key={index} value={level.id?.toString()}>{level.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+
                         </fieldset>
 
                         <fieldset className="grid grid-cols-6 gap-2 ">

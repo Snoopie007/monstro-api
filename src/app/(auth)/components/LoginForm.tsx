@@ -38,10 +38,8 @@ export default function LoginForm() {
 	async function login(v: z.infer<typeof LoginSchema>) {
 		setLoading(true);
 		try {
-
-
 			const res = await signIn("credentials", { ...v, redirect: false });
-			console.log("res", res)
+
 			if (res?.error) {
 				toast.error(res.code || 'Something went wrong. Please contact support at support@monstro.com.');
 				return;

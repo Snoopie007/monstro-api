@@ -5,7 +5,6 @@ import {
     DialogTitle,
     DialogHeader,
     DialogClose,
-    ScrollArea,
     DialogFooter,
     DialogBody,
     DialogTrigger
@@ -18,49 +17,39 @@ import { toast } from "react-toastify";
 import { useState } from "react";
 import useSWR from "swr";
 import { Icon } from "@/components/icons";
-import { LevelSchema } from "../../../../schemas";
+import { SessionSchema } from "../../../schemas";
 import { DialogDescription } from "@/components/ui/dialog";
-import { LevelForm } from "./LevelForm";
-
-
-interface CreateLevelProps {
+import SessionFields from "./SessionFields";
+import { Form } from "@/components/forms";
+interface CreateSessionProps {
     pid: number;
     lid: string
 }
 
 
-export function CreateLevel({ pid, lid }: CreateLevelProps) {
-    const { mutate } = useSWR(`/api/protected/${lid}/programs/${pid}/levels`);
+export function CreateSession({ pid, lid }: CreateSessionProps) {
+    const { mutate } = useSWR(`/api/protected/${lid}/programs/${pid}/sessions`);
     const [loading, setLoading] = useState<boolean>(false);
     const [open, setOpen] = useState<boolean>(false);
 
 
-    const form = useForm<z.infer<typeof LevelSchema>>({
-        resolver: zodResolver(LevelSchema),
+    const form = useForm<z.infer<typeof SessionSchema>>({
+        resolver: zodResolver(SessionSchema),
         defaultValues: {
-            name: "",
-            sessions: [
-                {
-                    day: 1,
-                    time: "12:00:00",
-                    duration: 30,
-
-                }
-            ],
-            capacity: 1,
-            minAge: 3,
-            maxAge: 5,
+            day: 1,
+            time: "12:00:00",
+            duration: 30,
         },
         mode: "onSubmit",
     })
 
 
 
-    async function submitForm(v: z.infer<typeof LevelSchema>) {
-
+    async function submitForm(v: z.infer<typeof SessionSchema>) {
+        console.log(v)
         setLoading(true);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/programs/${pid}/levels`, {
+            fetch(`/api/protected/loc/${lid}/programs/${pid}/sessions`, {
                 method: "POST",
                 body: JSON.stringify(v),
             })
@@ -72,7 +61,7 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
         }
         await sleep(2000)
         await mutate();
-        toast.success("Level Created Successfully")
+        toast.success("Session Created Successfully")
 
 
     };
@@ -86,14 +75,18 @@ export function CreateLevel({ pid, lid }: CreateLevelProps) {
                 </Button>
             </DialogTrigger>
             <DialogContent className="w-[500px] max-w-[500px]">
-                <DialogHeader>
-                    <DialogTitle>
-                        Create Level
+                <DialogHeader className="px-4 py-3 space-y-0">
+                    <DialogTitle className="leading-none">
+                        Create Session
                     </DialogTitle>
-                    <DialogDescription></DialogDescription>
+                    <DialogDescription className="hidden"></DialogDescription>
                 </DialogHeader>
                 <DialogBody>
-                    <LevelForm form={form} lid={lid} />
+                    <Form {...form}>
+                        <form>
+                            <SessionFields control={form.control} />
+                        </form>
+                    </Form>
                 </DialogBody>
                 <DialogFooter >
                     <DialogClose asChild>

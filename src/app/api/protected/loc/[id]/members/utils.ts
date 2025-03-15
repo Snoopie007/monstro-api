@@ -6,7 +6,7 @@ type BaseData = {
     memberPlanId: number,
     locationId: number;
     memberId: number;
-    programLevelId: number,
+    programId: number,
     beneficiaryId: number;
     startDate: Date | string,
     paymentMethod: "card" | "cash" | "check" | "zelle" | "venmo" | "paypal" | "apple" | "google",
