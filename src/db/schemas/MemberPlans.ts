@@ -3,13 +3,12 @@ import { programs } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { relations, sql } from "drizzle-orm";
 
-import { memberInvoices, members } from "./members";
+import { memberInvoices, members, memberContracts } from "./members";
 import { locations } from "./locations";
 import { transactions } from "./transactions";
 import { reservations } from "./reservations";
 import { BillingCycleAnchorConfig } from "@/types";
 import { LocationStatusEnum, PackageStatusEnum, PaymentMethodEnum, PlanInterval, PlanType } from "./enums";
-
 
 export const memberPlans = pgTable("member_plans", {
     id: serial("id").primaryKey(),
@@ -44,6 +43,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     payerId: integer("payer_id").references(() => members.id, { onDelete: "cascade" }),
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
+    memberContractId: integer("member_contract_id").references(() => memberContracts.id),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     stripeSubscriptionId: text("stripe_subscription_id"),
@@ -56,7 +56,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     trialEnd: timestamp("trial_end", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     paymentMethod: PaymentMethodEnum("payment_method").notNull(),
-    metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });
@@ -68,6 +68,7 @@ export const memberPackages = pgTable("member_packages", {
     memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     payerId: integer("payer_id").references(() => members.id, { onDelete: "set null" }),
+    memberContractId: integer("member_contract_id").references(() => memberContracts.id),
     beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
@@ -118,6 +119,10 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
         fields: [memberSubscriptions.locationId],
         references: [locations.id],
     }),
+    contract: one(memberContracts, {
+        fields: [memberSubscriptions.memberContractId],
+        references: [memberContracts.id],
+    }),
     transactions: many(transactions),
     invoices: many(memberInvoices),
     reservations: many(reservations),
@@ -145,6 +150,10 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
         fields: [memberPackages.beneficiaryId],
         references: [members.id],
         relationName: "packageBeneficiary",
+    }),
+    contract: one(memberContracts, {
+        fields: [memberPackages.memberContractId],
+        references: [memberContracts.id],
     }),
     transactions: many(transactions),
     invoices: many(memberInvoices),
