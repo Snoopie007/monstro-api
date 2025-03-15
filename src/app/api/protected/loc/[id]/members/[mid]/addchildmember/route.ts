@@ -37,7 +37,6 @@ export async function POST(req: Request) {
                 where: (memberLocation, { eq }) => eq(memberLocation.memberId, member.id) && eq(memberLocation.locationId, locationId),
             });
             console.log(memberLocation);
-
             if (memberLocation) {
                 if (!(planId && programId)) {
 
@@ -56,7 +55,6 @@ export async function POST(req: Request) {
 
                     return NextResponse.json({ error: "Please Signup first" }, { status: 400 });
                 }
-
                 try {
                     const emailSender = new EmailSender();
                     await emailSender.send(email, 'Welcome to Monstro', InviteEmailTemplate, {
@@ -69,11 +67,8 @@ export async function POST(req: Request) {
                 } catch (emailError) {
                     console.error(`Failed to send email to ${email}:`, emailError);
                 }
-
-
                 return NextResponse.json({ message: `Family member has sent you an invite with the relation of ${relation}` });
             } else {
-
                 await db.insert(memberLocations).values({
                     memberId: member.id,
                     locationId: locationId,
@@ -99,8 +94,6 @@ export async function POST(req: Request) {
                     relationship: relation,
                     created: new Date(),
                 });
-
-
 
                 try {
                     const emailSender = new EmailSender();
@@ -138,15 +131,14 @@ export async function POST(req: Request) {
                 created: new Date(),
             }).returning();
 
-            await db.insert(memberSubscriptions).values({
-              payerId: newMember.id,
-              locationId: locationId,
-              startDate: new Date(),
-              currentPeriodStart: new Date(),
-              currentPeriodEnd: new Date(),
-              created: new Date(),
-              paymentType: 'cash',
-            });
+            // await db.insert(memberSubscriptions).values({
+            //   payerId: 1,
+            //   locationId: locationId,
+            //   startDate: new Date(),
+            //   currentPeriodStart: new Date(),
+            //   currentPeriodEnd: new Date(),
+            //   created: new Date()
+            // });
 
             await db.insert(memberLocations).values({
                 memberId: newMember.id,

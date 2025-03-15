@@ -41,7 +41,7 @@ export const programMembers = pgTable("member_programs", {
 }, (t) => [primaryKey({ columns: [t.memberId, t.programId] })]);
 
 export const programSessions = pgTable("program_sessions", {
-    id: integer("id").primaryKey(),
+    id: serial("id").primaryKey(),
     programLevelId: integer("program_level_id").references(() => programLevels.id, { onDelete: "cascade" }),
     time: time("time").notNull(),
     duration: smallint("duration").notNull().default(0),

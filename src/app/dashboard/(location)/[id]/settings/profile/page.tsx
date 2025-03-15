@@ -11,7 +11,7 @@ async function getMember(id: number): Promise<Vendor | null> {
     return vendor ?? null;
 }
 
-export default async function ProfilePage(props: { params: { id: string } }) {
+export default async function ProfilePage(props: { params: Promise<{ id: string }> }) {
     const { id } = await props.params;
     const session = await auth();
     
