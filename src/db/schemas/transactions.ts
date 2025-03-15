@@ -1,4 +1,4 @@
-import { integer, numeric, serial, text, timestamp, pgTable, doublePrecision, jsonb, boolean, pgEnum, uuid } from "drizzle-orm/pg-core";
+import { integer, serial, text, timestamp, pgTable, jsonb, boolean } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 import { memberInvoices, members } from "./members";

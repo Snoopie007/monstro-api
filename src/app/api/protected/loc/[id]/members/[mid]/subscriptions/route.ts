@@ -98,7 +98,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             }).returning({ sid: memberSubscriptions.id })
             const [{ invoiceId }] = await tx.insert(memberInvoices).values({
                 ...newInvoice,
-                memberSubscriptionId: sid,
+                memberSubscriptionId: sid
             }).returning({ invoiceId: memberInvoices.id });
 
             await tx.insert(transactions).values({
