@@ -1,5 +1,7 @@
 import { ContractType } from "./enums";
 import { Location } from "./location";
+import { MemberPackage } from "./member";
+import { MemberSubscription } from "./member";
 export type Contract = {
     id: number;
     title: string;
@@ -25,6 +27,8 @@ export type MemberContract = {
     variables: Record<string, unknown>;
     signature: string;
     contract?: Contract;
+    subscription?: MemberSubscription | null;
+    package?: MemberPackage | null;
     created: Date;
     updated?: Date | null;
     deleted?: Date | null;
