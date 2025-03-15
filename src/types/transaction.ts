@@ -20,7 +20,7 @@ export type Transaction = {
     memberId?: number | null;
     member?: Member;
     status: TransactionStatus;
-    item: string;
+    item: string | null;
     subscriptionId?: number | null;
     subscription?: MemberSubscription;
     packageId?: number | null;

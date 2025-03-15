@@ -35,7 +35,7 @@ export async function POST(req: Request) {
             columns: {
                 firstName: true,
                 lastName: true,
-                companyEmail: true,
+                email: true,
                 phone: true,
             }
         });
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
         const customer = await stripe.createCustomer({
             firstName: vendor.firstName!,
             lastName: vendor.lastName!,
-            email: vendor.companyEmail!,
+            email: vendor.email!,
             phone: vendor.phone!
         }, token.id, {
             locationId: locationId,

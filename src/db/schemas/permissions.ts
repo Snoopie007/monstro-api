@@ -1,4 +1,4 @@
-import { bigserial, text, bigint, timestamp, pgTable, primaryKey, unique, integer, serial } from "drizzle-orm/pg-core";
+import { text, timestamp, pgTable, primaryKey, unique, integer, serial } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { users } from "./users";

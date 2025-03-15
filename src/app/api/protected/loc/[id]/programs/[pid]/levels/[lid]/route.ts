@@ -3,15 +3,12 @@ import { db } from "@/db/db";
 import { programLevels, programSessions } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 
-
 export async function PUT(req: Request, props : { params: Promise<{ id: string; pid: string; lid: string }> }) {
     try {
         const { id, pid, lid } = await props.params;
         console.log("PUT Request - Params:", { id, pid, lid });
 
         const body = await req.json();
-
-
         await db.update(programLevels)
             .set({
                 name: body.name,

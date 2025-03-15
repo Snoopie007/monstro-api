@@ -1,13 +1,14 @@
 import { db } from '@/db/db';
 import { importMembers } from '@/db/schemas/ImportMembers';
 import { NextResponse } from 'next/server';
-export async function POST(request: Request) {
+export async function POST(request: Request, props: {params: Promise<{id: number}>}) {
 
   const data = await request.formData();
   const file = data.get('file');
   const programId = data.get('programId');
   const planId = data.get('planId');
-
+  
+  const params = await props.params;
   if (!file) {
     return NextResponse.json({ status: 'fail', message: 'No file uploaded' }, { status: 400 });
   }
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
             programId: programId && typeof programId === 'string' ? parseInt(programId, 10) : null,
             planId: planId && typeof planId === 'string' ? parseInt(planId, 10) : null,
             created: new Date(),
+            locationId: params.id
           }); 
   
           addedRecords.push(inserted);

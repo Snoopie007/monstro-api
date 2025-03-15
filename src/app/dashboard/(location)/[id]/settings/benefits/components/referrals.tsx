@@ -22,7 +22,7 @@ export function VendorReferrals({ vendor }: VendorReferralsProps) {
                         <span className='text-muted-foreground '>Pending: </span>
                         <span className='text-foreground'>{pending} </span>
                     </div>
-                    <div className='flex flex-row items-center justify-center gap-1'>
+                    {/* <div className='flex flex-row items-center justify-center gap-1'>
                         <span className='text-muted-foreground '>Total received: </span>
                         <span className='text-foreground'>${vendor.credits}</span>
                     </div>
@@ -33,7 +33,7 @@ export function VendorReferrals({ vendor }: VendorReferralsProps) {
                     <div className='flex flex-row items-center justify-center gap-1'>
                         <span className='text-muted-foreground '>Balance: </span>
                         <span className='text-foreground'>${vendor.credits - vendor.spendedCredits}</span>
-                    </div>
+                    </div> */}
                 </div>
                 <div className='flex flex-row items-center justify-start gap-2 py-4'>
                     <div>

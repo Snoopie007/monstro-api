@@ -1,9 +1,9 @@
-import { db } from "../../../../../../../../db/db";
+import { db } from "@/db/db";
 import { memberLocations, memberSubscriptions, users, members, familyMembers, locations } from '../../../../../../../../db/schemas';
-import { EmailSender } from "../../../../../../../../libs/server/emails";
+import { EmailSender } from "@/libs/server/emails";
 import { NextResponse } from "next/server";
-import { InviteEmailTemplate } from '../../../../../../../../templates/emails/MemberInvite';
-import { MonstroData } from '../../../../../../../../libs/data';
+import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
+import { MonstroData } from '@/libs/data';
 import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
@@ -37,6 +37,7 @@ export async function POST(req: Request) {
                 where: (memberLocation, { eq }) => eq(memberLocation.memberId, member.id) && eq(memberLocation.locationId, locationId),
             });
             console.log(memberLocation);
+
             if (memberLocation) {
                 if (!(planId && programId)) {
 
@@ -55,6 +56,7 @@ export async function POST(req: Request) {
 
                     return NextResponse.json({ error: "Please Signup first" }, { status: 400 });
                 }
+
                 try {
                     const emailSender = new EmailSender();
                     await emailSender.send(email, 'Welcome to Monstro', InviteEmailTemplate, {
@@ -67,8 +69,11 @@ export async function POST(req: Request) {
                 } catch (emailError) {
                     console.error(`Failed to send email to ${email}:`, emailError);
                 }
+
+
                 return NextResponse.json({ message: `Family member has sent you an invite with the relation of ${relation}` });
             } else {
+
                 await db.insert(memberLocations).values({
                     memberId: member.id,
                     locationId: locationId,
@@ -76,17 +81,17 @@ export async function POST(req: Request) {
                     created: new Date(),
                 });
 
-                await db.insert(memberSubscriptions).values({
-                  payerId: familyMemberId,
-                  beneficiaryId: member.id,
-                  planId: planId,
-                  locationId: locationId,
-                  startDate: new Date(),
-                  currentPeriodStart: new Date(),
-                  currentPeriodEnd: new Date(),
-                  created: new Date(),
-                  paymentType: 'cash',
-                } as any);
+                // await db.insert(memberSubscriptions).values({
+                //   payerId: familyMemberId,
+                //   beneficiaryId: member.id,
+                //   planId: planId,
+                //   locationId: locationId,
+                //   startDate: new Date(),
+                //   currentPeriodStart: new Date(),
+                //   currentPeriodEnd: new Date(),
+                //   created: new Date(),
+                //   paymentType: 'cash',
+                // } as any);
 
                 await db.insert(familyMembers).values({
                     memberId: member.id,
@@ -94,6 +99,8 @@ export async function POST(req: Request) {
                     relationship: relation,
                     created: new Date(),
                 });
+
+
 
                 try {
                     const emailSender = new EmailSender();
@@ -119,25 +126,29 @@ export async function POST(req: Request) {
                 created: new Date(),
             }).returning();
 
-
+            const generateReferralCode = () => {
+                return Math.random().toString(36).substring(2, 8).toUpperCase();
+            };
+            
             const [newMember] = await db.insert(members).values({
                 userId: user.id,
                 firstName: firstName,
                 lastName: lastName,
                 email: email,
                 phone: '',
-                referralCode: '23131',
+                referralCode: generateReferralCode(),
                 currentPoints: 0,
                 created: new Date(),
             }).returning();
 
             // await db.insert(memberSubscriptions).values({
-            //   payerId: 1,
+            //   payerId: newMember.id,
             //   locationId: locationId,
             //   startDate: new Date(),
             //   currentPeriodStart: new Date(),
             //   currentPeriodEnd: new Date(),
-            //   created: new Date()
+            //   created: new Date(),
+            //   paymentType: 'cash',
             // });
 
             await db.insert(memberLocations).values({
@@ -149,7 +160,7 @@ export async function POST(req: Request) {
 
             await db.insert(familyMembers).values({
                 memberId: newMember.id,
-                relatedMemberId: newMember.id,
+                relatedMemberId: familyMemberId,
                 relationship: relation,
                 created: new Date(),
             });

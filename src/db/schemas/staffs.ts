@@ -1,4 +1,4 @@
-import { serial, text, bigserial, timestamp, pgTable, integer, primaryKey } from "drizzle-orm/pg-core";
+import { serial, text, timestamp, pgTable, integer, primaryKey } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { users } from "./users";
 import { roles } from "./permissions";
@@ -41,7 +41,7 @@ export const staffsRelations = relations(staffs, ({ many, one }) => ({
     }),
 }));
 
-export const staffLocationsRelations = relations(staffsLocations, ({ one }) => ({
+export const staffLocationsRelations = relations(staffsLocations, ({ one, many }) => ({
     staff: one(staffs, {
         fields: [staffsLocations.staffId],
         references: [staffs.id],
@@ -50,5 +50,17 @@ export const staffLocationsRelations = relations(staffsLocations, ({ one }) => (
         fields: [staffsLocations.locationId],
         references: [locations.id],
     }),
+    roles: many(staffsLocationRoles)
 }));
+
+export const staffsLocationRolesRelations = relations(staffsLocationRoles, ({one}) => ({
+    role: one(roles, {
+        fields: [staffsLocationRoles.roleId],
+        references: [roles.id]
+    }),
+    staffsLocation: one(staffsLocations, {
+        fields: [staffsLocationRoles.staffLocationId],
+        references: [staffsLocations.id]
+    })
+}))
 

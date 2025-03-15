@@ -8,15 +8,15 @@ export async function POST(req: NextRequest) {
     const user = await auth();
 
     if (user) {
-      const result = await db.insert("messages").into("tickets_messages")
-        .set({
-          ticket_id: newTicket.ticketId,
-          message: newTicket.message,
-          // Add other fields as needed
-        })
-        .returning("*");
+      // const result = await db.insert(messages).into("tickets_messages")
+      //   .set({
+      //     ticket_id: newTicket.ticketId,
+      //     message: newTicket.message,
+      //     // Add other fields as needed
+      //   })
+      //   .returning("*");
 
-      return NextResponse.json({ result }, { status: 201 });
+      return NextResponse.json({}, { status: 201 });
     }
   } catch (err) {
     console.log(err);

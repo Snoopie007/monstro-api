@@ -1,4 +1,4 @@
-import { bigserial, serial, text, timestamp, time, primaryKey, smallint, doublePrecision, pgTable, integer } from "drizzle-orm/pg-core";
+import { serial, text, timestamp, time, primaryKey, smallint, doublePrecision, pgTable, integer } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { members } from "./members";

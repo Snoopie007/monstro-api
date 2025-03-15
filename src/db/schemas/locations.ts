@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { bigint, boolean, primaryKey, varchar, serial, text, timestamp, pgTable, jsonb, pgEnum, integer } from "drizzle-orm/pg-core";
+import { boolean, primaryKey, varchar, serial, text, timestamp, pgTable, jsonb, integer } from "drizzle-orm/pg-core";
 import { memberInvoices, members } from "./members";
 import { integrations } from "./integrations";
 import { programs } from "./programs";
