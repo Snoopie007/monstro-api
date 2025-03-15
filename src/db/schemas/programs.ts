@@ -37,9 +37,7 @@ export const programSessions = pgTable("program_sessions", {
     day: smallint("day").notNull().default(1),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
-}, (t) => ({
-    uniqueProgramSession: unique().on(t.programId, t.time, t.duration)
-}));
+}, (t) => [unique("unique_program_session").on(t.programId, t.time, t.duration, t.day)])
 
 export const programsRelations = relations(programs, ({ one, many }) => ({
     location: one(locations, {
