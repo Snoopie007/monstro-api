@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from "@/auth";
 import { db } from '@/db/db';
 import { contractTemplates } from '@/db/schemas/ContractTemplates';
 import { eq } from 'drizzle-orm';
 
+type ContractId = {
+  cid: number;
+  id: number;
+}
 
-export async function GET(req: Request, props: { params: Promise<{ cid: number, id: string }> }) {
+export async function GET(req: Request, props: { params: Promise<ContractId> }) {
   const params = await props.params;
 
   try {
@@ -20,7 +23,7 @@ export async function GET(req: Request, props: { params: Promise<{ cid: number, 
   }
 }
 
-export async function PUT(req: NextRequest, props: { params: Promise<{ cid: number, id: string }> }) {
+export async function PUT(req: NextRequest, props: { params: Promise<ContractId> }) {
   const { cid } = await props.params;
   const data = await req.json();
   try {
@@ -49,12 +52,9 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ cid: numb
 
 }
 
-export async function DELETE(req: NextRequest, props: { params: Promise<{ cid: number }> }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<ContractId> }) {
   const { cid } = await props.params;
   try {
-
-
-
     const result = await db.delete(contractTemplates).where(eq(contractTemplates.id, cid)).returning();
 
 
