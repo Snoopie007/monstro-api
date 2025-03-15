@@ -67,7 +67,7 @@ export type MemberSubscription = {
 }
 
 export type MemberPackage = {
-    id?: string;
+    id?: number;
     memberPlanId: number;
     locationId: number;
     payerId: number | null;

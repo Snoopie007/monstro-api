@@ -1,4 +1,4 @@
-import { integer, boolean, text, timestamp, pgTable, serial, doublePrecision, pgEnum, jsonb, uuid } from "drizzle-orm/pg-core";
+import { integer, boolean, text, timestamp, pgTable, serial, jsonb } from "drizzle-orm/pg-core";
 import { programLevels, programs } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { relations, sql } from "drizzle-orm";

@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { integer, primaryKey, serial, text, timestamp, pgTable, boolean, varchar, pgEnum, jsonb, uuid, doublePrecision } from "drizzle-orm/pg-core";
+import { integer, primaryKey, serial, text, timestamp, pgTable, boolean, varchar, jsonb } from "drizzle-orm/pg-core";
 import { locations, memberLocations } from "./locations";
 import { users } from "./users";
 import { achievements } from "./achievements";
@@ -68,7 +68,7 @@ export const memberInvoices = pgTable("member_invoices", {
     currency: text("currency"),
     memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    memberPackageId: uuid("member_package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
+    memberPackageId: integer("member_package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
     memberSubscriptionId: integer("member_subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
     description: text("description"),
     items: jsonb("items").$type<Record<string, any>>().array().default(sql`'{}'::jsonb[]`),

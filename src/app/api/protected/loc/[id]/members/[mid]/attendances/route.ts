@@ -80,7 +80,8 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
                     attendances.push({
                         ...attendance,
                         programName,
-                        levelName
+                        levelName,
+                        created: attendance.created ?? new Date()
                     });
                 });
             });

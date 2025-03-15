@@ -1,4 +1,4 @@
-import { integer, numeric, serial, text, timestamp, pgTable, doublePrecision, jsonb, boolean, pgEnum, uuid } from "drizzle-orm/pg-core";
+import { integer, serial, text, timestamp, pgTable, jsonb, boolean } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 import { memberInvoices, members } from "./members";
@@ -18,9 +18,9 @@ export const transactions = pgTable("transactions", {
     status: TransactionStatusEnum("status").notNull().default("incomplete"),
     memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    invoiceId: uuid("invoice_id").unique().references(() => memberInvoices.id, { onDelete: "cascade" }),
+    invoiceId: integer("invoice_id").unique().references(() => memberInvoices.id, { onDelete: "cascade" }),
     subscriptionId: integer("subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
-    packageId: uuid("package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
+    packageId: integer("package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
     chargeDate: timestamp("charge_date", { withTimezone: true }).notNull().defaultNow(),
     currency: text("currency").notNull().default("USD"),
     metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
