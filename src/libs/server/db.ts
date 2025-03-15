@@ -35,7 +35,56 @@ function formatPhoneNumber(phoneNumber: string): string {
 		? phoneNumber.replace(/[^0-9+]/g, '')
 		: `+${phoneNumber.replace(/[^0-9]/g, '')}`;
 }
+
+
+async function hashPassword(password: string): Promise<string> {
+	// Convert password to buffer
+	const pwUtf8 = new TextEncoder().encode(password);
+
+	// Generate random salt
+	const salt = crypto.randomUUID();
+	const saltUtf8 = new TextEncoder().encode(salt);
+
+	// Hash the password
+	const pwHash = await crypto.subtle.digest('SHA-256', pwUtf8);
+
+	// Create a key from the hashed password
+	const key = await crypto.subtle.importKey('raw', pwHash, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+
+	// Sign the salt with the key
+	const signature = await crypto.subtle.sign('HMAC', key, saltUtf8);
+
+	// Convert to base64 strings
+	const hashedPassword = btoa(String.fromCharCode(...new Uint8Array(signature)));
+
+	return `${salt}:${hashedPassword}`;
+}
+
+async function compareHashedPassword(password: string, hashedPassword: string): Promise<boolean> {
+	const [salt, storedHash] = hashedPassword.split(':');
+
+	// Convert password to buffer
+	const pwUtf8 = new TextEncoder().encode(password);
+	const saltUtf8 = new TextEncoder().encode(salt);
+
+	// Hash the password
+	const pwHash = await crypto.subtle.digest('SHA-256', pwUtf8);
+
+	// Create a key from the hashed password
+	const key = await crypto.subtle.importKey('raw', pwHash, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+
+	// Sign the salt with the key
+	const signature = await crypto.subtle.sign('HMAC', key, saltUtf8);
+
+	// Convert to base64 string
+	const computedHash = btoa(String.fromCharCode(...new Uint8Array(signature)));
+
+	return computedHash === storedHash;
+}
+
 export {
+	hashPassword,
+	compareHashedPassword,
 	getTodaysAttendanceStatus,
 	formatPhoneNumber,
 	buildConflictUpdateColumns

@@ -28,8 +28,8 @@ export const locations = pgTable("locations", {
     metadata: jsonb("meta_data"),
     vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "cascade" }).notNull(),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: false }),
-    deleted: timestamp("deleted_at", { withTimezone: false }),
+    updated: timestamp("updated_at", { withTimezone: true }),
+    deleted: timestamp("deleted_at", { withTimezone: true }),
 });
 
 // ✅ Location State Table
@@ -46,7 +46,7 @@ export const locationState = pgTable("location_state", {
     usagePercent: integer("usage_percent").notNull().default(0),
     status: LocationStatusEnum("status").notNull().default("incomplete"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: false }),
+    updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 // ✅ Member Locations Table

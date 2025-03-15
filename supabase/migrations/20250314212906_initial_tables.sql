@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
   name text NOT NULL,
   email text NOT NULL UNIQUE,
   email_verified_at timestamp with time zone,
+  image text,
   password text,
   created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
   updated_at timestamp with time zone,
@@ -61,7 +62,6 @@ CREATE TABLE IF NOT EXISTS vendors (
   stripe_customer_id text,
   email text NOT NULL,
   avatar text,
-  account_owner boolean NOT NULL DEFAULT false,
   phone text,
   created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
   updated_at timestamp with time zone,
@@ -300,6 +300,18 @@ CREATE TABLE IF NOT EXISTS role_has_permissions (
   CONSTRAINT role_has_permissions_role_id_foreign FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS user_roles (
+  user_id bigint NOT NULL,
+  role_id bigint NOT NULL,
+  CONSTRAINT user_roles_pkey PRIMARY KEY (user_id, role_id),
+  CONSTRAINT user_roles_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+  CONSTRAINT user_roles_role_id_foreign FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
+
+
 -- Tables with dependencies on members and locations
 CREATE TABLE IF NOT EXISTS member_locations (
   location_id bigint NOT NULL,
@@ -483,6 +495,17 @@ CREATE TABLE IF NOT EXISTS staff_locations (
 
 CREATE INDEX IF NOT EXISTS idx_staff_locations_staff_id ON staff_locations (staff_id);
 CREATE INDEX IF NOT EXISTS idx_staff_locations_location_id ON staff_locations (location_id);
+
+CREATE TABLE IF NOT EXISTS staff_location_roles (
+  staff_location_location_id bigint NOT NULL,
+  role_id bigint NOT NULL,
+  CONSTRAINT staff_location_roles_staff_location_fkey FOREIGN KEY (staff_location_location_id) REFERENCES staff_locations (location_id) ON DELETE CASCADE,
+  CONSTRAINT staff_location_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_staff_location_roles_staff_location ON staff_location_roles (staff_location_location_id);
+CREATE INDEX IF NOT EXISTS idx_staff_location_roles_role_id ON staff_location_roles (role_id);
+
 
 -- Tables with dependencies on programs and staffs
 CREATE TABLE IF NOT EXISTS program_levels (

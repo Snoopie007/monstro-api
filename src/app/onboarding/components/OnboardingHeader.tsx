@@ -34,12 +34,12 @@ function OnboardingHeader() {
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        {/* <Avatar className="ml-2  h-7 w-7">
+                        <Avatar className="ml-2  h-7 w-7">
                             <AvatarImage src={`${user.image ? user.image : ""}`} alt={user.name} />
                             <AvatarFallback className="text-xs  bg-gray-200 text-black/80  font-semibold">
                                 {`${user.name.charAt(0)}${user.name.charAt(user.name.indexOf(' ') + 1)}`}
                             </AvatarFallback>
-                        </Avatar> */}
+                        </Avatar>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align='end' className='bg-white'>
 

@@ -71,14 +71,17 @@ export default auth(async (req) => {
 
 		// Handle home page and dashboard redirects (only for web, not for mobile)
 		if (isLoggedin && !isMobileApp) {
+			if (pathname.startsWith("/api/auth")) {
+				return NextResponse.next()
+			}
 			if (locations.length === 0 && pathname !== "/onboarding") {
 				return NextResponse.redirect(new URL("/onboarding", req.nextUrl.origin))
 			}
 
-
 			const [, path, locationId] = pathname.match(/^\/((?:dashboard|onboarding))\/([^/]+)(\/.*)?$/) || []
 
 			if (locationId) {
+
 				/** Check if locationId is a valid location */
 				let nextLocation = locations.find((loc: { id: string }) => loc.id === locationId)
 

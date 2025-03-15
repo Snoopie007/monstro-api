@@ -1,18 +1,18 @@
-import { boolean, date, bigint, pgTable, serial, timestamp, varchar, integer } from "drizzle-orm/pg-core";
+import { boolean, date, bigint, pgTable, serial, timestamp, text, integer } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 
 export const importMembers = pgTable("import_members", {
     id: serial("id").primaryKey(),
-    firstName: varchar("first_name", { length: 255 }).notNull(),
-    lastName: varchar("last_name", { length: 255 }).notNull(),
-    email: varchar("email", { length: 255 }).notNull(),
-    phone: varchar("phone", { length: 255 }),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone"),
     lastRenewalDay: date("last_renewal_day").notNull(),
-    status: varchar("status", { length: 255 }).notNull().default("Active"),
-    terms: varchar("terms", { length: 255 }).notNull().default("months"),
+    status: text("status").notNull().default("Active"),
+    terms: text("terms").notNull().default("months"),
     termCount: integer("term_count").notNull(),
-    created: timestamp("created_at", { withTimezone: false }),
-    updated: timestamp("updated_at", { withTimezone: false }),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
     programId: integer("program_id"),
     planId: integer("plan_id"),
     processed: boolean("processed").notNull().default(false),

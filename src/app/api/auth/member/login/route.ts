@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { sign } from "jsonwebtoken"
 import bcrypt from "bcryptjs"
 import { db } from "@/db/db"
 import { SignJWT } from "jose"
@@ -17,7 +16,6 @@ async function getUser(email: string) {
     },
   })
   if (!user || !user.password) return null;
-  console.log(user.member.memberLocations);
   return user;
 }
 
@@ -35,7 +33,7 @@ export async function POST(req: Request) {
 
     // Create a JWT token
     const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    const jwt = await new SignJWT(user).setProtectedHeader({alg: "HS256"}).setExpirationTime("1d").setIssuedAt().sign(secret);
+    const jwt = await new SignJWT(user).setProtectedHeader({ alg: "HS256" }).setExpirationTime("1d").setIssuedAt().sign(secret);
     console.log(jwt)
     user.password = "";
     return NextResponse.json({ token: jwt, ...user })

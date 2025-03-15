@@ -23,7 +23,7 @@ export const members = pgTable("members", {
     currentPoints: integer("current_points").notNull().default(0),
     gender: text("gender"),
     dob: timestamp("dob"),
-    avatar: varchar("avatar"),
+    avatar: text("avatar"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true }),

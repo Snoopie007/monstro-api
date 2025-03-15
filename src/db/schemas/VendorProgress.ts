@@ -1,4 +1,4 @@
-import { serial, integer, timestamp, pgTable, boolean, text, jsonb, doublePrecision } from "drizzle-orm/pg-core";
+import { serial, integer, timestamp, pgTable, boolean, text, jsonb } from "drizzle-orm/pg-core";
 import { vendors } from "./vendors";
 import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
@@ -8,8 +8,8 @@ export const vendorProgress = pgTable("vendor_progress", {
     id: serial("id").primaryKey(),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    points: doublePrecision("points").notNull().default(0),
-    totalPoints: doublePrecision("total_points").notNull().default(0),
+    points: integer("points").notNull().default(0),
+    totalPoints: integer("total_points").notNull().default(0),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
@@ -31,7 +31,7 @@ export const vendorRewards = pgTable("vendor_rewards", {
     name: text("name").notNull(),
     description: text("description").notNull(),
     images: text("images").notNull(), // Matches "images" in SQL
-    meta: jsonb("meta").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
+    meta: jsonb("meta").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
     requiredPoints: integer("required_points").notNull(),
     created: timestamp("created_at", { withTimezone: true }),
     updated: timestamp("updated_at", { withTimezone: true }),

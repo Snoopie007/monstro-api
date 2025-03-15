@@ -11,7 +11,7 @@ const MemberRelationshipEnum = pgEnum('relationship', ['parent', 'spouse', 'chil
 const RoleColorEnum = pgEnum('role_color', ["red", "green", "blue", "pink", "cyan", "lime", "orange", "fuchsia", "sky", "lemon", "purple", "yellow"]);
 const ContractTypeEnum = pgEnum('contract_type', ['contract', 'waiver']);
 const TransactionStatusEnum = pgEnum("transaction_status", ["paid", "failed", "incomplete"]);
-
+const StaffStatusEnum = pgEnum("staff_status", ["active", "inactive"]);
 export {
     LocationStatusEnum,
     PlanType, PlanInterval,
@@ -20,6 +20,6 @@ export {
     MemberRelationshipEnum,
     RoleColorEnum,
     ContractTypeEnum,
-
-    TransactionStatusEnum
+    TransactionStatusEnum,
+    StaffStatusEnum
 }

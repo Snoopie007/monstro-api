@@ -78,7 +78,7 @@ export const memberPackages = pgTable("member_packages", {
     totalClassAttended: integer("total_class_attended").notNull().default(0),
     totalClassLimit: integer("total_class_limit").notNull().default(0),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true })
 });
 
 export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({

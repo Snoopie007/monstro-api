@@ -3,7 +3,7 @@ import { accounts } from "./accounts";
 import { relations } from "drizzle-orm";
 import { members } from "./members";
 import { vendors } from "./vendors";
-import { modelHasRoles } from "./permissions";
+import { userRoles } from "./permissions";
 import { staffs } from "./staffs";
 
 export const users = pgTable("users", {
@@ -11,6 +11,7 @@ export const users = pgTable("users", {
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
     emailVerified: timestamp("email_verified_at", { withTimezone: true }),
+    image: text("image"),
     password: text("password"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
@@ -31,5 +32,5 @@ export const usersRelations = relations(users, ({ many, one }) => ({
         fields: [users.id],
         references: [staffs.userId],
     }),
-    roles: many(modelHasRoles),
+    roles: many(userRoles),
 }));

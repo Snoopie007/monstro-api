@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { bigint, varchar, serial, timestamp, pgTable, integer } from "drizzle-orm/pg-core";
+import { bigint, text, serial, timestamp, pgTable, integer } from "drizzle-orm/pg-core";
 import { programs } from "./programs";
 import { locations } from "./locations";
 import { memberAchievements } from "./members";
@@ -7,21 +7,21 @@ import { memberAchievements } from "./members";
 export const achievements = pgTable("achievements", {
     id: serial("id").primaryKey(),
     programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
-    title: varchar("title", { length: 255 }).notNull(),
-    badge: varchar("badge", { length: 255 }).notNull(),
+    title: text("title").notNull(),
+    badge: text("badge").notNull(),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }).notNull(),
     points: integer("points").notNull(),
-    created: timestamp('created_at', { withTimezone: false }),
-    updated: timestamp('updated_at', { withTimezone: false }),
-    description: varchar("description"),
-    icon: varchar("icon"),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
+    description: text("description"),
+    icon: text("icon"),
 });
 
 export const actions = pgTable("actions", {
     id: serial("id").primaryKey(),
-    name: varchar("name", { length: 255 }).notNull(),
-    created: timestamp('created_at', { withTimezone: false }),
-    updated: timestamp('updated_at', { withTimezone: false }),
+    name: text("name").notNull(),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
 });
 
 export const achievementsActions = pgTable("achievement_actions", {
@@ -29,9 +29,9 @@ export const achievementsActions = pgTable("achievement_actions", {
     achievementId: integer("achievement_id").references(() => achievements.id, { onDelete: "cascade" }).notNull(),
     actionId: integer("action_id").references(() => actions.id, { onDelete: "cascade" }).notNull(),
     count: integer("count").notNull(),
-    metadata: varchar("metadata", { length: 255 }),
-    created: timestamp('created_at', { withTimezone: false }),
-    updated: timestamp('updated_at', { withTimezone: false }),
+    metadata: text("metadata"),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
 });
 
 export const achievementsRelations = relations(achievements, ({ many }) => ({
