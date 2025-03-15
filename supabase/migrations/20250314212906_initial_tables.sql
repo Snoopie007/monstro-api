@@ -1,24 +1,19 @@
--- Create ENUM types with IF NOT EXISTS
-CREATE TYPE IF NOT EXISTS contract_type AS ENUM('contract', 'waiver');
-CREATE TYPE IF NOT EXISTS invoice_status AS ENUM('draft', 'paid', 'unpaid', 'uncollectible', 'void');
-CREATE TYPE IF NOT EXISTS location_status AS ENUM('incomplete', 'active', 'past_due', 'canceled', 'paused', 'trialing', 'unpaid', 'incomplete_expired');
-CREATE TYPE IF NOT EXISTS relationship AS ENUM('parent', 'spouse', 'child', 'sibling', 'other');
-CREATE TYPE IF NOT EXISTS package_status AS ENUM('active', 'incomplete', 'expired', 'completed');
-CREATE TYPE IF NOT EXISTS payment_method AS ENUM('card', 'cash', 'check', 'zelle', 'venmo', 'paypal', 'apple', 'google');
-CREATE TYPE IF NOT EXISTS plan_interval AS ENUM('day', 'week', 'month', 'year');
-CREATE TYPE IF NOT EXISTS plan_type AS ENUM('recurring', 'one-time');
-CREATE TYPE IF NOT EXISTS reservation_status AS ENUM('active', 'expired', 'canceled');
-CREATE TYPE IF NOT EXISTS role_color AS ENUM('red', 'green', 'blue', 'pink', 'cyan', 'lime', 'orange', 'fuchsia', 'sky', 'lemon', 'purple', 'yellow');
-CREATE TYPE IF NOT EXISTS transaction_status AS ENUM('paid', 'failed', 'incomplete');
-CREATE TYPE IF NOT EXISTS staff_status AS ENUM('active', 'inactive');
-CREATE TYPE IF NOT EXISTS support_ticket_status AS ENUM('open', 'updated', 'closed');
+-- Create ENUM types
+CREATE TYPE contract_type AS ENUM('contract', 'waiver');
+CREATE TYPE invoice_status AS ENUM('draft', 'paid', 'unpaid', 'uncollectible', 'void');
+CREATE TYPE location_status AS ENUM('incomplete', 'active', 'past_due', 'canceled', 'paused', 'trialing', 'unpaid', 'incomplete_expired');
+CREATE TYPE relationship AS ENUM('parent', 'spouse', 'child', 'sibling', 'other');
+CREATE TYPE package_status AS ENUM('active', 'incomplete', 'expired', 'completed');
+CREATE TYPE payment_method AS ENUM('card', 'cash', 'check', 'zelle', 'venmo', 'paypal', 'apple', 'google');
+CREATE TYPE plan_interval AS ENUM('day', 'week', 'month', 'year');
+CREATE TYPE plan_type AS ENUM('recurring', 'one-time');
+CREATE TYPE reservation_status AS ENUM('active', 'expired', 'canceled');
+CREATE TYPE role_color AS ENUM('red', 'green', 'blue', 'pink', 'cyan', 'lime', 'orange', 'fuchsia', 'sky', 'lemon', 'purple', 'yellow');
+CREATE TYPE transaction_status AS ENUM('paid', 'failed', 'incomplete');
+CREATE TYPE staff_status AS ENUM('active', 'inactive');
+CREATE TYPE support_ticket_status AS ENUM('open', 'updated', 'closed');
 
--- Function for current timestamp
-CREATE OR REPLACE FUNCTION current_timestamp() RETURNS timestamp with time zone AS $$
-BEGIN
-    RETURN now();
-END;
-$$ LANGUAGE plpgsql;
+
 
 -- Base tables with no foreign key dependencies
 CREATE TABLE IF NOT EXISTS users (
@@ -28,7 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
   email_verified_at timestamp with time zone,
   image text,
   password text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT users_email_unique UNIQUE (email)
@@ -39,7 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE TABLE IF NOT EXISTS actions (
   id bigserial PRIMARY KEY NOT NULL,
   name text NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
 
@@ -47,7 +42,7 @@ CREATE TABLE IF NOT EXISTS permissions (
   id bigserial PRIMARY KEY NOT NULL,
   name text NOT NULL,
   guard_name text NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   description text,
   CONSTRAINT permissions_name_guard_name_unique UNIQUE (name, guard_name)
@@ -63,7 +58,7 @@ CREATE TABLE IF NOT EXISTS vendors (
   email text NOT NULL,
   avatar text,
   phone text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT vendors_email_unique UNIQUE (email),
@@ -81,7 +76,7 @@ CREATE TABLE IF NOT EXISTS members (
   referral_code text,
   current_points integer DEFAULT 0,
   avatar text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   first_name text,
@@ -104,7 +99,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   ip_address text,
   browser_id text,
   machine_id text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT sessions_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
@@ -128,7 +123,7 @@ CREATE TABLE IF NOT EXISTS locations (
   timezone text,
   vendor_id bigint,
   meta_data jsonb DEFAULT '{}'::jsonb,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   industry text,
@@ -146,7 +141,7 @@ CREATE TABLE IF NOT EXISTS vendor_rewards (
   images text NOT NULL,
   meta jsonb NOT NULL,
   required_points integer NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
 
@@ -156,7 +151,7 @@ CREATE TABLE IF NOT EXISTS contracts (
   content text,
   title text,
   description text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   is_draft boolean NOT NULL DEFAULT false,
@@ -171,7 +166,7 @@ CREATE TABLE IF NOT EXISTS roles (
   id bigserial PRIMARY KEY NOT NULL,
   name text NOT NULL,
   guard_name text NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   location_id bigint,
   color role_color,
@@ -185,7 +180,7 @@ CREATE TABLE IF NOT EXISTS programs (
   name text NOT NULL,
   description text NOT NULL,
   icon text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT programs_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE
@@ -201,7 +196,7 @@ CREATE TABLE IF NOT EXISTS achievements (
   points bigint NOT NULL,
   description text,
   icon text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT achievements_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id)
 );
@@ -214,7 +209,7 @@ CREATE TABLE IF NOT EXISTS rewards (
   icon text,
   required_points integer NOT NULL,
   limit_per_member integer NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   limit_total text NOT NULL DEFAULT 'unlimited',
   images text[] NOT NULL DEFAULT '{}',
@@ -230,7 +225,7 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   description text,
   status support_ticket_status NOT NULL DEFAULT 'open',
   location_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT support_tickets_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id)
@@ -246,7 +241,7 @@ CREATE TABLE IF NOT EXISTS wallet (
   recharge_amount bigint NOT NULL DEFAULT 20,
   recharge_threshold bigint NOT NULL DEFAULT 10,
   last_charged timestamp with time zone,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT wallet_location_id_key UNIQUE (location_id),
@@ -263,7 +258,7 @@ CREATE TABLE IF NOT EXISTS import_members (
   status text NOT NULL DEFAULT 'active',
   terms plan_interval NOT NULL DEFAULT 'month',
   term_count integer NOT NULL,
-  created_at timestamp with time zone DEFAULT current_timestamp(),
+  created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone,
   program_id bigint,
   plan_id bigint,
@@ -279,10 +274,10 @@ CREATE TABLE IF NOT EXISTS location_state (
   payment_plan_id bigint,
   status location_status NOT NULL DEFAULT 'incomplete',
   agree_to_terms boolean NOT NULL DEFAULT false,
-  last_renewal_date timestamp with time zone DEFAULT current_timestamp(),
+  last_renewal_date timestamp with time zone DEFAULT now(),
   start_date timestamp with time zone,
   settings jsonb NOT NULL DEFAULT '{}'::jsonb,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   usage_percent integer NOT NULL DEFAULT 0,
   waiver_id bigint,
@@ -316,7 +311,7 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
 CREATE TABLE IF NOT EXISTS member_locations (
   location_id bigint NOT NULL,
   member_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   stripe_customer_id text,
   status location_status NOT NULL DEFAULT 'incomplete',
@@ -340,8 +335,8 @@ CREATE TABLE IF NOT EXISTS member_achievements (
   status text NOT NULL,
   note text,
   progress integer NOT NULL DEFAULT 0,
-  date_achieved timestamp with time zone DEFAULT current_timestamp(),
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  date_achieved timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT member_achievements_achievement_id_foreign FOREIGN KEY (achievement_id) REFERENCES achievements (id),
   CONSTRAINT member_achievements_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id)
@@ -352,7 +347,7 @@ CREATE TABLE IF NOT EXISTS member_referrals (
   member_id bigint NOT NULL,
   referred_member_id bigint NOT NULL,
   location_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT member_referrals_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
   CONSTRAINT member_referrals_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE,
@@ -366,7 +361,7 @@ CREATE TABLE IF NOT EXISTS reward_claims (
   previous_points integer,
   date_claimed timestamp with time zone,
   status smallint NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT reward_claims_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id),
@@ -380,7 +375,7 @@ CREATE TABLE IF NOT EXISTS vendor_levels (
   location_id bigint NOT NULL,
   points integer NOT NULL DEFAULT 0,
   total_points integer NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT vendor_levels_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
   CONSTRAINT vendor_levels_vendor_id_foreign FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
@@ -396,7 +391,7 @@ CREATE TABLE IF NOT EXISTS integrations (
   refresh_token text,
   integration_id text NOT NULL,
   additional_settings jsonb DEFAULT '{}'::jsonb,
-  created_at timestamp with time zone DEFAULT current_timestamp(),
+  created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone,
   location_id bigint,
   CONSTRAINT unique_service_location UNIQUE (service, location_id),
@@ -425,7 +420,7 @@ CREATE TABLE IF NOT EXISTS wallet_usage (
   balance integer NOT NULL DEFAULT 0,
   recharge_threshold integer NOT NULL DEFAULT 0,
   activity_date date NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT wallet_usage_wallet_id_foreign FOREIGN KEY (wallet_id) REFERENCES wallet (id) ON DELETE CASCADE
@@ -436,7 +431,7 @@ CREATE TABLE IF NOT EXISTS member_plans (
   id bigserial PRIMARY KEY NOT NULL,
   name character varying(255) NOT NULL,
   description character varying(255) NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   family boolean NOT NULL DEFAULT false,
@@ -463,7 +458,6 @@ CREATE TABLE IF NOT EXISTS member_plans (
 );
 
 CREATE INDEX IF NOT EXISTS idx_member_plans_program_id ON member_plans (program_id);
-
 -- Tables with dependencies on roles, users, and locations
 CREATE TABLE IF NOT EXISTS staffs (
   id bigserial PRIMARY KEY NOT NULL,
@@ -475,35 +469,36 @@ CREATE TABLE IF NOT EXISTS staffs (
   user_id bigint NOT NULL,
   role_id bigint,
   location_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT staffs_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
   CONSTRAINT staffs_role_id_foreign FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE SET NULL,
   CONSTRAINT staffs_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
-
 -- Tables with dependencies on staffs and locations
 CREATE TABLE IF NOT EXISTS staff_locations (
+  id bigserial PRIMARY KEY NOT NULL,
   staff_id bigint NOT NULL,
   location_id bigint NOT NULL,
   status staff_status NOT NULL DEFAULT 'active',
-  CONSTRAINT staff_locations_pkey PRIMARY KEY (staff_id, location_id),
   CONSTRAINT staff_locations_staff_id_foreign FOREIGN KEY (staff_id) REFERENCES staffs (id) ON DELETE CASCADE,
-  CONSTRAINT staff_locations_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE
+  CONSTRAINT staff_locations_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
+  CONSTRAINT staff_locations_staff_location_unique UNIQUE (staff_id, location_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_staff_locations_staff_id ON staff_locations (staff_id);
 CREATE INDEX IF NOT EXISTS idx_staff_locations_location_id ON staff_locations (location_id);
 
 CREATE TABLE IF NOT EXISTS staff_location_roles (
-  staff_location_location_id bigint NOT NULL,
+  staff_location_id bigint NOT NULL,
   role_id bigint NOT NULL,
-  CONSTRAINT staff_location_roles_staff_location_fkey FOREIGN KEY (staff_location_location_id) REFERENCES staff_locations (location_id) ON DELETE CASCADE,
+  CONSTRAINT staff_location_roles_pkey PRIMARY KEY (staff_location_id, role_id),
+  CONSTRAINT staff_location_roles_staff_location_fkey FOREIGN KEY (staff_location_id) REFERENCES staff_locations (id) ON DELETE CASCADE,
   CONSTRAINT staff_location_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_staff_location_roles_staff_location ON staff_location_roles (staff_location_location_id);
+CREATE INDEX IF NOT EXISTS idx_staff_location_roles_staff_location_id ON staff_location_roles (staff_location_id);
 CREATE INDEX IF NOT EXISTS idx_staff_location_roles_role_id ON staff_location_roles (role_id);
 
 
@@ -516,7 +511,7 @@ CREATE TABLE IF NOT EXISTS program_levels (
   max_age integer NOT NULL,
   program_id bigint NOT NULL,
   parent_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   interval plan_interval NOT NULL DEFAULT 'week',
@@ -532,7 +527,7 @@ CREATE INDEX IF NOT EXISTS idx_program_levels_program_id ON program_levels (prog
 CREATE TABLE IF NOT EXISTS program_sessions (
   id bigserial PRIMARY KEY NOT NULL,
   program_level_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   time time NOT NULL,
   duration smallint NOT NULL DEFAULT 0,
@@ -550,7 +545,7 @@ CREATE TABLE IF NOT EXISTS member_contracts (
   contract_id bigint NOT NULL,
   member_plan_id bigint,
   signed boolean NOT NULL DEFAULT false,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   location_id bigint,
@@ -570,7 +565,7 @@ CREATE TABLE IF NOT EXISTS member_subscriptions (
   payer_id bigint NOT NULL,
   beneficiary_id bigint NOT NULL,
   member_plan_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   stripe_subscription_id text,
   status location_status NOT NULL DEFAULT 'incomplete',
@@ -605,7 +600,7 @@ CREATE TABLE IF NOT EXISTS member_packages (
   member_plan_id bigint NOT NULL,
   payer_id bigint,
   beneficiary_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   status package_status NOT NULL DEFAULT 'incomplete',
   start_date timestamp with time zone NOT NULL,
@@ -672,7 +667,7 @@ CREATE TABLE IF NOT EXISTS reservations (
   id bigserial PRIMARY KEY NOT NULL,
   session_id bigint NOT NULL,
   status reservation_status NOT NULL DEFAULT 'active',
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,  
   location_id bigint NOT NULL,
   expired_on timestamp with time zone,
@@ -701,7 +696,7 @@ CREATE TABLE IF NOT EXISTS members (
   referral_code text,
   current_points integer DEFAULT 0,
   avatar text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   first_name text,
@@ -720,7 +715,7 @@ CREATE TABLE IF NOT EXISTS permissions (
   id bigserial PRIMARY KEY NOT NULL,
   name text NOT NULL,
   guard_name text NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone ,
   description text,
   CONSTRAINT permissions_name_guard_name_unique UNIQUE (name, guard_name)
@@ -734,7 +729,7 @@ CREATE TABLE IF NOT EXISTS program_levels (
   max_age integer NOT NULL,
   program_id bigint NOT NULL,
   parent_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   interval plan_interval NOT NULL DEFAULT 'week',
@@ -750,7 +745,7 @@ CREATE INDEX IF NOT EXISTS idx_program_levels_program_id ON program_levels (prog
 CREATE TABLE IF NOT EXISTS program_sessions (
   id bigserial PRIMARY KEY NOT NULL,
   program_level_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   time time NOT NULL,
   duration smallint NOT NULL DEFAULT 0,
@@ -767,7 +762,7 @@ CREATE TABLE IF NOT EXISTS programs (
   name text NOT NULL,
   description text NOT NULL,
   icon text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT programs_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE
@@ -779,7 +774,7 @@ CREATE TABLE IF NOT EXISTS reservations (
   id bigserial PRIMARY KEY NOT NULL,
   session_id bigint NOT NULL,
   status reservation_status NOT NULL DEFAULT 'active',
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   location_id bigint NOT NULL,
   expired_on timestamp with time zone,
@@ -806,7 +801,7 @@ CREATE TABLE IF NOT EXISTS reward_claims (
   previous_points integer,
   date_claimed timestamp with time zone,
   status smallint NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT reward_claims_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id),
@@ -821,7 +816,7 @@ CREATE TABLE IF NOT EXISTS rewards (
   icon text,
   required_points integer NOT NULL,
   limit_per_member integer NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   limit_total text NOT NULL DEFAULT 'unlimited',
   images text[] NOT NULL DEFAULT '{}',
@@ -840,7 +835,7 @@ CREATE TABLE IF NOT EXISTS roles (
   id bigserial PRIMARY KEY NOT NULL,
   name text NOT NULL,
   guard_name text NOT NULL,
-  created_at timestamp with time zone DEFAULT current_timestamp(),
+  created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone,
   location_id bigint,
   color role_color,
@@ -856,7 +851,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   ip_address text NOT NULL,
   browser_id text NOT NULL,
   machine_id text NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT sessions_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
@@ -874,7 +869,7 @@ CREATE TABLE IF NOT EXISTS staffs (
   user_id bigint NOT NULL,
   role_id bigint,
   location_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT staffs_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
@@ -901,14 +896,14 @@ CREATE TABLE IF NOT EXISTS transactions (
   transaction_type text NOT NULL,
   amount integer NOT NULL,
   status transaction_status NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   location_id bigint NOT NULL,
   member_id bigint,
   payment_type plan_type NOT NULL DEFAULT 'one-time',
   item text,
-  charge_date timestamp with time zone DEFAULT current_timestamp(),
+  charge_date timestamp with time zone DEFAULT now(),
   currency text NOT NULL DEFAULT 'USD',
   metadata jsonb NOT NULL DEFAULT '{}',
   refunded boolean NOT NULL DEFAULT false,
@@ -934,7 +929,7 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   description text,
   status support_ticket_status NOT NULL DEFAULT 'open',
   location_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT support_tickets_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id)
@@ -951,7 +946,7 @@ CREATE TABLE IF NOT EXISTS vendors (
   email text NOT NULL,
   avatar text,
   phone text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT vendors_email_unique UNIQUE (email),
@@ -968,7 +963,7 @@ CREATE TABLE IF NOT EXISTS vendor_progress (
   location_id bigint NOT NULL,
   points integer NOT NULL DEFAULT 0,
   total_points integer NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT vendor_progress_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
   CONSTRAINT vendor_progress_vendor_id_fkey FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
@@ -980,7 +975,7 @@ CREATE TABLE IF NOT EXISTS vendor_badges (
   badge_id bigint NOT NULL,
   progress integer NOT NULL,
   completed boolean NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   claimed_at timestamp with time zone,
   CONSTRAINT vendor_badges_vendor_progress_id_foreign FOREIGN KEY (vendor_progress_id) REFERENCES vendor_progress (id) ON DELETE CASCADE
 );
@@ -992,7 +987,7 @@ CREATE TABLE IF NOT EXISTS vendor_rewards (
   images text NOT NULL,
   meta jsonb NOT NULL,
   required_points integer NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
 
@@ -1002,7 +997,7 @@ CREATE TABLE IF NOT EXISTS vendor_levels (
   location_id bigint NOT NULL,
   points integer NOT NULL DEFAULT 0,
   total_points integer NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT vendor_levels_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
   CONSTRAINT vendor_levels_vendor_id_foreign FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
@@ -1022,7 +1017,7 @@ CREATE TABLE IF NOT EXISTS vendor_referrals (
   amount integer NOT NULL,
   vendor_id bigint NOT NULL,
   referral_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   accepted_at timestamp with time zone,
   CONSTRAINT vendor_referrals_vendor_id_foreign FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
 );
@@ -1034,7 +1029,7 @@ CREATE TABLE IF NOT EXISTS wallet (
   recharge_amount bigint NOT NULL DEFAULT 20,
   recharge_threshold bigint NOT NULL DEFAULT 10,
   last_charged timestamp with time zone,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT wallet_location_id_key UNIQUE (location_id),
@@ -1050,7 +1045,7 @@ CREATE TABLE IF NOT EXISTS wallet_usage (
   balance integer NOT NULL DEFAULT 0,
   recharge_threshold integer NOT NULL DEFAULT 0,
   activity_date date NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT wallet_usage_wallet_id_foreign FOREIGN KEY (wallet_id) REFERENCES wallet (id) ON DELETE CASCADE
@@ -1066,7 +1061,7 @@ CREATE TABLE IF NOT EXISTS integrations (
   refresh_token text,
   integration_id text NOT NULL,
   additional_settings jsonb DEFAULT '{}'::jsonb,
-  created_at timestamp with time zone DEFAULT current_timestamp(),
+  created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone,
   location_id bigint,
   CONSTRAINT unique_service_location UNIQUE (service, location_id),
@@ -1145,7 +1140,7 @@ CREATE TABLE IF NOT EXISTS staffs (
   user_id bigint NOT NULL,
   role_id bigint,
   location_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT staffs_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
@@ -1175,7 +1170,7 @@ CREATE TABLE IF NOT EXISTS program_levels (
   max_age integer NOT NULL,
   program_id bigint NOT NULL,
   parent_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   interval plan_interval NOT NULL DEFAULT 'week',
@@ -1191,7 +1186,7 @@ CREATE INDEX IF NOT EXISTS idx_program_levels_program_id ON program_levels (prog
 CREATE TABLE IF NOT EXISTS program_sessions (
   id bigserial PRIMARY KEY NOT NULL,
   program_level_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   time time NOT NULL,
   duration smallint NOT NULL DEFAULT 0,
@@ -1209,7 +1204,7 @@ CREATE TABLE IF NOT EXISTS member_contracts (
   contract_id bigint NOT NULL,
   member_plan_id bigint,
   signed boolean NOT NULL DEFAULT false,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   location_id bigint,
@@ -1229,7 +1224,7 @@ CREATE TABLE IF NOT EXISTS member_subscriptions (
   payer_id bigint NOT NULL,
   beneficiary_id bigint NOT NULL,
   member_plan_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   stripe_subscription_id text,
   status location_status NOT NULL DEFAULT 'incomplete',
@@ -1264,7 +1259,7 @@ CREATE TABLE IF NOT EXISTS member_packages (
   member_plan_id bigint NOT NULL,
   payer_id bigint,
   beneficiary_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   status package_status NOT NULL DEFAULT 'incomplete',
   start_date timestamp with time zone NOT NULL,
@@ -1303,12 +1298,12 @@ CREATE TABLE IF NOT EXISTS member_invoices (
   total bigint NOT NULL CHECK (total >= 0),
   discount bigint NOT NULL CHECK (discount >= 0),
   subtotal bigint NOT NULL CHECK (subtotal >= 0),
-  due_date timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  due_date timestamp with time zone NOT NULL DEFAULT now(),
   attempt_count integer NOT NULL DEFAULT 0,
   invoice_pdf text,
   status invoice_status NOT NULL DEFAULT 'draft',
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
-  updated_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
   member_subscription_id bigint,
   member_package_id bigint,
   for_period_start timestamp with time zone,
@@ -1331,7 +1326,7 @@ CREATE TABLE IF NOT EXISTS reservations (
   id bigserial PRIMARY KEY NOT NULL,
   session_id bigint NOT NULL,
   status reservation_status NOT NULL DEFAULT 'active',
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   location_id bigint NOT NULL,
   expired_on timestamp with time zone,
@@ -1360,7 +1355,7 @@ CREATE TABLE IF NOT EXISTS members (
   referral_code text,
   current_points integer DEFAULT 0,
   avatar text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   first_name text,
@@ -1379,7 +1374,7 @@ CREATE TABLE IF NOT EXISTS permissions (
   id bigserial PRIMARY KEY NOT NULL,
   name text NOT NULL,
   guard_name text NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone ,
   description text,
   CONSTRAINT permissions_name_guard_name_unique UNIQUE (name, guard_name)
@@ -1393,7 +1388,7 @@ CREATE TABLE IF NOT EXISTS program_levels (
   max_age integer NOT NULL,
   program_id bigint NOT NULL,
   parent_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   interval plan_interval NOT NULL DEFAULT 'week',
@@ -1409,7 +1404,7 @@ CREATE INDEX IF NOT EXISTS idx_program_levels_program_id ON program_levels (prog
 CREATE TABLE IF NOT EXISTS program_sessions (
   id bigserial PRIMARY KEY NOT NULL,
   program_level_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   time time NOT NULL,
   duration smallint NOT NULL DEFAULT 0,
@@ -1426,7 +1421,7 @@ CREATE TABLE IF NOT EXISTS programs (
   name text NOT NULL,
   description text NOT NULL,
   icon text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT programs_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE
@@ -1438,7 +1433,7 @@ CREATE TABLE IF NOT EXISTS reservations (
   id bigserial PRIMARY KEY NOT NULL,
   session_id bigint NOT NULL,
   status reservation_status NOT NULL DEFAULT 'active',
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   location_id bigint NOT NULL,
   expired_on timestamp with time zone,
@@ -1465,7 +1460,7 @@ CREATE TABLE IF NOT EXISTS reward_claims (
   previous_points integer,
   date_claimed timestamp with time zone,
   status smallint NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT reward_claims_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id),
@@ -1480,7 +1475,7 @@ CREATE TABLE IF NOT EXISTS rewards (
   icon text,
   required_points integer NOT NULL,
   limit_per_member integer NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   limit_total text NOT NULL DEFAULT 'unlimited',
   images text[] NOT NULL DEFAULT '{}',
@@ -1499,7 +1494,7 @@ CREATE TABLE IF NOT EXISTS roles (
   id bigserial PRIMARY KEY NOT NULL,
   name text NOT NULL,
   guard_name text NOT NULL,
-  created_at timestamp with time zone DEFAULT current_timestamp(),
+  created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone,
   location_id bigint,
   color role_color,
@@ -1515,7 +1510,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   ip_address text NOT NULL,
   browser_id text NOT NULL,
   machine_id text NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT sessions_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
@@ -1533,7 +1528,7 @@ CREATE TABLE IF NOT EXISTS staffs (
   user_id bigint NOT NULL,
   role_id bigint,
   location_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT staffs_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
@@ -1560,14 +1555,14 @@ CREATE TABLE IF NOT EXISTS transactions (
   transaction_type text NOT NULL,
   amount integer NOT NULL,
   status transaction_status NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   location_id bigint NOT NULL,
   member_id bigint,
   payment_type plan_type NOT NULL DEFAULT 'one-time',
   item text,
-  charge_date timestamp with time zone DEFAULT current_timestamp(),
+  charge_date timestamp with time zone DEFAULT now(),
   currency text NOT NULL DEFAULT 'USD',
   metadata jsonb NOT NULL DEFAULT '{}',
   refunded boolean NOT NULL DEFAULT false,
@@ -1593,7 +1588,7 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   description text,
   status support_ticket_status NOT NULL DEFAULT 'open',
   location_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT support_tickets_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id)
@@ -1610,7 +1605,7 @@ CREATE TABLE IF NOT EXISTS vendors (
   email text NOT NULL,
   icon text,
   phone_number text,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT vendors_email_unique UNIQUE (email),
@@ -1627,7 +1622,7 @@ CREATE TABLE IF NOT EXISTS vendor_progress (
   location_id bigint NOT NULL,
   points integer NOT NULL DEFAULT 0,
   total_points integer NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT vendor_progress_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
   CONSTRAINT vendor_progress_vendor_id_fkey FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
@@ -1639,7 +1634,7 @@ CREATE TABLE IF NOT EXISTS vendor_badges (
   badge_id bigint NOT NULL,
   progress integer NOT NULL,
   completed boolean NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   claimed_at timestamp with time zone,
   CONSTRAINT vendor_badges_vendor_progress_id_foreign FOREIGN KEY (vendor_progress_id) REFERENCES vendor_progress (id) ON DELETE CASCADE
 );
@@ -1651,7 +1646,7 @@ CREATE TABLE IF NOT EXISTS vendor_rewards (
   images text NOT NULL,
   meta jsonb NOT NULL,
   required_points integer NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
 
@@ -1661,7 +1656,7 @@ CREATE TABLE IF NOT EXISTS vendor_levels (
   location_id bigint NOT NULL,
   points integer NOT NULL DEFAULT 0,
   total_points integer NOT NULL DEFAULT 0,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT vendor_levels_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
   CONSTRAINT vendor_levels_vendor_id_foreign FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
@@ -1681,7 +1676,7 @@ CREATE TABLE IF NOT EXISTS vendor_referrals (
   amount integer NOT NULL,
   vendor_id bigint NOT NULL,
   referral_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   accepted_at timestamp with time zone,
   CONSTRAINT vendor_referrals_vendor_id_foreign FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
 );
@@ -1693,7 +1688,7 @@ CREATE TABLE IF NOT EXISTS wallet (
   recharge_amount bigint NOT NULL DEFAULT 20,
   recharge_threshold bigint NOT NULL DEFAULT 10,
   last_charged timestamp with time zone,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT wallet_location_id_key UNIQUE (location_id),
@@ -1709,7 +1704,7 @@ CREATE TABLE IF NOT EXISTS wallet_usage (
   balance integer NOT NULL DEFAULT 0,
   recharge_threshold integer NOT NULL DEFAULT 0,
   activity_date date NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT current_timestamp(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   deleted_at timestamp with time zone,
   CONSTRAINT wallet_usage_wallet_id_foreign FOREIGN KEY (wallet_id) REFERENCES wallet (id) ON DELETE CASCADE

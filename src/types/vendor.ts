@@ -12,7 +12,6 @@ export type Vendor = {
     stripeCustomerId: string | null;
     avatar: string | null;
     userId: number;
-    accountOwner: boolean;
     referrals?: VendorReferral[];
     vendorProgress?: VendorProgress;
     created: Date;

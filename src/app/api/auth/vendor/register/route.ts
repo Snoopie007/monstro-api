@@ -3,6 +3,7 @@ import { db } from "@/db/db";
 import { NextRequest, NextResponse } from "next/server";
 import { users, vendors } from "@/db/schemas";
 import bcrypt from "bcryptjs";
+import { formatPhoneNumber, hashPassword } from "@/libs/server/db";
 
 
 export async function POST(req: NextRequest) {
@@ -16,8 +17,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "User already exists" }, { status: 400 })
         }
         // Format phone number (ToDo)
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword: string = await bcrypt.hash(data.password, salt);
+        // const salt = await bcrypt.genSalt(10);
+        // const hashedPassword: string = await bcrypt.hash(data.password, salt);
+
+        const hashedPassword = await hashPassword(data.password);
         await db.transaction(async (tx) => {
             const [{ id }] = await tx.insert(users).values({
                 name: `${data.firstName} ${data.lastName}`,
@@ -27,11 +30,10 @@ export async function POST(req: NextRequest) {
 
             await tx.insert(vendors).values({
                 ...data,
+                phone: formatPhoneNumber(data.phone),
                 userId: id,
                 accountOwner: true,
-
             })
-
         })
 
 

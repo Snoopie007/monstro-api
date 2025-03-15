@@ -17,7 +17,7 @@ export default async function SignIn() {
                 <div className="py-4 bg-gray-100 px-2 text-center rounded-sm">
                     <p className="text-sm  ">
                         Don't have an account{" "}
-                        <Link href={"/auth/join"} className={"inline-flex text-indigo-600 hover:text-black underline  text-sm"} >
+                        <Link href={"/join"} className={"inline-flex text-indigo-600 hover:text-black underline  text-sm"} >
                             Create account
                         </Link>
                     </p>

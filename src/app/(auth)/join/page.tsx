@@ -4,16 +4,20 @@ import { CircleFadingArrowUp } from "lucide-react";
 
 const MonstroBenefits = [
     {
-        title: "Build your integration easily, with or without code",
-        description: "Use our prebuilt solutions or our developer-friendly APIs, with 24x7 customer support by your side."
+        title: "Gamify Member Management for Growth",
+        description: "We transform member engagement with gamification, helping martial arts schools boost revenue and generate more referrals effortlessly."
     },
     {
-        title: "Boost sales by offering preferred payment options",
+        title: "Improve Referrals with a Member App Built for Engagement",
+        description: "Keep members active and connected while making it easy to share achievements and invite friends."
+    },
+    {
+        title: "Convert More Leads with AI-Powered Engagement",
+        description: "Automate follow-ups, nurture leads, and increase appointment show-up rates—only pay for results."
+    },
+    {
+        title: "Join for Free—Only Pay for What You Use",
         description: "Increase conversion with built-in optimizations and access to 100+ payment options."
-    },
-    {
-        title: "Join millions of businesses that trust Stripe",
-        description: "Build on a payments platform with industry-leading uptime designed to protect your data."
     },
 ]
 

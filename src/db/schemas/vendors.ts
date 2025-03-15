@@ -12,7 +12,6 @@ export const vendors = pgTable("vendors", {
     stripeCustomerId: text("stripe_customer_id"),
     phone: text("phone"),
     email: text("email"),
-    accountOwner: boolean("account_owner").notNull().default(false),
     avatar: text("avatar"),
     userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
