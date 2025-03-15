@@ -4,6 +4,7 @@ import { boolean, serial, text, timestamp, pgTable, integer } from "drizzle-orm/
 import { locations } from "./locations";
 import { memberContracts } from "./members";
 import { memberPlans } from "./MemberPlans";
+import { ContractTypeEnum } from "./enums";
 
 export const contractTemplates = pgTable("contracts", {
     id: serial("id").primaryKey(),
@@ -17,7 +18,7 @@ export const contractTemplates = pgTable("contracts", {
     isDraft: boolean("is_draft").notNull().default(false),
     editable: boolean("editable").notNull().default(true),
     requireSignature: boolean("require_signature").notNull().default(false),
-    type: text("type").default("contract"),
+    type: ContractTypeEnum("type").notNull().default("contract"),
 });
 
 export const contractTemplateRelations = relations(contractTemplates, ({ many, one }) => ({
