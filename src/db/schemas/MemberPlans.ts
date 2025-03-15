@@ -75,7 +75,7 @@ export const memberPackages = pgTable("member_packages", {
     expireDate: timestamp("expire_date", { withTimezone: true }),
     status: PackageStatusEnum("status").notNull(),
     paymentMethod: PaymentMethodEnum("payment_method").notNull(),
-    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
     totalClassAttended: integer("total_class_attended").notNull().default(0),
     totalClassLimit: integer("total_class_limit").notNull().default(0),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
