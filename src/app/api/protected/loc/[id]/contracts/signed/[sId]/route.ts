@@ -17,12 +17,7 @@ export async function GET(
     where: (contract, { eq }) => eq(contract.id, Number(sid)),
     with: {
       member: true,
-      memberPlan: {
-        with: {
-          program: true,
-        },
-      } as any,
-      contract: true,
+      contractTemplate: true
     }
   });
 

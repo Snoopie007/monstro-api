@@ -54,10 +54,10 @@ export async function PUT(req: Request, props: { params: Promise<{ cid: string, 
 
 }
 
-export async function DELETE(req: NextRequest, props: { params: { cid: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ cid: string }> }) {
   try {
 
-    const { cid } = props.params;
+    const { cid } = await props.params;
 
     const result = await db.delete(contractTemplates).where(eq(contractTemplates.id, Number(cid))).returning();
 

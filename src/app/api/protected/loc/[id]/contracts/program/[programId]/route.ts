@@ -4,9 +4,9 @@ import {} from '@/db/schemas/programs'
 
 export async function GET(
   req: Request,
-  props: { params: Promise<{ programId: string, id: string }> }
+  props: { params: Promise<{ programid: string, id: string }> }
 ) {
-  const programId = await props.params;
+  const {programid: programId} = await props.params;
 
   if (!programId)
   {
@@ -14,7 +14,7 @@ export async function GET(
   }
 
   const program = await db.query.programs.findMany({
-    where: (program, { eq }) => eq(program.id, Number(programId.programId)),
+    where: (program, { eq }) => eq(program.id, Number(programId)),
   });
 
   console.log(program);
