@@ -23,13 +23,13 @@ export type Transaction = {
     item: string;
     subscriptionId?: number | null;
     subscription?: MemberSubscription;
-    packageId?: string | null;
+    packageId?: number | null;
     package?: MemberPackage;
     chargeDate: Date;
     currency: string;
     metadata?: TransactionMetadata;
     refunded?: boolean;
-    invoiceId?: string | null;
+    invoiceId?: number | null;
     invoice?: MemberInvoice;
     created?: Date;
     updated?: Date | null;
