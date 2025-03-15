@@ -11,7 +11,7 @@ export type Program = {
     capacity: number;
     minAge: number;
     maxAge: number;
-    instructorId: number;
+    instructorId: number | null;
     interval: Interval;
     intervalThreshold: number;
     benefits?: string[];

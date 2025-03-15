@@ -1,5 +1,6 @@
 import { LocationStatus } from "./enums";
 import { MemberInvoice, MemberSubscription } from "./member";
+import { Program } from "./program";
 import { Transaction } from "./transaction";
 
 
@@ -22,6 +23,7 @@ export type Location = {
     logoUrl: string | null;
     timezone: string | null;
     locationState?: LocationState;
+    programs?: Program[];
     memberInvoices?: MemberInvoice[];
     memberSubscriptions?: MemberSubscription[];
     transactions?: Transaction[];
