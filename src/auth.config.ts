@@ -79,6 +79,8 @@ export default {
 						}
 					});
 
+					console.log(jwt)
+
 					return {
 						id: rest.id.toString(),
 						name: rest.name,

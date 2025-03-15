@@ -24,7 +24,7 @@ export default auth(async (req) => {
 		const locations = req.auth?.user?.locations || []
 
 		// Check for mobile app requests
-		const isMobileApp = req.headers.get("X-Mobile-App") === "true" && pathname.includes("member")
+		const isMobileApp = req.headers.get("X-Mobile-App") === "true" && pathname.includes("mobile")
 		// Verify mobile app token
 		let isMobileAuthenticated = false
 		if (isMobileApp) {

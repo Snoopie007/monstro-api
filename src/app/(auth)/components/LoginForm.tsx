@@ -39,18 +39,20 @@ export default function LoginForm() {
 		setLoading(true);
 		try {
 
-			const res = await signIn("credentials", { ...v, redirect: false });
-			if (res?.error) {
-				toast.error(res.code || 'Something went wrong. Please contact support at support@monstro.com.');
-				return;
-			}
-
 			const locationId = localStorage.getItem('locationId');
 			const locationRes = await fetch(`/api/auth/vendor/location`, {
 				method: 'POST',
 				body: JSON.stringify({ ...v, lid: locationId }),
 			});
 			const location = await locationRes.json();
+			console.log("location", location)
+
+			const res = await signIn("credentials", { ...v, redirect: false });
+			console.log("res", res)
+			if (res?.error) {
+				toast.error(res.code || 'Something went wrong. Please contact support at support@monstro.com.');
+				return;
+			}
 
 			let redirect = '/onboarding';
 			if (location.id && location.status) {
