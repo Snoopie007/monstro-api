@@ -1,4 +1,4 @@
-import { MemberRelationship } from "./enums";
+import { MemberRelationship } from "./DatabaseEnums";
 import { Member } from "./member";
 
 export type FamilyMember = {

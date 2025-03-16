@@ -2,7 +2,7 @@ import { Contract, MemberContract } from "./contract";
 import { FamilyMember } from "./FamilyMember";
 import { Transaction } from "./transaction";
 import { Location } from "./location";
-import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod } from "./enums";
+import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod } from "./DatabaseEnums";
 import { Program } from "./program";
 
 export type Member = {

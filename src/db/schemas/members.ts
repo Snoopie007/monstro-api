@@ -7,7 +7,7 @@ import { rewards } from "./rewards";
 import { contractTemplates } from "./ContractTemplates";
 import { memberPackages, memberPlans } from "./MemberPlans";
 import { memberSubscriptions } from "./MemberPlans";
-import { InvoiceStatusEnum, MemberRelationshipEnum } from "./enums";
+import { InvoiceStatusEnum, MemberRelationshipEnum } from "./DatabaseEnums";
 
 export const members = pgTable("members", {
     id: serial("id").primaryKey(),

@@ -1,4 +1,4 @@
-import { RoleColor } from "./enums";
+import { RoleColor } from "./DatabaseEnums";
 
 export type Permission = {
     name: string;

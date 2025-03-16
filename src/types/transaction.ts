@@ -1,4 +1,4 @@
-import { TransactionStatus } from "./enums";
+import { TransactionStatus } from "./DatabaseEnums";
 import { Member, MemberInvoice, MemberPackage, MemberSubscription } from "./member";
 
 

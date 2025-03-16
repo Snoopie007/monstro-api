@@ -7,7 +7,7 @@ import { achievements } from "./achievements";
 import { reservations } from "./reservations";
 // Assuming staffs table exists
 import { staffs } from "./staffs";
-import { PlanInterval, ProgramStatusEnum } from "./enums";
+import { PlanInterval, ProgramStatusEnum } from "./DatabaseEnums";
 
 export const programs = pgTable("programs", {
     id: serial("id").primaryKey(),

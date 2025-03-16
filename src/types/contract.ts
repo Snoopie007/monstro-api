@@ -1,4 +1,4 @@
-import { ContractType } from "./enums";
+import { ContractType } from "./DatabaseEnums";
 import { Location } from "./location";
 import { MemberPackage } from "./member";
 import { MemberSubscription } from "./member";

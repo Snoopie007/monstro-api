@@ -4,7 +4,7 @@ import { boolean, serial, text, timestamp, pgTable, integer } from "drizzle-orm/
 import { locations } from "./locations";
 import { memberContracts } from "./members";
 import { memberPlans } from "./MemberPlans";
-import { ContractTypeEnum } from "./enums";
+import { ContractTypeEnum } from "./DatabaseEnums";
 
 export const contractTemplates = pgTable("contracts", {
     id: serial("id").primaryKey(),

@@ -1,4 +1,4 @@
-import { LocationStatus } from "./enums";
+import { LocationStatus } from "./DatabaseEnums";
 import { MemberInvoice, MemberSubscription } from "./member";
 import { Program } from "./program";
 import { Transaction } from "./transaction";

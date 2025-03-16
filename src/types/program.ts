@@ -1,7 +1,7 @@
 import { Reservation } from "./attendance";
 import { MemberPlan } from "./member";
 import { Location } from "./location";
-import { Interval, ProgramStatus } from "./enums";
+import { Interval, ProgramStatus } from "./DatabaseEnums";
 
 export type Program = {
     id: number;

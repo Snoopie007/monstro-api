@@ -3,7 +3,7 @@ import { locations } from "./locations";
 import { users } from "./users";
 import { roles } from "./permissions";
 import { relations } from "drizzle-orm";
-import { StaffStatusEnum } from "./enums";
+import { StaffStatusEnum } from "./DatabaseEnums";
 
 export const staffs = pgTable("staffs", {
     id: serial("id").primaryKey(),
