@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberLocations, memberSubscriptions, users, members, familyMembers, locations } from '../../../../../../../../db/schemas';
+import { memberLocations, memberSubscriptions, users, members, familyMembers, locations } from '@/db/schemas';
 import { EmailSender } from "@/libs/server/emails";
 import { NextResponse } from "next/server";
 import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
             where: eq(members.id, familyMemberId),
         });
 
-        if(!familyMember){
+        if (!familyMember) {
             return NextResponse.json({ error: "Family member not found" }, { status: 404 });
         }
 
@@ -129,7 +129,7 @@ export async function POST(req: Request) {
             const generateReferralCode = () => {
                 return Math.random().toString(36).substring(2, 8).toUpperCase();
             };
-            
+
             const [newMember] = await db.insert(members).values({
                 userId: user.id,
                 firstName: firstName,

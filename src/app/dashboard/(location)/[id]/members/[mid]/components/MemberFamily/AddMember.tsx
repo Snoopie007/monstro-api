@@ -15,8 +15,10 @@ import {
     AvatarFallback
 } from "@/components/ui";
 import {
-    Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
-    Form, FormControl, FormField, FormItem, FormLabel, Input, FormMessage,
+    Select, SelectTrigger, SelectValue,
+    SelectContent, SelectItem,
+    Form, FormControl, FormField,
+    FormItem, FormLabel, Input, FormMessage,
 } from '@/components/forms';
 import { cn, tryCatch } from '@/libs/utils';
 import { Loader2 } from 'lucide-react';
@@ -24,7 +26,7 @@ import { useForm } from 'react-hook-form';
 import { AddFamilyMemberSchema } from '../../schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { SetStateAction, Dispatch, useState } from 'react';
+import { SetStateAction, Dispatch, useState, useEffect } from 'react';
 import NewMemberFields from './NewMemberFields';
 import { toast } from 'react-toastify';
 
@@ -60,6 +62,12 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
     const [searchEmail, setSearchEmail] = useState<string | null>(null);
     const [familyPlans, setFamilyPlans] = useState<FamilyPlan[]>([]);
 
+    useEffect(() => {
+        if (parent) {
+            fetchFamilyPlans();
+        }
+    }, [parent]);
+
     const form = useForm<z.infer<typeof AddFamilyMemberSchema>>({
         resolver: zodResolver(AddFamilyMemberSchema),
         defaultValues: {
@@ -76,13 +84,15 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
     });
 
 
+
     async function fetchFamilyPlans() {
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/members/${parent.id}/family`)
-        )
-        if (error || !result || !result.ok) return
-        const data = await result.json();
-        console.log(data);
+        // const { result, error } = await tryCatch(
+        //     fetch(`/api/protected/loc/${lid}/members/${parent.id}/family`)
+        // )
+        // if (error || !result || !result.ok) return
+        // const data = await result.json();
+        // setFamilyPlans(data);
+        // console.log(data);
     }
 
     async function findExistingMember() {

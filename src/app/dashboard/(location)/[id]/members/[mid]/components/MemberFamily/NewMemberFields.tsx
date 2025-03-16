@@ -67,7 +67,7 @@ export default function NewMemberFields({ form, parent }: NewMemberFieldsProps) 
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel size="tiny">Email </FormLabel>
-                            <FormDescription>
+                            <FormDescription className='text-xs text-muted-foreground'>
                                 No email? We can create a proxy email that forwards messages to you.
                                 Click the button below to generate one.
                             </FormDescription>
