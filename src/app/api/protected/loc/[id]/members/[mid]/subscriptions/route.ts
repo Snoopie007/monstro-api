@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
-import { createSubscription } from "../../utils";
+import { calculateCurrentPeriodEnd, createInvoice, createSubscription } from "../../utils";
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 
@@ -85,7 +85,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             newSubscription.stripeSubscriptionId = sub.id
         }
 
-        if (data.paymentType !== "card") {
+        if (data.paymentMethod !== "card") {
             newSubscription.status = "active"
             newTransaction.status = "paid"
             newInvoice.status = "paid"
@@ -119,13 +119,20 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 eq(memberLocations.locationId, params.id)
             ))
         }
-        if (data.paymentType === "cash") {
-            // to check if there is the end period has increased
-            // it means the vendor has accepted a payment end period
-            // then not then need to mark the create invoice mark as draft
-            // that invoice will be for the next period
-            // forPeriod Start and forPeriodEnd
-            // add schedule hook.
+        if (data.paymentMethod === "cash") {
+            if(!newSubscription.cancelAt) {
+                const newDraftInvoice = createInvoice(plan, {
+                    memberId: params.mid,
+                    locationId: params.id,
+                    paymentMethod: "cash"
+                });
+                newDraftInvoice.forPeriodStart = newSubscription.currentPeriodEnd;
+                newDraftInvoice.forPeriodEnd = calculateCurrentPeriodEnd(newSubscription.currentPeriodEnd, plan.interval!, plan.intervalThreshold!);
+                const [{invoiceId}] = await db.insert(memberInvoices).values({
+                    ...newDraftInvoice,
+                    memberSubscriptionId: sid
+                }).returning({ invoiceId: memberInvoices.id });
+            }
         }
         return NextResponse.json({ sid }, { status: 200 })
     } catch (err) {

@@ -196,4 +196,5 @@ export {
     calculateInvoice,
     createPackage,
     createSubscription,
+    createInvoice
 }
