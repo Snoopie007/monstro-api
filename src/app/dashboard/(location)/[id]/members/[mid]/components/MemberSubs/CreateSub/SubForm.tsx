@@ -100,9 +100,10 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
         setLoading(false)
         if (error || !result || !result?.ok) return;
         const { sid } = await result.json()
-
+        
         const plan = plans.find((plan: MemberPlan) => plan.id === v.memberPlanId)
-        const program = programs.find((program: Program) => program.id === v.programId)
+        const program = programs.find((program: Program) => Number(program.id) === v.programId)
+        
         setProgress({
             ...progress,
             step: 2,
