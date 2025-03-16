@@ -57,15 +57,14 @@ export const NewPackageSchema = z.object({
     }
 });
 
-export const AddChildMemberSchema = z.object({
+export const AddFamilyMemberSchema = z.object({
     firstName: z.string(),
     lastName: z.string(),
     email: z.string().optional(),
     phone: z.string().optional(),
     family: z.object({
-        planId: z.number().optional(),
-        existingPlanId: z.number().optional(),
-        programId: z.number().optional(),
+        familySubscriptionId: z.number().optional(),
+        familyPackageId: z.number().optional(),
         relationship: z.string(),
     }),
 })

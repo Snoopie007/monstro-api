@@ -85,12 +85,11 @@ async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnTy
 }
 
 async function fetchStripePyamentMethods(accessToken: string, customerId: string): Promise<Stripe.PaymentMethod[]> {
-    console.log("accessToken", accessToken);
-    console.log("customerId", customerId);
+
     try {
         const stripe = new MemberStripePayments(accessToken);
         const paymentMethods = await stripe.getPaymentMethods(customerId, 25)
-        console.log("paymentMethods", paymentMethods);
+
         return paymentMethods.data;
     } catch (error) {
         console.log("error", error);
