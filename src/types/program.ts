@@ -26,8 +26,6 @@ export type Program = {
     deleted: Date | null;
 };
 
-
-
 export type ProgramSession = {
     id: number,
     duration: number,

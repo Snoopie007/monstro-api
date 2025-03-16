@@ -1,4 +1,4 @@
-import { Member, MemberPackage, MemberPlan, MemberSubscription } from '@/types/member';
+import { Member, FamilyPlan, MemberRelationship } from '@/types';
 import {
     Button,
     Dialog,
@@ -44,6 +44,13 @@ const ExistingNewOptions = [
     },
 ]
 
+const RelationshipOptions: MemberRelationship[] = [
+    "parent",
+    "spouse",
+    "child",
+    "sibling",
+    "other",
+]
 
 export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
     const [loading, setLoading] = useState(false);
@@ -51,7 +58,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
     const [existing, setExisting] = useState<string | null>(null);
     const [familyMember, setFamilyMember] = useState<Member | null>(null);
     const [searchEmail, setSearchEmail] = useState<string | null>(null);
-    const [familyPlans, setFamilyPlans] = useState<MemberSubscription[] | MemberPackage[]>([]);
+    const [familyPlans, setFamilyPlans] = useState<FamilyPlan[]>([]);
 
     const form = useForm<z.infer<typeof AddFamilyMemberSchema>>({
         resolver: zodResolver(AddFamilyMemberSchema),
@@ -165,7 +172,8 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                 <DialogBody>
                     {!familyPlans || familyPlans.length === 0 && (
                         <div className='block py-4  text-center'>
-                            <p className='text-sm text-muted-foreground'>No family plans found. <br /> Please sign up for a family plan first.</p>
+                            <p className='text-sm text-muted-foreground'>No family plans found. <br />
+                                Please sign up for a family plan first.</p>
                         </div>
                     )}
                     {familyPlans && familyPlans.length > 0 && (
@@ -192,8 +200,8 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
-                                                            {[{ id: 1, name: "Plan 1" }, { id: 2, name: "Plan 2" }, { id: 3, name: "Plan 3" }].map((plan: any, index: number) => (
-                                                                <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem>
+                                                            {familyPlans.map((plan: any, index: number) => (
+                                                                <SelectItem key={index} value={plan.id?.toString()}>{plan.planName}</SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
@@ -216,7 +224,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
-                                                            {['Parent', 'Child', 'Spouse', 'Sibling', 'Other'].map((relation: string, index: number) => (
+                                                            {RelationshipOptions.map((relation: MemberRelationship, index: number) => (
                                                                 <SelectItem key={index} value={relation}>{relation}</SelectItem>
                                                             ))}
                                                         </SelectContent>

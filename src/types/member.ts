@@ -177,3 +177,11 @@ export type IncompletePlan = {
     memberContractId: number | undefined;
     completedSteps: number[];
 }
+
+export type FamilyPlan = {
+    planName: string;
+    programName: string;
+    subscriptionId?: number;
+    packageId?: number;
+
+}
