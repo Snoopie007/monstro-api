@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { VendorBadge, VendorProgress as VendorProgressType } from '@/types'
+import { VendorBadge, VendorLevel } from '@/types'
 
 import Image from 'next/image'
 import { cn } from '@/libs/utils'
@@ -8,12 +8,12 @@ import { cn } from '@/libs/utils'
 import { Badge } from '@/components/ui'
 import { Progress } from '@/components/ui/progress'
 import { badges, AchivementBadge } from './data'
-type VendorProgressProps = {
-    progress: VendorProgressType
+type VendorLevelProps = {
+    level: VendorLevel
 }
 
 
-export function VendorBadges({ progress }: VendorProgressProps) {
+export function VendorBadges({ level }: VendorLevelProps) {
     const [search, setSearch] = useState("")
     return (
         <div className='space-y-4'>
@@ -22,7 +22,7 @@ export function VendorBadges({ progress }: VendorProgressProps) {
             </div>
             <div className='grid grid-cols-3 gap-2'>
                 {badges.map((badge) => (
-                    <BadgeItem key={badge.id} badge={badge} vendorBadges={progress.badges || []} />
+                    <BadgeItem key={badge.id} badge={badge} vendorBadges={level.badges || []} />
                 ))}
             </div>
         </div>

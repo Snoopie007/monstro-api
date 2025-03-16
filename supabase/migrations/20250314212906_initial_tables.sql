@@ -523,10 +523,36 @@ CREATE TABLE IF NOT EXISTS reservations (
   CONSTRAINT reservations_session_member_location_unique UNIQUE (session_id, member_id, location_id)
 );
 
+ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;
+
 CREATE INDEX IF NOT EXISTS idx_reservations_member_id ON reservations (member_id);
 CREATE INDEX IF NOT EXISTS idx_reservations_location_id ON reservations (location_id);
 CREATE INDEX IF NOT EXISTS idx_reservations_session_id ON reservations (session_id);
 CREATE INDEX IF NOT EXISTS idx_reservations_status ON reservations (status);
+
+
+CREATE TABLE IF NOT EXISTS check_ins (
+  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  reservation_id bigint NOT NULL,
+  start_time timestamp with time zone NOT NULL,
+  check_in_time timestamp with time zone NOT NULL,
+  check_out_time timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  deleted_at timestamp with time zone,
+  end_time timestamp with time zone NOT NULL,
+  ip_address inet,
+  lat numeric,
+  lng numeric,
+  mac_address text,
+  CONSTRAINT check_ins_reservation_id_foreign FOREIGN KEY (reservation_id) REFERENCES reservations (id) ON DELETE CASCADE
+)
+
+ALTER TABLE check_ins ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_check_ins_reservation_id ON check_ins (reservation_id);
+CREATE INDEX IF NOT EXISTS idx_check_ins_check_in_time ON check_ins (check_in_time);
+CREATE INDEX IF NOT EXISTS idx_check_ins_check_out_time ON check_ins (check_out_time);
 
 
 CREATE TABLE IF NOT EXISTS achievements (

@@ -50,7 +50,6 @@ export default function LoginForm() {
 				body: JSON.stringify({ ...v, lid: locationId }),
 			});
 			const location = await locationRes.json();
-			console.log("location", location)
 
 			let redirect = '/onboarding';
 			if (location.id && location.status) {

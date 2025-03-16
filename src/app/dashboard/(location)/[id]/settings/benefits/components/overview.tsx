@@ -12,7 +12,7 @@ interface VendorProgressOverviewProps {
 }
 
 export function VendorProgressOverview({ vendor }: VendorProgressOverviewProps) {
-    const progress = vendor.vendorProgress!;
+    const progress = vendor.vendorLevel!;
     const currentLevel = VendorLevels.find(
         level => progress?.totalPoints >= level.min && progress?.totalPoints <= level.max
     ) || VendorLevels[VendorLevels.length - 1];
