@@ -96,7 +96,11 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
     };
 
     return (
-        <Sheet open={!!role} onOpenChange={(open) => !open}>
+        <Sheet open={!!role} onOpenChange={(open) => {
+            if (!open) {
+                setCurrentRole(null);
+            }
+        }}>
 
             <SheetContent className="w-[30%] p-0 sm:max-w-[30%]">
                 <SheetHeader className='p-4'>

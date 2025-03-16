@@ -70,7 +70,7 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
                                             Current Password
                                         </FormLabel>
                                         <FormControl>
-                                            <Input type="password" className="rounded-sm" placeholder="Current Password" {...field} />
+                                            <Input type="password" className="rounded-sm" placeholder="••••••••" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -86,7 +86,7 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
                                             New Password
                                         </FormLabel>
                                         <FormControl>
-                                            <Input type="password" className="rounded-sm" placeholder="Password" {...field} />
+                                            <Input type="password" className="rounded-sm" placeholder="••••••••" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -102,7 +102,7 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
                                             Confirm Password
                                         </FormLabel>
                                         <FormControl>
-                                            <Input type="password" className="rounded-sm" placeholder="Confirm Password" {...field} />
+                                            <Input type="password" className="rounded-sm" placeholder="••••••••" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

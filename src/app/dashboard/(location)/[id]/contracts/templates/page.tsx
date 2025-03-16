@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { CreateContract } from './components';
 import { useContracts } from '@/hooks/useContracts';
-import SectionLoading from '@/components/section-loading';
+import SectionLoading from '@/components/SectionLoading';
 import { Icon } from '@/components/icons';
 import Link from 'next/link';
 import { Badge } from "@/components/ui";

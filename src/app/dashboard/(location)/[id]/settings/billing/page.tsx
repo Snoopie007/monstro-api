@@ -26,7 +26,7 @@ import { RetryPayment, CardList, Wallet } from './components';
 import { db } from '@/db/db';
 import { decodeId } from '@/libs/server/sqids';
 import { AlertCircleIcon } from 'lucide-react';
-
+import { format } from 'date-fns';
 type Subscription = {
     subscriptionId: string | null;
     name: string;
@@ -52,7 +52,7 @@ async function fetchClientStripe(customerId: string, locationId: string, locatio
         }]
         const stripe = new VendorStripePayments();
         const methods = await stripe.getPaymentMethods(customerId);
-        if (locationState.planId && locationState.planId !== 0) {
+        if (locationState.planId && locationState.planId !== 1) {
             const res = await stripe.getSubscriptions(customerId);
 
             subscriptions = res.data
@@ -60,17 +60,12 @@ async function fetchClientStripe(customerId: string, locationId: string, locatio
                 .map(sub => {
                     const plan = sub.items.data[0]?.plan;
 
-                    const dateFormat: Intl.DateTimeFormatOptions = {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                    };
                     return {
                         subscriptionId: sub.id,
                         name: plan?.nickname || "N/A",
                         amount: plan?.amount || 0,
-                        nextInvoice: new Date(sub.current_period_end * 1000).toLocaleString('en-US', dateFormat),
-                        endDate: sub.cancel_at ? new Date(sub.cancel_at * 1000).toLocaleString('en-US', dateFormat) : "N/A",
+                        nextInvoice: format(sub.current_period_end * 1000, 'MMM d, yyyy'),
+                        endDate: sub.cancel_at ? format(sub.cancel_at * 1000, 'MMM d, yyyy') : "N/A",
                         currency: plan?.currency || "USD",
                         status: sub.status,
                         invoiceId: sub.latest_invoice

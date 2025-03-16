@@ -157,9 +157,9 @@ const AutoRecharge = React.memo(({ wallet, lid, mutate, rechargeOptions, thresho
             <div className='text-xs font-medium border-b pb-2 border-foreground/10'>Auto Recharge Settings</div>
             <div className='grid grid-cols-2 gap-4 text-xs'>
                 <div className='flex flex-col gap-1'>
-                    <span className='font-medium '>Amount</span>
-                    <Select value={`${wallet?.rechargeAmount}`} defaultValue={"25"} onValueChange={(value) => {
-                        updateWalletSettings(Number(value), wallet.rechargeThreshold)
+                    <span className='text-[0.65rem] uppercase font-bold '>Amount</span>
+                    <Select value={`${wallet?.rechargeAmount / 100}`} defaultValue={"25"} onValueChange={(value) => {
+                        updateWalletSettings(parseInt(value) * 100, wallet.rechargeThreshold)
                     }}>
                         <SelectTrigger className=' w-full h-auto border-none bg-indigo-500 text-white text-xs py-1 px-2 rounded-xs'>
                             <SelectValue className='text-sm' />
@@ -174,9 +174,9 @@ const AutoRecharge = React.memo(({ wallet, lid, mutate, rechargeOptions, thresho
                     </Select>
                 </div>
                 <div className='flex flex-col gap-1'>
-                    <span className='font-medium '>Threshold</span>
-                    <Select value={`${wallet?.rechargeThreshold}`} defaultValue={"25"} onValueChange={(value) => {
-                        updateWalletSettings(wallet.rechargeAmount, Number(value))
+                    <span className='text-[0.65rem] uppercase font-bold '>Threshold</span>
+                    <Select value={`${wallet?.rechargeThreshold / 100}`} defaultValue={"25"} onValueChange={(value) => {
+                        updateWalletSettings(wallet.rechargeAmount, parseInt(value) * 100)
                     }}>
                         <SelectTrigger className='w-full h-auto border-none py-1 px-2 bg-indigo-500 text-white text-xs rounded-xs'>
                             <SelectValue className='text-sm' />

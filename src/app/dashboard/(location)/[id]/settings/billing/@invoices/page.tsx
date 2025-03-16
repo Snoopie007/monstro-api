@@ -12,7 +12,10 @@ import { format } from "date-fns";
 async function getCustomerInvoices(customerId: string): Promise<Stripe.Invoice[]> {
     try {
         const stripe = new VendorStripePayments();
-        return await stripe.getInvoices(customerId);
+        const invoices = await stripe.getInvoices(customerId);
+        console.log(invoices)
+        return invoices
+
     } catch (error) {
         console.log(error);
         return [];
@@ -42,6 +45,11 @@ export default async function InvoicesPage(props: { params: Promise<{ id: number
                         </TableRow>
                     </TableHeader>
                     <TableBody>
+                        {invoices.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={5} className="py-3  text-center">No invoices found</TableCell>
+                            </TableRow>
+                        )}
                         {invoices?.map((invoice, index) => (
                             <TableRow key={index} >
                                 <TableCell className="py-3">{format(invoice.created * 1000, 'MMM d, yyyy')}</TableCell>

@@ -69,8 +69,8 @@ export async function POST(req: Request) {
             locationId: decodedLocationId,
             balance: walletPayment / 100,
             credit: 0,
-            rechargeAmount: 20,
-            rechargeThreshold: 10,
+            rechargeAmount: 2500,
+            rechargeThreshold: 1000,
             lastCharged: new Date(),
         }).onConflictDoNothing({ target: [wallet.locationId] });
 
