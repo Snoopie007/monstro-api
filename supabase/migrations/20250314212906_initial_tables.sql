@@ -629,6 +629,7 @@ CREATE TABLE IF NOT EXISTS member_achievements (
   id bigserial PRIMARY KEY NOT NULL,
   achievement_id bigint NOT NULL,
   member_id bigint NOT NULL,
+  location_id bigint NOT NULL,
   status text NOT NULL,
   note text,
   progress integer NOT NULL DEFAULT 0,
@@ -636,7 +637,8 @@ CREATE TABLE IF NOT EXISTS member_achievements (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   CONSTRAINT member_achievements_achievement_id_foreign FOREIGN KEY (achievement_id) REFERENCES achievements (id),
-  CONSTRAINT member_achievements_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id)
+  CONSTRAINT member_achievements_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id),
+  CONSTRAINT member_achievements_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id)
 );
 
 CREATE TABLE IF NOT EXISTS member_referrals (

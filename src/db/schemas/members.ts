@@ -27,8 +27,9 @@ export const members = pgTable("members", {
 });
 
 export const memberAchievements = pgTable("member_achievements", {
-    memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
-    achievementId: integer("achievement_id").references(() => achievements.id, { onDelete: "cascade" }),
+    memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    achievementId: integer("achievement_id").notNull().references(() => achievements.id, { onDelete: "cascade" }),
     note: text("note"),
     status: text("status"),
     progress: integer("progress").default(0),
@@ -37,9 +38,9 @@ export const memberAchievements = pgTable("member_achievements", {
 }, (t) => [primaryKey({ columns: [t.memberId, t.achievementId] })]);
 
 export const memberRewards = pgTable("member_rewards", {
-    memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
-    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
-    rewardId: integer("reward_id").references(() => rewards.id, { onDelete: "cascade" }),
+    memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    rewardId: integer("reward_id").notNull().references(() => rewards.id, { onDelete: "cascade" }),
     previousPoints: integer("previous_points"),
     status: text("status"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -47,9 +48,9 @@ export const memberRewards = pgTable("member_rewards", {
 
 export const memberContracts = pgTable("member_contracts", {
     id: serial("id").primaryKey(),
-    memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
-    templateId: integer("contract_id").references(() => contractTemplates.id, { onDelete: "cascade" }),
-    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
+    memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    templateId: integer("contract_id").notNull().references(() => contractTemplates.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     memberPlanId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     signature: text("signature"),
     variables: jsonb("variables").$type<Record<string, any>>().default(sql`'{}'::jsonb`),

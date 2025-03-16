@@ -6,7 +6,6 @@ import { memberAchievements } from "./members";
 
 export const achievements = pgTable("achievements", {
     id: serial("id").primaryKey(),
-    programId: integer("program_id").references(() => programs.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     badge: text("badge").notNull(),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }).notNull(),
