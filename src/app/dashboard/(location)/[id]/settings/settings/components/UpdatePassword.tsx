@@ -1,5 +1,4 @@
 'use client'
-import { Button, Card, } from "@/components/ui";
 import {
     Form,
     FormField,
@@ -18,6 +17,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { useState } from "react";
 
+import {
+    Dialog, DialogClose, DialogTitle,
+    DialogDescription, DialogTrigger, DialogContent,
+    DialogHeader,
+    DialogFooter,
+    Button,
+    DialogBody
+} from "@/components/ui";
+
+
 export function UpdatePassword({ locationId }: { locationId: string }) {
     const [loading, setLoading] = useState(false)
 
@@ -31,10 +40,6 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
     })
     async function handleSubmit(v: z.infer<typeof UpdatePasswordSchema>) {
 
-        if (v.currentPassword === v.password) {
-            toast.error("Please a different password for your new password.")
-            return
-        }
 
         setLoading(true)
         const { result, error } = await tryCatch(
@@ -55,15 +60,25 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
 
     }
     return (
-        <Card className='rounded-sm'>
-            <div className='border-b  px-4 py-3'>
-                <span>Update Password</span>
-            </div>
-            <div className="px-6 py-8 ">
-                <Form {...form}>
-                    <form id="update-password">
-                        <fieldset>
-                            <div className="flex gap-4">
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant={"outline"} size={"sm"}>
+                    <span>Update Your Password</span>
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader className="p-4 space-y-0 gap-0">
+                    <DialogTitle >Update Your Password</DialogTitle>
+                    <DialogDescription className="hidden">
+
+                    </DialogDescription>
+
+                </DialogHeader>
+
+                <DialogBody>
+                    <Form {...form}>
+                        <form className="space-y-2">
+                            <fieldset>
                                 <FormField control={form.control} name="currentPassword" render={({ field }) => (
                                     <FormItem className="flex-1 mt-0">
                                         <FormLabel size="tiny">
@@ -76,10 +91,8 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
                                     </FormItem>
                                 )}
                                 />
-                            </div>
-                        </fieldset>
-                        <fieldset>
-                            <div className="flex gap-4">
+                            </fieldset>
+                            <fieldset>
                                 <FormField control={form.control} name="password" render={({ field }) => (
                                     <FormItem className="flex-1 mt-0">
                                         <FormLabel size="tiny">
@@ -90,12 +103,9 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
-                                )}
-                                />
-                            </div>
-                        </fieldset>
-                        <fieldset>
-                            <div className="flex gap-4">
+                                )} />
+                            </fieldset>
+                            <fieldset>
                                 <FormField control={form.control} name="confirmPassword" render={({ field }) => (
                                     <FormItem className="flex-1 mt-0">
                                         <FormLabel size="tiny">
@@ -108,23 +118,28 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
                                     </FormItem>
                                 )}
                                 />
-                            </div>
-                        </fieldset>
-                    </form>
-                </Form>
-            </div>
-            <div className="border-t py-3 px-6  text-right">
-                <Button
-                    onClick={form.handleSubmit(handleSubmit)}
-                    variant={"foreground"}
-                    size={"sm"}
-                    className={cn("children:hidden", loading && "children:inline-block")}
-                    type="submit"
-                >
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Update
-                </Button>
-            </div>
-        </Card >
+                            </fieldset>
+                        </form>
+                    </Form>
+                </DialogBody>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button variant={"outline"} size={"sm"}>
+                            Cancel
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        onClick={form.handleSubmit(handleSubmit)}
+                        variant={"foreground"}
+                        size={"sm"}
+                        className={cn("children:hidden", loading && "children:inline-block")}
+                        type="submit"
+                    >
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Update
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog >
     )
 }

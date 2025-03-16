@@ -29,8 +29,8 @@ export default async function InvoicesPage(props: { params: Promise<{ id: number
     const invoices = await getCustomerInvoices(session?.user.stripeCustomerId);
 
     return (
-        <div>
-            <div className="mb-4">
+        <div className="space-y-4">
+            <div className="space-y-1">
                 <div className='text-xl font-semibold mb-1'>Invoices</div>
                 <p className='text-sm'>Manage, download your invoices below.</p>
 

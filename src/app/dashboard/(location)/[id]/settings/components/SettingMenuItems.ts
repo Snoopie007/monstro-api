@@ -12,5 +12,5 @@ export const SettingMenuItems: SettingMenuItem[] = [
     { path: "billing", name: "Billing", roles: ['vendor'] },
     { path: "benefits", name: "Benefits", roles: ['vendor'] },
     { path: "integrations", name: "Integrations", roles: ['vendor', 'admin'] },
-    { path: "password", name: "Password", roles: ['vendor', 'admin'] }
+    { path: "settings", name: "Settings", roles: ['vendor', 'admin'] }
 ];
