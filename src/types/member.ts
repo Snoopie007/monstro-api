@@ -90,7 +90,7 @@ export type MemberPackage = {
     beneficiary?: Member;
     transactions?: Transaction[];
     created: Date;
-    updated?: Date;
+    updated?: Date | null;
 };
 export type BillingCycleAnchorConfig = {
     day_of_month: number;

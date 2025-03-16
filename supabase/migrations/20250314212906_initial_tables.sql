@@ -509,7 +509,7 @@ CREATE TABLE IF NOT EXISTS reservations (
   status reservation_status NOT NULL DEFAULT 'active',
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,  
-  location_id bigint NOT NULL,
+  location_id bigint NOT NULL, 
   expired_on timestamp with time zone,
   member_subscription_id bigint,
   canceled_on timestamp with time zone,
