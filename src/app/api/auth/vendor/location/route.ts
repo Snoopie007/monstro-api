@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
             })
             location = locations.find(loc => loc.locationState.status === 'incomplete' || loc.locationState.status === 'active') || locations[0];
         }
-        console.log("location", location)
+
         if (!location) {
             return NextResponse.json({ lid: null, status: null }, { status: 200 });
         }
