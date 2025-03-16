@@ -85,9 +85,12 @@ async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnTy
 }
 
 async function fetchStripePyamentMethods(accessToken: string, customerId: string): Promise<Stripe.PaymentMethod[]> {
+    console.log("accessToken", accessToken);
+    console.log("customerId", customerId);
     try {
         const stripe = new MemberStripePayments(accessToken);
         const paymentMethods = await stripe.getPaymentMethods(customerId, 25)
+        console.log("paymentMethods", paymentMethods);
         return paymentMethods.data;
     } catch (error) {
         console.log("error", error);
@@ -118,8 +121,8 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
         return <div>Member not found</div>
     }
     const { stripeIntegration, member, ml } = res
-    if (stripeIntegration?.accessToken && member?.stripeCustomerId) {
-        paymentMethods = await fetchStripePyamentMethods(stripeIntegration.accessToken, member.stripeCustomerId);
+    if (stripeIntegration?.accessToken && ml?.stripeCustomerId) {
+        paymentMethods = await fetchStripePyamentMethods(stripeIntegration.accessToken, ml.stripeCustomerId);
     }
 
     return (
