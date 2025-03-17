@@ -211,8 +211,6 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
                 await db.insert(memberPackages).values({
                     memberPlanId:familyPlanId,
                     locationId: params.id,
-                    beneficiaryId:member.id,
-                    payerId:familyMemberId,
                     programId: familyPlan.programId,
                     startDate: memberPackage.startDate,
                     memberId: member.id,
@@ -223,8 +221,6 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
                 emailUrl = `invite/${params.id}/pkg/${memberPackage.id}`;
             } else if(familyPlan.type == "recurring" && memberSubscription) {
                 await db.insert(memberSubscriptions).values({
-                    payerId:familyMemberId,
-                    beneficiaryId:member.id,
                     memberPlanId:familyPlanId,
                     locationId:params.id,
                     programId:familyPlan.programId,
