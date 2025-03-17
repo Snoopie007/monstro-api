@@ -12,7 +12,7 @@ if (!process.env.DATABASE_URL) {
 const connectionString = process.env.DATABASE_URL;
 
 const client = postgres(connectionString, { max: 1 });
-const db = drizzle(client, { schema: schema, logger: true });
+const db = drizzle(client, { schema: schema, logger: false });
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     throw new Error("SUPABASE_URL or SUPABASE_KEY is missing");

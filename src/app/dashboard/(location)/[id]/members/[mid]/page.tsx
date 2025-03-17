@@ -56,7 +56,7 @@ async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnTy
                         },
                         subscriptions: {
                             where: (ms, { eq, and }) => and(
-                                eq(ms.beneficiaryId, mid),
+                                eq(ms.memberId, mid),
                                 eq(ms.locationId, decodedId)
                             ),
                             with: {
