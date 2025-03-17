@@ -60,13 +60,11 @@ export const NewPackageSchema = z.object({
 export const AddFamilyMemberSchema = z.object({
     firstName: z.string(),
     lastName: z.string(),
-    email: z.string().optional(),
-    phone: z.string().optional(),
-    family: z.object({
-        familySubscriptionId: z.number().optional(),
-        familyPackageId: z.number().optional(),
-        relationship: z.string(),
-    }),
+    email: z.string(),
+    phone: z.string(),
+    familyMemberId: z.number(),
+    relationship: z.string(),
+    familyPlanId: z.string()
 })
 export const DAYS = [
     { label: "MON", value: 1 },

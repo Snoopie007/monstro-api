@@ -55,7 +55,7 @@ export type MemberSubscription = {
     program?: Program;
     plan?: MemberPlan;
     member?: Member;
-    parent?: MemberSubscription | null;
+    child?: MemberSubscription | null;
     metadata?: Record<string, unknown>;
     invoices?: MemberInvoice[];
     contract?: MemberContract | null;
@@ -84,8 +84,8 @@ export type MemberPackage = {
     invoice?: MemberInvoice | null;
     plan?: MemberPlan;
     contract?: MemberContract | null;
-    member?: Member;
-    parent?: MemberPackage | null;
+    member: Member;
+    child: MemberSubscription;
     transactions?: Transaction[];
     created: Date;
     updated?: Date | null;

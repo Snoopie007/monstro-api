@@ -1,4 +1,4 @@
-import { integer, boolean, text, timestamp, pgTable, serial, jsonb } from "drizzle-orm/pg-core";
+import { integer, boolean, text, timestamp, pgTable, serial, jsonb, foreignKey } from "drizzle-orm/pg-core";
 import { programs } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { relations, sql } from "drizzle-orm";
@@ -59,7 +59,13 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
-});
+}, (table) => [
+    foreignKey({
+        columns: [table.parentId],
+        foreignColumns: [table.id],
+        name: "parent_child_fk"
+    })
+]);
 
 
 
@@ -80,7 +86,13 @@ export const memberPackages = pgTable("member_packages", {
     totalClassLimit: integer("total_class_limit").notNull().default(0),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true })
-});
+}, (table) => [
+    foreignKey({
+        columns: [table.parentId],
+        foreignColumns: [table.id],
+        name: "parent_child_fk"
+    })
+]);
 
 export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
     program: one(programs, {
@@ -124,6 +136,7 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
     transactions: many(transactions),
     invoices: many(memberInvoices),
     reservations: many(reservations),
+    child: many(memberSubscriptions)
 }));
 
 export const memberPackagesRelations = relations(memberPackages, ({ one, many }) => ({
@@ -154,4 +167,5 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
     transactions: many(transactions),
     invoices: many(memberInvoices),
     reservations: many(reservations),
+    child: many(memberPackages)
 }));
