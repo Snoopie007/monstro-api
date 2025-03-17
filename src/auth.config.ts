@@ -1,6 +1,5 @@
 import { CredentialsSignin, type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
 import { db } from "./db/db";
 import { encodeId } from "./libs/server/sqids";
 import { SignJWT } from "jose";

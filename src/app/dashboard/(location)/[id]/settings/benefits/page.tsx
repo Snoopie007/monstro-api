@@ -15,7 +15,7 @@ async function fetchVendor(id: number, lid: string): Promise<Vendor> {
         const vendor = await db.query.vendors.findFirst({
             where: (vendors, { eq }) => eq(vendors.userId, id),
             with: {
-                vendorLevels: {
+                vendorLevel: {
                     with: {
                         claimedRewards: true,
                         badges: true
@@ -75,10 +75,10 @@ async function BenefitsPage(props: { params: Promise<{ id: string }> }) {
                     ))}
                 </TabsList>
                 <TabsContent value="My Progress">
-                    <VendorBadges progress={vendor.vendorLevels!} />
+                    <VendorBadges level={vendor.vendorLevel!} />
                 </TabsContent>
                 <TabsContent value="My Rewards">
-                    <VendorRewards claimedRewards={vendor.vendorLevels!.claimedRewards} />
+                    <VendorRewards claimedRewards={vendor.vendorLevel!.claimedRewards} />
                 </TabsContent>
 
                 <TabsContent value="My Referrals">

@@ -25,7 +25,7 @@ export const vendorsRelations = relations(vendors, ({ one, many }) => ({
         references: [users.id],
     }),
     locations: many(locations),
-    vendorLevels: one(vendorLevels, {
+    vendorLevel: one(vendorLevels, {
         fields: [vendors.id],
         references: [vendorLevels.vendorId],
     }),

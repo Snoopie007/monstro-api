@@ -13,7 +13,7 @@ export type Vendor = {
     avatar: string | null;
     userId: number;
     referrals?: VendorReferral[];
-    vendorLevels?: VendorLevel[];
+    vendorLevel?: VendorLevel;
     created: Date;
     updated: Date | null;
     deleted: Date | null;

@@ -8,12 +8,9 @@ import { cn } from '@/libs/utils'
 import { Badge } from '@/components/ui'
 import { Progress } from '@/components/ui/progress'
 import { badges, AchivementBadge } from './data'
-type VendorLevelProps = {
-    level: VendorLevel
-}
 
 
-export function VendorBadges({ level }: VendorLevelProps) {
+export function VendorBadges({ level }: { level: VendorLevel }) {
     const [search, setSearch] = useState("")
     return (
         <div className='space-y-4'>
