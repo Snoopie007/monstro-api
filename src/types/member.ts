@@ -84,8 +84,8 @@ export type MemberPackage = {
     invoice?: MemberInvoice | null;
     plan?: MemberPlan;
     contract?: MemberContract | null;
-    member: Member;
-    child: MemberSubscription;
+    member?: Member;
+    parent?: MemberPackage | null;
     transactions?: Transaction[];
     created: Date;
     updated?: Date | null;
