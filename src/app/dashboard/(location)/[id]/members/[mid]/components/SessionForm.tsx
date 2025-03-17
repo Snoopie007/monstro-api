@@ -122,7 +122,8 @@ export function SessionForm({ params, progress }: SessionFormProps) {
                 body: JSON.stringify({
                     sessionIds,
                     packageId: progress.packageId,
-                    subscriptionId: progress.subscriptionId
+                    subscriptionId: progress.subscriptionId,
+                    memberId: params.mid
                 })
             })
         )

@@ -8,8 +8,8 @@ type Params = {
     id: number,
 }
 export async function POST(req: Request, props: { params: Promise<Params> }) {
-    const { sessionIds, subscriptionId, packageId } = await req.json();
-
+    const { sessionIds, subscriptionId, packageId, memberId } = await req.json();
+    const { id } = await props.params;
     try {
         const newReservations: Reservation[] = []
         sessionIds.forEach((sid: number) => {
@@ -18,6 +18,8 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
                 memberPackageId: packageId || null,
                 sessionId: sid,
                 status: "active",
+                locationId: id,
+                memberId: memberId
             })
         })
 

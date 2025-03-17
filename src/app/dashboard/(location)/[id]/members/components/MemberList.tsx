@@ -27,7 +27,7 @@ import { TablePage, TablePageContent, TablePageFooter, TablePageHeader, TablePag
 export function MemberList({ params, stripeKey }: { params: { id: string }, stripeKey: string | null }) {
     // Pagination state
     const [page, setPage] = useState(0); // Current page index (0-based)
-    const [pageSize, setPageSize] = useState(10); // Number of rows per page
+    const [pageSize, setPageSize] = useState(25); // Number of rows per page
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
     const [searchQuery, setSearchQuery] = useState(""); // Search input state
 

@@ -1,4 +1,4 @@
-import { integer, boolean, text, timestamp, pgTable, serial, jsonb } from "drizzle-orm/pg-core";
+import { integer, boolean, text, timestamp, pgTable, serial, jsonb, foreignKey } from "drizzle-orm/pg-core";
 import { programs } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { relations, sql } from "drizzle-orm";
@@ -56,10 +56,18 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     trialEnd: timestamp("trial_end", { withTimezone: true }),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     paymentMethod: PaymentMethodEnum("payment_method").notNull(),
+    memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
+    parentId: integer("parent_id"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
-});
+}, (table) => [
+    foreignKey({
+        columns: [table.parentId],
+        foreignColumns: [table.id],
+        name: "parent_child_fk"
+    })
+]);
 
 
 
@@ -78,9 +86,17 @@ export const memberPackages = pgTable("member_packages", {
     metadata: jsonb("metadata").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
     totalClassAttended: integer("total_class_attended").notNull().default(0),
     totalClassLimit: integer("total_class_limit").notNull().default(0),
+    memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }),
+    parentId: integer("parent_id"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true })
-});
+}, (table) => [
+    foreignKey({
+        columns: [table.parentId],
+        foreignColumns: [table.id],
+        name: "parent_child_fk"
+    })
+]);
 
 export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
     program: one(programs, {
@@ -123,9 +139,15 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
         fields: [memberSubscriptions.memberContractId],
         references: [memberContracts.id],
     }),
+    member: one(members, {
+        fields: [memberSubscriptions.memberId],
+        references: [members.id],
+        relationName: "member",
+    }),
     transactions: many(transactions),
     invoices: many(memberInvoices),
     reservations: many(reservations),
+    child: many(memberSubscriptions)
 }));
 
 export const memberPackagesRelations = relations(memberPackages, ({ one, many }) => ({
@@ -155,7 +177,13 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
         fields: [memberPackages.memberContractId],
         references: [memberContracts.id],
     }),
+    member: one(members, {
+        fields: [memberPackages.memberId],
+        references: [members.id],
+        relationName: "member",
+    }),
     transactions: many(transactions),
     invoices: many(memberInvoices),
     reservations: many(reservations),
+    child: many(memberPackages)
 }));

@@ -44,7 +44,6 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 				description: data.description,
 				icon: data.icon,
 				points: Number(data.points),
-				programId: data.program ? Number(data.program) : null,
 				locationId: Number(params.id),
 			}).returning({ id: achievements.id });
 

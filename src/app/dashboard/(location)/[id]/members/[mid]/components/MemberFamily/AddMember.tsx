@@ -63,10 +63,8 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
     const [familyPlans, setFamilyPlans] = useState<FamilyPlan[]>([]);
 
     useEffect(() => {
-        if (parent) {
-            fetchFamilyPlans();
-        }
-    }, [parent]);
+        fetchFamilyPlans();
+    }, []);
 
     const form = useForm<z.infer<typeof AddFamilyMemberSchema>>({
         resolver: zodResolver(AddFamilyMemberSchema),
@@ -75,10 +73,9 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
             lastName: "",
             email: "",
             phone: "",
-            family: {
-                relationship: "",
-                familySubscriptionId: 0,
-            },
+            relationship: "",
+            familyPlanId: "",
+            familyMemberId: parent.id
         },
         mode: "onChange",
     });
@@ -86,13 +83,12 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
 
 
     async function fetchFamilyPlans() {
-        // const { result, error } = await tryCatch(
-        //     fetch(`/api/protected/loc/${lid}/members/${parent.id}/family`)
-        // )
-        // if (error || !result || !result.ok) return
-        // const data = await result.json();
-        // setFamilyPlans(data);
-        // console.log(data);
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${lid}/members/${parent.id}/family`)
+        )
+        if (error || !result || !result.ok) return
+        const data = await result.json();
+        setFamilyPlans(data);
     }
 
     async function findExistingMember() {
@@ -121,6 +117,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
             lastName: data.lastName,
             email: data.email,
             phone: data.phone,
+
         });
         setLoading(false);
     }
@@ -133,12 +130,13 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                 firstName: v.firstName,
                 lastName: v.lastName,
                 email: v.email,
-                locationId: lid,
+                phone: v.phone,
                 familyMemberId: parent.id,
-                relation: v.family.relationship,
+                relationship: v.relationship,
+                familyPlanId: v.familyPlanId
             };
 
-            const response = await fetch('/api/familyMembers', {
+            const response = await fetch(`/api/protected/loc/${lid}/members/${parent.id}/family`, {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });
@@ -195,11 +193,12 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                                     "space-y-1  bg-foreground/10 px-3 py-2 rounded-sm hidden",
                                     { "block": (familyMember || existing === "New Member") }
                                 )}>
+                                    <input type='hidden' value={parent.id} name='familyMemberId' />
 
                                     <fieldset>
                                         <FormField
                                             control={form.control}
-                                            name="family.familySubscriptionId"
+                                            name="familyPlanId"
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel size="tiny">Select a Family Plan</FormLabel>
@@ -210,8 +209,9 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
+                                                            
                                                             {familyPlans.map((plan: any, index: number) => (
-                                                                <SelectItem key={index} value={plan.id?.toString()}>{plan.planName}</SelectItem>
+                                                                <SelectItem key={`${index}-${plan.planId}`} value={plan.planId}>{plan.planName}</SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
@@ -223,7 +223,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                                     <fieldset>
                                         <FormField
                                             control={form.control}
-                                            name="family.relationship"
+                                            name="relationship"
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel size="tiny">Select a relationship</FormLabel>
@@ -234,8 +234,8 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
-                                                            {RelationshipOptions.map((relation: MemberRelationship, index: number) => (
-                                                                <SelectItem key={index} value={relation}>{relation}</SelectItem>
+                                                            {RelationshipOptions.map((relation: MemberRelationship) => (
+                                                                <SelectItem key={relation} value={relation}>{relation}</SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
@@ -280,6 +280,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                             size={"xs"}
                             type="submit"
                             disabled={loading}
+                            onClick={form.handleSubmit(onSubmit)}
                         >
                             <Loader2 className="mr-2 size-4 hidden animate-spin" />
                             Add Family
