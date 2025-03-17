@@ -3,9 +3,10 @@
 import { createContext, useReducer, ReactElement, useCallback, useContext, ReactNode } from "react";
 
 import { LocationState } from "@/types/location";
-
+import { MonstroLegal } from "@/libs/server/legalmdx";
 type StateType = {
     locationState: LocationState;
+    tos: MonstroLegal | undefined;
 }
 
 const enum REDUCER_ACTION_TYPE {
@@ -45,13 +46,15 @@ export const OnboardingContext = createContext<UseOnboardingContextType | null>(
 
 interface OnboardingProviderProps {
     state: LocationState;
+    tos: MonstroLegal | undefined;
     children: ReactNode;
 }
 
-export const OnboardingProvider = ({ children, state }: OnboardingProviderProps): ReactElement => {
+export const OnboardingProvider = ({ children, state, tos }: OnboardingProviderProps): ReactElement => {
     return (
         <OnboardingContext.Provider value={useOnboardingContext({
-            locationState: state
+            locationState: state,
+            tos: tos
         })}>
             {children}
         </OnboardingContext.Provider>
@@ -61,6 +64,7 @@ export const OnboardingProvider = ({ children, state }: OnboardingProviderProps)
 type UseOnboardingHookType = {
     locationState: LocationState;
     updateLocationState: (locationState: LocationState) => void;
+    tos: MonstroLegal | undefined;
 }
 
 export const useOnboarding = (): UseOnboardingHookType => {
@@ -72,6 +76,7 @@ export const useOnboarding = (): UseOnboardingHookType => {
 
     return {
         locationState: state.locationState,
-        updateLocationState
+        updateLocationState,
+        tos: state.tos
     };
 }

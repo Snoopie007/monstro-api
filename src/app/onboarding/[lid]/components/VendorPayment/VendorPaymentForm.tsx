@@ -22,7 +22,6 @@ import { VendorBillingSchema } from "@/libs/schemas";
 import { useOnboarding } from "../../provider/OnboardingProvider";
 import { Button } from "@/components/ui/button";
 
-import { dummyContract } from "@/libs/data";
 import { DialogTrigger, Dialog, DialogContent, DialogDescription, DialogTitle, DialogHeader, DialogFooter, DialogClose } from "@/components/ui";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSession } from "next-auth/react";
@@ -267,6 +266,7 @@ interface TermsAndConditionsProps {
 
 function TermsAndConditions({ checked, setChecked }: TermsAndConditionsProps) {
     const [scrolled, setScrolled] = useState(false);
+    const { tos } = useOnboarding();
 
     function handleScroll(e: React.UIEvent<HTMLDivElement>) {
         const element = e.currentTarget.querySelector('[data-radix-scroll-area-viewport]');
@@ -301,8 +301,8 @@ function TermsAndConditions({ checked, setChecked }: TermsAndConditionsProps) {
                 <div className="flex flex-col gap-2 space-y-1 ">
                     <p className="font-semibold  text-base px-4">Monstro <span className="text-red-500">Terms of Service</span></p>
                     <ScrollArea className="h-[500px] px-4 border-y border-gray-200" onScrollCapture={handleScroll}>
-                        <div className='prose pb-4   text-black prose-strong:text-black prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'
-                            dangerouslySetInnerHTML={{ '__html': dummyContract }}>
+                        <div className='prose pb-4   text-black prose-strong:text-black prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'>
+                            {tos?.content}
                         </div>
                     </ScrollArea>
 
