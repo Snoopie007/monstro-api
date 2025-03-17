@@ -17,20 +17,11 @@ export async function GET(req: NextRequest, props: { params: Promise<PackageProp
     try {
         const packages = await db.query.memberPackages.findMany({
             where: (memberPackage, { eq, and }) => and(
-                eq(memberPackage.beneficiaryId, params.mid),
+                eq(memberPackage.memberId, params.mid),
                 eq(memberPackage.locationId, params.id)
             ),
             with: {
-                plan: true,
-                payer: {
-                    columns: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true,
-                        phone: true,
-                    }
-                }
+                plan: true
             }
         })
 

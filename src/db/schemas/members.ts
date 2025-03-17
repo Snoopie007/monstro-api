@@ -101,7 +101,6 @@ export const membersRelations = relations(members, ({ many, one }) => ({
     achievements: many(memberAchievements),
     rewards: many(memberRewards),
     contracts: many(memberContracts),
-    subscriptions: many(memberSubscriptions, { relationName: "beneficiary" }),
     user: one(users, {
         fields: [members.userId],
         references: [users.id],
@@ -112,15 +111,9 @@ export const membersRelations = relations(members, ({ many, one }) => ({
     relatedByFamily: many(familyMembers, {
         relationName: "relatedMemberFamily",
     }),
-    payers: many(memberSubscriptions, {
-        relationName: "payer",
-    }),
-    packages: many(memberPackages, {
-        relationName: "packageBeneficiary",
-    }),
-    packagePayers: many(memberPackages, {
-        relationName: "packagePayer",
-    }),
+    packages: many(memberPackages),
+    subscriptions: many(memberSubscriptions),
+
 }));
 
 export const familyMemberRelations = relations(familyMembers, ({ one, many }) => ({

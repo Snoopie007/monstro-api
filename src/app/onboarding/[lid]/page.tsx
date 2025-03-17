@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { OnboardingProvider } from './provider/OnboardingProvider';
 import { db } from '@/db/db';
 import { decodeId } from '@/libs/server/sqids';
+import { getTOS, type MonstroLegal } from '@/libs/server/legalmdx';
 
 
 async function getLocationState(locationId: string) {
@@ -15,38 +16,24 @@ async function getLocationState(locationId: string) {
     return locationState
 }
 
+
 export default async function PlanSelectionPage(props: { params: Promise<{ lid: string }> }) {
     const { lid } = await props.params;
 
     const session = await auth();
-
+    const tos = await getTOS("term-of-use")
     if (!session || session.user.locations.length === 0) {
         return redirect("/login")
     }
 
-    // const location = session.user.locations.find((location: { id: string }) => location.id === lid);
 
-    // if (!location) {
-    //     // If location not found, redirect to first pending or active location, or dashboard
-    //     const redirectLocation = session.user.locations.find(
-    //         (loc: { id: string, status: string }) => loc.status === "Pending" || loc.status === "Active"
-    //     );
-    //     return redirect(redirectLocation
-    //         ? `/${redirectLocation.status === "Pending" ? "onboarding" : "dashboard"}/${redirectLocation.id}`
-    //         : "/dashboard"
-    //     );
-    // }
-
-    // if (location.status === "Active") {
-    //     return redirect(`/dashboard/${location.id}`);
-    // }
     const locationState = await getLocationState(lid);
     if (!locationState) {
         return redirect("/onboarding")
     }
     return (
         <div className="space-y-4">
-            <OnboardingProvider state={locationState}>
+            <OnboardingProvider state={locationState} tos={tos}>
                 <VendorPlanBuilder />
             </OnboardingProvider>
 

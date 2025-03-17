@@ -220,6 +220,25 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles (user_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
 
 
+-- Tables with dependencies on roles, users, and locations
+CREATE TABLE IF NOT EXISTS staffs (
+  id bigserial PRIMARY KEY NOT NULL,
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  email text NOT NULL,
+  phone text NOT NULL,
+  avatar text,
+  user_id bigint NOT NULL,
+  role_id bigint,
+  location_id bigint,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone,
+  deleted_at timestamp with time zone,
+  CONSTRAINT staffs_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
+  CONSTRAINT staffs_role_id_foreign FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE SET NULL,
+  CONSTRAINT staffs_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS programs (
   id bigserial PRIMARY KEY NOT NULL,
   location_id bigint NOT NULL,
@@ -370,8 +389,8 @@ CREATE INDEX IF NOT EXISTS idx_member_contracts_member_id ON member_contracts (m
 -- Tables with dependencies on members, member_plans, and program_levels
 CREATE TABLE IF NOT EXISTS member_subscriptions (
   id bigserial PRIMARY KEY NOT NULL,
-  payer_id bigint NOT NULL,
-  beneficiary_id bigint NOT NULL,
+  parent_id bigint,
+  member_id bigint NOT NULL,
   member_plan_id bigint,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
@@ -389,16 +408,16 @@ CREATE TABLE IF NOT EXISTS member_subscriptions (
   metadata jsonb NOT NULL DEFAULT '{}',
   program_id bigint,
   member_contract_id bigint,
-  CONSTRAINT member_payments_member_plan_id_fkey FOREIGN KEY (member_plan_id) REFERENCES member_plans (id) ON DELETE SET NULL,
-  CONSTRAINT member_payments_payer_id_foreign FOREIGN KEY (payer_id) REFERENCES members (id) ON DELETE CASCADE,
+  is_participant boolean NOT NULL DEFAULT true,
+  CONSTRAINT member_subscriptions_member_plan_id_fkey FOREIGN KEY (member_plan_id) REFERENCES member_plans (id) ON DELETE SET NULL,
+  CONSTRAINT member_subscriptions_parent_id_foreign FOREIGN KEY (parent_id) REFERENCES member_subscriptions (id) ON DELETE CASCADE,
   CONSTRAINT member_subscriptions_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
   CONSTRAINT member_subscriptions_member_contract_id_fkey FOREIGN KEY (member_contract_id) REFERENCES member_contracts (id),
   CONSTRAINT member_subscriptions_program_id_fkey FOREIGN KEY (program_id) REFERENCES programs (id),
-  CONSTRAINT member_payments_beneficiary_id_foreign FOREIGN KEY (beneficiary_id) REFERENCES members (id) ON DELETE CASCADE
+  CONSTRAINT member_subscriptions_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_member_subscriptions_payer_id ON member_subscriptions (payer_id);
-CREATE INDEX IF NOT EXISTS idx_member_subscriptions_beneficiary_id ON member_subscriptions (beneficiary_id);
+CREATE INDEX IF NOT EXISTS idx_member_subscriptions_member_id ON member_subscriptions (member_id);
 CREATE INDEX IF NOT EXISTS idx_member_subscriptions_location_id ON member_subscriptions (location_id);
 CREATE INDEX IF NOT EXISTS idx_member_subscriptions_status ON member_subscriptions (status);
 
@@ -406,8 +425,8 @@ CREATE INDEX IF NOT EXISTS idx_member_subscriptions_status ON member_subscriptio
 CREATE TABLE IF NOT EXISTS member_packages (
   id bigserial PRIMARY KEY NOT NULL,
   member_plan_id bigint NOT NULL,
-  payer_id bigint,
-  beneficiary_id bigint NOT NULL,
+  member_id bigint NOT NULL,
+  parent_id bigint,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   status package_status NOT NULL DEFAULT 'incomplete',
@@ -420,16 +439,16 @@ CREATE TABLE IF NOT EXISTS member_packages (
   location_id bigint NOT NULL,
   program_id bigint,
   member_contract_id bigint,
+  is_participant boolean NOT NULL DEFAULT true,
   CONSTRAINT member_packages_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
   CONSTRAINT member_packages_member_contract_id_fkey FOREIGN KEY (member_contract_id) REFERENCES member_contracts (id),
-  CONSTRAINT member_packages_beneficiary_id_fkey FOREIGN KEY (beneficiary_id) REFERENCES members (id) ON DELETE CASCADE,
-  CONSTRAINT member_packages_payer_id_fkey FOREIGN KEY (payer_id) REFERENCES members (id) ON DELETE SET NULL,
+  CONSTRAINT member_packages_member_id_fkey FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE,
+  CONSTRAINT member_packages_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES member_packages (id) ON DELETE CASCADE,
   CONSTRAINT member_packages_program_id_fkey FOREIGN KEY (program_id) REFERENCES programs (id),
   CONSTRAINT member_packages_member_plan_id_fkey FOREIGN KEY (member_plan_id) REFERENCES member_plans (id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_payer_id ON member_packages USING btree (payer_id);
-CREATE INDEX IF NOT EXISTS idx_beneficiary_id ON member_packages USING btree (beneficiary_id);
+CREATE INDEX IF NOT EXISTS idx_member_packages_member_id ON member_packages (member_id);
 CREATE INDEX IF NOT EXISTS idx_member_packages_location_id ON member_packages (location_id);
 CREATE INDEX IF NOT EXISTS idx_member_packages_status ON member_packages (status);
 
@@ -520,10 +539,11 @@ CREATE TABLE IF NOT EXISTS reservations (
   CONSTRAINT reservations_member_package_id_fkey FOREIGN KEY (member_package_id) REFERENCES member_packages (id) ON DELETE CASCADE,
   CONSTRAINT reservations_member_subscription_id_fkey FOREIGN KEY (member_subscription_id) REFERENCES member_subscriptions (id) ON DELETE CASCADE,
   CONSTRAINT reservations_session_id_foreign FOREIGN KEY (session_id) REFERENCES program_sessions (id) ON DELETE CASCADE,
-  CONSTRAINT reservations_session_member_location_unique UNIQUE (session_id, member_id, location_id)
+  CONSTRAINT reservations_session_subscription_unique UNIQUE (session_id, member_id, location_id, member_subscription_id),
+  CONSTRAINT reservations_session_package_unique UNIQUE (session_id, member_id, location_id, member_package_id)
 );
 
-ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;
+
 
 CREATE INDEX IF NOT EXISTS idx_reservations_member_id ON reservations (member_id);
 CREATE INDEX IF NOT EXISTS idx_reservations_location_id ON reservations (location_id);
@@ -546,13 +566,10 @@ CREATE TABLE IF NOT EXISTS check_ins (
   lng numeric,
   mac_address text,
   CONSTRAINT check_ins_reservation_id_foreign FOREIGN KEY (reservation_id) REFERENCES reservations (id) ON DELETE CASCADE
-)
-
-ALTER TABLE check_ins ENABLE ROW LEVEL SECURITY;
+);
 
 CREATE INDEX IF NOT EXISTS idx_check_ins_reservation_id ON check_ins (reservation_id);
 CREATE INDEX IF NOT EXISTS idx_check_ins_check_in_time ON check_ins (check_in_time);
-CREATE INDEX IF NOT EXISTS idx_check_ins_check_out_time ON check_ins (check_out_time);
 
 
 CREATE TABLE IF NOT EXISTS achievements (
@@ -796,24 +813,6 @@ CREATE TABLE IF NOT EXISTS import_members (
   CONSTRAINT import_members_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE
 );
 
--- Tables with dependencies on roles, users, and locations
-CREATE TABLE IF NOT EXISTS staffs (
-  id bigserial PRIMARY KEY NOT NULL,
-  first_name text NOT NULL,
-  last_name text NOT NULL,
-  email text NOT NULL,
-  phone text NOT NULL,
-  avatar text,
-  user_id bigint NOT NULL,
-  role_id bigint,
-  location_id bigint,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  CONSTRAINT staffs_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT staffs_role_id_foreign FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE SET NULL,
-  CONSTRAINT staffs_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
 
 -- Tables with dependencies on staffs and locations
 CREATE TABLE IF NOT EXISTS staff_locations (

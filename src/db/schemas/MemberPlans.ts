@@ -40,8 +40,8 @@ export const memberPlans = pgTable("member_plans", {
 
 export const memberSubscriptions = pgTable("member_subscriptions", {
     id: serial("id").primaryKey(),
-    payerId: integer("payer_id").references(() => members.id, { onDelete: "cascade" }),
-    beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    parentId: integer("parent_id"),
     memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
     memberContractId: integer("member_contract_id").references(() => memberContracts.id),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
@@ -75,9 +75,9 @@ export const memberPackages = pgTable("member_packages", {
     id: serial("id").primaryKey(),
     memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    payerId: integer("payer_id").references(() => members.id, { onDelete: "set null" }),
+    memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     memberContractId: integer("member_contract_id").references(() => memberContracts.id),
-    beneficiaryId: integer("beneficiary_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    parentId: integer("parent_id"),
     programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     expireDate: timestamp("expire_date", { withTimezone: true }),
@@ -112,17 +112,15 @@ export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
 }));
 
 export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one, many }) => ({
-    payer: one(members, {
-        fields: [memberSubscriptions.payerId],
+    member: one(members, {
+        fields: [memberSubscriptions.memberId],
         references: [members.id],
         relationName: "payer",
     }),
-    beneficiary: one(members, {
-        fields: [memberSubscriptions.beneficiaryId],
-        references: [members.id],
-        relationName: "beneficiary",
+    parent: one(memberSubscriptions, {
+        fields: [memberSubscriptions.parentId],
+        references: [memberSubscriptions.id],
     }),
-
     program: one(programs, {
         fields: [memberSubscriptions.programId],
         references: [programs.id],
@@ -163,15 +161,13 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
         fields: [memberPackages.locationId],
         references: [locations.id],
     }),
-    payer: one(members, {
-        fields: [memberPackages.payerId],
+    member: one(members, {
+        fields: [memberPackages.memberId],
         references: [members.id],
-        relationName: "packagePayer",
     }),
-    beneficiary: one(members, {
-        fields: [memberPackages.beneficiaryId],
-        references: [members.id],
-        relationName: "packageBeneficiary",
+    parent: one(memberPackages, {
+        fields: [memberPackages.parentId],
+        references: [memberPackages.id],
     }),
     contract: one(memberContracts, {
         fields: [memberPackages.memberContractId],

@@ -11,7 +11,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
     try {
         const subscriptions = await db.query.memberSubscriptions.findMany({
             where: (memberSubscriptions, { eq, and }) => and(
-                eq(memberSubscriptions.beneficiaryId, params.mid),
+                eq(memberSubscriptions.memberId, params.mid),
                 eq(memberSubscriptions.locationId, params.id)
             ),
             with: {
@@ -19,13 +19,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
                     with: {
                         program: true
                     }
-                },
-                payer: {
-                    columns: {
-                        id: true,
-                        firstName: true,
-                    }
-                },
+                }
             }
         })
 
@@ -120,7 +114,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             ))
         }
         if (data.paymentMethod === "cash") {
-            if(!newSubscription.cancelAt) {
+            if (!newSubscription.cancelAt) {
                 const newDraftInvoice = createInvoice(plan, {
                     memberId: params.mid,
                     locationId: params.id,
@@ -128,7 +122,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 });
                 newDraftInvoice.forPeriodStart = newSubscription.currentPeriodEnd;
                 newDraftInvoice.forPeriodEnd = calculateCurrentPeriodEnd(newSubscription.currentPeriodEnd, plan.interval!, plan.intervalThreshold!);
-                const [{invoiceId}] = await db.insert(memberInvoices).values({
+                const [{ invoiceId }] = await db.insert(memberInvoices).values({
                     ...newDraftInvoice,
                     memberSubscriptionId: sid
                 }).returning({ invoiceId: memberInvoices.id });

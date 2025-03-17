@@ -21,9 +21,7 @@ export type Member = {
     relatedByFamily?: FamilyMember[];
     memberLocation?: MemberLocation;
     subscriptions?: MemberSubscription[];
-    payers?: MemberSubscription[];
     packages?: MemberPackage[];
-    packagePayers?: MemberPackage[];
     created: Date;
     updated: Date | null;
     deleted: Date | null;
@@ -38,8 +36,8 @@ export type MemberOnboarding = {
 
 export type MemberSubscription = {
     id?: number;
-    payerId: number | null;
-    beneficiaryId: number;
+    memberId: number;
+    parentId?: number | null;
     memberPlanId: number;
     memberContractId?: number | null;
     startDate: Date;
@@ -56,10 +54,8 @@ export type MemberSubscription = {
     paymentMethod: PaymentMethod;
     program?: Program;
     plan?: MemberPlan;
-    payer?: Member | null;
-    beneficiary?: Member;
-    member: Member;
-    child: MemberSubscription;
+    member?: Member;
+    child?: MemberSubscription | null;
     metadata?: Record<string, unknown>;
     invoices?: MemberInvoice[];
     contract?: MemberContract | null;
@@ -72,8 +68,8 @@ export type MemberPackage = {
     id?: number;
     memberPlanId: number;
     locationId: number;
-    payerId: number | null;
-    beneficiaryId: number;
+    memberId: number;
+    parentId?: number | null;
     invoiceId?: string | null;
     memberContractId?: number | null;
     startDate: Date;
@@ -88,8 +84,6 @@ export type MemberPackage = {
     invoice?: MemberInvoice | null;
     plan?: MemberPlan;
     contract?: MemberContract | null;
-    payer?: Member;
-    beneficiary?: Member;
     member: Member;
     child: MemberSubscription;
     transactions?: Transaction[];

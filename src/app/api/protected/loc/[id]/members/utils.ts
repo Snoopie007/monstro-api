@@ -7,7 +7,6 @@ type BaseData = {
     locationId: number;
     memberId: number;
     programId: number,
-    beneficiaryId: number;
     startDate: Date | string,
     paymentMethod: "card" | "cash" | "check" | "zelle" | "venmo" | "paypal" | "apple" | "google",
 }
@@ -124,7 +123,7 @@ function createPackage(
 ): CreatePackageReturn {
     const today = new Date();
     const startDate = data.startDate ? new Date(data.startDate) : today;
-    const { beneficiaryId, totalClassLimit, ...rest } = data;
+    const { totalClassLimit, ...rest } = data;
     const { expireInterval, expireThreshold } = plan;
 
     let expireDate: Date | null = null;
@@ -136,8 +135,6 @@ function createPackage(
 
     const newPkg: MemberPackage = {
         ...rest,
-        payerId: rest.memberId,
-        beneficiaryId: beneficiaryId || rest.memberId,
         locationId: rest.locationId,
         startDate: startDate,
         expireDate,
@@ -156,7 +153,7 @@ function createSubscription(data: SubscriptionData, plan: MemberPlan): CreateSub
     const startDate = data.startDate ? new Date(data.startDate) : today;
     const periodEnd = calculateCurrentPeriodEnd(startDate, plan.interval!, plan.intervalThreshold!);
 
-    const { trialDays, endDate, beneficiaryId, ...rest } = data;
+    const { trialDays, endDate, ...rest } = data;
 
     let trialEnd: Date | undefined;
     if (data.trialDays) {
@@ -168,9 +165,8 @@ function createSubscription(data: SubscriptionData, plan: MemberPlan): CreateSub
     }
 
     const newSubscription: MemberSubscription = {
-        ...data,
-        payerId: rest.memberId,
-        beneficiaryId: beneficiaryId || rest.memberId,
+        ...rest,
+        memberId: rest.memberId,
         startDate: startDate,
         currentPeriodStart: startDate,
         currentPeriodEnd: periodEnd,
