@@ -230,7 +230,7 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
                     paymentMethod: memberSubscription.paymentMethod,
                     memberId: member.id,
                     parentId: memberSubscription.id,
-                    currentPeriodEnd: memberSubscription.currentPeriodEnd,
+                    currentPeriodEnd: memberSubscription.currentPeriodEnd
                 })
                 emailUrl = `invite/${params.id}/sub/${memberSubscription.id}`;
             }

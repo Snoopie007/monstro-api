@@ -117,7 +117,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
             lastName: data.lastName,
             email: data.email,
             phone: data.phone,
-
+            familyMemberId: parent.id
         });
         setLoading(false);
     }
@@ -281,6 +281,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                             type="submit"
                             disabled={loading}
                             onClick={form.handleSubmit(onSubmit)}
+                            // onClick={() => console.log(form.formState.errors)}
                         >
                             <Loader2 className="mr-2 size-4 hidden animate-spin" />
                             Add Family
