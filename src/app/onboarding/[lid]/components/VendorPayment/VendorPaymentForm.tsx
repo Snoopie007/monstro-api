@@ -305,7 +305,7 @@ function TermsAndConditions({ checked, setChecked }: TermsAndConditionsProps) {
                 <div className="flex flex-col gap-2 space-y-1 ">
                     <p className="font-semibold  text-base px-4">Monstro <span className="text-red-500">Terms of Service</span></p>
                     <ScrollArea className="h-[500px] px-4 border-y border-gray-200" onScrollCapture={handleScroll}>
-                        <div className='prose pb-4   text-black prose-strong:text-black prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'>
+                        <div className='prose py-4   text-black prose-strong:text-black prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'>
                             {tos?.content}
                         </div>
                     </ScrollArea>

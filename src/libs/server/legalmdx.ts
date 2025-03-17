@@ -11,8 +11,8 @@ export type MonstroLegal = {
 const GitHubUser = "Snoopie007"
 const Repo = "monstro-blog"
 
-export async function getTOS(fileName: string, folder: string = "posts"): Promise<MonstroLegal | undefined> {
-
+export async function getTOS(fileName: string, folder: string = "pages"): Promise<MonstroLegal | undefined> {
+    console.log(fileName, folder)
     const res = await fetch(`https://raw.githubusercontent.com/${GitHubUser}/${Repo}/main/${folder}/${fileName}.mdx`, {
         headers: {
             Accept: 'application/vnd.github+json',
@@ -22,6 +22,7 @@ export async function getTOS(fileName: string, folder: string = "posts"): Promis
         next: { revalidate: 1000 }
     })
 
+
     if (!res.ok) return undefined
 
     const rawMDX = await res.text()
@@ -29,13 +30,13 @@ export async function getTOS(fileName: string, folder: string = "posts"): Promis
     if (rawMDX === '404: Not Found') return undefined
 
 
-    const { frontmatter, content } = await compileMDX<MonstroLegal>({
+    const { content } = await compileMDX<MonstroLegal>({
         source: rawMDX,
         options: {
             parseFrontmatter: true,
         }
     })
-    console.log(frontmatter)
+
     const tos: MonstroLegal = {
         content: content
     }

@@ -37,6 +37,7 @@ const nextConfig: NextConfig = {
     maxHeaderSize: 32 * 1024, // 32KB
   },
   skipTrailingSlashRedirect: true,
+  transpilePackages: ['next-mdx-remote'],
   // output: 'standalone'
 };
 

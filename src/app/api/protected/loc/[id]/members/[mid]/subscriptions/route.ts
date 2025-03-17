@@ -23,6 +23,8 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
             }
         })
 
+
+
         return NextResponse.json(subscriptions, { status: 200 })
     } catch (err) {
         // console.log(err)

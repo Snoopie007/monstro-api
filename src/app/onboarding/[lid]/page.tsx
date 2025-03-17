@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { OnboardingProvider } from './provider/OnboardingProvider';
 import { db } from '@/db/db';
 import { decodeId } from '@/libs/server/sqids';
-import { getTOS, type MonstroLegal } from '@/libs/server/legalmdx';
+import { getTOS, type MonstroLegal } from '@/libs/server/LegalMDX';
 
 
 async function getLocationState(locationId: string) {
