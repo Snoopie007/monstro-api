@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
         const [subs, pkgs] = await Promise.all([
             db.query.memberSubscriptions.findMany({
                 where: (memberSubscriptions, { eq, and }) => and(
-                    eq(memberSubscriptions.beneficiaryId, params.mid),
+                    eq(memberSubscriptions.memberId, params.mid),
                     eq(memberSubscriptions.locationId, params.id)
                 ),
                 with: {
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
             }),
             db.query.memberPackages.findMany({
                 where: (memberPackages, { eq, and }) => and(
-                    eq(memberPackages.beneficiaryId, params.mid),
+                    eq(memberPackages.memberId, params.mid),
                     eq(memberPackages.locationId, params.id)
                 ),
                 with: {

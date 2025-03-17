@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, props: MemberReservationProps) {
 
         const subscription = await db.query.memberSubscriptions.findFirst({
             where: (s, { eq }) => and(
-                eq(s.beneficiaryId, Number(authMember.member.id)),
+                eq(s.memberId, Number(authMember.member.id)),
                 eq(s.locationId, Number(params.id)),
                 eq(s.status, 'active')
             ),

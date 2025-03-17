@@ -8,8 +8,8 @@ export async function POST(req: Request, props: { params: Promise<{ vid: number,
 
 
     try {
-        const vendorProgress = await db.query.vendorProgress.findFirst({
-            where: (vendorProgress, { eq }) => eq(vendorProgress.vendorId, params.vid),
+        const vendorProgress = await db.query.vendorLevels.findFirst({
+            where: (vendorLevels, { eq }) => eq(vendorLevels.vendorId, params.vid),
             with: {
                 badges: true,
             }

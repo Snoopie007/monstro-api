@@ -1,10 +1,9 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { users } from "@/db/schemas";
-
+import { compareHashedPassword, hashPassword } from "@/libs/server/db";
 export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const session = await auth();
@@ -28,14 +27,13 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
         return NextResponse.json({ message: 'User not found.' }, { status: 404 })
       }
 
-      const isValidCurrentPassword = await bcrypt.compare(currentPassword, user.password)
+      const isValidCurrentPassword = await compareHashedPassword(currentPassword, user.password)
 
       if (!isValidCurrentPassword) {
         return NextResponse.json({ message: 'Current password is incorrect.' }, { status: 400 })
       }
 
-      const salt = await bcrypt.genSalt(10);
-      const newHashedPassword: string = await bcrypt.hash(password, salt);
+      const newHashedPassword: string = await hashPassword(password)
 
       await db.update(users).set({ password: newHashedPassword }).where(eq(users.id, session.user.id))
 

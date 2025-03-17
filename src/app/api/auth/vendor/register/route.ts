@@ -2,7 +2,6 @@ import { db } from "@/db/db";
 
 import { NextRequest, NextResponse } from "next/server";
 import { users, vendors } from "@/db/schemas";
-import bcrypt from "bcryptjs";
 import { formatPhoneNumber, hashPassword } from "@/libs/server/db";
 
 

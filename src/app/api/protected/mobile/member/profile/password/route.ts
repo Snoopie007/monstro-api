@@ -2,8 +2,8 @@ import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
 import { users } from '@/db/schemas';
-import bcrypt from 'bcryptjs';
 import { authenticateMember } from '../../utils';
+import { compareHashedPassword, hashPassword } from '@/libs/server/db';
 
 export async function PUT(req: NextRequest, props: { params: Promise<{ id: number }> }) {
 
@@ -26,14 +26,13 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: numbe
 		if (!user.password) {
 			return NextResponse.json({ error: "No password set for this user" }, { status: 404 })
 		}
-		const match = await bcrypt.compare(`${data.password}`, user.password);
+		const match = await compareHashedPassword(`${data.password}`, user.password);
 
 		if (!match) {
 			return NextResponse.json({ error: "Invalid current Password" }, { status: 400 })
 		}
 
-		const salt = await bcrypt.genSalt(10);
-		const hashedPassword: string = await bcrypt.hash(data.newPassword, salt);
+		const hashedPassword: string = await hashPassword(data.newPassword)
 
 		await db.update(users).set({
 			password: hashedPassword

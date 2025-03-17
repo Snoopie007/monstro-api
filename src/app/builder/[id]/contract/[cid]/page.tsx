@@ -3,7 +3,7 @@ import { use } from "react";
 import ContractEditor from './ContractEditor'
 import { useContract } from '@/hooks/useContracts'
 
-import SectionLoader from '@/components/section-loading'
+import SectionLoader from '@/components/SectionLoading'
 export default function ContractBuilder(props: { params: Promise<{ cid: string, id: string }> }) {
     const params = use(props.params);
     const { contract, isLoading } = useContract(params.id, parseInt(params.cid))
