@@ -101,7 +101,7 @@ export default function LoginForm() {
 							<FormItem>
 								<FormLabel className="flex flex-row justify-between">
 									<span className="text-[0.65rem] font-semibold  uppercase">Password</span>
-									<Link href={"/auth/forgot-password"} className={"font-semibold text-[0.65rem]  uppercase"}					>
+									<Link href={"/login/forgot"} className={"font-semibold text-[0.65rem]  uppercase"}					>
 										Forgot your password?
 									</Link>
 

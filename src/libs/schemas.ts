@@ -1,13 +1,23 @@
 
 import * as z from "zod";
 
+export const EmailSchema = z.object({
+    email: z.string()
+        .trim()
+        .min(5, "Email is too short")
+        .max(254, "Email is too long")
+        .email("Invalid email address")
+        .refine(email => email.includes("."), {
+            message: "Email must contain a domain extension"
+        }),
+});
+
 export const UserInfoSchema = z.object({
-    email: z.string().min(8).email("invalid email."),
     firstName: z.string().min(2, { message: "Required" }),
     lastName: z.string().min(2, { message: "Required" }),
     phone: z.string().min(11, { message: 'Invalid phone number' }),
     referralCode: z.string().optional()
-});
+}).merge(EmailSchema);
 
 export const PasswordSchema = z.object({
     password: z.string().min(8, { message: "password must be atleast 8 characters long." }).refine(
@@ -20,9 +30,8 @@ export const PasswordSchema = z.object({
 export const RegisterSchema = z.object({
     firstName: z.string().min(2, "Required"),
     lastName: z.string().min(2, "Required"),
-    email: z.string().email("Invalid email address"),
     phone: z.string().min(11, { message: 'Invalid phone number' }),
-}).merge(PasswordSchema);
+}).merge(PasswordSchema).merge(EmailSchema);
 
 
 export const AddCreditCardSchema = z.object({
@@ -44,15 +53,18 @@ export const VendorRegistrationSchema = z.object({
 }).merge(PasswordSchema).merge(UserInfoSchema);
 
 
-export const ForgotPasswordSchema = z.object({
-    email: z.string().min(8, "Email is required.").email("invalid email."),
-});
+
 
 export const ResetPasswordSchema = z.object({
-    email: z.string().min(8, "Email is required.").email("invalid email."),
     token: z.string(),
-    password_confirmation: z.string().min(8)
-}).merge(PasswordSchema);
+    confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters long")
+}).merge(PasswordSchema).refine(
+    (data) => data.password === data.confirmPassword,
+    {
+        message: "Passwords do not match",
+        path: ["confirmPassword"]
+    }
+);
 
 
 export const LocationSetupSchema = z.object({
