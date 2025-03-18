@@ -32,7 +32,6 @@ export async function POST(req: NextRequest) {
       redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt })
       const [firstName, lastName] = user.name.split(" ")
       const encodedUserId = encodeId(user.id)
-      console.log(encodedUserId)
       const emailSender = new EmailSender();
       await emailSender.send(user.email, 'Reset your password', ResetPasswordEmail, {
         ui: {

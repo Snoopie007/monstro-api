@@ -16,7 +16,6 @@ export async function POST(req: NextRequest) {
 
     try {
         const [token, encodedUserId] = rest.token.split("%2B")
-        console.log(token, encodedUserId)
         const userId = decodeId(encodedUserId)
         if (password !== confirmPassword) {
             return NextResponse.json({ error: "Passwords do not match" }, { status: 400 })
