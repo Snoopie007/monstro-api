@@ -30,6 +30,7 @@ export async function POST(req: Request, props: { params: Promise<RoleProps> }) 
     try {
         const role = await db.insert(roles).values({
             ...data,
+            guardName: "default",
             locationId: params.id
         }).returning({ id: roles.id })
         return NextResponse.json(role, { status: 200 })
