@@ -2,11 +2,11 @@
 
 import { db } from "@/db/db";
 import { staffs, users } from "@/db/schemas";
-import { EmailSender } from "@/libs/email";
 import { and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { MonstroData } from '@/libs/data';
+import { EmailSender } from "@/libs/server/emails";
 
 
 type StaffProps = {
@@ -20,7 +20,7 @@ export async function GET(req: Request, props: { params: Promise<StaffProps> }) 
             where: (staffsLocations, { eq }) => and(eq(staffsLocations.locationId, params.id)),
             with: {
                 staff: true,
-                roles: true                   
+                roles: true    
             }
         })
         return NextResponse.json(staffs, { status: 200 });
