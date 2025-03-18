@@ -31,8 +31,7 @@ export function NewCustomerChart() {
 
                         >
                             <CartesianGrid vertical={false} horizontal={false} />
-                            <XAxis
-                                dataKey="month"
+                            <XAxis dataKey="month"
                                 tickLine={true}
                                 axisLine={true}
                                 interval={10}
