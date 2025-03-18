@@ -103,8 +103,11 @@ abstract class BaseStripePayments {
         return res.data;
     }
 
-    async getInvoices(customerId: string, limit?: number) {
-        const res = await this._stripe.invoices.list({ customer: customerId, limit: limit || 10 });
+    async getInvoices(limit?: number) {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        const res = await this._stripe.invoices.list({ customer: this._customer, limit: limit || 10 });
         return res.data;
     }
 
