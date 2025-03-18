@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { eq } from 'drizzle-orm';
-import { roles } from '@/db/schemas';
+import { roleHasPermissions, roles } from '@/db/schemas';
 import { db } from '@/db/db';
 
 type RoleProps = {
@@ -25,14 +25,41 @@ export async function PUT(req: Request, props: { params: Promise<RoleProps> }) {
   const data = await req.json()
 
   try {
-
-    const role = await db.update(roles).set({
-      ...data,
-      locationId: params.id
-    }).where(eq(roles.id, params.rid)).returning({ id: roles.id })
-    return NextResponse.json(role, { status: 200 })
-  } catch (err) {
-    console.log(err)
-    return NextResponse.json({ error: err }, { status: 500 })
-  }
+         const [role] = await db.update(roles).set({
+            name: data.name,
+            guardName: "default",
+            locationId: params.id,
+            color: data.color,
+ 
+         }).where(eq(roles.id, params.rid)).returning({ id: roles.id })
+         
+         if (!role) {
+          return NextResponse.json({ error: "Role update failed" }, { status: 500 });
+        }
+ 
+         if(data.permission && data.permission.length >0)
+         {
+             const permission = await db.query.permissions.findMany({
+                 where:(permissions,{ inArray }) => inArray(permissions.name, data.permission.name)
+             })
+ 
+             const permissionIds = permission.map((permission)=>permission.id)
+ 
+             if(permissionIds.length > 0)
+             {
+                 await db.insert(roleHasPermissions).values(
+                     permissionIds.map((permissionId) => ({
+                         roleId: role.id,
+                         permissionId: permissionId,
+                     }))
+                 );
+                 
+             }
+         }
+         return NextResponse.json(role, { status: 200 })
+ 
+     } catch (err) {
+         console.log(err)
+         return NextResponse.json({ error: err }, { status: 500 })
+     }
 }

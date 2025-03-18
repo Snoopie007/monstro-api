@@ -1,8 +1,8 @@
 
 
 import { db } from "@/db/db";
-import { staffs, users } from "@/db/schemas";
-import { and, isNull } from "drizzle-orm";
+import { users } from "@/db/schemas";
+import { and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { MonstroData } from '@/libs/data';
