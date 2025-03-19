@@ -25,10 +25,14 @@ function formatPhoneNumber(phoneNumber: string): string {
 		? phoneNumber.replace(/[^0-9+]/g, '')
 		: `+${phoneNumber.replace(/[^0-9]/g, '')}`;
 }
+function generateOtp() {
+	return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 
 
 export {
 	formatPhoneNumber,
-	buildConflictUpdateColumns
+	buildConflictUpdateColumns,
+	generateOtp
 }

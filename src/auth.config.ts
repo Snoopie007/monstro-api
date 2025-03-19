@@ -4,6 +4,9 @@ import { db } from "./db/db";
 import { encodeId } from "./libs/server/sqids";
 import { SignJWT } from "jose";
 import bcrypt from "bcryptjs";
+import { getRedisClient } from "./libs/server/redis";
+import { isAfter } from "date-fns";
+
 
 class CustomLoginError extends CredentialsSignin {
 	constructor(code: string) {
@@ -14,17 +17,41 @@ class CustomLoginError extends CredentialsSignin {
 	}
 }
 
+async function validateToken(t: string, uid: number, type: string) {
+	const redis = getRedisClient();
+	const RedisKey = `loginToken:${uid}:${type}`;
+	const otp = await redis.get(RedisKey);
+	const [token, time] = otp?.toString().split("::") || [];
+
+	// Check if the token is expired (more than 30 minutes old)
+
+	if (!otp || token !== t) {
+		throw new CustomLoginError("Invalid token")
+	}
+
+	const thirtyMinutesInMs = 30 * 60 * 1000;
+	const tokenExpired = isAfter(new Date(), new Date(parseInt(time) * 1000 + thirtyMinutesInMs));
+
+
+	await redis.del(RedisKey);
+	if (tokenExpired) {
+		throw new CustomLoginError("Token expired")
+	}
+}
+
 
 export default {
 	providers: [
 		Credentials({
 			credentials: {
 				email: { label: "Email", type: "email" },
-				password: { label: "Password", type: "password" }
+				password: { label: "Password", type: "password" },
+				token: { label: "Token", type: "text" },
+				type: { label: "Type", type: "text" }
 			},
 			authorize: async (credentials) => {
 
-				if (!credentials || !credentials.email || !credentials.password) {
+				if (!credentials?.email || !credentials?.password || !credentials?.token || !credentials?.type) {
 					return null;
 				}
 
@@ -61,11 +88,12 @@ export default {
 
 					if (!user || !user.password) throw new CustomLoginError("No user found");
 
-					// const match = await bcrypt.compare(`${credentials.password}`, user.password);
-
 					if (!user) throw new CustomLoginError("User not found");
+
 					const match = await bcrypt.compare(credentials.password.toString(), user.password);
 					if (!match) throw new CustomLoginError("Invalid password or email.");
+
+					await validateToken(credentials.token.toString(), user.id, credentials.type.toString());
 					// Create a JWT token
 					const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
 					const jwt = await new SignJWT(user).setProtectedHeader({ alg: "HS256" }).setExpirationTime("1d").setIssuedAt().sign(secret);

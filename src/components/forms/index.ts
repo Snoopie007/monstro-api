@@ -9,3 +9,4 @@ export * from "../../hooks/use-file-uploader";
 export * from "./form";
 export * from "./tag-input";
 export * from "./label";
+export * from "./OTPInput";

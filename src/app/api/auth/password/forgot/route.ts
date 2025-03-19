@@ -10,96 +10,96 @@ const redis = getRedisClient();
 const expiresAt = 60 * 30 + 30; // 30 minutes and 30 seconds
 
 function generateResetToken() {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
-  for (let i = 0; i < 32; i++) {
-    token += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return token;
+	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	let token = '';
+	for (let i = 0; i < 32; i++) {
+		token += characters.charAt(Math.floor(Math.random() * characters.length));
+	}
+	return token;
 }
 
 export async function POST(req: NextRequest) {
-  const { email } = await req.json()
-  try {
-    const user = await findUser(email)
+	const { email } = await req.json()
+	try {
+		const user = await findUser(email)
 
-    const RedisKey = `reset:${user.id}`;
+		const RedisKey = `reset:${user.id}`;
 
-    const exists = await redis.exists(RedisKey);
-    const token = generateResetToken();
+		const exists = await redis.exists(RedisKey);
+		const token = generateResetToken();
 
-    if (!exists) {
-      redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt })
-      const [firstName, lastName] = user.name.split(" ")
-      const encodedUserId = encodeId(user.id)
-      const emailSender = new EmailSender();
-      await emailSender.send(user.email, 'Reset your password', ResetPasswordEmail, {
-        ui: {
-          btnText: "Reset Password",
-          btnUrl: `${req.nextUrl.origin}/login/password/reset/${token}+${encodedUserId}`
-        },
-        member: {
-          firstName,
-          lastName,
-          email
-        },
-        monstro: MonstroData
-      });
-    }
+		if (!exists) {
+			redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt })
+			const [firstName, lastName] = user.name.split(" ")
+			const encodedUserId = encodeId(user.id)
+			const emailSender = new EmailSender();
+			await emailSender.send(user.email, 'Reset your password', ResetPasswordEmail, {
+				ui: {
+					btnText: "Reset Password",
+					btnUrl: `${req.nextUrl.origin}/login/password/reset/${token}+${encodedUserId}`
+				},
+				member: {
+					firstName,
+					lastName,
+					email
+				},
+				monstro: MonstroData
+			});
+		}
 
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (err) {
-    return NextResponse.json({ err }, { status: 500 })
-  }
+		return NextResponse.json({ success: true }, { status: 200 });
+	} catch (err) {
+		return NextResponse.json({ err }, { status: 500 })
+	}
 }
 
 export async function PUT(req: NextRequest) {
-  const { email } = await req.json()
+	const { email } = await req.json()
 
-  try {
-    const user = await findUser(email)
-    const RedisKey = `reset:${user.id}`;
-    // Remove the old OTP
-    await redis.del(RedisKey);
+	try {
+		const user = await findUser(email)
+		const RedisKey = `reset:${user.id}`;
+		// Remove the old OTP
+		await redis.del(RedisKey);
 
-    // Generate a new OTP
-    const token = generateResetToken();
+		// Generate a new OTP
+		const token = generateResetToken();
 
-    // Store the new OTP in Redis
-    await redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt });
-    const encodedUserId = encodeId(user.id)
-    const [firstName, lastName] = user.name.split(" ")
-    const emailSender = new EmailSender();
-    await emailSender.send(user.email, 'Reset your password', ResetPasswordEmail, {
-      member: {
-        firstName,
-        lastName,
-        email
-      },
-      ui: {
-        btnText: "Reset Password",
-        btnUrl: `${req.nextUrl.origin}/auth/password/reset/${token}+${encodedUserId}`
-      },
-      monstro: MonstroData
-    });
+		// Store the new OTP in Redis
+		await redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt });
+		const encodedUserId = encodeId(user.id)
+		const [firstName, lastName] = user.name.split(" ")
+		const emailSender = new EmailSender();
+		await emailSender.send(user.email, 'Reset your password', ResetPasswordEmail, {
+			member: {
+				firstName,
+				lastName,
+				email
+			},
+			ui: {
+				btnText: "Reset Password",
+				btnUrl: `${req.nextUrl.origin}/auth/password/reset/${token}+${encodedUserId}`
+			},
+			monstro: MonstroData
+		});
 
-  } catch (error) {
-    console.log(error)
-    return NextResponse.json({ error }, { status: 500 })
-  }
+	} catch (error) {
+		console.log(error)
+		return NextResponse.json({ error }, { status: 500 })
+	}
 
-  return NextResponse.json({ success: true }, { status: 200 })
+	return NextResponse.json({ success: true }, { status: 200 })
 }
 
 async function findUser(email: string) {
-  if (!email) {
-    throw new Error("Email is required")
-  }
-  const user = await db.query.users.findFirst({
-    where: (user, { eq }) => eq(user.email, email)
-  })
-  if (!user) {
-    throw new Error("User not found")
-  }
-  return user
+	if (!email) {
+		throw new Error("Email is required")
+	}
+	const user = await db.query.users.findFirst({
+		where: (user, { eq }) => eq(user.email, email)
+	})
+	if (!user) {
+		throw new Error("User not found")
+	}
+	return user
 }

@@ -16,9 +16,6 @@ export async function POST(req: NextRequest) {
         if (user) {
             return NextResponse.json({ error: "User already exists" }, { status: 400 })
         }
-        // Format phone number (ToDo)
-        // const salt = await bcrypt.genSalt(10);
-        // const hashedPassword: string = await bcrypt.hash(data.password, salt);
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
         await db.transaction(async (tx) => {

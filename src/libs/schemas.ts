@@ -45,8 +45,11 @@ export const AddCreditCardSchema = z.object({
 
 
 export const LoginSchema = z.object({
+    token: z.string().min(6, "Invalid token."),
+    type: z.enum(["email", "sms"]).optional(),
     email: z.string().min(8, "Email is required.").email("invalid email."),
-}).merge(PasswordSchema);
+    password: z.string().min(8, "Password is required."),
+})
 
 export const VendorRegistrationSchema = z.object({
     confirmPassword: z.string().min(8),
