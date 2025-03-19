@@ -78,7 +78,9 @@ export default function VendorPaymentForm() {
 
         if (!elements || !stripe || !locationId) return;
         setLoading(true);
-        const toastRef = toast.loading("Processing payment...", { className: 'text-sm font-medium ', autoClose: 1000 });
+        const toastRef = toast.loading("Processing payment...", { className: 'text-sm font-medium ' });
+
+
         const cardElement = elements!.getElement(CardElement);
         try {
 
@@ -111,7 +113,8 @@ export default function VendorPaymentForm() {
                 toast.update(toastRef, {
                     render: "Payment successful",
                     type: "success",
-                    autoClose: 10,
+                    isLoading: false,
+                    autoClose: 100
                 });
                 await sleep(100)
                 router.push(`/dashboard/${locationId}`)
@@ -250,7 +253,7 @@ export default function VendorPaymentForm() {
                         "children:hidden": !loading
                     })}
                     onClick={form.handleSubmit(onSubmit)}
-                    disabled={loading || !stripe || !form.formState.isValid || !locationState.agreeToTerms || !validCard}
+                // disabled={loading || !stripe || !form.formState.isValid || !locationState.agreeToTerms || !validCard}
 
                 >
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

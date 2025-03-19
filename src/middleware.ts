@@ -81,7 +81,7 @@ export default auth(async (req) => {
 				return NextResponse.redirect(new URL("/onboarding", req.nextUrl.origin))
 			}
 
-			if (pathname === "/") {
+			if (pathname === "/" || publicPaths.includes(pathname)) {
 				const next = locations.find((loc: { status: string }) => loc.status === "active") || locations.find((loc: { status: string }) => loc.status === "incomplete")
 				return NextResponse.redirect(new URL(`/${next.status === "active" ? "dashboard" : "onboarding"}/${next.id}`, req.nextUrl.origin))
 			}

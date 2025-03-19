@@ -1,3 +1,5 @@
+import { MonstroPackage, MonstroPlan } from "@/types/vendor";
+
 const CountryCodes = [
     { name: "Canada", code: "CA", shortName: "CAD" },
     { name: 'United States', code: "US", shortName: "USA" },
@@ -125,11 +127,14 @@ const Industries = [
     "Tutoring",
     "Other"
 ]
-import { MonstroPackage, MonstroPlan } from "@/types/vendor";
 
+const IS_PRODUCTION = process.env.NODE_ENV === "production"
 
-const GrowthPaymentPlanId = "price_1R4SBoDePDUzIffACO41pu6i"
-const ScalePaymentPlanId = "price_1R4SAwDePDUzIffAuu9dm7Qi"
+const GROWTH_PLAN_ID = IS_PRODUCTION ? "price_1QZS9xDePDUzIffA00000000" : "price_1R4SBoDePDUzIffACO41pu6i"
+const SCALE_PLAN_ID = IS_PRODUCTION ? "price_1QZS9xDePDUzIffA00000000" : "price_1R4SAwDePDUzIffAuu9dm7Qi"
+const BASIC_PLAN_ID = IS_PRODUCTION ? "price_1QZS9xDePDUzIffA00000000" : "price_1R4SG5DePDUzIffAz3GU05uZ"
+const PREMIUM_PLAN_ID = IS_PRODUCTION ? "price_1QZS9xDePDUzIffA00000000" : "price_1R4UUNDePDUzIffArAlN6mq6"
+
 
 const packages: MonstroPackage[] = [
     {
@@ -165,7 +170,7 @@ const packages: MonstroPackage[] = [
                 length: 0,
                 interval: "mo.",
                 trial: 0,
-                priceId: GrowthPaymentPlanId,
+                priceId: GROWTH_PLAN_ID,
             },
             {
                 id: 2,
@@ -177,7 +182,7 @@ const packages: MonstroPackage[] = [
                 length: 10,
                 interval: "mo.",
                 trial: 30,
-                priceId: GrowthPaymentPlanId,
+                priceId: GROWTH_PLAN_ID,
             },
             {
                 id: 3,
@@ -189,7 +194,7 @@ const packages: MonstroPackage[] = [
                 length: 14,
                 interval: "mo.",
                 trial: 0,
-                priceId: GrowthPaymentPlanId,
+                priceId: GROWTH_PLAN_ID,
             }
 
         ]
@@ -231,7 +236,7 @@ const packages: MonstroPackage[] = [
                 length: 0,
                 trial: 0,
                 interval: "mo.",
-                priceId: ScalePaymentPlanId,
+                priceId: SCALE_PLAN_ID,
             },
             {
                 id: 5,
@@ -243,7 +248,7 @@ const packages: MonstroPackage[] = [
                 interval: "mo.",
                 discount: 0,
                 trial: 30,
-                priceId: ScalePaymentPlanId,
+                priceId: SCALE_PLAN_ID,
             },
             {
                 id: 6,
@@ -255,7 +260,7 @@ const packages: MonstroPackage[] = [
                 length: 14,
                 interval: "mo.",
                 trial: 0,
-                priceId: ScalePaymentPlanId,
+                priceId: SCALE_PLAN_ID,
             }
 
         ]
@@ -320,7 +325,7 @@ const plans: MonstroPlan[] = [
         ],
         description: "Everything in pay as you go + 1x AI Bot + Monstro Marketing Suite with basic support (email & live chat only). Pay only for transactions.",
         note: "Stripe transaction fees (2.9% + $0.30) apply on top of the 2%",
-        priceId: "price_1R4S1jDePDUzIffAQ2XhWDqP"
+        priceId: BASIC_PLAN_ID
     },
     {
         id: 3,
@@ -331,7 +336,6 @@ const plans: MonstroPlan[] = [
         aiBots: 10,
         threshold: 4,
         benefits: [
-
             ...BaseBenefits,
             {
                 name: "10x AI Bots",
@@ -348,7 +352,7 @@ const plans: MonstroPlan[] = [
         ],
         description: `No additional transaction fees plus get full access to Monstro marketing suite, 10x AI Bots, and premium support.`,
         note: "No additional transaction fees but Stripe transaction fees (2.9% + $0.30) still apply.",
-        priceId: "price_1QuLbCDePDUzIffAu0b7ubYZ"
+        priceId: PREMIUM_PLAN_ID
     }
 ]
 

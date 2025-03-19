@@ -49,6 +49,7 @@ export default async function RootLayout({
                         position="top-right"
                         hideProgressBar={false}
                         closeOnClick
+                        stacked={true}
                     />
                 </body>
 
