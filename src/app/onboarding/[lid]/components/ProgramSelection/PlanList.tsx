@@ -47,7 +47,7 @@ export default function PlanList() {
                                 {plan.name}
                             </h2>
                             <span className="text-xs font-semibold bg-indigo-500 text-white px-2 py-1 rounded-sm">
-                                ${plan.price}/{plan.interval}
+                                ${plan.price}{plan.id !== 1 && `/${plan.threshold} ${plan.interval}`}
                             </span>
                         </div>
                         <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: plan.description }} />

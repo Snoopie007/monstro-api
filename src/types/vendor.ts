@@ -47,12 +47,14 @@ export type MonstroPlan = {
     name: string;
     price: number;
     usagePercent: number;
+    threshold: number;
     interval: string;
     benefits: { name: string, description?: string }[];
     description: string;
     priceId: string | undefined;
     aiBots: number;
     note?: string;
+    coupon?: string;
 }
 
 

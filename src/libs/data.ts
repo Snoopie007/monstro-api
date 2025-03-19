@@ -128,6 +128,8 @@ const Industries = [
 import { MonstroPackage, MonstroPlan } from "@/types/vendor";
 
 
+const GrowthPaymentPlanId = "price_1R4SBoDePDUzIffACO41pu6i"
+const ScalePaymentPlanId = "price_1R4SAwDePDUzIffAuu9dm7Qi"
 
 const packages: MonstroPackage[] = [
     {
@@ -163,19 +165,19 @@ const packages: MonstroPackage[] = [
                 length: 0,
                 interval: "mo.",
                 trial: 0,
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
+                priceId: GrowthPaymentPlanId,
             },
             {
                 id: 2,
                 name: "500 Down",
                 description: "$500 down, $299 for 10 months.",
                 downPayment: 500,
-                monthlyPayment: 299,
+                monthlyPayment: 300,
                 discount: 0,
                 length: 10,
                 interval: "mo.",
                 trial: 30,
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
+                priceId: GrowthPaymentPlanId,
             },
             {
                 id: 3,
@@ -183,11 +185,11 @@ const packages: MonstroPackage[] = [
                 description: "Pay 0 down, $299 for 14 months.",
                 downPayment: 0,
                 discount: 0,
-                monthlyPayment: 299,
+                monthlyPayment: 300,
                 length: 14,
                 interval: "mo.",
                 trial: 0,
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
+                priceId: GrowthPaymentPlanId,
             }
 
         ]
@@ -225,23 +227,23 @@ const packages: MonstroPackage[] = [
                 description: "Pay in full today for a $1,000 discount.",
                 downPayment: 6000,
                 discount: 1000,
-                monthlyPayment: 0,
+                monthlyPayment: 500,
                 length: 0,
                 trial: 0,
                 interval: "mo.",
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
+                priceId: ScalePaymentPlanId,
             },
             {
                 id: 5,
                 name: "1000 Down",
                 description: "1000 down, $499 for 10 months.",
                 downPayment: 1000,
-                monthlyPayment: 499,
+                monthlyPayment: 500,
                 length: 10,
                 interval: "mo.",
                 discount: 0,
                 trial: 30,
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
+                priceId: ScalePaymentPlanId,
             },
             {
                 id: 6,
@@ -253,7 +255,7 @@ const packages: MonstroPackage[] = [
                 length: 14,
                 interval: "mo.",
                 trial: 0,
-                priceId: "price_1NVhoxDePDUzIffAPzStEiBA",
+                priceId: ScalePaymentPlanId,
             }
 
         ]
@@ -288,7 +290,8 @@ const plans: MonstroPlan[] = [
         name: "Pay as you go",
         price: 0,
         usagePercent: 2,
-        interval: "mo.",
+        interval: "week",
+        threshold: 4,
         aiBots: 0,
         benefits: BaseBenefits,
         description: `Get full access to Monstro member management free. Pay only for 2% of transactions you process with Monstro.`,
@@ -299,8 +302,9 @@ const plans: MonstroPlan[] = [
         id: 2,
         name: "Basic",
         price: 99,
-        interval: "mo.",
+        interval: "week",
         usagePercent: 2,
+        threshold: 4,
         aiBots: 1,
         benefits: [
             ...BaseBenefits,
@@ -316,15 +320,16 @@ const plans: MonstroPlan[] = [
         ],
         description: "Everything in pay as you go + 1x AI Bot + Monstro Marketing Suite with basic support (email & live chat only). Pay only for transactions.",
         note: "Stripe transaction fees (2.9% + $0.30) apply on top of the 2%",
-        priceId: "price_1QuLaWDePDUzIffAo7JtMv5i"
+        priceId: "price_1R4S1jDePDUzIffAQ2XhWDqP"
     },
     {
         id: 3,
         name: "Premium",
         price: 299,
-        interval: "mo.",
+        interval: "week",
         usagePercent: 0,
         aiBots: 10,
+        threshold: 4,
         benefits: [
 
             ...BaseBenefits,

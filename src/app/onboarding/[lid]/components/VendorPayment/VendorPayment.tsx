@@ -4,7 +4,6 @@ import { getStripe } from '@/libs/client/stripe';
 import { useEffect, useState } from 'react';
 import { formatAmountForDisplay } from '@/libs/utils';
 import { useOnboarding } from '../../provider/OnboardingProvider';
-import { useSession } from 'next-auth/react';
 import { MonstroPlan, MonstroPackage, PackagePaymentPlan } from '@/types';
 import VendorPaymentForm from './VendorPaymentForm';
 import { plans, packages } from "@/libs/data";

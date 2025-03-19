@@ -111,9 +111,9 @@ export default function VendorPaymentForm() {
                 toast.update(toastRef, {
                     render: "Payment successful",
                     type: "success",
-                    isLoading: true,
-                    autoClose: 100,
+                    autoClose: 10,
                 });
+                await sleep(100)
                 router.push(`/dashboard/${locationId}`)
             } else {
                 setLoading(false);

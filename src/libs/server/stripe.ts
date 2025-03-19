@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { MemberPlan, MonstroPlan, PackagePaymentPlan } from "@/types";
-import { isAfter } from "date-fns";
+import { isAfter, addMonths } from "date-fns";
 import Stripe from "stripe";
 
 type Customer = {
@@ -36,7 +36,7 @@ abstract class BaseStripePayments {
             email: customer.email,
             phone: customer.phone,
             ...(token && { source: token }),
-            ...(metadata && { metadata })
+            metadata: metadata || undefined
         });
         this.setCustomer(c.id)
         return c
@@ -120,6 +120,18 @@ abstract class BaseStripePayments {
     }
 }
 
+interface VendorPaymentIntentOptions {
+    authorizeOnly?: boolean;
+    statement?: string;
+    description?: string;
+    metadata?: Record<string, any>;
+}
+
+interface VendorPaymentIntentResponse {
+    clientSecret: string;
+    paymentIntent: Stripe.PaymentIntent;
+}
+
 class VendorStripePayments extends BaseStripePayments {
     constructor() {
         super(process.env.STRIPE_SECRET_KEY!);
@@ -133,16 +145,17 @@ class VendorStripePayments extends BaseStripePayments {
         });
     }
 
-    async createPaymentIntent(
-        amount: number,
-        customerId: string,
-        cardId: string | undefined,
-        options?: {
-            authorizeOnly?: boolean,
-            statement?: string,
-            description?: string
+    /**
+     * Create a payment intent
+     * @param amount - The amount to charge
+     * @param cardId - The card id to charge
+     * @param options - The options for the payment intent
+     * @returns The client secret for the payment intent
+     */
+    async createPaymentIntent(amount: number, cardId: string | undefined, options?: VendorPaymentIntentOptions): Promise<VendorPaymentIntentResponse> {
+        if (!this._customer) {
+            throw new Error("Customer not set");
         }
-    ): Promise<{ clientSecret: string }> {
         const option: Stripe.PaymentIntentCreateParams = {
             amount,
             description: options?.description,
@@ -150,71 +163,90 @@ class VendorStripePayments extends BaseStripePayments {
             currency: "usd",
             confirm: true,
             capture_method: options?.authorizeOnly ? "manual" : "automatic",
-            customer: customerId,
+            customer: this._customer,
             setup_future_usage: "off_session",
             statement_descriptor: "Monstro",
             ...(cardId && { payment_method: cardId }),
+            metadata: options?.metadata || undefined,
             return_url: "https://mymonstro.com",
         };
 
         const paymentIntent = await this._stripe.paymentIntents.create(option);
-        return { clientSecret: paymentIntent.client_secret as string };
+        return { clientSecret: paymentIntent.client_secret as string, paymentIntent: paymentIntent as Stripe.PaymentIntent };
     }
 
-    async createPaymentPlan(paymentPlan: PackagePaymentPlan, customer: string, vendorId: string, locationId: string) {
-        const items = [{ price: paymentPlan.priceId }];
-        const today = new Date();
-        const monthsInMs = paymentPlan.length * 30.44 * 24 * 60 * 60 * 1000;
-        const trialInMs = paymentPlan.trial * 24 * 60 * 60 * 1000;
-        const cancelDate = new Date(today.getTime() + monthsInMs + trialInMs);
-
-        const options: Stripe.SubscriptionCreateParams = {
-            customer,
-            description: `${paymentPlan.length} months payment plan`,
-            items,
-            cancel_at: Math.floor(cancelDate.getTime() / 1000),
-            trial_period_days: paymentPlan.trial,
-            collection_method: 'charge_automatically',
-            metadata: {
-                vendorId: vendorId
-            }
-        };
-
-        return this._stripe.subscriptions.create(options);
-    }
-
-    async createSubscription(plan: MonstroPlan, customer: string, vendorId: string, locationId: string, trial?: number) {
-        const options: Stripe.SubscriptionCreateParams = {
-            customer,
-            description: `Monstro ${plan.name} Subscription`,
-            items: [{ price: plan.priceId }],
-            metadata: {
-                vendorId: vendorId,
-                locationId: locationId
-            }
-        };
-        return this._stripe.subscriptions.create(options);
-    }
-
-    createSubSchedule(priceId: string, startDate: Date, endDate: Date, metadata: Record<string, any>) {
+    async createPaymentPlan(paymentPlan: PackagePaymentPlan, metadata: Record<string, any>) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
+
+        const options: Stripe.SubscriptionCreateParams = {
+            customer: this._customer,
+            description: `${paymentPlan.length} months payment plan`,
+            items: [{ price: paymentPlan.priceId }],
+            trial_period_days: paymentPlan.trial,
+            collection_method: 'charge_automatically',
+            metadata
+        };
+
+        return this._stripe.subscriptions.create(options);
+    }
+
+    async createSubscription(plan: MonstroPlan, metadata: Record<string, any>, trial?: number) {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        const options: Stripe.SubscriptionCreateParams = {
+            customer: this._customer,
+            description: `Monstro ${plan.name} Subscription`,
+            items: [{ price: plan.priceId }],
+            metadata
+        };
+        return this._stripe.subscriptions.create(options);
+    }
+
+    async createSubSchedule(plan: PackagePaymentPlan, metadata: Record<string, any>) {
+
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        const today = new Date();
+        const startDate = addMonths(today, plan.trial > 0 ? 1 : 0);
+
         const options: Stripe.SubscriptionScheduleCreateParams = {
             customer: this._customer,
-            start_date: new Date(startDate).getTime() / 1000,
+            start_date: plan.trial > 0 ? Math.floor(startDate.getTime() / 1000) : "now",
             end_behavior: "release",
             phases: [{
-                items: [{ price: priceId }],
+                items: [{ price: plan.priceId }],
+                iterations: plan.length,
                 billing_cycle_anchor: 'automatic',
-                ...(endDate && { end_date: new Date(endDate).getTime() / 1000 }),
                 currency: 'usd',
                 collection_method: 'charge_automatically',
-
+                metadata
+            }, {
+                items: [{ price: "price_1R4SG5DePDUzIffAz3GU05uZ" }],
+                billing_cycle_anchor: 'automatic',
+                currency: 'usd',
+                collection_method: 'charge_automatically',
+                metadata
             }],
             metadata
         }
         return this._stripe.subscriptionSchedules.create(options);
+    }
+
+    async createGHLSubSchedule(metadata: Record<string, any>) {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        const options: Stripe.SubscriptionCreateParams = {
+            customer: this._customer,
+            description: `Monstro Marketing Suite Subscription`,
+            items: [{ price: "price_1R4S9xDePDUzIffAFUKu0ROH", discounts: [{ coupon: "7Yt7dfGs" }] }],
+            metadata
+        };
+        return this._stripe.subscriptions.create(options);
     }
 }
 
