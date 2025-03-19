@@ -9,9 +9,6 @@ const nextConfig: NextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  sassOptions: {
-    silenceDeprecations: ['legacy-js-api'],
-  },
   experimental: {
     largePageDataBytes: 128 * 1024, // 128KB
   },
