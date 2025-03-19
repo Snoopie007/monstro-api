@@ -3,7 +3,7 @@
 import { createContext, useReducer, ReactElement, useCallback, useContext, ReactNode } from "react";
 
 import { LocationState } from "@/types/location";
-import { MonstroLegal } from "@/libs/server/LegalMDX";
+import { MonstroLegal } from "@/libs/server/MDXParse";
 type StateType = {
     locationState: LocationState;
     tos: MonstroLegal | undefined;

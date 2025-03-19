@@ -1,8 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { and, eq, sql } from 'drizzle-orm';
-import { getTodaysAttendanceStatus } from '@/libs/server/db';
+import { and } from 'drizzle-orm';
 import { authenticateMember } from '../utils';
 type MemberReservationProps = {
     params: Promise<{ id: number, rid: number }>

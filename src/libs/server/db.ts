@@ -1,16 +1,6 @@
 import { db } from "@/db/db";
-import dayjs from "dayjs";
 import { and, SQL, sql, getTableColumns } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
-
-async function getTodaysAttendanceStatus(rid: number) {
-	// Check if attendance is marked today
-	const todayDate = dayjs().format("YYYY-MM-DD");
-	const attendance = await db.query.attendances.findFirst({
-		where: (attendances, { eq, sql }) => and(sql`DATE(check_in_time) = ${todayDate}`, eq(attendances.reservationId, Number(rid)))
-	});
-	return !!attendance;
-}
 
 
 const buildConflictUpdateColumns = <
@@ -39,7 +29,6 @@ function formatPhoneNumber(phoneNumber: string): string {
 
 
 export {
-	getTodaysAttendanceStatus,
 	formatPhoneNumber,
 	buildConflictUpdateColumns
 }
