@@ -37,7 +37,7 @@ export async function POST(req: Request) {
         if (!vendor) {
             throw new Error("Vendor not found")
         }
-        await stripe.createCustomer({
+        const customer = await stripe.createCustomer({
             firstName: vendor.firstName,
             lastName: vendor.lastName!,
             email: vendor.email!,
@@ -69,26 +69,26 @@ export async function POST(req: Request) {
         }
 
         const today = new Date();
-        // await db.transaction(async (tx) => {
-        //     await tx.update(locations).set({
-        //         updated: today
-        //     }).where(eq(locations.id, decodedLocationId))
+        await db.transaction(async (tx) => {
+            await tx.update(locations).set({
+                updated: today
+            }).where(eq(locations.id, lid))
 
-        //     const { created, ...rest } = state
-        //     await tx.update(locationState).set({
-        //         ...rest,
-        //         status: "active",
-        //         usagePercent: plan?.usagePercent,
-        //         startDate: today,
-        //         lastRenewalDate: today,
-        //         updated: today,
-        //     }).where(eq(locationState.locationId, decodedLocationId))
+            const { created, ...rest } = state
+            await tx.update(locationState).set({
+                ...rest,
+                status: "active",
+                usagePercent: plan?.usagePercent,
+                startDate: today,
+                lastRenewalDate: today,
+                updated: today,
+            }).where(eq(locationState.locationId, lid))
 
-        //     await tx.update(vendors).set({
-        //         stripeCustomerId: customer.id,
-        //         updated: today
-        //     }).where(eq(vendors.id, vendorId))
-        // })
+            await tx.update(vendors).set({
+                stripeCustomerId: customer.id,
+                updated: today
+            }).where(eq(vendors.id, vendorId))
+        })
 
         return NextResponse.json({ success: true }, { status: 200 })
     } catch (err) {
