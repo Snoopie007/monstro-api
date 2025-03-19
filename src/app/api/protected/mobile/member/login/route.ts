@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/db/db"
 import { SignJWT } from "jose"
-import { compareHashedPassword } from "@/libs/server/db"
+import bcrypt from "bcryptjs";
 // This should be replaced with your actual user retrieval logic
 async function getUser(email: string) {
   const user = await db.query.users.findFirst({
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    const match = await compareHashedPassword(`${password}`, user.password)
+    const match = await bcrypt.compare(`${password}`, user.password)
     if (!match) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
 
     // Create a JWT token
