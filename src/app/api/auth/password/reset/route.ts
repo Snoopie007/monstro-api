@@ -3,12 +3,13 @@ import { db } from "@/db/db";
 import { users } from "@/db/schemas";
 import { ResetSuccessEmail } from "@/templates/emails";
 import { MonstroData } from "@/libs/data";
-import { hashPassword } from "@/libs/server/db";
 import { EmailSender } from "@/libs/server/emails";
 import { decodeId } from "@/libs/server/sqids";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { getRedisClient } from "@/libs/server/redis";
+import bcrypt from "bcryptjs";
+
 const redis = getRedisClient();
 
 export async function POST(req: NextRequest) {
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Token expired" }, { status: 400 })
         }
 
-        const hashedPassword = await hashPassword(password)
+        const hashedPassword = await bcrypt.hash(password, 10)
         await db.update(users).set({
             password: hashedPassword
         }).where(eq(users.id, user.id))

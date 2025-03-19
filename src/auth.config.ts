@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { db } from "./db/db";
 import { encodeId } from "./libs/server/sqids";
 import { SignJWT } from "jose";
-import { compareHashedPassword } from "./libs/server/db";
+import bcrypt from "bcryptjs";
 
 class CustomLoginError extends CredentialsSignin {
 	constructor(code: string) {
@@ -64,7 +64,7 @@ export default {
 					// const match = await bcrypt.compare(`${credentials.password}`, user.password);
 
 					if (!user) throw new CustomLoginError("User not found");
-					const match = await compareHashedPassword(credentials.password.toString(), user.password);
+					const match = await bcrypt.compare(credentials.password.toString(), user.password);
 					if (!match) throw new CustomLoginError("Invalid password or email.");
 					// Create a JWT token
 					const secret = new TextEncoder().encode(process.env.AUTH_SECRET);

@@ -2,7 +2,8 @@ import { db } from "@/db/db";
 
 import { NextRequest, NextResponse } from "next/server";
 import { users, vendors } from "@/db/schemas";
-import { formatPhoneNumber, hashPassword } from "@/libs/server/db";
+import { formatPhoneNumber } from "@/libs/server/db";
+import bcrypt from "bcryptjs";
 
 
 export async function POST(req: NextRequest) {
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
         // const salt = await bcrypt.genSalt(10);
         // const hashedPassword: string = await bcrypt.hash(data.password, salt);
 
-        const hashedPassword = await hashPassword(data.password);
+        const hashedPassword = await bcrypt.hash(data.password, 10);
         await db.transaction(async (tx) => {
             const [{ id }] = await tx.insert(users).values({
                 name: `${data.firstName} ${data.lastName}`,
