@@ -1,12 +1,13 @@
-import { CameraIcon, Trash2Icon, UploadCloudIcon } from "lucide-react";
-import React, { useRef } from 'react'
+'use client'
+import { CameraIcon } from "lucide-react";
+import React, { useRef, useState } from 'react'
 import Image from "next/image";
-import { Button } from "@/components/ui";
+import { Button, Card, CardFooter } from "@/components/ui";
 import { tryCatch } from "@/libs/utils";
 
-export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: string, setLogoUrl: Function, locationId: number }) {
+export default function CompanyLogo({ logo, locationId }: { logo: string | null, locationId: number }) {
     const fileRef = useRef<HTMLInputElement | null>(null)
-
+    const [loading, setLoading] = useState(false);
     async function uploadLogo() {
         const file = fileRef.current?.files?.[0]
         if (!file) return;
@@ -23,7 +24,6 @@ export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: st
         )
         if (error || !result) throw error;
         const data = await result.json();
-        setLogoUrl(data.url);
     }
 
     const LogoUploadInfo = () => (
@@ -36,26 +36,27 @@ export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: st
     )
 
     return (
-        <div className="border-b pb-4 mb-4">
+        <Card className="rounded-sm bg-foreground/5 border-foreground/10">
             <input type='file' ref={fileRef} onInput={uploadLogo} className='hidden' />
 
-            <div className="flex flex-row gap-6 items-center">
+            <div className="flex flex-row gap-10 items-center p-6">
                 {logo ? (
                     <>
-                        <div className='avatar group shrink relative items-end flex'>
-                            <Image src={logo} width={100} height={100} className="aspect-square bg-gray-200 rounded-full" priority={true} alt='company logo' />
-                        </div>
                         <div className="flex-1 flex flex-col gap-3">
                             <LogoUploadInfo />
                             <div className="flex gap-2">
                                 <Button variant="outline" size="xs" onClick={() => fileRef.current?.click()}>
-                                    <UploadCloudIcon size={16} className='mr-2' /> Upload
+                                    Upload
                                 </Button>
-                                <Button variant="destructive" size="xs" onClick={() => setLogoUrl("")}>
-                                    <Trash2Icon size={16} className='mr-2' /> Remove
+                                <Button variant="destructive" size="xs">
+                                    Remove
                                 </Button>
                             </div>
                         </div>
+                        <div className='avatar group shrink relative items-end flex'>
+                            <Image src={logo} width={100} height={100} className="aspect-square bg-gray-200 rounded-sm" priority={true} alt='company logo' />
+                        </div>
+
                     </>
                 ) : (
                     <>
@@ -69,6 +70,12 @@ export default function CompanyLogo({ logo, setLogoUrl, locationId }: { logo: st
                     </>
                 )}
             </div>
-        </div>
+            <CardFooter className="flex justify-end border-t px-6 py-3 border-foreground/10">
+                <Button variant="foreground" size="sm">
+                    Save
+                </Button>
+
+            </CardFooter>
+        </Card>
     )
 }

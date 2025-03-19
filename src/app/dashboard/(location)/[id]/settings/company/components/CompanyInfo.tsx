@@ -97,7 +97,7 @@ export default function CompanyInfoForm({ location }: { location: Location }) {
                     <CardTitle className="text-lg">General Information</CardTitle>
                 </CardHeader>
                 <div className="px-4 py-6">
-                    <CompanyLogo logo={logoUrl} setLogoUrl={setLogoUrl} locationId={location.id} />
+
                     <Form {...form}>
                         <form className="space-y-3">
                             <input type="hidden" name="logo" value={logoUrl} />

@@ -38,7 +38,8 @@ export type PackagePaymentPlan = {
     interval: string;
     discount: number;
     trial: number;
-    priceId: string;
+
+    priceId: string | undefined;
 }
 
 export type MonstroPlan = {
@@ -49,7 +50,8 @@ export type MonstroPlan = {
     interval: string;
     benefits: { name: string, description?: string }[];
     description: string;
-    priceId: string;
+    priceId: string | undefined;
+    aiBots: number;
     note?: string;
 }
 
