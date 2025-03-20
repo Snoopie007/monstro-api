@@ -1,35 +1,34 @@
 'use client'
-import { CameraIcon, Loader2 } from "lucide-react";
-import React, { useRef, useState } from 'react'
-import Image from "next/image";
+import { Loader2 } from "lucide-react";
+import React, { useState } from 'react'
 import { Button, Card, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui";
 import { Location } from "@/types";
 import { cn, tryCatch } from "@/libs/utils";
-import { z } from "zod";
 import { toast } from "react-toastify";
-import { Input } from "@/components/forms";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
+import { Industries, TimeZones } from "@/libs/data";
 
 export default function CompanyLogo({ location }: { location: Location }) {
-    const [name, setName] = useState(location.name);
+    const [industry, setIndustry] = useState(location.industry);
     const [loading, setLoading] = useState(false);
 
 
     async function update() {
-        if (!name || name === location.name) return;
+        if (!industry || industry === location.industry) return;
         setLoading(true);
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${location.id}/update`, {
                 method: "POST",
-                body: JSON.stringify({ name })
+                body: JSON.stringify({ industry })
             })
         )
         setLoading(false);
         if (error || !result || !result.ok) {
-            toast.error("Failed to update company name");
+            toast.error("Failed to update timezone");
             return;
         }
         const data = await result.json();
-        setName(data.name);
+        setIndustry(data.industry);
     }
 
 
@@ -39,13 +38,25 @@ export default function CompanyLogo({ location }: { location: Location }) {
 
             <div className="p-6 space-y-4">
                 <CardHeader className="p-0 space-y-2">
-                    <CardTitle className="text-lg">Friendly Business Name</CardTitle>
+                    <CardTitle className="text-lg">Industry</CardTitle>
                     <CardDescription>
-                        This is the name that will be displayed to the public.
+                        This is the industry that will be used to display the industry in the location.
                     </CardDescription>
                 </CardHeader>
-                <Input type="text" className="rounded-sm w-60" placeholder="Friendly Business Name"
-                    value={name} onChange={(e) => setName(e.target.value)} />
+                <Select onValueChange={setIndustry} value={industry ?? undefined} >
+
+                    <SelectTrigger className="rounded-sm w-60">
+                        <SelectValue placeholder="Select your industry" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                        {Industries.map((industry, index) => (
+                            <SelectItem key={index} value={industry} >
+                                {industry}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
             <CardFooter className="flex justify-end border-t px-6 py-3 border-foreground/10">
                 <Button variant="foreground" size="sm" disabled={loading} onClick={update}

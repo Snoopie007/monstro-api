@@ -1,17 +1,9 @@
 import { z } from "zod";
 
-export const CompanyInfoSchema = z.object({
-    name: z.string(),
-    legalName: z.string().optional(),
-    email: z.string().email("invalid email."),
-    phone: z.string(),
-    industry: z.string(),
-    logoUrl: z.string(),
-    website: z.string(),
-    address: z.string(),
-    city: z.string(),
-    state: z.string(),
-    postalCode: z.string(),
-    country: z.string(),
-    timezone: z.string().min(1, "Timezone is required"),
+export const CompanyAddressSchema = z.object({
+    address: z.string().min(1, "Address is required"),
+    city: z.string().min(1, "City is required"),
+    state: z.string().min(1, "State is required"),
+    postalCode: z.string().min(1, "Postal code is required"),
+    country: z.string().min(1, "Country is required"),
 });
