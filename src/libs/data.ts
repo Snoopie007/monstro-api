@@ -130,9 +130,9 @@ const Industries = [
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production"
 
-const GROWTH_PLAN_ID = IS_PRODUCTION ? "price_1QZS9xDePDUzIffA00000000" : "price_1R4SBoDePDUzIffACO41pu6i"
-const SCALE_PLAN_ID = IS_PRODUCTION ? "price_1QZS9xDePDUzIffA00000000" : "price_1R4SAwDePDUzIffAuu9dm7Qi"
-const BASIC_PLAN_ID = IS_PRODUCTION ? "price_1QZS9xDePDUzIffA00000000" : "price_1R4SG5DePDUzIffAz3GU05uZ"
+const GROWTH_PLAN_ID = IS_PRODUCTION ? "price_1R4WXrDePDUzIffAoH2vxWKS" : "price_1R4SBoDePDUzIffACO41pu6i"
+const SCALE_PLAN_ID = IS_PRODUCTION ? "price_1R4WYJDePDUzIffAHbhu59ag" : "price_1R4SAwDePDUzIffAuu9dm7Qi"
+const BASIC_PLAN_ID = IS_PRODUCTION ? "price_1R4WeVDePDUzIffAZQPObJhE" : "price_1R4SG5DePDUzIffAz3GU05uZ"
 const PREMIUM_PLAN_ID = IS_PRODUCTION ? "price_1QZS9xDePDUzIffA00000000" : "price_1R4UUNDePDUzIffArAlN6mq6"
 
 
@@ -175,7 +175,7 @@ const packages: MonstroPackage[] = [
             {
                 id: 2,
                 name: "500 Down",
-                description: "$500 down, $299 for 10 months.",
+                description: "$500 down, $300 for 10 months.",
                 downPayment: 500,
                 monthlyPayment: 300,
                 discount: 0,
@@ -187,7 +187,7 @@ const packages: MonstroPackage[] = [
             {
                 id: 3,
                 name: "0 Down",
-                description: "Pay 0 down, $299 for 14 months.",
+                description: "Pay 0 down, $300 for 14 months.",
                 downPayment: 0,
                 discount: 0,
                 monthlyPayment: 300,
@@ -241,7 +241,7 @@ const packages: MonstroPackage[] = [
             {
                 id: 5,
                 name: "1000 Down",
-                description: "1000 down, $499 for 10 months.",
+                description: "1000 down, $500 for 10 months.",
                 downPayment: 1000,
                 monthlyPayment: 500,
                 length: 10,
@@ -253,10 +253,10 @@ const packages: MonstroPackage[] = [
             {
                 id: 6,
                 name: "0 Down",
-                description: "Pay 0 down, $499 for 14 months.",
+                description: "Pay 0 down, $500 for 14 months.",
                 downPayment: 0,
                 discount: 0,
-                monthlyPayment: 499,
+                monthlyPayment: 500,
                 length: 14,
                 interval: "mo.",
                 trial: 0,

@@ -212,7 +212,7 @@ class VendorStripePayments extends BaseStripePayments {
         }
         const today = new Date();
         const startDate = addMonths(today, plan.trial > 0 ? 1 : 0);
-
+        const price = process.env.NODE_ENV === "production" ? "price_1R4WeVDePDUzIffAZQPObJhE" : "price_1R4SG5DePDUzIffAz3GU05uZ"
         const options: Stripe.SubscriptionScheduleCreateParams = {
             customer: this._customer,
             start_date: plan.trial > 0 ? Math.floor(startDate.getTime() / 1000) : "now",
@@ -225,7 +225,7 @@ class VendorStripePayments extends BaseStripePayments {
                 collection_method: 'charge_automatically',
                 metadata
             }, {
-                items: [{ price: "price_1R4SG5DePDUzIffAz3GU05uZ" }],
+                items: [{ price }],
                 billing_cycle_anchor: 'automatic',
                 currency: 'usd',
                 collection_method: 'charge_automatically',
@@ -237,13 +237,15 @@ class VendorStripePayments extends BaseStripePayments {
     }
 
     async createGHLSubSchedule(metadata: Record<string, any>) {
+        const price = process.env.NODE_ENV === "production" ? "price_1R4WblDePDUzIffAvMQrZRFE" : "price_1R4S9xDePDUzIffAFUKu0ROH"
+        const coupon = process.env.NODE_ENV === "production" ? "kQcIf0sW" : "7Yt7dfGs"
         if (!this._customer) {
             throw new Error("Customer not set");
         }
         const options: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
             description: `Monstro Marketing Suite Subscription`,
-            items: [{ price: "price_1R4S9xDePDUzIffAFUKu0ROH", discounts: [{ coupon: "7Yt7dfGs" }] }],
+            items: [{ price, discounts: [{ coupon }] }],
             metadata
         };
         return this._stripe.subscriptions.create(options);
