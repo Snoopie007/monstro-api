@@ -63,7 +63,7 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
                 <Button
                     variant="foreground"
                     size="sm"
-                    disabled={loading}
+                    disabled={loading || !value || value === currentValue}
                     onClick={update}
                     className={cn('children:hidden', loading && 'children:block')}
                 >

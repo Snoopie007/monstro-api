@@ -12,11 +12,6 @@ import SupportMenu from './SupportMenu';
 import UserMenu from './UserMenu';
 import { Icon } from '@/components/icons';
 import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbList,
-    BreadcrumbSeparator,
-    BreadcrumbLink,
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
@@ -118,37 +113,7 @@ function TopNav({ locationId }: { locationId: string }) {
                 <div className={cn('logo  flex flex-row ')}>
                     <Image src='/images/monstro-icon.webp' alt='' width={24} height={24} />
                 </div>
-                <Breadcrumb>
-                    <BreadcrumbList >
-                        <BreadcrumbItem>
-                            <LocationSelect locationId={locationId} />
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator>
-                            /
-                        </BreadcrumbSeparator>
-                        <BreadcrumbItem>
-                            <BreadcrumbLink href={`/dashboard/${locationId}`} className='py-1 text-xs px-2 hover:bg-accent rounded-sm'>
-                                Dashboard
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        {currentPath.slice(2).map((segment, index) => {
-                            const href = `/${currentPath.slice(0, index + 3).join('/')}`;
-                            return (
-                                <React.Fragment key={index}>
-                                    <BreadcrumbSeparator>
-                                        /
-                                    </BreadcrumbSeparator>
-                                    <BreadcrumbItem>
-                                        <BreadcrumbLink href={href} className='py-1 text-xs px-2 hover:bg-accent capitalize rounded-sm'>
-                                            {segment}
-                                        </BreadcrumbLink>
-                                    </BreadcrumbItem>
-                                </React.Fragment>
-                            );
-                        })}
-
-                    </BreadcrumbList>
-                </Breadcrumb>
+                <LocationSelect locationId={locationId} />
 
 
             </div>
