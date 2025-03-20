@@ -62,7 +62,7 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant={"outline"} size={"sm"}>
+                <Button variant={"foreground"} size={"sm"}>
                     <span>Update Your Password</span>
                 </Button>
             </DialogTrigger>

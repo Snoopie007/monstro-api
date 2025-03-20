@@ -25,15 +25,16 @@ export default function Charges({ charges }: { charges: Stripe.Charge[] }) {
                     )}
                     {charges?.map((charge, index) => (
                         <TableRow key={index} >
+                            <TableCell className="py-3">{charge.id}</TableCell>
                             <TableCell className="py-3">{format(charge.created * 1000, 'MMM d, yyyy')}</TableCell>
 
                             <TableCell className="py-3">{formatAmountForDisplay(charge.amount / 100, 'usd', true)}</TableCell>
                             <TableCell className="py-3">
-                                <Badge>{charge.status}</Badge>
+                                <Badge variant={charge.status === 'succeeded' ? 'active' : 'inactive'}>{charge.status}</Badge>
                             </TableCell>
-                            <TableCell className="text-right py-3">
-                                <Button variant="outline" size="icon">
-                                    <DownloadCloudIcon />
+                            <TableCell className="text-center py-3">
+                                <Button variant="foreground" size="icon" className="size-6">
+                                    <DownloadCloudIcon className="size-4" />
                                 </Button>
                             </TableCell>
                         </TableRow>

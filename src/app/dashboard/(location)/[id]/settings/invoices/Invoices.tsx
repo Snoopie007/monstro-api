@@ -25,15 +25,16 @@ export default function Invoices({ invoices }: { invoices: Stripe.Invoice[] }) {
                     )}
                     {invoices?.map((invoice, index) => (
                         <TableRow key={index} >
+                            <TableCell className="py-3">{invoice.id}</TableCell>
                             <TableCell className="py-3">{format(invoice.created * 1000, 'MMM d, yyyy')}</TableCell>
 
                             <TableCell className="py-3">{formatAmountForDisplay(invoice.total / 100, 'usd', true)}</TableCell>
                             <TableCell className="py-3">
-                                <Badge>{invoice.status}</Badge>
+                                <Badge variant={invoice.status === 'paid' ? 'active' : 'inactive'}>{invoice.status}</Badge>
                             </TableCell>
-                            <TableCell className="text-right py-3">
-                                <Button variant="outline" size="icon">
-                                    <DownloadCloudIcon />
+                            <TableCell className="text-center py-3">
+                                <Button variant="foreground" size="icon" className="size-6">
+                                    <DownloadCloudIcon className="size-4" />
                                 </Button>
                             </TableCell>
                         </TableRow>

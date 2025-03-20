@@ -12,7 +12,7 @@ export default async function SettingsPage(props: { params: Promise<{ id: string
                 <p className='text-sm'>Manage your account settings below.</p>
             </div>
             <div className='flex flex-col gap-4'>
-                <Card className='p-4 flex flex-row justify-between items-center rounded-sm'>
+                <Card className='p-4 flex flex-row justify-between items-center rounded-sm bg-foreground/5 border-foreground/10'>
                     <div className="pace-y-1 w-full">
                         <div className="text-base font-medium">Update Password</div>
                         <p className="text-sm text-muted-foreground">

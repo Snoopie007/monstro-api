@@ -12,7 +12,7 @@ async function getCustomerInvoices(customerId: string): Promise<{ invoices: Stri
         stripe.setCustomer(customerId);
         const invoices = await stripe.getInvoices(25);
         const charges = await stripe.getCharges(25);
-        console.log(invoices)
+
         return { invoices, charges }
 
     } catch (error) {
@@ -30,7 +30,7 @@ export default async function InvoicesPage(props: { params: Promise<{ id: number
     return (
         <div className="space-y-4">
             <Tabs>
-                <TabsList>
+                <TabsList className="rounded-sm" defaultValue="invoices">
                     <TabsTrigger value="invoices">Invoices</TabsTrigger>
                     <TabsTrigger value="charges">Charges</TabsTrigger>
                 </TabsList>
