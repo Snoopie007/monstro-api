@@ -1,7 +1,6 @@
 import React from 'react'
 import { auth } from "@/auth";
-import { StepBox, StepBoxContent, StepBoxHeader } from "./components";
-import AddLocation from './components/AddLocation/AddLocation';
+import { AddLocation } from './components';
 import { redirect } from 'next/navigation';
 import { cn } from '@/libs/utils';
 

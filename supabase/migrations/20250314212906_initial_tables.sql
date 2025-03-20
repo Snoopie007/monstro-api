@@ -673,20 +673,19 @@ CREATE TABLE IF NOT EXISTS member_referrals (
 
 CREATE TABLE IF NOT EXISTS integrations (
   id bigserial PRIMARY KEY NOT NULL,
-  vendor_id bigint NOT NULL,
   service text NOT NULL,
   api_key text,
   secret_key text,
   access_token text,
   refresh_token text,
+  expires_at bigint,
   integration_id text NOT NULL,
-  additional_settings jsonb DEFAULT '{}'::jsonb,
+  settings jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone,
-  location_id bigint,
+  location_id bigint NOT NULL,
   CONSTRAINT unique_service_location UNIQUE (service, location_id),
   CONSTRAINT integrations_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT integrations_vendor_id_foreign FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
 );
 
 -- Tables with dependencies on vendors and locations

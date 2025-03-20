@@ -3,7 +3,8 @@ import { db } from '@/db/db';
 import { integrations } from '@/db/schemas';
 import { decodeId } from '@/libs/server/sqids';
 import { VendorStripePayments } from '@/libs/server/stripe';
-import { ExtendedUser } from '@/types/next-auth';
+import Stripe from 'stripe';
+import { Integration } from '@/types/integrations';
 
 interface IntegrationSearchParams {
 	code: string,
@@ -11,7 +12,22 @@ interface IntegrationSearchParams {
 	state: string
 }
 
-async function completeIntegration(name: string, user: ExtendedUser, searchParams: IntegrationSearchParams): Promise<boolean> {
+
+function getStripeSettings(token: Stripe.OAuthToken) {
+	const { scope, ...rest } = token;
+	return {
+		apiKey: rest.stripe_publishable_key || null,
+		secretKey: rest.access_token || null,
+		accessToken: rest.access_token || null,
+		refreshToken: rest.refresh_token || null,
+		integrationId: rest.stripe_user_id || '',
+		settings: {
+			scope: scope
+		}
+	}
+}
+
+async function completeIntegration(name: string, searchParams: IntegrationSearchParams): Promise<boolean> {
 	try {
 		const decodedId = decodeId(searchParams.state);
 		const stripe = new VendorStripePayments();
@@ -22,27 +38,24 @@ async function completeIntegration(name: string, user: ExtendedUser, searchParam
 
 		if (!location?.id) return false;
 
-		const token = await stripe.connectOAuth(searchParams.code, searchParams.scope);
-		if (!token?.stripe_user_id) return false;
+		let newIntegration: Omit<Integration, 'locationId' | 'service'> | null = null;
+
+		if (name === 'stripe') {
+			const token = await stripe.connectOAuth(searchParams.code, searchParams.scope);
+			if (!token?.stripe_user_id) return false;
+			newIntegration = getStripeSettings(token);
+		}
+
+		if (!newIntegration) return false;
 
 		await db.insert(integrations).values({
+			...newIntegration,
 			locationId: location.id,
 			service: name,
-			apiKey: token.stripe_publishable_key,
-			secretKey: token.access_token,
-			accessToken: token.access_token,
-			refreshToken: token.refresh_token,
-			integrationId: token.stripe_user_id,
-			vendorId: location.vendorId,
-			additionalSettings: { ...token },
-			created: new Date(),
 		}).onConflictDoUpdate({
 			target: [integrations.locationId, integrations.service],
 			set: {
-				secretKey: token.access_token,
-				accessToken: token.access_token,
-				refreshToken: token.refresh_token,
-				integrationId: token.stripe_user_id,
+				...newIntegration,
 			}
 		});
 
@@ -60,7 +73,7 @@ export default async function CompleteIntegeration(props: { params: Promise<{ na
 
 	if (!session) return null;
 
-	const connection = await completeIntegration(params.name, session.user, searchParams);
+	const connection = await completeIntegration(params.name, searchParams);
 
 	return (
 		<div className="h-[100svh] bg-white dark:bg-white text-black dark:text-black w-full">

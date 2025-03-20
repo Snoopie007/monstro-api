@@ -1,5 +1,5 @@
-import { db } from "@/db/db";
-import { and, SQL, sql, getTableColumns } from "drizzle-orm";
+
+import { SQL, sql, getTableColumns } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 
 

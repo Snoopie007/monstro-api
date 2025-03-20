@@ -22,7 +22,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import { Industries } from "@/libs/data";
 import { useRouter } from "next/navigation";
-export default function AddLocation() {
+export function AddLocation() {
 
     const router = useRouter();
     const [loading, setLoading] = useState<boolean>(false);

@@ -39,11 +39,6 @@ export const StripeCardOptions = {
 	return formatter.format(amount);
 }
 
-export function isExpired(dateTimeString: string) {
-    const dateTime = new Date(dateTimeString);
-    const currentDate = new Date();
-    return dateTime < currentDate;
-}
 
 function cn(...inputs: ClassValue[]) {
   	return twMerge(clsx(inputs));
@@ -103,37 +98,37 @@ function formatEmail(email: string) {
 	return `${username?.substring(0, 2)}${'*'.repeat(username?.length - 2)}@${domain}`;
   }
   
-  function formatPhone(phone: string) {
+function formatPhone(phone: string) {
 	if (!phone) return '';
 	const lastThreeDigits = phone.slice(-4);
 	return `${'*'.repeat(phone.length - 4)}${lastThreeDigits}`;
-  }
-  
-  
-  /**
-   * Replaces placeholders in the given template string with corresponding values from the data object.
-   *
-   * @param template - The template string containing placeholders in the form of {{key}}.
-   * @param data - An object containing key-value pairs, where keys match placeholders in the template.
-   * @returns A string with placeholders replaced by their corresponding values from the data object.
-   *          If a placeholder's key is not found in the data, the placeholder remains unchanged.
-   */
-  
-  function interpolateMsg(template: string, data: Record<string, any>): string {
+}
+
+
+/**
+ * Replaces placeholders in the given template string with corresponding values from the data object.
+ *
+ * @param template - The template string containing placeholders in the form of {{key}}.
+ * @param data - An object containing key-value pairs, where keys match placeholders in the template.
+ * @returns A string with placeholders replaced by their corresponding values from the data object.
+ *          If a placeholder's key is not found in the data, the placeholder remains unchanged.
+ */
+
+function interpolateMsg(template: string, data: Record<string, any>): string {
 	return template.replace(/\{\{([^}]+)\}\}/g, (match: string, p1: string): string => {
-	  // Split the path into parts (e.g. "user.name" -> ["user", "name"])
-	  const parts = p1.trim().split('.');
-  
-	  // Traverse the object following the path
-	  let value: Record<string, any> = data;
-	  for (const part of parts) {
+		// Split the path into parts (e.g. "user.name" -> ["user", "name"])
+		const parts = p1.trim().split('.');
+
+		// Traverse the object following the path
+		let value: Record<string, any> = data;
+		for (const part of parts) {
 		if (value === undefined || value === null) return match;
 		value = value[part];
-	  }
-  
-	  return String(value ?? match);
+		}
+
+		return String(value ?? match);
 	});
-  }
+}
   
 
 export {
