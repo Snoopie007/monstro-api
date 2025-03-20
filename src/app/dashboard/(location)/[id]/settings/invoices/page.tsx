@@ -29,8 +29,8 @@ export default async function InvoicesPage(props: { params: Promise<{ id: number
 
     return (
         <div className="space-y-4">
-            <Tabs>
-                <TabsList className="rounded-sm" defaultValue="invoices">
+            <Tabs defaultValue="invoices">
+                <TabsList className="rounded-sm">
                     <TabsTrigger value="invoices">Invoices</TabsTrigger>
                     <TabsTrigger value="charges">Charges</TabsTrigger>
                 </TabsList>

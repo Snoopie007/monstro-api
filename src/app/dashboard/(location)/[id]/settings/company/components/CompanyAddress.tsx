@@ -38,8 +38,21 @@ export default function CompanyAddress({ location }: { location: Location }) {
         mode: "onSubmit",
     });
     async function update(values: z.infer<typeof CompanyAddressSchema>) {
+        setLoading(true);
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${location.id}/vendor/company`, {
+                method: "POST",
+                body: JSON.stringify(values)
+            })
+        )
+        setLoading(false);
+        if (error || !result || !result.ok) {
+            toast.error("Failed to update address");
+            return;
+        }
+        const data = await result.json();
+        console.log(data);
     }
-
     return (
         <Card className="rounded-sm bg-foreground/5 border-foreground/10">
 

@@ -12,7 +12,7 @@ export default function Charges({ charges }: { charges: Stripe.Charge[] }) {
             <Table >
                 <TableHeader>
                     <TableRow>
-                        {['ID', 'Date', 'Status', 'Amount', 'Download'].map((header, i) => (
+                        {['ID', 'Date', 'Status', 'Amount'].map((header, i) => (
                             <TableHead key={i}>{header}</TableHead>
                         ))}
                     </TableRow>
@@ -32,11 +32,7 @@ export default function Charges({ charges }: { charges: Stripe.Charge[] }) {
                             <TableCell className="py-3">
                                 <Badge variant={charge.status === 'succeeded' ? 'active' : 'inactive'}>{charge.status}</Badge>
                             </TableCell>
-                            <TableCell className="text-center py-3">
-                                <Button variant="foreground" size="icon" className="size-6">
-                                    <DownloadCloudIcon className="size-4" />
-                                </Button>
-                            </TableCell>
+
                         </TableRow>
                     ))}
                 </TableBody>

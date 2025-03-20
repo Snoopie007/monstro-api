@@ -12,7 +12,7 @@ export default function Invoices({ invoices }: { invoices: Stripe.Invoice[] }) {
             <Table >
                 <TableHeader>
                     <TableRow>
-                        {['ID', 'Date', 'Status', 'Amount', 'Download'].map((header, i) => (
+                        {['ID', 'Date', 'Status', 'Amount', 'Invoice'].map((header, i) => (
                             <TableHead key={i}>{header}</TableHead>
                         ))}
                     </TableRow>

@@ -2,7 +2,6 @@
 import { Loader2 } from "lucide-react";
 import React, { useState } from 'react'
 import { Button, Card, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui";
-import { Location } from "@/types";
 import { cn, tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Input } from "@/components/forms";
@@ -29,7 +28,7 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
         const payload = { [type]: value };
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/update`, {
+            fetch(`/api/protected/loc/${lid}/vendor/company`, {
                 method: "POST",
                 body: JSON.stringify(payload)
             })

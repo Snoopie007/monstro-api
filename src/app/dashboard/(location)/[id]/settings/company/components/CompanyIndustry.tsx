@@ -17,7 +17,7 @@ export default function CompanyLogo({ location }: { location: Location }) {
         if (!industry || industry === location.industry) return;
         setLoading(true);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${location.id}/update`, {
+            fetch(`/api/protected/loc/${location.id}/vendor/company`, {
                 method: "POST",
                 body: JSON.stringify({ industry })
             })
