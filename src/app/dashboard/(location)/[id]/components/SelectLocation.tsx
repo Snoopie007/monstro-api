@@ -28,9 +28,11 @@ export default function LocationSelect({ locationId }: { locationId: string }) {
     }, [locationId])
 
     function handleSelect(location: Location) {
+
         setOpen(false);
         if (`${location.id}` === locationId) return;
         setSelectedLocation(location);
+
         localStorage.setItem('locationId', `${location.id}`);
         push(`/dashboard/${location.id}`);
     }
