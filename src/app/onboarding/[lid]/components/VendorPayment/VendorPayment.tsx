@@ -4,9 +4,8 @@ import { getStripe } from '@/libs/client/stripe';
 import { useEffect, useMemo, useState } from 'react';
 import { formatAmountForDisplay } from '@/libs/utils';
 import { useOnboarding } from '../../provider/OnboardingProvider';
-import { MonstroPlan, MonstroPackage, PackagePaymentPlan } from '@/types';
+import { MonstroPlan, MonstroPackage, PackagePaymentPlan } from '@/types/admin';
 import VendorPaymentForm from './VendorPaymentForm';
-import { plans, packages } from "@/libs/data";
 import { addDays, addMonths, format } from 'date-fns';
 
 
@@ -18,7 +17,7 @@ type UserSelection = {
 }
 
 export default function VendorPayment() {
-    const { locationState } = useOnboarding();
+    const { locationState, plans, packages } = useOnboarding();
     const [userSelection, setUserSelection] = useState<UserSelection>({ plan: undefined, pkg: undefined, paymentPlan: undefined });
 
     useEffect(() => {
@@ -28,7 +27,7 @@ export default function VendorPayment() {
         }
         if (locationState.pkgId) {
             const pkg = packages.find(p => p.id === locationState.pkgId);
-            const paymentPlan = pkg?.paymentPlans.find(pp => pp.id === locationState.paymentPlanId);
+            const paymentPlan = pkg?.paymentPlans?.find(pp => pp.id === locationState.paymentPlanId);
             if (pkg && paymentPlan) {
                 setUserSelection({ ...userSelection, pkg, paymentPlan });
             }

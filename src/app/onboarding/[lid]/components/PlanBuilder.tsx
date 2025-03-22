@@ -6,6 +6,7 @@ import { SelectPlan } from './ProgramSelection'
 import VendorPayment from './VendorPayment/VendorPayment'
 import { StepBox, StepBoxHeader, StepBoxContent } from '../../components'
 import { useState } from 'react'
+import { MonstroPackage, MonstroPlan } from '@/types/admin'
 
 export function VendorPlanBuilder() {
     const [currentStep, setCurrentStep] = useState(1)

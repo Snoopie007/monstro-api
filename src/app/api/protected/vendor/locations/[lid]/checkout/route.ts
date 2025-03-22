@@ -1,13 +1,13 @@
 
 import { NextResponse } from 'next/server';
-import { db } from '@/db/db';
+import { db, admindb } from '@/db/db';
 import { locations, locationState, vendors, wallet } from '@/db/schemas';
 import { decodeId } from '@/libs/server/sqids';
 import { VendorStripePayments } from '@/libs/server/stripe';
-import { MonstroPackage, MonstroPlan } from '@/types/vendor';
 
-import { packages, plans } from "@/libs/data";
 import { eq } from 'drizzle-orm';
+import { MonstroPlan } from '@/types/admin';
+import { PackagePaymentPlan } from '@/types/admin';
 
 
 const stripe = new VendorStripePayments();
@@ -17,16 +17,37 @@ export async function POST(req: Request) {
     const data = await req.json();
     const { vendorId, locationId, token, state } = data;
     const lid = decodeId(locationId);
-    const paymentPlan = state.pkgId
-        ? packages.find((p: MonstroPackage) => p.id === state.pkgId)?.paymentPlans.find(p => p.id === state.paymentPlanId)
-        : undefined;
 
-    const plan = !state.pkgId
-        ? plans.find(p => p.id === state.planId)
-        : undefined;
+    let paymentPlan: PackagePaymentPlan | null = null;
 
-    if (!plan && !paymentPlan) {
-        throw new Error("Plan not found")
+    if (state.packageId) {
+        const pkg = await admindb.query.monstroPackages.findFirst({
+            where: (pkg, { eq }) => eq(pkg.id, state.packageId),
+            with: {
+                paymentPlans: {
+                    where: (plan, { eq }) => eq(plan.id, state.paymentPlanId)
+                }
+            }
+        });
+
+        if (!pkg) {
+            throw new Error("Package not found")
+        }
+
+        paymentPlan = pkg.paymentPlans[0];
+    }
+
+    let plan: MonstroPlan | null = null;
+    if (state.planId) {
+        const p = await admindb.query.monstroPlans.findFirst({
+            where: (plan, { eq }) => eq(plan.id, state.planId)
+        });
+
+        if (!p) {
+            throw new Error("Plan not found")
+        }
+
+        plan = p;
     }
 
     try {
@@ -55,12 +76,13 @@ export async function POST(req: Request) {
                     metadata
                 })
             }
-            if (paymentPlan.monthlyPayment > 0) {
-                await Promise.all([
-                    stripe.createSubSchedule(paymentPlan, metadata),
-                    stripe.createGHLSubSchedule(metadata)
-                ]);
+            if (paymentPlan.monthlyPayment > 0 && paymentPlan.priceId) {
+                await stripe.createPaymentPlan(paymentPlan, metadata)
             }
+            await Promise.all([
+                stripe.createPackageSubscriptions(metadata),
+                stripe.createGHLSubscription(metadata)
+            ]);
         }
 
         if (plan && plan.id !== 1) {

@@ -4,9 +4,14 @@ import { createContext, useReducer, ReactElement, useCallback, useContext, React
 
 import { LocationState } from "@/types/location";
 import { MonstroLegal } from "@/libs/server/MDXParse";
+import { MonstroPackage } from "@/types/admin";
+import { MonstroPlan } from "@/types/admin";
+
 type StateType = {
     locationState: LocationState;
     tos: MonstroLegal | undefined;
+    plans: MonstroPlan[];
+    packages: MonstroPackage[];
 }
 
 const enum REDUCER_ACTION_TYPE {
@@ -48,13 +53,17 @@ interface OnboardingProviderProps {
     state: LocationState;
     tos: MonstroLegal | undefined;
     children: ReactNode;
+    plans: MonstroPlan[];
+    packages: MonstroPackage[];
 }
 
-export const OnboardingProvider = ({ children, state, tos }: OnboardingProviderProps): ReactElement => {
+export const OnboardingProvider = ({ children, state, tos, plans, packages }: OnboardingProviderProps): ReactElement => {
     return (
         <OnboardingContext.Provider value={useOnboardingContext({
             locationState: state,
-            tos: tos
+            tos: tos,
+            plans: plans,
+            packages: packages
         })}>
             {children}
         </OnboardingContext.Provider>
@@ -65,6 +74,8 @@ type UseOnboardingHookType = {
     locationState: LocationState;
     updateLocationState: (locationState: LocationState) => void;
     tos: MonstroLegal | undefined;
+    plans: MonstroPlan[];
+    packages: MonstroPackage[];
 }
 
 export const useOnboarding = (): UseOnboardingHookType => {
@@ -77,6 +88,8 @@ export const useOnboarding = (): UseOnboardingHookType => {
     return {
         locationState: state.locationState,
         updateLocationState,
-        tos: state.tos
+        tos: state.tos,
+        plans: state.plans,
+        packages: state.packages
     };
 }

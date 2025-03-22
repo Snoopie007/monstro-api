@@ -4,16 +4,29 @@ import { auth } from "@/auth";
 import { VendorPlanBuilder } from "./components";
 import { redirect } from 'next/navigation';
 import { OnboardingProvider } from './provider/OnboardingProvider';
-import { db } from '@/db/db';
+import { admindb, db } from '@/db/db';
 import { decodeId } from '@/libs/server/sqids';
 import { getTOS } from '@/libs/server/MDXParse';
 
 
 async function getLocationState(locationId: string) {
-    const locationState = await db.query.locationState.findFirst({
-        where: (locationState, { eq }) => eq(locationState.locationId, decodeId(locationId))
-    })
-    return locationState
+    try {
+        const locationState = await db.query.locationState.findFirst({
+            where: (locationState, { eq }) => eq(locationState.locationId, decodeId(locationId))
+        })
+        return locationState
+    } catch (error) {
+        console.error(error);
+    }
+}
+async function getPackagesAndPlans() {
+    try {
+        const plans = await admindb.query.monstroPlans.findMany();
+        const packages = await admindb.query.monstroPackages.findMany();
+        return { plans, packages };
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 
@@ -21,7 +34,7 @@ export default async function PlanSelectionPage(props: { params: Promise<{ lid: 
     const { lid } = await props.params;
 
     const session = await auth();
-    const tos = await getTOS("term-of-use")
+
     if (!session || session.user.locations.length === 0) {
         return redirect("/login")
     }
@@ -31,9 +44,19 @@ export default async function PlanSelectionPage(props: { params: Promise<{ lid: 
     if (!locationState) {
         return redirect("/onboarding")
     }
+    const tos = await getTOS("term-of-use")
+    const pnp = await getPackagesAndPlans();
+
+    if (!pnp) {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen">
+                Something went wrong, please try again later
+            </div>
+        )
+    }
     return (
         <div className="space-y-4">
-            <OnboardingProvider state={locationState} tos={tos}>
+            <OnboardingProvider state={locationState} tos={tos} plans={pnp.plans} packages={pnp.packages}>
                 <VendorPlanBuilder />
             </OnboardingProvider>
 

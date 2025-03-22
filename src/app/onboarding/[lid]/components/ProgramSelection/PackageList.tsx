@@ -1,12 +1,12 @@
-import { packages } from "@/libs/data";
+
 import { cn } from "@/libs/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui";
 import { useOnboarding } from "../../provider/OnboardingProvider";
 import React, { useState, useMemo, useCallback } from "react";
-import { MonstroPackage } from "@/types";
+import { MonstroPackage } from "@/types/admin";
 
 export default function PackageList() {
-    const { locationState, updateLocationState } = useOnboarding();
+    const { locationState, updateLocationState, packages } = useOnboarding();
     const [expandedPackageId, setExpandedPackageId] = useState<number | null>(null);
 
     const isSelected = useCallback((pkgId: number) => {
@@ -69,7 +69,7 @@ export default function PackageList() {
                             Select a payment plan
                         </div>
                         <div className="grid grid-cols-3 gap-2">
-                            {pkg.paymentPlans.map((paymentPlan) => (
+                            {pkg.paymentPlans?.map((paymentPlan) => (
                                 <div key={paymentPlan.name}
                                     className={cn(
                                         `border border-gray-200 px-4 py-2 space-y-1 text-sm text-black rounded-xs group

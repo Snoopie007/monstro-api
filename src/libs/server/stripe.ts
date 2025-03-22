@@ -1,6 +1,7 @@
 import { db } from "@/db/db";
-import { MemberPlan, MonstroPlan, PackagePaymentPlan } from "@/types";
-import { isAfter, addMonths } from "date-fns";
+import { MemberPlan } from "@/types";
+import { MonstroPlan, PackagePaymentPlan } from "@/types/admin";
+import { isAfter, addDays } from "date-fns";
 import Stripe from "stripe";
 
 type Customer = {
@@ -165,6 +166,7 @@ class VendorStripePayments extends BaseStripePayments {
             capture_method: options?.authorizeOnly ? "manual" : "automatic",
             customer: this._customer,
             setup_future_usage: "off_session",
+
             statement_descriptor: "Monstro",
             ...(cardId && { payment_method: cardId }),
             metadata: options?.metadata || undefined,
@@ -175,68 +177,79 @@ class VendorStripePayments extends BaseStripePayments {
         return { clientSecret: paymentIntent.client_secret as string, paymentIntent: paymentIntent as Stripe.PaymentIntent };
     }
 
-    async createPaymentPlan(paymentPlan: PackagePaymentPlan, metadata: Record<string, any>) {
-        if (!this._customer) {
-            throw new Error("Customer not set");
-        }
-
-        const options: Stripe.SubscriptionCreateParams = {
-            customer: this._customer,
-            description: `${paymentPlan.length} months payment plan`,
-            items: [{ price: paymentPlan.priceId }],
-            trial_period_days: paymentPlan.trial,
-            collection_method: 'charge_automatically',
-            metadata
-        };
-
-        return this._stripe.subscriptions.create(options);
-    }
-
     async createSubscription(plan: MonstroPlan, metadata: Record<string, any>, trial?: number) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
+
+
         const options: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
             description: `Monstro ${plan.name} Subscription`,
-            items: [{ price: plan.priceId }],
+            items: [{ price: plan.priceId! }],
             metadata
         };
         return this._stripe.subscriptions.create(options);
     }
 
-    async createSubSchedule(plan: PackagePaymentPlan, metadata: Record<string, any>) {
-
+    async createPaymentPlan(plan: PackagePaymentPlan, metadata: Record<string, any>) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
         const today = new Date();
-        const startDate = addMonths(today, plan.trial > 0 ? 1 : 0);
-        const price = process.env.NODE_ENV === "production" ? "price_1R4WeVDePDUzIffAZQPObJhE" : "price_1R4SG5DePDUzIffAz3GU05uZ"
+        const startDate = addDays(today, plan.trial || 0);
+        const endDate = addDays(startDate, (plan.length * 4));
+        const isProd = process.env.NODE_ENV === "production"
+        const options: Stripe.SubscriptionCreateParams = {
+            customer: this._customer,
+            items: [{ price: isProd ? plan.priceId! : plan.testPriceId! }],
+            cancel_at: Math.floor(endDate.getTime() / 1000),
+            trial_end: Math.floor(startDate.getTime() / 1000),
+            metadata
+        };
+        return this._stripe.subscriptions.create(options);
+    }
+
+    async createPackageSubscriptions(metadata: Record<string, any>) {
+
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        const isProd = process.env.NODE_ENV === "production"
+        const phaseOneCoupon = isProd ? "#" : "QuJSpLOZ"
+        const phaseOnePrice = isProd ? "#" : "price_1R4UUNDePDUzIffArAlN6mq6"
+        const phaseTwoPrice = isProd ? "#" : "price_1R4SG5DePDUzIffAz3GU05uZ"
+
         const options: Stripe.SubscriptionScheduleCreateParams = {
             customer: this._customer,
-            start_date: plan.trial > 0 ? Math.floor(startDate.getTime() / 1000) : "now",
+            start_date: "now",
             end_behavior: "release",
             phases: [{
-                items: [{ price: plan.priceId }],
-                iterations: plan.length,
+                items: [{ price: phaseOnePrice, discounts: [{ coupon: phaseOneCoupon }] }],
+                iterations: 12,
                 billing_cycle_anchor: 'automatic',
                 currency: 'usd',
                 collection_method: 'charge_automatically',
                 metadata
             }, {
-                items: [{ price }],
+                items: [{ price: phaseTwoPrice }],
                 billing_cycle_anchor: 'automatic',
                 currency: 'usd',
                 collection_method: 'charge_automatically',
                 metadata
             }],
-            metadata
+            metadata,
+            expand: ["subscription"]
         }
-        return this._stripe.subscriptionSchedules.create(options);
+        const schedule = await this._stripe.subscriptionSchedules.create(options);
+
+        return schedule;
+    }
+    async updateSchedule(scheduleId: string, updates: Stripe.SubscriptionScheduleUpdateParams) {
+        return await this._stripe.subscriptionSchedules.update(scheduleId, updates);
     }
 
-    async createGHLSubSchedule(metadata: Record<string, any>) {
+    async createGHLSubscription(metadata: Record<string, any>) {
         const price = process.env.NODE_ENV === "production" ? "price_1R4WblDePDUzIffAvMQrZRFE" : "price_1R4S9xDePDUzIffAFUKu0ROH"
         const coupon = process.env.NODE_ENV === "production" ? "kQcIf0sW" : "7Yt7dfGs"
         if (!this._customer) {

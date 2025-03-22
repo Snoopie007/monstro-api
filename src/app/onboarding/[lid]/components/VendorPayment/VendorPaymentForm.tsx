@@ -253,7 +253,7 @@ export default function VendorPaymentForm() {
                         "children:hidden": !loading
                     })}
                     onClick={form.handleSubmit(onSubmit)}
-                // disabled={loading || !stripe || !form.formState.isValid || !locationState.agreeToTerms || !validCard}
+                    disabled={loading || !form.formState.isValid || !locationState.agreeToTerms || !validCard}
 
                 >
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

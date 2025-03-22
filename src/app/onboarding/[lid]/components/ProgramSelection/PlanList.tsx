@@ -1,12 +1,12 @@
-import { plans } from "@/libs/data";
+
 import { cn } from "@/libs/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui";
 import { useOnboarding } from "../../provider/OnboardingProvider";
 import { useState } from "react";
-import { MonstroPlan } from "@/types";
+import { MonstroPlan } from "@/types/admin";
 
 export default function PlanList() {
-    const { locationState, updateLocationState } = useOnboarding();
+    const { locationState, updateLocationState, plans } = useOnboarding();
     const [expandedPlanId, setExpandedPlanId] = useState<number | null>(null);
 
     function isSelected(plan: MonstroPlan) {

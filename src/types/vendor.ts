@@ -19,44 +19,6 @@ export type Vendor = {
     deleted: Date | null;
 }
 
-export type MonstroPackage = {
-    id: number;
-    name: string;
-    description: string;
-    price: number;
-    benefits: { name: string, description?: string }[];
-    paymentPlans: PackagePaymentPlan[];
-}
-
-export type PackagePaymentPlan = {
-    id: number;
-    name: string;
-    description: string;
-    downPayment: number;
-    monthlyPayment: number;
-    length: number;
-    interval: string;
-    discount: number;
-    trial: number;
-
-    priceId: string | undefined;
-}
-
-export type MonstroPlan = {
-    id: number;
-    name: string;
-    price: number;
-    usagePercent: number;
-    threshold: number;
-    interval: string;
-    benefits: { name: string, description?: string }[];
-    description: string;
-    priceId: string | undefined;
-    aiBots: number;
-    note?: string;
-    coupon?: string;
-}
-
 
 export type VendorLevel = {
     id: number;

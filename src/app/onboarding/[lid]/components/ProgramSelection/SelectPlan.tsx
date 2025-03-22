@@ -9,11 +9,17 @@ import PlanList from "./PlanList"
 import { Loader2 } from "lucide-react";
 import { cn, sleep } from "@/libs/utils";
 import PackageList from "./PackageList";
-import { useState } from "react";
-
+import { SetStateAction, Dispatch, useState } from "react";
+import { MonstroPlan, MonstroPackage } from "@/types/admin";
 
 import { useOnboarding } from "../../provider/OnboardingProvider";
-export function SelectPlan({ setCurrentStep }: { setCurrentStep: (step: number) => void }) {
+
+interface SelectPlanProps {
+    setCurrentStep: Dispatch<SetStateAction<number>>;
+
+}
+
+export function SelectPlan({ setCurrentStep }: SelectPlanProps) {
     const { locationState, updateLocationState } = useOnboarding()
     const [loading, setLoading] = useState(false);
 
