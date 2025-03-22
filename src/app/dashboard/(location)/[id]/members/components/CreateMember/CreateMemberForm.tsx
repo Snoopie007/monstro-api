@@ -70,7 +70,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
 
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/members/new`, {
+            fetch(`/api/protected/loc/${lid}/members`, {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,

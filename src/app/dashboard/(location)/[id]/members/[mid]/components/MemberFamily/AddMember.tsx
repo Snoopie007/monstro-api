@@ -96,7 +96,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
         setLoading(true);
         setSearchEmail(null);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/member?email=${searchEmail}`)
+            fetch(`/api/protected/loc/${lid}/search?email=${searchEmail}`)
         )
         setLoading(false);
         if (error || !result || !result.ok) {
@@ -209,7 +209,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
-                                                            
+
                                                             {familyPlans.map((plan: any, index: number) => (
                                                                 <SelectItem key={`${index}-${plan.planId}`} value={plan.planId}>{plan.planName}</SelectItem>
                                                             ))}
@@ -281,7 +281,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                             type="submit"
                             disabled={loading}
                             onClick={form.handleSubmit(onSubmit)}
-                            // onClick={() => console.log(form.formState.errors)}
+                        // onClick={() => console.log(form.formState.errors)}
                         >
                             <Loader2 className="mr-2 size-4 hidden animate-spin" />
                             Add Family

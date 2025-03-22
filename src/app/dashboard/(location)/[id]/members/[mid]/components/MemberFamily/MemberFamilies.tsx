@@ -22,8 +22,6 @@ interface MemberFamiliesProps {
 
 export function MemberFamilies({ params, familyMembers }: MemberFamiliesProps) {
     const { member } = useMemberStatus()
-    const [attachMemberOpen, setAttachMemberOpen] = useState(false)
-    const [addChildOpen, setAddChildOpen] = useState(false)
 
     return (
         <Card className='rounded-sm'>

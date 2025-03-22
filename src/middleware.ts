@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "./auth"
 import { decodeId } from "./libs/server/sqids"
-// import { verify } from "jsonwebtoken"
 import { jwtVerify } from "jose";
 
 const publicPaths = ["/login", "/api/auth", "/api/location", "/join", "/api/webhooks"]

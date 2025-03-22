@@ -685,7 +685,7 @@ CREATE TABLE IF NOT EXISTS integrations (
   updated_at timestamp with time zone,
   location_id bigint NOT NULL,
   CONSTRAINT unique_service_location UNIQUE (service, location_id),
-  CONSTRAINT integrations_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
+  CONSTRAINT integrations_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE
 );
 
 -- Tables with dependencies on vendors and locations

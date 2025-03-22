@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
-import { and, count, eq, ilike, or, sql } from 'drizzle-orm';
-import { memberLocations, members, } from '@/db/schemas';
 
 export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
     const params = await props.params;

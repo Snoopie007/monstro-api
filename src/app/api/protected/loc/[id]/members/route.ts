@@ -1,8 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
 import { and, count, eq, ilike, or, sql } from 'drizzle-orm';
-import { memberLocations, members, } from '@/db/schemas';
+import { memberLocations, members, users } from '@/db/schemas';
+import { formatPhoneNumber } from '@/libs/server/db';
+import { encodeReferralCode } from '@/libs/server/sqids';
 
 export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
 	const params = await props.params;
@@ -66,5 +68,92 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 	} catch (err) {
 		console.error(err);
 		return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+	}
+}
+
+
+
+
+const INCOMPLETE_PLAN = {
+	programId: undefined,
+	memberContractId: undefined,
+	memberPlanId: undefined,
+	currentStep: 1,
+	completedSteps: []
+}
+
+export async function POST(req: NextRequest, props: { params: Promise<{ id: number }> }) {
+	const params = await props.params;
+	const { invite, ...data } = await req.json();
+
+	try {
+
+		const locationState = await db.query.locationState.findFirst({
+			where: (locationState, { eq }) => eq(locationState.locationId, params.id)
+		})
+
+
+		if (!locationState) {
+			return NextResponse.json({ error: "No valid location not found" }, { status: 404 })
+		}
+
+		// const [{ exists }] = await db.execute<{ exists: boolean }>(
+		//     sql`select exists(${db.select({ n: sql`1` }).from(members).where(eq(members.email, data.email))}) as exists`
+		// )
+
+		const existing = await db.query.members.findFirst({
+			where: (member, { eq }) => eq(member.email, data.email),
+			with: {
+				memberLocations: true
+			}
+		})
+
+		if (existing) {
+			return NextResponse.json({ existing: true, member: existing }, { status: 200 })
+		}
+
+		let user = await db.query.users.findFirst({
+			where: (user, { eq }) => eq(user.email, data.email),
+			columns: {
+				id: true,
+			}
+		})
+
+
+		if (!user) {
+			/** Create User if there isn't one */
+			const [res] = await db.insert(users).values({
+				name: `${data.firstName} ${data.lastName}`,
+				email: data.email,
+			}).returning()
+
+			user = res
+		}
+
+
+		const member = await db.transaction(async (tx) => {
+
+			const [member] = await tx.insert(members).values({
+				...data,
+				dob: data.dob ? new Date(data.dob) : null,
+				userId: user.id,
+				phone: formatPhoneNumber(data.phone),
+				referralCode: encodeReferralCode(user.id),
+			}).returning({ id: members.id, firstName: members.firstName, lastName: members.lastName, email: members.email, phone: members.phone })
+
+			await tx.insert(memberLocations).values({
+				locationId: params.id,
+				memberId: member.id,
+				status: "incomplete",
+				incompletePlan: INCOMPLETE_PLAN
+			})
+			return member
+		})
+
+
+		return NextResponse.json({ existing: false, member }, { status: 200 })
+	} catch (err) {
+		console.log(err)
+		return NextResponse.json({ error: err }, { status: 500 })
 	}
 }
