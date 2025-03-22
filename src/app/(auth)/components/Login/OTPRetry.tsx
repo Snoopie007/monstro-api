@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import { sleep } from '@/libs/utils'
-import { useLoginStatus } from '../../providers/LoginStatusProvider';
+import { useLoginStatus } from '../../login/providers/LoginStatusProvider';
 
 interface OTPRetryProps {
     type: string | undefined;

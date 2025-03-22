@@ -10,7 +10,7 @@ import { LoginSchema } from "@/libs/schemas";
 import OTPFields from "./OTPFields";
 import LoginFields from "./LoginFields";
 import TypeFields from "./TypeFields";
-import { useLoginStatus } from "../../providers/LoginStatusProvider";
+import { useLoginStatus } from "../../login/providers/LoginStatusProvider";
 
 export default function LoginForm() {
 	const { step } = useLoginStatus();

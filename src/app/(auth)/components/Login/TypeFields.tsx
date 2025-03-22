@@ -9,7 +9,7 @@ import { UseFormReturn } from 'react-hook-form'
 import { z } from 'zod'
 import { Button } from '@/components/ui'
 import { cn, formatEmail, formatPhone, tryCatch } from '@/libs/utils'
-import { useLoginStatus } from '../../providers/LoginStatusProvider'
+import { useLoginStatus } from '../../login/providers/LoginStatusProvider'
 import { toast } from 'react-toastify'
 import { Loader2 } from 'lucide-react'
 

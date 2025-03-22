@@ -1,7 +1,7 @@
 
 import Link from "next/link";
 import LoginForm from "../components/Login/LoginForm";
-import { LoginStatusProvider } from "../providers/LoginStatusProvider";
+import { LoginStatusProvider } from "./providers/LoginStatusProvider";
 
 export default async function SignIn() {
 

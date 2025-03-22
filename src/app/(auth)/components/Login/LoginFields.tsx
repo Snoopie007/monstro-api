@@ -12,7 +12,7 @@ import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { toast } from 'react-toastify';
-import { useLoginStatus } from '../../providers/LoginStatusProvider'
+import { useLoginStatus } from '../../login/providers/LoginStatusProvider'
 
 interface LoginFieldsProps {
     form: UseFormReturn<z.infer<typeof LoginSchema>>;

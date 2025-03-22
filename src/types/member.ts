@@ -2,7 +2,7 @@ import { Contract, MemberContract } from "./contract";
 import { FamilyMember } from "./FamilyMember";
 import { Transaction } from "./transaction";
 import { Location } from "./location";
-import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod } from "./DatabaseEnums";
+import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod, ImportStatus } from "./DatabaseEnums";
 import { Program } from "./program";
 
 export type Member = {
@@ -183,3 +183,24 @@ export type FamilyPlan = {
     packageId?: number;
 
 }
+export type ImportMember = {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+    lastRenewalDay: Date;
+    status: string;
+    terms: string;
+    termCount: number;
+    created: Date;
+    updated: Date | null;
+    programId: number | null;
+    planId: number | null;
+    memberId: number | null;
+    isFamilyPlan: boolean;
+    isPrimaryMember: boolean;
+    processed: boolean;
+    locationId: number;
+}
+

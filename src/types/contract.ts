@@ -2,6 +2,7 @@ import { ContractType } from "./DatabaseEnums";
 import { Location } from "./location";
 import { MemberPackage } from "./member";
 import { MemberSubscription } from "./member";
+
 export type Contract = {
     id: number;
     title: string;
