@@ -1,4 +1,4 @@
-export type SalesStatus = 'Pending' | 'Closed' | 'Lost';
+export type SalesStatus = 'Pending' | 'Closed' | 'Completed';
 
 export type Sale = {
     id: number;
@@ -6,15 +6,15 @@ export type Sale = {
     lastName: string;
     email: string;
     phone: string;
-    locationId?: number;
-    ghlLocationId?: string;
-    userId?: number;
-    planId?: number;
-    packageId?: number;
-    stripeCustomerId?: string;
-    paymentId?: number;
-    closedAt?: Date;
+    locationId?: number | null;
+    ghlLocationId?: string | null;
+    userId?: number | null;
+    planId?: number | null;
+    packageId?: number | null;
+    stripeCustomerId?: string | null;
+    paymentId?: number | null;
+    closedAt?: Date | null;
     status: SalesStatus;
     created: Date;
-    updated?: Date;
+    updated?: Date | null;
 }

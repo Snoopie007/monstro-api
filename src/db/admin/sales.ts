@@ -1,6 +1,5 @@
-import { pgTable, serial, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 import { SalesStatusEnum } from "./AdminEnums";
-import { relations } from "drizzle-orm";
 
 export const sales = pgTable("sales", {
     id: serial("id").primaryKey(),
@@ -13,6 +12,7 @@ export const sales = pgTable("sales", {
     planId: integer("plan_id"),
     packageId: integer("package_id"),
     paymentId: integer("payment_id"),
+    agreeToTerms: boolean("agree_to_terms").notNull().default(false),
     stripeCustomerId: text("stripe_customer_id"),
     closedOn: timestamp("closed_on"),
     status: SalesStatusEnum("status").notNull().default('Pending'),

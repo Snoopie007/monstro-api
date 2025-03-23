@@ -90,3 +90,10 @@ export const VendorBillingSchema = z.object({
     address_state: z.string().min(2, { message: "Required" }),
     address_zip: z.string().min(2, { message: "Required" })
 });
+
+export const VendorInviteSchema = z.object({
+    email: z.string().min(1, { message: "Email is required" }).email({ message: "Invalid email address" }),
+}).merge(PasswordSchema);
+
+
+

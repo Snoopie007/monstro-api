@@ -1,13 +1,14 @@
 
 import { NextResponse } from 'next/server';
-import { db, admindb } from '@/db/db';
-import { locations, locationState, vendors, wallet } from '@/db/schemas';
+import { db } from '@/db/db';
+import { locations, locationState, vendors } from '@/db/schemas';
 import { decodeId } from '@/libs/server/sqids';
 import { VendorStripePayments } from '@/libs/server/stripe';
 
 import { eq } from 'drizzle-orm';
 import { MonstroPlan } from '@/types/admin';
 import { PackagePaymentPlan } from '@/types/admin';
+import { chargeWallet, getPlan, getPaymentPlan } from '../../../utils';
 
 
 const stripe = new VendorStripePayments();
@@ -18,39 +19,20 @@ export async function POST(req: Request) {
     const { vendorId, locationId, token, state } = data;
     const lid = decodeId(locationId);
 
-    let paymentPlan: PackagePaymentPlan | null = null;
-
-    if (state.packageId) {
-        const pkg = await admindb.query.monstroPackages.findFirst({
-            where: (pkg, { eq }) => eq(pkg.id, state.packageId),
-            with: {
-                paymentPlans: {
-                    where: (plan, { eq }) => eq(plan.id, state.paymentPlanId)
-                }
-            }
-        });
-
-        if (!pkg) {
-            throw new Error("Package not found")
-        }
-
-        paymentPlan = pkg.paymentPlans[0];
-    }
-
-    let plan: MonstroPlan | null = null;
-    if (state.planId) {
-        const p = await admindb.query.monstroPlans.findFirst({
-            where: (plan, { eq }) => eq(plan.id, state.planId)
-        });
-
-        if (!p) {
-            throw new Error("Plan not found")
-        }
-
-        plan = p;
-    }
 
     try {
+
+        let paymentPlan: PackagePaymentPlan | null = null;
+
+        if (state.packageId) {
+            paymentPlan = await getPaymentPlan(state.paymentPlanId, state.packageId)
+        }
+
+        let plan: MonstroPlan | null = null;
+        if (state.planId) {
+            plan = await getPlan(state.planId)
+        }
+
         const vendor = await db.query.vendors.findFirst({
             where: (vendor, { eq }) => eq(vendor.id, vendorId)
         });
@@ -65,7 +47,7 @@ export async function POST(req: Request) {
             phone: vendor.phone!,
         }, token.id, { vendorId });
 
-        await chargeWallet(lid, vendorId, token);
+        await chargeWallet(stripe, lid, vendorId, token);
 
         const metadata = { vendorId, locationId }
 
@@ -117,27 +99,4 @@ export async function POST(req: Request) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
     }
-}
-
-async function chargeWallet(locationId: number, vendorId: number, token: any) {
-    const walletPayment = 10 * 100;
-    const { clientSecret } = await stripe.createPaymentIntent(
-        walletPayment,
-        token.card.id,
-        { description: `Auto-charge USD ${walletPayment / 100} was successfully added to wallet.` }
-    );
-
-    if (!clientSecret) {
-        throw new Error("Wallet payment failed")
-    }
-
-    await db.insert(wallet).values({
-        locationId: locationId,
-        balance: walletPayment / 100,
-        credit: 0,
-        rechargeAmount: 2500,
-        rechargeThreshold: 1000,
-        lastCharged: new Date(),
-    }).onConflictDoNothing({ target: [wallet.locationId] });
-
 }

@@ -1,0 +1,109 @@
+
+import { NextResponse } from 'next/server';
+import { admindb, db } from '@/db/db';
+import { locations, locationState, vendorLevels } from '@/db/schemas';
+import { encodeId } from '@/libs/server/sqids';
+import { formatPhoneNumber } from '@/libs/server/db';
+import { MonstroPlan } from '@/types/admin';
+import { PackagePaymentPlan } from '@/types/admin';
+import { VendorStripePayments } from '@/libs/server/stripe';
+import { getPlan } from '../utils';
+import { eq } from 'drizzle-orm';
+import { getPaymentPlan } from '../utils';
+import { sales } from '@/db/admin/sales';
+
+const stripe = new VendorStripePayments();
+
+
+export async function POST(req: Request) {
+    const { saleId, ...data } = await req.json();
+
+
+
+
+    try {
+
+        const sale = await admindb.query.sales.findFirst({
+            where: (sale, { eq }) => eq(sale.id, saleId)
+        })
+
+        if (!sale) {
+            return NextResponse.json({ error: "Sale not found" }, { status: 400 })
+        }
+
+        let paymentPlan: PackagePaymentPlan | null = null;
+        let plan: MonstroPlan | null = null;
+        if (sale.planId) {
+            plan = await getPlan(sale.planId)
+        }
+
+        if (sale.paymentId && sale.packageId) {
+            paymentPlan = await getPaymentPlan(sale.paymentId, sale.packageId)
+        }
+        const today = new Date();
+
+        const [location] = await db.insert(locations).values({
+            ...data,
+            phone: formatPhoneNumber(data.phone),
+            slug: data.name.toLowerCase().replace(/ /g, '')
+        }).returning({ id: locations.id, name: locations.name })
+
+
+        const metadata = { vendorId: data.vendorId, locationId: location.id }
+
+
+        if (paymentPlan) {
+            const downPayment = Number(paymentPlan.downPayment - paymentPlan.discount) * 100;
+            if (paymentPlan.downPayment > 0) {
+                await stripe.createPaymentIntent(downPayment, undefined, {
+                    metadata
+                })
+            }
+            if (paymentPlan.monthlyPayment > 0 && paymentPlan.priceId) {
+                await stripe.createPaymentPlan(paymentPlan, metadata)
+            }
+            await Promise.all([
+                stripe.createPackageSubscriptions(metadata),
+                stripe.createGHLSubscription(metadata)
+            ]);
+        }
+
+        if (plan && plan.id !== 1) {
+
+            await stripe.createSubscription(plan, metadata, 0);
+        }
+
+        await db.transaction(async (tx) => {
+
+            await tx.insert(locationState).values({
+                paymentPlanId: sale.paymentId,
+                planId: sale.planId,
+                pkgId: sale.packageId,
+                agreeToTerms: sale.agreeToTerms,
+                locationId: location.id,
+                status: "active",
+                usagePercent: plan?.usagePercent,
+                startDate: today,
+                lastRenewalDate: today,
+            })
+
+            await tx.insert(vendorLevels).values({
+                vendorId: data.vendorId,
+                locationId: location.id
+            })
+        });
+
+        await admindb.update(sales).set({
+            status: "Completed",
+            closedOn: today,
+            updated: today
+        }).where(eq(sales.id, saleId));
+
+        const encodedId = encodeId(location.id)
+
+        return NextResponse.json({ ...location, id: encodedId, status: "active" }, { status: 200 })
+    } catch (err) {
+        console.log(err)
+        return NextResponse.json({ error: err }, { status: 500 })
+    }
+}

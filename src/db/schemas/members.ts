@@ -11,7 +11,7 @@ import { InvoiceStatusEnum, MemberRelationshipEnum } from "./DatabaseEnums";
 
 export const members = pgTable("members", {
     id: serial("id").primaryKey(),
-    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     firstName: text("first_name").notNull(),
     lastName: text("last_name"),
     email: text("email").notNull(),

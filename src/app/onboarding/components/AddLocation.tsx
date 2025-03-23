@@ -22,7 +22,9 @@ import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import { Industries } from "@/libs/data";
 import { useRouter } from "next/navigation";
-export function AddLocation() {
+
+
+export function AddLocation({ saleId }: { saleId: string | null }) {
 
     const router = useRouter();
     const [loading, setLoading] = useState<boolean>(false);
@@ -61,9 +63,9 @@ export function AddLocation() {
         if (!form.formState.isValid) return;
 
         setLoading(true);
-
+        const path = saleId ? `/api/protected/vendor/${saleId}` : "/api/protected/vendor/locations";
         const { result, error } = await tryCatch(
-            fetch("/api/protected/vendor/locations", {
+            fetch(path, {
                 method: "POST",
                 body: JSON.stringify({
                     vendorId: session?.user?.vendorId,
@@ -85,7 +87,8 @@ export function AddLocation() {
         update({
             locations: [...session?.user.locations, data],
         })
-        router.push(`/onboarding/${data.id}`);
+
+        router.push(`${saleId ? `/dashboard/${data.id}` : `/onboarding/locations/${data.id}`}`);
 
     }
 

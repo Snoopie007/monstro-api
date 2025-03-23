@@ -4,8 +4,10 @@ import { AddLocation } from './components';
 import { redirect } from 'next/navigation';
 import { cn } from '@/libs/utils';
 
-export default async function VendorOnboarding() {
+export default async function VendorOnboarding(props: { searchParams: Promise<{ [key: string]: string | boolean }> }) {
     const session = await auth();
+    const searchParams = await props.searchParams;
+    const saleId = searchParams.sid as string | null;
 
     if (session?.user.locations.length > 0) {
         const pendingLocation = session?.user.locations.find((location: { id: string, status: string }) => location.status === "Pending")
@@ -27,7 +29,7 @@ export default async function VendorOnboarding() {
                         </p>
                     </div>
                     <div>
-                        <AddLocation />
+                        <AddLocation saleId={saleId} />
                     </div>
                 </div>
             </div>
