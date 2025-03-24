@@ -37,26 +37,31 @@ export async function PUT(req: Request, props: { params: Promise<RoleProps> }) {
           return NextResponse.json({ error: "Role update failed" }, { status: 500 });
         }
  
-         if(data.permission && data.permission.length >0)
-         {
-             const permission = await db.query.permissions.findMany({
-                 where:(permissions,{ inArray }) => inArray(permissions.name, data.permission.name)
-             })
- 
-             const permissionIds = permission.map((permission)=>permission.id)
- 
-             if(permissionIds.length > 0)
-             {
+        if(data.permissions && data.permissions.length >0)
+          {
+              
+              const permission = await db.query.permissions.findMany({
+                  where:(permission,{ inArray }) => inArray(permission.name, data.permissions)
+  
+              })
+              
+              const permissionIds = permission.map((permission)=>permission.id)
+              console.log(roleHasPermissions.roleId)
+              const deleted =await db.delete(roleHasPermissions).where(eq(roleHasPermissions.roleId, role.id));
+              console.log(deleted)
+  
+              if(permissionIds.length > 0)
+              {
                  await db.insert(roleHasPermissions).values(
-                     permissionIds.map((permissionId) => ({
-                         roleId: role.id,
-                         permissionId: permissionId,
-                     }))
-                 );
-                 
-             }
-         }
-         return NextResponse.json(role, { status: 200 })
+                      permissionIds.map((permissionId) => ({
+                          roleId: role.id,
+                          permissionId: permissionId,
+                      }))
+                  );
+                  
+              }
+          }
+          return NextResponse.json(role, { status: 200 })
  
      } catch (err) {
          console.log(err)

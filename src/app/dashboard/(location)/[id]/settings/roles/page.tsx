@@ -37,8 +37,27 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
     }
 
     async function removeRole(roleId: number) {
+        const confirmDelete = window.confirm("Are you sure you want to delete this role?");
+        if (!confirmDelete) return;
 
+        try {
+            const response = await fetch(`/api/protected/loc/${params.id}/roles/${roleId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to delete role");
+            }
+            mutate();
+        } catch (error) {
+            console.error("Error deleting role:", error);
+            alert("Failed to delete role. Please try again.");
+        }
     }
+
 
 
     return (
