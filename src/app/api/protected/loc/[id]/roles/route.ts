@@ -19,7 +19,7 @@ export async function GET(req: Request, props: { params: Promise<RoleProps> }) {
             }
         })
 
-        console.log(roles);
+        
         
         return NextResponse.json(roles, { status: 200 });
     } catch (err) {
@@ -31,8 +31,6 @@ export async function POST(req: Request, props: { params: Promise<RoleProps> }) 
     const params = await props.params;
     const data = await req.json()
     console.log(data)
-    console.log(params);
-    
     try {
         const [role] = await db.insert(roles).values({
            name: data.name,
@@ -42,23 +40,32 @@ export async function POST(req: Request, props: { params: Promise<RoleProps> }) 
 
         }).returning({ id: roles.id })
 
+        
 
-        if(data.permission && data.permission.length >0)
+        
+        if(data.permissions && data.permissions.length >0)
         {
+            console.log( data.permissions.name)
             const permission = await db.query.permissions.findMany({
-                where:(permissions,{ inArray }) => inArray(permissions.name, data.permission.name)
+                where:(permission,{ inArray }) => inArray(permission.name, data.permissions)
+
             })
+            console.log("Permission",permission)
 
             const permissionIds = permission.map((permission)=>permission.id)
+            console.log("Permission Id",permissionIds)
 
             if(permissionIds.length > 0)
             {
-                await db.insert(roleHasPermissions).values(
+               const inserted= await db.insert(roleHasPermissions).values(
                     permissionIds.map((permissionId) => ({
                         roleId: role.id,
                         permissionId: permissionId,
                     }))
                 );
+                console.log("inserted permissiin is ",inserted)
+
+
                 
             }
         }

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import ReactComponentName from "react-scan/react-component-name/webpack"; 
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -36,6 +37,10 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   transpilePackages: ['next-mdx-remote'],
   // output: 'standalone'
+  webpack: (config) => {
+    config.plugins.push(ReactComponentName({})); 
+    return config;
+  },
 };
 
 export default nextConfig;
