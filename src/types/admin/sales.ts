@@ -1,4 +1,4 @@
-export type SalesStatus = 'Pending' | 'Closed' | 'Completed';
+export type SalesStatus = 'Pending' | 'Closed' | 'Completed' | 'Cancelled' | 'Upgraded' | 'Downgraded';
 
 export type Sale = {
     id: number;
