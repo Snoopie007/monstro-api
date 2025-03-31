@@ -4,13 +4,14 @@ import { admindb, db } from '@/db/db';
 import { locations, locationState, vendorLevels } from '@/db/schemas';
 import { encodeId } from '@/libs/server/sqids';
 import { formatPhoneNumber } from '@/libs/server/db';
-import { MonstroPlan } from '@/types/admin';
+import { MonstroPlan, Sale } from '@/types/admin';
 import { PackagePaymentPlan } from '@/types/admin';
 import { VendorStripePayments } from '@/libs/server/stripe';
 import { getPlan } from '../utils';
 import { eq } from 'drizzle-orm';
 import { getPaymentPlan } from '../utils';
 import { sales } from '@/db/admin/sales';
+import { AgencyGHL } from '@/libs/server/ghl';
 
 const stripe = new VendorStripePayments();
 
@@ -101,9 +102,36 @@ export async function POST(req: Request) {
 
         const encodedId = encodeId(location.id)
 
+        await ghlAutomations(sale)
+
         return NextResponse.json({ ...location, id: encodedId, status: "active" }, { status: 200 })
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
+
+
+async function ghlAutomations(sale: Sale) {
+
+    const integration = await admindb.query.adminIntegrations.findFirst({
+        where: (vendorIntegration, { eq }) => eq(vendorIntegration.service, "ghl")
+    })
+
+    if (!integration) {
+        throw new Error("GHL integration not found")
+    }
+    const ghl = new AgencyGHL()
+
+    await ghl.getAccessToken(integration)
+
+    await ghl.upsertContact({
+        firstName: sale.firstName,
+        lastName: sale.lastName,
+        email: sale.email,
+        phone: sale.phone,
+        locationId: 'rCcWpfkx9wZlMF7P4C5V',
+        tags: ['customer'],
+        contactType: 'Customer',
+    })
+}   
