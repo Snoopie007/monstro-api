@@ -13,6 +13,7 @@ CREATE TYPE transaction_status AS ENUM('paid', 'failed', 'incomplete');
 CREATE TYPE staff_status AS ENUM('active', 'inactive');
 CREATE TYPE support_ticket_status AS ENUM('open', 'updated', 'closed');
 CREATE TYPE program_status AS ENUM('active', 'inactive');
+CREATE TYPE import_status AS ENUM('pending', 'processing', 'completed', 'failed');
 
 
 -- Base tables with no foreign key dependencies
@@ -797,10 +798,13 @@ CREATE TABLE IF NOT EXISTS import_members (
   id bigserial PRIMARY KEY NOT NULL,
   first_name text NOT NULL,
   last_name text NOT NULL,
+  member_id bigint,
+  is_family_plan boolean NOT NULL DEFAULT false,
+  is_primary_member boolean NOT NULL DEFAULT false,
   email text NOT NULL,
   phone text NOT NULL,
-  last_renewal_day date NOT NULL,
-  status text NOT NULL DEFAULT 'active',
+  last_renewal_day timestamp with time zone NOT NULL,
+  status import_status NOT NULL DEFAULT 'pending',
   terms plan_interval NOT NULL DEFAULT 'month',
   term_count integer NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
@@ -809,7 +813,10 @@ CREATE TABLE IF NOT EXISTS import_members (
   plan_id bigint,
   processed boolean NOT NULL DEFAULT false,
   location_id bigint NOT NULL,
-  CONSTRAINT import_members_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE
+  CONSTRAINT import_members_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
+  CONSTRAINT import_members_member_id_fkey FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE SET NULL,
+  CONSTRAINT import_members_program_id_fkey FOREIGN KEY (program_id) REFERENCES programs (id) ON DELETE SET NULL,
+  CONSTRAINT import_members_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES member_plans (id) ON DELETE SET NULL
 );
 
 
