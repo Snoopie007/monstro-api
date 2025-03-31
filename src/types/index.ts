@@ -16,3 +16,4 @@ export * from './VendorReferral';
 export * from './transaction';
 export * from './wallet';
 export * from './DatabaseEnums';
+export * from './integrations';

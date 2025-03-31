@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, boolean, jsonb } from "drizzle-orm/pg-core";
 import { SalesStatusEnum } from "./AdminEnums";
 
 export const sales = pgTable("sales", {
@@ -20,3 +20,19 @@ export const sales = pgTable("sales", {
     updated: timestamp("updated_at", { withTimezone: true }),
 });
 
+
+export const adminIntegrations = pgTable("admin_integrations", {
+    id: serial("id").primaryKey(),
+    service: text("service").notNull(),
+    apiKey: text("api_key"),
+    secretKey: text("secret_key"),
+    refreshToken: text("refresh_token"),
+    accessToken: text("access_token"),
+    expires: integer("expires_at"),
+    tokenType: text("token_type"),
+    scope: text("scope"),
+    providerId: text("provider_id").notNull(),
+    settings: jsonb("settings").$type<Record<string, unknown>>(),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true })
+})
