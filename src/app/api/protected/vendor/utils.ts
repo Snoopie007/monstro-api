@@ -31,7 +31,7 @@ async function chargeWallet(stripe: VendorStripePayments, locationId: number, ve
 
 
 async function getPaymentPlan(paymentId: number, pkgId: number) {
-
+    console.log(paymentId, pkgId)
     const pkg = await admindb.query.monstroPackages.findFirst({
         where: (pkg, { eq }) => eq(pkg.id, pkgId),
         with: {
@@ -44,7 +44,7 @@ async function getPaymentPlan(paymentId: number, pkgId: number) {
     if (!pkg) {
         throw new Error("Package not found")
     }
-
+    console.log("pkg", pkg.paymentPlans[0])
     return pkg.paymentPlans[0];
 
 

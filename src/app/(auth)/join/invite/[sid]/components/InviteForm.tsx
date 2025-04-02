@@ -39,7 +39,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
         resolver: zodResolver(VendorInviteSchema),
         defaultValues: {
             email: sale.email || "",
-            password: undefined,
+            password: '',
         },
         mode: "onChange",
     });
@@ -75,7 +75,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
             return;
         }
 
-        await signIn("credentials", { redirect: false, ...v })
+        const signInResult = await signIn("credentials", { redirect: false, ...v })
         router.push(`/onboarding?sid=${sale.id}`);
     }
 

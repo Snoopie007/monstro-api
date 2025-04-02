@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { MemberPlan } from "@/types";
 import { MonstroPlan, PackagePaymentPlan } from "@/types/admin";
-import { isAfter, addDays } from "date-fns";
+import { isAfter, addDays, addWeeks } from "date-fns";
 import Stripe from "stripe";
 
 type Customer = {
@@ -198,7 +198,8 @@ class VendorStripePayments extends BaseStripePayments {
         }
         const today = new Date();
         const startDate = addDays(today, plan.trial || 0);
-        const endDate = addDays(startDate, (plan.length * 4));
+        const endDate = addWeeks(startDate, (plan.length * 4));
+
         const isProd = process.env.NODE_ENV === "production"
         const options: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
@@ -216,9 +217,9 @@ class VendorStripePayments extends BaseStripePayments {
             throw new Error("Customer not set");
         }
         const isProd = process.env.NODE_ENV === "production"
-        const phaseOneCoupon = isProd ? "#" : "QuJSpLOZ"
-        const phaseOnePrice = isProd ? "#" : "price_1R4UUNDePDUzIffArAlN6mq6"
-        const phaseTwoPrice = isProd ? "#" : "price_1R4SG5DePDUzIffAz3GU05uZ"
+        const phaseOneCoupon = isProd ? "qHgZNW46" : "QuJSpLOZ"
+        const phaseOnePrice = isProd ? "price_1R9XXWDePDUzIffAbDo18Rtf" : "price_1R4UUNDePDUzIffArAlN6mq6"
+        const phaseTwoPrice = isProd ? "price_1R4WeVDePDUzIffAZQPObJhE" : "price_1R4SG5DePDUzIffAz3GU05uZ"
 
         const options: Stripe.SubscriptionScheduleCreateParams = {
             customer: this._customer,
@@ -245,6 +246,7 @@ class VendorStripePayments extends BaseStripePayments {
 
         return schedule;
     }
+
     async updateSchedule(scheduleId: string, updates: Stripe.SubscriptionScheduleUpdateParams) {
         return await this._stripe.subscriptionSchedules.update(scheduleId, updates);
     }

@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import ReactComponentName from "react-scan/react-component-name/webpack"; 
+import ReactComponentName from "react-scan/react-component-name/webpack";
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -9,9 +9,6 @@ const nextConfig: NextConfig = {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
-  },
-  experimental: {
-    largePageDataBytes: 128 * 1024, // 128KB
   },
   images: {
     remotePatterns: [
@@ -38,7 +35,7 @@ const nextConfig: NextConfig = {
   transpilePackages: ['next-mdx-remote'],
   // output: 'standalone'
   webpack: (config) => {
-    config.plugins.push(ReactComponentName({})); 
+    config.plugins.push(ReactComponentName({}));
     return config;
   },
 };

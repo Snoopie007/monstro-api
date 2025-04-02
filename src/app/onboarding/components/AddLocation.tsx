@@ -68,6 +68,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             fetch(path, {
                 method: "POST",
                 body: JSON.stringify({
+                    ...(saleId ? { saleId } : {}),
                     vendorId: session?.user?.vendorId,
                     ...v,
                     metadata,
@@ -81,7 +82,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             return toast.error("Failed to add location, please try again.");
         }
         const data = await result.json();
-        console.log(data)
+
         localStorage.setItem("locationId", data.id);
 
         update({

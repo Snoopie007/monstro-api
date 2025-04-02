@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
 
             await tx.insert(vendors).values({
                 ...sale,
+                id: undefined,
                 phone: formatPhoneNumber(sale.phone),
                 userId: id,
             });
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
         })
 
         await admindb.update(sales).set({
-            agreeToTerms,
+            agreedToTerms: true,
         }).where(eq(sales.id, saleId))
 
 

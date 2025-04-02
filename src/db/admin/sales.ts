@@ -12,13 +12,14 @@ export const sales = pgTable("sales", {
     planId: integer("plan_id"),
     packageId: integer("package_id"),
     paymentId: integer("payment_id"),
-    agreeToTerms: boolean("agree_to_terms").notNull().default(false),
     stripeCustomerId: text("stripe_customer_id"),
+    agreedToTerms: boolean("agreed_to_terms").notNull().default(false),
     closedOn: timestamp("closed_on"),
     status: SalesStatusEnum("status").notNull().default('Pending'),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
+
 
 
 export const adminIntegrations = pgTable("admin_integrations", {

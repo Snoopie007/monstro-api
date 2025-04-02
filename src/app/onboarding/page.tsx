@@ -8,7 +8,6 @@ export default async function VendorOnboarding(props: { searchParams: Promise<{ 
     const session = await auth();
     const searchParams = await props.searchParams;
     const saleId = searchParams.sid as string | null;
-
     if (session?.user.locations.length > 0) {
         const pendingLocation = session?.user.locations.find((location: { id: string, status: string }) => location.status === "Pending")
         if (pendingLocation) {

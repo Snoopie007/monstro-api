@@ -8,12 +8,14 @@ import { getTOS } from "@/libs/server/MDXParse";
 
 async function getSale(sid: string) {
     const decodedSid = decodeId(sid);
+
     try {
         const sale = await admindb.query.sales.findFirst({
             where: (sale, { eq }) => eq(sale.id, decodedSid)
         })
         return sale;
     } catch (error) {
+        console.error(error)
         return null;
     }
 }
@@ -35,9 +37,9 @@ export default async function InvitePackagePage(props: InvitePackagePageProps) {
     return (
         <div className="flex flex-col gap-4">
 
-            <div className="w-full max-w-lg shadow-xs border bg-white border-gray-200 rounded-sm p-1 space-y-4  ">
+            <div className="w-full max-w-lg mx-auto shadow-xs border bg-white border-gray-200 rounded-sm p-1 space-y-4  ">
 
-                <div className="space-y-6 p-4">
+                <div className="space-y-6  p-4">
 
                     <InviteForm sale={sale} tos={tos} />
 

@@ -50,8 +50,8 @@ export default {
 				type: { label: "Type", type: "text" }
 			},
 			authorize: async (credentials) => {
-
-				if (!credentials?.email || !credentials?.password || !credentials?.token || !credentials?.type) {
+				console.log(credentials)
+				if (!credentials?.email || !credentials?.password) {
 					return null;
 				}
 
@@ -92,8 +92,9 @@ export default {
 
 					const match = await bcrypt.compare(credentials.password.toString(), user.password);
 					if (!match) throw new CustomLoginError("Invalid password or email.");
-
-					await validateToken(credentials.token.toString(), user.id, credentials.type.toString());
+					if (credentials.token && credentials.type) {
+						await validateToken(credentials.token.toString(), user.id, credentials.type.toString());
+					}
 					// Create a JWT token
 					const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
 					const jwt = await new SignJWT(user).setProtectedHeader({ alg: "HS256" }).setExpirationTime("1d").setIssuedAt().sign(secret);
@@ -123,6 +124,7 @@ export default {
 					};
 
 				} catch (error) {
+					console.log(error)
 					if (error instanceof CustomLoginError) {
 						throw error;
 					}

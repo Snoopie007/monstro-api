@@ -17,9 +17,7 @@ const stripe = new VendorStripePayments();
 
 
 export async function POST(req: Request) {
-    const { saleId, ...data } = await req.json();
-
-
+    const { saleId, vendorId, ...data } = await req.json();
 
 
     try {
@@ -28,7 +26,7 @@ export async function POST(req: Request) {
             where: (sale, { eq }) => eq(sale.id, saleId)
         })
 
-        if (!sale) {
+        if (!sale || !sale.stripeCustomerId) {
             return NextResponse.json({ error: "Sale not found" }, { status: 400 })
         }
 
@@ -41,6 +39,8 @@ export async function POST(req: Request) {
         if (sale.paymentId && sale.packageId) {
             paymentPlan = await getPaymentPlan(sale.paymentId, sale.packageId)
         }
+
+
         const today = new Date();
 
         const [location] = await db.insert(locations).values({
@@ -50,10 +50,11 @@ export async function POST(req: Request) {
         }).returning({ id: locations.id, name: locations.name })
 
 
-        const metadata = { vendorId: data.vendorId, locationId: location.id }
+        const metadata = { vendorId, locationId: location.id }
 
-
+        stripe.setCustomer(sale.stripeCustomerId)
         if (paymentPlan) {
+
             const downPayment = Number(paymentPlan.downPayment - paymentPlan.discount) * 100;
             if (paymentPlan.downPayment > 0) {
                 await stripe.createPaymentIntent(downPayment, undefined, {
@@ -69,18 +70,16 @@ export async function POST(req: Request) {
             ]);
         }
 
-        if (plan && plan.id !== 1) {
-
+        if (plan && ![1, 4].includes(plan.id)) {
             await stripe.createSubscription(plan, metadata, 0);
         }
 
         await db.transaction(async (tx) => {
-
             await tx.insert(locationState).values({
                 paymentPlanId: sale.paymentId,
                 planId: sale.planId,
                 pkgId: sale.packageId,
-                agreeToTerms: sale.agreeToTerms,
+                agreeToTerms: sale.agreedToTerms,
                 locationId: location.id,
                 status: "active",
                 usagePercent: plan?.usagePercent,
@@ -89,7 +88,7 @@ export async function POST(req: Request) {
             })
 
             await tx.insert(vendorLevels).values({
-                vendorId: data.vendorId,
+                vendorId,
                 locationId: location.id
             })
         });
@@ -105,6 +104,7 @@ export async function POST(req: Request) {
         await ghlAutomations(sale)
 
         return NextResponse.json({ ...location, id: encodedId, status: "active" }, { status: 200 })
+
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
@@ -117,6 +117,8 @@ async function ghlAutomations(sale: Sale) {
     const integration = await admindb.query.adminIntegrations.findFirst({
         where: (vendorIntegration, { eq }) => eq(vendorIntegration.service, "ghl")
     })
+
+
 
     if (!integration) {
         throw new Error("GHL integration not found")

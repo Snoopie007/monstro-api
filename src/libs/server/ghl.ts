@@ -123,10 +123,11 @@ class AgencyGHL extends BaseGHL {
     async getAccessToken(integration: AdminIntegration): Promise<string> {
         const currentTime = new Date().getTime();
         const isExpired = integration.expires ? currentTime > integration.expires : true;
-
+        console.log(!integration.refreshToken)
         if (!integration.refreshToken) throw new Error("No Refresh Token.");
 
         if (!isExpired && integration.accessToken) {
+            this.ACCESS_TOKEN = integration.accessToken;
             return integration.accessToken;
         }
 
@@ -166,6 +167,7 @@ class VendorGHL extends BaseGHL {
         const isExpired = integration.expires ? currentTime > integration.expires : true;
 
         if (integration.accessToken && !isExpired) {
+            this.ACCESS_TOKEN = integration.accessToken;
             return integration.accessToken;
         }
 
