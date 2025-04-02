@@ -21,8 +21,14 @@ async function getLocationState(locationId: string) {
 }
 async function getPackagesAndPlans() {
     try {
-        const plans = await admindb.query.monstroPlans.findMany();
-        const packages = await admindb.query.monstroPackages.findMany();
+        const plans = await admindb.query.monstroPlans.findMany({
+            where: (plans, { not, eq }) => not(eq(plans.name, "Grandfather"))
+        });
+        const packages = await admindb.query.monstroPackages.findMany({
+            with: {
+                paymentPlans: true
+            }
+        });
         return { plans, packages };
     } catch (error) {
         console.error(error);
