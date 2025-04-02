@@ -5,7 +5,7 @@ import { programs } from "./programs";
 import { memberPlans } from "./MemberPlans";
 import { members } from "./members";
 
-export const importedMembers = pgTable("import_members", {
+export const importMembers = pgTable("import_members", {
     id: serial("id").primaryKey(),
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
@@ -28,21 +28,21 @@ export const importedMembers = pgTable("import_members", {
 
 
 
-export const importedMembersRelations = relations(importedMembers, ({ one }) => ({
+export const importedMembersRelations = relations(importMembers, ({ one }) => ({
     location: one(locations, {
-        fields: [importedMembers.locationId],
+        fields: [importMembers.locationId],
         references: [locations.id],
     }),
     member: one(members, {
-        fields: [importedMembers.memberId],
+        fields: [importMembers.memberId],
         references: [members.id],
     }),
     plan: one(memberPlans, {
-        fields: [importedMembers.planId],
+        fields: [importMembers.planId],
         references: [memberPlans.id],
     }),
     program: one(programs, {
-        fields: [importedMembers.programId],
+        fields: [importMembers.programId],
         references: [programs.id],
     }),
 }));
