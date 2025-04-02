@@ -6,7 +6,7 @@ import { programs } from '@/db/schemas/programs';
 import { memberSubscriptions, memberPlans, memberPackages } from '@/db/schemas/MemberPlans';
 import { alias } from 'drizzle-orm/pg-core';
 import { familyMembers, locations, memberLocations, members, users } from '@/db/schemas';
-import { MonstroData, plans } from '@/libs/data';
+import { MonstroData } from '@/libs/data';
 import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { EmailSender } from '@/libs/server/emails';
 
