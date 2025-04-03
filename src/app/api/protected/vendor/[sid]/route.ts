@@ -11,7 +11,7 @@ import { getPlan } from '../utils';
 import { eq } from 'drizzle-orm';
 import { getPaymentPlan } from '../utils';
 import { sales } from '@/db/admin/sales';
-import { AgencyGHL } from '@/libs/server/ghl';
+import { AgencyGHL, VendorGHL } from '@/libs/server/ghl';
 
 const stripe = new VendorStripePayments();
 
@@ -117,13 +117,11 @@ export async function POST(req: Request) {
     }
 }
 
-
 async function ghlAutomations(sale: Sale) {
 
     const integration = await admindb.query.adminIntegrations.findFirst({
         where: (vendorIntegration, { eq }) => eq(vendorIntegration.service, "ghl")
     })
-
 
 
     if (!integration) {
@@ -132,14 +130,21 @@ async function ghlAutomations(sale: Sale) {
     const ghl = new AgencyGHL()
 
     await ghl.getAccessToken(integration)
+    const locationToken = await ghl.getLocationTokenFromAgency({
+        companyId: integration.providerId,
+        locationId: "rCcWpfkx9wZlMF7P4C5V",
+    })
 
-    await ghl.upsertContact({
+
+    const vendorGHL = new VendorGHL();
+    vendorGHL.setAccessToken(locationToken.access_token);
+    await vendorGHL.upsertContact({
         firstName: sale.firstName,
         lastName: sale.lastName,
         email: sale.email,
         phone: sale.phone,
         locationId: 'rCcWpfkx9wZlMF7P4C5V',
         tags: ['customer'],
-        contactType: 'Customer',
+        type: 'Customer',
     })
 }   

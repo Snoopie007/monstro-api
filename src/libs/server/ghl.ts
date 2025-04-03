@@ -94,23 +94,7 @@ class BaseGHL {
 
         return await res.json();
     }
-    async upsertContact(contact: Record<string, any>): Promise<void> {
-        if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
-        const res = await fetch(`${this.API}/contacts/upsert`, {
-            method: "POST",
-            headers: {
-                ...DefaultHeaders,
-                "Authorization": `Bearer ${this.ACCESS_TOKEN}`
-            },
-            body: JSON.stringify(contact)
-        });
-        if (!res.ok) {
-            const error = await res.json();
-            console.log(error);
-            throw new Error("Error Upserting Contact.");
-        }
 
-    }
 }
 
 
@@ -118,12 +102,38 @@ class AgencyGHL extends BaseGHL {
     constructor() {
         super();
     }
+    async getLocationTokenFromAgency(data: { companyId: string, locationId: string }) {
+        if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
+        const qs = QueryString.stringify(data);
+        const res = await fetch(`${this.API}/oauth/locationToken`, {
+            method: 'POST',
+            headers: {
+                "Version": "2021-07-28",
+                'Content-Type': 'application/x-www-form-urlencoded',
+                "Authorization": `Bearer ${this.ACCESS_TOKEN}`
+            },
+            body: qs
+        });
 
+        if (!res.ok) {
+            const error = await res.json();
+            console.log(error);
+            throw new Error("Error Getting Location Token.");
+        }
+
+        const { companyId, traceId, userId, ...responseData } = await res.json();
+        return responseData;
+    }
+
+    async getCompanyToken(code: string, callback = '/callback') {
+        const res = await this.getToken(code, 'Company', callback);
+        return res;
+    }
 
     async getAccessToken(integration: AdminIntegration): Promise<string> {
         const currentTime = new Date().getTime();
         const isExpired = integration.expires ? currentTime > integration.expires : true;
-        console.log(!integration.refreshToken)
+
         if (!integration.refreshToken) throw new Error("No Refresh Token.");
 
         if (!isExpired && integration.accessToken) {
@@ -137,7 +147,7 @@ class AgencyGHL extends BaseGHL {
         await admindb.update(adminIntegrations).set({
             accessToken: access_token,
             refreshToken: refresh_token,
-            expires: new Date().getTime() + expires_in * 1000,
+            expires: (new Date().getTime() + expires_in) * 1000,
             scope,
         }).where(eq(adminIntegrations.service, "ghl"));
 
@@ -281,7 +291,23 @@ class VendorGHL extends BaseGHL {
     }
 
 
+    async upsertContact(contact: Record<string, any>): Promise<void> {
+        if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
+        const res = await fetch(`${this.API}/contacts/upsert`, {
+            method: "POST",
+            headers: {
+                ...DefaultHeaders,
+                "Authorization": `Bearer ${this.ACCESS_TOKEN}`
+            },
+            body: JSON.stringify(contact)
+        });
+        if (!res.ok) {
+            const error = await res.json();
+            console.log(error);
+            throw new Error("Error Upserting Contact.");
+        }
 
+    }
 
     async bookAppointment(appointment: Record<string, any>) {
         if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
