@@ -101,7 +101,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                                         Email
                                     </FormLabel>
                                     <FormControl>
-                                        <Input type="email" disabled placeholder="Email" {...field} />
+                                        <Input type="email" className="bg-white border border-gray-200  rounded-sm p-4 text-sm shadow-none" disabled placeholder="Email" {...field} />
                                     </FormControl>
                                 </FormItem>
                             )} />
@@ -114,7 +114,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                                         Setup Your Password
                                     </FormLabel>
                                     <FormControl>
-                                        <Input type="password" placeholder="••••••••" className="[&:not(:placeholder-shown)]:text-lg" {...field} />
+                                        <Input type="password" placeholder="••••••••" className="bg-white border border-gray-200  rounded-sm p-4 text-sm shadow-none [&:not(:placeholder-shown)]:text-lg" {...field} />
                                     </FormControl>
                                 </FormItem>
                             )} />

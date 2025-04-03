@@ -59,15 +59,19 @@ export default function TypeFields({ form }: { form: UseFormReturn<z.infer<typeo
                                 <RadioGroup
                                     onValueChange={field.onChange}
                                     defaultValue={field.value}
-                                    className="flex flex-col space-y-2"
+                                    className="flex flex-col space-y-0"
                                 >
                                     {['email', 'sms'].map((type) => (
-                                        <FormItem key={type} className="flex items-center space-x-2 space-y-0">
-                                            <FormControl>
-                                                <RadioGroupItem value={type} className='border-black ' />
-                                            </FormControl>
-                                            <FormLabel className="font-normal leading-none">
+                                        <FormItem key={type} className='w-full flex '>
+                                            <FormLabel className="w-full space-x-2 border border-gray-200 px-4 py-3 cursor-pointer rounded-sm font-normal leading-none ">
+
+                                                <FormControl>
+                                                    <RadioGroupItem value={type} className='border-black ' />
+                                                </FormControl>
+
                                                 {type === 'email' ? formatEmail(user?.email || '') : formatPhone(user?.phone || '')}
+
+
                                             </FormLabel>
                                         </FormItem>
                                     ))}
