@@ -11,6 +11,8 @@ type Customer = {
     phone: string;
 }
 
+const isProd = process.env.NODE_ENV === "production"
+
 abstract class BaseStripePayments {
     protected _stripe: Stripe;
     protected _customer: string | null = null;
@@ -166,7 +168,6 @@ class VendorStripePayments extends BaseStripePayments {
             capture_method: options?.authorizeOnly ? "manual" : "automatic",
             customer: this._customer,
             setup_future_usage: "off_session",
-
             statement_descriptor: "Monstro",
             ...(cardId && { payment_method: cardId }),
             metadata: options?.metadata || undefined,
@@ -182,13 +183,15 @@ class VendorStripePayments extends BaseStripePayments {
             throw new Error("Customer not set");
         }
 
-
         const options: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
             description: `Monstro ${plan.name} Subscription`,
             items: [{ price: plan.priceId! }],
             metadata
         };
+        if (trial) {
+            options.trial_period_days = trial;
+        }
         return this._stripe.subscriptions.create(options);
     }
 
@@ -200,14 +203,17 @@ class VendorStripePayments extends BaseStripePayments {
         const startDate = addDays(today, plan.trial || 0);
         const endDate = addWeeks(startDate, (plan.length * 4));
 
-        const isProd = process.env.NODE_ENV === "production"
         const options: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
             items: [{ price: isProd ? plan.priceId! : plan.testPriceId! }],
             cancel_at: Math.floor(endDate.getTime() / 1000),
-            trial_end: Math.floor(startDate.getTime() / 1000),
             metadata
         };
+
+        if (plan.trial) {
+            options.trial_end = Math.floor(startDate.getTime() / 1000);
+        }
+
         return this._stripe.subscriptions.create(options);
     }
 
@@ -216,7 +222,6 @@ class VendorStripePayments extends BaseStripePayments {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
-        const isProd = process.env.NODE_ENV === "production"
         const phaseOneCoupon = isProd ? "qHgZNW46" : "QuJSpLOZ"
         const phaseOnePrice = isProd ? "price_1R9XXWDePDUzIffAbDo18Rtf" : "price_1R4UUNDePDUzIffArAlN6mq6"
         const phaseTwoPrice = isProd ? "price_1R4WeVDePDUzIffAZQPObJhE" : "price_1R4SG5DePDUzIffAz3GU05uZ"
@@ -252,8 +257,8 @@ class VendorStripePayments extends BaseStripePayments {
     }
 
     async createGHLSubscription(metadata: Record<string, any>) {
-        const price = process.env.NODE_ENV === "production" ? "price_1R4WblDePDUzIffAvMQrZRFE" : "price_1R4S9xDePDUzIffAFUKu0ROH"
-        const coupon = process.env.NODE_ENV === "production" ? "kQcIf0sW" : "7Yt7dfGs"
+        const price = isProd ? "price_1R4WblDePDUzIffAvMQrZRFE" : "price_1R4S9xDePDUzIffAFUKu0ROH"
+        const coupon = isProd ? "kQcIf0sW" : "7Yt7dfGs"
         if (!this._customer) {
             throw new Error("Customer not set");
         }

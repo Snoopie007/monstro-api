@@ -43,13 +43,19 @@ export async function POST(req: Request) {
 
         const today = new Date();
 
-        const [location] = await db.insert(locations).values({
-            ...data,
-            phone: formatPhoneNumber(data.phone),
-            slug: data.name.toLowerCase().replace(/ /g, '')
-        }).returning({ id: locations.id, name: locations.name })
+        // const [location] = await db.insert(locations).values({
+        //     ...data,
+        //     phone: formatPhoneNumber(data.phone),
+        //     slug: data.name.toLowerCase().replace(/ /g, '')
+        // }).returning({ id: locations.id, name: locations.name })
 
-
+        const location = await db.query.locations.findFirst({
+            where: (location, { eq }) => eq(location.id, 1)
+        })
+        if (!location) {
+            return NextResponse.json({ error: "Location not found" }, { status: 400 })
+        }
+        console.log(location)
         const metadata = { vendorId, locationId: location.id }
 
         stripe.setCustomer(sale.stripeCustomerId)
