@@ -74,6 +74,11 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
         icon: "SquareChartGantt"
     },
     {
+        name: "Calendar",
+        path: "big-calender-demo",
+        icon: "CalendarClock"
+    },
+    {
         name: "Settings",
         path: "settings/company",
         icon: "Settings"
