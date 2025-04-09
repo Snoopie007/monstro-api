@@ -50,8 +50,9 @@ export async function POST(req: Request) {
 
 
         if (!location) {
-            return NextResponse.json({ error: "Location not found" }, { status: 400 })
+            throw new Error("Error creating location")
         }
+
         const metadata = { vendorId, locationId: location.id }
 
         stripe.setCustomer(sale.stripeCustomerId)
