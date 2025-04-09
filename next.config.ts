@@ -34,10 +34,10 @@ const nextConfig: NextConfig = {
   skipTrailingSlashRedirect: true,
   transpilePackages: ['next-mdx-remote'],
   // output: 'standalone'
-  webpack: (config) => {
-    config.plugins.push(ReactComponentName({}));
-    return config;
-  },
+  // webpack: (config) => {
+  //   config.plugins.push(ReactComponentName({}));
+  //   return config;
+  // },
 };
 
 export default nextConfig;
