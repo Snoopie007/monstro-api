@@ -89,8 +89,8 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             locations: [...session?.user.locations, data],
         })
 
-        router.push(`${saleId ? `/dashboard/${data.id}` : `/onboarding/locations/${data.id}`}`);
-
+        router.push(`${saleId ? `/dashboard/${data.id}` : `/onboarding/${data.id}`}`);
+        return
     }
 
     function remove() {
