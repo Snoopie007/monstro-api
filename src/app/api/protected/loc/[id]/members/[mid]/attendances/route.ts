@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { ExtendedAttendance } from '@/types/attendance';
+import { attendances } from '@/db/schemas';
 
 /**
  * Retrieves attendance records for a specific member at a location,
@@ -74,7 +75,10 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
 
         return NextResponse.json(attendances, { status: 200 });
     } catch (err) {
-        console.log(err);
+       
         return NextResponse.json({ error: err }, { status: 500 });
     }
 }
+
+
+

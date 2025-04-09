@@ -51,6 +51,7 @@ const SessionCalendar: React.FC<{
             title: `Name: ${session.programName}`,
             start,
             end,
+            duration: session.duration,
           };
         });
 
