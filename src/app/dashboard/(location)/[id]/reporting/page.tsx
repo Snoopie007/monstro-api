@@ -12,7 +12,10 @@ import ReportDatePicker from './components/ReportDatePicker'
 import { ReportProvider } from './provider/ReportContext'
 
 
-export default function Reporting() {
+
+
+export default async function Reporting(props: { params: Promise<{ id: string }> }) {
+    const { id } = await props.params
 
     return (
 
