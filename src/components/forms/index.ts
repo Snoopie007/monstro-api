@@ -7,5 +7,6 @@ export * from "./select";
 export * from "./datetime-picker";
 export * from "../../hooks/use-file-uploader";
 export * from "./form";
+export * from "./TagInput";
 export * from "./label";
 export * from "./OTPInput";
