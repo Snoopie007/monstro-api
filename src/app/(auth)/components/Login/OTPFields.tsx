@@ -44,9 +44,8 @@ export default function VerifyOTP({ form }: VerifyOTPProps) {
             ...v,
         });
 
-
+        setLoading(false)
         if (res?.error) {
-            setLoading(false)
             toast.error(res.code || 'Something went wrong. Please contact support at support@monstro.com.');
             return;
         }

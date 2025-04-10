@@ -76,6 +76,10 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
         }
 
         const signInResult = await signIn("credentials", { redirect: false, ...v })
+        if (signInResult?.error) {
+            toast.error(signInResult.code || 'Something went wrong. Please contact support at support@monstro.com.');
+            return;
+        }
         router.push(`/onboarding?sid=${sale.id}`);
     }
 
