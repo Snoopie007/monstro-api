@@ -14,6 +14,7 @@ export type Sale = {
     stripeCustomerId?: string | null;
     paymentId?: number | null;
     closedAt?: Date | null;
+    coupon?: string | null;
     status: SalesStatus;
     created: Date;
     updated?: Date | null;

@@ -195,7 +195,8 @@ class VendorStripePayments extends BaseStripePayments {
         return this._stripe.subscriptions.create(options);
     }
 
-    async createPaymentPlan(plan: PackagePaymentPlan, metadata: Record<string, any>) {
+    async createPaymentPlan(plan: PackagePaymentPlan, coupon: string | undefined, metadata: Record<string, any>) {
+
         if (!this._customer) {
             throw new Error("Customer not set");
         }
@@ -205,10 +206,16 @@ class VendorStripePayments extends BaseStripePayments {
 
         const options: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
-            items: [{ price: isProd ? plan.priceId! : plan.testPriceId! }],
+            items: [{
+                price: isProd ? plan.priceId! : plan.testPriceId!
+            }],
             cancel_at: Math.floor(endDate.getTime() / 1000),
             metadata
         };
+
+        if (coupon) {
+            options.discounts = [{ coupon }];
+        }
 
         if (plan.trial) {
             options.trial_end = Math.floor(startDate.getTime() / 1000);
