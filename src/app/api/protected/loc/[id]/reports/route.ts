@@ -1,49 +1,47 @@
 
-import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { NextResponse, NextRequest } from "next/server";
-import { subMonths } from "date-fns";
+import { getRecentCancelledMembers, getTopCustomersBySpend } from "./utils";
+import { getRevenueData } from "./utils";
+import { getRecurringRevenueData } from "./utils";
+import { getNewMembersByMonth } from "./utils";
+
 type ReportProps = {
     params: Promise<{ id: number }>
 }
 
+
 export async function GET(req: NextRequest, props: ReportProps) {
     const { id } = await props.params
-    const searchParams = req.nextUrl.searchParams
-    const type = searchParams.get("type")
-    const session = await auth();
-
-    if (!type) {
-        return NextResponse.json({ error: "Type is required" }, { status: 400 })
-    }
 
 
     try {
-        const report = await getReport(id, type)
-        return NextResponse.json(report, { status: 200 })
+        const transactions = await db.query.transactions.findMany({
+            where: (transactions, { eq, and }) => and(
+                eq(transactions.locationId, id),
+                eq(transactions.status, 'paid'),
+            )
+        });
+
+        const members = await db.query.memberLocations.findMany({
+            where: (memberLocations, { eq }) => eq(memberLocations.locationId, id),
+            with: {
+                member: true
+            }
+        });
+
+        const newMembersByMonth = getNewMembersByMonth(members)
+        const topCustomersBySpend = getTopCustomersBySpend(transactions, members)
+
+        return NextResponse.json({
+            transactions,
+            revenueData: getRevenueData(transactions),
+            recurringRevenueData: getRecurringRevenueData(transactions),
+            recentCancelledMembers: getRecentCancelledMembers(members),
+            newMembersByMonth,
+            topCustomersBySpend
+        }, { status: 200 });
     } catch (err) {
-        return NextResponse.json({ error: err }, { status: 500 })
+        return NextResponse.json({ error: err }, { status: 500 });
     }
-}
-
-
-
-async function getReport(id: number, type: string) {
-    switch (type) {
-        case "members":
-            return await newMemberReport(id)
-        default:
-            return NextResponse.json({ error: "Invalid report type" }, { status: 400 })
-    }
-}
-
-async function newMemberReport(id: number) {
-    const members = await db.query.memberLocations.findMany({
-        where: (memberLocations, { eq, and, gte }) => and(
-            eq(memberLocations.locationId, id),
-            eq(memberLocations.status, "active"),
-            gte(memberLocations.created, subMonths(new Date(), 1))
-        )
-    })
-    return members
 }

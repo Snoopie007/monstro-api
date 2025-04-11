@@ -1,3 +1,4 @@
+'use client'
 import React, { useEffect, useState } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
@@ -51,7 +52,7 @@ export function CustomerLTVChart() {
                 <div className=' relative flex flex-row'>
 
 
-                    <ChartYAxis maxAmount={maxAmount} type="currency" />
+                    <ChartYAxis max={maxAmount} min={0} type="currency" />
                     <ChartContainer config={chartConfig} className='flex-1'>
                         <LineChart
                             accessibilityLayer
