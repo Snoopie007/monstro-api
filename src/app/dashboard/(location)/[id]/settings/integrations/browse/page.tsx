@@ -26,8 +26,15 @@ export default function BrowseIntegrationPage(props: { params: Promise<{ id: str
                 if (Array.isArray(value)) {
                     value = value.join(' ');
                 }
-                if (key == "state") {
+                if (key === "state") {
                     return `${key}=${params.id}`;
+                }
+                if (key === "redirect_uri") {
+                    // Add origin to redirect_uri if it's a relative path
+                    if (typeof value === 'string' && value.startsWith('/')) {
+                        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                        return `${key}=${origin}${value}`;
+                    }
                 }
                 return `${key}=${value}`;
             }).join('&');
