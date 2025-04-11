@@ -18,10 +18,9 @@ import { useReport } from '@/hooks/useReports'
 export default function Reporting(props: { params: Promise<{ id: string }> }) {
     const { id } = use(props.params)
     const { reports, isLoading, error } = useReport(id)
-
     if (error) {
-        return <div className='flex flex-col gap-2'>
-            <h2 className='text-xl font-semibold'>Reporting Overview</h2>
+        return <div className='flex flex-col gap-2 items-center justify-center h-[calc(100vh-50px)]'>
+
             <div className='text-sm text-muted-foreground'>Error loading reports</div>
         </div>
     }
