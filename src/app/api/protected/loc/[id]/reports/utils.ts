@@ -8,7 +8,7 @@ const months = [
     "July", "August", "September", "October", "November", "December"
 ];
 
-function getRecentCancelledMembers(memberLocations: MemberLocation[]) {
+function recentCancelledMembers(memberLocations: MemberLocation[]) {
     return memberLocations
         .filter(ml => ml.status === 'canceled')
         .sort((a, b) => new Date(b.updated || b.created).getTime() - new Date(a.updated || a.created).getTime())
@@ -21,7 +21,7 @@ function getRecentCancelledMembers(memberLocations: MemberLocation[]) {
         }));
 }
 
-function getNewMembersByMonth(memberLocations: MemberLocation[]) {
+function newMembersByMonth(memberLocations: MemberLocation[]) {
     // Initialize counts for each month
     const counts = Object.fromEntries(months.map(month => [month, 0]));
 
@@ -38,7 +38,7 @@ function getNewMembersByMonth(memberLocations: MemberLocation[]) {
 
     return months.map(month => ({ month, count: counts[month] }));
 }
-function getTopCustomersBySpend(transactions: Transaction[], mls: MemberLocation[]) {
+function topSpenders(transactions: Transaction[], mls: MemberLocation[]) {
     // Using Map instead of object for better type safety and performance
     const memberTotals = new Map<number, number>();
 
@@ -59,7 +59,7 @@ function getTopCustomersBySpend(transactions: Transaction[], mls: MemberLocation
         .slice(0, 10);
 }
 
-function getRevenueData(transactions: Transaction[]) {
+function revenueData(transactions: Transaction[]) {
 
 
     const revenueByMonth = Object.fromEntries(months.map(month => [month, 0]));
@@ -71,10 +71,10 @@ function getRevenueData(transactions: Transaction[]) {
         }
     });
 
-    return months.map(month => ({ month, revenue: revenueByMonth[month] }));
+    return months.map(month => ({ month, amount: revenueByMonth[month] }));
 }
 
-function getRecurringRevenueData(transactions: Transaction[]) {
+function recurringRevenueData(transactions: Transaction[]) {
 
     const recurringRevenueByMonth = Object.fromEntries(months.map(month => [month, 0]));
 
@@ -87,11 +87,50 @@ function getRecurringRevenueData(transactions: Transaction[]) {
 
     return months.map(month => ({ month, amount: recurringRevenueByMonth[month] }));
 }
+function mltv(transactions: Transaction[]) {
+    // Group transactions by member and month
+    const memberMonthlyTotals = new Map<number, Map<string, number>>();
+
+    // Process each transaction
+    transactions.forEach(tx => {
+        if (!tx.memberId || !tx.created || tx.refunded) return;
+
+        // Get or create member map
+        if (!memberMonthlyTotals.has(tx.memberId)) {
+            memberMonthlyTotals.set(tx.memberId, new Map());
+        }
+
+        const memberMap = memberMonthlyTotals.get(tx.memberId)!;
+        const month = months[new Date(tx.created).getMonth()];
+        const currentAmount = memberMap.get(month) || 0;
+        memberMap.set(month, currentAmount + (tx.amount / 100));
+    });
+
+    // Calculate median LTV for each month
+    return months.map(month => {
+        // Get all non-zero values for this month
+        const values = Array.from(memberMonthlyTotals.values())
+            .map(memberMap => memberMap.get(month) || 0)
+            .filter(amount => amount > 0);
+
+        let median = 0;
+        if (values.length > 0) {
+            values.sort((a, b) => a - b);
+            const mid = Math.floor(values.length / 2);
+            median = values.length % 2 === 0
+                ? (values[mid - 1] + values[mid]) / 2
+                : values[mid];
+        }
+
+        return { month, amount: median };
+    });
+}
 
 export {
-    getRecentCancelledMembers,
-    getNewMembersByMonth,
-    getRevenueData,
-    getRecurringRevenueData,
-    getTopCustomersBySpend
+    recentCancelledMembers,
+    newMembersByMonth,
+    revenueData,
+    recurringRevenueData,
+    topSpenders,
+    mltv
 };

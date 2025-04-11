@@ -19,6 +19,12 @@ export default function Reporting(props: { params: Promise<{ id: string }> }) {
     const { id } = use(props.params)
     const { reports, isLoading, error } = useReport(id)
 
+    if (error) {
+        return <div className='flex flex-col gap-2'>
+            <h2 className='text-xl font-semibold'>Reporting Overview</h2>
+            <div className='text-sm text-muted-foreground'>Error loading reports</div>
+        </div>
+    }
     return (
 
         <ReportProvider>
@@ -38,12 +44,8 @@ export default function Reporting(props: { params: Promise<{ id: string }> }) {
 
                         <div className='grid grid-cols-3 gap-12 border-b border-foreground/10 pb-10'>
                             <NewCustomerChart isLoading={isLoading} data={reports?.newMembersByMonth} />
-                            <CustomerLTVChart />
-                            <TopSpenders isLoading={isLoading} data={reports?.topCustomersBySpend} />
-
-
-
-
+                            <CustomerLTVChart isLoading={isLoading} data={reports?.mltv} />
+                            <TopSpenders isLoading={isLoading} data={reports?.topSpenders} />
                         </div>
                         <div className='grid grid-cols-3 gap-12   '>
                             <ChurnedMembers isLoading={isLoading} data={reports?.recentCancelledMembers} />

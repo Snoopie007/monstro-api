@@ -16,14 +16,14 @@ const chartConfig = {
 
 interface RevenueChartProps {
     isLoading: boolean
-    data: { month: string, revenue: number }[]
+    data: { month: string, amount: number }[]
 }
 
 export function RevenueChart({ isLoading, data }: RevenueChartProps) {
     const { filters } = useReportFilters()
     const maxAmount = React.useMemo(() => {
         if (!data) return 0;
-        return Math.max(...data.map(item => item.revenue))
+        return Math.max(...data.map(item => item.amount))
 
     }, [data]);
     return (
@@ -72,7 +72,7 @@ export function RevenueChart({ isLoading, data }: RevenueChartProps) {
                                     content={<ChartTooltipContent hideLabel />}
                                 />
                                 <Line
-                                    dataKey="revenue"
+                                    dataKey="amount"
                                     type="monotone"
                                     stroke="var(--color-desktop)"
                                     strokeWidth={1}
