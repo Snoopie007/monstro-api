@@ -5,7 +5,7 @@ import { authenticateMember } from '../utils';
 
 export async function GET(req: NextRequest) {
 	try {
-		const authMember = authenticateMember(req);
+		const authMember =  authenticateMember(req);
 		const locations = await db.query.memberLocations.findMany({
 			where: (location, { eq, and }) => and(
 				eq(location.memberId, Number(authMember.member?.id)),
