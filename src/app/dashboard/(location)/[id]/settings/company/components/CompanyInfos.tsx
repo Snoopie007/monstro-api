@@ -43,10 +43,10 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
     }
 
     return (
-        <Card className="rounded-sm bg-foreground/5 border-foreground/10">
+        <Card className="rounded-sm  border-foreground/10">
             <div className="p-6 space-y-4">
                 <CardHeader className="p-0 space-y-2">
-                    <CardTitle className="text-lg">{title}</CardTitle>
+                    <CardTitle className="text-base">{title}</CardTitle>
                     <CardDescription>
                         {description}
                     </CardDescription>
@@ -59,7 +59,7 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
                     onChange={(e) => setValue(e.target.value)}
                 />
             </div>
-            <CardFooter className="flex justify-end border-t px-6 py-3 border-foreground/10">
+            <CardFooter className="flex justify-end border-t px-6 py-3 bg-foreground/5 border-foreground/10">
                 <Button
                     variant="foreground"
                     size="sm"

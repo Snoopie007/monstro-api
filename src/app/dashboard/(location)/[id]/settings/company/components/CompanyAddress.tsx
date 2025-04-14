@@ -54,11 +54,11 @@ export default function CompanyAddress({ location }: { location: Location }) {
         console.log(data);
     }
     return (
-        <Card className="rounded-sm bg-foreground/5 border-foreground/10">
+        <Card className="rounded-sm  border-foreground/10">
 
             <div className="p-6 space-y-4">
                 <CardHeader className="p-0 space-y-2">
-                    <CardTitle className="text-lg">Business Address</CardTitle>
+                    <CardTitle className="text-base">Business Address</CardTitle>
                     <CardDescription>
                         This is the address that will be displayed to the public.
                     </CardDescription>
@@ -159,7 +159,7 @@ export default function CompanyAddress({ location }: { location: Location }) {
                     </form>
                 </Form>
             </div>
-            <CardFooter className="flex justify-end border-t px-6 py-3 border-foreground/10">
+            <CardFooter className="flex justify-end border-t px-6 py-3 bg-foreground/5 border-foreground/10">
                 <Button variant="foreground" size="sm" disabled={loading} onClick={form.handleSubmit(update)}
                     className={cn('children:hidden', loading && 'children:block')}
                 >

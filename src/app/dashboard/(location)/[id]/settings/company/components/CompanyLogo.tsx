@@ -36,7 +36,7 @@ export default function CompanyLogo({ logo, locationId }: { logo: string | null,
     )
 
     return (
-        <Card className="rounded-sm bg-foreground/5 border-foreground/10">
+        <Card className="rounded-sm  border-foreground/10">
             <input type='file' ref={fileRef} onInput={uploadLogo} className='hidden' />
 
             <div className="flex flex-row gap-10 items-center p-6">
@@ -70,7 +70,7 @@ export default function CompanyLogo({ logo, locationId }: { logo: string | null,
                     </>
                 )}
             </div>
-            <CardFooter className="flex justify-end border-t px-6 py-3 border-foreground/10">
+            <CardFooter className="flex justify-end border-t px-6 py-3 border-foreground/10 bg-foreground/5">
                 <Button variant="foreground" size="sm">
                     Save
                 </Button>
