@@ -23,8 +23,6 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
             }
         })
 
-
-
         return NextResponse.json(subscriptions, { status: 200 })
     } catch (err) {
         // console.log(err)
@@ -123,8 +121,12 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                     paymentMethod: "cash"
                 });
                 newDraftInvoice.forPeriodStart = newSubscription.currentPeriodEnd;
-                newDraftInvoice.forPeriodEnd = calculateCurrentPeriodEnd(newSubscription.currentPeriodEnd, plan.interval!, plan.intervalThreshold!);
-                const [{ invoiceId }] = await db.insert(memberInvoices).values({
+                newDraftInvoice.forPeriodEnd = calculateCurrentPeriodEnd(
+                    newSubscription.currentPeriodEnd,
+                    plan.interval!,
+                    plan.intervalThreshold!
+                );
+                await db.insert(memberInvoices).values({
                     ...newDraftInvoice,
                     memberSubscriptionId: sid
                 }).returning({ invoiceId: memberInvoices.id });

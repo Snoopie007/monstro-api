@@ -40,6 +40,7 @@ export type LocationState = {
     agreeToTerms: boolean;
     lastRenewalDate: Date | null;
     startDate: Date | null;
+    taxRate: number;
     settings: LocationSettings;
     usagePercent: number;
     status: LocationStatus;

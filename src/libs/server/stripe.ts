@@ -342,6 +342,7 @@ class MemberStripePayments extends BaseStripePayments {
             return_url: settings?.returnUrl || "https://unknown.com",
             expand: ["payment_method"]
         }
+
         const { client_secret, payment_method } = await this._stripe.paymentIntents.create(option);
         return { clientSecret: client_secret as string, paymentMethod: payment_method as Stripe.PaymentMethod };
     }
@@ -359,6 +360,7 @@ class MemberStripePayments extends BaseStripePayments {
         const options: Stripe.SubscriptionCreateParams = {
             ...rest,
             customer: this._customer,
+            automatic_tax: { enabled: true },
             description: `Subscription to ${plan.name}`,
             items: [{ price: plan.stripePriceId as string }],
             collection_method: "charge_automatically",

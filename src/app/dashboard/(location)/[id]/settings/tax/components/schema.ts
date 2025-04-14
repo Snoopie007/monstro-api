@@ -19,17 +19,6 @@ export const TaxSettingsSchema = z.object({
     tax_code: z.string().min(1),
 });
 
-export const USTaxTypes = [
-    {
-        name: "Sales Tax",
-        code: "state_sales_tax",
-    },
-    {
-        name: "Retail Delivery Tax",
-        code: "retail_delivery_tax",
-    }
-]
-
 
 export const TaxBehaviors = [
     {

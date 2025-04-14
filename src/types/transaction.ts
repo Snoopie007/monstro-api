@@ -21,6 +21,7 @@ export type Transaction = {
     member?: Member;
     status: TransactionStatus;
     item: string | null;
+    tax: number;
     subscriptionId?: number | null;
     subscription?: MemberSubscription;
     packageId?: number | null;

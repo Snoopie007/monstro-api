@@ -25,6 +25,7 @@ export const transactions = pgTable("transactions", {
     currency: text("currency").notNull().default("USD"),
     metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
     refunded: boolean("refunded").notNull().default(false),
+    tax: integer("tax").notNull().default(0),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
     deleted: timestamp("deleted_at", { withTimezone: true }),

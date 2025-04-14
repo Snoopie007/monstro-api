@@ -52,7 +52,7 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
                     </CardDescription>
                 </CardHeader>
                 <Input
-                    type="email"
+                    type="text"
                     className="rounded-sm w-60"
                     placeholder={`Enter ${type}`}
                     value={value ?? undefined}

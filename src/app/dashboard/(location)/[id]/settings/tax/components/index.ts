@@ -1,3 +1,3 @@
-export * from './RegisterTax';
-export * from './TaxList';
 
+export * from './StripeTax';
+export * from './TaxRate';
