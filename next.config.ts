@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import ReactComponentName from "react-scan/react-component-name/webpack";
+// import ReactComponentName from "react-scan/react-component-name/webpack";
 
 const nextConfig: NextConfig = {
   /* config options here */
