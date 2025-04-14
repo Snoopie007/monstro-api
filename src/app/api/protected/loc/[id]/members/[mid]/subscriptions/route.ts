@@ -47,12 +47,20 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             where: (locationState, { eq }) => eq(locationState.locationId, params.id),
         })
 
+        if (!locationState) {
+            return NextResponse.json({ error: "No valid location not found" }, { status: 404 })
+        }
+
+        // Apply tax to the plan price
+        const tax = Math.floor(plan.price * (locationState.taxRate / 10000))
+
+
         let { newSubscription, newTransaction, newInvoice } = createSubscription({
             ...data,
             memberId: params.mid,
             locationId: params.id,
             trialDays
-        }, plan)
+        }, plan, tax)
 
         if (data.paymentMethod === "card") {
             const stripe = await getStripeCustomer(params)
@@ -113,25 +121,15 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 eq(memberLocations.locationId, params.id)
             ))
         }
-        if (data.paymentMethod === "cash") {
-            if (!newSubscription.cancelAt) {
-                const newDraftInvoice = createInvoice(plan, {
-                    memberId: params.mid,
-                    locationId: params.id,
-                    paymentMethod: "cash"
-                });
-                newDraftInvoice.forPeriodStart = newSubscription.currentPeriodEnd;
-                newDraftInvoice.forPeriodEnd = calculateCurrentPeriodEnd(
-                    newSubscription.currentPeriodEnd,
-                    plan.interval!,
-                    plan.intervalThreshold!
-                );
-                await db.insert(memberInvoices).values({
-                    ...newDraftInvoice,
-                    memberSubscriptionId: sid
-                }).returning({ invoiceId: memberInvoices.id });
-            }
+
+        if (data.paymentMethod === "cash" && !newSubscription.cancelAt) {
+            newInvoice.status = "draft"
+            await db.insert(memberInvoices).values({
+                ...newInvoice,
+                memberSubscriptionId: sid
+            }).returning({ invoiceId: memberInvoices.id });
         }
+
         return NextResponse.json({ sid }, { status: 200 })
     } catch (err) {
         console.log(err)

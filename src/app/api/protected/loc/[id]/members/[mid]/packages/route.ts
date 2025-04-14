@@ -55,20 +55,21 @@ export async function POST(req: NextRequest, props: { params: Promise<PackagePro
         }
 
 
+        // Apply tax to the plan price
+        const tax = Math.floor(plan.price * (locationState.taxRate / 10000))
+        const amount = plan.price + tax
 
         let { newTransaction, newPkg, newInvoice } = createPackage({
             ...data,
             memberId: params.mid,
             locationId: params.id,
-        }, plan)
+        }, plan, tax)
 
         let clientSecret: string | undefined;
         if (data.paymentMethod === "card") {
 
             const stripe = await getStripeCustomer(params)
 
-            // Apply tax to the plan price
-            const amount = plan.price + Math.floor(plan.price * (locationState.taxRate / 10000))
             const res = await stripe.createPaymentIntent(amount, {
                 paymentMethod: stripePaymentMethod.id,
                 currency: plan.currency,
