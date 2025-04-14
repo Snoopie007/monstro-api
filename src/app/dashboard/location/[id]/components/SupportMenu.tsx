@@ -21,10 +21,10 @@ export default function SupportMenu({ locationId }: { locationId: string }) {
             <DropdownMenuContent align='end'>
 
                 <DropdownMenuItem className='cursor-pointer'>
-                    <Link href={`/dashboard/${locationId}/settings/profile`}>Support Articles</Link>
+                    <Link href={`/dashboard/location/${locationId}/settings/profile`}>Support Articles</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                    <Link href={`/dashboard/${locationId}/support`}>Support Center</Link>
+                    <Link href={`#`}>Support Center</Link>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem>Share Feedback</DropdownMenuItem>

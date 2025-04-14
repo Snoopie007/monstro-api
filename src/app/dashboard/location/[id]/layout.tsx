@@ -7,7 +7,7 @@ import { db } from "@/db/db";
 import { redirect } from "next/navigation";
 
 
-interface AccountStatusLayoutProps {
+interface LocationLayoutProps {
     children: React.ReactNode,
     params: Promise<{ id: string }>
 }
@@ -20,7 +20,7 @@ async function getLocationState(locationId: string) {
 }
 
 
-export default async function AccountStatusLayout(props: AccountStatusLayoutProps) {
+export default async function LocationLayout(props: LocationLayoutProps) {
     const params = await props.params;
     const { children } = props;
     const locationState = await getLocationState(params.id)

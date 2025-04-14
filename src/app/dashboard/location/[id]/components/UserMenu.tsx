@@ -34,7 +34,7 @@ export default function UserMenu({ locationId }: { locationId: string }) {
             <DropdownMenuContent align='end'>
 
                 <DropdownMenuItem className='cursor-pointer'>
-                    <Link href={`/dashboard/${locationId}/settings/profile`}>Profile</Link>
+                    <Link href={`/dashboard/location/${locationId}/settings/profile`}>Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>Billing</DropdownMenuItem>
 

@@ -34,7 +34,7 @@ export default function LocationSelect({ locationId }: { locationId: string }) {
         setSelectedLocation(location);
 
         localStorage.setItem('locationId', `${location.id}`);
-        push(`/dashboard/${location.id}`);
+        push(`/dashboard/location/${location.id}`);
     }
 
     return (

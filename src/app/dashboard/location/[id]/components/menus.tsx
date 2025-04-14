@@ -65,7 +65,7 @@ function SideNav({ locationId }: { locationId: string }) {
                                                     <ul className='px-2 space-y-1'>
                                                         {item.subMenu.map((subItem) => (
                                                             <li key={subItem.name} className='w-full inactive:opacity-50'>
-                                                                <Link href={`/dashboard/${locationId}/${subItem.path}`}
+                                                                <Link href={`/dashboard/location/${locationId}/${subItem.path}`}
                                                                     className={cn(subMenuItemClass)}>
                                                                     {subItem.name}
                                                                 </Link>
@@ -78,7 +78,7 @@ function SideNav({ locationId }: { locationId: string }) {
                                         </li>
                                     ) : (
                                         <li className='w-full inactive:opacity-50'>
-                                            <Link href={`/dashboard/${locationId}/${item.path}`} className={cn(menuLinkClass, 'inactive:hidden')}>
+                                            <Link href={`/dashboard/location/${locationId}/${item.path}`} className={cn(menuLinkClass, 'inactive:hidden')}>
                                                 <span><Icon name={item.icon} size={16} /></span>
                                                 <b className='group-data-[state=closed]:opacity-0 font-semibold flex-1 text-xs'>{item.name}</b>
                                             </Link>
