@@ -12,7 +12,7 @@ export const ProgramColumns = (locationId: string): ColumnDef<Program, any>[] =>
         cell: ({ row }) => {
             const program = row.original
             return (
-                <Link href={`/dashboard/${locationId}/programs/${program.id}`} className="" >
+                <Link href={`/dashboard/location/${locationId}/programs/${program.id}`} className="" >
                     {program.name}
                 </Link>
             )

@@ -38,7 +38,7 @@ export const MemberColumns = (locationId: string): ColumnDef<Member, any>[] => [
       const member = row.original
       return (
 
-        <Link href={`/dashboard/${locationId}/members/${member.id}`} className="font-semibold">{member.firstName} {member.lastName}</Link>
+        <Link href={`/dashboard/location/${locationId}/members/${member.id}`} className="font-semibold">{member.firstName} {member.lastName}</Link>
       )
     },
   },
