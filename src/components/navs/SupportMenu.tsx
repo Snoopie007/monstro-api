@@ -10,7 +10,10 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CircleHelp } from "lucide-react";
-export default function SupportMenu({ locationId }: { locationId: string }) {
+
+
+
+export function SupportMenu() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -21,7 +24,7 @@ export default function SupportMenu({ locationId }: { locationId: string }) {
             <DropdownMenuContent align='end'>
 
                 <DropdownMenuItem className='cursor-pointer'>
-                    <Link href={`/dashboard/location/${locationId}/settings/profile`}>Support Articles</Link>
+                    <Link href={`#`}>Support Articles</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                     <Link href={`#`}>Support Center</Link>

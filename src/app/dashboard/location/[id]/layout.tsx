@@ -1,4 +1,4 @@
-import { SideNav, TopNav } from "./components/menus";
+import { LocationSideNav, LocationTopNav } from "./components";
 import { cn } from "@/libs/utils";
 import { AccountStatusProvider } from "./providers/AccountStatusProvider";
 
@@ -32,9 +32,9 @@ export default async function LocationLayout(props: LocationLayoutProps) {
     return (
         <main className={cn("min-h-screen max-h-screen h-screen overflow-hidden flex flex-col w-full  bg-background")}>
             <AccountStatusProvider locationState={locationState}>
-                <TopNav locationId={params.id} />
+                <LocationTopNav lid={params.id} />
                 <div className="relative flex flex-1 flex-row justify-start items-start  w-full">
-                    <SideNav locationId={params.id} />
+                    <LocationSideNav lid={params.id} />
                     <div className="flex-1 h-full">
                         {children}
                     </div>

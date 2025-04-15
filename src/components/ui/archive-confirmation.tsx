@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger, AlertDialogAction } from '@/components/ui/AlertDialog';
 import { cn } from '@/libs/utils';
 
 export const ArchiveConfirmation = ({ removeFunction, entity, params, buttonType, buttonClassName, openButtonText }: { removeFunction: Function, entity: string, params: any, buttonType: string, buttonClassName: string, openButtonText: string | ReactNode }) => {

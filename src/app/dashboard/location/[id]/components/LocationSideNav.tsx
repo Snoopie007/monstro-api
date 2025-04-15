@@ -2,14 +2,8 @@
 import { cn } from '@/libs/utils';
 import Link from 'next/link';
 import { motion } from "framer-motion"
-import Image from 'next/image';
 
 import { SidebarMenuItems } from './MenuItems';
-import LocationSelect from './SelectLocation';
-import ThemeMenu from '@/components/ui/ThemeMenu';
-import { Bell } from 'lucide-react';
-import SupportMenu from './SupportMenu';
-import UserMenu from './UserMenu';
 import { Icon } from '@/components/icons';
 import {
     Collapsible,
@@ -17,10 +11,11 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui"
 import React from 'react';
-import { usePathname } from 'next/navigation';
 import { useAccountStatus } from '../providers/AccountStatusProvider';
 
-function SideNav({ locationId }: { locationId: string }) {
+
+
+export function LocationSideNav({ lid }: { lid: string }) {
     const [currentMenuToggle, setCurrentMenuToggle] = React.useState<string | null>(null)
     const [isOpen, setIsOpen] = React.useState<boolean>(false)
     const { locationState } = useAccountStatus();
@@ -65,7 +60,7 @@ function SideNav({ locationId }: { locationId: string }) {
                                                     <ul className='px-2 space-y-1'>
                                                         {item.subMenu.map((subItem) => (
                                                             <li key={subItem.name} className='w-full inactive:opacity-50'>
-                                                                <Link href={`/dashboard/location/${locationId}/${subItem.path}`}
+                                                                <Link href={`/dashboard/location/${lid}/${subItem.path}`}
                                                                     className={cn(subMenuItemClass)}>
                                                                     {subItem.name}
                                                                 </Link>
@@ -78,7 +73,7 @@ function SideNav({ locationId }: { locationId: string }) {
                                         </li>
                                     ) : (
                                         <li className='w-full inactive:opacity-50'>
-                                            <Link href={`/dashboard/location/${locationId}/${item.path}`} className={cn(menuLinkClass, 'inactive:hidden')}>
+                                            <Link href={`/dashboard/location/${lid}/${item.path}`} className={cn(menuLinkClass, 'inactive:hidden')}>
                                                 <span><Icon name={item.icon} size={16} /></span>
                                                 <b className='group-data-[state=closed]:opacity-0 font-semibold flex-1 text-xs'>{item.name}</b>
                                             </Link>
@@ -98,45 +93,3 @@ function SideNav({ locationId }: { locationId: string }) {
     )
 }
 
-
-
-function TopNav({ locationId }: { locationId: string }) {
-    const pathname = usePathname();
-    const pathSegments = pathname.split('/').filter(Boolean);
-    const currentPath = pathSegments;
-
-    return (
-        <div className=" w-full border-b border-gray-200 py-2 px-3 flex flex-initial justify-between">
-
-
-            <div className='flex flex-row items-center gap-2'>
-                <div className={cn('logo  flex flex-row ')}>
-                    <Image src='/images/monstro-icon.webp' alt='' width={24} height={24} />
-                </div>
-                <LocationSelect locationId={locationId} />
-
-
-            </div>
-            <div className='flex flex-row items-center gap-3'>
-                <div>
-                    <ThemeMenu />
-                </div>
-                <div>
-                    <div className='px-3'>
-                        <Bell size={16} />
-                    </div>
-                </div>
-                <div className='items-center'>
-                    <SupportMenu locationId={locationId} />
-                </div>
-                <div>
-                    <UserMenu locationId={locationId} />
-                </div>
-            </div>
-        </div>
-    )
-}
-export {
-    SideNav,
-    TopNav
-}

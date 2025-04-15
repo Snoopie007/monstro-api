@@ -1,4 +1,4 @@
-export * from './alert-dialog';
+export * from './AlertDialog';
 export * from './archive-confirmation';
 export * from './card';
 export * from './collapsible';
