@@ -38,7 +38,7 @@ export default async function LocationsPage() {
                 <div className='grid grid-cols-4 gap-4'>
                     {locations.map((location) => (
                         <Link href={`/dashboard/locations/${location.id}`} key={location.id}>
-                            <Card key={location.id} className='p-4 rounded-sm min-h-36 border-foreground/20'>
+                            <Card key={location.id} className='p-4 rounded-sm min-h-36 bg-foreground/5 border-foreground/10'>
                                 <div className='flex flex-row items-start gap-2 justify-between'>
 
                                     <div className='flex flex-col items-start justify-start'>
