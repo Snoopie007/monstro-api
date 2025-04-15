@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui'
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { LocationsList } from './components/LocationsList'
+import { encodeId } from '@/libs/server/sqids'
 
 
 
@@ -16,6 +17,10 @@ async function fetchLocations(vid: number) {
             with: {
                 locationState: true
             }
+        })
+
+        locations.map(location => {
+            location.id = encodeId(location.id) as unknown as number
         })
         return locations
     } catch (error) {
