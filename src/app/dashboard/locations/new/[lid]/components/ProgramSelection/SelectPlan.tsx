@@ -11,7 +11,7 @@ import { cn, sleep } from "@/libs/utils";
 import PackageList from "./PackageList";
 import { SetStateAction, Dispatch, useState } from "react";
 
-import { useOnboarding } from "../../provider/NewLocationContext";
+import { useNewLocation } from "../../provider/NewLocationContext";
 
 interface SelectPlanProps {
     setCurrentStep: Dispatch<SetStateAction<number>>;
@@ -19,7 +19,7 @@ interface SelectPlanProps {
 }
 
 export function SelectPlan({ setCurrentStep }: SelectPlanProps) {
-    const { locationState, updateLocationState } = useOnboarding()
+    const { locationState, updateLocationState } = useNewLocation()
     const [loading, setLoading] = useState(false);
 
     async function next() {

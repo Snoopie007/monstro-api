@@ -19,7 +19,7 @@ import {
 } from "@/components/forms";
 import { Loader2, LockIcon } from "lucide-react";
 import { VendorBillingSchema } from "@/libs/schemas";
-import { useOnboarding } from "../../provider/NewLocationContext";
+import { useNewLocation } from "../../provider/NewLocationContext";
 import { Button } from "@/components/ui/button";
 
 import { useSession } from "next-auth/react";
@@ -39,7 +39,7 @@ function handlePaymentError(toastRef: string | number, message: string) {
 
 
 export default function VendorPaymentForm() {
-    const { locationState, updateLocationState, tos } = useOnboarding();
+    const { locationState, updateLocationState, tos } = useNewLocation();
     const [errorMessage, setErrorMessage] = useState("");
     const [locationId, setLocationId] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);

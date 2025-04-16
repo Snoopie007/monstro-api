@@ -1,12 +1,12 @@
 
 import { cn } from "@/libs/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui";
-import { useOnboarding } from "../../provider/NewLocationContext";
+import { useNewLocation } from "../../provider/NewLocationContext";
 import React, { useState, useMemo, useCallback } from "react";
 import { MonstroPackage } from "@/types/admin";
 
 export default function PackageList() {
-    const { locationState, updateLocationState, packages } = useOnboarding();
+    const { locationState, updateLocationState, packages } = useNewLocation();
     const [expandedPackageId, setExpandedPackageId] = useState<number | null>(null);
 
     const isSelected = useCallback((pkgId: number) => {
