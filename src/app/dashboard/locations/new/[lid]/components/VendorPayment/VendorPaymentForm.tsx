@@ -19,7 +19,7 @@ import {
 } from "@/components/forms";
 import { Loader2, LockIcon } from "lucide-react";
 import { VendorBillingSchema } from "@/libs/schemas";
-import { useOnboarding } from "../../provider/OnboardingProvider";
+import { useOnboarding } from "../../provider/NewLocationContext";
 import { Button } from "@/components/ui/button";
 
 import { useSession } from "next-auth/react";

@@ -3,7 +3,7 @@ import { Skeleton } from '@/components/ui';
 import { getStripe } from '@/libs/client/stripe';
 import { useEffect, useMemo, useState } from 'react';
 import { formatAmountForDisplay } from '@/libs/utils';
-import { useOnboarding } from '../../provider/OnboardingProvider';
+import { useOnboarding } from '../../provider/NewLocationContext';
 import { MonstroPlan, MonstroPackage, PackagePaymentPlan } from '@/types/admin';
 import VendorPaymentForm from './VendorPaymentForm';
 import { addDays, addMonths, format } from 'date-fns';

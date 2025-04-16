@@ -11,7 +11,7 @@ import { cn, sleep } from "@/libs/utils";
 import PackageList from "./PackageList";
 import { SetStateAction, Dispatch, useState } from "react";
 
-import { useOnboarding } from "../../provider/OnboardingProvider";
+import { useOnboarding } from "../../provider/NewLocationContext";
 
 interface SelectPlanProps {
     setCurrentStep: Dispatch<SetStateAction<number>>;

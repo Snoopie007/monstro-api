@@ -1,7 +1,7 @@
 
 import { cn } from "@/libs/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui";
-import { useOnboarding } from "../../provider/OnboardingProvider";
+import { useOnboarding } from "../../provider/NewLocationContext";
 import { useState } from "react";
 import { MonstroPlan } from "@/types/admin";
 

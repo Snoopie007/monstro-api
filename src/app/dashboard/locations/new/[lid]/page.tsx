@@ -3,7 +3,7 @@ import React from 'react'
 import { auth } from "@/auth";
 import { VendorPlanBuilder } from "./components";
 import { redirect } from 'next/navigation';
-import { OnboardingProvider } from './provider/OnboardingProvider';
+import { NewLocationProvider } from './provider/NewLocationContext';
 import { admindb, db } from '@/db/db';
 import { decodeId } from '@/libs/server/sqids';
 import { getTOS } from '@/libs/server/MDXParse';
@@ -62,9 +62,9 @@ export default async function PlanSelectionPage(props: { params: Promise<{ lid: 
     }
     return (
         <div className="space-y-4">
-            <OnboardingProvider state={locationState} tos={tos} plans={pnp.plans} packages={pnp.packages}>
+            <NewLocationProvider state={locationState} tos={tos} plans={pnp.plans} packages={pnp.packages}>
                 <VendorPlanBuilder />
-            </OnboardingProvider>
+            </NewLocationProvider>
 
         </div>
     );
