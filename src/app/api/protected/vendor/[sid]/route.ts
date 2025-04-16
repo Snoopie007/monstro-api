@@ -44,6 +44,7 @@ export async function POST(req: Request) {
 
         const [location] = await db.insert(locations).values({
             ...data,
+            vendorId,
             phone: formatPhoneNumber(data.phone),
             slug: data.name.toLowerCase().replace(/ /g, '')
         }).returning({ id: locations.id, name: locations.name })

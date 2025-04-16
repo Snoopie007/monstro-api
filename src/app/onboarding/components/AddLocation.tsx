@@ -75,6 +75,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
 
         setLoading(true);
         const path = saleId ? `/api/protected/vendor/${saleId}` : "/api/protected/vendor/locations";
+
         const { result, error } = await tryCatch(
             fetch(path, {
                 method: "POST",
