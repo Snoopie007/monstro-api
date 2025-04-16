@@ -13,6 +13,7 @@ async function getSale(sid: string) {
         const sale = await admindb.query.sales.findFirst({
             where: (sale, { eq }) => eq(sale.id, decodedSid)
         })
+        console.log(sale)
         return sale;
     } catch (error) {
         console.error(error)

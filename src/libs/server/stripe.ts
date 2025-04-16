@@ -121,6 +121,24 @@ abstract class BaseStripePayments {
     async refund(chargeId: string) {
         return await this._stripe.refunds.create({ charge: chargeId });
     }
+
+
+    async calculateTax(amount: number, quantity: number, reference: string) {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        const res = await this._stripe.tax.calculations.create({
+            currency: "usd",
+            customer: this._customer,
+            line_items: [{
+                amount,
+                quantity,
+                reference
+            }]
+        });
+        console.log(res);
+        return res;
+    }
 }
 
 interface VendorPaymentIntentOptions {
@@ -195,7 +213,8 @@ class VendorStripePayments extends BaseStripePayments {
         return this._stripe.subscriptions.create(options);
     }
 
-    async createPaymentPlan(plan: PackagePaymentPlan, metadata: Record<string, any>) {
+    async createPaymentPlan(plan: PackagePaymentPlan, coupon: string | undefined, metadata: Record<string, any>) {
+
         if (!this._customer) {
             throw new Error("Customer not set");
         }
@@ -205,10 +224,16 @@ class VendorStripePayments extends BaseStripePayments {
 
         const options: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
-            items: [{ price: isProd ? plan.priceId! : plan.testPriceId! }],
+            items: [{
+                price: isProd ? plan.priceId! : plan.testPriceId!
+            }],
             cancel_at: Math.floor(endDate.getTime() / 1000),
             metadata
         };
+
+        if (coupon) {
+            options.discounts = [{ coupon }];
+        }
 
         if (plan.trial) {
             options.trial_end = Math.floor(startDate.getTime() / 1000);
@@ -317,6 +342,7 @@ class MemberStripePayments extends BaseStripePayments {
             return_url: settings?.returnUrl || "https://unknown.com",
             expand: ["payment_method"]
         }
+
         const { client_secret, payment_method } = await this._stripe.paymentIntents.create(option);
         return { clientSecret: client_secret as string, paymentMethod: payment_method as Stripe.PaymentMethod };
     }
@@ -334,6 +360,7 @@ class MemberStripePayments extends BaseStripePayments {
         const options: Stripe.SubscriptionCreateParams = {
             ...rest,
             customer: this._customer,
+            automatic_tax: { enabled: true },
             description: `Subscription to ${plan.name}`,
             items: [{ price: plan.stripePriceId as string }],
             collection_method: "charge_automatically",
@@ -407,6 +434,37 @@ class MemberStripePayments extends BaseStripePayments {
 
 
         return product.default_price as Stripe.Price
+    }
+
+    async retrieveTaxSettings() {
+        const res = await this._stripe.tax.settings.retrieve();
+        return res;
+    }
+
+    async updateTaxSettings(settings: Stripe.Tax.SettingsUpdateParams) {
+        return await this._stripe.tax.settings.update(settings);
+    }
+
+    async getTaxRegistrations() {
+        const res = await this._stripe.tax.registrations.list();
+        return res.data;
+    }
+
+    async updateTaxRegistration(registrationId: string, updates: Stripe.Tax.RegistrationUpdateParams) {
+        return await this._stripe.tax.registrations.update(registrationId, updates);
+    }
+
+    async createTaxRegistration(type: Stripe.Tax.RegistrationCreateParams.CountryOptions.Us.Type, state: string, country: string) {
+        return await this._stripe.tax.registrations.create({
+            country: country,
+            country_options: {
+                us: {
+                    state,
+                    type
+                }
+            },
+            active_from: 'now'
+        });
     }
 
 }

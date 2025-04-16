@@ -52,7 +52,18 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
     function selectAddress(result: Record<string, any>) {
         const { metadata, ...rest } = result;
 
-        form.reset(rest);
+        form.reset({
+            name: rest.name,
+            industry: rest.industry,
+            phone: rest.phone,
+            website: rest.website,
+            address: rest.address,
+            city: rest.city,
+            state: rest.state,
+            postalCode: rest.postalCode,
+            logoUrl: rest.logoUrl,
+            country: rest.country,
+        });
         setMetadata(metadata);
         setEdit(true);
     }
@@ -89,8 +100,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             locations: [...session?.user.locations, data],
         })
 
-        router.push(`${saleId ? `/dashboard/${data.id}` : `/onboarding/${data.id}`}`);
-        return
+        return router.push(`${saleId ? `/dashboard/${data.id}` : `/onboarding/${data.id}`}`);
     }
 
     function remove() {

@@ -164,6 +164,7 @@ export type MemberLocation = {
     stripeCustomerId: string | null;
     inviteAcceptedDate: Date | null;
     incompletePlan?: IncompletePlan | null;
+    member?: Member;
     created: Date;
     updated: Date | null;
 }

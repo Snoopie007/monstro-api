@@ -62,7 +62,7 @@ export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, locati
             setLoadingState(false);
 
             if (!isDraft) {
-                router.push(`/dashboard/${locationId}/contracts/`);
+                router.push(`/dashboard/location/${locationId}/contracts/`);
             }
         } catch (error) {
             console.log('Error:', error);
@@ -88,7 +88,7 @@ export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, locati
                     <Icon name={(isSidebarOpen ? 'PanelLeftClose' : 'PanelLeftOpen')} size={18} />
                 </Button>
                 <Link
-                    href={`/dashboard/${locationId}/contracts`}
+                    href={`/dashboard/location/${locationId}/contracts`}
                     className={cn(LeftMenuButtonStyle, "text-sm justify-center  h-full py-2 border-x")}
                 >
                     Back

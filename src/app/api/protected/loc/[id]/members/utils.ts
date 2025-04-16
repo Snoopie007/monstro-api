@@ -57,7 +57,7 @@ function calculateCurrentPeriodEnd(startDate: Date, interval: string, threshold:
     return endDate;
 }
 
-function calculateInvoice(plans: MemberPlan[], rest: { taxRate: number, discount: number }) {
+function calculateInvoice(plans: MemberPlan[], tax: number, discount: number) {
     const items: { name: string, quantity: number, price: number }[] = []
     let subtotal = 0
 
@@ -69,14 +69,12 @@ function calculateInvoice(plans: MemberPlan[], rest: { taxRate: number, discount
         })
         subtotal += plan.price
     })
-    const tax = (subtotal * rest.taxRate) / 100
-    const total = subtotal - rest.discount + tax
+    const total = subtotal - discount + tax
     return {
-
         items,
-        tax: rest.taxRate,
+        tax,
         total,
-        discount: rest.discount,
+        discount,
         subtotal,
 
     }
@@ -86,30 +84,32 @@ type RestProps = { memberId: number, locationId: number, paymentMethod: string }
 
 function createTransaction(
     plan: MemberPlan,
-    rest: RestProps
+    props: RestProps,
+    tax: number
 ): Transaction {
     const today = new Date();
     const description = plan.type === "recurring" ? `Subscription to ${plan.name}` : `One time payment for ${plan.name}`;
 
     return {
-        ...rest,
+        ...props,
         chargeDate: today,
         status: "incomplete",
         transactionType: "incoming",
         paymentType: plan.type,
         description,
+        tax,
         amount: plan.price,
         currency: plan.currency,
         item: plan.name,
     };
 }
 
-function createInvoice(plan: MemberPlan, rest: RestProps): MemberInvoice {
+function createInvoice(plan: MemberPlan, props: RestProps, tax: number): MemberInvoice {
     const description = plan.type === "recurring" ? `Subscription to ${plan.name}` : `Payment for ${plan.name}`;
     return {
-        ...calculateInvoice([plan], { taxRate: 0, discount: 0 }),
-        memberId: rest.memberId,
-        locationId: rest.locationId,
+        ...calculateInvoice([plan], tax, 0),
+        memberId: props.memberId,
+        locationId: props.locationId,
         description,
         currency: plan.currency,
         paid: false,
@@ -119,7 +119,8 @@ function createInvoice(plan: MemberPlan, rest: RestProps): MemberInvoice {
 
 function createPackage(
     data: PackageData,
-    plan: MemberPlan
+    plan: MemberPlan,
+    tax: number
 ): CreatePackageReturn {
     const today = new Date();
     const startDate = data.startDate ? new Date(data.startDate) : today;
@@ -143,12 +144,12 @@ function createPackage(
         status: "incomplete",
     };
 
-    const newTransaction = createTransaction(plan, rest);
-    const newInvoice = createInvoice(plan, rest);
+    const newTransaction = createTransaction(plan, rest, tax);
+    const newInvoice = createInvoice(plan, rest, tax);
     return { newTransaction, newPkg, newInvoice };
 }
 
-function createSubscription(data: SubscriptionData, plan: MemberPlan): CreateSubscriptionReturn {
+function createSubscription(data: SubscriptionData, plan: MemberPlan, tax: number): CreateSubscriptionReturn {
     const today = new Date();
     const startDate = data.startDate ? new Date(data.startDate) : today;
     const periodEnd = calculateCurrentPeriodEnd(startDate, plan.interval!, plan.intervalThreshold!);
@@ -175,9 +176,9 @@ function createSubscription(data: SubscriptionData, plan: MemberPlan): CreateSub
         trialEnd,
     };
 
-    const newTransaction = createTransaction(plan, rest);
+    const newTransaction = createTransaction(plan, rest, tax);
     const newInvoice = {
-        ...createInvoice(plan, rest),
+        ...createInvoice(plan, rest, tax),
         forPeriodStart: startDate,
         forPeriodEnd: periodEnd,
     }

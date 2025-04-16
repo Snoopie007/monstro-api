@@ -54,17 +54,23 @@ export async function POST(req: NextRequest, props: { params: Promise<PackagePro
             return NextResponse.json({ error: "No valid location not found" }, { status: 404 })
         }
 
+
+        // Apply tax to the plan price
+        const tax = Math.floor(plan.price * (locationState.taxRate / 10000))
+        const amount = plan.price + tax
+
         let { newTransaction, newPkg, newInvoice } = createPackage({
             ...data,
             memberId: params.mid,
             locationId: params.id,
-        }, plan)
+        }, plan, tax)
 
         let clientSecret: string | undefined;
         if (data.paymentMethod === "card") {
 
             const stripe = await getStripeCustomer(params)
-            const res = await stripe.createPaymentIntent(plan.price, {
+
+            const res = await stripe.createPaymentIntent(amount, {
                 paymentMethod: stripePaymentMethod.id,
                 currency: plan.currency,
                 applicationFeePercent: (locationState.usagePercent / 100),

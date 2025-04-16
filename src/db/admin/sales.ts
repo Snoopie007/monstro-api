@@ -15,6 +15,7 @@ export const sales = pgTable("sales", {
     stripeCustomerId: text("stripe_customer_id"),
     agreedToTerms: boolean("agreed_to_terms").notNull().default(false),
     closedOn: timestamp("closed_on"),
+    coupon: text("coupon"),
     status: SalesStatusEnum("status").notNull().default('Pending'),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),

@@ -59,7 +59,7 @@ export async function POST(req: Request) {
                 })
             }
             if (paymentPlan.monthlyPayment > 0 && paymentPlan.priceId) {
-                await stripe.createPaymentPlan(paymentPlan, metadata)
+                await stripe.createPaymentPlan(paymentPlan, undefined, metadata)
             }
             await Promise.all([
                 stripe.createPackageSubscriptions(metadata),

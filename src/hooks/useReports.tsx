@@ -4,14 +4,13 @@ import { fetcher } from "./hooks";
 
 
 
-function useReport(id: string, type: string) {
-    const { data, error, isLoading, mutate } = useSWR({ url: `reports/?type=${type}`, id: id }, fetcher);
+function useReport(id: string) {
+    const { data, error, isLoading } = useSWR({ url: `reports`, id: id }, fetcher);
 
     return {
-        reward: data,
+        reports: data,
         error,
         isLoading,
-        mutate,
     };
 }
 
