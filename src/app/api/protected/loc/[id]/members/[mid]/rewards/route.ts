@@ -1,6 +1,4 @@
 import { db } from "@/db/db";
-import { memberRewards} from "@/db/schemas";
-
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
@@ -9,8 +7,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
     try {
         const rewards = await db.query.memberRewards.findMany({
             where: (memberRewards, { eq, and }) => and(
-                eq(memberRewards.memberId, params.mid),
-                eq(memberRewards.locationId, params.id)
+                eq(memberRewards.memberId, params.mid)
             )
         })
 
