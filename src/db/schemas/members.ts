@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { integer, primaryKey, serial, text, timestamp, pgTable, boolean, jsonb } from "drizzle-orm/pg-core";
+import { integer, primaryKey, serial, text, timestamp, pgTable, boolean, jsonb, smallint } from "drizzle-orm/pg-core";
 import { locations, memberLocations } from "./locations";
 import { users } from "./users";
 import { achievements } from "./achievements";
@@ -37,14 +37,15 @@ export const memberAchievements = pgTable("member_achievements", {
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.memberId, t.achievementId] })]);
 
-export const memberRewards = pgTable("member_rewards", {
+export const memberRewards = pgTable("reward_claims", {
+    id: serial("id").primaryKey(),
     memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     rewardId: integer("reward_id").notNull().references(() => rewards.id, { onDelete: "cascade" }),
     previousPoints: integer("previous_points"),
-    status: text("status"),
+    dateClaimed: timestamp('date_claimed', { withTimezone: true }).notNull().defaultNow(),
+    status: smallint("status"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [primaryKey({ columns: [t.memberId, t.locationId, t.rewardId] })]);
+}, (t) => [primaryKey({ columns: [t.id] })]);
 
 export const memberContracts = pgTable("member_contracts", {
     id: serial("id").primaryKey(),
@@ -185,5 +186,12 @@ export const memberInvoicesRelations = relations(memberInvoices, ({ one }) => ({
     location: one(locations, {
         fields: [memberInvoices.locationId],
         references: [locations.id],
+    }),
+}));
+
+export const memberRewardRelations = relations(memberRewards, ({ one }) => ({
+    reward: one(rewards, {
+        fields: [memberRewards.rewardId],
+        references: [rewards.id],
     }),
 }));

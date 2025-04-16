@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { and } from 'drizzle-orm';
-import { authenticateMember } from '../utils';
+import { authenticateMember } from '@/libs/utils';
 type MemberReservationProps = {
     params: Promise<{ id: number, rid: number }>
 }

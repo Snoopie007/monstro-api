@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { authenticateMember } from '../../../../utils';
-// import { inArray } from 'drizzle-orm';
-// import { attendances,reservations,programSessions } from '@/db/schemas';
+import { authenticateMember } from '@/libs/utils';
 
 
-export async function GET(req: NextRequest, props: { params: Promise<{ id: number, lid: number, pid: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ lid: number, pid: number }> }) {
   try {
     const params = await props.params;
     const authMember = authenticateMember(req);

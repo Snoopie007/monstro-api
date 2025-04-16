@@ -1,6 +1,9 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Time } from '@internationalized/date';
+import { NextRequest } from "next/server";
+import { Member } from "@/types";
+import { decodeJwt } from "jose";
 
 export function stringToTime(time: string) {
     return new Time(parseInt(time.split(":")[0]), parseInt(time.split(":")[1]));
@@ -129,6 +132,15 @@ function interpolateMsg(template: string, data: Record<string, any>): string {
 		return String(value ?? match);
 	});
 }
+
+function authenticateMember(req: NextRequest): { member: Member } {
+	const token = req.headers.get("Authorization")?.split(" ")[1]
+	const authMember = decodeJwt(token ?? "");
+	if (!authMember) {
+			throw new Error("Access denied");
+	}
+	return authMember as { member: Member };
+}
   
 
 export {
@@ -140,6 +152,7 @@ export {
 	formatEmail,
 	formatPhone,
 	interpolateMsg,
+	authenticateMember
 }
 
 
