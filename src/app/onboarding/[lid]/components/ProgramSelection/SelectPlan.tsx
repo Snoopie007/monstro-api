@@ -10,7 +10,6 @@ import { Loader2 } from "lucide-react";
 import { cn, sleep } from "@/libs/utils";
 import PackageList from "./PackageList";
 import { SetStateAction, Dispatch, useState } from "react";
-import { MonstroPlan, MonstroPackage } from "@/types/admin";
 
 import { useOnboarding } from "../../provider/OnboardingProvider";
 

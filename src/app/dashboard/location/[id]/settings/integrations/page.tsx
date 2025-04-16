@@ -18,7 +18,7 @@ export default function IntegrationPage(props: { params: Promise<{ id: string }>
                 <div className='flex flex-row gap-2 items-center py-3'>
                     <input placeholder='Search Intergrations' className='flex-1 rounded-xs text-sm bg-transparent py-1.5 px-4 border-foreground/60 border ' />
                     <Button variant='foreground' size='sm' className="rounded-xs" onClick={() => {
-                        router.push(`/dashboard/${params.id}/settings/integrations/browse`);
+                        router.push(`/dashboard/location/${params.id}/settings/integrations/browse`);
                     }}>
                         Browse Market
                     </Button>

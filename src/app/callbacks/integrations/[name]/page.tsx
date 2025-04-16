@@ -136,7 +136,7 @@ export default async function CompleteIntegeration(props: { params: Promise<{ na
 					)}
 				</div>
 			</div>
-			<meta httpEquiv="refresh" content={`3;url=/dashboard/${searchParams.state}/settings/integrations`} />
+			<meta httpEquiv="refresh" content={`3;url=/dashboard/location/${searchParams.state}/settings/integrations`} />
 		</div>
 	)
 }

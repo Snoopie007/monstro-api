@@ -14,7 +14,6 @@ async function getLocationState(locationId: string) {
         const locationState = await db.query.locationState.findFirst({
             where: (locationState, { eq }) => eq(locationState.locationId, decodeId(locationId))
         })
-        console.log(locationState)
         return locationState
     } catch (error) {
         console.error(error);
