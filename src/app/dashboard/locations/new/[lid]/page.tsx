@@ -19,6 +19,7 @@ async function getLocationState(locationId: string) {
         console.error(error);
     }
 }
+
 async function getPackagesAndPlans() {
     try {
         const plans = await admindb.query.monstroPlans.findMany({
@@ -48,7 +49,7 @@ export default async function PlanSelectionPage(props: { params: Promise<{ lid: 
 
     const locationState = await getLocationState(lid);
     if (!locationState) {
-        return redirect("/onboarding")
+        return redirect("/dashboard/locations/new")
     }
     const tos = await getTOS("term-of-use")
     const pnp = await getPackagesAndPlans();
