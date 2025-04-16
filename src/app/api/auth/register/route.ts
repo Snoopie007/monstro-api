@@ -35,28 +35,6 @@ export async function POST(req: NextRequest) {
 
 
 
-        // const res = await fetch(`${process.env.GHL_URL}/contacts/`, {
-        //     method: "POST",
-        //     headers: {
-        //         'Content-type': 'application/json',
-        //         "Authorization": `Bearer ${process.env.GHL_KEY}`,
-        //     },
-        //     body: JSON.stringify({
-        //         firstName: vendor.firstName,
-        //         lastName: vendor.lastName,
-        //         phone: vendor.phone,
-        //         email: vendor.email,
-        //         source: "Website Form",
-        //         tags: ["Customer"],
-        //         locationId: "rCcWpfkx9wZlMF7P4C5V",
-        //         customFields: [
-        //             { key: "sales_rep", field_value: rep },
-        //             { key: "plan_type", field_value: plan.name }
-        //         ]
-        //     })
-        // });
-
-
         return NextResponse.json({ success: true }, { status: 200 });
 
     } catch (error) {

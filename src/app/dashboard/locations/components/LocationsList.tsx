@@ -24,7 +24,7 @@ export const LocationsList = ({ locations }: { locations: Location[] }) => {
             <div className='flex flex-row gap-2 items-center justify-start'>
 
                 <Button variant={'foreground'} size={'sm'} asChild>
-                    <Link href='/onboarding' >New Location</Link>
+                    <Link href='/dashboard/locations/new' >New Location</Link>
                 </Button>
                 <Input placeholder='Search' className='w-36 h-9 rounded-sm border-foreground/10' value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>

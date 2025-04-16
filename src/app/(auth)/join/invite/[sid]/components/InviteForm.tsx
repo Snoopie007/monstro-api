@@ -80,7 +80,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
             toast.error(signInResult.code || 'Something went wrong. Please contact support at support@monstro.com.');
             return;
         }
-        router.push(`/onboarding?sid=${sale.id}`);
+        router.push(`/dashboard/locations/new?sid=${sale.id}`);
     }
 
     return (
