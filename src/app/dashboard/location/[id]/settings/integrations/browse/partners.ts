@@ -8,7 +8,7 @@ export const IntergrationPartners = [
         options: {
             response_type: "code",
             redirect_uri: "/dashboard/settings/integrations/ghl",
-            client_id: "65850b0d2525182171c0e69d-lqg41p93",
+            client_id: process.env.NEXT_PUBLIC_GHL_CLIENT_ID!,
             scope: ["oauth.write", "oauth.readonly"]
         }
     },
@@ -20,7 +20,7 @@ export const IntergrationPartners = [
         tags: ["Payment"],
         options: {
             response_type: "code",
-            client_id: "ca_R9oj3AotaNhPhnWRyfOMQbdsGKtlIM0B",
+            client_id: process.env.NEXT_PUBLIC_STRIPE_CLIENT_ID!,
             scope: "read_write",
             redirect_uri: "/callbacks/integrations/stripe",
             state: ""
