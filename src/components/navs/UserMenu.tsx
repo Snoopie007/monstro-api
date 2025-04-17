@@ -59,7 +59,7 @@ export function UserMenu() {
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="flex flex-col items-start justify-start space-y-2 hover:bg-transparent">
+                <DropdownMenuItem className="flex flex-col items-start justify-start space-y-2 focus:bg-transparent">
                     <div className="text-xs  text-foreground/70  font-semibold">Theme</div>
                     <ul className="space-y-0 justify-start w-full">
                         {['light', 'dark', 'system'].map((t) => (
