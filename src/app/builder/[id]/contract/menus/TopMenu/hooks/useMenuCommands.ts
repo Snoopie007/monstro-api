@@ -15,7 +15,6 @@ export const useTextmenuCommands = (editor: Editor) => {
     const onAlignRight = useCallback(() => editor.chain().focus().setTextAlign('right').run(), [editor])
     const onAlignJustify = useCallback(() => editor.chain().focus().setTextAlign('justify').run(), [editor])
     const onInsertVariable = useCallback((variable: Variable) => {
-        console.log(variable)
         editor.chain().focus().insertContent({
             type: "mention",
             attrs: variable,

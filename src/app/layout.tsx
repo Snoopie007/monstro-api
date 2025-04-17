@@ -4,7 +4,7 @@ import { ToastContainer } from "react-toastify";
 import "@public/globals.css";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
-import { ThemeProvider } from "@/providers/theme-provider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 import { Monitoring } from "react-scan/monitoring/next";
 
 
