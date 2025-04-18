@@ -8,12 +8,10 @@ import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { locationState } from "@/db/schemas";
 import { decodeId } from "@/libs/server/sqids";
-import { buffer } from "stream/consumers";
 import { VendorStripePayments } from "@/libs/server/stripe";
 
 export async function POST(req: NextRequest) {
 
-    const body = await req.json();
     const signature = (await headers()).get("Stripe-Signature");
 
     if (!signature) {
@@ -30,7 +28,7 @@ export async function POST(req: NextRequest) {
             throw new Error("Stripe webhook secret not found");
         }
         const event = await stripe.constructEvent(
-            Buffer.from(JSON.stringify(body)),
+            Buffer.from(JSON.stringify(req)),
             signature,
             process.env.STRIPE_WEBHOOK_SECRET
         );

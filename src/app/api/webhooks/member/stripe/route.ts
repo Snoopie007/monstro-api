@@ -5,125 +5,134 @@ import { db } from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { MemberSubscription } from "@/types";
+import { waitUntil } from "@vercel/functions";
+import { VendorStripePayments } from "@/libs/server/stripe";
+import { tryCatch } from "@/libs/utils";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
-  apiVersion: "2025-02-24.acacia",
-});
+
 
 export const config = {
-  api: {
-    bodyParser: false, // Required for Stripe webhooks
-  },
+	api: {
+		bodyParser: false, // Required for Stripe webhooks
+	},
 };
 
 const allowedEvents: Stripe.Event.Type[] = [
-  "customer.subscription.updated",
-  "customer.subscription.deleted",
-  "customer.subscription.paused",
-  "customer.subscription.resumed",
-  "invoice.payment_failed",
-  "invoice.payment_action_required",
-  "payment_intent.canceled",
+	"customer.subscription.updated",
+	"customer.subscription.deleted",
+	"customer.subscription.paused",
+	"customer.subscription.resumed",
+	"invoice.payment_failed",
+	"invoice.payment_action_required",
+	"payment_intent.canceled",
 ];
 
 export async function POST(req: NextRequest) {
-  const signature = (await headers()).get("Stripe-Signature");
+	const signature = (await headers()).get("Stripe-Signature");
 
-  if (!signature) {
-    return NextResponse.json({ message: "No signature" }, { status: 400 });
-  }
+	if (!signature) {
+		return NextResponse.json({ message: "Invalid signature", status: 400 })
+	};
 
-  const rawBody = await req.text();
-  let event: Stripe.Event;
 
-  try {
-    event = stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET ?? '');
-  } catch (err) {
-    console.error("Webhook signature verification failed.", err);
-    return NextResponse.json({ message: "Webhook signature verification failed." }, { status: 400 });
-  }
+	const stripe = new VendorStripePayments();
+	async function doEventProcessing(): Promise<void> {
+		if (typeof signature !== "string") {
+			throw new Error("Stripe Hook Signature is not a string");
+		}
+		if (!process.env.STRIPE_MEMBER_WEBHOOK_SECRET) {
+			throw new Error("Stripe Member webhook secret not found");
+		}
+		const event = await stripe.constructEvent(
+			Buffer.from(JSON.stringify(req)),
+			signature,
+			process.env.STRIPE_MEMBER_WEBHOOK_SECRET
+		);
 
-  try {
-    await processEvent(event);
-    return NextResponse.json({ message: "Event processed successfully." }, { status: 200 });
-  } catch (error) {
-    console.error("Error processing event:", error);
-    return NextResponse.json({ message: "Error processing event." }, { status: 500 });
-  }
+		waitUntil(processEvent(event));
+	}
+
+	const { error } = await tryCatch(doEventProcessing());
+
+	if (error) {
+		console.error("[STRIPE HOOK] Error processing event", error);
+	}
+
+	return NextResponse.json({ message: "Stripe webhook received", status: 200 });
 }
 
 async function processEvent(event: Stripe.Event) {
-  if (!allowedEvents.includes(event.type)) return;
+	if (!allowedEvents.includes(event.type)) return;
 
-  switch (event.type) {
-    case "customer.subscription.updated":
-      await handleSubscriptionUpdated(event);
-      break;
-    case "customer.subscription.deleted":
-      await handleSubscriptionDeleted(event);
-      break;
-    case "customer.subscription.paused":
-      await handleSubscriptionPaused(event);
-      break;
-    case "customer.subscription.resumed":
-      await handleSubscriptionResumed(event);
-      break;
-    case "invoice.payment_failed":
-      await handleInvoicePaymentFailed(event);
-      break;
-    default:
-      console.warn(`Unhandled event type: ${event.type}`);
-  }
+	switch (event.type) {
+		case "customer.subscription.updated":
+			await handleSubscriptionUpdated(event);
+			break;
+		case "customer.subscription.deleted":
+			await handleSubscriptionDeleted(event);
+			break;
+		case "customer.subscription.paused":
+			await handleSubscriptionPaused(event);
+			break;
+		case "customer.subscription.resumed":
+			await handleSubscriptionResumed(event);
+			break;
+		case "invoice.payment_failed":
+			await handleInvoicePaymentFailed(event);
+			break;
+		default:
+			console.warn(`Unhandled event type: ${event.type}`);
+	}
 }
 
 async function handleSubscriptionUpdated(event: Stripe.Event) {
-  const subscription = event.data.object as Stripe.Subscription;
-  const localSubscription = db.update(memberSubscriptions).set({
-    status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
-  }).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
+	const subscription = event.data.object as Stripe.Subscription;
+	const localSubscription = db.update(memberSubscriptions).set({
+		status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
+	}).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
 
-  console.log("Subscription updated:", localSubscription);
-  // Update subscription details in your database
+	console.log("Subscription updated:", localSubscription);
+	// Update subscription details in your database
 }
 
 async function handleSubscriptionDeleted(event: Stripe.Event) {
-  const subscription = event.data.object as Stripe.Subscription;
-  const localSubscription = db.update(memberSubscriptions).set({
-    status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
-  }).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
+	const subscription = event.data.object as Stripe.Subscription;
+	const localSubscription = db.update(memberSubscriptions).set({
+		status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
+	}).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
 
-  console.log("Subscription updated:", localSubscription);
+	console.log("Subscription updated:", localSubscription);
 }
 
 async function handleSubscriptionPaused(event: Stripe.Event) {
-  const subscription = event.data.object as Stripe.Subscription;
-  const localSubscription = db.update(memberSubscriptions).set({
-    status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
-  }).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
+	const subscription = event.data.object as Stripe.Subscription;
+	const localSubscription = db.update(memberSubscriptions).set({
+		status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
+	}).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
 
-  console.log("Subscription updated:", localSubscription);
-  // Update subscription status to paused in your database
+	console.log("Subscription updated:", localSubscription);
+	// Update subscription status to paused in your database
 }
 
 async function handleSubscriptionResumed(event: Stripe.Event) {
-  const subscription = event.data.object as Stripe.Subscription;
-  const localSubscription = db.update(memberSubscriptions).set({
-    status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
-  }).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
+	const subscription = event.data.object as Stripe.Subscription;
+	const localSubscription = db.update(memberSubscriptions).set({
+		status: subscription.status as "active" | "canceled" | "past_due" | "incomplete" | "trialing" | "unpaid" | undefined
+	}).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id)).returning();
 
-  console.log("Subscription updated:", localSubscription);
-  // Update subscription status to active in your database
+	console.log("Subscription updated:", localSubscription);
+	// Update subscription status to active in your database
 }
 
 async function handleInvoicePaymentFailed(event: Stripe.Event) {
-  const invoice = event.data.object as Stripe.Invoice;
-  console.log(event)
-  if (invoice.subscription) {
-    const localSubscription = db.update(memberSubscriptions).set({
-      status: 'past_due'
-    }).where(eq(memberSubscriptions.stripeSubscriptionId, invoice.subscription as string)).returning();
+	const invoice = event.data.object as Stripe.Invoice;
+	console.log(event)
+	if (invoice.subscription) {
+		const localSubscription = db.update(memberSubscriptions).set({
+			status: 'past_due'
+		}).where(eq(memberSubscriptions.stripeSubscriptionId, invoice.subscription as string)).returning();
 
-    console.log("Subscription updated:", localSubscription);
-  }
-  // Notify the user about payment failure or handle retries
+		console.log("Subscription updated:", localSubscription);
+	}
+	// Notify the user about payment failure or handle retries
 }
