@@ -130,7 +130,10 @@ async function ghlAutomations(sale: Sale) {
         companyId: integration.providerId,
         locationId: "rCcWpfkx9wZlMF7P4C5V",
     })
-
+    if (!locationToken) {
+        console.log("Error Getting Location Token.")
+        return NextResponse.json({ error: "Error Getting Location Token." }, { status: 200 })
+    }
 
     const vendorGHL = new VendorGHL();
     vendorGHL.setAccessToken(locationToken.access_token);

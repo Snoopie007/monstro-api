@@ -71,15 +71,15 @@ export const ResetPasswordSchema = z.object({
 
 
 export const LocationSetupSchema = z.object({
-    name: z.string().min(1, "Business name is required."),
-    industry: z.string().min(1, "Please select at least one category."),
-    address: z.string().min(8, "Address is required."),
-    city: z.string().min(3, "City is required."),
-    state: z.string().min(1, "State is required."),
-    country: z.string().min(2, "Country is required."),
-    postalCode: z.string().min(3, "Postal code is required."),
+    name: z.string({ message: "Business name is required." }).min(1),
+    industry: z.string({ message: "Select an industry." }).min(1),
+    address: z.string({ message: "Address is required." }).min(8),
+    city: z.string({ message: "City is required." }).min(3),
+    state: z.string({ message: "State is required." }).min(1),
+    country: z.string({ message: "Country is required." }).min(2),
+    postalCode: z.string({ message: "Postal code is required." }).min(3),
     website: z.string().optional(),
-    phone: z.string().min(11, "Phone number is required."),
+    phone: z.string({ message: "Phone number is required." }).min(11),
     logoUrl: z.string().optional(),
 });
 
