@@ -27,6 +27,7 @@ export const locations = pgTable("locations", {
     logoUrl: text("logo_url"),
     slug: text("slug").unique().notNull(),
     metadata: jsonb("meta_data"),
+    about: text("about"),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
