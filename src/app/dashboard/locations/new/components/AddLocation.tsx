@@ -9,7 +9,13 @@ import { Loader2 } from "lucide-react";
 import { LocationSetupSchema } from "@/libs/schemas";
 import { AutoComplete } from "./GoogleAutoComplete";
 import {
-    Form, FormItem, FormMessage, FormField, Input, FormControl, FormLabel,
+    Form,
+    FormItem,
+    FormMessage,
+    FormField,
+    Input,
+    FormControl,
+    FormLabel,
     Select,
     SelectContent,
     SelectItem,
@@ -64,6 +70,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             logoUrl: rest.logoUrl,
             country: rest.country,
         });
+
         setMetadata(metadata);
         setEdit(true);
     }

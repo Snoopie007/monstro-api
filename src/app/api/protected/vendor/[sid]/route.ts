@@ -18,8 +18,6 @@ const stripe = new VendorStripePayments();
 
 export async function POST(req: Request) {
     const { saleId, vendorId, ...data } = await req.json();
-
-
     try {
 
         const sale = await admindb.query.sales.findFirst({

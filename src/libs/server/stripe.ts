@@ -136,7 +136,6 @@ abstract class BaseStripePayments {
                 reference
             }]
         });
-        console.log(res);
         return res;
     }
 }
