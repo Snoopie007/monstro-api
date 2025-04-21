@@ -14,7 +14,6 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: num
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-  
     const parsedStartTime = new Date(startTime);
     const parsedEndTime = new Date(endTime);
     const parsedCheckInTime = new Date(checkInTime);
@@ -52,7 +51,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: num
         );
       }
     }
-    
+
     const newAttendance = await db.insert(attendances).values({
       reservationId: rId,
       startTime: parsedStartTime,
@@ -63,14 +62,11 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: num
       macAddress: macAddress || null,
       lat: lat || null,
       lng: lng || null,
-    }).returning()
+    }).returning();
 
-    
     return NextResponse.json(newAttendance, { status: 201 });
   } catch (err) {
     console.log(err);
     return NextResponse.json({ error: "Failed to create attendance" }, { status: 500 });
   }
 }
-
-
