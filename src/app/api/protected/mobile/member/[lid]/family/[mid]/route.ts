@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { authenticateMember } from '@/libs/utils';
+import { actions } from '@/db/schemas';
 
 type Props = {
     lid: number,
@@ -21,18 +22,31 @@ export async function GET(req: NextRequest, props: { params: Promise<Props> }) {
         }
 
         const family = await db.query.familyMembers.findFirst({
-            where: (familyMembers, { eq, and }) => and(eq(familyMembers.relatedMemberId, params.mid)),
-            with: {
-                relatedMember: {
+          where: (familyMembers, { eq, and }) => and(eq(familyMembers.relatedMemberId, params.mid)),
+          with: {
+            relatedMember: {
+              with: {
+                memberLocations: true,
+                achievements: {
                   with: {
-                    memberLocations: true,
-                    achievements: true,
-                    packages: true,
-                    rewards: true,
-                    subscriptions: true,
+                    achievement: {
+                      with: {
+                        actions: true
+                      }
+                    }
                   }
-                }
+                },
+                packages: {
+                  with: {
+                    program: true,
+                  }
+                },
+                rewards: true,
+                subscriptions: true,
+                
+              }
             }
+          }
         });
 
         return NextResponse.json(family, { status: 200 });
