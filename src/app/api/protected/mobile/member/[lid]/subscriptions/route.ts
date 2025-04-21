@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
                     with: {
                         program: {
                             with: {
-                                x: true
+                                sessions: true
                             }
                         }
                     }
