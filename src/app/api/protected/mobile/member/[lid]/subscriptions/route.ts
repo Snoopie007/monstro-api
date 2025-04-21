@@ -13,11 +13,16 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
                 eq(memberSubscriptions.locationId, params.lid)
             ),
             with: {
+                reservations: {
+                    with: {
+                        session: true
+                    }
+                },
                 plan: {
                     with: {
                         program: {
                             with: {
-                                sessions: true
+                                x: true
                             }
                         }
                     }
