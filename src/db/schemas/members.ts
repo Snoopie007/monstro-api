@@ -131,8 +131,6 @@ export const familyMemberRelations = relations(familyMembers, ({ one, many }) =>
 
 }));
 
-
-
 export const memberAchievementsRelations = relations(memberAchievements, ({ one }) => ({
     member: one(members, {
         fields: [memberAchievements.memberId],
@@ -194,4 +192,8 @@ export const memberRewardRelations = relations(memberRewards, ({ one }) => ({
         fields: [memberRewards.rewardId],
         references: [rewards.id],
     }),
+    member: one(members, {
+        fields: [memberRewards.memberId],
+        references: [members.id],
+      }),
 }));

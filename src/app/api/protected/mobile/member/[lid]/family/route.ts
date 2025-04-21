@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { eq, and, isNull, sql, Column, SQL } from 'drizzle-orm';
-import { programs } from '@/db/schemas/programs';
-import { memberSubscriptions, memberPlans, memberPackages } from '@/db/schemas/MemberPlans';
+import { memberSubscriptions, memberPackages } from '@/db/schemas/MemberPlans';
 import { familyMembers, locations, memberLocations, members, users } from '@/db/schemas';
 import { MonstroData } from '@/libs/data';
 import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { EmailSender } from '@/libs/server/emails';
 import { authenticateMember } from '@/libs/utils';
-import { PgTableWithColumns, PgColumn } from 'drizzle-orm/pg-core';
 
 type Props = {
     lid: number
@@ -16,76 +14,25 @@ type Props = {
 
 export async function GET(req: NextRequest, props: { params: Promise<Props> }) {
     const params = await props.params;
-    console.log('params', params.lid)
     try {
         const authMember = authenticateMember(req);
         const memberId = authMember.member?.id;
-        console.log('memberId', memberId)
-        
-        if (!memberId) {
-            return NextResponse.json({ error: "Member not found" }, { status: 404 });
+        const member = await db.query.members.findFirst({
+            where: (members, { eq }) => eq(members.id, Number(memberId)),
+          });
+      
+        if (!member) {
+          return NextResponse.json({ error: "Member not found" }, { status: 404 });
         }
 
-        const subscriptions = [];
-        const packages = [];
-        const subs = await db.select({
-            planName: memberPlans.name,
-            planId: memberPlans.id,
-            programName: programs.name,
-            subscriptionId: memberSubscriptions.id,
-            planFamilyLimit: memberPlans.familyMemberLimit,
-        }).from(memberSubscriptions)
-            .where(and(
-                eq(memberSubscriptions.memberId, memberId),
-                eq(memberSubscriptions.locationId, params.lid),
-                eq(memberSubscriptions.memberPlanId, memberPlans.id)
-            ))
-            .innerJoin(memberPlans, and(
-                eq(memberSubscriptions.memberPlanId, memberPlans.id),
-                eq(memberPlans.family, true)
-            ))
-            .innerJoin(programs, eq(memberPlans.programId, programs.id));
+        const family = await db.query.familyMembers.findMany({
+            where: (familyMembers, { eq, and }) => and(eq(familyMembers.memberId, member.id)),
+            with: {
+                relatedMember: true
+            }
+        });
 
-        for await (const sub of subs) {
-            const childSubCount = await db.select({
-                count: sql<number>`count(*)`
-            }).from(memberSubscriptions)
-                .where(eq(memberSubscriptions.parentId, sub.subscriptionId));
-            subscriptions.push({
-                ...sub,
-                childrenCount: Number(childSubCount[0]?.count ?? 0)
-            });
-        }
-        
-        const pkgs = await db.select({
-            planName: memberPlans.name,
-            programName: programs.name,
-            packageId: memberPackages.id,
-            planFamilyLimit: memberPlans.familyMemberLimit,
-        }).from(memberPackages)
-            .where(and(
-                eq(memberPackages.memberId, memberId),
-                eq(memberPackages.locationId, params.lid),
-                eq(memberPackages.memberPlanId, memberPlans.id)
-            ))
-            .innerJoin(memberPlans, and(
-                eq(memberPackages.memberPlanId, memberPlans.id),
-                eq(memberPlans.family, false))
-            )
-            .innerJoin(programs, eq(memberPlans.programId, programs.id));
-
-        for await (const pkg of pkgs) {
-            const childSubCount = await db.select({
-                count: sql<number>`count(*)`
-            }).from(memberPackages)
-                .where(eq(memberPackages.parentId, pkg.packageId));
-            packages.push({
-                ...pkg,
-                childrenCount: Number(childSubCount[0]?.count ?? 0)
-            });
-        }
-
-        return NextResponse.json([...subscriptions, ...packages], { status: 200 });
+        return NextResponse.json(family, { status: 200 });
     } catch (err) {
       console.error(err);
         return NextResponse.json({ error: err }, { status: 500 });
