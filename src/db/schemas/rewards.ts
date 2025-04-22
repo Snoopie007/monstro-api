@@ -1,5 +1,7 @@
 import { text, integer, timestamp, pgTable, serial } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
+import { memberRewards } from "./members";
+import { relations } from "drizzle-orm";
 
 export const rewards = pgTable("rewards", {
     id: serial("id").primaryKey(),
@@ -14,3 +16,7 @@ export const rewards = pgTable("rewards", {
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
+
+export const rewardRelations = relations(rewards, ({ many }) => ({
+    claims: many(memberRewards),
+}));

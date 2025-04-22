@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { and, eq } from 'drizzle-orm';
-import { authenticateMember } from '../../../utils';
+import { authenticateMember } from '@/libs/utils';
 
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: number, rid: number }> }) {

@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
 import { users } from '@/db/schemas';
-import { authenticateMember } from '../../utils';
+import { authenticateMember } from '@/libs/utils';
 import bcrypt from 'bcryptjs';
 
 export async function PUT(req: NextRequest, props: { params: Promise<{ id: number }> }) {

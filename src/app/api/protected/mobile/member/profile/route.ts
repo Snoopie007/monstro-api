@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
 import { members } from '@/db/schemas';
-import { authenticateMember } from '../utils';
+import { authenticateMember } from '@/libs/utils';
 
 
-export async function GET(req: NextRequest, props: { params: Promise<{ id: number }> }) {
-	const params = await props.params;
+export async function GET(req: NextRequest) {
+	
 	try {
 		const authMember = authenticateMember(req);
 
@@ -28,8 +28,9 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
 	}
 }
 
-export async function PUT(req: NextRequest, props: { params: Promise<{ id: number }> }) {
+export async function PUT(req: NextRequest) {
 	const data = await req.json()
+
 	try {
 		const authMember = authenticateMember(req);
 
@@ -41,6 +42,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: numbe
 				avatar: true
 			}
 		});
+		console.log('member', member)
 
 		await db.update(members).set({
 			...member,
