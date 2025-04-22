@@ -73,17 +73,18 @@ export default auth(async (req) => {
 				return NextResponse.next()
 			}
 
-			if (locations.length === 0 && pathname !== "/onboarding") {
-				return NextResponse.redirect(new URL("/onboarding", req.nextUrl.origin))
+			const NewLocationPath = "/dashboard/locations/new";
+
+			if (locations.length === 0 && pathname !== NewLocationPath) {
+				return NextResponse.redirect(new URL(NewLocationPath, req.nextUrl.origin))
 			}
 
 			if (pathname === "/" || publicPaths.includes(pathname)) {
 				const next = locations.find((loc: { status: string }) => loc.status === "active") || locations.find((loc: { status: string }) => loc.status === "incomplete")
-				return NextResponse.redirect(new URL(`/${next.status === "active" ? "dashboard/location" : "onboarding"}/${next.id}`, req.nextUrl.origin))
+				return NextResponse.redirect(new URL(`/${next.status === "active" ? "dashboard/location" : NewLocationPath}/${next.id}`, req.nextUrl.origin))
 			}
 
-
-			const [, path, locationId] = pathname.match(/^\/((?:dashboard\/location|onboarding))\/([^/]+)(\/.*)?$/) || []
+			const [, path, locationId] = pathname.match(/^\/((?:dashboard\/location|dashboard\/locations\/new))\/([^/]+)(\/.*)?$/) || []
 
 			if (locationId) {
 				/** Check if locationId is a valid location */
@@ -97,7 +98,7 @@ export default auth(async (req) => {
 				}
 
 				/** If the path is not allowed for the current location, redirect to the dashboard of the next location */
-				const allowedInactivePaths = [`/dashboard/location/${nextLocation.id}`, `/dashboard/location/${nextLocation.id}/settings/billing`]
+				const allowedInactivePaths = [`/dashboard/location/${nextLocation.id}`]
 				if (
 					path.startsWith("dashboard") &&
 					!allowedInactivePaths.includes(pathname) &&
@@ -107,7 +108,7 @@ export default auth(async (req) => {
 				}
 
 				const isOnboarding = nextLocation.status === "incomplete"
-				const targetPath = isOnboarding ? "onboarding" : "dashboard/location"
+				const targetPath = isOnboarding ? NewLocationPath : "dashboard/location"
 
 				if (path !== targetPath) {
 					return NextResponse.redirect(new URL(`/${targetPath}/${nextLocation.id}`, req.nextUrl.origin))

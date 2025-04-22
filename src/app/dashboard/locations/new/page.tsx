@@ -17,7 +17,7 @@ export default async function VendorOnboarding(props: { searchParams: Promise<{ 
     }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 max-w-xl mx-auto py-10">
             <div className={cn("flex flex-col gap-2")}>
                 <div className="space-y-2">
                     <div className={cn("flex flex-col items-start space-y-1 text-black cursor-pointer")}>

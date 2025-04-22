@@ -9,7 +9,13 @@ import { Loader2 } from "lucide-react";
 import { LocationSetupSchema } from "@/libs/schemas";
 import { AutoComplete } from "./GoogleAutoComplete";
 import {
-    Form, FormItem, FormMessage, FormField, Input, FormControl, FormLabel,
+    Form,
+    FormItem,
+    FormMessage,
+    FormField,
+    Input,
+    FormControl,
+    FormLabel,
     Select,
     SelectContent,
     SelectItem,
@@ -64,6 +70,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             logoUrl: rest.logoUrl,
             country: rest.country,
         });
+
         setMetadata(metadata);
         setEdit(true);
     }
@@ -71,10 +78,14 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
 
     async function submit(v: z.infer<typeof LocationSetupSchema>) {
 
-        if (!form.formState.isValid) return;
+        const isValid = await form.trigger();
 
+        if (!isValid) return;
         setLoading(true);
+        await sleep(2000);
+
         const path = saleId ? `/api/protected/vendor/${saleId}` : "/api/protected/vendor/locations";
+
         const { result, error } = await tryCatch(
             fetch(path, {
                 method: "POST",
@@ -88,8 +99,9 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
         );
 
         await sleep(2000);
-        setLoading(false);
+
         if (!result || error || !result.ok) {
+            setLoading(false);
             return toast.error("Failed to add location, please try again.");
         }
         const data = await result.json();
@@ -100,7 +112,11 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             locations: [...session?.user.locations, data],
         })
 
-        return router.push(`${saleId ? `/dashboard/${data.id}` : `/onboarding/${data.id}`}`);
+        const url = saleId ? `/dashboard/location/${data.id}` : `/dashboard/locations/new/${data.id}`;
+
+        router.push(url);
+
+        return
     }
 
     function remove() {
@@ -128,7 +144,10 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                     <ul className="space-y-2 list-disc list-inside ">
 
                         {form.formState.errors && Object.keys(form.formState.errors).map((key) => (
-                            <li key={key} className=" text-red-500 text-xs">{form.formState.errors[key as keyof z.infer<typeof LocationSetupSchema>]?.message}</li>
+                            <li key={key} className=" text-red-500 text-xs">
+                                {form.formState.errors[key as keyof z.infer<typeof LocationSetupSchema>]?.message}
+
+                            </li>
                         ))}
 
                     </ul>
@@ -288,7 +307,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                     className={cn(" children:hidden ", {
                         "children:inline-flex": loading
                     })}
-                    disabled={!form.formState.isValid}
+                    disabled={loading || form.formState.isSubmitting}
                 >
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Continue

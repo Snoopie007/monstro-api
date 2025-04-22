@@ -32,7 +32,7 @@ const reducer = (state: StateType, action: ReducerAction): StateType => {
     }
 }
 
-const useOnboardingContext = (initState: StateType) => {
+const useNewLocationContext = (initState: StateType) => {
     const [state, dispatch] = useReducer(reducer, initState);
 
     const updateLocationState = useCallback((locationState: LocationState) => {
@@ -45,11 +45,11 @@ const useOnboardingContext = (initState: StateType) => {
     return { state, updateLocationState };
 }
 
-type UseOnboardingContextType = ReturnType<typeof useOnboardingContext>
+type UseNewLocationContextType = ReturnType<typeof useNewLocationContext>
 
-export const OnboardingContext = createContext<UseOnboardingContextType | null>(null)
+export const NewLocationContext = createContext<UseNewLocationContextType | null>(null)
 
-interface OnboardingProviderProps {
+interface NewLocationProviderProps {
     state: LocationState;
     tos: MonstroLegal | undefined;
     children: ReactNode;
@@ -57,20 +57,20 @@ interface OnboardingProviderProps {
     packages: MonstroPackage[];
 }
 
-export const OnboardingProvider = ({ children, state, tos, plans, packages }: OnboardingProviderProps): ReactElement => {
+export const NewLocationProvider = ({ children, state, tos, plans, packages }: NewLocationProviderProps): ReactElement => {
     return (
-        <OnboardingContext.Provider value={useOnboardingContext({
+        <NewLocationContext.Provider value={useNewLocationContext({
             locationState: state,
             tos: tos,
             plans: plans,
             packages: packages
         })}>
             {children}
-        </OnboardingContext.Provider>
+        </NewLocationContext.Provider>
     );
 }
 
-type UseOnboardingHookType = {
+type UseNewLocationHookType = {
     locationState: LocationState;
     updateLocationState: (locationState: LocationState) => void;
     tos: MonstroLegal | undefined;
@@ -78,10 +78,10 @@ type UseOnboardingHookType = {
     packages: MonstroPackage[];
 }
 
-export const useOnboarding = (): UseOnboardingHookType => {
-    const context = useContext(OnboardingContext)
+export const useNewLocation = (): UseNewLocationHookType => {
+    const context = useContext(NewLocationContext)
     if (!context) {
-        throw new Error('useOnboarding must be used within a OnboardingProvider')
+        throw new Error('useNewLocation must be used within a NewLocationProvider')
     }
     const { state, updateLocationState } = context;
 

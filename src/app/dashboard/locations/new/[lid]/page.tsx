@@ -3,7 +3,7 @@ import React from 'react'
 import { auth } from "@/auth";
 import { VendorPlanBuilder } from "./components";
 import { redirect } from 'next/navigation';
-import { OnboardingProvider } from './provider/OnboardingProvider';
+import { NewLocationProvider } from './provider/NewLocationContext';
 import { admindb, db } from '@/db/db';
 import { decodeId } from '@/libs/server/sqids';
 import { getTOS } from '@/libs/server/MDXParse';
@@ -14,12 +14,12 @@ async function getLocationState(locationId: string) {
         const locationState = await db.query.locationState.findFirst({
             where: (locationState, { eq }) => eq(locationState.locationId, decodeId(locationId))
         })
-        console.log(locationState)
         return locationState
     } catch (error) {
         console.error(error);
     }
 }
+
 async function getPackagesAndPlans() {
     try {
         const plans = await admindb.query.monstroPlans.findMany({
@@ -49,7 +49,7 @@ export default async function PlanSelectionPage(props: { params: Promise<{ lid: 
 
     const locationState = await getLocationState(lid);
     if (!locationState) {
-        return redirect("/onboarding")
+        return redirect("/dashboard/locations/new")
     }
     const tos = await getTOS("term-of-use")
     const pnp = await getPackagesAndPlans();
@@ -63,9 +63,9 @@ export default async function PlanSelectionPage(props: { params: Promise<{ lid: 
     }
     return (
         <div className="space-y-4">
-            <OnboardingProvider state={locationState} tos={tos} plans={pnp.plans} packages={pnp.packages}>
+            <NewLocationProvider state={locationState} tos={tos} plans={pnp.plans} packages={pnp.packages}>
                 <VendorPlanBuilder />
-            </OnboardingProvider>
+            </NewLocationProvider>
 
         </div>
     );

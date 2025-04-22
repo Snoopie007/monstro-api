@@ -6,22 +6,34 @@ import { tryCatch } from "@/libs/utils";
 import { waitUntil } from "@vercel/functions";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
-import { locations, locationState } from "@/db/schemas";
+import { locationState } from "@/db/schemas";
 import { decodeId } from "@/libs/server/sqids";
+import { VendorStripePayments } from "@/libs/server/stripe";
 
 export async function POST(req: NextRequest) {
 
-    const body = await req.json();
     const signature = (await headers()).get("Stripe-Signature");
 
-    if (!signature) return NextResponse.json({ message: "No signature", status: 400 });
+    if (!signature) {
+        return NextResponse.json({ message: "Invalid signature", status: 400 })
+    };
 
 
+    const stripe = new VendorStripePayments();
     async function doEventProcessing(): Promise<void> {
         if (typeof signature !== "string") {
             throw new Error("Stripe Hook Signature is not a string");
         }
-        waitUntil(processEvent(body));
+        if (!process.env.STRIPE_WEBHOOK_SECRET) {
+            throw new Error("Stripe webhook secret not found");
+        }
+        const event = await stripe.constructEvent(
+            Buffer.from(JSON.stringify(req)),
+            signature,
+            process.env.STRIPE_WEBHOOK_SECRET
+        );
+
+        waitUntil(processEvent(event));
     }
 
     const { error } = await tryCatch(doEventProcessing());

@@ -62,7 +62,7 @@ class BaseGHL {
         if (!res.ok) {
             const error = await res.json();
             console.log(error.message);
-            throw new Error("Error Getting Token.");
+            return null;
         }
 
         return await res.json();
@@ -103,6 +103,7 @@ class AgencyGHL extends BaseGHL {
         super();
     }
     async getLocationTokenFromAgency(data: { companyId: string, locationId: string }) {
+
         if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
         const qs = QueryString.stringify(data);
         const res = await fetch(`${this.API}/oauth/locationToken`, {
@@ -114,11 +115,9 @@ class AgencyGHL extends BaseGHL {
             },
             body: qs
         });
-
         if (!res.ok) {
             const error = await res.json();
             console.log(error);
-            throw new Error("Error Getting Location Token.");
         }
 
         const { companyId, traceId, userId, ...responseData } = await res.json();
@@ -155,8 +154,6 @@ class AgencyGHL extends BaseGHL {
 
         return access_token;
     }
-
-
 }
 
 
@@ -304,7 +301,6 @@ class VendorGHL extends BaseGHL {
         if (!res.ok) {
             const error = await res.json();
             console.log(error);
-            throw new Error("Error Upserting Contact.");
         }
 
     }

@@ -1,2 +1,2 @@
-export * from './use-menu-commands';
-export * from './use-menu-state';
+export * from './useMenuCommands';
+export * from './useMenuState';

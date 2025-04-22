@@ -50,9 +50,10 @@ export default function VerifyOTP({ form }: VerifyOTPProps) {
             return;
         }
 
-        let redirect = '/onboarding';
+        const NewLocationPath = "/dashboard/locations/new";
+        let redirect = NewLocationPath;
         if (location) {
-            redirect = location?.status === "incomplete" ? `/onboarding/${location.id}` : `/dashboard/location/${location.id}`
+            redirect = location?.status === "incomplete" ? `${NewLocationPath}/${location.id}` : `/dashboard/location/${location.id}`
         }
 
         return router.push(redirect);

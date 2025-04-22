@@ -55,7 +55,7 @@ export function RegisterForm() {
             await signIn("credentials", {
                 ...v,
                 redirect: true,
-                callbackUrl: "/onboarding"
+                callbackUrl: "/dashboard/locations/new"
             })
         } catch (error) {
             console.log(error);

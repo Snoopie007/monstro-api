@@ -8,12 +8,10 @@ import { getTOS } from "@/libs/server/MDXParse";
 
 async function getSale(sid: string) {
     const decodedSid = decodeId(sid);
-
     try {
         const sale = await admindb.query.sales.findFirst({
             where: (sale, { eq }) => eq(sale.id, decodedSid)
         })
-        console.log(sale)
         return sale;
     } catch (error) {
         console.error(error)
@@ -32,7 +30,13 @@ export default async function InvitePackagePage(props: InvitePackagePageProps) {
     const sale = await getSale(sid);
     const tos = await getTOS("term-of-use")
     if (!sale) {
-        return <div>Invalid request.</div>;
+        return <div className="flex flex-col gap-4">
+            <div className="w-full max-w-lg mx-auto  border bg-white border-gray-200 rounded-sm p-1 space-y-4  ">
+                <div className="space-y-6  p-4">
+                    <div>Invalid request.</div>
+                </div>
+            </div>
+        </div>;
     }
 
     return (

@@ -75,12 +75,13 @@ export default async function CompleteIntegeration(props: { params: Promise<{ na
 
 	const connection = await completeIntegration(params.name, searchParams);
 
+
 	return (
 		<div className="h-[100svh] bg-white dark:bg-white text-black dark:text-black w-full">
 			<div className="max-w-lg w-full h-full m-auto py-10 flex flex-row items-center">
 				<div className="text-center border px-6 py-10 rounded-sm border-gray-200 shadow-xs m-auto">
 					{connection ? (
-						<div className='text-center'>
+						<div className='text-center flex flex-col items-center justify-center'>
 							<svg className="mb-4 w-16 h-16" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 								<circle className="fill-green-500" cx="50" cy="50" r="40" />
 								<path
@@ -107,7 +108,7 @@ export default async function CompleteIntegeration(props: { params: Promise<{ na
 							<p className='text-black/80'>You'll be redirect back to Monstro.</p>
 						</div>
 					) : (
-						<div className='text-center'>
+						<div className='text-center flex flex-col items-center justify-center'>
 							<svg className="mb-4 w-16 h-16" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 								<circle className="fill-red-500" cx="50" cy="50" r="40" />
 								<path
@@ -136,7 +137,7 @@ export default async function CompleteIntegeration(props: { params: Promise<{ na
 					)}
 				</div>
 			</div>
-			<meta httpEquiv="refresh" content={`3;url=/dashboard/${searchParams.state}/settings/integrations`} />
+			<meta httpEquiv="refresh" content={`3;url=/dashboard/location/${searchParams.state}/settings/integrations`} />
 		</div>
 	)
 }

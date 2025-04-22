@@ -45,8 +45,9 @@ abstract class BaseStripePayments {
         return c
     }
 
-
-
+    async constructEvent(body: Buffer, sig: string, key: string): Promise<Stripe.Event> {
+        return await this._stripe.webhooks.constructEvent(body, sig, key);
+    }
     async updatePaymentMethod(id: string, update: Stripe.PaymentMethodUpdateParams) {
         return await this._stripe.paymentMethods.update(id, update);
     }
@@ -136,7 +137,6 @@ abstract class BaseStripePayments {
                 reference
             }]
         });
-        console.log(res);
         return res;
     }
 }

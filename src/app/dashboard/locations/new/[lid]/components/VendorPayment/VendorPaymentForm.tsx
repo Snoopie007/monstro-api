@@ -19,15 +19,9 @@ import {
 } from "@/components/forms";
 import { Loader2, LockIcon } from "lucide-react";
 import { VendorBillingSchema } from "@/libs/schemas";
-import { useOnboarding } from "../../provider/OnboardingProvider";
+import { useNewLocation } from "../../provider/NewLocationContext";
 import { Button } from "@/components/ui/button";
 
-import {
-    DialogTrigger, Dialog, DialogContent, DialogDescription,
-    DialogTitle, DialogHeader, DialogFooter,
-    DialogClose
-} from "@/components/ui";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSession } from "next-auth/react";
 import { decodeId } from "@/libs/server/sqids";
 import { TermsAndConditions } from "@/components/terms";
@@ -45,7 +39,7 @@ function handlePaymentError(toastRef: string | number, message: string) {
 
 
 export default function VendorPaymentForm() {
-    const { locationState, updateLocationState, tos } = useOnboarding();
+    const { locationState, updateLocationState, tos } = useNewLocation();
     const [errorMessage, setErrorMessage] = useState("");
     const [locationId, setLocationId] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -118,7 +112,7 @@ export default function VendorPaymentForm() {
                     autoClose: 100
                 });
                 await sleep(100)
-                router.push(`/dashboard/${locationId}`)
+                router.push(`/dashboard/location/${locationId}`)
             } else {
                 setLoading(false);
                 return handlePaymentError(toastRef, "Invalid Card.");

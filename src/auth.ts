@@ -37,7 +37,7 @@ export const {
 		signOut: "/sign-out",
 		error: "/auth/error", // Error code passed in query string as ?error=
 		verifyRequest: "/auth/verify-request", // (used for check email message)
-		newUser: "/onboarding"
+		newUser: "/dashboard/locations/new"
 	},
 	session: {
 		strategy: "jwt",
