@@ -11,7 +11,6 @@ import { getPlan } from '../utils';
 import { eq } from 'drizzle-orm';
 import { getPaymentPlan } from '../utils';
 import { sales } from '@/db/admin/sales';
-import { AgencyGHL, VendorGHL } from '@/libs/server/ghl';
 
 const stripe = new VendorStripePayments();
 
@@ -103,8 +102,7 @@ export async function POST(req: Request) {
 
         const encodedId = encodeId(location.id)
 
-        await ghlAutomations(sale)
-
+  
         return NextResponse.json({ ...location, id: encodedId, status: "active" }, { status: 200 })
 
     } catch (err) {
@@ -113,37 +111,22 @@ export async function POST(req: Request) {
     }
 }
 
-async function ghlAutomations(sale: Sale) {
+// async function ghlAutomations(sale: Sale) {
 
-    const integration = await admindb.query.adminIntegrations.findFirst({
-        where: (vendorIntegration, { eq }) => eq(vendorIntegration.service, "ghl")
-    })
+//     const integration = await admindb.query.adminIntegrations.findFirst({
+//         where: (vendorIntegration, { eq }) => eq(vendorIntegration.service, "ghl")
+//     })
 
 
-    if (!integration) {
-        throw new Error("GHL integration not found")
-    }
-    const ghl = new AgencyGHL()
+//     if (!integration) {
+//         throw new Error("GHL integration not found")
+//     }
+//     const ghl = new AgencyGHL()
 
-    await ghl.getAccessToken(integration)
-    const locationToken = await ghl.getLocationTokenFromAgency({
-        companyId: integration.providerId,
-        locationId: "rCcWpfkx9wZlMF7P4C5V",
-    })
-    if (!locationToken) {
-        console.log("Error Getting Location Token.")
-        return NextResponse.json({ error: "Error Getting Location Token." }, { status: 200 })
-    }
-
-    const vendorGHL = new VendorGHL();
-    vendorGHL.setAccessToken(locationToken.access_token);
-    await vendorGHL.upsertContact({
-        firstName: sale.firstName,
-        lastName: sale.lastName,
-        email: sale.email,
-        phone: sale.phone,
-        locationId: 'rCcWpfkx9wZlMF7P4C5V',
-        tags: ['customer'],
-        type: 'Customer',
-    })
-}   
+//     await ghl.getAccessToken(integration)
+//     const locationToken = await ghl.getLocationTokenFromAgency({
+//         companyId: integration.providerId,
+//         locationId: "rCcWpfkx9wZlMF7P4C5V",
+//     })
+    
+// }   
