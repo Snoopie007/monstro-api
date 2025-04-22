@@ -30,28 +30,36 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
       }
     })
 
-    console.log("subscriptions", subscriptions)
     const allSessions: any[] = [];
-    const allProgarms: any[] = [];
-
+    const allPrograms: any[] = [];
 
     subscriptions.forEach(subscription => {
-      allProgarms.push(subscription.plan.program);
+      
+      const reservationCount = subscription.reservations.length;
+      
+      
+      const programWithCount = {
+        ...subscription.plan.program,
+        reservationCount: reservationCount,
+        totalSessions: subscription.plan.program.sessions.length
+      };
+      
+      allPrograms.push(programWithCount);
+      
       subscription.reservations.forEach((reservation: any) => {
         allSessions.push(reservation);
       });
     });
-    // console.log(allSessions)
-    allProgarms.forEach((program) => {
-        program.sessions.forEach((session: any) => {
-          session.isEnrolled = allSessions.findIndex((s: any) => s.sessionId === session.id) !== -1;
-        });
+
+    allPrograms.forEach((program) => {
+      program.sessions.forEach((session: any) => {
+        session.isEnrolled = allSessions.findIndex((s: any) => s.sessionId === session.id) !== -1;
+      });
     });
 
-    return NextResponse.json(allProgarms, { status: 200 })
+    return NextResponse.json(allPrograms, { status: 200 });
   }
   catch (err) {
-    // console.log(err)
-    return NextResponse.json({ error: err }, { status: 500 })
+    return NextResponse.json({ error: err }, { status: 500 });
   }
 }
