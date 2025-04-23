@@ -4,7 +4,7 @@ import { NextResponse, NextRequest } from "next/server";
 
 export async function GET(req: NextRequest, props: { params: Promise<{ lid: number }> }) {
     const params = await props.params;
-    const authMember =  authenticateMember(req);
+    const authMember = authenticateMember(req);
 
     try {
         const subscriptions = await db.query.memberSubscriptions.findMany({
