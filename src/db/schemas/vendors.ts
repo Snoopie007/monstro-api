@@ -1,4 +1,4 @@
-import { text, timestamp, pgTable, integer, serial } from "drizzle-orm/pg-core";
+import { text, timestamp, pgTable, integer, serial, boolean } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { relations } from "drizzle-orm";
 import { vendorLevels } from "./VendorProgress";
@@ -34,41 +34,5 @@ export const vendorsRelations = relations(vendors, ({ one, many }) => ({
         fields: [vendors.id],
         references: [vendorReferrals.referralId],
         relationName: "referee",
-    }),
-}));
-
-export const wallet = pgTable("wallet", {
-    id: serial("id").primaryKey(),
-    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    balance: integer("balance").notNull().default(0),
-    credit: integer("credit").notNull().default(0),
-    rechargeAmount: integer("recharge_amount").notNull().default(20),
-    rechargeThreshold: integer("recharge_threshold").notNull().default(10),
-    lastCharged: timestamp("last_charged", { withTimezone: true }),
-    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: true }),
-    deleted: timestamp("deleted_at", { withTimezone: true }),
-});
-
-
-export const walletUsage = pgTable("wallet_usage", {
-    id: serial("id").primaryKey(),
-    walletId: integer("wallet_id").notNull().references(() => wallet.id, { onDelete: "cascade" }),
-    description: text("description").notNull(),
-    category: text("category").notNull(),
-    amount: integer("amount").notNull().default(0),
-    eventId: integer("event_id").notNull().default(0),
-    balance: integer("balance").notNull().default(0),
-    rechargeThreshold: integer("recharge_threshold").notNull().default(0),
-    activityDate: timestamp("activity_date").notNull(),
-    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: true }),
-    deleted: timestamp("deleted_at", { withTimezone: true }),
-});
-
-export const walletRelations = relations(wallet, ({ one }) => ({
-    location: one(locations, {
-        fields: [wallet.locationId],
-        references: [locations.id],
     }),
 }));

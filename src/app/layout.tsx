@@ -5,7 +5,7 @@ import "@public/globals.css";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { ThemeProvider } from "@/providers/ThemeProvider";
-import { Monitoring } from "react-scan/monitoring/next";
+// import { Monitoring } from "react-scan/monitoring/next";
 
 
 export const metadata: Metadata = {
@@ -42,10 +42,10 @@ export default async function RootLayout({
                     />
                 </head>
                 <body className={"font-roboto"}>
-                    <Monitoring
+                    {/* <Monitoring
                         apiKey="-OqpEnrUNsFguu-tRoISM0H5Lgsx7qIo" // Safe to expose publically
                         url="https://monitoring.react-scan.com/api/v1/ingest"
-                    />
+                    /> */}
                     <ThemeProvider
 
                         defaultTheme="system"

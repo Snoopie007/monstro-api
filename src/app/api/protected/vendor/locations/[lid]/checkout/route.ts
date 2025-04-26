@@ -47,7 +47,7 @@ export async function POST(req: Request) {
             phone: vendor.phone!,
         }, token.id, { vendorId });
 
-        await chargeWallet(stripe, lid, vendorId, token);
+        await chargeWallet(stripe, lid, token);
 
         const metadata = { vendorId, locationId }
 

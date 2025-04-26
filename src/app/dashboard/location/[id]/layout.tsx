@@ -1,11 +1,10 @@
 import { LocationSideNav, LocationTopNav } from "./components";
 import { cn } from "@/libs/utils";
 import { AccountStatusProvider } from "./providers/AccountStatusProvider";
-
 import { decodeId } from "@/libs/server/sqids";
 import { db } from "@/db/db";
 import { redirect } from "next/navigation";
-
+import "@public/editor.css";
 
 interface LocationLayoutProps {
     children: React.ReactNode,

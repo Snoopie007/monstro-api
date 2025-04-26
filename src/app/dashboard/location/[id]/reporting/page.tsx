@@ -1,6 +1,6 @@
 'use client'
 import React, { use } from 'react'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { ScrollArea } from '@/components/ui/ScrollArea'
 import {
     RevenueChart,
     RecurringRevenueChart,

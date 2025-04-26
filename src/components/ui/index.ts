@@ -6,7 +6,7 @@ export * from './command';
 export * from './skeleton';
 export * from './button';
 export * from './avatar';
-export * from './scroll-area';
+export * from './ScrollArea';
 export * from './dialog';
 export * from './dropdown-menu';
 export * from './sheet';

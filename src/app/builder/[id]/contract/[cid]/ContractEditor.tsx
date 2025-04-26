@@ -2,7 +2,7 @@
 import { EditorContent } from '@tiptap/react'
 import { TopMenu, ContentMenu } from '../menus'
 import { useBlockEditor } from '../hooks/useBlockEditor'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { ScrollArea } from '@/components/ui/ScrollArea'
 import { Sidebar } from '../components/Sidebar'
 import { useMemo, useState } from 'react'
 import { DarkModeSwitcher } from '../components/DarkModeSwitcher'

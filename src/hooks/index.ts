@@ -1,2 +1,3 @@
 export * from './hooks'
-export * from './use-file-uploader'
+export * from './useFileUploader'
+export * from './useBots'

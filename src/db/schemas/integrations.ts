@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, primaryKey, serial, text, timestamp, pgTable, json, unique } from "drizzle-orm/pg-core";
+import { integer, primaryKey, serial, text, timestamp, pgTable, jsonb, unique } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 
 
@@ -13,7 +13,7 @@ export const integrations = pgTable("integrations", {
     refreshToken: text("refresh_token"),
     integrationId: text("integration_id").notNull(),
     expires: integer("expires_at"),
-    settings: json("settings"),
+    settings: jsonb("settings").$type<Record<string, unknown>>().notNull().default({}),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [

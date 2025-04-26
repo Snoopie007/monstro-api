@@ -1,7 +1,7 @@
 
 import { Editor } from '@tiptap/react'
 import { useCallback } from 'react'
-import { Variable } from '../../../extensions/Variables/types'
+import { Variable } from '../../../../../../../components/extensions/Variables/types'
 
 export const useTextmenuCommands = (editor: Editor) => {
     const onUndo = useCallback(() => editor.chain().focus().undo().run(), [editor])

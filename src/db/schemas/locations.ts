@@ -4,10 +4,11 @@ import { memberInvoices, members } from "./members";
 import { integrations } from "./integrations";
 import { programs } from "./programs";
 import { transactions } from "./transactions";
-import { vendors, wallet } from "./vendors";
+import { vendors } from "./vendors";
 import { memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import { IncompletePlan, LocationSettings } from "@/types";
+import { aiBots } from "./ai";
 
 
 export const locations = pgTable("locations", {
@@ -52,7 +53,31 @@ export const locationState = pgTable("location_state", {
     updated: timestamp("updated_at", { withTimezone: true }),
 });
 
-// ✅ Member Locations Table
+
+export const wallets = pgTable("wallets", {
+    id: serial("id").primaryKey(),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    balance: integer("balance").notNull().default(0),
+    credits: integer("credits").notNull().default(0),
+    rechargeAmount: integer("recharge_amount").notNull().default(2500),
+    rechargeThreshold: integer("recharge_threshold").notNull().default(1000),
+    lastCharged: timestamp("last_charged", { withTimezone: true }),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
+});
+
+
+export const walletUsages = pgTable("wallet_usages", {
+    id: serial("id").primaryKey(),
+    walletId: integer("wallet_id").notNull().references(() => wallets.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    amount: integer("amount").notNull().default(0),
+    balance: integer("balance").notNull().default(0),
+    isCredit: boolean("is_credit").notNull().default(false),
+    activityDate: timestamp("activity_date").notNull(),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+});
+
 export const memberLocations = pgTable("member_locations", {
     memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
@@ -73,6 +98,7 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
     programs: many(programs),
     memberSubscriptions: many(memberSubscriptions),
     memberInvoices: many(memberInvoices),
+    bots: many(aiBots),
     locationState: one(locationState, {
         fields: [locations.id],
         references: [locationState.locationId],
@@ -81,9 +107,9 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
         fields: [locations.vendorId],
         references: [vendors.id],
     }),
-    wallet: one(wallet, {
+    wallet: one(wallets, {
         fields: [locations.id],
-        references: [wallet.locationId],
+        references: [wallets.locationId],
     })
 }));
 
@@ -106,4 +132,13 @@ export const memberLocationsRelations = relations(memberLocations, ({ one, many 
         references: [locations.id],
     }),
     transactions: many(transactions),
+}));
+
+
+export const walletRelations = relations(wallets, ({ one, many }) => ({
+    location: one(locations, {
+        fields: [wallets.locationId],
+        references: [locations.id],
+    }),
+    usages: many(walletUsages, { relationName: "usages" }),
 }));

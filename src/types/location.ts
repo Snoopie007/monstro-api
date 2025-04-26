@@ -2,6 +2,7 @@ import { LocationStatus } from "./DatabaseEnums";
 import { MemberInvoice, MemberSubscription } from "./member";
 import { Program } from "./program";
 import { Transaction } from "./transaction";
+import { Wallet } from "./wallet";
 
 
 export type Location = {
@@ -27,6 +28,7 @@ export type Location = {
     memberInvoices?: MemberInvoice[];
     memberSubscriptions?: MemberSubscription[];
     transactions?: Transaction[];
+    wallet?: Wallet;
     created: Date;
     updated: Date | null;
     deleted: Date | null;

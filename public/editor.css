@@ -3,6 +3,13 @@
 .ProseMirror {
 	@apply caret-black dark:caret-white outline-0 pr-8 pl-20 z-0 lg:pl-8 lg:pr-8;
 }
+
+
+#aiForm .ProseMirror {
+  @apply lg:pl-0 lg:pr-0;
+}
+
+
 .ProseMirror .selection {
 	@apply inline;
 }

@@ -1,7 +1,11 @@
 
-import { SQL, sql, getTableColumns } from "drizzle-orm";
+import { walletUsages } from "@/db/schemas";
+import { SQL, sql, getTableColumns, eq } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
-
+import { db } from "@/db/db";
+import { Location } from "@/types";
+import { wallets } from "@/db/schemas";
+import { VendorStripePayments } from "./stripe";
 
 const buildConflictUpdateColumns = <
 	T extends PgTable,
@@ -30,9 +34,64 @@ function generateOtp() {
 }
 
 
+async function chargeWallet(location: Location, amount: number, description: string) {
+	const wallet = location.wallet;
+	let isCredit = false;
+	if (!wallet) { throw new Error("Wallet not found") }
+
+	try {
+		if (wallet.balance < (wallet.rechargeThreshold * 100)) {
+			const stripe = new VendorStripePayments();
+			const vendor = await db.query.vendors.findFirst({
+				where: (vendor, { eq }) => eq(vendor.id, location.vendorId)
+			});
+			if (!vendor || !vendor.stripeCustomerId) { throw new Error("Vendor not found") }
+			stripe.setCustomer(vendor.stripeCustomerId);
+			const { clientSecret } = await stripe.createPaymentIntent(wallet.rechargeAmount, undefined, {
+				description: `Auto-charge USD ${wallet.rechargeAmount / 100} was successfully added to wallet.`,
+				metadata: {
+					locationId: wallet.locationId
+				}
+			});
+			if (!clientSecret) { throw new Error("Payment failed") }
+			wallet.balance += wallet.rechargeAmount;
+		}
+
+		if (wallet.credits > amount) {
+			wallet.credits -= amount;
+			isCredit = true;
+		} else {
+			wallet.balance -= amount;
+		}
+
+		const today = new Date();
+
+		db.transaction(async (tx) => {
+			await tx.update(wallets).set({
+				balance: wallet.balance,
+				credits: wallet.credits,
+				lastCharged: today
+			}).where(eq(wallets.id, wallet.id))
+
+			await tx.insert(walletUsages).values({
+				walletId: wallet.id,
+				balance: wallet.balance,
+				amount: amount,
+				isCredit,
+				description,
+				activityDate: today
+			})
+		})
+		return wallet;
+	} catch (error) {
+		console.error("Error charging wallet:", error);
+		throw error;
+	}
+}
 
 export {
 	formatPhoneNumber,
 	buildConflictUpdateColumns,
-	generateOtp
+	generateOtp,
+	chargeWallet
 }

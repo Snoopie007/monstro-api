@@ -4,14 +4,35 @@ import * as React from "react"
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 
 import { cn } from "@/libs/utils"
+import { cva, VariantProps } from "class-variance-authority"
+
+const scrollAreaVariants = cva(
+	"relative overflow-hidden",
+	{
+		variants: {
+			variant: {
+				textarea: "min-h-[100px] overflow-hidden  bg-background border border-foreground/10 rounded-sm",
+				default: "rounded-xs",
+			},
+		},
+		defaultVariants: {
+			variant: "default",
+		},
+	}
+)
+
+interface ScrollAreaProps
+	extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>,
+	VariantProps<typeof scrollAreaVariants> {
+}
 
 const ScrollArea = React.forwardRef<
-	React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
+	React.ComponentRef<typeof ScrollAreaPrimitive.Root>,
+	ScrollAreaProps
+>(({ className, children, variant, ...props }, ref) => (
 	<ScrollAreaPrimitive.Root
 		ref={ref}
-		className={cn("relative overflow-hidden", className)}
+		className={cn(scrollAreaVariants({ variant }), className)}
 		{...props}
 	>
 		<ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
@@ -24,7 +45,7 @@ const ScrollArea = React.forwardRef<
 ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
 
 const ScrollBar = React.forwardRef<
-	React.ElementRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
+	React.ComponentRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
 	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>
 >(({ className, orientation = "vertical", ...props }, ref) => (
 	<ScrollAreaPrimitive.ScrollAreaScrollbar

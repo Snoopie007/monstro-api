@@ -19,6 +19,7 @@ export type VariableListRef = {
     >;
 };
 export type VariableListProps = SuggestionProps<Variable>;
+
 export const VariableList = forwardRef<VariableListRef, VariableListProps>((props, ref) => {
     const [selectedIndex, setSelectedIndex] = useState(0)
     const scrollContainer = useRef<HTMLDivElement>(null)

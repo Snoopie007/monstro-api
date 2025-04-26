@@ -6,18 +6,16 @@ export type Wallet = {
     credits: number,
     rechargeAmount: number,
     rechargeThreshold: number,
-    lastRecharge: Date,
+    lastCharged: Date | null,
     usages?: WalletUsage[],
     created: Date,
     updated: Date | null,
-    deleted: Date | null,
 }
 export type WalletUsage = {
     id: number,
     walletId: number,
     amount: number,
-    eventId: number,
-    category: string,
+    isCredit: boolean,
     description: string,
     balance: number
     activityDate: Date | null,

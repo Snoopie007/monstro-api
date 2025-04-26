@@ -4,18 +4,13 @@ export const Variable = Mention.extend({
     addAttributes() {
         return {
             ...this.parent?.(),
+
             value: {
                 default: null,
                 parseHTML: (element) => {
-                    return {
-                        uuid: element.getAttribute("data-mention-uuid")
-                    };
+                    return element.getAttribute("data-value")
                 },
                 renderHTML: (attributes) => {
-                    if (!attributes.value) {
-                        return {};
-                    }
-
                     return {
                         "data-value": attributes.value
                     };

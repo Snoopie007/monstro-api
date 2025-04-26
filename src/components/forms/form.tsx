@@ -104,7 +104,7 @@ interface FormLabelProps
   VariantProps<typeof formLabelVariants> { }
 
 const FormLabel = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
+  React.ComponentRef<typeof LabelPrimitive.Root>,
   FormLabelProps
 >(({ className, size, ...props }, ref) => {
   const { error, formItemId } = useFormField()

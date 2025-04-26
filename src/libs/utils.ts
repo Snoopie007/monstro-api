@@ -117,7 +117,7 @@ function formatPhone(phone: string) {
  *          If a placeholder's key is not found in the data, the placeholder remains unchanged.
  */
 
-function interpolateMsg(template: string, data: Record<string, any>): string {
+function interEmailsAndText(template: string, data: Record<string, any>): string {
 	return template.replace(/\{\{([^}]+)\}\}/g, (match: string, p1: string): string => {
 		// Split the path into parts (e.g. "user.name" -> ["user", "name"])
 		const parts = p1.trim().split('.');
@@ -143,6 +143,46 @@ function authenticateMember(req: NextRequest): { member: Member } {
 }
   
 
+
+function interpolate(template: string, variables: Record<string, any>): string {
+    if (!template) return '';
+
+    // Clean up HTML and normalize newlines
+    let output = template
+        .replace(/<p>/g, '\n')
+        .replace(/<\/p>/g, '')
+        .replace(/\r\n/g, '\n');
+
+    // Replace variable spans (e.g., <span data-value="user.firstName">@user.firstName</span>)
+    output = output.replace(
+        /<span[^>]*data-value="([^"]*)"[^>]*>@[^<]*<\/span>/g,
+        (_, path) => {
+            try {
+                const value = path.split('.')
+                    .reduce((obj: Record<string, any> | undefined, key: string) =>
+                        obj && typeof obj === 'object' ? obj[key] : undefined,
+                        variables
+                    );
+                return value !== undefined ? String(value) : `@${path}`;
+            } catch {
+                return `@${path}`;
+            }
+        }
+    );
+
+    // Replace @variable.property mentions
+    output = output.replace(
+        /@([a-zA-Z0-9]+)\.([a-zA-Z0-9]+)/g,
+        (match, obj, prop) => {
+            return variables[obj]?.[prop] !== undefined
+                ? String(variables[obj][prop])
+                : match;
+        }
+    );
+
+    // Clean up whitespace
+    return output.trim().replace(/\n\s*\n\s*\n/g, '\n\n');
+}
 export {
 	sleep,
 	tryCatch,
@@ -151,8 +191,9 @@ export {
 	formatTime,
 	formatEmail,
 	formatPhone,
-	interpolateMsg,
-	authenticateMember
+	interEmailsAndText,
+	authenticateMember,
+	interpolate
 }
 
 

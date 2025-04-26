@@ -1,5 +1,5 @@
 'use client'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { ScrollArea } from '@/components/ui/ScrollArea'
 import { cn } from '@/libs/utils'
 import { SupportTicket, SupportTicketMessage } from '@/types'
 import { ChangeEvent, MutableRefObject, useEffect, useRef, useState } from 'react'

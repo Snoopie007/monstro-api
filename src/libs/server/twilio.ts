@@ -1,5 +1,5 @@
 import twilio from 'twilio';
-import { interpolateMsg } from '../utils';
+import { interEmailsAndText } from '../utils';
 export class TwilioClient {
     private _client: twilio.Twilio;
     private _fromPhone: string;
@@ -18,7 +18,7 @@ export class TwilioClient {
     public async send(to: string, message: string, data: Record<string, any>) {
 
         await this._client.messages.create({
-            body: interpolateMsg(message, data),
+            body: interEmailsAndText(message, data),
             to,
             from: this._fromPhone
         });

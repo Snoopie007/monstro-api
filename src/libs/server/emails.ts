@@ -1,5 +1,5 @@
 import * as sendgrid from '@sendgrid/mail';
-import { interpolateMsg } from '../utils';
+import { interEmailsAndText } from '../utils';
 
 
 
@@ -20,7 +20,7 @@ export class EmailSender {
 
 
     public async send(email: string, subject: string, template: string, data: Record<string, any>) {
-        const html = interpolateMsg(template, data);
+        const html = interEmailsAndText(template, data);
 
         await this._sender.send({
             to: email,

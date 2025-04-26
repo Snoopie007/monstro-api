@@ -1,29 +1,27 @@
 import { db, admindb } from "@/db/db";
+import { wallets } from "@/db/schemas/locations";
 import { VendorStripePayments } from "@/libs/server/stripe";
-import { wallet } from "@/db/schemas";
 
 
 
-async function chargeWallet(stripe: VendorStripePayments, locationId: number, vendorId: number, token: any) {
+async function chargeWallet(stripe: VendorStripePayments, locationId: number, token: any) {
     const walletPayment = 10 * 100;
     const { clientSecret } = await stripe.createPaymentIntent(
         walletPayment,
         token.card.id,
-        { description: `Auto-charge USD ${walletPayment / 100} was successfully added to wallet.` }
+        { description: `Auto-charge $10 USD was successfully added to wallet.` }
     );
 
     if (!clientSecret) {
         throw new Error("Wallet payment failed")
     }
 
-    await db.insert(wallet).values({
+    await db.insert(wallets).values({
         locationId: locationId,
-        balance: walletPayment / 100,
-        credit: 0,
-        rechargeAmount: 2500,
-        rechargeThreshold: 1000,
+        balance: walletPayment,
+        credits: 0,
         lastCharged: new Date(),
-    }).onConflictDoNothing({ target: [wallet.locationId] });
+    }).onConflictDoNothing({ target: [wallets.locationId] });
 
 }
 

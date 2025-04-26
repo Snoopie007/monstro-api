@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { ChevronsUpDown } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Location } from "@/types";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";

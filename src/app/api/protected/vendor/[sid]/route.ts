@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { admindb, db } from '@/db/db';
-import { locations, locationState, vendorLevels } from '@/db/schemas';
+import { locations, locationState, vendorLevels, wallets } from '@/db/schemas';
 import { encodeId } from '@/libs/server/sqids';
 import { formatPhoneNumber } from '@/libs/server/db';
 import { MonstroPlan, Sale } from '@/types/admin';
@@ -91,6 +91,13 @@ export async function POST(req: Request) {
             await tx.insert(vendorLevels).values({
                 vendorId,
                 locationId: location.id
+            })
+
+            await tx.insert(wallets).values({
+                locationId: location.id,
+                balance: 0,
+                credits: 0,
+                lastCharged: today
             })
         });
 

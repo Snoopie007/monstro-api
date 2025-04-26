@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/libs/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/ScrollArea";
 import { MonstroLegal } from "@/libs/server/MDXParse";
 
 
