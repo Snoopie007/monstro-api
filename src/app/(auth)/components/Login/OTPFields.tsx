@@ -12,7 +12,7 @@ import { toast } from 'react-toastify'
 import { signIn } from 'next-auth/react'
 import { Loader2 } from 'lucide-react'
 import OTPRetry from './OTPRetry'
-import { LoginSchema } from '@/libs/schemas'
+import { LoginSchema } from '@/libs/FormSchemas/schemas'
 import { useLoginStatus } from '../../login/providers/LoginStatusProvider'
 
 interface VerifyOTPProps {

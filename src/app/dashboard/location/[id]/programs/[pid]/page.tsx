@@ -3,15 +3,14 @@ import { useProgram } from '@/hooks/usePrograms';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import React, { use } from 'react';
 
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from "@/components/ui/tabs"
+// import {
+//     Tabs,
+//     TabsContent,
+//     TabsList,
+//     TabsTrigger,
+// } from "@/components/ui/tabs"
 import UpdateProgram from './components/UpdateProgram';
 import { ProgramMembers } from './components/ProgramMembers';
-import ProgramPlans from './components/ProgramPlans/ProgramPlanList';
 
 
 import LoadingComponent from '@/components/loading';

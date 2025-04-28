@@ -6,7 +6,7 @@ import {
 } from '@/components/forms'
 import Link from 'next/link'
 import { cn, tryCatch } from '@/libs/utils'
-import { LoginSchema } from '@/libs/schemas'
+import { LoginSchema } from '@/libs/FormSchemas/schemas'
 import { UseFormReturn } from 'react-hook-form'
 import { z } from 'zod'
 import { Loader2 } from 'lucide-react'

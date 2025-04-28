@@ -4,6 +4,7 @@ import {
     Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
     Input,
     FormDescription,
+    SelectContract
 } from '@/components/forms';
 
 import { z } from "zod";
@@ -15,13 +16,12 @@ import {
     CollapsibleTrigger,
     Switch,
 } from '@/components/ui';
-import { NewPlanSchema } from '../../../../schemas';
+import { NewPackageSchema } from '@/libs/FormSchemas';
 import { cn } from '@/libs/utils';
 import { ChevronRight } from 'lucide-react';
-import { SelectContract } from './SelectContract';
 
 interface SubFieldsProps {
-    form: UseFormReturn<z.infer<typeof NewPlanSchema>>,
+    form: UseFormReturn<z.infer<typeof NewPackageSchema>>,
     lid: string
 }
 
@@ -33,7 +33,7 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
             <fieldset className=''>
                 <FormField
                     control={form.control}
-                    name="pkg.totalClassLimit"
+                    name="totalClassLimit"
                     render={({ field }) => (
                         <FormItem className="">
                             <FormLabel size={"tiny"}>Total Classes</FormLabel>
@@ -60,7 +60,7 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                         <div className='grid grid-cols-3 gap-3 items-baseline'>
                             <FormField
                                 control={form.control}
-                                name="pkg.expireThreshold"
+                                name="expireThreshold"
                                 render={({ field }) => (
                                     <FormItem className="col-span-1">
 
@@ -72,7 +72,7 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                             />
                             <FormField
                                 control={form.control}
-                                name="pkg.expireInterval"
+                                name="expireInterval"
                                 render={({ field }) => (
                                     <FormItem className="col-span-2">
 
@@ -97,7 +97,20 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                         </div>
                     </fieldset>
 
-                    <SelectContract lid={lid} form={form} />
+                    <fieldset>
+                        <FormField
+                            control={form.control}
+                            name="contractId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel size={"tiny"}>Attach a Contract</FormLabel>
+                                    <FormDescription className="text-xs">Leave blank to not attach a contract.</FormDescription>
+                                    <SelectContract lid={lid} onChange={field.onChange} />
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </fieldset>
                     <fieldset >
                         <FormField
                             control={form.control}

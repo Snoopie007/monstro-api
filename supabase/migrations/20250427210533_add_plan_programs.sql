@@ -20,7 +20,13 @@ DROP CONSTRAINT member_plans_program_id_foreign;
 
 
 ALTER TABLE member_plans
+ADD COLUMN location_id INT NOT NULL;
+
+ALTER TABLE member_plans
 DROP COLUMN program_id;
+
+ALTER TABLE member_plans
+ADD CONSTRAINT fk_member_plans_location_id FOREIGN KEY (location_id) REFERENCES locations(id);
 
 ALTER TABLE member_plans
 ADD COLUMN marketing_details JSONB NOT NULL DEFAULT '{}';

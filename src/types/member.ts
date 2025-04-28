@@ -3,7 +3,7 @@ import { FamilyMember } from "./FamilyMember";
 import { Transaction } from "./transaction";
 import { Location } from "./location";
 import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod, ImportStatus } from "./DatabaseEnums";
-import { Program } from "./program";
+import { PlanProgram, Program } from "./program";
 
 export type Member = {
     id?: number;
@@ -121,6 +121,7 @@ export type MemberPlan = {
     expireThreshold: number | null;
     allowProration: boolean;
     billingAnchorConfig: BillingCycleAnchorConfig | null;
+    planPrograms?: PlanProgram[];
     created: Date;
     updated: Date | null;
     deleted: Date | null;

@@ -31,6 +31,7 @@ export const memberPlans = pgTable("member_plans", {
     expireThreshold: integer("expire_threshold"),
     billingAnchorConfig: jsonb("billing_anchor_config").$type<BillingCycleAnchorConfig>().default(sql`'{}'::jsonb`),
     allowProration: boolean("allow_proration").notNull().default(false),
+    locationId: integer("location_id").notNull().references(() => locations.id),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })
@@ -103,6 +104,10 @@ export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
     contract: one(contractTemplates, {
         fields: [memberPlans.contractId],
         references: [contractTemplates.id],
+    }),
+    location: one(locations, {
+        fields: [memberPlans.locationId],
+        references: [locations.id],
     }),
     planPrograms: many(planPrograms),
     packages: many(memberPackages),

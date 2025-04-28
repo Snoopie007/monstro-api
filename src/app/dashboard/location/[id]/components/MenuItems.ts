@@ -19,13 +19,21 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
         icon: "Users"
     },
     {
-        name: "Programs & Classes",
+        name: "Programs & Plans",
         icon: "BookText",
         subMenu: [
             {
                 name: "Programs",
                 path: 'programs',
 
+            },
+            {
+                name: "Subscriptions",
+                path: "subscriptions",
+            },
+            {
+                name: "Packages",
+                path: "packages",
             },
             {
                 name: "Signed contracts",

@@ -18,7 +18,7 @@ import {
     RegionSelect
 } from "@/components/forms";
 import { Loader2, LockIcon } from "lucide-react";
-import { VendorBillingSchema } from "@/libs/schemas";
+import { VendorBillingSchema } from "@/libs/FormSchemas/schemas";
 import { useNewLocation } from "../../provider/NewLocationContext";
 import { Button } from "@/components/ui/button";
 
