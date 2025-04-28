@@ -34,11 +34,11 @@ export const IntergrationPartners = [
         tags: ["Accounting"],
         options: {
             client_id: process.env.NEXT_PUBLIC_QUICKBOOKS_CLIENT_ID,
-            client_secret: process.env.QUICKBOOKS_CLIENT_SECRET,
+            // client_secret: process.env.QUICKBOOKS_CLIENT_SECRET,
             response_type: 'code',
-            scope: process.env.NEXT_PUBLIC_QUICKBOOKS_SCOPE,
-            redirect_uri: process.env.QUICKBOOKS_REDIRECT_URI,
-            state: '',
+            scope: 'com.intuit.quickbooks.accounting',
+            redirect_uri: 'https://d63c-111-88-41-241.ngrok-free.app/api/quickbooks/callback',
+            state: 'test123',
         }
     }
 ]
