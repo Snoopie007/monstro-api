@@ -17,7 +17,6 @@ export const memberPlans = pgTable("member_plans", {
     family: boolean("family").notNull().default(false),
     familyMemberLimit: integer("family_member_limit").notNull().default(0),
     archived: boolean("archived").notNull().default(false),
-    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     contractId: integer("contract_id").references(() => contractTemplates.id),
     interval: PlanInterval("interval").default("month"),
     intervalThreshold: integer("interval_threshold").default(1),
@@ -35,6 +34,12 @@ export const memberPlans = pgTable("member_plans", {
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true })
+});
+
+
+export const planPrograms = pgTable("plan_programs", {
+    planId: integer("plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
+    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
 });
 
 
@@ -95,16 +100,26 @@ export const memberPackages = pgTable("member_packages", {
 ]);
 
 export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
-    program: one(programs, {
-        fields: [memberPlans.programId],
-        references: [programs.id],
-    }),
     contract: one(contractTemplates, {
         fields: [memberPlans.contractId],
         references: [contractTemplates.id],
     }),
+    planPrograms: many(planPrograms),
     packages: many(memberPackages),
     subscriptions: many(memberSubscriptions),
+}));
+
+
+export const planProgramsRelations = relations(planPrograms, ({ one }) => ({
+    plan: one(memberPlans, {
+        fields: [planPrograms.planId],
+        references: [memberPlans.id],
+    }),
+    program: one(programs, {
+        fields: [planPrograms.programId],
+        references: [programs.id],
+    }),
+
 }));
 
 export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one, many }) => ({

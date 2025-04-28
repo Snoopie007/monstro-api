@@ -2,7 +2,7 @@ import { bigserial, serial, text, timestamp, time, primaryKey, smallint, doubleP
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { members } from "./members";
-import { memberPackages, memberPlans, memberSubscriptions } from "./MemberPlans";
+import { memberPackages, memberPlans, memberSubscriptions, planPrograms } from "./MemberPlans";
 import { achievements } from "./achievements";
 import { reservations } from "./reservations";
 // Assuming staffs table exists
@@ -21,7 +21,6 @@ export const programs = pgTable("programs", {
     interval: PlanInterval("interval").notNull().default("week"),
     intervalThreshold: smallint("interval_threshold").notNull().default(1),
     icon: text("icon"),
-    benefits: text("benefits").array().$type<string[]>().default([]),
     status: ProgramStatusEnum("status").notNull().default("active"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
@@ -44,7 +43,7 @@ export const programsRelations = relations(programs, ({ one, many }) => ({
         fields: [programs.locationId],
         references: [locations.id],
     }),
-    plans: many(memberPlans),
+    programPlans: many(planPrograms),
     achievements: many(achievements),
     sessions: many(programSessions),
     instructor: one(staffs, {

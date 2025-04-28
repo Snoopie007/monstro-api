@@ -35,10 +35,10 @@ export function ProgramSessions({ sessions, pid, lid }: ProgramSessionsProps) {
     return (
         <>
 
-            <Card className="rounded-sm">
+            <Card className="border-x-0 border-y">
                 <CardHeader className="p-0">
                     <div className="flex flex-row items-center justify-between border-b ">
-                        <div className="flex-1 inline-block text-sm  px-4 font-semibold capitalize ">
+                        <div className="flex-1 inline-block text-sm  px-4 font-semibold  ">
                             Sessions
                         </div>
                         <div className="flex-initial fl ex flex-row items-center h-full">

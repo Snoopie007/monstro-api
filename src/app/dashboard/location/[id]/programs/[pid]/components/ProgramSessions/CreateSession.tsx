@@ -46,7 +46,6 @@ export function CreateSession({ pid, lid }: CreateSessionProps) {
 
 
     async function submitForm(v: z.infer<typeof SessionSchema>) {
-        console.log(v)
         setLoading(true);
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/programs/${pid}/sessions`, {
@@ -71,7 +70,7 @@ export function CreateSession({ pid, lid }: CreateSessionProps) {
             <DialogTrigger asChild>
 
                 <Button variant={"ghost"} className={" h-full border-l  rounded-none"}>
-                    +
+                    + Session
                 </Button>
             </DialogTrigger>
             <DialogContent className="w-[500px] max-w-[500px]">

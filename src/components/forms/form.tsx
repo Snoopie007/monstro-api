@@ -11,7 +11,7 @@ import {
 } from "react-hook-form"
 
 import { cn } from "@/libs/utils"
-import { Label } from "@/components/forms/label"
+import { Label, labelVariants } from "@/components/forms/label"
 import { cva, VariantProps } from "class-variance-authority"
 
 const Form = FormProvider
@@ -85,44 +85,28 @@ const FormItem = React.forwardRef<
 })
 FormItem.displayName = "FormItem"
 
-const formLabelVariants = cva(
-  "",
-  {
-    variants: {
-      size: {
-        default: "",
-        tiny: "text-tiny uppercase font-medium"
-      },
-    },
-    defaultVariants: {
-      size: "default",
-    },
-  }
-)
 interface FormLabelProps
   extends React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root>,
-  VariantProps<typeof formLabelVariants> { }
+  VariantProps<typeof labelVariants> { }
 
 const FormLabel = React.forwardRef<
   React.ComponentRef<typeof LabelPrimitive.Root>,
   FormLabelProps
->(({ className, size, ...props }, ref) => {
+>(({ className, ...props }, ref) => {
   const { error, formItemId } = useFormField()
 
   return (
     <Label
+
       ref={ref}
-      className={cn(
-        error && "text-destructive ",
-        formLabelVariants({ size }),
-        className
-      )}
+      className={cn(error && "text-destructive", { " text-[0.65rem]": props.size === "tiny" }, className)}
       htmlFor={formItemId}
       {...props}
     />
   )
 })
 FormLabel.displayName = "FormLabel"
+
 
 const FormControl = React.forwardRef<
   React.ElementRef<typeof Slot>,

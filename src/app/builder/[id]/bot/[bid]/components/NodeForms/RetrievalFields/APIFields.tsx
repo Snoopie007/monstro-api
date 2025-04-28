@@ -9,7 +9,6 @@ import { RetrievalNodeSchema } from '../schemas'
 import { cn, sleep, tryCatch } from '@/libs/utils'
 import { useBotBuilder } from '../../../providers/AIBotProvider'
 import { Button, Skeleton } from '@/components/ui'
-import { integrations } from '@/db/ClientSchema'
 import { Loader2 } from 'lucide-react'
 
 
