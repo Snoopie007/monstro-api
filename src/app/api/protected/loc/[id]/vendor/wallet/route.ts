@@ -2,13 +2,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
-import { wallet } from '@/db/schemas';
+import { wallets } from '@/db/schemas';
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: number }> }) {
     const params = await props.params;
 
     try {
-        const wallet = await db.query.wallet.findFirst({
+        const wallet = await db.query.wallets.findFirst({
             where: (wallet, { eq }) => eq(wallet.locationId, params.id),
         })
 
@@ -25,10 +25,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
     const { id, ...rest } = body;
     try {
 
-        await db.update(wallet).set({
+        await db.update(wallets).set({
             ...rest,
             updated: new Date()
-        }).where(eq(wallet.id, id))
+        }).where(eq(wallets.id, id))
 
 
         return NextResponse.json({ success: true }, { status: 200 })

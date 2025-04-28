@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { auth } from '@/auth';
 import { eq, sql } from 'drizzle-orm';
-import { wallet } from '@/db/schemas';
+import { wallets } from '@/db/schemas';
 import { VendorStripePayments } from '@/libs/server/stripe';
 
 export async function POST(req: NextRequest, props: { params: Promise<{ id: number }> }) {
@@ -32,11 +32,11 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
             return NextResponse.json({ error: "Payment failed" }, { status: 400 })
         }
 
-        await db.update(wallet).set({
-            balance: sql`${wallet.balance} + ${amount}`,
+        await db.update(wallets).set({
+            balance: sql`${wallets.balance} + ${amount}`,
             lastCharged: new Date(),
             updated: new Date()
-        }).where(eq(wallet.id, id))
+        }).where(eq(wallets.id, id))
 
         return NextResponse.json({ success: true }, { status: 200 })
     } catch (err) {
