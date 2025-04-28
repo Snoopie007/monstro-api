@@ -25,5 +25,20 @@ export const IntergrationPartners = [
             redirect_uri: "/callbacks/integrations/stripe",
             state: ""
         }
+    },
+    {
+        name: "Quickbooks",
+        description: "Quickbooks is an accounting software",
+        url: "https://appcenter.intuit.com/connect/oauth2",
+        logo: "quickbooks-logo.png",
+        tags: ["Accounting"],
+        options: {
+            client_id: process.env.NEXT_PUBLIC_QUICKBOOKS_CLIENT_ID,
+            client_secret: process.env.QUICKBOOKS_CLIENT_SECRET,
+            response_type: 'code',
+            scope: process.env.NEXT_PUBLIC_QUICKBOOKS_SCOPE,
+            redirect_uri: process.env.QUICKBOOKS_REDIRECT_URI,
+            state: '',
+        }
     }
 ]

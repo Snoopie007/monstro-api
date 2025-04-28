@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
         })
         return NextResponse.json(subscriptions, { status: 200 })
     } catch (err) {
-        // console.log(err)
+        console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
