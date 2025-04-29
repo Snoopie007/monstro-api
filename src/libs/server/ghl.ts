@@ -216,6 +216,25 @@ class VendorGHL extends BaseGHL {
         return data.calendars;
     }
 
+
+    async getWorkflows(id: string) {
+
+        if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
+        const res = await fetch(`${this.API}/workflows/?locationId=${id}`, {
+            method: "GET",
+            headers: {
+                ...DefaultHeaders,
+                "Authorization": `Bearer ${this.ACCESS_TOKEN}`
+            },
+        });
+
+        if (!res.ok) {
+            throw new Error("Error Fetching Workflows.");
+        }
+        const data = await res.json();
+
+        return data.workflows;
+    }
     async sendMessage(message: { message: string, contactId: string, type: string }) {
         if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
         const res = await fetch(`${this.API}/conversations/messages`, {

@@ -38,7 +38,7 @@ type APIFieldsProps = {
 }
 
 export function APIFields({ form }: APIFieldsProps) {
-    const { integrations, setPartnerData, partnerData } = useBotBuilder()
+    const { integrations, setPartnerData, partnerData, lid } = useBotBuilder()
     const [loading, setLoading] = useState(false)
     const service = form.watch('options.retrieval.api.service')
     const action = form.watch('options.retrieval.api.action')
@@ -59,7 +59,7 @@ export function APIFields({ form }: APIFieldsProps) {
         const iid = form.getValues('options.retrieval.api.integrationId')
         if (!iid) return;
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/integrations/${iid}/actions?action=getCalendarSlots`)
+            fetch(`/api/protected/loc/${lid}/integrations/${iid}/actions?action=getCalendarSlots`)
         )
         setLoading(false)
         if (error || !result) return;

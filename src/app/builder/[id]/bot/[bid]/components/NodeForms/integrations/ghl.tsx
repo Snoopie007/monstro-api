@@ -11,7 +11,7 @@ import {
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Link, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { NodeSettingsProps } from "../../NodeSettings"
 import { useBotBuilder } from "../../../providers/AIBotProvider"
@@ -38,7 +38,7 @@ const GHL_ACTIONS = [
 
 export function GHLIntegration({ addNodes, updateNode }: NodeSettingsProps) {
     const [loading, setLoading] = useState(false)
-    const { currentNode, integrations, partnerData, setPartnerData, hasChanged } = useBotBuilder()
+    const { currentNode, integrations, partnerData, setPartnerData, hasChanged, lid } = useBotBuilder()
 
     const filteredIntegrations = integrations?.filter((integration) => integration.service === 'ghl')
 
@@ -90,7 +90,7 @@ export function GHLIntegration({ addNodes, updateNode }: NodeSettingsProps) {
         if (!integrationId) return;
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/integrations/${integrationId}/actions?action=${action}`)
+            fetch(`/api/protected/loc/${lid}/integrations/${integrationId}/actions?action=${action}`)
         )
         if (error || !result || !result.ok) return;
         const data = await result.json();
