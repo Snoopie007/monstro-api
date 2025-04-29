@@ -1,8 +1,7 @@
-import { bigserial, serial, text, timestamp, time, primaryKey, smallint, doublePrecision, pgTable, integer, unique } from "drizzle-orm/pg-core";
+import { bigserial, serial, text, timestamp, time, smallint, doublePrecision, pgTable, integer, unique } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
-import { members } from "./members";
-import { memberPackages, memberPlans, memberSubscriptions, planPrograms } from "./MemberPlans";
+import { planPrograms } from "./MemberPlans";
 import { achievements } from "./achievements";
 import { reservations } from "./reservations";
 // Assuming staffs table exists
@@ -49,9 +48,7 @@ export const programsRelations = relations(programs, ({ one, many }) => ({
     instructor: one(staffs, {
         fields: [programs.instructorId],
         references: [staffs.id],
-    }),
-    memberSubscriptions: many(memberSubscriptions),
-    memberPackages: many(memberPackages),
+    })
 }));
 
 

@@ -25,12 +25,13 @@ import { Loader2 } from "lucide-react";
 import { cn, sleep, tryCatch } from "@/libs/utils";
 import { useMemberPaymentMethods } from "../../../providers/MemberContext";
 import React from "react";
-import { Program, MemberPlan } from "@/types";
+import { MemberPlan } from "@/types";
 import { Stripe } from "stripe";
 import DurationPicker from "../../../../components/DurationPicker";
 import { toast } from "react-toastify";
 import { SubPackageProgress } from "../../SessionForm";
 import { useMemberStatus } from "../../../providers/MemberContext";
+import { useSubscriptions } from "@/hooks";
 
 type SubFormProps = {
     params: { id: string, mid: number },
@@ -43,7 +44,7 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods()
     const { ml } = useMemberStatus()
-    const [programs, setPrograms] = useState<Program[]>([]);
+    const { subscriptions } = useSubscriptions(params.id)
     const [plans, setPlans] = useState<MemberPlan[]>([]);
     const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
 
@@ -56,7 +57,6 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
             trailDays: undefined,
             paymentMethod: undefined,
             memberPlanId: undefined,
-            programId: undefined,
             allowProration: false,
             other: {
                 cardId: undefined,
@@ -64,22 +64,6 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
         },
         mode: "onSubmit",
     })
-
-
-    useEffect(() => {
-        fetchPrograms()
-    }, [])
-
-    async function fetchPrograms() {
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${params.id}/programs?type=recurring`)
-        )
-
-        if (error || !result?.ok) return;
-        const data = await result.json()
-        const filteredPrograms = data.filter((program: Program) => program.plans.length > 0)
-        setPrograms(filteredPrograms)
-    }
 
 
     const paymentMethod = form.watch("paymentMethod")
@@ -100,17 +84,9 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
         setLoading(false)
         if (error || !result || !result?.ok) return;
         const { sid } = await result.json()
-        
+
         const plan = plans.find((plan: MemberPlan) => plan.id === v.memberPlanId)
-        const program = programs.find((program: Program) => Number(program.id) === v.programId)
-        
-        setProgress({
-            ...progress,
-            step: 2,
-            plan: plan,
-            program: program,
-            subscriptionId: sid
-        })
+
         form.reset()
         toast.success("Subscription created successfully")
     }
@@ -123,34 +99,7 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
                 <Form {...form}>
                     <form className='space-y-1' >
 
-                        <fieldset>
-                            <FormField
-                                control={form.control}
-                                name="programId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel size="tiny">Program</FormLabel>
-                                        <Select onValueChange={(value) => {
-                                            field.onChange(Number(value))
-                                            const program = programs.find((program: Program) => program.id == Number(value))
-                                            setPlans(program?.plans || [])
-                                        }}>
-                                            <FormControl>
-                                                <SelectTrigger className="rounded-sm">
-                                                    <SelectValue placeholder="Select a program" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {programs && programs.map((program: Program, index: number) => (
-                                                    program.plans.length ? <SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem> : null
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </fieldset>
+
                         <fieldset >
                             <FormField
                                 control={form.control}
@@ -158,16 +107,40 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Plan</FormLabel>
-                                        <Select disabled={!form.getValues("programId")}
-                                            onValueChange={(value) => field.onChange(Number(value))} >
+                                        <Select onValueChange={(value) => field.onChange(Number(value))} >
                                             <FormControl>
                                                 <SelectTrigger className="rounded-sm">
                                                     <SelectValue placeholder="Select a plan" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {plans && plans.map((plan: MemberPlan, index: number) => (
-                                                    (plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
+                                                {subscriptions && subscriptions.map((sub: MemberPlan, index: number) => (
+                                                    (sub.id) ? <SelectItem key={index} value={sub.id?.toString()}>{sub.name}</SelectItem> : null
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                        </fieldset>
+                        <fieldset>
+                            <FormField
+                                control={form.control}
+                                name="paymentMethod"
+                                render={({ field }) => (
+                                    <FormItem className="">
+                                        <FormLabel size="tiny">Payment Method</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!form.getValues("memberPlanId")}>
+                                            <SelectTrigger className="rounded-sm capitalize">
+                                                <SelectValue placeholder="Select a payment method" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {['card', "cash", "zelle", "bank payment", "cheque"].map((method) => (
+                                                    <SelectItem key={method} value={method.toLowerCase()} className="capitalize">
+                                                        {method}
+                                                    </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -178,31 +151,8 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
 
                         </fieldset>
 
-                        <fieldset className="grid grid-cols-6 gap-2 items-center">
-                            <div className="col-span-2">
-                                <FormField
-                                    control={form.control}
-                                    name="paymentMethod"
-                                    render={({ field }) => (
-                                        <FormItem className="">
-                                            <FormLabel size="tiny">Payment Method</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!form.getValues("memberPlanId")}>
-                                                <SelectTrigger className="rounded-sm capitalize">
-                                                    <SelectValue placeholder="Select a payment method" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {['card', "cash", "zelle", "bank payment", "cheque"].map((method) => (
-                                                        <SelectItem key={method} value={method.toLowerCase()} className="capitalize">
-                                                            {method}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
+                        <fieldset >
+
                             <div className="col-span-4 flex flex-col gap-1.5">
                                 <FormLabel size="tiny">Duration</FormLabel>
                                 <DurationPicker
@@ -278,7 +228,7 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
                                         control={form.control}
                                         name="allowProration"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center gap-2 rounded-sm border border-foreground/10 py-2 px-3 ">
+                                            <FormItem className="flex flex-row bg-background items-center gap-2 rounded-sm border border-foreground/10 py-2 px-3 ">
 
                                                 <FormControl>
                                                     <Switch

@@ -22,7 +22,7 @@ export function MemberProfile({ params }: MemberProfileProps) {
 
 
     return (
-        <Card className='rounded-sm overflow-hidden'>
+        <Card className='border-none'>
             <CardHeader className='border-b py-0 px-0 text-left ' >
                 <div className='flex justify-between flex-row items-center '>
                     <div className='px-4 py-2'>

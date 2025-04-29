@@ -12,7 +12,12 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui";
 import {
-    Form, FormControl, FormField, FormMessage, FormItem, FormLabel,
+    Form,
+    FormControl,
+    FormField,
+    FormMessage,
+    FormItem,
+    FormLabel,
     Select,
     SelectTrigger,
     SelectValue,
@@ -22,7 +27,7 @@ import {
     FormDescription,
 } from '@/components/forms';
 
-import { SetStateAction, Dispatch, useEffect, useState } from "react";
+import { SetStateAction, Dispatch, useState } from "react";
 import { NewPackageSchema } from "../../../schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,10 +37,10 @@ import { Loader2, CalendarIcon, ChevronRight } from "lucide-react";
 import { cn, tryCatch } from "@/libs/utils";
 import { useMemberPaymentMethods, useMemberStatus } from "../../../providers/MemberContext";
 import React from "react";
-import { Program, MemberPlan } from "@/types";
+import { MemberPlan } from "@/types";
 import { Stripe } from "stripe";
 import { toast } from "react-toastify";
-import { useMemberPackages } from "@/hooks";
+import { useMemberPackages, usePackages } from "@/hooks";
 import { SubPackageProgress } from "../../SessionForm";
 
 interface PkgFormProps {
@@ -49,9 +54,8 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
     const { ml } = useMemberStatus()
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods()
-    const [programs, setPrograms] = useState<Program[]>([]);
-    const [plans, setPlans] = useState<MemberPlan[]>([]);
     const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
+    const { packages } = usePackages(params.id)
 
     const form = useForm<z.infer<typeof NewPackageSchema>>({
         resolver: zodResolver(NewPackageSchema),
@@ -61,7 +65,6 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
             paymentMethod: undefined,
             memberPlanId: undefined,
             totalClassLimit: undefined,
-            programId: undefined,
             other: {
                 cardId: undefined,
             }
@@ -69,21 +72,6 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
         mode: "onSubmit",
     })
 
-
-    useEffect(() => {
-        fetchPrograms()
-    }, [])
-
-    async function fetchPrograms() {
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${params.id}/programs?type=one-time`)
-        )
-
-        if (error || !result?.ok) return;
-        const data = await result.json()
-        const filteredPrograms = data.filter((program: Program) => program.plans.length > 0)
-        setPrograms(filteredPrograms)
-    }
 
 
     const paymentType = form.watch("paymentMethod")
@@ -102,16 +90,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
         )
         setLoading(false)
         if (error || !result?.ok) return;
-        const data = await result.json()
-        const program = programs.find((program: Program) => program.id === v.programId)
-        const plan = plans.find((plan: MemberPlan) => plan.id === v.memberPlanId)
-        setProgress({
-            ...progress,
-            step: 2,
-            packageId: data.id,
-            plan: plan,
-            program: program
-        })
+
         form.reset()
         mutate()
         toast.success("Package created successfully")
@@ -124,34 +103,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
             <DialogBody >
                 <Form {...form}>
                     <form className='space-y-1' >
-                        <fieldset>
-                            <FormField
-                                control={form.control}
-                                name="programId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel size="tiny">Select a Program</FormLabel>
-                                        <Select onValueChange={(value) => {
-                                            field.onChange(Number(value))
-                                            const program = programs.find((program: Program) => program.id == Number(value))
-                                            setPlans(program?.plans || [])
-                                        }}>
-                                            <FormControl>
-                                                <SelectTrigger className="rounded-sm">
-                                                    <SelectValue placeholder="Select a program" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {programs && programs.map((program: Program, index: number) => (
-                                                    program.plans.length ? <SelectItem key={index} value={program.id.toString()}>{program.name}</SelectItem> : null
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </fieldset>
+
                         <fieldset >
                             <FormField
                                 control={form.control}
@@ -159,16 +111,15 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Select a Plan</FormLabel>
-                                        <Select disabled={!form.getValues("programId")}
-                                            onValueChange={(value) => field.onChange(Number(value))} >
+                                        <Select onValueChange={(value) => field.onChange(Number(value))} >
                                             <FormControl>
                                                 <SelectTrigger className="rounded-sm">
                                                     <SelectValue placeholder="Select a plan" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {plans && plans.map((plan: MemberPlan, index: number) => (
-                                                    (plan.id) ? <SelectItem key={index} value={plan.id?.toString()}>{plan.name}</SelectItem> : null
+                                                {packages && packages.map((pkg: MemberPlan, index: number) => (
+                                                    (pkg.id) ? <SelectItem key={index} value={pkg.id?.toString()}>{pkg.name}</SelectItem> : null
                                                 ))}
                                             </SelectContent>
                                         </Select>

@@ -35,7 +35,6 @@ export const locations = pgTable("locations", {
     deleted: timestamp("deleted_at", { withTimezone: true }),
 });
 
-// ✅ Location State Table
 export const locationState = pgTable("location_state", {
     locationId: integer("location_id").primaryKey().references(() => locations.id, { onDelete: "cascade" }),
     planId: integer("plan_id"),

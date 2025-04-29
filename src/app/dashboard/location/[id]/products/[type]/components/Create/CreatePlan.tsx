@@ -38,6 +38,7 @@ import { PlanSubFields } from "./SubFields";
 import useSWR from "swr";
 import { Loader2 } from "lucide-react";
 import { PlanPkgFields } from "./PkgFields";
+import AddPrograms from "../AddPrograms";
 
 interface CreatePlanProps {
     lid: string
@@ -58,6 +59,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
             family: false,
             familyMemberLimit: 0,
             amount: 0,
+            programs: [],
             intervalClassLimit: undefined,
             sub: {
                 interval: 'month',
@@ -165,6 +167,25 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                                                 <Textarea className={"resize-none min-h-8"} placeholder="Short description" {...field} />
                                             </FormControl>
                                             <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="programs"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size={"tiny"}>Select Programs</FormLabel>
+                                            <FormDescription className="text-xs ">
+                                                Select at least one program that this plan will include.
+                                            </FormDescription>
+                                            <FormControl>
+                                                <AddPrograms value={field.value} onChange={field.onChange} />
+                                            </FormControl>
+                                            <FormMessage />
+
                                         </FormItem>
                                     )}
                                 />

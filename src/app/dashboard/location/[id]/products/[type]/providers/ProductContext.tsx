@@ -25,7 +25,7 @@ const reducer = (state: StateType, action: ReducerAction): StateType => {
     }
 }
 
-const useProductContext = (initState: StateType) => {
+const useProductsContext = (initState: StateType) => {
     const [state, dispatch] = useReducer(reducer, initState)
 
     const updateFilters = useCallback((filters: Record<string, string>) => {
@@ -38,51 +38,39 @@ const useProductContext = (initState: StateType) => {
     return { state, updateFilters }
 }
 
-type UseProductContextType = ReturnType<typeof useProductContext>
+type UseProductsContextType = ReturnType<typeof useProductsContext>
 
-export const ProductContext = createContext<UseProductContextType | null>(null)
+export const ProductsContext = createContext<UseProductsContextType | null>(null)
 
-type ProductProviderType = {
+type ProductsProviderType = {
     programs: Program[],
     initialFilters?: Record<string, string>,
     children?: ReactElement | ReactElement[] | undefined
 }
 
-export const ProductProvider = ({
+export const ProductsProvider = ({
     programs,
     initialFilters = {},
     children
-}: ProductProviderType): ReactElement => {
+}: ProductsProviderType): ReactElement => {
     return (
-        <ProductContext.Provider value={useProductContext({ programs, filters: initialFilters })} >
+        <ProductsContext.Provider value={useProductsContext({ programs, filters: initialFilters })} >
             {children}
-        </ProductContext.Provider>
+        </ProductsContext.Provider>
     )
 }
 
-type UseProductFiltersHookType = {
+type UseProductsHookType = {
     filters: Record<string, string>,
-    updateFilters: (filters: Record<string, string>) => void
-}
-
-export const useProductFilters = (): UseProductFiltersHookType => {
-    const context = useContext(ProductContext)
-    if (!context) {
-        throw new Error('useProductFilters must be used within a ProductProvider')
-    }
-    const { state: { filters }, updateFilters } = context
-    return { filters, updateFilters }
-}
-
-type UseProductProgramsHookType = {
+    updateFilters: (filters: Record<string, string>) => void,
     programs: Program[]
 }
 
-export const useProductPrograms = (): UseProductProgramsHookType => {
-    const context = useContext(ProductContext)
+export const useProducts = (): UseProductsHookType => {
+    const context = useContext(ProductsContext)
     if (!context) {
-        throw new Error('useProductPrograms must be used within a ProductProvider')
+        throw new Error('useProducts must be used within a ProductsProvider')
     }
-    const { state: { programs } } = context
-    return { programs }
+    const { state: { filters, programs }, updateFilters } = context
+    return { filters, updateFilters, programs }
 }

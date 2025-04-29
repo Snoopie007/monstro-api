@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
-import { calculateCurrentPeriodEnd, createInvoice, createSubscription } from "../../utils";
+import { createSubscription } from "../../utils";
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 
@@ -17,7 +17,11 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
             with: {
                 plan: {
                     with: {
-                        program: true
+                        planPrograms: {
+                            with: {
+                                program: true
+                            }
+                        }
                     }
                 }
             }

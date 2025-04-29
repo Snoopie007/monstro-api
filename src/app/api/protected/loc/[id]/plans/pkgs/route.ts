@@ -1,12 +1,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { memberPlans } from '@/db/schemas';
+import { memberPlans, planPrograms } from '@/db/schemas';
 
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: number }> }) {
     const params = await props.params;
-    const { searchParams } = new URL(req.url);
+
 
     try {
 
@@ -33,16 +33,25 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
 export async function POST(req: Request, props: { params: Promise<{ id: number, pid: number }> }) {
     const params = await props.params;
 
-    const { amount, ...data } = await req.json()
+    const { amount, programs, ...data } = await req.json()
 
     const formatedAmount = amount * 100
     try {
 
-        const [plan] = await db.insert(memberPlans).values({
-            ...data,
-            price: formatedAmount,
-            programId: params.pid,
-        }).returning({ id: memberPlans.id });
+        const plan = await db.transaction(async (tx) => {
+            const [plan] = await tx.insert(memberPlans).values({
+                ...data,
+                price: formatedAmount,
+                programId: params.pid,
+            }).returning({ id: memberPlans.id });
+
+            await tx.insert(planPrograms).values(programs.map((program: number) => ({
+                planId: plan.id,
+                programId: program,
+            })));
+
+            return plan
+        })
 
         return NextResponse.json(plan, { status: 200 });
     } catch (err) {

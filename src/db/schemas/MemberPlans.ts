@@ -51,7 +51,6 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
     memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
     memberContractId: integer("member_contract_id").references(() => memberContracts.id),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     stripeSubscriptionId: text("stripe_subscription_id"),
     status: LocationStatusEnum("status").notNull().default("incomplete"),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
@@ -82,7 +81,6 @@ export const memberPackages = pgTable("member_packages", {
     memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     memberContractId: integer("member_contract_id").references(() => memberContracts.id),
     parentId: integer("parent_id"),
-    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     startDate: timestamp("start_date", { withTimezone: true }).notNull(),
     expireDate: timestamp("expire_date", { withTimezone: true }),
     status: PackageStatusEnum("status").notNull(),
@@ -137,10 +135,6 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
         fields: [memberSubscriptions.parentId],
         references: [memberSubscriptions.id],
     }),
-    program: one(programs, {
-        fields: [memberSubscriptions.programId],
-        references: [programs.id],
-    }),
     plan: one(memberPlans, {
         fields: [memberSubscriptions.memberPlanId],
         references: [memberPlans.id],
@@ -163,10 +157,6 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
     plan: one(memberPlans, {
         fields: [memberPackages.memberPlanId],
         references: [memberPlans.id],
-    }),
-    program: one(programs, {
-        fields: [memberPackages.programId],
-        references: [programs.id],
     }),
     location: one(locations, {
         fields: [memberPackages.locationId],

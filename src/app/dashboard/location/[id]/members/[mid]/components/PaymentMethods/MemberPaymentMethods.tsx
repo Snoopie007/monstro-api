@@ -22,8 +22,8 @@ export function PaymentMethods({ stripeKey, params }: PaymentMethodsProps) {
     const { paymentMethods, addPaymentMethods } = useMemberPaymentMethods()
 
     return (
-        <Card className='rounded-sm'>
-            <CardHeader className='border-b space-y-0 p-0 flex justify-between flex-row items-center ' >
+        <Card className='border-x-0 border-t border-b-0'>
+            <CardHeader className='border-b space-y-0 bg-foreground/5 p-0 flex justify-between flex-row items-center ' >
                 <CardTitle className="text-sm  px-4">
                     Payment Methods
                 </CardTitle>

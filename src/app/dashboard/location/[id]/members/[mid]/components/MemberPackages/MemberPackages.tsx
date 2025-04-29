@@ -9,9 +9,7 @@ import {
     TableRow
 } from '@/components/ui'
 import { Input } from '@/components/forms'
-import { cn, formatAmountForDisplay } from '@/libs/utils'
-
-// import NewMemberTransaction from './CreateTransaction'
+import { formatAmountForDisplay } from '@/libs/utils'
 import { useMemberPackages } from '@/hooks'
 
 import { format } from 'date-fns'

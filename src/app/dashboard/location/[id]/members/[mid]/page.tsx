@@ -62,7 +62,11 @@ async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnTy
                             with: {
                                 plan: {
                                     with: {
-                                        program: true,
+                                        planPrograms: {
+                                            with: {
+                                                program: true
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -125,9 +129,9 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
     }
 
     return (
-        <div className='grid grid-cols-12 gap-6 p-4'>
+        <div className='grid grid-cols-12 h-full  '>
             <MemberProvider member={member} paymentMethods={paymentMethods} ml={ml}>
-                <div className='col-span-4 space-y-4'>
+                <div className='col-span-4  border-r   '>
                     <MemberProfile params={params} />
                     <PaymentMethods stripeKey={stripeIntegration ? stripeIntegration?.apiKey : ''} params={params} />
                     <MemberFamilies params={params} familyMembers={member.familyMembers} />

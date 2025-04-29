@@ -9,7 +9,7 @@ import {
 import { CreatePlan, SearchInput, SubscriptionList, PackageList } from "./components";
 import { db } from "@/db/db";
 import { decodeId } from "@/libs/server/sqids";
-import { ProductProvider } from "./providers/ProductContext";
+import { ProductsProvider } from "./providers/ProductContext";
 import { Program } from "@/types";
 
 
@@ -34,7 +34,7 @@ export default async function Products(props: { params: Promise<{ id: string, ty
     const programs = await getPrograms(params.id);
 
     return (
-        <ProductProvider programs={programs}>
+        <ProductsProvider programs={programs}>
 
             <TablePage>
                 <TablePageHeader>
@@ -47,7 +47,7 @@ export default async function Products(props: { params: Promise<{ id: string, ty
                 </TablePageHeader>
                 {params.type === "subs" ? <SubscriptionList lid={params.id} /> : <PackageList lid={params.id} />}
             </TablePage>
-        </ProductProvider>
+        </ProductsProvider>
 
     );
 }
