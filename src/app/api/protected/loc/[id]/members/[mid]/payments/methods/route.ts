@@ -2,7 +2,6 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { memberLocations } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
-import { error } from "console";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
