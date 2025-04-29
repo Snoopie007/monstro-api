@@ -29,11 +29,11 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
             },
             {
                 name: "Subscriptions",
-                path: "subscriptions",
+                path: "products/subs",
             },
             {
                 name: "Packages",
-                path: "packages",
+                path: "products/pkgs",
             },
             {
                 name: "Signed contracts",

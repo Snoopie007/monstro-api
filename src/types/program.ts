@@ -14,8 +14,7 @@ export type Program = {
     instructorId: number | null;
     interval: Interval;
     intervalThreshold: number;
-    benefits: string[] | null;
-    programPlans: PlanProgram[];
+    programPlans?: PlanProgram[];
     locationId?: number;
     status: ProgramStatus;
     location?: Location;
@@ -29,8 +28,8 @@ export type Program = {
 export type PlanProgram = {
     planId: number;
     programId: number;
-    program: Program;
-    plan: MemberPlan;
+    program?: Program;
+    plan?: MemberPlan;
 }
 
 export type ProgramSession = {

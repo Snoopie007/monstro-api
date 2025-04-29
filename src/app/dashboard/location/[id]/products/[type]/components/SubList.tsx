@@ -1,24 +1,33 @@
 'use client';
-import { use, useState } from "react";
-
 import { useSubscriptions } from '@/hooks';
 import ErrorComponent from '@/components/error';
-import { Program } from "@/types";
-import { TablePage, TablePageHeaderTitle, TablePageHeader, TablePageHeaderSection, TablePageContent, TablePageFooter, TableCell, TableHeader, Table, TableRow, TableHead, TableBody, Skeleton } from "@/components/ui";
+import {
+    TablePageContent,
+    TablePageFooter,
+    TableCell,
+    TableHeader,
+    Table,
+    TableRow,
+    TableHead,
+    TableBody, Skeleton
+} from "@/components/ui";
 import Loading from "@/components/loading";
-import { flexRender } from "@tanstack/react-table";
-import { getCoreRowModel } from "@tanstack/react-table";
-import { useReactTable } from "@tanstack/react-table";
-import { SubColumns } from "./components";
-import { CreateSub } from "./components/CreateSub";
+import {
+    flexRender,
+    useReactTable,
+    getCoreRowModel
+} from "@tanstack/react-table";
+
+import { SubColumns } from "./SubscriptionColumns";
 
 
-export default function Programs(props: { params: Promise<{ id: string }> }) {
-    const params = use(props.params);
-    const { subscriptions, isLoading, error } = useSubscriptions(params.id);
-    const [searchQuery, setSearchQuery] = useState<string>("");
+export function SubscriptionList({ lid }: { lid: string }) {
 
-    const columns = SubColumns(params.id);
+
+
+    const { subscriptions, isLoading, error } = useSubscriptions(lid);
+
+    const columns = SubColumns(lid);
 
     const table = useReactTable({
         data: subscriptions,
@@ -28,25 +37,10 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
 
     if (error) return <ErrorComponent error={error} />
     if (isLoading) return <Loading />
-    // Filter programs based on the search query
-    const filteredPrograms = subscriptions?.filter((program: Program) =>
-        program.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+
 
     return (
-        <TablePage>
-            <TablePageHeader>
-                <TablePageHeaderTitle>Subscriptions</TablePageHeaderTitle>
-                <TablePageHeaderSection>
-                    <input
-                        placeholder='Search subscriptions'
-                        className='text-xs bg-transparent py-1 px-2 rounded-xs border'
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <CreateSub lid={params.id} />
-                </TablePageHeaderSection>
-            </TablePageHeader>
+        <>
             <TablePageContent>
                 <Table className="w-auto border-r border-b border-foreground/5" >
                     <TableHeader>
@@ -104,10 +98,10 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
             </TablePageContent>
             <TablePageFooter>
                 <p className="p-2">
-                    {filteredPrograms?.length} subscriptions found
+                    {subscriptions?.length} subscriptions found
                 </p>
             </TablePageFooter>
-        </TablePage>
+        </>
 
     );
 }

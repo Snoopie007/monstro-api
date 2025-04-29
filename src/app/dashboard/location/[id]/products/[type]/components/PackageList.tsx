@@ -1,28 +1,34 @@
 'use client';
-import { use, useState } from "react";
-
 import { usePackages } from '@/hooks';
 import ErrorComponent from '@/components/error';
-import { MemberPlan, } from "@/types";
 import {
-    TablePage, TablePageHeaderTitle, TablePageHeader,
-    TablePageHeaderSection, TablePageContent, TablePageFooter,
-    TableCell, TableHeader, Table, TableRow, TableHead,
+    TablePageContent,
+    TablePageFooter,
+    TableCell,
+    TableHeader,
+    Table,
+    TableRow,
+    TableHead,
     TableBody, Skeleton
 } from "@/components/ui";
 import Loading from "@/components/loading";
-import { flexRender } from "@tanstack/react-table";
-import { getCoreRowModel } from "@tanstack/react-table";
-import { useReactTable } from "@tanstack/react-table";
-import { PkgColumns, CreatePkg } from "./components";
+import {
+    flexRender,
+    useReactTable,
+    getCoreRowModel
+} from "@tanstack/react-table";
+
+import { SubColumns } from "./SubscriptionColumns";
 
 
-export default function Programs(props: { params: Promise<{ id: string }> }) {
-    const params = use(props.params);
-    const { packages, isLoading, error } = usePackages(params.id);
-    const [searchQuery, setSearchQuery] = useState<string>("");
 
-    const columns = PkgColumns(params.id);
+export function PackageList({ lid }: { lid: string }) {
+
+
+
+    const { packages, isLoading, error } = usePackages(lid);
+
+    const columns = SubColumns(lid);
 
     const table = useReactTable({
         data: packages,
@@ -32,25 +38,11 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
 
     if (error) return <ErrorComponent error={error} />
     if (isLoading) return <Loading />
-    // Filter programs based on the search query
-    const filteredPackages = packages?.filter((pkg: MemberPlan) =>
-        pkg.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+
 
     return (
-        <TablePage>
-            <TablePageHeader>
-                <TablePageHeaderTitle>Packages</TablePageHeaderTitle>
-                <TablePageHeaderSection>
-                    <input
-                        placeholder='Search packages'
-                        className='text-xs bg-transparent py-1 px-2 rounded-xs border'
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <CreatePkg lid={params.id} />
-                </TablePageHeaderSection>
-            </TablePageHeader>
+        <>
+
             <TablePageContent>
                 <Table className="w-auto border-r border-b border-foreground/5" >
                     <TableHeader>
@@ -96,7 +88,7 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={columns.length} className="h-6 w-full font-medium text-center">
-                                            No packages found.
+                                            No subscriptions found.
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -108,10 +100,10 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
             </TablePageContent>
             <TablePageFooter>
                 <p className="p-2">
-                    {filteredPackages?.length} packages found
+                    {packages?.length} packages found
                 </p>
             </TablePageFooter>
-        </TablePage>
+        </>
 
     );
 }

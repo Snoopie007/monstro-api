@@ -28,8 +28,8 @@ export const PkgColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => 
                 <div className="flex flex-wrap">
 
                     {programCount > 0 ? planPrograms?.map((planProgram: PlanProgram) => (
-                        <div key={planProgram.program.id} className="text-xs ">
-                            {planProgram.program.name.slice(0, 1)}
+                        <div key={planProgram.program?.id} className="text-xs ">
+                            {planProgram.program?.name.slice(0, 1)}
                         </div>
                     )) : (
                         <div className="text-sm">
@@ -60,6 +60,18 @@ export const PkgColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => 
             return (
                 <span className="text-sm">
                     {formatAmountForDisplay(plan.price / 100, plan.currency)}
+                </span>
+            )
+        }
+    },
+    {
+        accessorKey: "totalClassLimit",
+        header: "Total Classes",
+        cell: ({ row }) => {
+            const plan = row.original
+            return (
+                <span className="text-sm">
+                    {plan.totalClassLimit}
                 </span>
             )
         }

@@ -1,19 +1,39 @@
 
 import { z } from "zod";
 
+
 const NewPlanSchema = z.object({
     type: z.enum(["recurring", "one-time"], { message: "Required" }),
     name: z.string().min(2, { message: "Required" }),
     description: z.string().min(2, { message: "Required" }),
     amount: z.number().gt(1, { message: "Price must be at least $1." }),
-    classLimitInterval: z.enum(["week", "month", "year"]).optional(),
-    classLimitThreshold: z.number().optional(),
     family: z.boolean().optional(),
     familyMemberLimit: z.number().optional(),
     contractId: z.number().optional(),
-})
+    intervalClassLimit: z.number().optional(),
+    pkg: z.object({
+        expireInterval: z.enum(["day", "week", "month", "year"]).optional(),
+        expireThreshold: z.number().optional(),
+        totalClassLimit: z.number().optional(),
+    }),
+    sub: z.object({
+        interval: z.enum(["day", "week", "month", "year"], { message: "Required" }),
+        intervalThreshold: z.number().min(1, { message: "Required" }).max(365, { message: "Max 31" }),
+        allowProration: z.boolean().optional(),
+        billingAnchor: z.enum(["1st", "1st & 15th"]).optional()
+    }),
+}).superRefine((data, ctx) => {
 
-function validateFamily(data: z.infer<typeof NewPlanSchema>, ctx: z.RefinementCtx) {
+    if (data.type === 'one-time') {
+
+        if (!data.pkg.totalClassLimit || data.pkg.totalClassLimit < 1) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Required",
+                path: ["pkg", "totalClassLimit"]
+            });
+        }
+    }
     if (data.family) {
         if (!data.familyMemberLimit) {
             ctx.addIssue({
@@ -35,23 +55,7 @@ function validateFamily(data: z.infer<typeof NewPlanSchema>, ctx: z.RefinementCt
             });
         }
     }
-}
-
-
-const NewSubSchema = z.object({
-    interval: z.enum(["day", "week", "month", "year"], { message: "Required" }),
-    intervalThreshold: z.number().min(1, { message: "Required" }).max(365, { message: "Max 31" }),
-    allowProration: z.boolean().optional(),
-    billingAnchor: z.enum(["1st", "1st & 15th"]).optional()
-}).merge(NewPlanSchema).superRefine(validateFamily);
-
-
-const NewPackageSchema = z.object({
-    expireInterval: z.enum(["day", "week", "month", "year"]).optional(),
-    expireThreshold: z.number().optional(),
-    totalClassLimit: z.number().optional(),
-    intervalClassLimit: z.number().optional(),
-}).merge(NewPlanSchema).superRefine(validateFamily);
+});
 
 
 type PresetInterval = { label: string, interval: string, intervalThreshold: number }
@@ -77,11 +81,9 @@ const BillingAnchorConfigSchema = [
 ]
 
 export {
-    NewSubSchema,
     type PresetInterval,
     PresetIntervals,
     PlanType,
     BillingAnchorConfigSchema,
-    NewPackageSchema,
     NewPlanSchema
 }

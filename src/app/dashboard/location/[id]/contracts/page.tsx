@@ -14,7 +14,7 @@ import { useSignedContracts } from '@/hooks/useContracts';
 
 import Loading from '@/components/loading';
 import Link from 'next/link';
-import { TablePage, TablePageContent, TablePageFooter, TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle } from "@/components/ui/table-page";
+import { TablePage, TablePageContent, TablePageFooter, TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle } from "@/components/ui/TablePage";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 

@@ -1,3 +1,4 @@
+'use client';
 import {
     Button,
     Dialog,
@@ -6,7 +7,6 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    Switch
 } from "@/components/ui";
 import { cn, tryCatch } from "@/libs/utils";
 import { z } from "zod";
@@ -23,59 +23,69 @@ import {
     SelectTrigger,
     SelectValue,
     SelectContent,
-    FormDescription,
-    SelectItem
+    SelectItem,
+    FormDescription
 } from "@/components/forms";
 import { useForm } from "react-hook-form";
-import { NewPackageSchema, NewSubSchema } from "@/libs/FormSchemas";
+import { NewPlanSchema } from "@/libs/FormSchemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useState } from "react";
 import { DialogClose, DialogDescription, DialogTrigger } from "@radix-ui/react-dialog";
 
 import { toast } from "react-toastify";
-import { PlanPkgFields } from "./PkgFields";
+import { PlanSubFields } from "./SubFields";
 
 import useSWR from "swr";
 import { Loader2 } from "lucide-react";
+import { PlanPkgFields } from "./PkgFields";
 
-interface CreatePkgProps {
+interface CreatePlanProps {
     lid: string
+    type: "recurring" | "one-time"
 }
 
-export function CreatePkg({ lid }: CreatePkgProps) {
-    const { mutate } = useSWR(`/api/protected/${lid}/packages`);
+export function CreatePlan({ lid, type }: CreatePlanProps) {
+    const { mutate } = useSWR(`/api/protected/loc/${lid}/plans/${type === "recurring" ? "subs" : "pkgs"}`);
 
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
-    const form = useForm<z.infer<typeof NewPackageSchema>>({
-        resolver: zodResolver(NewPackageSchema),
+    const form = useForm<z.infer<typeof NewPlanSchema>>({
+        resolver: zodResolver(NewPlanSchema),
         defaultValues: {
             name: "",
-            type: "one-time",
             description: "",
+            type: type,
             family: false,
             familyMemberLimit: 0,
             amount: 0,
-            classLimitInterval: undefined,
-            classLimitThreshold: undefined,
-            expireInterval: undefined,
-            expireThreshold: undefined,
-            totalClassLimit: undefined,
             intervalClassLimit: undefined,
+            sub: {
+                interval: 'month',
+                intervalThreshold: 1,
+                allowProration: false,
+                billingAnchor: undefined
+            },
+            pkg: {
+                expireInterval: undefined,
+                expireThreshold: undefined,
+                totalClassLimit: 0,
+            },
             contractId: undefined,
         },
         mode: 'onSubmit'
     })
 
-
-
-    async function submitForm(v: z.infer<typeof NewPackageSchema>) {
+    async function submitForm(v: z.infer<typeof NewPlanSchema>) {
         setLoading(true)
+        const { pkg, sub, ...rest } = v
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/packages`, {
+            fetch(`/api/protected/loc/${lid}/plans/${type === "recurring" ? "subs" : "pkgs"}`, {
                 method: 'POST',
-                body: JSON.stringify(v)
+                body: JSON.stringify({
+                    ...rest,
+                    ...(type === 'recurring' ? { ...sub } : { ...pkg })
+                })
             })
         )
         if (error || !result || !result.ok) {
@@ -95,12 +105,12 @@ export function CreatePkg({ lid }: CreatePkgProps) {
         <Dialog open={open} onOpenChange={setOpen} >
             <DialogTrigger asChild>
                 <Button variant={"foreground"} size={"xs"}  >
-                    + Subscription
+                    + {type === "recurring" ? "Subscription" : "Package"}
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
                 <DialogHeader className="space-y-0" >
-                    <DialogTitle>Create Package</DialogTitle>
+                    <DialogTitle>{type === "recurring" ? "Create Subscription" : "Create Package"}</DialogTitle>
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <DialogBody>
@@ -115,7 +125,7 @@ export function CreatePkg({ lid }: CreatePkgProps) {
                                         <FormItem >
                                             <FormLabel size={"tiny"}>Name</FormLabel>
                                             <FormControl>
-                                                <Input type='text' className={cn("")} placeholder="Package Name" {...field} />
+                                                <Input type='text' className={cn("")} placeholder="Name" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -152,59 +162,15 @@ export function CreatePkg({ lid }: CreatePkgProps) {
                                         <FormItem >
                                             <FormLabel size={"tiny"}>Description</FormLabel>
                                             <FormControl>
-                                                <Textarea className={"resize-none"} placeholder="Short description" {...field} />
+                                                <Textarea className={"resize-none min-h-8"} placeholder="Short description" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
-
                                     )}
                                 />
                             </fieldset>
-                            <fieldset className=' flex-1 grid grid-cols-3 gap-2 items-baseline'>
-                                <FormField
-                                    control={form.control}
-                                    name="classLimitInterval"
-                                    render={({ field }) => (
-                                        <FormItem className="col-span-1">
-                                            <FormLabel size={"tiny"}>Class Limit(Optional)</FormLabel>
-                                            <FormControl>
-                                                <Input type='number' placeholder="" onChange={(e) => {
-                                                    if (e.target.value) {
-                                                        field.onChange(parseInt(e.target.value))
-                                                        form.setValue("classLimitThreshold", 1)
-                                                    }
-                                                }} value={field.value || ""} />
-                                            </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="classLimitInterval"
-                                    render={({ field }) => (
-                                        <FormItem className="col-span-2">
-                                            <FormLabel size={"tiny"} >Per(Optional)</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value} >
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select..." />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {['week', 'month', 'year'].map((preset, index) => (
-                                                        <SelectItem key={index} value={preset}>
-                                                            {preset}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-
-                                        </FormItem>
-                                    )}
-                                />
-                            </fieldset>
-
-                            <PlanPkgFields lid={lid} form={form} />
+                            {type === "recurring" && <PlanSubFields lid={lid} form={form} />}
+                            {type === "one-time" && <PlanPkgFields lid={lid} form={form} />}
                         </form>
                     </Form >
                 </DialogBody >

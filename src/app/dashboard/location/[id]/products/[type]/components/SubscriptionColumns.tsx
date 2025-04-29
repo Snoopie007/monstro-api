@@ -28,8 +28,8 @@ export const SubColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => 
                 <div className="flex flex-wrap">
 
                     {programCount > 0 ? planPrograms?.map((planProgram: PlanProgram) => (
-                        <div key={planProgram.program.id} className="text-xs ">
-                            {planProgram.program.name.slice(0, 1)}
+                        <div key={planProgram.program?.id} className="text-xs ">
+                            {planProgram.program?.name.slice(0, 1)}
                         </div>
                     )) : (
                         <div className="text-sm">

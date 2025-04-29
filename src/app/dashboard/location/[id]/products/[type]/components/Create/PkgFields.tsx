@@ -16,12 +16,12 @@ import {
     CollapsibleTrigger,
     Switch,
 } from '@/components/ui';
-import { NewPackageSchema } from '@/libs/FormSchemas';
+import { NewPlanSchema } from '@/libs/FormSchemas';
 import { cn } from '@/libs/utils';
 import { ChevronRight } from 'lucide-react';
 
 interface SubFieldsProps {
-    form: UseFormReturn<z.infer<typeof NewPackageSchema>>,
+    form: UseFormReturn<z.infer<typeof NewPlanSchema>>,
     lid: string
 }
 
@@ -30,10 +30,44 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
     return (
 
         <div className='space-y-2'>
-            <fieldset className=''>
+            <fieldset>
                 <FormField
                     control={form.control}
-                    name="totalClassLimit"
+                    name="contractId"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel size={"tiny"}>Attach a Contract</FormLabel>
+
+                            <SelectContract lid={lid} onChange={field.onChange} />
+                            <FormMessage />
+                            <FormDescription className="text-xs">Leave blank to not attach a contract.</FormDescription>
+                        </FormItem>
+                    )}
+                />
+            </fieldset>
+            <fieldset className='grid grid-cols-2 gap-2 items-baseline'>
+                <FormField
+                    control={form.control}
+                    name="intervalClassLimit"
+                    render={({ field }) => (
+                        <FormItem className="col-span-1">
+                            <FormLabel size={"tiny"}>Class Limit Per Week</FormLabel>
+                            <FormControl>
+                                <Input type='number' placeholder="" onChange={(e) => {
+                                    if (e.target.value) {
+                                        field.onChange(parseInt(e.target.value))
+                                    }
+                                }} value={field.value || ""} />
+                            </FormControl>
+                            <FormDescription>
+                                Leave blank for unlimited.
+                            </FormDescription>
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="pkg.totalClassLimit"
                     render={({ field }) => (
                         <FormItem className="">
                             <FormLabel size={"tiny"}>Total Classes</FormLabel>
@@ -44,14 +78,14 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                         </FormItem>
                     )}
                 />
-
             </fieldset>
+
             <Collapsible >
                 <CollapsibleTrigger className="flex group flex-row items-center gap-1">
                     <ChevronRight size={15} className="group-data-[state=open]:rotate-90" />
                     <span className="text-[0.7rem] uppercase font-medium cursor-pointer">
                         Package Options {" "}
-                        <span className=' text-yellow-300'>(Optional)</span>
+                        <span className=' text-red-500'>(Optional)</span>
                     </span>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="bg-background rounded-sm p-4 space-y-2">
@@ -60,7 +94,7 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                         <div className='grid grid-cols-3 gap-3 items-baseline'>
                             <FormField
                                 control={form.control}
-                                name="expireThreshold"
+                                name="pkg.expireThreshold"
                                 render={({ field }) => (
                                     <FormItem className="col-span-1">
 
@@ -72,7 +106,7 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                             />
                             <FormField
                                 control={form.control}
-                                name="expireInterval"
+                                name="pkg.expireInterval"
                                 render={({ field }) => (
                                     <FormItem className="col-span-2">
 
@@ -97,20 +131,6 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                         </div>
                     </fieldset>
 
-                    <fieldset>
-                        <FormField
-                            control={form.control}
-                            name="contractId"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel size={"tiny"}>Attach a Contract</FormLabel>
-                                    <FormDescription className="text-xs">Leave blank to not attach a contract.</FormDescription>
-                                    <SelectContract lid={lid} onChange={field.onChange} />
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </fieldset>
                     <fieldset >
                         <FormField
                             control={form.control}
