@@ -37,8 +37,10 @@ export function CreatePackage({ params }: { params: { id: string, mid: number } 
                 <Button variant={"foreground"} size={"sm"} className=''>+ Package</Button>
             </DialogTrigger>
             <DialogContent className="max-w-[450px]">
-                <DialogHeader>
-                    <DialogTitle>Create Package</DialogTitle>
+                <DialogHeader className="space-y-0">
+                    <DialogTitle className='text-sm font-medium flex flex-row items-center gap-1'>
+                        Add Member Package
+                    </DialogTitle>
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <PkgForm params={params} progress={progress} setProgress={setProgress} />

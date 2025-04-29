@@ -135,7 +135,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                 control={form.control}
                                 name="paymentMethod"
                                 render={({ field }) => (
-                                    <FormItem className="col-span-2">
+                                    <FormItem className="col-span-2 ">
                                         <FormLabel size="tiny">Payment Method</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!form.getValues("memberPlanId")} >
                                             <SelectTrigger className="rounded-sm capitalize" >
@@ -233,7 +233,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                 <ChevronRight size={16} className="group-data-[state=open]:rotate-90" />
                                 <span className="font-medium">Overwrite</span>
                             </CollapsibleTrigger>
-                            <CollapsibleContent className="p-4 bg-foreground/10 rounded-sm mt-4 space-y-2">
+                            <CollapsibleContent className="p-4 bg-foreground/5 rounded-sm mt-4 space-y-2">
 
                                 <fieldset >
 
@@ -243,11 +243,12 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                         render={({ field }) => (
                                             <FormItem >
                                                 <FormLabel size="tiny">Total Class Limit</FormLabel>
-                                                <FormDescription className="text-xs">You may overwrite the total class limit for this package.</FormDescription>
+
                                                 <FormControl>
                                                     <Input type="number" className="border-none" max={100} placeholder="Total Class Limit" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
+                                                <FormDescription className="text-xs">You may overwrite the total class limit for this package.</FormDescription>
                                             </FormItem >
                                         )}
                                     />
@@ -260,9 +261,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                         render={({ field }) => (
                                             <FormItem className="col-span-1">
                                                 <FormLabel size="tiny">Start Date</FormLabel>
-                                                <FormDescription className="text-xs">
-                                                    The start date is set to today's date by default.
-                                                </FormDescription>
+
                                                 <Popover>
                                                     <PopoverTrigger asChild>
                                                         <Button variant="outline" className={cn("w-full border-none pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
@@ -281,6 +280,9 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                                     </PopoverContent>
                                                 </Popover>
                                                 <FormMessage />
+                                                <FormDescription className="text-xs">
+                                                    The start date is set to today's date by default.
+                                                </FormDescription>
                                             </FormItem>
                                         )}
                                     />

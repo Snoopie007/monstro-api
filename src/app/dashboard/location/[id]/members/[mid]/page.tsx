@@ -138,9 +138,11 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
                 </div>
                 <div className='col-span-8'>
                     <Tabs defaultValue="Subscriptions" className="w-full" >
-                        <TabsList className={cn()}>
+                        <TabsList className={cn("bg-transparent p-2.5 border-b w-full justify-start")}>
                             {MemberDetailsMenu.map((item, index) => (
-                                <TabsTrigger key={index} value={item}>{item}</TabsTrigger>
+                                <TabsTrigger key={index} value={item} className="text-xs ">
+                                    {item}
+                                </TabsTrigger>
                             ))}
                         </TabsList>
                         <TabsContent value="Subscriptions">

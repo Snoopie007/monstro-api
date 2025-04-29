@@ -34,19 +34,19 @@ export function MemberRewards({ params }: { params: { id: string; mid: number } 
     }, [params.id]);
 
     return (
-        <div className='py-4'>
-            <div className='w-full flex flex-row items-center justify-between'>
+        <div className='space-y-2'>
+            <div className='w-full flex flex-row items-center px-4  gap-2'>
                 <div className='flex-initial'>
                     <Input placeholder='Filter' className='w-[250px] h-auto py-2 rounded-sm' />
                 </div>
             </div>
 
-            <div className='border rounded-xs mt-4'>
+            <div className='border-y'>
                 <Table>
                     <TableHeader>
                         <TableRow>
                             {['Reward', 'Description', 'Claim Date', ''].map((header, index) => (
-                                <TableHead key={index} className='text-sm h-auto py-4'>
+                                <TableHead key={index} className='text-xs h-auto py-2'>
                                     {header}
                                 </TableHead>
                             ))}

@@ -25,9 +25,9 @@ export function MemberProfile({ params }: MemberProfileProps) {
         <Card className='border-none'>
             <CardHeader className='border-b py-0 px-0 text-left ' >
                 <div className='flex justify-between flex-row items-center '>
-                    <div className='px-4 py-2'>
-                        <button onClick={() => { router.back() }} className=" text-foreground" >
-                            <ChevronLeft className="inline-block" size={20} />
+                    <div className=' '>
+                        <button onClick={() => { router.back() }} className=" border-r px-4 py-2 text-foreground" >
+                            <ChevronLeft className="inline-block text-muted-foreground cursor-pointer" size={20} />
                         </button>
                     </div>
                     <div>
