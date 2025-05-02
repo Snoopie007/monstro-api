@@ -5,14 +5,14 @@ import React from 'react'
 
 const TablePage = React.forwardRef<HTMLDialogElement, React.HTMLAttributes<HTMLDialogElement>>(
     ({ children, ...props }, ref) => {
-        // Validate that children only contain TablePageHeader, TablePageContent and TablePageFooter
-        React.Children.forEach(children, child => {
-            if (React.isValidElement(child)) {
-                if (child.type !== TablePageHeader && child.type !== TablePageContent && child.type !== TablePageFooter) {
-                    throw new Error('TablePage children must be either TablePageHeader, TablePageContent or TablePageFooter');
-                }
-            }
-        });
+
+        // React.Children.forEach(children, child => {
+        //     if (React.isValidElement(child)) {
+        //         if (child.type !== TablePageHeader) {
+        //             throw new Error('TablePage children must be either TablePageHeader');
+        //         }
+        //     }
+        // });
 
         return (
             <main className="flex flex-col w-full h-full">
@@ -27,13 +27,13 @@ const TableHeaderContext = React.createContext(false);
 const TablePageHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
     ({ children, ...props }, ref) => {
         // Validate that children only contain TablePageHeaderTitle and TablePageHeaderSection
-        React.Children.forEach(children, child => {
-            if (React.isValidElement(child)) {
-                if (child.type !== TablePageHeaderTitle && child.type !== TablePageHeaderSection) {
-                    throw new Error('TablePageHeader children must be either TablePageHeaderTitle or TablePageHeaderSection');
-                }
-            }
-        });
+        // React.Children.forEach(children, child => {
+        //     if (React.isValidElement(child)) {
+        //         if (child.type !== TablePageHeaderTitle && child.type !== TablePageHeaderSection) {
+        //             throw new Error('TablePageHeader children must be either TablePageHeaderTitle or TablePageHeaderSection');
+        //         }
+        //     }
+        // });
 
         return (
             <TableHeaderContext.Provider value={true}>

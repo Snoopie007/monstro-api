@@ -45,22 +45,7 @@ export async function POST(req: NextRequest) {
             })
         }
 
-        if (!location) {
-            const locations = await db.query.locations.findMany({
-                where: (locations, { eq }) => eq(locations.vendorId, vendor.id),
-                columns: {
-                    id: true,
-                },
-                with: {
-                    locationState: {
-                        columns: {
-                            status: true
-                        }
-                    }
-                }
-            })
-            location = locations.find(loc => loc.locationState.status === 'incomplete' || loc.locationState.status === 'active') || locations[0];
-        }
+
 
         const LoginUser = {
             ...vendor,
@@ -70,11 +55,7 @@ export async function POST(req: NextRequest) {
 
 
         return NextResponse.json({
-            user: LoginUser,
-            location: location ? {
-                id: encodeId(location.id),
-                status: location.locationState.status,
-            } : { id: null, status: null },
+            user: LoginUser
         }, { status: 200 })
 
     } catch (error) {

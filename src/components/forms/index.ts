@@ -10,3 +10,4 @@ export * from "./form";
 export * from "./TagInput";
 export * from "./label";
 export * from "./OTPInput";
+export * from "../../app/dashboard/location/[id]/products/[type]/components/SelectContract";

@@ -48,8 +48,8 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
 
 
     return (
-        <div className="py-4 space-y-2">
-            <div className="flex flex-row justify-between items-center">
+        <div className="space-y-2">
+            <div className="flex flex-row justify-between items-center px-4 gap-2">
                 <div className="flex flex-row gap-2 items-center">
                     <Select onValueChange={(value) => {
                         table.getColumn("programName")?.setFilterValue(value)
@@ -67,7 +67,7 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
                     </Select>
                 </div>
             </div>
-            <Card>
+            <Card className="border-y border-x-0">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (

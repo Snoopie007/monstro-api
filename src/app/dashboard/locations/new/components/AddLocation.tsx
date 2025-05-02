@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { cn, sleep, tryCatch } from "@/libs/utils";
 import { Button } from "@/components/ui";
 import { Loader2 } from "lucide-react";
-import { LocationSetupSchema } from "@/libs/schemas";
+import { LocationSetupSchema } from "@/libs/FormSchemas/schemas";
 import { AutoComplete } from "./GoogleAutoComplete";
 import {
     Form,
@@ -105,8 +105,6 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             return toast.error("Failed to add location, please try again.");
         }
         const data = await result.json();
-
-        localStorage.setItem("locationId", data.id);
 
         update({
             locations: [...session?.user.locations, data],

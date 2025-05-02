@@ -30,7 +30,7 @@ export const LocationsList = ({ locations }: { locations: Location[] }) => {
             </div>
             <div className='grid grid-cols-4 gap-4'>
                 {filteredLocations.map((l) => (
-                    <Link href={`/dashboard/location/${l.id}`} key={l.id}>
+                    <Link href={`${l.locationState?.status === 'active' ? '/dashboard/location' : '/dashboard/locations/new'}/${l.id}`} key={l.id}>
                         <Card key={l.id} className='p-4 rounded-sm min-h-36 bg-foreground/5 border-foreground/10'>
                             <div className='flex flex-row items-start gap-2 justify-between'>
 

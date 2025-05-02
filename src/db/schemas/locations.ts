@@ -1,11 +1,11 @@
 import { relations, sql } from "drizzle-orm";
-import { boolean, primaryKey, varchar, serial, text, timestamp, pgTable, jsonb, integer } from "drizzle-orm/pg-core";
+import { boolean, primaryKey, serial, text, timestamp, pgTable, jsonb, integer } from "drizzle-orm/pg-core";
 import { memberInvoices, members } from "./members";
 import { integrations } from "./integrations";
 import { programs } from "./programs";
 import { transactions } from "./transactions";
 import { vendors } from "./vendors";
-import { memberSubscriptions } from "./MemberPlans";
+import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import { IncompletePlan, LocationSettings } from "@/types";
 import { aiBots } from "./ai";
@@ -35,7 +35,6 @@ export const locations = pgTable("locations", {
     deleted: timestamp("deleted_at", { withTimezone: true }),
 });
 
-// ✅ Location State Table
 export const locationState = pgTable("location_state", {
     locationId: integer("location_id").primaryKey().references(() => locations.id, { onDelete: "cascade" }),
     planId: integer("plan_id"),
@@ -96,6 +95,7 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
     memberLocations: many(memberLocations),
     integrations: many(integrations),
     programs: many(programs),
+    memberPlans: many(memberPlans),
     memberSubscriptions: many(memberSubscriptions),
     memberInvoices: many(memberInvoices),
     bots: many(aiBots),

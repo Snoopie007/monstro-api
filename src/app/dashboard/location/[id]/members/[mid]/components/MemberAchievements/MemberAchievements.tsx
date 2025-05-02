@@ -14,14 +14,14 @@ export function MemberAchievements({ params }: { params: { id: string, mid: numb
     const { achievements, error, isLoading } = useMemberAchievements(params.id, params.mid)
 
     return (
-        <div className='py-4'>
-            <div className='w-full flex flex-row items-center  justify-between'>
+        <div className='space-y-2'>
+            <div className='w-full flex flex-row items-center px-4  gap-2'>
                 <div className='flex-initial'>
                     <Input placeholder='Filter' className='w-[250px] h-auto py-2 rounded-sm' />
                 </div>
 
             </div>
-            <div className='border rounded-xs mt-4'>
+            <div className='border-y'>
                 <Table className=''>
                     <TableHeader>
                         <TableRow>

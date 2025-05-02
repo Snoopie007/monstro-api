@@ -62,7 +62,7 @@ export function ProgramMembers({ programId, locationId }: { programId: number, l
 
     return (
         <>
-            <div className="flex flex-row items-center justify-between mb-2">
+            <div className="flex flex-row items-center justify-between px-4 py-2">
                 <div className="flex-initial">
                     <Input
                         placeholder="Filter names..."
@@ -70,13 +70,10 @@ export function ProgramMembers({ programId, locationId }: { programId: number, l
                         onChange={(event) =>
                             table.getColumn("name")?.setFilterValue(event.target.value)
                         }
-                        className="border text-sm h-auto py-2 rounded-sm"
+                        className="border text-xs h-auto py-2 rounded-sm"
                     />
                 </div>
 
-                {/* <Button variant={"foreground"} className=' rounded-sm '>
-                    Enroll Member
-                </Button> */}
             </div>
 
             <div className="flex flex-col w-full">

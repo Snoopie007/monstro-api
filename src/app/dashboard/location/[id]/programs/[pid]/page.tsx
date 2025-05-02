@@ -3,15 +3,14 @@ import { useProgram } from '@/hooks/usePrograms';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import React, { use } from 'react';
 
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from "@/components/ui/tabs"
+// import {
+//     Tabs,
+//     TabsContent,
+//     TabsList,
+//     TabsTrigger,
+// } from "@/components/ui/tabs"
 import UpdateProgram from './components/UpdateProgram';
 import { ProgramMembers } from './components/ProgramMembers';
-import ProgramPlans from './components/ProgramPlans/ProgramPlanList';
 
 
 import LoadingComponent from '@/components/loading';
@@ -29,14 +28,14 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
 
     if (program) {
         return (
-            <div className="m-auto p-5 grid grid-cols-10 gap-4 ">
+            <div className="m-auto grid grid-cols-10 h-full ">
 
-                <div className='col-span-3 space-y-4 '>
-                    <Card>
+                <div className='col-span-3 border-r border-foreground/10 '>
+                    <Card className='border-none'>
                         <CardHeader className="p-0">
                             <div className="border-b flex flex-row justify-between ">
                                 <div className="flex-initial flex flex-row items-center px-4">
-
+                                    <span className='text-sm font-semibold'> Program Overview</span>
                                 </div>
                                 <div className="flex-1 flex flex-row items-center justify-end ">
                                     <div className="flex ">
@@ -72,21 +71,7 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
                 </div>
 
                 <div className="col-span-7">
-                    <Tabs defaultValue="members" className="w-full">
-                        <TabsList className='bg-foreground/10 rounded-sm  h-auto'>
-                            {["members", "subscriptions & packages"].map((tab) => (
-                                <TabsTrigger key={tab} value={tab} className='capitalize'>
-                                    {tab}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                        <TabsContent value="members" >
-                            <ProgramMembers programId={program.id} locationId={params.id} />
-                        </TabsContent>
-                        <TabsContent value="subscriptions & packages">
-                            <ProgramPlans programPlans={program.plans} lid={params.id} pid={params.pid} />
-                        </TabsContent>
-                    </Tabs>
+                    <ProgramMembers programId={program.id} locationId={params.id} />
                 </div>
             </div>
         )

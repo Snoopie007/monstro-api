@@ -27,6 +27,7 @@ enum ActionType {
 type StateType = {
     hierarchy: HierarchyNode<NodeSettings> | null
     changed: boolean
+    lid: string
     variables: FieldOptionGroup[]
     currentNode: PartialNodeSettings | null
     currentEdge: Edge | null
@@ -37,6 +38,7 @@ type StateType = {
 
 const initState: StateType = {
     hierarchy: null,
+    lid: "",
     changed: false,
     variables: [],
     currentNode: null,
@@ -142,6 +144,7 @@ interface AIBotProviderProps {
     children: ReactNode,
     bot: AIBot | undefined,
     integrations: Integration[] | undefined,
+    lid: string
 }
 
 const DEFAULT_START_NODES: NodeSettings[] = [{
@@ -150,7 +153,7 @@ const DEFAULT_START_NODES: NodeSettings[] = [{
     id: "end", node: { label: "End" }, type: "end", position: { x: 0, y: 100 }, parentId: "start"
 }]
 
-export function AIBotProvider({ children, bot, integrations }: AIBotProviderProps) {
+export function AIBotProvider({ children, bot, integrations, lid }: AIBotProviderProps) {
     if (!bot) {
         throw new Error("Bot not found")
     }
@@ -158,7 +161,7 @@ export function AIBotProvider({ children, bot, integrations }: AIBotProviderProp
     const hierarchy = stratify<NodeSettings>()(objectives);
 
     return (
-        <AIBotContext.Provider value={AIBotContextReturns({ ...initState, hierarchy, integrations, invalidNodes: bot.invalidNodes })}>
+        <AIBotContext.Provider value={AIBotContextReturns({ ...initState, hierarchy, integrations, invalidNodes: bot.invalidNodes, lid })}>
             {children}
         </AIBotContext.Provider>
     )
@@ -176,7 +179,7 @@ export function useHierarchy() {
 
 export function useBotBuilder() {
     const {
-        state: { currentNode, changed, currentEdge, invalidNodes, integrations, variables, partnerData },
+        state: { currentNode, changed, currentEdge, invalidNodes, integrations, variables, partnerData, lid },
         hasChanged,
         setCurrentNode,
         setCurrentEdge,
@@ -189,6 +192,7 @@ export function useBotBuilder() {
 
 
     return {
+        lid,
         integrations,
         changed,
         hasChanged,

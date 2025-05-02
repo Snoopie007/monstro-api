@@ -45,7 +45,7 @@ export default async function BotBuilder(props: { params: Promise<{ id: string, 
 
     return (
         <div className='w-screen h-screen relative  '>
-            <AIBotProvider integrations={integrations} bot={bot}>
+            <AIBotProvider integrations={integrations} bot={bot} lid={params.id}>
                 <ReactFlowProvider>
                     <BotSettings bot={bot} lid={params.id} />
                     <div className='h-full w-full bg-gray-100'>

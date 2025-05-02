@@ -1,5 +1,5 @@
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { locations, locationState, vendors } from '@/db/schemas';
 import { decodeId } from '@/libs/server/sqids';
@@ -9,23 +9,31 @@ import { eq } from 'drizzle-orm';
 import { MonstroPlan } from '@/types/admin';
 import { PackagePaymentPlan } from '@/types/admin';
 import { chargeWallet, getPlan, getPaymentPlan } from '../../../utils';
+import { auth } from '@/auth';
 
 
 const stripe = new VendorStripePayments();
 
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest, props: { params: Promise<{ lid: string }> }) {
     const data = await req.json();
-    const { vendorId, locationId, token, state } = data;
-    const lid = decodeId(locationId);
+    const { token, state } = data;
 
+    const session = await auth();
+    if (!session || !session.user) {
+        return NextResponse.json({ error: "Vendor not found" }, { status: 404 })
+    }
+
+    const params = await props.params;
+    const lid = decodeId(params.lid);
+    const vendorId = session.user.vendorId;
 
     try {
 
         let paymentPlan: PackagePaymentPlan | null = null;
 
-        if (state.packageId) {
-            paymentPlan = await getPaymentPlan(state.paymentPlanId, state.packageId)
+        if (state.pkgId) {
+            paymentPlan = await getPaymentPlan(state.paymentPlanId, state.pkgId)
         }
 
         let plan: MonstroPlan | null = null;
@@ -47,9 +55,9 @@ export async function POST(req: Request) {
             phone: vendor.phone!,
         }, token.id, { vendorId });
 
-        await chargeWallet(stripe, lid, token);
+        await chargeWallet(stripe, lid, token.card.id);
 
-        const metadata = { vendorId, locationId }
+        const metadata = { vendorId, locationId: lid }
 
         if (paymentPlan) {
             const downPayment = Number(paymentPlan.downPayment - paymentPlan.discount) * 100;

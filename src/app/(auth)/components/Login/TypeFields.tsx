@@ -4,7 +4,7 @@ import {
     RadioGroup,
     RadioGroupItem,
 } from '@/components/forms'
-import { LoginSchema } from '@/libs/schemas'
+import { LoginSchema } from '@/libs/FormSchemas/schemas'
 import { UseFormReturn } from 'react-hook-form'
 import { z } from 'zod'
 import { Button } from '@/components/ui'

@@ -6,7 +6,7 @@ import {
 	Form,
 } from "@/components/forms";
 
-import { LoginSchema } from "@/libs/schemas";
+import { LoginSchema } from "@/libs/FormSchemas/schemas";
 import OTPFields from "./OTPFields";
 import LoginFields from "./LoginFields";
 import TypeFields from "./TypeFields";

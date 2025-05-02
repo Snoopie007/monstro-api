@@ -21,13 +21,20 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 			offset: (page - 1) * pageSize,
 			where: (program, { eq }) => eq(program.locationId, params.id),
 			with: {
-				plans: type ? {
-					where: (plan, { eq }) => eq(plan.type, type as "recurring" | "one-time")
-				} : true,
+				programPlans: {
+					with: {
+						plan: {
+							columns: {
+								id: true,
+								name: true,
+								type: true,
+							}
+						}
+					}
+				}
 			},
 			extras: {
-				counts: db.$count(program, eq(program.locationId, params.id)).as("counts"),
-				planCounts: sql<number>`(SELECT count(*) FROM member_plans WHERE member_plans.program_id = programs.id)`.as("planCounts")
+				counts: db.$count(program, eq(program.locationId, params.id)).as("counts")
 			}
 		})
 

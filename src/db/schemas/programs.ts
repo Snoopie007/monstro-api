@@ -7,25 +7,25 @@ import { staffs } from "./staffs";
 import { PlanInterval, ProgramStatusEnum } from "./DatabaseEnums";
 
 export const programs = pgTable("programs", {
-    id: bigint("id", { mode: "bigint" }).primaryKey().notNull(),
+    id: serial("id").primaryKey(),
     name: text("name").notNull(),
-    description: text("description").notNull(),
-    icon: text("icon"),
+    description: text("description"),
     capacity: integer("capacity").notNull(),
     minAge: integer("min_age").notNull(),
     maxAge: integer("max_age").notNull(),
-    locationId: bigint("location_id", { mode: "bigint" }).notNull().references(() => locations.id, { onDelete: "cascade" }),
-    instructorId: bigint("instructor_id", { mode: "bigint" }).references(() => staffs.id, { onDelete: "set null" }),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    instructorId: integer("instructor_id").references(() => staffs.id, { onDelete: "set null" }),
     interval: PlanInterval("interval").notNull().default("week"),
     intervalThreshold: smallint("interval_threshold").notNull().default(1),
-    status: ProgramStatusEnum("status").notNull().default("active"),
-    cancelationThreshold: integer("cancelation_threshold").notNull().default(24),
+    icon: text("icon"),
     allowWaitlist: boolean("allow_waitlist").notNull().default(false),
-    waitlistCapacity: integer("waitlist_capacity").notNull().default(0),
+    waitlistCapacity: smallint("waitlist_capacity").notNull().default(0),
     allowMakeUpClass: boolean("allow_make_up_class").notNull().default(false),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }),
-    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    cancelationThreshold: smallint("cancelation_threshold").notNull().default(0),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    status: ProgramStatusEnum("status").notNull().default("active"),
+    updated: timestamp('updated_at', { withTimezone: true }),
+    deleted: timestamp('deleted_at', { withTimezone: true })
 });
 
 export const planPrograms = pgTable("plan_programs", {

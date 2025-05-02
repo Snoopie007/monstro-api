@@ -85,21 +85,6 @@ const FormItem = React.forwardRef<
 })
 FormItem.displayName = "FormItem"
 
-const formLabelVariants = cva(
-  "",
-  {
-    variants: {
-      size: {
-        default: "",
-        tiny: "text-tiny uppercase font-medium"
-      },
-    },
-    defaultVariants: {
-      size: "default",
-    },
-  }
-)
-
 interface FormLabelProps
   extends React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root>,
   VariantProps<typeof labelVariants> { }
@@ -121,6 +106,7 @@ const FormLabel = React.forwardRef<
   )
 })
 FormLabel.displayName = "FormLabel"
+
 
 const FormControl = React.forwardRef<
   React.ComponentRef<typeof Slot>,

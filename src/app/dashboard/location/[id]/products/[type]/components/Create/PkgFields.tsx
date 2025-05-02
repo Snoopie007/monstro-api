@@ -4,6 +4,7 @@ import {
     Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
     Input,
     FormDescription,
+    SelectContract
 } from '@/components/forms';
 
 import { z } from "zod";
@@ -15,10 +16,9 @@ import {
     CollapsibleTrigger,
     Switch,
 } from '@/components/ui';
-import { NewPlanSchema } from '../../../../schemas';
+import { NewPlanSchema } from '@/libs/FormSchemas';
 import { cn } from '@/libs/utils';
 import { ChevronRight } from 'lucide-react';
-import { SelectContract } from './SelectContract';
 
 interface SubFieldsProps {
     form: UseFormReturn<z.infer<typeof NewPlanSchema>>,
@@ -30,7 +30,41 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
     return (
 
         <div className='space-y-2'>
-            <fieldset className=''>
+            <fieldset>
+                <FormField
+                    control={form.control}
+                    name="contractId"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel size={"tiny"}>Attach a Contract</FormLabel>
+
+                            <SelectContract lid={lid} onChange={field.onChange} />
+                            <FormMessage />
+                            <FormDescription className="text-xs">Leave blank to not attach a contract.</FormDescription>
+                        </FormItem>
+                    )}
+                />
+            </fieldset>
+            <fieldset className='grid grid-cols-2 gap-2 items-baseline'>
+                <FormField
+                    control={form.control}
+                    name="intervalClassLimit"
+                    render={({ field }) => (
+                        <FormItem className="col-span-1">
+                            <FormLabel size={"tiny"}>Class Limit Per Week</FormLabel>
+                            <FormControl>
+                                <Input type='number' placeholder="" onChange={(e) => {
+                                    if (e.target.value) {
+                                        field.onChange(parseInt(e.target.value))
+                                    }
+                                }} value={field.value || ""} />
+                            </FormControl>
+                            <FormDescription>
+                                Leave blank for unlimited.
+                            </FormDescription>
+                        </FormItem>
+                    )}
+                />
                 <FormField
                     control={form.control}
                     name="pkg.totalClassLimit"
@@ -44,14 +78,14 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                         </FormItem>
                     )}
                 />
-
             </fieldset>
+
             <Collapsible >
                 <CollapsibleTrigger className="flex group flex-row items-center gap-1">
                     <ChevronRight size={15} className="group-data-[state=open]:rotate-90" />
                     <span className="text-[0.7rem] uppercase font-medium cursor-pointer">
                         Package Options {" "}
-                        <span className=' text-yellow-300'>(Optional)</span>
+                        <span className=' text-red-500'>(Optional)</span>
                     </span>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="bg-background rounded-sm p-4 space-y-2">
@@ -97,7 +131,6 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                         </div>
                     </fieldset>
 
-                    <SelectContract lid={lid} form={form} />
                     <fieldset >
                         <FormField
                             control={form.control}

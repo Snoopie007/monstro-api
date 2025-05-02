@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
 import Link from "next/link";;
 import { Loader2 } from "lucide-react";
-import { RegisterSchema } from "@/libs/schemas";
+import { RegisterSchema } from "@/libs/FormSchemas/schemas";
 import PhoneInput from 'react-phone-number-input/input'
 import { CountryCodes } from "@/libs/data";
 import { CountryCode } from "@/types";

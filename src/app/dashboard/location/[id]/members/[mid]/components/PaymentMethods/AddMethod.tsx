@@ -22,7 +22,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { cn, StripeCardOptions } from "@/libs/utils";
 import { useTheme } from "next-themes";
-import { AddCreditCardSchema } from "@/libs/schemas";
+import { AddCreditCardSchema } from "@/libs/FormSchemas/schemas";
 import { RegionSelect } from "@/components/forms";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";

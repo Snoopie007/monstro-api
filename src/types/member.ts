@@ -2,8 +2,8 @@ import { Contract, MemberContract } from "./contract";
 import { FamilyMember } from "./FamilyMember";
 import { Transaction } from "./transaction";
 import { Location } from "./location";
-import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod, ImportStatus } from "./DatabaseEnums";
-import { Program } from "./program";
+import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod } from "./DatabaseEnums";
+import { PlanProgram, Program } from "./program";
 
 export type Member = {
     id?: number;
@@ -47,12 +47,10 @@ export type MemberSubscription = {
     cancelAt?: Date | null;
     cancelAtPeriodEnd?: boolean;
     locationId: number;
-    programId: number;
     stripeSubscriptionId?: string | null;
     trialEnd?: Date | null;
     endedAt?: Date | null;
     paymentMethod: PaymentMethod;
-    program?: Program;
     plan?: MemberPlan;
     member?: Member;
     child?: MemberSubscription | null;
@@ -62,7 +60,7 @@ export type MemberSubscription = {
     status: LocationStatus;
     created?: Date;
     updated?: Date | null;
-}
+};
 
 export type MemberPackage = {
     id?: number;
@@ -79,8 +77,6 @@ export type MemberPackage = {
     totalClassAttended?: number;
     totalClassLimit: number;
     metadata?: Record<string, unknown>;
-    programId: number;
-    program?: Program;
     invoice?: MemberInvoice | null;
     plan?: MemberPlan;
     contract?: MemberContract | null;
@@ -90,6 +86,7 @@ export type MemberPackage = {
     created: Date;
     updated?: Date | null;
 };
+
 export type BillingCycleAnchorConfig = {
     day_of_month: number;
     hour?: number;
@@ -104,7 +101,6 @@ export type MemberPlan = {
     description: string;
     archived: boolean;
     family: boolean;
-    programId: number;
     familyMemberLimit: number;
     contractId?: number | null;
     contract?: Contract | undefined;
@@ -121,6 +117,7 @@ export type MemberPlan = {
     expireThreshold: number | null;
     allowProration: boolean;
     billingAnchorConfig: BillingCycleAnchorConfig | null;
+    planPrograms?: PlanProgram[];
     created: Date;
     updated: Date | null;
     deleted: Date | null;

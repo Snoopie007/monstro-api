@@ -21,7 +21,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { debounce } from "@tiptap-pro/extension-table-of-contents";
 import ImportMembers from "./ImportMember";
 import { Separator } from "@/components/ui";
-import { TablePage, TablePageContent, TablePageFooter, TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle } from "@/components/ui/table-page";
+import { TablePage, TablePageContent, TablePageFooter, TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle } from "@/components/ui/TablePage";
 
 
 export function MemberList({ params, stripeKey }: { params: { id: string }, stripeKey: string | null }) {

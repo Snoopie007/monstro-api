@@ -68,8 +68,6 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 	})
 ]);
 
-
-
 export const memberPackages = pgTable("member_packages", {
 	id: serial("id").primaryKey(),
 	memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),

@@ -18,13 +18,13 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
                     eq(memberSubscriptions.locationId, params.id)
                 ),
                 with: {
-                    program: {
-                        columns: {
-                            name: true
-                        }
-                    },
                     reservations: {
                         with: {
+                            session: {
+                                with: {
+                                    program: true
+                                }
+                            },
                             attendances: true
                         }
                     }
@@ -36,13 +36,14 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
                     eq(memberPackages.locationId, params.id)
                 ),
                 with: {
-                    program: {
-                        columns: {
-                            name: true
-                        }
-                    },
+
                     reservations: {
                         with: {
+                            session: {
+                                with: {
+                                    program: true
+                                }
+                            },
                             attendances: true
                         }
                     }
@@ -55,16 +56,13 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
 
         memberPlans.forEach(plan => {
             if (!plan.reservations?.length) return;
-
-            const programName = plan.program.name;
-
             plan.reservations.forEach(reservation => {
                 if (!reservation.attendances?.length) return;
 
                 reservation.attendances.forEach(attendance => {
                     attendances.push({
                         ...attendance,
-                        programName,
+                        programName: reservation.session.program.name,
                         created: attendance.created ?? new Date()
                     });
                 });

@@ -9,27 +9,19 @@ type LoginUser = {
     phone: string;
 }
 
-type LoginLocation = {
-    id: string;
-    status: string;
-}
-
 type StateType = {
     step: number;
     user: LoginUser | null;
-    location: LoginLocation | null;
 }
 
 type Action =
     | { type: 'SET_STEP'; payload: number }
     | { type: 'SET_USER'; payload: LoginUser | null }
-    | { type: 'SET_LOCATION'; payload: LoginLocation | null }
 
 const reducer = (state: StateType, action: Action): StateType => {
     switch (action.type) {
         case 'SET_STEP': return { ...state, step: action.payload }
         case 'SET_USER': return { ...state, user: action.payload }
-        case 'SET_LOCATION': return { ...state, location: action.payload }
         default: return state
     }
 }
@@ -44,7 +36,7 @@ interface LoginStatusProviderProps {
 }
 
 export const LoginStatusProvider = ({ children }: LoginStatusProviderProps): ReactElement => {
-    const [state, dispatch] = useReducer(reducer, { step: 1, user: null, location: null });
+    const [state, dispatch] = useReducer(reducer, { step: 1, user: null });
 
 
     return (
@@ -57,10 +49,8 @@ export const LoginStatusProvider = ({ children }: LoginStatusProviderProps): Rea
 type UseLoginStatusHookType = {
     step: number;
     user: LoginUser | null;
-    location: LoginLocation | null;
     setStep: (step: number) => void;
     setUser: (user: LoginUser | null) => void;
-    setLocation: (location: LoginLocation | null) => void;
 }
 
 export const useLoginStatus = (): UseLoginStatusHookType => {
@@ -79,16 +69,10 @@ export const useLoginStatus = (): UseLoginStatusHookType => {
         dispatch({ type: 'SET_USER', payload: user });
     };
 
-    const setLocation = (location: LoginLocation | null) => {
-        dispatch({ type: 'SET_LOCATION', payload: location });
-    };
-
     return {
         step: state.step,
         user: state.user,
-        location: state.location,
         setStep,
-        setUser,
-        setLocation
+        setUser
     };
 }

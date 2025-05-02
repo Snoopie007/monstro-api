@@ -168,12 +168,12 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" className="border-y-0 rounded-none">Add Family to Plan</Button>
+                <Button variant="outline" className="border-y-0 border-r-0 rounded-none">+ Family to Plan</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[450px] rounded-sm">
                 <DialogHeader className="space-y-0 gap-0">
                     <DialogTitle>
-                        Add a Family to Plan
+                        Add Family to Plan
                     </DialogTitle>
                     <DialogDescription className="hidden"></DialogDescription>
                 </DialogHeader>

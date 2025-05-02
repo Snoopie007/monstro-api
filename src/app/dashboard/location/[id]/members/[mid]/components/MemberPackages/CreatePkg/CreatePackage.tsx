@@ -15,8 +15,7 @@ import { useState } from "react";
 import React from "react";
 
 import { PkgForm } from "./PkgForm";
-import { DEFAULT_PROGRESS, SessionForm, SubPackageProgress } from "../../SessionForm";
-import { motion } from "framer-motion";
+import { DEFAULT_PROGRESS, SubPackageProgress } from "../../SessionForm";
 
 export function CreatePackage({ params }: { params: { id: string, mid: number } }) {
     const [progress, setProgress] = useState<SubPackageProgress>(DEFAULT_PROGRESS);
@@ -38,32 +37,13 @@ export function CreatePackage({ params }: { params: { id: string, mid: number } 
                 <Button variant={"foreground"} size={"sm"} className=''>+ Package</Button>
             </DialogTrigger>
             <DialogContent className="max-w-[450px]">
-                <DialogHeader>
-                    <DialogTitle>Create Package</DialogTitle>
+                <DialogHeader className="space-y-0">
+                    <DialogTitle className='text-sm font-medium flex flex-row items-center gap-1'>
+                        Add Member Package
+                    </DialogTitle>
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
-                {progress.step === 1 && (
-                    <motion.div
-                        key="step1"
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: -20, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        <PkgForm params={params} progress={progress} setProgress={setProgress} />
-                    </motion.div>
-                )}
-                {progress.step === 2 && (
-                    <motion.div
-                        key="step2"
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: -20, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        <SessionForm params={params} progress={progress} />
-                    </motion.div>
-                )}
+                <PkgForm params={params} progress={progress} setProgress={setProgress} />
             </DialogContent>
         </Dialog >
     )

@@ -14,17 +14,27 @@ export type Program = {
     instructorId: number | null;
     interval: Interval;
     intervalThreshold: number;
-    benefits: string[] | null;
-    plans: MemberPlan[];
+    programPlans?: PlanProgram[];
     locationId?: number;
     status: ProgramStatus;
     location?: Location;
     planCounts?: string;
     sessions?: ProgramSession[];
+    allowWaitlist: boolean;
+    waitlistCapacity: number;
+    allowMakeUpClass: boolean;
+    cancelationThreshold: number;
     created: Date;
     updated: Date | null;
     deleted: Date | null;
 };
+
+export type PlanProgram = {
+    planId: number;
+    programId: number;
+    program?: Program;
+    plan?: MemberPlan;
+}
 
 export type ProgramSession = {
     id: number,

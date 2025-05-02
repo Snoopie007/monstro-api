@@ -25,7 +25,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
         const { clientSecret } = await stripe.createPaymentIntent(
             walletPayment,
             undefined,
-            { description: `Manual-charge USD ${walletPayment / 100} was successfully added to wallet.` }
+            { description: `Manual-charge USD ${amount} was successfully added to wallet.` }
         );
 
         if (!clientSecret) {

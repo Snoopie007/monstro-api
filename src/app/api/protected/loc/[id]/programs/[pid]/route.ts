@@ -17,12 +17,16 @@ export async function GET(req: Request, props: { params: Promise<Params> }) {
 			where: (programs, { eq }) => eq(programs.id, params.pid),
 			with: {
 				sessions: true,
-				plans: true,
+				programPlans: {
+					with: {
+						plan: true
+					}
+				}
 			},
-			extras: {
-				memberSubscriptions: sql<number>`(SELECT count(*) FROM member_subscriptions WHERE member_subscriptions.program_id = programs.id)`.as("memberSubscriptions"),
-				memberPackages: sql<number>`(SELECT count(*) FROM member_packages WHERE member_packages.program_id = programs.id)`.as("memberPackages")
-			}
+			// extras: {
+			// 	memberSubscriptions: sql<number>`(SELECT count(*) FROM member_subscriptions WHERE member_subscriptions.program_id = programs.id)`.as("memberSubscriptions"),
+			// 	memberPackages: sql<number>`(SELECT count(*) FROM member_packages WHERE member_packages.program_id = programs.id)`.as("memberPackages")
+			// }
 		});
 		return NextResponse.json(program, { status: 200 });
 	} catch (err) {

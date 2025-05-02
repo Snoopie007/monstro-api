@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
 
     try {
         const wallet = await db.query.wallets.findFirst({
-            where: (wallet, { eq }) => eq(wallet.locationId, params.id),
+            where: (wallets, { eq }) => eq(wallets.locationId, params.id),
         })
 
         return NextResponse.json(wallet, { status: 200 });

@@ -1,5 +1,5 @@
 "use client"
-import { ResetPasswordSchema } from '@/libs/schemas';
+import { ResetPasswordSchema } from '@/libs/FormSchemas/schemas';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form';

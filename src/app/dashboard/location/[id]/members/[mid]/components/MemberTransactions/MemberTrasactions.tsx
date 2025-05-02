@@ -19,11 +19,11 @@ import { format } from 'date-fns'
 import { Transaction } from '@/types/transaction'
 
 export function MemberTransactions({ params }: { params: { id: string, mid: number } }) {
-    const { member } = useMemberStatus();
+    ;
     const { transactions, error, isLoading } = useMemberTransactions(params.id, params.mid);
     return (
-        <div className='py-4'>
-            <div className='w-full flex flex-row items-center  gap-2'>
+        <div className='space-y-2'>
+            <div className='w-full flex flex-row items-center px-4  gap-2'>
                 <div className='flex-initial'>
                     <Input placeholder='Search transactions...' className='w-[250px] text-xs h-8 py-2 rounded-xs' />
                 </div>
@@ -31,7 +31,7 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
 
                 </div>
             </div>
-            <div className='border rounded-sm mt-4'>
+            <div className='border-y'>
                 <Table className=''>
                     <TableHeader>
                         <TableRow>

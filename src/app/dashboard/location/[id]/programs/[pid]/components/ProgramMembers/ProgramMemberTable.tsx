@@ -25,7 +25,7 @@ export function ProgramMemberTable<TData, TValue>({
 }: { columns: number, table: TansackTable<Member>, isLoading: boolean }) {
 
     return (
-        <div className="rounded-sm border">
+        <div className="border-t">
             <Table>
                 <TableHeader>
                     {table.getHeaderGroups().map((headerGroup) => (
