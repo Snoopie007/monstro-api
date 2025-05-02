@@ -11,9 +11,9 @@ interface LocationLayoutProps {
     params: Promise<{ id: string }>
 }
 
-async function getLocationState(locationId: string) {
+async function getLocationState(lid: string) {
     const locationState = await db.query.locationState.findFirst({
-        where: (locationState, { eq }) => eq(locationState.locationId, decodeId(locationId))
+        where: (locationState, { eq }) => eq(locationState.locationId, decodeId(lid))
     })
     return locationState
 }
@@ -25,7 +25,7 @@ export default async function LocationLayout(props: LocationLayoutProps) {
     const locationState = await getLocationState(params.id)
 
     if (!locationState) {
-        redirect("/dashboard")
+        redirect("/dashboard/locations")
     }
 
     return (

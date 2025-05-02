@@ -106,8 +106,6 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
         }
         const data = await result.json();
 
-        localStorage.setItem("locationId", data.id);
-
         update({
             locations: [...session?.user.locations, data],
         })

@@ -20,7 +20,7 @@ interface LoginFieldsProps {
 
 export default function LoginFields({ form }: LoginFieldsProps) {
     const [loading, setLoading] = useState(false);
-    const { setStep, setUser, setLocation } = useLoginStatus();
+    const { setStep, setUser } = useLoginStatus();
 
     async function verifyEmailAndPassword() {
 
@@ -28,13 +28,13 @@ export default function LoginFields({ form }: LoginFieldsProps) {
         if (!isValid) return;
         setLoading(true);
 
-        const locationId = localStorage.getItem('locationId');
         const { email, password } = form.getValues();
 
         const { result, error } = await tryCatch(fetch(`/api/auth/login`, {
             method: 'POST',
-            body: JSON.stringify({ email, password, lid: locationId }),
+            body: JSON.stringify({ email, password }),
         }));
+
         setLoading(false);
         const data = await result?.json();
         if (error || !result || !result.ok) {
@@ -42,12 +42,8 @@ export default function LoginFields({ form }: LoginFieldsProps) {
             toast.error(data?.error || error?.message || 'Something went wrong. Please contact support at support@monstro.com.');
             return;
         }
-        const { user, location } = data;
+        const { user } = data;
         setUser(user);
-        if (location.id && location.status) {
-            localStorage.setItem('locationId', location.id);
-            setLocation(location);
-        }
         setStep(2);
     }
 

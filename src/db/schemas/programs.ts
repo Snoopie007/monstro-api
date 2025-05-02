@@ -1,4 +1,4 @@
-import { serial, text, timestamp, time, smallint, doublePrecision, pgTable, integer, unique, boolean } from "drizzle-orm/pg-core";
+import { serial, text, timestamp, time, smallint, pgTable, integer, unique, boolean } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { memberPackages, memberPlans, memberSubscriptions } from "./MemberPlans";
@@ -10,7 +10,7 @@ export const programs = pgTable("programs", {
     id: serial("id").primaryKey(),
     name: text("name").notNull(),
     description: text("description"),
-    capacity: doublePrecision("capacity").notNull(),
+    capacity: integer("capacity").notNull(),
     minAge: integer("min_age").notNull(),
     maxAge: integer("max_age").notNull(),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
@@ -18,8 +18,8 @@ export const programs = pgTable("programs", {
     interval: PlanInterval("interval").notNull().default("week"),
     intervalThreshold: smallint("interval_threshold").notNull().default(1),
     icon: text("icon"),
-    allowWaitList: boolean("allow_waitlist").notNull().default(false),
-    waitListCapacity: smallint("waitlist_capacity").notNull().default(0),
+    allowWaitlist: boolean("allow_waitlist").notNull().default(false),
+    waitlistCapacity: smallint("waitlist_capacity").notNull().default(0),
     allowMakeUpClass: boolean("allow_make_up_class").notNull().default(false),
     cancelationThreshold: smallint("cancelation_threshold").notNull().default(0),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

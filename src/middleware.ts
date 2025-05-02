@@ -17,6 +17,7 @@ async function verifyToken(token: string): Promise<boolean> {
 }
 
 export default auth(async (req) => {
+
 	try {
 		const { pathname } = req.nextUrl
 		const isLoggedin = !!req.auth
@@ -88,30 +89,31 @@ export default auth(async (req) => {
 
 			if (locationId) {
 				/** Check if locationId is a valid location */
-				let nextLocation = locations.find((loc: { id: string }) => loc.id === locationId)
+				const next = locations.find((loc: { id: string }) => loc.id === locationId)
 
-				/** If locationId is not a valid location, redirect to the first active location */
-				if (!nextLocation) {
-					nextLocation =
-						locations.find((loc: { status: string }) => loc.status === "active") ||
-						locations.find((loc: { status: string }) => loc.status === "incomplete")
+				if (!next) {
+					return NextResponse.redirect(new URL("/dashboard/locations", req.nextUrl.origin))
+				}
+
+				if (path.startsWith("dashboard/locations/new")) {
+					return NextResponse.next()
 				}
 
 				/** If the path is not allowed for the current location, redirect to the dashboard of the next location */
-				const allowedInactivePaths = [`/dashboard/location/${nextLocation.id}`]
+				const allowedInactivePaths = [`/dashboard/location/${next.id}`]
 				if (
 					path.startsWith("dashboard") &&
 					!allowedInactivePaths.includes(pathname) &&
-					!["active", "incomplete"].includes(nextLocation.status)
+					!["active", "incomplete"].includes(next.status)
 				) {
-					return NextResponse.redirect(new URL(`/dashboard/location/${nextLocation.id}`, req.nextUrl.origin))
+					return NextResponse.redirect(new URL(`/dashboard/location/${next.id}`, req.nextUrl.origin))
 				}
 
-				const isOnboarding = nextLocation.status === "incomplete"
+				const isOnboarding = next.status === "incomplete"
 				const targetPath = isOnboarding ? NewLocationPath : "dashboard/location"
 
 				if (path !== targetPath) {
-					return NextResponse.redirect(new URL(`/${targetPath}/${nextLocation.id}`, req.nextUrl.origin))
+					return NextResponse.redirect(new URL(`/${targetPath}/${next.id}`, req.nextUrl.origin))
 				}
 			}
 		}

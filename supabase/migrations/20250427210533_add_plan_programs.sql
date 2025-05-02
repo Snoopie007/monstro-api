@@ -48,3 +48,17 @@ DROP CONSTRAINT IF EXISTS unique_session_subscription;
 ALTER TABLE reservations
 ADD CONSTRAINT unique_session_package_single_session UNIQUE (session_id, member_package_id, start_date);
 ADD CONSTRAINT unique_session_subscription_single_session UNIQUE (session_id, member_subscription_id, start_date);
+
+ALTER TABLE locations_state
+ADD COLUMN stripe_subscription_id TEXT;
+ADD COLUMN metadata JSONB NOT NULL DEFAULT '{}';
+
+
+
+
+
+
+
+
+
+

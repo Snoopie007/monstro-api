@@ -187,10 +187,13 @@ class VendorStripePayments extends BaseStripePayments {
             customer: this._customer,
             setup_future_usage: "off_session",
             statement_descriptor: "Monstro",
-            ...(cardId && { payment_method: cardId }),
             metadata: options?.metadata || undefined,
             return_url: "https://mymonstro.com",
         };
+
+        if (cardId) {
+            option.payment_method = cardId;
+        }
 
         const paymentIntent = await this._stripe.paymentIntents.create(option);
         return { clientSecret: paymentIntent.client_secret as string, paymentIntent: paymentIntent as Stripe.PaymentIntent };
@@ -213,7 +216,12 @@ class VendorStripePayments extends BaseStripePayments {
         return this._stripe.subscriptions.create(options);
     }
 
-    async createPaymentPlan(plan: PackagePaymentPlan, coupon: string | undefined, metadata: Record<string, any>) {
+    async createPaymentPlan(
+        plan: PackagePaymentPlan,
+        coupon: string | undefined,
+        metadata: Record<string, any>,
+        paymentMethodId?: string | undefined
+    ) {
 
         if (!this._customer) {
             throw new Error("Customer not set");
@@ -231,6 +239,11 @@ class VendorStripePayments extends BaseStripePayments {
             metadata
         };
 
+        if (paymentMethodId) {
+            options.default_payment_method = paymentMethodId;
+        }
+
+
         if (coupon) {
             options.discounts = [{ coupon }];
         }
@@ -242,7 +255,7 @@ class VendorStripePayments extends BaseStripePayments {
         return this._stripe.subscriptions.create(options);
     }
 
-    async createPackageSubscriptions(metadata: Record<string, any>) {
+    async createPackageSubscriptions(metadata: Record<string, any>, paymentMethodId?: string | undefined) {
 
         if (!this._customer) {
             throw new Error("Customer not set");
@@ -260,12 +273,14 @@ class VendorStripePayments extends BaseStripePayments {
                 iterations: 12,
                 billing_cycle_anchor: 'automatic',
                 currency: 'usd',
+                ...(paymentMethodId && { default_payment_method: paymentMethodId }),
                 collection_method: 'charge_automatically',
                 metadata
             }, {
                 items: [{ price: phaseTwoPrice }],
                 billing_cycle_anchor: 'automatic',
                 currency: 'usd',
+                ...(paymentMethodId && { default_payment_method: paymentMethodId }),
                 collection_method: 'charge_automatically',
                 metadata
             }],
@@ -423,7 +438,7 @@ class MemberStripePayments extends BaseStripePayments {
                 unit_amount: price,
                 metadata: {
                     locationId: locationId,
-                    programId: data.programId
+                    planId: data.id!
                 }
             },
             metadata: {

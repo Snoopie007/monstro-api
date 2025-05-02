@@ -1,8 +1,6 @@
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/db/db';
-import { locations, locationState, vendors } from '@/db/schemas';
-import { decodeId } from '@/libs/server/sqids';
+import { NextResponse } from 'next/server';
+
 import { VendorStripePayments } from '@/libs/server/stripe';
 
 import { eq } from 'drizzle-orm';
@@ -10,17 +8,18 @@ import { MonstroPlan } from '@/types/admin';
 import { PackagePaymentPlan } from '@/types/admin';
 import { chargeWallet, getPlan, getPaymentPlan } from '../../../utils';
 import { auth } from '@/auth';
-
-
+import { decodeId } from '@/libs/server/sqids';
+import { locations, locationState } from '@/db/schemas/locations';
+import { db } from '@/db/db';
 const stripe = new VendorStripePayments();
 
 
-export async function POST(req: NextRequest, props: { params: Promise<{ lid: string }> }) {
+export async function POST(req: Request, props: { params: Promise<{ lid: string }> }) {
     const data = await req.json();
-    const { token, state } = data;
+    const { paymentMethodId, state } = data;
 
     const session = await auth();
-    if (!session || !session.user) {
+    if (!session || !session.user.stripeCustomerId) {
         return NextResponse.json({ error: "Vendor not found" }, { status: 404 })
     }
 
@@ -41,36 +40,25 @@ export async function POST(req: NextRequest, props: { params: Promise<{ lid: str
             plan = await getPlan(state.planId)
         }
 
-        const vendor = await db.query.vendors.findFirst({
-            where: (vendor, { eq }) => eq(vendor.id, vendorId)
-        });
+        const stripe = new VendorStripePayments();
+        stripe.setCustomer(session.user.stripeCustomerId);
 
-        if (!vendor) {
-            throw new Error("Vendor not found")
-        }
-        const customer = await stripe.createCustomer({
-            firstName: vendor.firstName,
-            lastName: vendor.lastName!,
-            email: vendor.email!,
-            phone: vendor.phone!,
-        }, token.id, { vendorId });
-
-        await chargeWallet(stripe, lid, token.card.id);
+        await chargeWallet(stripe, lid, paymentMethodId);
 
         const metadata = { vendorId, locationId: lid }
 
         if (paymentPlan) {
             const downPayment = Number(paymentPlan.downPayment - paymentPlan.discount) * 100;
             if (paymentPlan.downPayment > 0) {
-                await stripe.createPaymentIntent(downPayment, token.card.id, {
-                    metadata
+                await stripe.createPaymentIntent(downPayment, paymentMethodId, {
+                    metadata,
                 })
             }
             if (paymentPlan.monthlyPayment > 0 && paymentPlan.priceId) {
-                await stripe.createPaymentPlan(paymentPlan, undefined, metadata)
+                await stripe.createPaymentPlan(paymentPlan, undefined, metadata, paymentMethodId)
             }
             await Promise.all([
-                stripe.createPackageSubscriptions(metadata),
+                stripe.createPackageSubscriptions(metadata, paymentMethodId),
                 stripe.createGHLSubscription(metadata)
             ]);
         }
@@ -95,11 +83,6 @@ export async function POST(req: NextRequest, props: { params: Promise<{ lid: str
                 lastRenewalDate: today,
                 updated: today,
             }).where(eq(locationState.locationId, lid))
-
-            await tx.update(vendors).set({
-                stripeCustomerId: customer.id,
-                updated: today
-            }).where(eq(vendors.id, vendorId))
         })
 
         return NextResponse.json({ success: true }, { status: 200 })

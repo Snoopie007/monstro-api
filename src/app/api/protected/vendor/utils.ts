@@ -4,11 +4,12 @@ import { VendorStripePayments } from "@/libs/server/stripe";
 
 
 
-async function chargeWallet(stripe: VendorStripePayments, locationId: number, token: any) {
+async function chargeWallet(stripe: VendorStripePayments, lid: number, token: string | undefined) {
+
     const walletPayment = 10 * 100;
     const { clientSecret } = await stripe.createPaymentIntent(
         walletPayment,
-        token.card.id,
+        token,
         { description: `Auto-charge $10 USD was successfully added to wallet.` }
     );
 
@@ -17,7 +18,7 @@ async function chargeWallet(stripe: VendorStripePayments, locationId: number, to
     }
 
     await db.insert(wallets).values({
-        locationId: locationId,
+        locationId: lid,
         balance: walletPayment,
         credits: 0,
         lastCharged: new Date(),

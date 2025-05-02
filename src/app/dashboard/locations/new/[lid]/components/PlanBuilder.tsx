@@ -3,11 +3,12 @@
 import { motion } from 'framer-motion'
 
 import { SelectPlan } from './ProgramSelection'
-import VendorPayment from './VendorPayment/VendorPayment'
+import { VendorPayment } from './VendorPayment'
 import { StepBox, StepBoxHeader, StepBoxContent } from '../../components'
 import { useState } from 'react'
 
-export function VendorPlanBuilder() {
+export function VendorPlanBuilder({ lid }: { lid: string }) {
+
     const [currentStep, setCurrentStep] = useState(1)
     return (
         <div className="space-y-4">
@@ -29,7 +30,7 @@ export function VendorPlanBuilder() {
                 />
                 <StepBoxContent>
                     <AnimatedSection>
-                        <VendorPayment />
+                        <VendorPayment lid={lid} />
                     </AnimatedSection>
                 </StepBoxContent>
             </StepBox>

@@ -25,7 +25,6 @@ export default function VerifyOTP({ form }: VerifyOTPProps) {
 
     const [loading, setLoading] = useState(false);
     const router = useRouter();
-    const { location } = useLoginStatus();
     const { type, ...rest } = form.getValues();
 
 
@@ -50,13 +49,7 @@ export default function VerifyOTP({ form }: VerifyOTPProps) {
             return;
         }
 
-        const NewLocationPath = "/dashboard/locations/new";
-        let redirect = NewLocationPath;
-        if (location) {
-            redirect = location?.status === "incomplete" ? `${NewLocationPath}/${location.id}` : `/dashboard/location/${location.id}`
-        }
-
-        return router.push(redirect);
+        return router.push('/dashboard/locations');
 
     }
 
