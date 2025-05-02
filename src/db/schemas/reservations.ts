@@ -1,6 +1,6 @@
 
 import { relations } from "drizzle-orm";
-import { integer, serial, timestamp, pgTable, boolean } from "drizzle-orm/pg-core";
+import { integer, serial, timestamp, pgTable, boolean, date } from "drizzle-orm/pg-core";
 import { programSessions } from "./programs";
 import { members } from "./members";
 import { attendances } from "./attendances";
@@ -17,10 +17,10 @@ export const reservations = pgTable("reservations", {
     memberPackageId: integer("member_package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
     locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
     status: ReservationStatusEnum("status").default("active").notNull(),
-    expiredDate: timestamp("expired_on", { withTimezone: true }),
-    canceledDate: timestamp("canceled_on", { withTimezone: true }),
-    auto: boolean("auto").notNull().default(false),
-    startDate: timestamp("start_date", { withTimezone: true }).notNull().defaultNow(),
+    startDate: date("start_date").notNull(),
+    auto: boolean("auto").default(false).notNull(),
+    expiredDate: date("expired_on"),
+    canceledDate: date("canceled_on"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });

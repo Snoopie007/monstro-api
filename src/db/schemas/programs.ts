@@ -1,32 +1,37 @@
-import { bigserial, serial, text, timestamp, time, primaryKey, smallint, doublePrecision, pgTable, integer, unique } from "drizzle-orm/pg-core";
+import { serial, text, timestamp, time, smallint, pgTable, integer, unique, boolean, bigint, primaryKey } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
-import { members } from "./members";
 import { memberPackages, memberPlans, memberSubscriptions } from "./MemberPlans";
-import { achievements } from "./achievements";
 import { reservations } from "./reservations";
-// Assuming staffs table exists
 import { staffs } from "./staffs";
 import { PlanInterval, ProgramStatusEnum } from "./DatabaseEnums";
 
 export const programs = pgTable("programs", {
-    id: serial("id").primaryKey(),
+    id: bigint("id", { mode: "bigint" }).primaryKey().notNull(),
     name: text("name").notNull(),
-    description: text("description"),
-    capacity: doublePrecision("capacity").notNull(),
+    description: text("description").notNull(),
+    icon: text("icon"),
+    capacity: integer("capacity").notNull(),
     minAge: integer("min_age").notNull(),
     maxAge: integer("max_age").notNull(),
-    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    instructorId: integer("instructor_id").references(() => staffs.id, { onDelete: "cascade" }),
+    locationId: bigint("location_id", { mode: "bigint" }).notNull().references(() => locations.id, { onDelete: "cascade" }),
+    instructorId: bigint("instructor_id", { mode: "bigint" }).references(() => staffs.id, { onDelete: "set null" }),
     interval: PlanInterval("interval").notNull().default("week"),
     intervalThreshold: smallint("interval_threshold").notNull().default(1),
-    icon: text("icon"),
-    benefits: text("benefits").array().$type<string[]>().default([]),
     status: ProgramStatusEnum("status").notNull().default("active"),
-    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp('updated_at', { withTimezone: true }),
-    deleted: timestamp('deleted_at', { withTimezone: true })
+    cancelationThreshold: integer("cancelation_threshold").notNull().default(24),
+    allowWaitlist: boolean("allow_waitlist").notNull().default(false),
+    waitlistCapacity: integer("waitlist_capacity").notNull().default(0),
+    allowMakeUpClass: boolean("allow_make_up_class").notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
+
+export const planPrograms = pgTable("plan_programs", {
+    planId: integer("plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
+    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+}, (t) => [primaryKey({ columns: [t.planId, t.programId] })]);
 
 
 export const programSessions = pgTable("program_sessions", {
@@ -37,7 +42,9 @@ export const programSessions = pgTable("program_sessions", {
     day: smallint("day").notNull().default(1),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
-}, (t) => [unique("unique_program_session").on(t.programId, t.time, t.duration, t.day)])
+}, (t) => [unique("unique_program_session").on(t.programId, t.time, t.duration, t.day)]);
+
+
 
 export const programsRelations = relations(programs, ({ one, many }) => ({
     location: one(locations, {
@@ -45,7 +52,6 @@ export const programsRelations = relations(programs, ({ one, many }) => ({
         references: [locations.id],
     }),
     plans: many(memberPlans),
-    achievements: many(achievements),
     sessions: many(programSessions),
     instructor: one(staffs, {
         fields: [programs.instructorId],
@@ -62,4 +68,17 @@ export const programSessionsRelations = relations(programSessions, ({ one, many 
         references: [programs.id],
     }),
     reservations: many(reservations),
+}));
+
+
+export const planProgramsRelations = relations(planPrograms, ({ one }) => ({
+    plan: one(memberPlans, {
+        fields: [planPrograms.planId],
+        references: [memberPlans.id],
+    }),
+    program: one(programs, {
+        fields: [planPrograms.programId],
+        references: [programs.id],
+    }),
+
 }));
