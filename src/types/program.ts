@@ -20,6 +20,10 @@ export type Program = {
     location?: Location;
     planCounts?: string;
     sessions?: ProgramSession[];
+    allowWaitList: boolean;
+    waitListCapacity: number;
+    allowMakeUpClass: boolean;
+    cancelationThreshold: number;
     created: Date;
     updated: Date | null;
     deleted: Date | null;
