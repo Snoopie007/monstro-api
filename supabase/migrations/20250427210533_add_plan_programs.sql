@@ -62,6 +62,9 @@ ADD COLUMN metadata JSONB NOT NULL DEFAULT '{}';
 ALTER TABLE locations
 DROP CONSTRAINT locations_address_key;
 
+ALTER TABLE vendor_levels
+DROP COLUMN location_id;
+
 
 
 

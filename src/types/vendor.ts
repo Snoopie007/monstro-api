@@ -23,7 +23,6 @@ export type Vendor = {
 export type VendorLevel = {
     id: number;
     vendorId: number;
-    locationId: number | null;
     vendor?: Vendor;
     points: number;
     totalPoints: number;

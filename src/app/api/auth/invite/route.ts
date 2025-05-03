@@ -1,7 +1,7 @@
 import { admindb, db } from "@/db/db";
 
 import { NextRequest, NextResponse } from "next/server";
-import { users, vendors } from "@/db/schemas";
+import { users, vendors, vendorLevels } from "@/db/schemas";
 import { formatPhoneNumber } from "@/libs/server/db";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
@@ -37,12 +37,16 @@ export async function POST(req: NextRequest) {
                 password: hashedPassword,
             }).returning({ id: users.id })
 
-            await tx.insert(vendors).values({
+            const [{ vid }] = await tx.insert(vendors).values({
                 ...sale,
                 id: undefined,
                 phone: formatPhoneNumber(sale.phone),
                 userId: id,
-            });
+            }).returning({ vid: vendors.id });
+
+            await tx.insert(vendorLevels).values({
+                vendorId: vid
+            })
 
         })
 

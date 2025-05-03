@@ -7,7 +7,6 @@ import { relations, sql } from "drizzle-orm";
 export const vendorLevels = pgTable("vendor_levels", {
     id: serial("id").primaryKey(),
     vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
-    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     points: integer("points").notNull().default(0),
     totalPoints: integer("total_points").notNull().default(0),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

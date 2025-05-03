@@ -31,11 +31,6 @@ export async function POST(req: Request) {
                 ...DEFAULT_LOCATION_STATE
             })
 
-            await tx.insert(vendorLevels).values({
-                vendorId: data.vendorId,
-                locationId: location.id
-            })
-
             return { ...location, status: "incomplete" }
         });
 

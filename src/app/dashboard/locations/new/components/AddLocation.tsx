@@ -106,15 +106,15 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
         }
         const data = await result.json();
 
-        update({
+        await update({
             locations: [...session?.user.locations, data],
         })
 
         const url = saleId ? `/dashboard/location/${data.id}` : `/dashboard/locations/new/${data.id}`;
 
-        router.push(url);
+        return router.push(url);
 
-        return
+
     }
 
     function remove() {

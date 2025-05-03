@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 
 import { NextRequest, NextResponse } from "next/server";
-import { users, vendors } from "@/db/schemas";
+import { users, vendors, vendorLevels } from "@/db/schemas";
 import { formatPhoneNumber } from "@/libs/server/db";
 import bcrypt from "bcryptjs";
 
@@ -25,11 +25,16 @@ export async function POST(req: NextRequest) {
                 password: hashedPassword,
             }).returning({ id: users.id })
 
-            await tx.insert(vendors).values({
+            const [{ vid }] = await tx.insert(vendors).values({
                 ...data,
                 phone: formatPhoneNumber(data.phone),
                 userId: id,
                 accountOwner: true,
+            }).returning({ vid: vendors.id });
+
+
+            await tx.insert(vendorLevels).values({
+                vendorId: vid
             })
         })
 
