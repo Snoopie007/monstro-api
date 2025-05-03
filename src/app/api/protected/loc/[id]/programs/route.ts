@@ -21,7 +21,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 			offset: (page - 1) * pageSize,
 			where: (program, { eq }) => eq(program.locationId, params.id),
 			with: {
-				programPlans: {
+				planPrograms: {
 					with: {
 						plan: {
 							columns: {

@@ -17,11 +17,7 @@ export async function GET(req: Request, props: { params: Promise<Params> }) {
 			where: (programs, { eq }) => eq(programs.id, params.pid),
 			with: {
 				sessions: true,
-				programPlans: {
-					with: {
-						plan: true
-					}
-				}
+				plans: true
 			},
 			// extras: {
 			// 	memberSubscriptions: sql<number>`(SELECT count(*) FROM member_subscriptions WHERE member_subscriptions.program_id = programs.id)`.as("memberSubscriptions"),

@@ -39,6 +39,11 @@ DROP CONSTRAINT fk_member_subscriptions_program_id;
 ALTER TABLE member_subscriptions
 DROP COLUMN program_id,
 
+ALTER TABLE import_members
+DROP COLUMN program_id;
+
+ALTER TABLE import_members
+DROP CONSTRAINT import_members_program_id_fkey;
 
 ALTER TABLE reservations
 DROP CONSTRAINT IF EXISTS unique_session_package,

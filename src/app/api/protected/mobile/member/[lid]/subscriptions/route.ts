@@ -18,15 +18,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
                         session: true
                     }
                 },
-                plan: {
-                    with: {
-                        program: {
-                            with: {
-                                sessions: true
-                            }
-                        }
-                    }
-                }
+                plan: true
             }
         })
         return NextResponse.json(subscriptions, { status: 200 })

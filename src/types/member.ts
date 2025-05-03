@@ -3,7 +3,7 @@ import { FamilyMember } from "./FamilyMember";
 import { Transaction } from "./transaction";
 import { Location } from "./location";
 import { Interval, PlanType, LocationStatus, InvoiceStatus, PackageStatus, PaymentMethod } from "./DatabaseEnums";
-import { PlanProgram, Program } from "./program";
+import { PlanProgram } from "./program";
 
 export type Member = {
     id?: number;
@@ -25,12 +25,6 @@ export type Member = {
     created: Date;
     updated: Date | null;
     deleted: Date | null;
-};
-export type MemberOnboarding = {
-    selectProgramId: number | null;
-    selectPlanId: number | null;
-    completedSteps: number[];
-    currentStep: number;
 };
 
 
@@ -167,11 +161,8 @@ export type MemberLocation = {
 }
 
 export type IncompletePlan = {
-    programId: number | undefined;
     memberPlanId: number | undefined;
-    currentStep: number;
     memberContractId: number | undefined;
-    completedSteps: number[];
 }
 
 export type FamilyPlan = {

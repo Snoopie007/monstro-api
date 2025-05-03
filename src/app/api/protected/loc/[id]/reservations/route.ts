@@ -14,6 +14,7 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
         const newReservations: Reservation[] = []
         sessionIds.forEach((sid: number) => {
             newReservations.push({
+                startDate: new Date().toISOString().split("T")[0],
                 memberSubscriptionId: subscriptionId || null,
                 memberPackageId: packageId || null,
                 sessionId: sid,

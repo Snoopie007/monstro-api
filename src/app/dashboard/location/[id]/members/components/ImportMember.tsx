@@ -8,8 +8,7 @@ import { cn, tryCatch } from '@/libs/utils';
 import { Table, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/forms/select';
 import { toast } from 'react-toastify';
-import { usePrograms } from '@/hooks/usePrograms';
-import { Program } from '@/types';
+import { useMemberPlans } from '@/hooks';
 
 
 const fileTypes = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .csv";
@@ -22,12 +21,10 @@ type FilePreviewType = {
 export default function ImportMembers({ lid }: { lid: string }) {
     const [step, setStep] = useState(0);
     const [file, setFile] = useState<File | undefined>(undefined);
-    const [programId, setProgramId] = useState<Number | null>(null);
     const [planId, setPlanId] = useState<Number | null>(null);
     const [preview, setPreview] = useState<FilePreviewType | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const { data: programs, isLoading: programIsLoading } = usePrograms(lid);
-
+    const { plans } = useMemberPlans(lid);
     const requiredHeaders = ['first_name', 'last_name', 'email', 'phone', 'last_renewal_day', 'terms', 'term_count', 'status'];
     const normalizedRequiredHeaders = requiredHeaders.map(header => header.toLowerCase());
     const validTerms = ['month', 'week', 'year', 'day'];
@@ -109,8 +106,8 @@ export default function ImportMembers({ lid }: { lid: string }) {
         const formData = new FormData();
 
         formData.append('file', file as File);
-        if (programId && planId) {
-            formData.append('programId', programId.toString());
+        if (planId) {
+
             formData.append('planId', planId.toString());
         }
         const { result, error } = await tryCatch(
@@ -160,10 +157,7 @@ export default function ImportMembers({ lid }: { lid: string }) {
                     {preview && <ImportPreview preview={preview} />}
                     {step === 1 && (
                         <div className='space-y-2'>
-                            <SelectField data={programs.filter((p: Program) => p.plans.length)} onChange={setProgramId} label="Select a Program" />
-                            {programId &&
-                                <SelectField data={programs.find((p: Program) => p.id == programId).plans} onChange={setPlanId} label="Select a Plan" />
-                            }
+                            <SelectField data={plans} onChange={setPlanId} label="Select a Plan" />
                             <p className='text-xs text-yellow-400'>If no selection is made, members will be added without a program or plan. You can assign one later.</p>
                         </div>
                     )}

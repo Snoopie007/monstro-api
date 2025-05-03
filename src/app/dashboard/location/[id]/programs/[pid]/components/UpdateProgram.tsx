@@ -23,7 +23,7 @@ export interface UpdateProgramProps {
     programId: number,
     locationId: string
 }
-export default function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
+export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const { program, mutate } = useProgram(locationId, programId);
     const [open, setOpen] = useState<boolean>(false);

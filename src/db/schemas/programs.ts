@@ -51,14 +51,15 @@ export const programsRelations = relations(programs, ({ one, many }) => ({
         fields: [programs.locationId],
         references: [locations.id],
     }),
-    plans: many(memberPlans),
+    plans: many(memberPlans, {
+        relationName: "planPrograms"
+    }),
+    planPrograms: many(planPrograms),
     sessions: many(programSessions),
     instructor: one(staffs, {
         fields: [programs.instructorId],
         references: [staffs.id],
-    }),
-    memberSubscriptions: many(memberSubscriptions),
-    memberPackages: many(memberPackages),
+    })
 }));
 
 

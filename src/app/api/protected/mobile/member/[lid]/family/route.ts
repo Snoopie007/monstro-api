@@ -19,10 +19,10 @@ export async function GET(req: NextRequest, props: { params: Promise<Props> }) {
         const memberId = authMember.member?.id;
         const member = await db.query.members.findFirst({
             where: (members, { eq }) => eq(members.id, Number(memberId)),
-          });
-      
+        });
+
         if (!member) {
-          return NextResponse.json({ error: "Member not found" }, { status: 404 });
+            return NextResponse.json({ error: "Member not found" }, { status: 404 });
         }
 
         const family = await db.query.familyMembers.findMany({
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest, props: { params: Promise<Props> }) {
 
         return NextResponse.json(family, { status: 200 });
     } catch (err) {
-      console.error(err);
+        console.error(err);
         return NextResponse.json({ error: err }, { status: 500 });
     }
 }
@@ -43,10 +43,10 @@ export async function POST(req: NextRequest, props: { params: Promise<Props> }) 
     try {
         const params = await props.params;
         const { firstName, lastName, email, phone, familyMemberId, relationship, familyPlanId } = await req.json();
-        
+
         const authMember = authenticateMember(req);
         const payerMemberId = authMember.member?.id;
-        
+
         if (!payerMemberId) {
             return NextResponse.json({ error: "Member not found" }, { status: 404 });
         }
@@ -113,18 +113,18 @@ export async function POST(req: NextRequest, props: { params: Promise<Props> }) 
                     eq(memberSubscriptions.status, 'active'),
                 )
             });
-    
+
             for await (const pkg of activeMemberPackage) {
                 const childSubCount = await db.select({
                     count: sql<number>`count(*)`
                 }).from(memberPackages)
                     .where(eq(memberPackages.parentId, pkg.id));
-                
+
                 if (childSubCount.length && childSubCount[0].count < familyPlan.familyMemberLimit) {
                     memberPackage = pkg;
                 }
             }
-            
+
         } else if (familyPlan.type == "recurring") {
             const activeMemberSubscriptions = await db.query.memberSubscriptions.findMany({
                 where: (memberSubscriptions, { eq }) => and(
@@ -136,13 +136,13 @@ export async function POST(req: NextRequest, props: { params: Promise<Props> }) 
                     isNull(memberSubscriptions.endedAt)
                 )
             });
-    
+
             for await (const subscription of activeMemberSubscriptions) {
                 const childSubCount = await db.select({
                     count: sql<number>`count(*)`
                 }).from(memberSubscriptions)
                     .where(eq(memberSubscriptions.parentId, subscription.id));
-                
+
                 if (childSubCount.length && childSubCount[0].count < familyPlan.familyMemberLimit) {
                     memberSubscription = subscription;
                 }
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest, props: { params: Promise<Props> }) 
             await db.insert(memberLocations).values({
                 memberId: member.id,
                 locationId: params.lid,
-                status: "active",             
+                status: "active",
             });
         }
 
@@ -168,19 +168,17 @@ export async function POST(req: NextRequest, props: { params: Promise<Props> }) 
             await db.insert(memberPackages).values({
                 memberPlanId: familyPlanId,
                 locationId: params.lid,
-                programId: familyPlan.programId,
                 startDate: memberPackage.startDate,
                 memberId: member.id,
                 parentId: memberPackage.id,
                 paymentMethod: memberPackage.paymentMethod,
-                status: "active",   
+                status: "active",
             });
             emailUrl = `invite/${params.lid}/pkg/${memberPackage.id}`;
         } else if (familyPlan.type == "recurring" && memberSubscription) {
             await db.insert(memberSubscriptions).values({
                 memberPlanId: familyPlanId,
                 locationId: params.lid,
-                programId: familyPlan.programId,
                 status: 'active',
                 startDate: memberSubscription.startDate,
                 currentPeriodStart: memberSubscription.currentPeriodStart,

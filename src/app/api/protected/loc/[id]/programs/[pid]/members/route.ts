@@ -5,21 +5,29 @@ import { Member } from '@/types';
 export async function GET(req: Request, props: { params: Promise<{ pid: number, id: number }> }) {
 	const params = await props.params;
 	try {
-		const subscription = await db.query.memberSubscriptions.findMany({
-			where: (members, { eq }) => eq(members.programId, params.pid),
+		const plans = await db.query.planPrograms.findMany({
+			where: (planPrograms, { eq }) => eq(planPrograms.programId, params.pid)
+		})
+
+		const plansIds = plans.map((plan) => plan.planId)
+
+		const subscriptions = await db.query.memberSubscriptions.findMany({
+			where: (memberSubscriptions, { inArray }) => inArray(memberSubscriptions.memberPlanId, plansIds),
 			with: {
 				member: true
 			}
-		});
+		})
+
 		const packages = await db.query.memberPackages.findMany({
-			where: (packages, { eq }) => eq(packages.programId, params.pid),
+			where: (memberPackages, { inArray }) => inArray(memberPackages.memberPlanId, plansIds),
 			with: {
 				member: true
 			}
-		});
+		})
+
 		const members: Member[] = [];
-		if (subscription && subscription.length) {
-			subscription.forEach((subscription) => {
+		if (subscriptions && subscriptions.length) {
+			subscriptions.forEach((subscription) => {
 				members.push(subscription.member);
 			});
 		}

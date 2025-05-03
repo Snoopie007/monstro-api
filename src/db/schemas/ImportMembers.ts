@@ -17,7 +17,6 @@ export const importMembers = pgTable("import_members", {
     termCount: integer("term_count").notNull(),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
-    programId: integer("program_id").references(() => programs.id),
     planId: integer("plan_id").references(() => memberPlans.id),
     memberId: integer("member_id").references(() => members.id),
     isFamilyPlan: boolean("is_family_plan").notNull().default(false),
@@ -40,9 +39,5 @@ export const importedMembersRelations = relations(importMembers, ({ one }) => ({
     plan: one(memberPlans, {
         fields: [importMembers.planId],
         references: [memberPlans.id],
-    }),
-    program: one(programs, {
-        fields: [importMembers.programId],
-        references: [programs.id],
-    }),
+    })
 }));
