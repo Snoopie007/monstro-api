@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { admindb, db } from '@/db/db';
-import { locations, locationState, vendorLevels, wallets } from '@/db/schemas';
+import { locations, locationState, wallets } from '@/db/schemas';
 import { encodeId } from '@/libs/server/sqids';
 import { formatPhoneNumber } from '@/libs/server/db';
 import { MonstroPlan, Sale } from '@/types/admin';
@@ -88,10 +88,7 @@ export async function POST(req: Request) {
                 lastRenewalDate: today,
             })
 
-            await tx.insert(vendorLevels).values({
-                vendorId,
-                locationId: location.id
-            })
+
 
             await tx.insert(wallets).values({
                 locationId: location.id,
@@ -109,7 +106,7 @@ export async function POST(req: Request) {
 
         const encodedId = encodeId(location.id)
 
-  
+
         return NextResponse.json({ ...location, id: encodedId, status: "active" }, { status: 200 })
 
     } catch (err) {
@@ -118,22 +115,4 @@ export async function POST(req: Request) {
     }
 }
 
-// async function ghlAutomations(sale: Sale) {
 
-//     const integration = await admindb.query.adminIntegrations.findFirst({
-//         where: (vendorIntegration, { eq }) => eq(vendorIntegration.service, "ghl")
-//     })
-
-
-//     if (!integration) {
-//         throw new Error("GHL integration not found")
-//     }
-//     const ghl = new AgencyGHL()
-
-//     await ghl.getAccessToken(integration)
-//     const locationToken = await ghl.getLocationTokenFromAgency({
-//         companyId: integration.providerId,
-//         locationId: "rCcWpfkx9wZlMF7P4C5V",
-//     })
-    
-// }   
