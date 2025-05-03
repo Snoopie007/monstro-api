@@ -59,7 +59,8 @@ ADD COLUMN stripe_subscription_id TEXT;
 ADD COLUMN metadata JSONB NOT NULL DEFAULT '{}';
 
 
-
+ALTER TABLE locations
+DROP CONSTRAINT locations_address_key;
 
 
 

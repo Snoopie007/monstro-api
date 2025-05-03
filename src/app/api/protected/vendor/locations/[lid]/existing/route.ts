@@ -64,7 +64,6 @@ export async function POST(req: Request, props: { params: Promise<{ lid: string 
         }
 
         if (plan && plan.id !== 1) {
-
             await stripe.createSubscription(plan, metadata, 0);
         }
 
