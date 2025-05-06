@@ -22,6 +22,7 @@ import { signIn } from "next-auth/react";
 import { Sale } from "@/types/admin";
 import { TermsAndConditions } from "@/components/terms";
 import { MonstroLegal } from "@/libs/server/MDXParse";
+
 interface InviteFormProps {
     sale: Sale;
     tos: MonstroLegal | undefined;
@@ -81,6 +82,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
             return;
         }
         router.push(`/dashboard/locations/new?sid=${sale.id}`);
+        return
     }
 
     return (

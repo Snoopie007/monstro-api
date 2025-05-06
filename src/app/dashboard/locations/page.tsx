@@ -1,10 +1,6 @@
 import { db } from '@/db/db'
 import React from 'react'
 import { auth } from '@/auth'
-import { Card } from '@/components/ui'
-import { Badge } from '@/components/ui'
-import { ChevronRight } from 'lucide-react'
-import Link from 'next/link'
 import { LocationsList } from './components/LocationsList'
 import { encodeId } from '@/libs/server/sqids'
 

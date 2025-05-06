@@ -12,7 +12,7 @@ import {
 
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { CreditCard, LogOut, PowerOff, User } from "lucide-react";
+import { CreditCard, User } from "lucide-react";
 import { cn } from "@/libs/utils";
 import { useTheme } from "next-themes";
 

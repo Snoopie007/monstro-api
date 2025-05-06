@@ -26,9 +26,9 @@ interface InvitePackagePageProps {
 
 export default async function InvitePackagePage(props: InvitePackagePageProps) {
     const { sid } = await props.params;
-    const searchParams = await props.searchParams;
     const sale = await getSale(sid);
     const tos = await getTOS("term-of-use")
+
     if (!sale) {
         return <div className="flex flex-col gap-4">
             <div className="w-full max-w-lg mx-auto  border bg-white border-gray-200 rounded-sm p-1 space-y-4  ">

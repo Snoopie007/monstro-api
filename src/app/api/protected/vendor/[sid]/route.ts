@@ -4,7 +4,7 @@ import { admindb, db } from '@/db/db';
 import { locations, locationState, wallets } from '@/db/schemas';
 import { encodeId } from '@/libs/server/sqids';
 import { formatPhoneNumber } from '@/libs/server/db';
-import { MonstroPlan, Sale } from '@/types/admin';
+import { MonstroPlan } from '@/types/admin';
 import { PackagePaymentPlan } from '@/types/admin';
 import { VendorStripePayments } from '@/libs/server/stripe';
 import { getPlan } from '../utils';
@@ -108,7 +108,6 @@ export async function POST(req: Request) {
 
 
         return NextResponse.json({ ...location, id: encodedId, status: "active" }, { status: 200 })
-
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
