@@ -16,14 +16,17 @@ export async function GET(req: Request, props: { params: Promise<Params> }) {
 		const program = await db.query.programs.findFirst({
 			where: (programs, { eq }) => eq(programs.id, params.pid),
 			with: {
-				sessions: true,
-				plans: true
-			},
-			// extras: {
-			// 	memberSubscriptions: sql<number>`(SELECT count(*) FROM member_subscriptions WHERE member_subscriptions.program_id = programs.id)`.as("memberSubscriptions"),
-			// 	memberPackages: sql<number>`(SELECT count(*) FROM member_packages WHERE member_packages.program_id = programs.id)`.as("memberPackages")
-			// }
-		});
+					location: true,
+					instructor: true,
+					sessions: true,
+					planPrograms: {
+							with: {
+									plan: true
+							}
+					}
+			}
+	});
+	
 		return NextResponse.json(program, { status: 200 });
 	} catch (err) {
 		console.error(err)

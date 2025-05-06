@@ -17,6 +17,7 @@ type Props = {
 export async function GET(req: Request, props: { params: Promise<Props> }) {
     const params = await props.params;
     try {
+        
         const subscriptions = [];
         const packages = [];
         const subs = await db.select({
@@ -83,7 +84,7 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
         const { firstName, lastName, email, phone, familyMemberId, relationship, familyPlanId } = await req.json();
         let emailUrl = "";
         let newMember = false;
-
+       
         const location = await db.query.locations.findFirst({
             where: eq(locations.id, params.id),
         });

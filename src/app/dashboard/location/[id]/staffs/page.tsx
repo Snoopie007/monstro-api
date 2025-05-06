@@ -138,7 +138,7 @@ export default function StaffsPage(props: StaffsPageProps) {
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={columns.length} className="h-6 w-full font-medium text-center">
-                                                No rewards found.
+                                                No staff found.
                                             </TableCell>
                                         </TableRow>
                                     )}

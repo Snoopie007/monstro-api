@@ -18,7 +18,7 @@ import { Textarea } from '@/components/forms/textarea';
 import { RewardImages } from './RewardImages';
 import { Loader2 } from 'lucide-react';
 
-const InputStyle = "border bg-transparent w-full rounded-[4px] text-sm text-white py-2 px-4 border-white h-auto  font-roboto";
+const InputStyle = "border bg-transparent w-full rounded-[4px] text-sm text-black py-2 px-4 border-white h-auto  font-roboto";
 
 export interface AddrewardProps {
 	reward: Reward | undefined,
@@ -166,7 +166,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 											render={({ field }) => (
 												<FormItem className='space-y-0'>
 													<FormControl>
-														<Input type='text' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(e.currentTarget.value)} />
+														<Input type='text' className={cn(InputStyle)} placeholder="Limit" {...field}  onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -185,7 +185,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 											render={({ field }) => (
 												<FormItem className='space-y-0'>
 													<FormControl>
-														<Input type='text' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(e.currentTarget.value)} />
+														<Input type='number' className={cn(InputStyle)} placeholder="Limit" {...field}  onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -205,7 +205,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 												<FormItem className='space-y-0'>
 
 													<FormControl>
-														<Input type='text' className={cn(InputStyle)} placeholder="Reward" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+														<Input type='number' className={cn(InputStyle)} placeholder="Reward" {...field}  onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
