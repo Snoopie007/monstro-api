@@ -121,7 +121,7 @@
     "eslint": "^9.22.0",
     "eslint-config-next": "15.0.3",
     "postcss": "^8",
-    "supabase": "^2.22.6",
+    "supabase": "^2.22.12",
     "tailwind-merge": "^2.5.5",
     "tailwindcss": "^4.0.14",
     "tailwindcss-animate": "^1.0.7",

@@ -34,28 +34,37 @@ ADD COLUMN marketing_details JSONB NOT NULL DEFAULT '{}';
 
 
 ALTER TABLE member_subscriptions
-DROP CONSTRAINT fk_member_subscriptions_program_id;
+DROP CONSTRAINT member_subscriptions_program_id_fkey;
 
 ALTER TABLE member_subscriptions
-DROP COLUMN program_id,
+DROP COLUMN program_id;
+
+ALTER TABLE member_packages
+DROP CONSTRAINT member_packages_program_id_fkey;
+
+ALTER TABLE member_packages
+DROP COLUMN program_id;
+
+
+ALTER TABLE import_members
+DROP CONSTRAINT import_members_program_id_fkey;
 
 ALTER TABLE import_members
 DROP COLUMN program_id;
 
-ALTER TABLE import_members
-DROP CONSTRAINT import_members_program_id_fkey;
 
 ALTER TABLE reservations
 DROP CONSTRAINT IF EXISTS unique_session_package,
 DROP CONSTRAINT IF EXISTS unique_session_subscription;
 
-
 ALTER TABLE reservations
-ADD CONSTRAINT unique_session_package_single_session UNIQUE (session_id, member_package_id, start_date);
-ADD CONSTRAINT unique_session_subscription_single_session UNIQUE (session_id, member_subscription_id, start_date);
+ADD CONSTRAINT unique_session_package_single_session UNIQUE (session_id, member_package_id, start_date),
+ADD CONSTRAINT unique_session_subscription_single_session UNIQUE (session_id, member_subscription_id, start_date),
+ADD CONSTRAINT unique_session_package_multi_session UNIQUE (session_id, member_package_id, auto),
+ADD CONSTRAINT unique_session_subscription_multi_session UNIQUE (session_id, member_subscription_id, auto);
 
-ALTER TABLE locations_state
-ADD COLUMN stripe_subscription_id TEXT;
+ALTER TABLE location_state
+ADD COLUMN stripe_subscription_id TEXT,
 ADD COLUMN metadata JSONB NOT NULL DEFAULT '{}';
 
 
