@@ -12,7 +12,6 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 				with: {
 					member: true,
 					contractTemplate: true,
-					plan: true
 				}
 			});
 

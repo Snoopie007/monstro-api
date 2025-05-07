@@ -1,4 +1,4 @@
-import { integer, boolean, text, timestamp, pgTable, serial, jsonb, foreignKey, primaryKey } from "drizzle-orm/pg-core";
+import { integer, boolean, text, timestamp, pgTable, serial, jsonb, foreignKey } from "drizzle-orm/pg-core";
 import { planPrograms } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { relations, sql } from "drizzle-orm";
@@ -93,10 +93,6 @@ export const memberPackages = pgTable("member_packages", {
 ]);
 
 export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
-	contract: one(contractTemplates, {
-		fields: [memberPlans.contractId],
-		references: [contractTemplates.id],
-	}),
 	location: one(locations, {
 		fields: [memberPlans.locationId],
 		references: [locations.id],

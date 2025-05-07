@@ -14,7 +14,10 @@ import { useSignedContracts } from '@/hooks/useContracts';
 
 import Loading from '@/components/loading';
 import Link from 'next/link';
-import { TablePage, TablePageContent, TablePageFooter, TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle } from "@/components/ui/TablePage";
+import {
+    TablePage, TablePageContent, TablePageFooter,
+    TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle
+} from "@/components/ui/TablePage";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 
@@ -62,7 +65,7 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                     <Table className=" w-auto border-r border-b border-foreground/10 ">
                         <TableHeader className=" text-xs  border-foreground/10">
                             <TableRow className='bg-foreground/10 ' >
-                                {["Title", "Program", "Plan", "Member", "Signed", "Download"].map((title) => (
+                                {["Title", "Member", "Signed Date", "Download"].map((title) => (
                                     <TableHead key={title} className="font-semibold text-foreground h-auto py-2 border border-foreground/10 text-xs" >
                                         {title}
                                     </TableHead>
@@ -77,13 +80,7 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                                             <TableCell className="text-sm py-1 border border-foreground/10">
                                                 {contract.contractTemplate.title}
                                             </TableCell>
-                                            <TableCell className="text-sm  py-1 border border-foreground/10">
-                                                {contract.plan ? contract.plan.program.name : ""}
-                                            </TableCell>
 
-                                            <TableCell className="text-sm  py-1 border border-foreground/10">
-                                                {contract.plan ? contract.plan.name : ""}
-                                            </TableCell>
 
                                             <TableCell className="text-sm  py-1 border border-foreground/10">
                                                 {contract.member.firstName} {contract.member.lastName}

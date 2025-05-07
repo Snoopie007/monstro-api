@@ -52,7 +52,6 @@ export const memberContracts = pgTable("member_contracts", {
     memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     templateId: integer("contract_id").notNull().references(() => contractTemplates.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    memberPlanId: integer("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" }),
     signature: text("signature"),
     variables: jsonb("variables").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     signed: boolean("signed").notNull().default(false),
@@ -149,10 +148,6 @@ export const memberContractsRelations = relations(memberContracts, ({ many, one 
         fields: [memberContracts.memberId],
         references: [members.id],
     }),
-    plan: one(memberPlans, {
-        fields: [memberContracts.memberPlanId],
-        references: [memberPlans.id],
-    }),
     contractTemplate: one(contractTemplates, {
         fields: [memberContracts.templateId],
         references: [contractTemplates.id],
@@ -195,5 +190,5 @@ export const memberRewardRelations = relations(memberRewards, ({ one }) => ({
     member: one(members, {
         fields: [memberRewards.memberId],
         references: [members.id],
-      }),
+    }),
 }));
