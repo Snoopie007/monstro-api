@@ -67,10 +67,11 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
         )
         await sleep(1000);
 
-        setLoading(false);
 
 
         if (error || !result || !result.ok) {
+            setLoading(false);
+
             const data = await result?.json();
             toast.error(data?.error || "Uh oh, something went wrong")
             return;

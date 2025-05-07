@@ -43,13 +43,18 @@ export function TermsAndConditions({ checked, setChecked, tos }: TermsAndConditi
                     </p>
                 </div>
             </DialogTrigger>
-            <DialogContent className="max-w-[500px] space-y-4 py-4 border-gray-100 bg-white text-black">
+            <DialogContent className="max-w-[600px] space-y-4 py-4 border-none bg-white text-black">
                 <DialogHeader className="hidden">
                     <DialogTitle></DialogTitle>
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
-                <div className="flex flex-col gap-2 space-y-1 ">
-                    <p className="font-semibold  text-base px-4">Monstro <span className="text-red-500">Terms of Service</span></p>
+                <div className="flex flex-col  ">
+                    <p className="font-semibold  text-base px-4 pb-2">Monstro <span className="text-red-500">Terms of Service</span></p>
+                    <div className="bg-red-500 text-white p-4 ">
+                        <p className="text-sm">
+                            You must scroll to the bottom of the page to accept the terms of service.
+                        </p>
+                    </div>
                     <ScrollArea className="h-[500px] px-4 border-y border-gray-200" onScrollCapture={handleScroll}>
                         <div className='prose py-4   text-black prose-strong:text-black prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'>
                             {tos?.content}

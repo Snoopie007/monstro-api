@@ -59,16 +59,16 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
         const { metadata, ...rest } = result;
 
         form.reset({
-            name: rest.name,
-            industry: rest.industry,
-            phone: rest.phone,
-            website: rest.website,
-            address: rest.address,
-            city: rest.city,
-            state: rest.state,
-            postalCode: rest.postalCode,
-            logoUrl: rest.logoUrl,
-            country: rest.country,
+            name: rest.name || "",
+            industry: rest.industry || "",
+            phone: rest.phone || "",
+            website: rest.website || "",
+            address: rest.address || "",
+            city: rest.city || "",
+            state: rest.state || "",
+            postalCode: rest.postalCode || "",
+            logoUrl: rest.logoUrl || "",
+            country: rest.country || "USA",
         });
 
         setMetadata(metadata);
@@ -111,9 +111,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
         })
 
         const url = saleId ? `/dashboard/location/${data.id}` : `/dashboard/locations/new/${data.id}`;
-
         return router.push(url);
-
 
     }
 

@@ -19,8 +19,6 @@ interface VerifyOTPProps {
     form: UseFormReturn<z.infer<typeof LoginSchema>>;
 }
 
-
-
 export default function VerifyOTP({ form }: VerifyOTPProps) {
 
     const [loading, setLoading] = useState(false);

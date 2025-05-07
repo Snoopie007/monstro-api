@@ -3,7 +3,7 @@ import { auth } from "./auth"
 import { decodeId } from "./libs/server/sqids"
 import { jwtVerify } from "jose";
 
-const publicPaths = ["/login", "/api/auth", "/api/location", "/join", "/api/webhooks"]
+const publicPaths = ["/login", "/api/auth", "/join", "/api/webhooks"]
 
 async function verifyToken(token: string): Promise<boolean> {
 	try {
@@ -81,8 +81,7 @@ export default auth(async (req) => {
 			}
 
 			if (pathname === "/" || publicPaths.includes(pathname)) {
-				const next = locations.find((loc: { status: string }) => loc.status === "active") || locations.find((loc: { status: string }) => loc.status === "incomplete")
-				return NextResponse.redirect(new URL(`/${next.status === "active" ? "dashboard/location" : NewLocationPath}/${next.id}`, req.nextUrl.origin))
+				return NextResponse.redirect(new URL(`/dashboard/locations`, req.nextUrl.origin))
 			}
 
 			const [, path, locationId] = pathname.match(/^\/((?:dashboard\/location|dashboard\/locations\/new))\/([^/]+)(\/.*)?$/) || []
@@ -95,26 +94,20 @@ export default auth(async (req) => {
 					return NextResponse.redirect(new URL("/dashboard/locations", req.nextUrl.origin))
 				}
 
-				if (path.startsWith("dashboard/locations/new")) {
-					return NextResponse.next()
-				}
-
 				/** If the path is not allowed for the current location, redirect to the dashboard of the next location */
-				const allowedInactivePaths = [`/dashboard/location/${next.id}`]
-				if (
-					path.startsWith("dashboard") &&
-					!allowedInactivePaths.includes(pathname) &&
-					!["active", "incomplete"].includes(next.status)
-				) {
-					return NextResponse.redirect(new URL(`/dashboard/location/${next.id}`, req.nextUrl.origin))
+				const allowedInactivePaths = [`/dashboard/location/${next.id}/suspended`]
+				if (!["active", "incomplete"].includes(next.status) && !allowedInactivePaths.includes(path)) {
+					return NextResponse.redirect(new URL(`/dashboard/location/${next.id}/suspended`, req.nextUrl.origin))
 				}
 
-				const isOnboarding = next.status === "incomplete"
-				const targetPath = isOnboarding ? NewLocationPath : "dashboard/location"
+				return NextResponse.next()
 
-				if (path !== targetPath) {
-					return NextResponse.redirect(new URL(`/${targetPath}/${next.id}`, req.nextUrl.origin))
-				}
+				// const isOnboarding = next.status === "incomplete"
+				// const targetPath = isOnboarding ? NewLocationPath : "dashboard/location"
+
+				// if (path !== targetPath) {
+				// 	return NextResponse.redirect(new URL(`/${targetPath}/${next.id}`, req.nextUrl.origin))
+				// }
 			}
 		}
 

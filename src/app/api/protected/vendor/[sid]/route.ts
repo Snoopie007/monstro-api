@@ -11,6 +11,7 @@ import { getPlan } from '../utils';
 import { eq } from 'drizzle-orm';
 import { getPaymentPlan } from '../utils';
 import { sales } from '@/db/admin/sales';
+import { Location } from '@/types';
 
 const stripe = new VendorStripePayments();
 
@@ -39,16 +40,26 @@ export async function POST(req: Request) {
 
         const today = new Date();
 
-        const [location] = await db.insert(locations).values({
-            ...data,
-            vendorId,
-            phone: formatPhoneNumber(data.phone),
-            slug: data.name.toLowerCase().replace(/ /g, '')
-        }).returning({ id: locations.id, name: locations.name })
+        let location: Location | undefined = undefined;
+        location = await db.query.locations.findFirst({
+            where: (location, { eq }) => eq(location.name, data.name),
+            with: {
+                locationState: true
+            }
+        })
 
+        if (location && location.locationState?.status === "active") {
+            return NextResponse.json({ error: "Location already exists" }, { status: 400 })
+        }
 
         if (!location) {
-            throw new Error("Error creating location")
+            const [loc] = await db.insert(locations).values({
+                ...data,
+                vendorId,
+                phone: formatPhoneNumber(data.phone),
+                slug: data.name.toLowerCase().replace(/ /g, '')
+            }).returning()
+            location = loc;
         }
 
         const metadata = { vendorId, locationId: location.id }
