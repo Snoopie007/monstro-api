@@ -30,6 +30,9 @@ export async function POST(req: NextRequest) {
         }
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
+
+        const { id, ...rest } = sale;
+
         await db.transaction(async (tx) => {
             const [{ id }] = await tx.insert(users).values({
                 name: `${sale.firstName} ${sale.lastName}`,
@@ -37,17 +40,16 @@ export async function POST(req: NextRequest) {
                 password: hashedPassword,
             }).returning({ id: users.id })
 
+
             const [{ vid }] = await tx.insert(vendors).values({
-                ...sale,
-                id: undefined,
+                ...rest,
                 phone: formatPhoneNumber(sale.phone),
                 userId: id,
             }).returning({ vid: vendors.id });
 
             await tx.insert(vendorLevels).values({
                 vendorId: vid
-            })
-
+            });
         })
 
         await admindb.update(sales).set({
