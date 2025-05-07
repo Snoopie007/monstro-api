@@ -144,7 +144,7 @@ export function BotSettings({ lid, bot }: BotSettingsProps) {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className="rounded-sm">Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => push(`/dashboard/locations/profile/${lid}/ai`)} className="rounded-sm">Continue</AlertDialogAction>
+                        <AlertDialogAction onClick={() => push(`/dashboard/location/${lid}/ai`)} className="rounded-sm">Continue</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

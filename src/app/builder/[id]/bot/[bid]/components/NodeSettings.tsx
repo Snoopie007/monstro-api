@@ -111,7 +111,7 @@ export function NodeSettings() {
     return (
         <Sheet open={!!currentNode} onOpenChange={(open) => setCurrentNode(open ? currentNode : null)}  >
 
-            <SheetContent className="w-[550px] sm:max-w-[550px] sm:w-[550px] p-0" >
+            <SheetContent id="botSettings" className="w-[550px] sm:max-w-[550px] sm:w-[550px] p-0" >
                 <SheetHeader className=" border-foreground/5  border-b">
                     <SheetTitle >Update {currentNode?.node.label}</SheetTitle>
                     <SheetDescription className="hidden"></SheetDescription>
