@@ -31,7 +31,10 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
         []
     )
 
-    const programs = attendances?.map((attendance: ExtendedAttendance) => attendance.programName)
+    const programs: string[] = attendances 
+        ? Array.from(new Set(attendances.map((attendance: ExtendedAttendance) => attendance.programName)))
+        : [];
+
     const table = useReactTable({
         data: attendances || [],
         columns: MemberAttendanceColumns,
@@ -46,20 +49,19 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
     })
 
 
-
     return (
         <div className="space-y-2">
             <div className="flex flex-row justify-between items-center px-4 gap-2">
                 <div className="flex flex-row gap-2 items-center">
-                    <Select onValueChange={(value) => {
+                <Select onValueChange={(value) => {
                         table.getColumn("programName")?.setFilterValue(value)
                     }}>
-                        <SelectTrigger >
+                        <SelectTrigger>
                             <SelectValue placeholder="Filter by program" />
                         </SelectTrigger>
                         <SelectContent>
-                            {programs && programs.map((program: string) => (
-                                <SelectItem key={program} value={program}>
+                            {programs.map((program: string, index: number) => (
+                                <SelectItem key={`${program}-${index}`} value={program}>
                                     {program}
                                 </SelectItem>
                             ))}

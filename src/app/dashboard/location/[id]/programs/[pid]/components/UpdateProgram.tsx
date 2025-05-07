@@ -23,54 +23,65 @@ export interface UpdateProgramProps {
     programId: number,
     locationId: string
 }
+
 export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const { program, mutate } = useProgram(locationId, programId);
     const [open, setOpen] = useState<boolean>(false);
+    
+    // Initialize form with default values that match your program structure
     const form = useForm<z.infer<typeof UpdateProgramSchema>>({
         resolver: zodResolver(UpdateProgramSchema),
         defaultValues: {
-            description: "",
-            name: "",
-            capacity: 0,
-            minAge: 0,
-            maxAge: 0,
+            description: program?.description || "",
+            name: program?.name || "",
+            capacity: program?.capacity || 0,
+            minAge: program?.minAge || 0,
+            maxAge: program?.maxAge || 0,
         },
         mode: "onChange",
     });
 
+    // Reset form when program changes or dialog opens
     useEffect(() => {
-        form.reset({
-            description: program.description,
-            name: program.name
-        })
-    }, [program])
+        if (program && open) {
+            form.reset({
+                description: program.description || "",
+                name: program.name || "",
+                capacity: program.capacity || 0,
+                minAge: program.minAge || 0,
+                maxAge: program.maxAge || 0,
+            });
+        }
+    }, [program, open]);
 
     async function submitForm(v: z.infer<typeof UpdateProgramSchema>) {
-        setLoading(true)
+        setLoading(true);
         try {
-            await sleep(2000)
+            await sleep(2000);
             const { result, error } = await tryCatch(
-                fetch(`/api/protected/loc/location/${locationId}/programs/${programId}`, {
-                    method: 'PUT',
+                fetch(`/api/protected/loc/${locationId}/programs/${programId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
                     body: JSON.stringify(v)
                 })
-            )
-            if (!error || !result || !result.ok) {
-                toast.error("Error updating the program, please try again.")
-
-                return
+            );
+            
+            if (error || !result || !result.ok) {
+                toast.error("Error updating the program, please try again.");
+                return;
             }
 
-            const data = await result.json()
-            mutate({ ...program, ...data })
-            toast.success("Program updated successfully")
+            const data = await result.json();
+            mutate({ ...program, ...data });
+            toast.success("Program updated successfully");
+            setOpen(false);
         } catch (error) {
-            toast.error("Error updating the program, please try again.")
-
+            toast.error("Error updating the program, please try again.");
         } finally {
-            setOpen(false)
-            setLoading(false)
+            setLoading(false);
         }
     }
 
@@ -86,100 +97,118 @@ export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
                 </DialogHeader>
                 <DialogBody>
                     <Form {...form}>
-                        <form className='' >
-                            <fieldset>
+                        <form onSubmit={form.handleSubmit(submitForm)} className='space-y-4'>
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel size={"tiny"}>Program Name</FormLabel>
+                                        <FormControl>
+                                            <Input 
+                                                type='text' 
+                                                placeholder="Program Name" 
+                                                {...field} 
+                                                value={field.value || ""} // Ensure value is never undefined
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel size={"tiny"}>Program Description</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                placeholder="Program Description"
+                                                className="resize-none"
+                                                {...field}
+                                                value={field.value || ""} // Ensure value is never undefined
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div className='flex flex-row items-center gap-2 w-full'>
                                 <FormField
                                     control={form.control}
-                                    name="name"
+                                    name="capacity"
                                     render={({ field }) => (
-                                        <FormItem className="mb-4">
-                                            <FormLabel size={"tiny"}>Program Name</FormLabel>
+                                        <FormItem className="flex-1">
+                                            <FormLabel size={"tiny"}>Capacity</FormLabel>
                                             <FormControl>
-                                                <Input type='text' className={cn("")} placeholder="Program Name" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel size={"tiny"}>Program Description</FormLabel>
-                                            <FormControl>
-                                                <Textarea
-                                                    placeholder="Program Description"
-                                                    className="resize-none border "
-                                                    {...field}
+                                                <Input 
+                                                    type='number' 
+                                                    placeholder='Capacity'  
+                                                    {...field} 
+                                                    value={field.value ?? 0} // Ensure value is never undefined
+                                                    onChange={(e) => field.onChange(Number(e.target.value))}
                                                 />
                                             </FormControl>
-
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                                <fieldset className='flex flex-row items-center gap-2  w-full'>
-
-                                    <FormField
-                                        control={form.control}
-                                        name="capacity"
-                                        render={({ field }) => (
-                                            <FormItem >
-                                                <FormLabel size={"tiny"}>Capacity</FormLabel>
-                                                <FormControl>
-                                                    <Input type='number' className={cn()} placeholder={'Capacity'}  {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="minAge"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormLabel size={"tiny"}>Min Age</FormLabel>
-                                                <FormControl>
-                                                    <Input type='number' className={cn()} placeholder={'Min Age'} {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="maxAge"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormLabel size={"tiny"}>Max Age</FormLabel>
-                                                <FormControl>
-                                                    <Input type='number' className={cn()} placeholder={'Max Age'} {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-
-                                        )}
-                                    />
-                                </fieldset>
-                            </fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="minAge"
+                                    render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                            <FormLabel size={"tiny"}>Min Age</FormLabel>
+                                            <FormControl>
+                                                <Input 
+                                                    type='number' 
+                                                    placeholder='Min Age' 
+                                                    {...field} 
+                                                    value={field.value ?? 0} // Ensure value is never undefined
+                                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="maxAge"
+                                    render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                            <FormLabel size={"tiny"}>Max Age</FormLabel>
+                                            <FormControl>
+                                                <Input 
+                                                    type='number' 
+                                                    placeholder='Max Age' 
+                                                    {...field} 
+                                                    value={field.value ?? 0} // Ensure value is never undefined
+                                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                         </form>
                     </Form>
                 </DialogBody>
                 <DialogFooter>
-                    <Button onClick={form.handleSubmit(submitForm)}
+                    <Button 
+                        onClick={form.handleSubmit(submitForm)}
                         variant={"foreground"}
                         size={"sm"}
-                        disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
-                        className={cn("children:hidden", (loading && "children:inline-block"))}>
+                        disabled={loading || !form.formState.isValid}
+                        className={cn("children:hidden", loading && "children:inline-block")}
+                    >
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Update
                     </Button>
                 </DialogFooter>
             </DialogContent>
-
         </Dialog>
-    )
+    );
 }

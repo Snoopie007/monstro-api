@@ -8,6 +8,7 @@ type Params = {
     pid: number,
     lid: number
 }
+
 export async function GET(req: NextRequest, props: { params: Promise<Params> }) {
     const params = await props.params;
 
@@ -27,6 +28,40 @@ export async function GET(req: NextRequest, props: { params: Promise<Params> }) 
         })
 
         return NextResponse.json(sessions, { status: 200 });
+    } catch (err) {
+        console.log(err);
+        return NextResponse.json({ error: err }, { status: 500 });
+    }
+}
+
+
+export async function POST(req: Request, props: { params: Promise<{ pid: number }> }) {
+    const params = await props.params;
+    const { time, duration, day } = await req.json();
+    
+    try {
+        await db.transaction(async (tx) => {
+            
+            const [session] = await tx.insert(programSessions)
+                .values({
+                    programId: params.pid,
+                    time,
+                    duration,
+                    day,
+                    
+                })
+                .returning({ 
+                    id: programSessions.id,
+                    programId: programSessions.programId,
+                    time: programSessions.time,
+                    duration: programSessions.duration,
+                    day: programSessions.day,
+                });
+
+            return session;
+        });
+
+        return NextResponse.json({ success: true }, { status: 200 });
     } catch (err) {
         console.log(err);
         return NextResponse.json({ error: err }, { status: 500 });

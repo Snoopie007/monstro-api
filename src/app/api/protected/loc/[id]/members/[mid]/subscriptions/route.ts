@@ -139,3 +139,41 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
+
+export async function DELETE(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
+    const params = await props.params;
+    const { subscriptionId } = await req.json();
+
+    try {
+        // First check if subscription exists
+        const existingSub = await db.query.memberSubscriptions.findFirst({
+            where: (memberSubscriptions, { eq, and }) => and(
+                eq(memberSubscriptions.id, subscriptionId),
+                eq(memberSubscriptions.memberId, params.mid),
+                eq(memberSubscriptions.locationId, params.id)
+            )
+        });
+
+        if (!existingSub) {
+            return NextResponse.json({ error: "Subscription not found" }, { status: 404 });
+        }
+
+        const deletedSub = await db.update(memberSubscriptions)
+            .set({
+                status: "canceled",
+                cancelAt: new Date(),
+                
+            })
+            .where(and(
+                eq(memberSubscriptions.id, subscriptionId),
+                eq(memberSubscriptions.memberId, params.mid),
+                eq(memberSubscriptions.locationId, params.id)
+            ))
+            .returning();
+
+        return NextResponse.json(deletedSub, { status: 200 });
+    } catch (err) {
+        console.log(err);
+        return NextResponse.json({ error: err }, { status: 500 });
+    }
+}
