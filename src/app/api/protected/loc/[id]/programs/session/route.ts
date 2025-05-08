@@ -17,6 +17,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
     }
 }
 
+
 export async function DELETE(req: NextRequest, props: { params: Promise<{ id: number }> }) {
     const params = await props.params;
     const { sessionId } = await req.json();
