@@ -40,11 +40,12 @@ async function chargeWallet(location: Location, amount: number, description: str
 	if (!wallet) { throw new Error("Wallet not found") }
 
 	try {
-		if (wallet.balance < (wallet.rechargeThreshold * 100)) {
+		if (wallet.balance < (wallet.rechargeThreshold)) {
 			const stripe = new VendorStripePayments();
 			const vendor = await db.query.vendors.findFirst({
 				where: (vendor, { eq }) => eq(vendor.id, location.vendorId)
 			});
+
 			if (!vendor || !vendor.stripeCustomerId) { throw new Error("Vendor not found") }
 			stripe.setCustomer(vendor.stripeCustomerId);
 			const { clientSecret } = await stripe.createPaymentIntent(wallet.rechargeAmount, undefined, {
@@ -65,7 +66,6 @@ async function chargeWallet(location: Location, amount: number, description: str
 		}
 
 		const today = new Date();
-
 		db.transaction(async (tx) => {
 			await tx.update(wallets).set({
 				balance: wallet.balance,
