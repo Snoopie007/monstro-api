@@ -67,9 +67,14 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
     },
 
     {
-        name: "Staffs",
+        name: "Staff",
         path: "staffs",
         icon: "AtSign"
+    },
+    {
+        name: "Calendar",
+        path: "calendar",
+        icon: "CalendarClock"
     },
     {
         name: "Transactions",
@@ -81,11 +86,7 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
         path: "reporting",
         icon: "SquareChartGantt"
     },
-    {
-        name: "Calendar",
-        path: "big-calender-demo",
-        icon: "CalendarClock"
-    },
+
     {
         name: "Settings",
         path: "settings/company",

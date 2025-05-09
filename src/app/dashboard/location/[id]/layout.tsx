@@ -34,7 +34,7 @@ export default async function LocationLayout(props: LocationLayoutProps) {
                 <LocationTopNav lid={params.id} />
                 <div className="relative flex flex-1 flex-row justify-start items-start  w-full">
                     <LocationSideNav lid={params.id} />
-                    <div className="flex-1 h-full">
+                    <div className="flex-1 h-[calc(100vh-52px)]">
                         {children}
                     </div>
                 </div>

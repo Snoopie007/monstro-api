@@ -19,3 +19,16 @@ export type ExtendedAttendance = Attendance & {
 };
 
 export type Reservation = typeof reservations.$inferInsert
+
+
+export type CalendarEvent = {
+    id: string
+    title: string
+    end: Date
+    duration: number
+    start: Date
+    data: Record<string, unknown>
+}
+
+
+export type CalendarView = 'month' | 'week' | 'day';
