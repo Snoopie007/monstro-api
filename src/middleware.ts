@@ -80,7 +80,7 @@ export default auth(async (req) => {
 				return NextResponse.redirect(new URL(NewLocationPath, req.nextUrl.origin))
 			}
 
-			if (pathname === "/" || publicPaths.includes(pathname)) {
+			if (pathname === "/" || publicPaths.includes(pathname) || pathname.startsWith("/join")) {
 				return NextResponse.redirect(new URL(`/dashboard/locations`, req.nextUrl.origin))
 			}
 
