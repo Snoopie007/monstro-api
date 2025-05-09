@@ -167,11 +167,11 @@ export type IncompletePlan = {
 
 export type FamilyPlan = {
     planName: string;
-    programName: string;
+    planId: number;
     subscriptionId?: number;
     packageId?: number;
-
 }
+
 export type ImportMember = {
     id: number;
     firstName: string;

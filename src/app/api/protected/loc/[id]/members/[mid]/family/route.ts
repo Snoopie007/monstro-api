@@ -48,6 +48,7 @@ export async function GET(req: Request, props: { params: Promise<Props> }) {
 
         const pkgs = await db.select({
             planName: memberPlans.name,
+            planId: memberPlans.id,
             packageId: memberPackages.id,
             planFamilyLimit: memberPlans.familyMemberLimit,
         }).from(memberPackages)
@@ -57,7 +58,10 @@ export async function GET(req: Request, props: { params: Promise<Props> }) {
                     eq(memberPackages.locationId, params.id),
                     eq(memberPackages.memberPlanId, memberPlans.id)
                 ))
-            .innerJoin(memberPlans, and(eq(memberPackages.memberPlanId, memberPlans.id), eq(memberPlans.family, false)))
+            .innerJoin(memberPlans, and(
+                eq(memberPackages.memberPlanId, memberPlans.id),
+                eq(memberPlans.family, true)
+            ))
 
         for await (const pkg of pkgs) {
             const childSubCount = await db.select({
