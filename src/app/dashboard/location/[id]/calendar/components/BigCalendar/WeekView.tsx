@@ -23,12 +23,14 @@ export function WeekView({ events = [], currentDate }: WeekViewProps) {
 
     const processedEvents = useMemo(() => {
         return events.map(event => {
-            const heightInPixels = Math.max(Math.floor(event.duration * 60 / 60), 30); // 60px per hour, minimum 30px
-
+            const height = Math.max(event.duration, 30);
+            const start = new Date(event.start);
+            // Calculate top position based on 60px per hour
+            const top = (start.getHours() * 60) + (start.getMinutes());
             return {
                 ...event,
-                heightInPixels,
-                minuteOffset: event.duration / 60 * 100
+                height,
+                top
             };
         });
     }, [events]);
@@ -83,7 +85,7 @@ export function WeekView({ events = [], currentDate }: WeekViewProps) {
 }
 
 
-type ProcessedEvent = CalendarEvent & { heightInPixels: number; minuteOffset: number }
+type ProcessedEvent = CalendarEvent & { height: number; top: number }
 
 interface HourRowProps {
     hour: number;
@@ -129,10 +131,10 @@ function HourRow({
                 const isTodayCell = isToday(day);
 
                 return (
-                    <div key={di} className={cn("relative min-h-[60px] ",
-                        di < 6 && "border-r border-foreground/10",
-                        hourIndex < totalHours - 1 && "border-b border-foreground/10",
-                        isTodayCell ? "bg-foreground/10" : "bg-background"
+                    <div key={di} className={cn(" min-h-[60px] ",
+                        { "border-r border-foreground/10": di < 6 },
+                        { "border-b border-foreground/10": hourIndex < totalHours - 1 },
+                        { "bg-foreground/10": isTodayCell }
                     )} >
                         {dayEvents.map((event) => {
 
@@ -142,8 +144,8 @@ function HourRow({
                                     event={event}
                                     onSelect={setCurrentEvent}
                                     position={{
-                                        top: event.minuteOffset,
-                                        height: event.heightInPixels
+                                        top: event.top,
+                                        height: event.height
                                     }}
                                 />
                             );
@@ -195,17 +197,19 @@ function WeekEvenItem({ event, onSelect, position }: WeekEvenItemProps) {
         <div
             className="absolute"
             style={{
-                top: `${position.top}%`,
+                top: `${position.top}px`,
                 height: `${position.height}px`,
                 zIndex: 10
             }}
             onClick={() => onSelect && onSelect(event)}
         >
-            <div className='border-l-3 border-indigo-500 text-xs rounded-sm cursor-pointer bg-foreground text-background p-2'>
-                <div className="font-medium text-sm truncate">{event.title}</div>
-                <div className="text-[10px] truncate">
-                    {eventTimeLabel}
-                </div>
+            <div className={cn(
+                "border-l-3 border-indigo-500 min-w-[100px] text-xs rounded-sm cursor-pointer",
+                "bg-foreground text-background p-2",
+                "hover:bg-foreground/80 transition-colors"
+            )}>
+                {event.title}
+
             </div>
 
         </div>

@@ -46,7 +46,7 @@ function CalendarPage(props: { params: Promise<{ id: string }> }) {
 			<div className="flex-1 h-full">
 				<BigCalendar events={events} />
 			</div>
-			<div className="flex-initial w-[300px] flex flex-col p-2 pt-2 pb-1 space-y-2">
+			<div className="flex-initial w-[300px] flex flex-col pl-0 pr-2 pt-2 pb-1 space-y-2">
 
 				<Calendar
 					mode="single"

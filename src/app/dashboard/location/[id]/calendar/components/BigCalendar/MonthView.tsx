@@ -16,7 +16,7 @@ export function MonthView({
     currentDate,
 }: MonthViewProps) {
     const [calendarDays, setCalendarDays] = useState<Date[]>([]);
-    const { setCurrentEvent } = useSessionCalendar()
+
     useEffect(() => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -73,7 +73,6 @@ export function MonthView({
                         day={day}
                         currentDate={currentDate}
                         events={events}
-                        onSelectEvent={setCurrentEvent}
                         isLastRow={Math.floor(index / 7) === 4} // Changed from 5 to 4 for 5 rows total
                         isLastColumn={(index + 1) % 7 === 0}
                     />
@@ -96,7 +95,6 @@ interface DayItemProps {
 function DayItem({
     day,
     events,
-    onSelectEvent,
     currentDate,
     isLastRow,
     isLastColumn,
@@ -104,6 +102,7 @@ function DayItem({
     const today = new Date()
     const isToday = isSameDay(day, today);
     const isCurrentMonth = isSameMonth(day, currentDate);
+    const { setCurrentDate, setCurrentEvent } = useSessionCalendar()
 
     // Get events for a specific day
     const getEventsForDay = (date: Date) => {
@@ -118,12 +117,15 @@ function DayItem({
     const dayEvents = getEventsForDay(day);
 
     return (
-        <div className={cn(
-            "p-1 relative bg-background border-foreground/5",
-            { "text-indigo-500": isToday, "bg-foreground/10 text-foreground/20": !isCurrentMonth },
-            { "border-b": !isLastRow },
-            { "border-r": !isLastColumn }
-        )} >
+        <div
+            className={cn(
+                "p-1 relative bg-background border-foreground/5 hover:bg-foreground/5 transition-colors cursor-pointer",
+                { "text-indigo-500": isToday, "bg-foreground/10 text-foreground/20": !isCurrentMonth },
+                { "border-b": !isLastRow },
+                { "border-r": !isLastColumn }
+            )}
+            onClick={() => setCurrentDate(day)}
+        >
             <div className="text-right p-1">
                 <span className={cn("inline-block size-6 text-center leading-6",)}>
                     {day.getDate()}
@@ -133,7 +135,7 @@ function DayItem({
 
             <div className="overflow-hidden space-y-0.5">
                 {dayEvents.slice(0, 5).map((event, i) => (
-                    <EventItem key={event.id} event={event} onSelect={onSelectEvent} />
+                    <EventItem key={event.id} event={event} onSelect={setCurrentEvent} />
                 ))}
                 {dayEvents.length > 5 && (
                     <div className="text-xs text-indigo-600 p-1 mb-1 truncate cursor-pointer">
@@ -153,8 +155,7 @@ interface EventItemProps {
 
 function EventItem({ event, onSelect }: EventItemProps) {
     return (
-        <div
-            className="text-xs bg-foreground text-background border-l-3 border-indigo-500 rounded-sm py-1 px-2 truncate cursor-pointer"
+        <div className="text-xs bg-foreground text-background border-l-3 border-indigo-500 rounded-sm py-1 px-2 truncate cursor-pointer"
             onClick={() => onSelect && onSelect(event)}
         >
             ({event.data?.reservationCounts as number || 0}) {event.title}
