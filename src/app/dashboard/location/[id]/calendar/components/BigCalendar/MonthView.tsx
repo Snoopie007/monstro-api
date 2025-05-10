@@ -66,7 +66,7 @@ export function MonthView({
             </div>
 
 
-            <div className="grid grid-cols-7 h-[calc(100vh-155px)]">
+            <div className="grid grid-cols-7 h-[calc(100vh-140px)]">
                 {calendarDays.map((day, index) => (
                     <DayItem
                         key={index}
