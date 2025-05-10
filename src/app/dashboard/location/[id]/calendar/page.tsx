@@ -29,7 +29,9 @@ function CalendarPage(props: { params: Promise<{ id: string }> }) {
 	async function fetchEvents() {
 		setIsLoading(true)
 		const { result, error } = await tryCatch(
-			fetch(`/api/protected/loc/${id}/events?date=${currentDate.toISOString()}`)
+			fetch(`/api/protected/loc/${id}/events?date=${currentDate.toISOString()}`, {
+				cache: 'no-store'
+			})
 		)
 
 		setIsLoading(false)
