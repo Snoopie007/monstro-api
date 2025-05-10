@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 import { Vendor } from "@/types";
 
 
-export function AddDoc({ lid }: { lid: number }) {
+export function AddDoc({ lid }: { lid: string }) {
     const [search, setSearch] = useState<string>("");
     const [customer, setCustomer] = useState<Partial<Vendor> | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
@@ -64,7 +64,7 @@ export function AddDoc({ lid }: { lid: number }) {
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Add a PDF Document</DialogTitle>
+                    <DialogTitle>Add PDF Document</DialogTitle>
                 </DialogHeader>
                 <DialogBody className="space-y-2">
 

@@ -27,7 +27,7 @@ export default async function AIBotsPage(props: { params: Promise<{ id: string }
         </div>
     }
     return (
-        <div className='flex flex-row  h-[calc(100vh-58px)]'>
+        <div className='flex flex-row  h-[calc(100vh-50px)]'>
             <Botlist lid={params.id} location={location} />
         </div>
     )

@@ -1,19 +1,20 @@
-import { Button } from '@/components/ui/button'
+
 import React from 'react'
 import { db } from '@/db/db'
 import { format } from 'date-fns'
 import { AddDoc } from './components/AddDoc'
-async function getDocuments(lid: number) {
-
-    const docs = await db.query.documents.findMany({
-        where: (docs, { eq }) => eq(docs.locationId, lid)
-    })
-    return docs;
+import { decodeId } from '@/libs/server/sqids';
+async function getDocuments(lid: string) {
+    const decodedLid = decodeId(lid);
+    // const docs = await db.query.documents.findMany({
+    //     where: (docs, { eq }) => eq(docs.locationId, decodedLid)
+    // })
+    return [];
 }
 
-export default async function AIKnowledgePage({ params }: { params: Promise<{ lid: number }> }) {
-    const { lid } = await params;
-    const documents = await getDocuments(lid);
+export default async function AIKnowledgePage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const documents = await getDocuments(id);
     return (
         <div className='flex flex-col max-w-xl mx-auto py-4'>
             <div className=' flex flex-row justify-between border-b border-foreground/10 items-center  gap-2 pb-4'>
@@ -22,11 +23,11 @@ export default async function AIKnowledgePage({ params }: { params: Promise<{ li
                     <p className='text-sm text-gray-500'>Upload PDFs to create a knowledge base for your AI.</p>
                 </div>
                 <div>
-                    <AddDoc lid={lid} />
+                    <AddDoc lid={id} />
                 </div>
             </div>
             <div className='flex flex-row justify-start items-center  gap-2 py-2'>
-                {documents.length > 0 ? (
+                {/* {documents.length > 0 ? (
                     documents.map((doc) => (
                         <div key={doc.id}>
                             <div>{doc.name}</div>
@@ -40,7 +41,7 @@ export default async function AIKnowledgePage({ params }: { params: Promise<{ li
                         <span className='text-sm text-muted-foreground'> Upload a document to get started</span>
 
                     </div>
-                )}
+                )} */}
             </div>
         </div >
     )

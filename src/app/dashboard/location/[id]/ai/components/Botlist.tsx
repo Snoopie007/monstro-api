@@ -54,7 +54,7 @@ export function Botlist({ lid, location }: { lid: string, location: Location }) 
     }
     return (
         <>
-            <div className={`flex-1  border-r h-full`}>
+            <div className={`flex-1 border-r   h-full`}>
                 <div className=' px-4 flex flex-row justify-start items-center border-b  gap-2 py-2'>
 
                     <Button variant={"foreground"} size={"xs"} asChild>
