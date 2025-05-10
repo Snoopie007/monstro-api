@@ -69,9 +69,9 @@ export function CalendarToolbar({
     };
 
     return (
-        <div className="flex items-center border-b border-foreground/5 justify-between py-1.5">
+        <div className="flex items-center justify-between py-1.5">
             <div className='flex flex-row gap-4 items-center'>
-                <div className="border-r text-sm px-4 py-1 font-semibold">
+                <div className="border-r text-sm px-4 border-foreground/10 font-semibold">
                     {getDateDisplay()}
                 </div>
                 <div className="grid  grid-cols-4 items-center border border-foreground/10 rounded-sm">
@@ -102,7 +102,7 @@ export function CalendarToolbar({
                             key={viewType}
                             value={viewType}
                             className={cn("w-16 rounded-none font-semibold text-xs h-8 cursor-pointer", {
-                                'border-x': viewType === 'week'
+                                'border-x border-foreground/10': viewType === 'week'
                             })}
                         >
                             {viewType.charAt(0).toUpperCase() + viewType.slice(1)}

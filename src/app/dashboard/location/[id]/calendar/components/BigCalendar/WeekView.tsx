@@ -1,18 +1,18 @@
 "use client";
 import { ScrollArea } from '@/components/ui';
 import { cn } from '@/libs/utils';
-import { format, startOfWeek, addDays, isToday, differenceInMinutes } from 'date-fns';
-import React, { useMemo, useCallback, memo } from 'react';
+import { format, startOfWeek, addDays, isToday } from 'date-fns';
+import React, { useMemo, memo } from 'react';
 import { CurrentTimeLine } from '.';
 import { CalendarEvent } from '@/types';
+import { useSessionCalendar } from '../../providers/SessionCalendarProvider';
 
 interface WeekViewProps {
     events?: CalendarEvent[];
-    onSelectEvent?: (event: CalendarEvent) => void;
     currentDate: Date;
 }
 
-export function WeekView({ events = [], onSelectEvent, currentDate }: WeekViewProps) {
+export function WeekView({ events = [], currentDate }: WeekViewProps) {
 
     const weekDays = useMemo(() => {
         const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
@@ -23,29 +23,17 @@ export function WeekView({ events = [], onSelectEvent, currentDate }: WeekViewPr
 
     const processedEvents = useMemo(() => {
         return events.map(event => {
-            const startDate = new Date(event.start);
-            const endDate = new Date(event.end);
-            const durationInMinutes = differenceInMinutes(endDate, startDate);
-            const heightInPixels = Math.max(Math.floor(durationInMinutes * 60 / 60), 30); // 60px per hour, minimum 30px
+            const heightInPixels = Math.max(Math.floor(event.duration * 60 / 60), 30); // 60px per hour, minimum 30px
 
             return {
                 ...event,
-                day: startDate.getDay(),
-                hour: startDate.getHours(),
-                minute: startDate.getMinutes(),
-                durationInMinutes,
-                heightInPixels
+                heightInPixels,
+                minuteOffset: event.duration / 60 * 100
             };
         });
     }, [events]);
 
-    const getEventsForDay = useCallback((date: Date, hour: number) => {
-        return processedEvents.filter(event => {
-            const eventDay = new Date(event.start).getDay();
-            const eventHour = new Date(event.start).getHours();
-            return date.getDay() === eventDay && eventHour === hour;
-        });
-    }, [processedEvents]);
+
 
     const isTodayVisible = useMemo(() =>
         weekDays.some(day => isToday(day)),
@@ -55,37 +43,34 @@ export function WeekView({ events = [], onSelectEvent, currentDate }: WeekViewPr
     return (
         <div className="w-full h-full flex flex-col">
 
-            <div className="grid grid-cols-8 border-b h-14 flex-initial">
-                <div className="border-r p-2 text-left text-xs font-semibold uppercase text-foreground/80">
+            <div className="grid grid-cols-8 border-b border-foreground/10 h-14 flex-initial">
+                <div className="border-r border-foreground/10 p-2 text-left text-xs font-semibold uppercase ">
                     Time
                 </div>
                 {weekDays.map((day, index) => (
                     <div key={index}
                         className={cn("py-2 px-4 text-left font-medium text-xs",
-                            isToday(day) ? "text-indigo-500" : "text-foreground/80",
-                            index < 6 && "border-r"
+                            isToday(day) ? "text-indigo-500" : "text-foreground",
+                            index < 6 && "border-r border-foreground/10"
                         )}
                     >
                         <div className='font-semibold uppercase'>{format(day, 'EEE')}</div>
-                        <div>{format(day, 'MMM d')}</div>
+                        <div className='text-foreground/60'>{format(day, 'MMM d')}</div>
                     </div>
                 ))}
             </div>
 
             <div className="flex-1 overflow-hidden">
-                <ScrollArea className='h-[calc(100vh-152px)]'>
-                    <div className="grid grid-cols-8 relative">
-                        {/* Current time line - only render if today is visible */}
-                        {isTodayVisible && isToday(currentDate) && <CurrentTimeLine />}
+                <ScrollArea className='h-[calc(100vh-160px)]'>
 
+                    <div className="grid grid-cols-8 relative">
+                        {isTodayVisible && isToday(currentDate) && <CurrentTimeLine />}
                         {hours.map((hour, hourIndex) => (
                             <MemoizedHourRow
                                 key={hour}
                                 hour={hour}
                                 hourIndex={hourIndex}
                                 weekDays={weekDays}
-                                getEventsForDay={getEventsForDay}
-                                onSelectEvent={onSelectEvent}
                                 totalHours={hours.length}
                                 processedEvents={processedEvents}
                             />
@@ -97,14 +82,15 @@ export function WeekView({ events = [], onSelectEvent, currentDate }: WeekViewPr
     );
 }
 
+
+type ProcessedEvent = CalendarEvent & { heightInPixels: number; minuteOffset: number }
+
 interface HourRowProps {
     hour: number;
     hourIndex: number;
     weekDays: Date[];
-    getEventsForDay: (date: Date, hour: number) => any[];
-    onSelectEvent?: (event: CalendarEvent) => void;
     totalHours: number;
-    processedEvents: any[];
+    processedEvents: ProcessedEvent[];
 }
 
 // Base HourRow component
@@ -112,12 +98,10 @@ function HourRow({
     hour,
     hourIndex,
     weekDays,
-    getEventsForDay,
-    onSelectEvent,
     totalHours,
     processedEvents
 }: HourRowProps) {
-    // Pre-format the hour label to avoid doing it in render
+    const { setCurrentEvent } = useSessionCalendar();
     const hourLabel = useMemo(() =>
         format(new Date().setHours(hour, 0), 'h a'),
         [hour]
@@ -125,7 +109,9 @@ function HourRow({
 
     return (
         <React.Fragment>
-            <div className={cn("border-r p-2 text-sm text-gray-500", hourIndex < totalHours - 1 && "border-b")}>
+            <div className={cn("border-r p-2 text-sm text-foreground/60 border-foreground/10",
+                hourIndex < totalHours - 1 && "border-b")}
+            >
                 {hourLabel}
             </div>
 
@@ -143,24 +129,20 @@ function HourRow({
                 const isTodayCell = isToday(day);
 
                 return (
-                    <div key={di}
-                        className={cn(
-                            "relative min-h-[60px]",
-                            di < 6 && "border-r",
-                            hourIndex < totalHours - 1 && "border-b",
-                            isTodayCell ? "bg-indigo-50" : "bg-white"
-                        )}
-                    >
-                        {dayEvents.map((event, ei) => {
-                            const minuteOffset = event.minute / 60 * 100; // Convert to percentage of hour
+                    <div key={di} className={cn("relative min-h-[60px] ",
+                        di < 6 && "border-r border-foreground/10",
+                        hourIndex < totalHours - 1 && "border-b border-foreground/10",
+                        isTodayCell ? "bg-foreground/10" : "bg-background"
+                    )} >
+                        {dayEvents.map((event) => {
 
                             return (
                                 <WeekEvenItem
                                     key={event.id}
                                     event={event}
-                                    onSelect={onSelectEvent}
+                                    onSelect={setCurrentEvent}
                                     position={{
-                                        top: minuteOffset,
+                                        top: event.minuteOffset,
                                         height: event.heightInPixels
                                     }}
                                 />
@@ -181,10 +163,14 @@ const MemoizedHourRow = memo(HourRow, (prevProps, nextProps) => {
         prevProps.hourIndex === nextProps.hourIndex &&
         prevProps.totalHours === nextProps.totalHours &&
         prevProps.weekDays === nextProps.weekDays &&
-        prevProps.processedEvents === nextProps.processedEvents &&
-        prevProps.onSelectEvent === nextProps.onSelectEvent
+        prevProps.processedEvents === nextProps.processedEvents
     );
 });
+
+
+
+
+
 
 
 interface WeekEvenItemProps {

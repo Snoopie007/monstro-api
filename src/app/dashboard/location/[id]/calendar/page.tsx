@@ -19,12 +19,12 @@ function CalendarPage(props: { params: Promise<{ id: string }> }) {
 	}
 
 	return (
-		<div className="flex flex-row h-full">
+		<div className="flex flex-row h-full bg-foreground/5">
 
 			<div className="flex-1 h-full">
 				<BigCalendar events={events} selectedDay={new Date()} />
 			</div>
-			<div className="flex-initial w-[350px] border-l border-foreground/5">
+			<div className="flex-initial w-[350px]">
 
 
 				{/* {isSidebarOpen && selectedSession && (

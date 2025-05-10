@@ -26,7 +26,7 @@ export function DayView({ events = [], currentDate }: DayViewProps) {
                 const hour = startDate.getHours();
                 const minute = startDate.getMinutes();
                 const heightInPixels = Math.max(event.duration, 30);
-                const topPosition = hour * 60 + minute + hour;
+                const topPosition = hour * 60 + minute;
 
                 return {
                     ...event,
@@ -41,16 +41,16 @@ export function DayView({ events = [], currentDate }: DayViewProps) {
     return (
         <div className="w-full h-full flex flex-col">
             <div className="flex-1 overflow-hidden">
-                <ScrollArea className='h-[calc(100vh-96px)]'>
+                <ScrollArea className='h-[calc(100vh-105px)]'>
                     <div className="relative">
                         {isCurrentDay && <CurrentTimeLine />}
 
                         {hours.map((hour) => (
-                            <div key={hour} className="flex border-b min-h-[60px]">
-                                <div className="w-[60px] flex-shrink-0 p-2 text-xs text-foreground/60 border-r">
+                            <div key={hour} className="flex border-b border-foreground/10 min-h-[60px] max-h-[60px] relative ">
+                                <div className="w-[60px] flex-shrink-0 p-2 text-xs text-foreground/60 border-r border-foreground/10">
                                     {format(new Date().setHours(hour, 0), 'h a')}
                                 </div>
-                                <div className="flex-grow relative h-[60px]"></div>
+                                <div className="flex-grow relative h-full"></div>
                             </div>
                         ))}
 
@@ -94,7 +94,8 @@ function DayEventItem({ event, onSelect, position }: DayEventItemProps) {
             onClick={() => onSelect(event)}
         >
             <div className={cn(
-                "flex flex-row w-full max-w-[300px] bg-foreground text-background border-l-3 border-indigo-600 p-2 items-center rounded-sm ",
+                "flex flex-row w-full max-w-[300px] bg-foreground text-background ",
+                "border-l-3 border-indigo-600 p-2 items-center rounded-sm ",
                 "cursor-pointer hover:bg-indigo-500 hover:text-white group transition-colors"
             )}>
                 <span className='font-medium text-sm '>

@@ -1,10 +1,10 @@
 import useSWR from "swr";
-import { fetcher } from "./hooks";
+import { fetcher, newfetcher } from "./hooks";
 
 
 
 function useCalendarEvents(id: string, date: string) {
-    const { data, error, isLoading } = useSWR({ url: `events?date=${date}`, id: id }, fetcher);
+    const { data, error, isLoading } = useSWR([`events`, id, `?date=${date}`], newfetcher);
     return {
         events: data,
         error,

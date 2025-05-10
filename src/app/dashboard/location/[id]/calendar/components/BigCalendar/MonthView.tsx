@@ -54,7 +54,7 @@ export function MonthView({
 
     return (
         <div className="flex flex-col">
-            <div className="grid grid-cols-7  bg-foreground/5">
+            <div className="grid grid-cols-7  ">
                 {weekdays.map((day, index) => (
                     <div key={day} className={cn(
                         "text-left px-4 text-sm font-medium py-2 border-b border-foreground/5 uppercase",
@@ -66,7 +66,7 @@ export function MonthView({
             </div>
 
 
-            <div className="grid grid-cols-7 h-[calc(100vh-136px)]">
+            <div className="grid grid-cols-7 h-[calc(100vh-155px)]">
                 {calendarDays.map((day, index) => (
                     <DayItem
                         key={index}
@@ -120,7 +120,7 @@ function DayItem({
     return (
         <div className={cn(
             "p-1 relative bg-background border-foreground/5",
-            { "text-indigo-500": isToday, "bg-foreground/5 text-foreground/20": !isCurrentMonth },
+            { "text-indigo-500": isToday, "bg-foreground/10 text-foreground/20": !isCurrentMonth },
             { "border-b": !isLastRow },
             { "border-r": !isLastColumn }
         )} >
