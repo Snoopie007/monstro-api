@@ -27,8 +27,21 @@ export type CalendarEvent = {
     end: Date
     duration: number
     start: Date
-    data: Record<string, unknown>
+    data: CalendarEventData
 }
 
+type CalendarEventData = {
+    reservationId: number
+    programId: number
+    sessionId: number
+    members: CalendarEventMember[]
+}
+
+
+type CalendarEventMember = {
+    memberId?: number
+    name: string
+    avatar?: string | null
+}
 
 export type CalendarView = 'month' | 'week' | 'day';

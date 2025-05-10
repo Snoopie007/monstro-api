@@ -30,3 +30,15 @@ ADD CONSTRAINT recurring_reservations_member_package_id_fkey FOREIGN KEY (member
 ADD CONSTRAINT unique_session_package_recurring UNIQUE (session_id, member_package_id),
 ADD CONSTRAINT unique_session_subscription_recurring UNIQUE (session_id, member_subscription_id);
 
+
+CREATE TABLE IF NOT EXISTS recurring_reservations_exceptions (
+    id bigserial PRIMARY KEY NOT NULL,
+    recurring_reservation_id bigint NOT NULL,
+    event_id text NOT NULL,
+    occurrence_date timestamp with time zone NOT NULL,
+    new_date timestamp with time zone,
+    is_canceled boolean NOT NULL DEFAULT false,
+    modified_at timestamp with time zone NOT NULL,
+    title text,
+);
+

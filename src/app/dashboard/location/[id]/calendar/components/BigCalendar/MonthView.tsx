@@ -4,7 +4,8 @@ import { isSameDay, isSameMonth } from 'date-fns';
 import React, { useState, useEffect } from 'react';
 import { CalendarEvent } from '@/types';
 import { useSessionCalendar } from '../../providers/SessionCalendarProvider';
-
+import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui';
 
 interface MonthViewProps {
     events?: CalendarEvent[];
@@ -97,17 +98,11 @@ interface DayItemProps {
     isLastColumn: boolean;
 }
 
-function DayItem({
-    day,
-    events,
-    currentDate,
-    isLastRow,
-    isLastColumn,
-}: DayItemProps) {
+function DayItem({ day, events, currentDate, isLastRow, isLastColumn }: DayItemProps) {
     const today = new Date()
     const isToday = isSameDay(day, today);
     const isCurrentMonth = isSameMonth(day, currentDate);
-    const { setCurrentDate, setCurrentEvent } = useSessionCalendar()
+    const { setCurrentDate, setCurrentEvent, isLoading } = useSessionCalendar()
 
     // Get events for a specific day
     const getEventsForDay = (date: Date) => {
@@ -139,12 +134,16 @@ function DayItem({
 
 
             <div className="overflow-hidden space-y-0.5">
-                {dayEvents.slice(0, 5).map((event, i) => (
-                    <EventItem key={event.id} event={event} onSelect={setCurrentEvent} />
-                ))}
+                {isLoading && isCurrentMonth ? (
+                    <Skeleton className="h-4 w-full" />
+                ) : (
+                    dayEvents.slice(0, 3).map((event, i) => (
+                        <EventItem key={event.id} event={event} onSelect={setCurrentEvent} />
+                    ))
+                )}
                 {dayEvents.length > 5 && (
                     <div className="text-xs text-indigo-600 p-1 mb-1 truncate cursor-pointer">
-                        +{dayEvents.length - 5} more
+                        +{dayEvents.length - 3} more
                     </div>
                 )}
             </div>
@@ -159,11 +158,27 @@ interface EventItemProps {
 }
 
 function EventItem({ event, onSelect }: EventItemProps) {
+    const members = event.data.members
+
     return (
-        <div className="text-xs bg-foreground text-background border-l-3 border-indigo-500 rounded-sm py-1 px-2 truncate cursor-pointer"
+        <div className="text-xs bg-foreground text-background border-l-3 flex-col border-indigo-500 rounded-sm py-1.5 px-2 truncate cursor-pointer"
             onClick={() => onSelect && onSelect(event)}
         >
-            ({event.data?.reservationCounts as number || 0}) {event.title}
+
+
+            <div className="truncate overflow-hidden text-ellipsis font-medium">
+                {event.title}
+            </div>
+            <div className="flex items-center">
+                {members.length > 0 && members.slice(0, 2).map((m, i) => (
+                    <Avatar className="size-4">
+                        <AvatarImage src={`${m.avatar ? m.avatar : ""}`} alt={m.name} />
+                        <AvatarFallback className="text-[0.6rem]  bg-background/50 text-primary-foreground  font-semibold">
+                            {`${m.name.charAt(0)}`}
+                        </AvatarFallback>
+                    </Avatar>
+                ))}
+            </div>
         </div>
     )
 }

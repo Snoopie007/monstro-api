@@ -6,15 +6,14 @@ import { Calendar } from "@/components/ui/calendar"
 
 
 import { CalendarEvent } from "@/types";
-import { tryCatch } from "@/libs/utils";
+import { sleep, tryCatch } from "@/libs/utils";
 import DayList from "./components/DayList";
 
 
 function CalendarPage(props: { params: Promise<{ id: string }> }) {
 	const { id } = use(props.params);
 
-	const { currentDate, setCurrentDate, currentMonth, setCurrentMonth } = useSessionCalendar()
-	const [isLoading, setIsLoading] = useState(true)
+	const { currentDate, setCurrentDate, currentMonth, setCurrentMonth, isLoading, setIsLoading } = useSessionCalendar()
 	const [events, setEvents] = useState<CalendarEvent[]>([])
 
 	useEffect(() => {
@@ -34,12 +33,14 @@ function CalendarPage(props: { params: Promise<{ id: string }> }) {
 			})
 		)
 
-		setIsLoading(false)
-		if (error || !result || !result.ok) return
+		if (error || !result || !result.ok) {
+			setIsLoading(false)
+			return
+		}
 
 		const data = await result.json()
-		console.log("new events", data)
 		setEvents(data)
+		setIsLoading(false)
 	}
 
 
