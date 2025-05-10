@@ -99,7 +99,7 @@ function DayEventItem({ event, onSelect, position }: DayEventItemProps) {
                 "cursor-pointer hover:bg-indigo-500 hover:text-white group transition-colors"
             )}>
                 <span className='font-medium text-sm '>
-                    ({event.data?.reservationCounts as number || 0}) {event.title}
+                    {event.title}
                 </span>
             </div>
 
