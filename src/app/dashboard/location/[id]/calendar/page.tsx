@@ -36,6 +36,7 @@ function CalendarPage(props: { params: Promise<{ id: string }> }) {
 		if (error || !result || !result.ok) return
 
 		const data = await result.json()
+		console.log("new events", data)
 		setEvents(data)
 	}
 

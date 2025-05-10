@@ -22,27 +22,32 @@ export function MonthView({
         const month = currentDate.getMonth();
         const days: Date[] = [];
 
+        // Get first day of month and its weekday (0-6, where 0 is Sunday)
         const firstDayOfMonth = new Date(year, month, 1);
         const startingDayOfWeek = firstDayOfMonth.getDay();
 
+        // Add days from previous month to fill the first week
+        const prevMonth = new Date(year, month, 0);
+        const prevMonthDays = prevMonth.getDate();
 
-        if (startingDayOfWeek > 0) {
-            const prevMonth = new Date(year, month, 0);
-            const prevMonthDays = prevMonth.getDate();
-
-            for (let i = prevMonthDays - startingDayOfWeek + 1; i <= prevMonthDays; i++) {
-                days.push(new Date(year, month - 1, i));
-            }
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            const day = prevMonthDays - startingDayOfWeek + i + 1;
+            days.push(new Date(year, month - 1, day));
         }
 
+        // Add all days of current month
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         for (let i = 1; i <= daysInMonth; i++) {
             days.push(new Date(year, month, i));
         }
 
+        // Determine if we need 5 or 6 rows (weeks) - each row has 7 days
+        const weeksNeeded = Math.ceil(days.length / 7);
+        const totalDaysNeeded = weeksNeeded * 7;
 
-        const remainingDays = 35 - days.length; // Changed from 42 to 35 to have 5 weeks instead of 6
-        for (let i = 1; i <= remainingDays; i++) {
+        // Add days from next month to complete the grid
+        const daysToAdd = totalDaysNeeded - days.length;
+        for (let i = 1; i <= daysToAdd; i++) {
             days.push(new Date(year, month + 1, i));
         }
 
