@@ -82,7 +82,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
                 });
             });
         });
-
+        console.log("events", events)
         return NextResponse.json(events, { status: 200 });
     } catch (err) {
         console.log(err);
