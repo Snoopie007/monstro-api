@@ -7,6 +7,7 @@ import { Calendar } from "@/components/ui/calendar"
 
 import { CalendarEvent } from "@/types";
 import { tryCatch } from "@/libs/utils";
+import DayList from "./components/DayList";
 
 
 function CalendarPage(props: { params: Promise<{ id: string }> }) {
@@ -45,20 +46,20 @@ function CalendarPage(props: { params: Promise<{ id: string }> }) {
 			<div className="flex-1 h-full">
 				<BigCalendar events={events} />
 			</div>
-			<div className="flex-initial w-[300px] p-2 py-2">
+			<div className="flex-initial w-[300px] flex flex-col p-2 pt-2 pb-1 space-y-2">
 
 				<Calendar
 					mode="single"
 					fromDate={new Date()}
 					selected={currentDate}
 					onSelect={(date) => {
-
 						if (date) {
 							setCurrentDate(date)
 						}
 					}}
-					className="rounded-md border border-foreground/10 bg-background"
+					className="rounded-lg border border-foreground/10 bg-background"
 				/>
+				<DayList lid={id} events={events} />
 
 			</div>
 			{/* {isSidebarOpen && selectedSession && (

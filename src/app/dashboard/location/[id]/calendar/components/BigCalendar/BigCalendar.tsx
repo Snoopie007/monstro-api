@@ -32,7 +32,7 @@ export function BigCalendar({
                 onViewChange={handleViewChange}
                 onNavigate={handleNavigate}
             />
-            <div className='pt-0 pb-2 px-2  flex-1  h-full '>
+            <div className='pt-0 pb-2 px-2  flex-1 '>
 
                 <div className='border overflow-hidden border-foreground/10 bg-background rounded-lg'>
                     {view === 'month' && (

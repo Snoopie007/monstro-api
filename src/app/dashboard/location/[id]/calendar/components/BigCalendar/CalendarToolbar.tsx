@@ -69,7 +69,7 @@ export function CalendarToolbar({
     };
 
     return (
-        <div className="flex items-center justify-between py-1.5">
+        <div className="flex flex-initial items-center justify-between py-1.5">
             <div className='flex flex-row gap-4 items-center'>
                 <div className="border-r text-sm px-4 border-foreground/10 font-semibold">
                     {getDateDisplay()}
