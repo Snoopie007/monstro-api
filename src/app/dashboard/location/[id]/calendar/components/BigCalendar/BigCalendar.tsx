@@ -2,19 +2,18 @@
 import React, { useState } from 'react';
 import { CalendarToolbar, MonthView, DayView, WeekView } from '.';
 import { CalendarView, CalendarEvent } from '@/types';
+import { useSessionCalendar } from '../../providers/SessionCalendarProvider';
 
 
 interface BigCalendarProps {
-    events: CalendarEvent[];
-    selectedDay: Date;
+    events: CalendarEvent[]
 }
 
 
 export function BigCalendar({
     events = [],
-    selectedDay,
 }: BigCalendarProps) {
-    const [currentDate, setCurrentDate] = useState(selectedDay);
+    const { currentDate, setCurrentDate } = useSessionCalendar()
     const [view, setView] = useState<CalendarView>('month');
 
     const handleViewChange = (newView: CalendarView) => {
