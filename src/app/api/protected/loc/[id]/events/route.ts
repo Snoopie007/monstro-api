@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
 
     const startDate = startOfMonth(new Date(date || new Date()));
     const endDate = endOfMonth(startDate)
-
+    console.log(startDate, endDate)
     try {
         let events: CalendarEvent[] = [];
 
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
                 });
             }
         });
-
+        console.log(events)
         return NextResponse.json(events, { status: 200 });
     } catch (err) {
         console.log(err);

@@ -75,13 +75,13 @@ type UseSessionCalendarContextType = ReturnType<typeof useSessionCalendarContext
 export const SessionCalendarContext = createContext<UseSessionCalendarContextType | null>(null)
 
 type SessionCalendarProviderType = {
-    initialDate?: Date;
+    initialDate: Date;
     initialEvent?: CalendarEvent | null;
     children?: ReactElement | ReactElement[] | undefined
 }
 
 export const SessionCalendarProvider = ({
-    initialDate = new Date(),
+    initialDate,
     initialEvent = null,
     children
 }: SessionCalendarProviderType): ReactElement => {
