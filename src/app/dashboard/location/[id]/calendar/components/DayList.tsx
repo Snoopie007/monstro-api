@@ -18,7 +18,7 @@ export function DayList({ lid, events }: { lid: string, events: CalendarEvent[] 
 
     //         setClasses(classes)
     //     }
-    // }, [events, currentDate])
+    // }, [ currentDate])
 
     return (
         <div className='bg-background rounded-lg border border-foreground/10 flex-1 h-full' >
