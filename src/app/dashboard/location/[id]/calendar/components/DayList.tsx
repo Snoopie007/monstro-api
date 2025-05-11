@@ -24,7 +24,7 @@ export function DayList({ lid, events }: { lid: string, events: CalendarEvent[] 
         <div className='bg-background rounded-lg border border-foreground/10 flex-1 h-full' >
             <div className='flex flex-col flex-1 h-full p-4 space-y-2'>
                 <div className='text-base font-semibold   '>
-                    Classes for {format(currentDate, 'MMMM d, yyyy')}
+                    {/* Classes for {format(currentDate, 'MMMM d, yyyy')} */}
                 </div>
 
                 <ScrollArea className='h-full'>
@@ -32,7 +32,7 @@ export function DayList({ lid, events }: { lid: string, events: CalendarEvent[] 
                         {classes.map((c) => (
                             <div key={c.id} className='border border-foreground/10 bg-foreground/5 rounded-sm px-4 py-3'>
                                 <div className='text-sm font-medium'>{c.title}</div>
-                                <div className='text-xs text-foreground/50'>{format(c.start, 'h:mm a')} - {format(c.end, 'h:mm a')}</div>
+                                {/* <div className='text-xs text-foreground/50'>{format(c.start, 'h:mm a')} - {format(c.end, 'h:mm a')}</div> */}
                             </div>
                         ))}
                     </div>
