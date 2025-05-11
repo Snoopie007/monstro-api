@@ -7,7 +7,7 @@ import { Calendar } from "@/components/ui/calendar"
 
 import { CalendarEvent } from "@/types";
 import { sleep, tryCatch } from "@/libs/utils";
-import DayList from "./components/DayList";
+// import DayList from "./components/DayList";
 
 
 export default function CalendarPage(props: { params: Promise<{ id: string }> }) {
@@ -60,7 +60,7 @@ export default function CalendarPage(props: { params: Promise<{ id: string }> })
 					// }}
 					className="rounded-lg border border-foreground/10 bg-background"
 				/>
-				<DayList lid={id} events={events} />
+				{/* <DayList lid={id} events={events} /> */}
 
 			</div>
 			{/* {isSidebarOpen && selectedSession && (

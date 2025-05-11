@@ -1,4 +1,4 @@
-import { SessionCalendarProvider } from "./providers/SessionCalendarProvider";
+// import { SessionCalendarProvider } from "./providers/SessionCalendarProvider";
 
 interface CalendarLayoutProps {
     children: React.ReactNode,
