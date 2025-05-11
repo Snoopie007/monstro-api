@@ -1,19 +1,18 @@
 "use client";
 import { use, useEffect, useState } from "react";
 // import { BigCalendar } from "./components/BigCalendar";
-// import { useSessionCalendar } from "./providers/SessionCalendarProvider";
+import { useSessionCalendar } from "./providers/SessionCalendarProvider";
 import { Calendar } from "@/components/ui/calendar"
 
 
 import { CalendarEvent } from "@/types";
 import { sleep, tryCatch } from "@/libs/utils";
-// import DayList from "./components/DayList";
-
+import { DayList } from "./components";
 
 export default function CalendarPage(props: { params: Promise<{ id: string }> }) {
 	const { id } = use(props.params);
 
-	// const { currentDate, setCurrentDate, currentMonth, setCurrentMonth, isLoading, setIsLoading } = useSessionCalendar()
+	const { currentDate, setCurrentDate, currentMonth, setCurrentMonth, isLoading, setIsLoading } = useSessionCalendar()
 	const [events, setEvents] = useState<CalendarEvent[]>([])
 
 	// useEffect(() => {
@@ -53,14 +52,14 @@ export default function CalendarPage(props: { params: Promise<{ id: string }> })
 					mode="single"
 					fromDate={new Date()}
 					selected={new Date()}
-					// onSelect={(date) => {
-					// 	if (date) {
-					// 		setCurrentDate(date)
-					// 	}
-					// }}
+					onSelect={(date) => {
+						if (date) {
+							setCurrentDate(date)
+						}
+					}}
 					className="rounded-lg border border-foreground/10 bg-background"
 				/>
-				{/* <DayList lid={id} events={events} /> */}
+				<DayList lid={id} events={events} />
 
 			</div>
 			{/* {isSidebarOpen && selectedSession && (
