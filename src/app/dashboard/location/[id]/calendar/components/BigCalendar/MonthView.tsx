@@ -5,7 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { CalendarEvent } from '@/types';
 import { useSessionCalendar } from '../../providers/SessionCalendarProvider';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui';
+import { Avatar, AvatarImage, AvatarFallback, Button } from '@/components/ui';
+import { Maximize2 } from 'lucide-react';
 
 interface MonthViewProps {
     events?: CalendarEvent[];
@@ -119,21 +120,31 @@ function DayItem({ day, events, currentDate, isLastRow, isLastColumn }: DayItemP
     return (
         <div
             className={cn(
-                "p-1 relative bg-background border-foreground/5 hover:bg-foreground/5 transition-colors cursor-pointer",
-                { "text-indigo-500": isToday, "bg-foreground/10 text-foreground/20": !isCurrentMonth },
+                "p-1 relative bg-background border-foreground/5 group transition-colors cursor-pointer",
+                "data-[month=true]:text-foreground/20 data-[month=true]:bg-foreground/5",
                 { "border-b": !isLastRow },
                 { "border-r": !isLastColumn }
             )}
-            onClick={() => setCurrentDate(day)}
+            data-today={isToday}
+            data-month={isCurrentMonth}
+
         >
-            <div className="text-right p-1">
-                <span className={cn("inline-block size-6 text-center leading-6",)}>
+            <div className="text-right flex flex-row justify-end  overflow-hidden">
+                <span className={cn("inline-block size-6 text-center leading-6 transform transition-transform duration-200 group-hover:-translate-x-7",
+                    "group-data-[today=true]:text-indigo-500 group-data-[today=true]:font-bold",
+                )}>
                     {day.getDate()}
                 </span>
+                <div className='absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200'>
+                    <Button variant='ghost' size='icon' className='size-5' onClick={() => setCurrentDate(day)}>
+                        <Maximize2 className='size-3' />
+                    </Button>
+                </div>
             </div>
 
 
-            <div className="overflow-hidden space-y-0.5">
+
+            <div className="overflow-hidden space-y-0.5 mt-1">
                 {isLoading && isCurrentMonth ? (
                     <Skeleton className="h-4 w-full" />
                 ) : (
@@ -171,7 +182,7 @@ function EventItem({ event, onSelect }: EventItemProps) {
             </div>
             <div className="flex items-center">
                 {members.length > 0 && members.slice(0, 2).map((m, i) => (
-                    <Avatar className="size-4">
+                    <Avatar key={m.memberId} className="size-4">
                         <AvatarImage src={`${m.avatar ? m.avatar : ""}`} alt={m.name} />
                         <AvatarFallback className="text-[0.6rem]  bg-background/50 text-primary-foreground  font-semibold">
                             {`${m.name.charAt(0)}`}

@@ -32,7 +32,7 @@ export function DayList({ lid, events }: { lid: string, events: CalendarEvent[] 
                         {classes.map((c) => (
                             <div key={c.id} className='border border-foreground/10 bg-foreground/5 rounded-sm px-4 py-3'>
                                 <div className='text-sm font-medium'>{c.title}</div>
-                                {/* <div className='text-xs text-foreground/50'>{format(c.start, 'h:mm a')} - {format(c.end, 'h:mm a')}</div> */}
+                                <div className='text-xs text-foreground/50'>{format(c.start, 'h:mm a')} - {format(c.end, 'h:mm a')}</div>
                             </div>
                         ))}
                     </div>
