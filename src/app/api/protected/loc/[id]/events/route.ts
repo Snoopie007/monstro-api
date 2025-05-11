@@ -8,12 +8,10 @@ import { NextResponse, NextRequest } from "next/server";
 export async function GET(req: NextRequest, props: { params: Promise<{ id: number }> }) {
     const { searchParams } = new URL(req.url)
     const params = await props.params
-    console.log("searchParams", searchParams)
     const date = searchParams.get("date")
-    console.log("EVENTS", date)
     const startDate = startOfMonth(new Date(date || new Date()));
     const endDate = endOfMonth(startDate)
-    console.log(startDate, endDate)
+
     try {
         let events: CalendarEvent[] = [];
 

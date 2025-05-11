@@ -49,16 +49,11 @@ export default auth(async (req) => {
 			if (!encodedId || !isNaN(Number(encodedId))) {
 				return NextResponse.next()
 			}
-			console.log("subpath", subpath)
-			console.log("searchParams", searchParams)
 
-			// Preserve all search parameters without conversion to object and back
-			const params = searchParams.toString()
-			console.log("params", params)
 			const decodedId = decodeId(encodedId)
 
-			const url = new URL(`/api/protected/loc/${decodedId}${subpath}?${params}`, req.url)
-			console.log("url", url)
+			const url = new URL(`/api/protected/loc/${decodedId}${subpath}?${searchParams.toString()}`, req.url)
+
 			return decodedId
 				? NextResponse.rewrite(url)
 				: NextResponse.json({ message: "Invalid location" }, { status: 400 })
