@@ -121,7 +121,7 @@ function DayItem({ day, events, currentDate, isLastRow, isLastColumn }: DayItemP
         <div
             className={cn(
                 "p-1 relative bg-background border-foreground/5 group transition-colors cursor-pointer",
-                "data-[month=true]:text-foreground/20 data-[month=true]:bg-foreground/5",
+                "data-[month=false]:text-foreground/20 data-[month=false]:bg-foreground/5",
                 { "border-b": !isLastRow },
                 { "border-r": !isLastColumn }
             )}
