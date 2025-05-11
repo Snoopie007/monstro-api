@@ -1,6 +1,6 @@
 "use client";
 import { use, useEffect, useState } from "react";
-import { BigCalendar } from "./components/BigCalendar";
+// import { BigCalendar } from "./components/BigCalendar";
 import { useSessionCalendar } from "./providers/SessionCalendarProvider";
 import { Calendar } from "@/components/ui/calendar"
 
@@ -46,21 +46,21 @@ export default function CalendarPage(props: { params: Promise<{ id: string }> })
 		<div className="flex flex-row h-full bg-foreground/5">
 
 			<div className="flex-1 h-full">
-				<BigCalendar events={events} />
+				{/* <BigCalendar events={events} /> */}
 			</div>
 			<div className="flex-initial w-[300px] flex flex-col pl-0 pr-2 pt-2 pb-1 space-y-2">
-				{/* 
-			<Calendar
-				mode="single"
-				fromDate={new Date()}
-				selected={currentDate}
-				onSelect={(date) => {
-					if (date) {
-						setCurrentDate(date)
-					}
-				}}
-				className="rounded-lg border border-foreground/10 bg-background"
-			/> */}
+
+				<Calendar
+					mode="single"
+					fromDate={new Date()}
+					selected={currentDate}
+					onSelect={(date) => {
+						if (date) {
+							setCurrentDate(date)
+						}
+					}}
+					className="rounded-lg border border-foreground/10 bg-background"
+				/>
 				<DayList lid={id} events={events} />
 
 			</div>
