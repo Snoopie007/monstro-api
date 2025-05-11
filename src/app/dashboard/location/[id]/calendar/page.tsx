@@ -13,7 +13,7 @@ import DayList from "./components/DayList";
 export default function CalendarPage(props: { params: Promise<{ id: string }> }) {
 	const { id } = use(props.params);
 
-	const { currentDate, setCurrentDate, currentMonth, setCurrentMonth, isLoading, setIsLoading } = useSessionCalendar()
+	// const { currentDate, setCurrentDate, currentMonth, setCurrentMonth, isLoading, setIsLoading } = useSessionCalendar()
 	const [events, setEvents] = useState<CalendarEvent[]>([])
 
 	// useEffect(() => {
@@ -35,9 +35,8 @@ export default function CalendarPage(props: { params: Promise<{ id: string }> })
 	// 		setIsLoading(false)
 	// 		return
 	// 	}
-
 	// 	const data = await result.json()
-	// 	setEvents([])
+	// 	setEvents(data)
 	// 	setIsLoading(false)
 	// }
 
@@ -53,12 +52,12 @@ export default function CalendarPage(props: { params: Promise<{ id: string }> })
 				<Calendar
 					mode="single"
 					fromDate={new Date()}
-					selected={currentDate}
-					onSelect={(date) => {
-						if (date) {
-							setCurrentDate(date)
-						}
-					}}
+					selected={new Date()}
+					// onSelect={(date) => {
+					// 	if (date) {
+					// 		setCurrentDate(date)
+					// 	}
+					// }}
 					className="rounded-lg border border-foreground/10 bg-background"
 				/>
 				<DayList lid={id} events={events} />
