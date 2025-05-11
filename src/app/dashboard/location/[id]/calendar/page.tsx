@@ -73,6 +73,6 @@ return (
 			)} */}
 	</div>
 );
-};
+
 
 export default CalendarPage;
