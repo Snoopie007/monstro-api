@@ -1,5 +1,4 @@
 import { db } from "@/db/db";
-import { programs } from "@/db/schemas";
 import { CalendarEvent } from "@/types";
 import { endOfMonth, startOfMonth } from "date-fns";
 import { NextResponse, NextRequest } from "next/server";
@@ -9,6 +8,7 @@ import { NextResponse, NextRequest } from "next/server";
 export async function GET(req: NextRequest, props: { params: Promise<{ id: number }> }) {
     const { searchParams } = new URL(req.url)
     const params = await props.params
+    console.log("searchParams", searchParams)
     const date = searchParams.get("date")
     console.log("EVENTS", date)
     const startDate = startOfMonth(new Date(date || new Date()));
