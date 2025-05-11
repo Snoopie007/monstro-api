@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
     const { searchParams } = new URL(req.url)
     const params = await props.params
     const date = searchParams.get("date")
-
+    console.log("EVENTS", date)
     const startDate = startOfMonth(new Date(date || new Date()));
     const endDate = endOfMonth(startDate)
     console.log(startDate, endDate)
