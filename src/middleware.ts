@@ -49,7 +49,7 @@ export default auth(async (req) => {
 			if (!encodedId || !isNaN(Number(encodedId))) {
 				return NextResponse.next()
 			}
-
+			console.log("subpath", subpath)
 			const decodedId = decodeId(encodedId)
 			return decodedId
 				? NextResponse.rewrite(new URL(`/api/protected/loc/${decodedId}${subpath}`, req.url))
