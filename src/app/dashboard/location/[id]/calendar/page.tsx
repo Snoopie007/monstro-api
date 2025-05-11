@@ -49,7 +49,7 @@ return (
 			<BigCalendar events={events} />
 		</div>
 		<div className="flex-initial w-[300px] flex flex-col pl-0 pr-2 pt-2 pb-1 space-y-2">
-
+			{/* 
 			<Calendar
 				mode="single"
 				fromDate={new Date()}
@@ -60,7 +60,7 @@ return (
 					}
 				}}
 				className="rounded-lg border border-foreground/10 bg-background"
-			/>
+			/> */}
 			<DayList lid={id} events={events} />
 
 		</div>
