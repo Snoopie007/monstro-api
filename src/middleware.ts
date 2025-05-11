@@ -43,7 +43,7 @@ export default auth(async (req) => {
 			if (!isLoggedin && !(isMobileApp && isMobileAuthenticated)) {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 			}
-
+			console.log("pathname", pathname)
 			const [, encodedId, subpath = ""] = pathname.match(/^\/api\/protected\/loc\/([^/]+)(\/.*)?$/) || []
 
 			if (!encodedId || !isNaN(Number(encodedId))) {
