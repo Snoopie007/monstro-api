@@ -1,4 +1,4 @@
-// import { SessionCalendarProvider } from "./providers/SessionCalendarProvider";
+import { SessionCalendarProvider } from "./providers/SessionCalendarProvider";
 
 interface CalendarLayoutProps {
     children: React.ReactNode,
@@ -12,11 +12,11 @@ export default async function CalendarLayout(props: CalendarLayoutProps) {
 
 
     return (
-        // <SessionCalendarProvider initialDate={new Date()}>
-        <div className="w-full  h-[calc(100vh-52px)]">
-            {children}
-        </div>
-        // </SessionCalendarProvider>
+        <SessionCalendarProvider initialDate={new Date()}>
+            <div className="w-full  h-[calc(100vh-52px)]">
+                {children}
+            </div>
+        </SessionCalendarProvider>
 
     )
 }
