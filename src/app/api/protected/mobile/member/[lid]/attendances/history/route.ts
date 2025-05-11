@@ -31,7 +31,6 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
 					inArray(reservations.memberSubscriptionId, subIds),
 					inArray(reservations.memberPackageId, pkgIds)
 				),
-				eq(reservations.status, "active"),
 				eq(reservations.locationId, params.lid)
 			),
 			with: {
@@ -40,7 +39,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
 						program: true
 					}
 				},
-				attendances: true,
+				attendance: true,
 			}
 		})
 
@@ -48,16 +47,14 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
 
 
 		reservations.forEach(reservation => {
-			if (!reservation.attendances?.length) return;
+			if (!reservation.attendance) return;
 
 			const programName = reservation.session?.program?.name ?? "Unknown";
 
-			reservation.attendances.forEach(attendance => {
-				attendances.push({
-					...attendance,
-					programName,
-					created: attendance.created ?? new Date()
-				});
+			attendances.push({
+				...reservation.attendance,
+				programName,
+				created: reservation.attendance.created ?? new Date()
 			});
 		});
 

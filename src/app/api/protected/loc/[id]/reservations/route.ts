@@ -37,7 +37,6 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
                 memberSubscriptionId: subscriptionId || null,
                 memberPackageId: packageId || null,
                 sessionId: sid,
-                status: "active",
                 locationId: id,
                 memberId: memberId
             })

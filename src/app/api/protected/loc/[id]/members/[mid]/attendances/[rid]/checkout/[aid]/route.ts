@@ -3,70 +3,59 @@ import { db } from '@/db/db';
 import { attendances } from '@/db/schemas';
 import { eq } from 'drizzle-orm';
 
-export async function PATCH(req: NextRequest, props: { params: Promise<{ mid: number, id: number, rid: number, aid:number }> }) {
-  const params = await props.params;
+export async function PATCH(req: NextRequest, props: { params: Promise<{ mid: number, id: number, rid: number, aid: number }> }) {
+	const params = await props.params;
 
-  console.log('params:', params);  // Log the entire params object to see its content
+	try {
+		const body = await req.json();
 
-  try {
-    const body = await req.json();
-    console.log('Incoming body:', body);
 
-    // Log for debugging if params.aid is correct
-    console.log("params.aid:", params.aid);
+		// Force type conversion to ensure it's a number
+		const attendance = await db.query.attendances.findFirst({
+			where: (attendances, { eq }) => eq(attendances.id, Number(params.aid)),
+		});
 
-    // Force type conversion to ensure it's a number
-    const attendance = await db.query.attendances.findFirst({
-      where: (attendances, { eq }) => eq(attendances.id, Number(params.aid)),
-    });
+		if (!attendance) {
+			console.error("Attendance not found for id:", params.aid);
+			return NextResponse.json({ error: "Attendance record not found" }, { status: 404 });
+		}
 
-    if (!attendance) {
-      console.error("Attendance not found for id:", params.aid);
-      return NextResponse.json({ error: "Attendance record not found" }, { status: 404 });
-    }
+		// Continue with the rest of the logic
+		const { startTime, endTime, checkInTime, checkOutTime, ipAddress, macAddress, lat, lng } = body;
 
-    // Continue with the rest of the logic
-    const { startTime, endTime, checkInTime, checkOutTime, ipAddress, macAddress, lat, lng } = body;
+		const parseDate = (dateString: string): Date | null => {
+			if (!dateString) return null;
+			const date = new Date(dateString);
+			if (isNaN(date.getTime())) {
+				console.error(`Invalid date format: ${dateString}`);
+				return null;
+			}
+			return date;
+		};
 
-    const parseDate = (dateString: string): Date | null => {
-      if (!dateString) return null;
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        console.error(`Invalid date format: ${dateString}`);
-        return null;
-      }
-      return date;
-    };
+		const parsedStartTime = parseDate(startTime) || attendance.startTime;
+		const parsedEndTime = parseDate(endTime) || attendance.endTime;
+		const parsedCheckInTime = parseDate(checkInTime) || attendance.checkInTime;
+		const parsedCheckOutTime = parseDate(checkOutTime);
 
-    const parsedStartTime = parseDate(startTime) || attendance.startTime;
-    const parsedEndTime = parseDate(endTime) || attendance.endTime;
-    const parsedCheckInTime = parseDate(checkInTime) || attendance.checkInTime;
-    const parsedCheckOutTime = parseDate(checkOutTime);
+		const updatedAttendance = await db.update(attendances).set({
+			startTime: parsedStartTime || attendance.startTime,
+			endTime: parsedEndTime || attendance.endTime,
+			checkInTime: parsedCheckInTime || attendance.checkInTime,
+			checkOutTime: parsedCheckOutTime,
+			ipAddress: ipAddress || null,
+			macAddress: macAddress || null,
+			lat: lat || null,
+			lng: lng || null,
+		}).where(eq(attendances.id, Number(params.aid)));
 
-    console.log("parsedStartTime", parsedStartTime)
-    console.log("parsedEndTime", parsedEndTime)
-    console.log("parsedCheckInTime", parsedCheckInTime)
-    console.log("parsedCheckOutTime", parsedCheckOutTime)
 
-    const updatedAttendance = await db.update(attendances).set({
-      startTime: parsedStartTime || attendance.startTime,
-      endTime: parsedEndTime || attendance.endTime,
-      checkInTime: parsedCheckInTime || attendance.checkInTime,
-      checkOutTime: parsedCheckOutTime,   
-      ipAddress: ipAddress || null,
-      macAddress: macAddress || null,
-      lat: lat || null,
-      lng: lng || null,
-    }).where(eq(attendances.id, Number(params.aid)));
-
-    console.log("updatedAttendance", updatedAttendance)
-
-    return NextResponse.json(updatedAttendance, { status: 200 });
-  } catch (err) {
-    console.log(err);
-    return NextResponse.json({ 
-      error: "Failed to update attendance",
-      details: err instanceof Error ? err.message : String(err)
-    }, { status: 500 });
-  }
+		return NextResponse.json(updatedAttendance, { status: 200 });
+	} catch (err) {
+		console.log(err);
+		return NextResponse.json({
+			error: "Failed to update attendance",
+			details: err instanceof Error ? err.message : String(err)
+		}, { status: 500 });
+	}
 }

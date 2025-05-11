@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
                                     program: true
                                 }
                             },
-                            attendances: true
+                            attendance: true
                         }
                     }
                 }
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
                                     program: true
                                 }
                             },
-                            attendances: true
+                            attendance: true
                         }
                     }
                 }
@@ -58,14 +58,11 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
         memberPlans.forEach(plan => {
             if (!plan.reservations?.length) return;
             plan.reservations.forEach(reservation => {
-                if (!reservation.attendances?.length) return;
-
-                reservation.attendances.forEach(attendance => {
-                    attendances.push({
-                        ...attendance,
-                        programName: reservation.session.program.name,
-                        created: attendance.created ?? new Date()
-                    });
+                if (!reservation.attendance) return;
+                attendances.push({
+                    ...reservation.attendance,
+                    programName: reservation.session.program.name,
+                    created: reservation.attendance.created ?? new Date()
                 });
             });
         });
@@ -73,7 +70,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
 
         return NextResponse.json(attendances, { status: 200 });
     } catch (err) {
-       
+
         return NextResponse.json({ error: err }, { status: 500 });
     }
 }
