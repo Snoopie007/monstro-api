@@ -10,7 +10,7 @@ import { sleep, tryCatch } from "@/libs/utils";
 import DayList from "./components/DayList";
 
 
-function CalendarPage(props: { params: Promise<{ id: string }> }) {
+export default function CalendarPage(props: { params: Promise<{ id: string }> }) {
 	const { id } = use(props.params);
 
 	const { currentDate, setCurrentDate, currentMonth, setCurrentMonth, isLoading, setIsLoading } = useSessionCalendar()
@@ -39,17 +39,17 @@ function CalendarPage(props: { params: Promise<{ id: string }> }) {
 	// 	const data = await result.json()
 	// 	setEvents([])
 	// 	setIsLoading(false)
-}
+	// }
 
 
-return (
-	<div className="flex flex-row h-full bg-foreground/5">
+	return (
+		<div className="flex flex-row h-full bg-foreground/5">
 
-		<div className="flex-1 h-full">
-			<BigCalendar events={events} />
-		</div>
-		<div className="flex-initial w-[300px] flex flex-col pl-0 pr-2 pt-2 pb-1 space-y-2">
-			{/* 
+			<div className="flex-1 h-full">
+				<BigCalendar events={events} />
+			</div>
+			<div className="flex-initial w-[300px] flex flex-col pl-0 pr-2 pt-2 pb-1 space-y-2">
+				{/* 
 			<Calendar
 				mode="single"
 				fromDate={new Date()}
@@ -61,18 +61,17 @@ return (
 				}}
 				className="rounded-lg border border-foreground/10 bg-background"
 			/> */}
-			<DayList lid={id} events={events} />
+				<DayList lid={id} events={events} />
 
-		</div>
-		{/* {isSidebarOpen && selectedSession && (
+			</div>
+			{/* {isSidebarOpen && selectedSession && (
 				<Sidebar
 					session={{ ...selectedSession, locationId }}
 					reservations={reservations}
 					onClose={handleSidebarClose}
 				/>
 			)} */}
-	</div>
-);
+		</div>
+	);
+};
 
-
-export default CalendarPage;
