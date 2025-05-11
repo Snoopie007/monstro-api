@@ -19,7 +19,7 @@ async function verifyToken(token: string): Promise<boolean> {
 export default auth(async (req) => {
 
 	try {
-		const { pathname } = req.nextUrl
+		const { pathname, searchParams } = req.nextUrl
 		const isLoggedin = !!req.auth
 		const locations = req.auth?.user?.locations || []
 
@@ -43,16 +43,24 @@ export default auth(async (req) => {
 			if (!isLoggedin && !(isMobileApp && isMobileAuthenticated)) {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 			}
-			console.log("pathname", pathname)
+
 			const [, encodedId, subpath = ""] = pathname.match(/^\/api\/protected\/loc\/([^/]+)(\/.*)?$/) || []
 
 			if (!encodedId || !isNaN(Number(encodedId))) {
 				return NextResponse.next()
 			}
 			console.log("subpath", subpath)
+			console.log("searchParams", searchParams)
+
+			// Preserve all search parameters without conversion to object and back
+			const params = searchParams.toString()
+			console.log("params", params)
 			const decodedId = decodeId(encodedId)
+
+			const url = new URL(`/api/protected/loc/${decodedId}${subpath}?${params}`, req.url)
+			console.log("url", url)
 			return decodedId
-				? NextResponse.rewrite(new URL(`/api/protected/loc/${decodedId}${subpath}`, req.url))
+				? NextResponse.rewrite(url)
 				: NextResponse.json({ message: "Invalid location" }, { status: 400 })
 		}
 
