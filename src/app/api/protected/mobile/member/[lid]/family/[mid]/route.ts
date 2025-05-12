@@ -39,6 +39,7 @@ export async function GET(req: NextRequest, props: { params: Promise<Props> }) {
             packages: true,
             rewards: true,
             subscriptions: true,
+           
 
           }
         }
