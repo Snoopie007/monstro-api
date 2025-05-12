@@ -146,7 +146,7 @@ class AgencyGHL extends BaseGHL {
         await admindb.update(adminIntegrations).set({
             accessToken: access_token,
             refreshToken: refresh_token,
-            expires: (new Date().getTime() + expires_in) * 1000,
+            expires: new Date().getTime() + (expires_in * 1000),
             scope,
         }).where(eq(adminIntegrations.service, "ghl"));
 
@@ -187,7 +187,7 @@ class VendorGHL extends BaseGHL {
         await db.update(integrations).set({
             accessToken: access_token,
             refreshToken: refresh_token,
-            expires: new Date().getTime() + expires_in * 1000,
+            expires: new Date().getTime() + (expires_in * 1000),
         }).where(eq(integrations.id, integration.id!));
 
         this.ACCESS_TOKEN = access_token;
