@@ -27,7 +27,7 @@ import {
 import { VendorGHL } from '@/libs/server/ghl';
 import { Integration } from '@/types';
 import { interpolate } from '@/libs/utils';
-import { chargeWallet } from '@/libs/server/db';
+import { chargeWallet, checkWalletBalance } from '@/libs/server/db';
 
 type ChatDataType = {
     messages: ChatCompletionMessageParam[],
@@ -95,6 +95,8 @@ export async function POST(req: NextRequest) {
     if (!location) {
         return NextResponse.json({ message: "Location Not Found" }, { status: 500 })
     }
+
+    await checkWalletBalance(location);
 
 
     const bot = location.bots[0];

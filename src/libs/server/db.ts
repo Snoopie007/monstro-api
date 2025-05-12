@@ -3,7 +3,7 @@ import { walletUsages } from "@/db/schemas";
 import { SQL, sql, getTableColumns, eq } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { db } from "@/db/db";
-import { Location } from "@/types";
+import { Location, Wallet } from "@/types";
 import { wallets } from "@/db/schemas";
 import { VendorStripePayments } from "./stripe";
 
@@ -34,18 +34,17 @@ function generateOtp() {
 }
 
 
-async function chargeWallet(location: Location, amount: number, description: string) {
+
+async function checkWalletBalance(location: Location) {
 	const wallet = location.wallet;
-	let isCredit = false;
 	if (!wallet) { throw new Error("Wallet not found") }
 
 	try {
-		if (wallet.balance < (wallet.rechargeThreshold)) {
+		if (wallet.balance < wallet.rechargeThreshold) {
 			const stripe = new VendorStripePayments();
 			const vendor = await db.query.vendors.findFirst({
 				where: (vendor, { eq }) => eq(vendor.id, location.vendorId)
 			});
-
 			if (!vendor || !vendor.stripeCustomerId) { throw new Error("Vendor not found") }
 			stripe.setCustomer(vendor.stripeCustomerId);
 			const { clientSecret } = await stripe.createPaymentIntent(wallet.rechargeAmount, undefined, {
@@ -58,19 +57,42 @@ async function chargeWallet(location: Location, amount: number, description: str
 			wallet.balance += wallet.rechargeAmount;
 		}
 
-		if (wallet.credits > amount) {
-			wallet.credits -= amount;
-			isCredit = true;
-		} else {
-			wallet.balance -= amount;
-		}
+		await db.update(wallets).set({
+			balance: wallet.balance,
+			credits: wallet.credits,
+			lastCharged: new Date()
+		}).where(eq(wallets.id, wallet.id))
 
-		const today = new Date();
+
+		location.wallet = wallet;
+		return location;
+	} catch (error) {
+		console.error("Error charging wallet:", error);
+		throw new Error("Error charging wallet");
+	}
+}
+
+async function chargeWallet(location: Location, amount: number, description: string) {
+	let isCredit = false;
+	let wallet = location.wallet;
+	if (!wallet) { throw new Error("Wallet not found") }
+
+
+	if (wallet.credits > amount) {
+		wallet.credits -= amount;
+		isCredit = true;
+	} else {
+		wallet.balance -= amount;
+	}
+
+
+	try {
+
 		db.transaction(async (tx) => {
 			await tx.update(wallets).set({
 				balance: wallet.balance,
 				credits: wallet.credits,
-				lastCharged: today
+				updated: new Date()
 			}).where(eq(wallets.id, wallet.id))
 
 			await tx.insert(walletUsages).values({
@@ -79,19 +101,22 @@ async function chargeWallet(location: Location, amount: number, description: str
 				amount: amount,
 				isCredit,
 				description,
-				activityDate: today
+				activityDate: new Date()
 			})
 		})
-		return wallet;
+		location.wallet = wallet;
+		return location;
 	} catch (error) {
 		console.error("Error charging wallet:", error);
-		throw error;
+		throw new Error("Error charging wallet");
 	}
 }
+
 
 export {
 	formatPhoneNumber,
 	buildConflictUpdateColumns,
 	generateOtp,
+	checkWalletBalance,
 	chargeWallet
 }
