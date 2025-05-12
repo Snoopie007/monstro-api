@@ -18,9 +18,21 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
                         session: true
                     }
                 },
-                plan: true
+                plan: {
+                    with: {
+                        planPrograms: {
+                            with: {
+                                program: {
+                                    with: {
+                                        sessions: true,
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
             }
-        })
+        });
         return NextResponse.json(subscriptions, { status: 200 })
     } catch (err) {
         // console.log(err)
