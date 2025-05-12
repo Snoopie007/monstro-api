@@ -16,7 +16,6 @@ export function DayList({ lid, events }: { lid: string, events: CalendarEvent[] 
 
         if (events) {
             const classes = events.filter((event) => isSameDay(event.start, currentDate))
-
             setClasses(classes)
         }
 
@@ -32,11 +31,16 @@ export function DayList({ lid, events }: { lid: string, events: CalendarEvent[] 
         <div className='bg-background rounded-lg border border-foreground/10 flex-1 h-full' >
             <div className='flex flex-col flex-1 h-full p-4 space-y-2'>
                 <div className='text-sm font-semibold '>
-                    Classes for {today}
+                    Reservations for {today}
                 </div>
 
                 <ScrollArea className='h-full'>
                     <div className='flex flex-col gap-2'>
+                        {classes.length === 0 && (
+                            <div className='text-muted-foreground border border-foreground/10 bg-foreground/5 text-xs rounded-sm px-3 py-2 flex items-center justify-center'>
+                                No reservations found.
+                            </div>
+                        )}
                         {classes.map((c) => (
                             <div key={c.id} className={cn(
                                 'border border-foreground/10 bg-foreground/5  text-xs',
