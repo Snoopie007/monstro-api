@@ -31,8 +31,8 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
 
         // Get recurring reservations
         const recurrings = await db.query.recurringReservations.findMany({
-            where: (r, { and, eq, gte, or, isNull }) => and(
-                gte(r.startDate, startDate.toISOString()),
+            where: (r, { and, eq, gte, or, isNull, lte }) => and(
+                lte(r.startDate, startDate.toISOString()),
                 eq(r.locationId, params.id),
                 or(
                     isNull(r.canceledOn),
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
         recurrings.forEach(recurring => {
             if (!recurring.session || !recurring.member) return;
 
-            let currentDate = new Date(recurring.startDate);
+            let currentDate = new Date(startDate);
 
 
             const sessionDay = recurring.session.day;
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
                 // if (!exception || !exception.isCanceled) {
 
                 // }
-                const { id, ...rest } = recurring;
+                const { id, intervalThreshold, interval, exceptions, ...rest } = recurring;
                 const vr: Reservation = {
                     ...rest,
                     startDate: currentDate.toISOString().split('T')[0]

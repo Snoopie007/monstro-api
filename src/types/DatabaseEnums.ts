@@ -4,7 +4,6 @@ export type Interval = 'day' | 'week' | 'month' | 'year';
 export type PackageStatus = 'active' | 'incomplete' | 'expired' | 'completed';
 export type PaymentMethod = 'card' | 'cash' | 'check' | 'zelle' | 'venmo' | 'paypal' | 'apple' | 'google';
 export type InvoiceStatus = 'draft' | 'paid' | 'unpaid' | 'uncollectible' | 'void';
-export type ReservationStatus = 'active' | 'expired' | 'canceled';
 export type MemberRelationship = 'parent' | 'spouse' | 'child' | 'sibling' | 'other';
 export type ContractType = 'contract' | 'waiver';
 export type RoleColor = "red" | "green" | "blue" | "pink" | "cyan" | "lime" | "orange" | "fuchsia" | "sky" | "lemon" | "purple" | "yellow";

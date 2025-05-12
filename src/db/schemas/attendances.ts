@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
 import { serial, timestamp, pgTable, text, integer } from "drizzle-orm/pg-core";
-import { recurringReservations, recurringReservationsExceptions, reservations } from "./reservations";
+import { recurringReservations, reservations } from "./reservations";
 
 export const attendances = pgTable("check_ins", {
     id: serial("id").primaryKey(),
