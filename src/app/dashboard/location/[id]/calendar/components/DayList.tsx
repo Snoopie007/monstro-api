@@ -10,7 +10,7 @@ import { cn } from '@/libs/utils'
 export function DayList({ lid, events }: { lid: string, events: CalendarEvent[] }) {
     const { currentDate, setCurrentDate, } = useSessionCalendar()
     const [classes, setClasses] = useState<CalendarEvent[]>([])
-
+    const [today, setToday] = useState<string>('')
 
     useEffect(() => {
 
@@ -20,6 +20,10 @@ export function DayList({ lid, events }: { lid: string, events: CalendarEvent[] 
             setClasses(classes)
         }
 
+        if (currentDate) {
+            setToday(format(currentDate, 'MMMM d, yyyy'))
+        }
+
     }, [currentDate])
 
 
@@ -27,8 +31,8 @@ export function DayList({ lid, events }: { lid: string, events: CalendarEvent[] 
     return (
         <div className='bg-background rounded-lg border border-foreground/10 flex-1 h-full' >
             <div className='flex flex-col flex-1 h-full p-4 space-y-2'>
-                <div className='text-sm font-semibold  border-b border-foreground/10 pb-1'>
-                    {currentDate ? `Classes for ${format(currentDate, 'MMMM d, yyyy')}` : 'Loading...'}
+                <div className='text-sm font-semibold '>
+                    Classes for {today}
                 </div>
 
                 <ScrollArea className='h-full'>
