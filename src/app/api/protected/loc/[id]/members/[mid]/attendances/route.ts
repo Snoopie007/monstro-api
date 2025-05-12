@@ -19,6 +19,16 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
                     eq(memberSubscriptions.locationId, params.id)
                 ),
                 with: {
+                    recurrings: {
+                        with: {
+                            session: {
+                                with: {
+                                    program: true
+                                }
+                            },
+                            attendances: true
+                        }
+                    },
                     reservations: {
                         with: {
                             session: {
@@ -37,7 +47,16 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
                     eq(memberPackages.locationId, params.id)
                 ),
                 with: {
-
+                    recurrings: {
+                        with: {
+                            session: {
+                                with: {
+                                    program: true
+                                }
+                            },
+                            attendances: true
+                        }
+                    },
                     reservations: {
                         with: {
                             session: {
@@ -56,15 +75,29 @@ export async function GET(req: NextRequest, props: { params: Promise<{ mid: numb
         const memberPlans = [...(subs || []), ...(pkgs || [])];
 
         memberPlans.forEach(plan => {
-            if (!plan.reservations?.length) return;
-            plan.reservations.forEach(reservation => {
-                if (!reservation.attendance) return;
-                attendances.push({
-                    ...reservation.attendance,
-                    programName: reservation.session.program.name,
-                    created: reservation.attendance.created ?? new Date()
+            if (plan.reservations && plan.reservations.length > 0) {
+                plan.reservations.forEach(reservation => {
+                    if (!reservation.attendance) return;
+                    attendances.push({
+                        ...reservation.attendance,
+                        programName: reservation.session.program.name,
+                        created: reservation.attendance.created ?? new Date()
+                    });
                 });
-            });
+            }
+
+            if (plan.recurrings && plan.recurrings.length > 0) {
+                plan.recurrings.forEach(recurring => {
+                    if (!recurring.attendances) return;
+                    recurring.attendances.forEach(attendance => {
+                        attendances.push({
+                            ...attendance,
+                            programName: recurring.session.program.name,
+                            created: attendance.created ?? new Date()
+                        });
+                    });
+                });
+            }
         });
 
 

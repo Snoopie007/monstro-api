@@ -1,8 +1,5 @@
 'use client'
-
-
 import {
-    Button,
     Skeleton,
     Table,
     TableBody,
@@ -19,7 +16,7 @@ import { getCoreRowModel, getFilteredRowModel, flexRender, ColumnFiltersState, S
 import { useReactTable } from "@tanstack/react-table";
 import { MemberAttendanceColumns } from "./MemberAttendanceColumns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 
 export function MemberAttedance({ params }: { params: { id: string, mid: number } }) {
@@ -31,7 +28,7 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
         []
     )
 
-    const programs: string[] = attendances 
+    const programs: string[] = attendances
         ? Array.from(new Set(attendances.map((attendance: ExtendedAttendance) => attendance.programName)))
         : [];
 
@@ -53,7 +50,7 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
         <div className="space-y-2">
             <div className="flex flex-row justify-between items-center px-4 gap-2">
                 <div className="flex flex-row gap-2 items-center">
-                <Select onValueChange={(value) => {
+                    <Select onValueChange={(value) => {
                         table.getColumn("programName")?.setFilterValue(value)
                     }}>
                         <SelectTrigger>

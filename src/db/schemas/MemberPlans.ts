@@ -6,7 +6,7 @@ import { relations, sql } from "drizzle-orm";
 import { memberInvoices, members, memberContracts } from "./members";
 import { locations } from "./locations";
 import { transactions } from "./transactions";
-import { reservations } from "./reservations";
+import { recurringReservations, reservations } from "./reservations";
 import { BillingCycleAnchorConfig } from "@/types";
 import { LocationStatusEnum, PackageStatusEnum, PaymentMethodEnum, PlanInterval, PlanType } from "./DatabaseEnums";
 
@@ -130,6 +130,7 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
 	transactions: many(transactions),
 	invoices: many(memberInvoices),
 	reservations: many(reservations),
+	recurrings: many(recurringReservations),
 	child: many(memberSubscriptions)
 }));
 
@@ -157,5 +158,6 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
 	transactions: many(transactions),
 	invoices: many(memberInvoices),
 	reservations: many(reservations),
+	recurrings: many(recurringReservations),
 	child: many(memberPackages)
 }));

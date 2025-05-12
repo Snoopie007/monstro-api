@@ -48,17 +48,19 @@ export default function CalendarPage(props: { params: Promise<{ id: string }> })
 			</div>
 			<div className="flex-initial w-[300px] flex flex-col pl-0 pr-2 pt-2 pb-1 space-y-2">
 
-				<Calendar
-					mode="single"
-					fromDate={new Date()}
-					selected={new Date()}
-					onSelect={(date) => {
-						if (date) {
-							setCurrentDate(date)
-						}
-					}}
-					className="rounded-lg border border-foreground/10 bg-background"
-				/>
+				<div className="rounded-lg border border-foreground/10 bg-background flex py-4 flex-row justify-center  items-center ">
+					<Calendar
+						mode="single"
+						fromDate={new Date()}
+						selected={new Date()}
+						onSelect={(date) => {
+							if (date) {
+								setCurrentDate(date)
+							}
+						}}
+						className="p-0 w-[250px]"
+					/>
+				</div>
 				<DayList lid={id} events={events} />
 
 			</div>

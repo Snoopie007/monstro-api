@@ -1,8 +1,4 @@
 import { db } from "@/db/db";
-import { reservations } from "@/db/schemas/reservations";
-import { Reservation } from "@/types";
-import { cosineDistance, eq } from "drizzle-orm";
-import next from "next";
 import { NextResponse } from "next/server";
 
 
@@ -12,7 +8,7 @@ export async function GET(req: Request, props: { params: Promise<{ sid: number }
 
   try {
     const reservation = await db.query.reservations.findMany({
-      where: (reservations, { eq, and }) => eq(reservations.sessionId, sid)
+      where: (reservations, { eq }) => eq(reservations.sessionId, sid)
     });
 
     console.log("Fetched reservations:", reservation);

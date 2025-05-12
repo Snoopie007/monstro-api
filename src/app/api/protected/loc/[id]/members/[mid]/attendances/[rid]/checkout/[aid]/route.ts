@@ -8,9 +8,6 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ mid: nu
 
 	try {
 		const body = await req.json();
-
-
-		// Force type conversion to ensure it's a number
 		const attendance = await db.query.attendances.findFirst({
 			where: (attendances, { eq }) => eq(attendances.id, Number(params.aid)),
 		});

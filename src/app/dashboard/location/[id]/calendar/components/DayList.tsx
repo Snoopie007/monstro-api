@@ -24,7 +24,7 @@ export function DayList({ lid, events }: { lid: string, events: CalendarEvent[] 
         <div className='bg-background rounded-lg border border-foreground/10 flex-1 h-full' >
             <div className='flex flex-col flex-1 h-full p-4 space-y-2'>
                 <div className='text-base font-semibold   '>
-                    {/* Classes for {format(currentDate, 'MMMM d, yyyy')} */}
+                    Classes for {currentDate && format(currentDate, 'MMMM d, yyyy')}
                 </div>
 
                 <ScrollArea className='h-full'>
