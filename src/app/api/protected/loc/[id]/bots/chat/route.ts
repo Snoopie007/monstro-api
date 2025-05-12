@@ -13,7 +13,7 @@ import {
 
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { db } from '@/db/db';
-import { getRedisClient } from '@/libs/server/redis';
+import { getAIRestClient } from '@/libs/server/redis';
 import { IntegrationNodeOptions, NodeSettings, RetrievalNodeOptions } from '@/types';
 import { type HierarchyNode, stratify } from 'd3-hierarchy';
 import {
@@ -55,7 +55,7 @@ type SessionContext = {
 
 const TTL = 60 * 60 * 1
 
-const redis = getRedisClient();
+const redis = getAIRestClient();
 
 const fakeData = {
     prospect: {

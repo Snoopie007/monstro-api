@@ -13,6 +13,19 @@ const getRedisClient = () => {
     return client;
 };
 
+
+const getAIRestClient = () => {
+    if (!process.env.UPSTASH_AI_REST_URL || !process.env.UPSTASH_AI_REST_TOKEN) {
+        throw new Error("UPSTASH_AI_REST_URL and UPSTASH_AI_REST_TOKEN must be set in the environment");
+    }
+    const client = new Redis({
+        url: process.env.UPSTASH_AI_REST_URL,
+        token: process.env.UPSTASH_AI_REST_TOKEN,
+    });
+    return client;
+}
+
+
 // const getQstashClient = () => {
 //     if (!process.env.UPSTASH_QSTASH_REST_TOKEN) {
 //         throw new Error("UPSTASH_QSTASH_REST_TOKEN must be set in the environment");
@@ -24,5 +37,6 @@ const getRedisClient = () => {
 // }
 
 export {
-    getRedisClient
+    getRedisClient,
+    getAIRestClient
 }

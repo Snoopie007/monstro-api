@@ -123,7 +123,7 @@ export function Botlist({ lid, location }: { lid: string, location: Location }) 
                                                 <Button variant={'ghost'} size={'icon'} className='size-6 hover:bg-foreground/10 '
                                                     onClick={() => {
                                                         navigator.clipboard.writeText(
-                                                            `https://api.mymonstroapp.com/api/public/ai/${lid}/bot/${encodeId(bot.id)}`
+                                                            `https://api.mymonstroapp.com/api/public/bot/${encodeId(bot.id)}`
                                                         );
                                                     }}
                                                 >
