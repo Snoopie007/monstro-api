@@ -15,10 +15,10 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
 				eq(reservations.memberSubscriptionId, Number(authMember.member?.id || 0))
 			),
 			with: {
-				attendances: true
+				attendance: true
 			}
 		});
-		return NextResponse.json(reservation?.attendances, { status: 200 });
+		return NextResponse.json(reservation?.attendance, { status: 200 });
 	} catch (err) {
 		console.log(err)
 		return NextResponse.json({ error: err }, { status: 500 })
