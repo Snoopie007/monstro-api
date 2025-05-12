@@ -35,7 +35,7 @@ export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
 
             const transaction = row.original
             return (
-                <div className="flex flex-row items-center gap-2">{transaction.amount}</div>
+                <div className="flex flex-row items-center gap-2">{transaction.amount / 100}</div>
             )
         },
     },
