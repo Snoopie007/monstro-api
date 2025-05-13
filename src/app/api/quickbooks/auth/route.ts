@@ -1,9 +1,8 @@
-import { NextApiRequest, NextApiResponse } from 'next';
 import { randomUUID } from 'crypto';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export async function GET(request: Request) {
   const authUrl = new URL('https://appcenter.intuit.com/connect/oauth2');
-  
+
   const params = {
     client_id: process.env.NEXT_PUBLIC_QUICKBOOKS_CLIENT_ID,
     client_secret: process.env.QUICKBOOKS_CLIENT_SECRET,
@@ -18,5 +17,6 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       authUrl.searchParams.append(key, value);
     }
   });
-  res.redirect(authUrl.toString());
+
+  return Response.redirect(authUrl.toString(), 302);
 }
