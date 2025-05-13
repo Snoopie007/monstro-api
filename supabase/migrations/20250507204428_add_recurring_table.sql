@@ -53,3 +53,11 @@ ADD CONSTRAINT check_ins_recurring_id_fkey FOREIGN KEY (recurring_id) REFERENCES
 
 ALTER TABLE check_ins
 DROP CONSTRAINT IF EXISTS check_ins_reservation_id_foreign;
+
+ALTER TABLE recurring_reservations_exceptions
+DROP CONSTRAINT IF EXISTS recurring_reservations_exceptions_reservation_id_fkey;
+
+ALTER TABLE recurring_reservations_exceptions
+DROP COLUMN IF EXISTS reservation_id,
+DROP COLUMN IF EXISTS is_canceled;
+

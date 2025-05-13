@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, serial, timestamp, pgTable, boolean, date, unique } from "drizzle-orm/pg-core";
+import { integer, serial, timestamp, pgTable, date, unique } from "drizzle-orm/pg-core";
 import { programSessions } from "./programs";
 import { members } from "./members";
 import { attendances } from "./attendances";
@@ -42,8 +42,6 @@ export const recurringReservationsExceptions = pgTable("recurring_reservations_e
     id: serial("id").primaryKey().notNull(),
     recurringReservationId: integer("recurring_reservation_id").notNull().references(() => recurringReservations.id, { onDelete: "cascade" }),
     occurrenceDate: date("occurrence_date").notNull(),
-    isCanceled: boolean("is_canceled").notNull().default(false),
-    reservationId: integer("reservation_id").references(() => reservations.id, { onDelete: "cascade" }),
 }, (t) => [unique("unique_exception_recurring").on(t.recurringReservationId, t.occurrenceDate)]);
 
 
@@ -103,10 +101,6 @@ export const recurringReservationsExceptionsRelations = relations(recurringReser
     recurring: one(recurringReservations, {
         fields: [recurringReservationsExceptions.recurringReservationId],
         references: [recurringReservations.id],
-    }),
-    reservation: one(reservations, {
-        fields: [recurringReservationsExceptions.reservationId],
-        references: [reservations.id],
     })
 }));
 

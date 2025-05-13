@@ -172,14 +172,12 @@ function EventItem({ event, onSelect }: EventItemProps) {
     const members = event.data.members
 
     return (
-        <div className="text-xs bg-foreground text-background border-l-3 flex-col border-indigo-500 rounded-sm py-1.5 px-2 truncate cursor-pointer"
+        <div className={cn(
+            "text-xs bg-foreground text-background border-l-3 flex flex-row items-center gap-2",
+            "border-indigo-500 rounded-sm py-1.5 px-2 truncate cursor-pointer"
+        )}
             onClick={() => onSelect && onSelect(event)}
         >
-
-
-            <div className="truncate overflow-hidden text-ellipsis font-medium">
-                {event.title}
-            </div>
             <div className="flex items-center">
                 {members.length > 0 && members.slice(0, 2).map((m, i) => (
                     <Avatar key={m.memberId} className="size-4">
@@ -190,6 +188,10 @@ function EventItem({ event, onSelect }: EventItemProps) {
                     </Avatar>
                 ))}
             </div>
+            <div className="truncate overflow-hidden text-ellipsis font-medium">
+                {event.title}
+            </div>
+
         </div>
     )
 }

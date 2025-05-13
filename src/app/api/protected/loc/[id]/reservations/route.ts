@@ -26,23 +26,19 @@ export async function GET(req: Request, props: { params: Promise<Params> }) {
 
 
 export async function POST(req: Request, props: { params: Promise<Params> }) {
-    const { sessionIds, subscriptionId, packageId, memberId } = await req.json();
+    const { sessionId, startDate, subscriptionId, packageId, memberId } = await req.json();
     const { id } = await props.params;
 
     try {
-        const newReservations: Reservation[] = []
-        sessionIds.forEach((sid: number) => {
-            newReservations.push({
-                startDate: new Date().toISOString().split("T")[0],
-                memberSubscriptionId: subscriptionId || null,
-                memberPackageId: packageId || null,
-                sessionId: sid,
-                locationId: id,
-                memberId: memberId
-            })
-        })
 
-        await db.insert(reservations).values(newReservations)
+        await db.insert(reservations).values({
+            startDate,
+            memberSubscriptionId: subscriptionId || null,
+            memberPackageId: packageId || null,
+            sessionId,
+            locationId: id,
+            memberId: memberId
+        })
 
         return NextResponse.json({ success: true }, { status: 200 });
 

@@ -22,7 +22,12 @@ export const LocationsList = ({ locations }: { locations: Location[] }) => {
 
         <div className='flex flex-col gap-4'>
             <div className='flex flex-row gap-2 items-center justify-start'>
-                <Input placeholder='Search' className='w-36 h-9 rounded-sm border-foreground/10' value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Input placeholder='Search' className='w-[400px] h-9 rounded-sm border-foreground/10' value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Button variant='foreground' size='sm' className='h-9 rounded-sm border-foreground/10' asChild>
+                    <Link href='/dashboard/locations/new'>
+                        Add Location
+                    </Link>
+                </Button>
             </div>
             <div className='grid grid-cols-4 gap-4'>
                 {filteredLocations.map((l) => (
