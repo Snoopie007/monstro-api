@@ -60,7 +60,7 @@ export default function BrowseIntegrationPage(props: { params: Promise<{ id: str
             </div>
             <div className="grid grid-cols-2 gap-4">
                 {filteredPartners.map((partner, index) => (
-                    <Link key={index} href={generateURL(partner)} className="border border-foreground/20 rounded-sm py-6 px-4 space-y-4">
+                    <Link key={index} href={generateURL(partner)} className="border border-foreground/5 rounded-sm py-6 px-4 space-y-4">
                         <div className="flex flex-row gap-4 items-center justify-center">
                             <div className="rounded-full overflow-hidden size-10 flex">
                                 <Image src={`/images/partners/${partner.logo}`} alt={partner.name} width={45} height={45} />
