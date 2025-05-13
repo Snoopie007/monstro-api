@@ -2,13 +2,13 @@ import { db } from "@/db/db";
 import { NextResponse } from "next/server";
 
 
-export async function GET(req: Request, props: { params: Promise<{ sid: number }> }) {
+export async function GET(req: Request, props: { params: Promise<{ rid: number }> }) {
 
-  const { sid } = await props.params;
+  const { rid } = await props.params;
 
   try {
     const reservation = await db.query.reservations.findMany({
-      where: (reservations, { eq }) => eq(reservations.sessionId, sid)
+      where: (reservations, { eq }) => eq(reservations.id, rid)
     });
 
     console.log("Fetched reservations:", reservation);

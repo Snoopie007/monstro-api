@@ -65,13 +65,15 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
             }
 
             while (currentDate <= endDate) {
-                // const exception = recurring.exceptions?.find(e =>
-                //     new Date(e.occurrenceDate).toISOString().split('T')[0] === currentDate.toISOString().split('T')[0]
-                // );
+                const exception = recurring.exceptions?.find(e =>
+                    e.occurrenceDate === currentDate.toISOString().split('T')[0]
+                );
 
-                // if (!exception || !exception.isCanceled) {
+                if (exception) {
+                    currentDate = addDays(currentDate, (recurring.intervalThreshold || 1) * 7);
+                    continue;
+                }
 
-                // }
                 const { id, intervalThreshold, interval, exceptions, ...rest } = recurring;
                 const vr: Reservation = {
                     ...rest,
@@ -86,7 +88,6 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
 
         // Process standard reservations
         reservations.forEach(reservation => {
-
             addEventToCalendar(events, reservation);
         });
 
