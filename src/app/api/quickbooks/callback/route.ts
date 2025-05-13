@@ -1,7 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import axios, { AxiosError } from 'axios';
-import { encode } from 'base-64';
+
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -20,24 +19,24 @@ export async function GET(req: Request) {
   }
 
   try {
-    const tokenResponse = await axios.post(
-      'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
-      new URLSearchParams({
+    const res = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(
+          `${process.env.NEXT_PUBLIC_QUICKBOOKS_CLIENT_ID}:${process.env.QUICKBOOKS_CLIENT_SECRET}`
+        ).toString('base64')}`,
+      },
+      body: new URLSearchParams({
         grant_type: 'authorization_code',
         code: code,
         redirect_uri: process.env.QUICKBOOKS_REDIRECT_URI!,
       }).toString(),
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${encode(
-            `${process.env.NEXT_PUBLIC_QUICKBOOKS_CLIENT_ID}:${process.env.QUICKBOOKS_CLIENT_SECRET}`
-          )}`,
-        },
-      }
-    );
+    });
 
-    const { access_token, refresh_token } = tokenResponse.data;
+    const data = await res.json();
+
+    const { access_token, refresh_token } = data;
 
     const redirectUrl = new URL('/dashboard', req.url);
     redirectUrl.searchParams.set('access_token', access_token);
@@ -49,8 +48,7 @@ export async function GET(req: Request) {
     return NextResponse.redirect(redirectUrl);
 
   } catch (error) {
-    const err = error as AxiosError;
-    console.error('Token exchange error:', err.response?.data || err.message);
+    console.error('Token exchange error:', error);
     return NextResponse.redirect(new URL('/?error=token_exchange_failed', req.url));
   }
 }

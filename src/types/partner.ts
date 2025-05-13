@@ -8,7 +8,7 @@ export type Partner = {
     options: {
         response_type: string,
         redirect_uri: string,
-        client_id: string | null,
+        client_id: string | undefined,
         scope: string | string[]
     }
 }
