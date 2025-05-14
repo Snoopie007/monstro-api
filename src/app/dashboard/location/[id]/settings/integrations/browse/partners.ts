@@ -3,7 +3,7 @@ export const IntergrationPartners = [
         name: "GHL",
         description: "GHL is a payment gateway",
         url: "https://marketplace.gohighlevel.com/oauth/chooselocation",
-        logo: "ghl-logo.jpg",
+        logo: "ghl-logo.webp",
         tags: ["Marketing"],
         options: {
             response_type: "code",
@@ -16,7 +16,7 @@ export const IntergrationPartners = [
         name: "Stripe",
         description: "Stripe is a payment gateway",
         url: "https://connect.stripe.com/oauth/v2/authorize",
-        logo: "stripe-logo.png",
+        logo: "stripe-logo.webp",
         tags: ["Payment"],
         options: {
             response_type: "code",
@@ -30,14 +30,13 @@ export const IntergrationPartners = [
         name: "Quickbooks",
         description: "Quickbooks is an accounting software",
         url: "https://appcenter.intuit.com/connect/oauth2",
-        logo: "quickbooks-logo.png",
+        logo: "quickbooks-logo.webp",
         tags: ["Accounting"],
         options: {
             client_id: process.env.NEXT_PUBLIC_QUICKBOOKS_CLIENT_ID,
-            // client_secret: process.env.QUICKBOOKS_CLIENT_SECRET,
             response_type: 'code',
             scope: 'com.intuit.quickbooks.accounting',
-            redirect_uri: 'https://d63c-111-88-41-241.ngrok-free.app/api/quickbooks/callback',
+            redirect_uri: '/callbacks/integrations/quickbooks"',
             state: 'test123',
         }
     }

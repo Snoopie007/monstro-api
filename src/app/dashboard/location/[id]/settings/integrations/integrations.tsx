@@ -44,7 +44,7 @@ export default function IntegrationList({ integrations, locationId }: Intergrati
                 <li key={index} className="bg-background flex flex-row gap-2 items-center w-full min-h-4 py-2 px-6 rounded-[4px] border ">
                     <div className='flex-1 flex flex-row gap-4 items-center'>
                         <div className="rounded-sm overflow-hidden">
-                            <Image src={`/images/partners/${integration.service.toLowerCase()}-logo.png`} alt={integration.service} width={30} height={30} />
+                            <Image src={`/images/partners/${integration.service.toLowerCase()}-logo.webp`} alt={integration.service} width={30} height={30} />
                         </div>
                         <div>
                             <div className="font-medium text-sm">{integration.service}</div>
