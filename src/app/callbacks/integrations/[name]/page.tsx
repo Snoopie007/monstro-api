@@ -50,10 +50,7 @@ async function completeIntegration(name: string, searchParams: IntegrationSearch
       newIntegration = getStripeSettings(token);
     } else if (name === 'quickbooks') {
       if (searchParams.error || !searchParams.code) return false;
-      console.log('searchParams', searchParams);
-      console.log('searchParams.code', searchParams.code);
       const tokenData = await exchangeCodeForToken(searchParams.code, process.env.QUICKBOOKS_REDIRECT_URI!, searchParams.realmId);
-      console.log('tokenData', tokenData);
       if (!tokenData.access_token) return false;
       newIntegration = getQuickbooksSettings({ ...tokenData, realmId: searchParams.realmId });
     } else if (name === 'gl') {

@@ -48,7 +48,7 @@ class BaseGHL {
             client_secret: this.CLIENT_SECRET,
             'grant_type': 'authorization_code',
             'user_type': type,
-            'redirect_uri': `${process.env.NODE_ENV === "development" ? " https://d156-2407-aa80-15-645b-74c5-b559-bde8-866d.ngrok-free.app" : "https://admin.mymonstro.com"}${callback}`,
+            'redirect_uri': `${process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://admin.mymonstro.com"}${callback}`,
             code
         });
 
