@@ -2,15 +2,17 @@ import { db } from "@/db/db";
 import { authenticateMember } from "@/libs/utils";
 import { NextResponse, NextRequest } from "next/server";
 
-export async function GET(req: NextRequest, props: { params: Promise<{ lid: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ lid: number,sid: number }> }) {
     const params = await props.params;
     const authMember = authenticateMember(req);
 
     try {
-        const subscriptions = await db.query.memberSubscriptions.findMany({
+        const subscriptions = await db.query.memberSubscriptions.findFirst({
             where: (memberSubscriptions, { eq, and }) => and(
                 eq(memberSubscriptions.memberId, Number(authMember.member?.id)),
-                eq(memberSubscriptions.locationId, params.lid)
+                eq(memberSubscriptions.locationId, params.lid),
+                eq(memberSubscriptions.id, params.sid)
+
             ),
             with: {
                 reservations: {
@@ -35,6 +37,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
         });
         return NextResponse.json(subscriptions, { status: 200 })
     } catch (err) {
+        console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }

@@ -3,9 +3,10 @@ import { walletUsages } from "@/db/schemas";
 import { SQL, sql, getTableColumns, eq } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { db } from "@/db/db";
-import { Location, Wallet } from "@/types";
+import { Location, ProgramSession, Wallet } from "@/types";
 import { wallets } from "@/db/schemas";
 import { VendorStripePayments } from "./stripe";
+import { isBefore } from "date-fns";
 
 const buildConflictUpdateColumns = <
 	T extends PgTable,
@@ -33,7 +34,19 @@ function generateOtp() {
 	return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function isSessionPasted(session: ProgramSession, selectedDay: Date) {
+    const today = new Date();
+    const sessionTime = getSessionTime(session);
+    const isPasted = isBefore(selectedDay, today) ? sessionTime.getTime() < today.getTime() : false;
+    return isPasted;
+}
 
+function getSessionTime(session: ProgramSession) {
+    const [hours, minutes] = session.time.split(':').map(Number);
+    const sessionTime = new Date();
+    sessionTime.setHours(hours, minutes, 0, 0);
+    return sessionTime;
+}
 
 async function checkWalletBalance(location: Location) {
 	const wallet = location.wallet;
@@ -111,6 +124,20 @@ async function chargeWallet(location: Location, amount: number, description: str
 		throw new Error("Error charging wallet");
 	}
 }
+function getSessionState(session: ProgramSession, mid: number) {
+    const reservations = session.reservations?.length ?? 0;
+    const recurringReservations = session.recurringReservations?.length ?? 0;
+    const availability = (session.program?.capacity ?? 0) - (reservations + recurringReservations);
+
+	const hasRecurringReservations = session.recurringReservations?.some((r: { memberId: number }) => r.memberId === mid) ?? false;
+    const hasReservations = session.reservations?.some(r => r.memberId === mid) ?? false;
+
+    const isReserved = hasRecurringReservations || hasReservations;
+
+    const isFull = availability <= 0;
+
+    return { isReserved, isFull };
+}
 
 
 export {
@@ -118,5 +145,8 @@ export {
 	buildConflictUpdateColumns,
 	generateOtp,
 	checkWalletBalance,
-	chargeWallet
+	chargeWallet,
+	isSessionPasted,
+	getSessionTime,
+	getSessionState
 }

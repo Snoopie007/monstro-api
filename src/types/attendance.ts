@@ -25,6 +25,8 @@ export type ExtendedAttendance = Attendance & {
 };
 
 export type Reservation = typeof reservations.$inferInsert & {
+    isRecurring?: boolean;
+    recurringId?: number;
     session?: ProgramSession
     member?: Member
 }

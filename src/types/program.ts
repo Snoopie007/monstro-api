@@ -37,6 +37,7 @@ export type PlanProgram = {
 }
 
 export type ProgramSession = {
+		recurringReservations: any;
     id: number,
     duration: number,
     programId: number,
