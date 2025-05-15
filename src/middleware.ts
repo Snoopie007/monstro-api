@@ -3,7 +3,7 @@ import { auth } from "./auth"
 import { decodeId } from "./libs/server/sqids"
 import { jwtVerify } from "jose";
 
-const publicPaths = ["/login", "/api/auth", "/api/location", "/join", "/api/webhooks","/api/quickbooks"]
+const publicPaths = ["/login", "/api/auth", "/api/location", "/join", "/api/webhooks","/api/quickbooks","/callbacks"]
 
 async function verifyToken(token: string): Promise<boolean> {
 	try {

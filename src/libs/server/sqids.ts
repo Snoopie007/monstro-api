@@ -17,6 +17,7 @@ const sqids = new Sqids({
 })
 
 const decodeId = (id: string) => sqids.decode(id)[0];
+
 const encodeId = (id: number) => sqids.encode([id, 2, 3]);
 
 export {

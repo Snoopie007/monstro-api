@@ -31,7 +31,7 @@ class BaseGHL {
     readonly CLIENT_SECRET: string;
     ACCESS_TOKEN: string | undefined;
     constructor() {
-        this.API = process.env.GHL_API || '';
+        this.API = process.env.NEXT_PUBLIC_GHL_API || '';
         this.CLIENT_ID = process.env.NEXT_PUBLIC_GHL_CLIENT_ID || '';
         this.CLIENT_SECRET = process.env.GHL_CLIENT_SECRET || '';
     }
@@ -48,7 +48,7 @@ class BaseGHL {
             client_secret: this.CLIENT_SECRET,
             'grant_type': 'authorization_code',
             'user_type': type,
-            'redirect_uri': `${process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://admin.mymonstro.com"}/${callback}`,
+            'redirect_uri': `${process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://admin.mymonstro.com"}${callback}`,
             code
         });
 
@@ -57,7 +57,7 @@ class BaseGHL {
             body: data
         };
 
-        const res = await fetch(`${this.API}/oauth/token`, config);
+        const res = await fetch(`${this.API}oauth/token`, config);
 
         if (!res.ok) {
             const error = await res.json();
