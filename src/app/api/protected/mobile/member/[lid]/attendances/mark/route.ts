@@ -7,7 +7,6 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: num
 
   try {
     const body = await req.json();
-    console.log("body", body)
     const { startTime, endTime, checkInTime, checkOutTime, ipAddress, macAddress, lat, lng, rId } = body;
 
     if (!startTime || !endTime || !checkInTime) {
