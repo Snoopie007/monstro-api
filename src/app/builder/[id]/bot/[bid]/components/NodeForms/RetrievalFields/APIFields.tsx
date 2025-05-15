@@ -38,11 +38,11 @@ type APIFieldsProps = {
 }
 
 export function APIFields({ form }: APIFieldsProps) {
-    const { integrations, setPartnerData, partnerData, lid } = useBotBuilder()
+    const { integrations, setPartnerData, partnerData } = useBotBuilder()
     const [loading, setLoading] = useState(false)
-    const service = form.watch('options.retrieval.api.service')
-    const action = form.watch('options.retrieval.api.action')
-    const integrationId = form.watch('options.retrieval.api.integrationId')
+    const service = form.watch('retrieval.api.service')
+    const action = form.watch('retrieval.api.action')
+    const integrationId = form.watch('retrieval.api.integrationId')
     useEffect(() => {
         if (loading || !service) return;
 
@@ -56,10 +56,10 @@ export function APIFields({ form }: APIFieldsProps) {
 
     async function getCalendars() {
         setLoading(true)
-        const iid = form.getValues('options.retrieval.api.integrationId')
+        const iid = form.getValues('retrieval.api.integrationId')
         if (!iid) return;
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/integrations/${iid}/actions?action=getCalendarSlots`)
+            fetch(`/api/protected/integrations/${iid}/actions?action=getCalendarSlots`)
         )
         setLoading(false)
         if (error || !result) return;
@@ -79,7 +79,7 @@ export function APIFields({ form }: APIFieldsProps) {
         await sleep(2000)
         setLoading(false)
         if (!integration) return;
-        form.setValue('options.retrieval.api.integrationId', integration.id!)
+        form.setValue('retrieval.api.integrationId', integration.id!)
     }
 
 
@@ -88,7 +88,7 @@ export function APIFields({ form }: APIFieldsProps) {
             <fieldset className="flex flex-row gap-2">
                 <FormField
                     control={form.control}
-                    name="options.retrieval.api.service"
+                    name="retrieval.api.service"
                     render={({ field }) => (
                         <FormItem className='flex-1'>
                             <FormLabel size="tiny">Select Integration</FormLabel>
@@ -112,7 +112,7 @@ export function APIFields({ form }: APIFieldsProps) {
                 {integrationId && (
                     <FormField
                         control={form.control}
-                        name="options.retrieval.api.action"
+                        name="retrieval.api.action"
 
                         render={({ field }) => (
                             <FormItem className='flex-1'>
@@ -155,7 +155,7 @@ export function APIFields({ form }: APIFieldsProps) {
                 <fieldset >
                     <FormField
                         control={form.control}
-                        name="options.retrieval.api.calendarId"
+                        name="retrieval.api.calendarId"
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel size="tiny">Calendar</FormLabel>

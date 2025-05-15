@@ -15,7 +15,7 @@ export default function DefaultPath({ form, i }: DefaultPathProps) {
     return (
         < FormField
             control={form.control}
-            name={`paths.${i}.node.label`}
+            name={`paths.${i}.data.label`}
             render={({ field }) => (
                 <FormItem >
                     <FormLabel size="tiny">Default Path</FormLabel>

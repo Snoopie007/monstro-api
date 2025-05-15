@@ -70,8 +70,8 @@ export default function PathComponent({ form, i, extractionVariables }: PathComp
     const [open, setOpen] = useState(false);
     const { variables } = useBotBuilder();
     const fieldOptions = [...variables, { group: "Extraction Variables", options: extractionVariables }]
-    const operator = form.watch(`paths.${i}.options.path.condition.operator`);
-    const fieldType = form.watch(`paths.${i}.options.path.condition.type`);
+    const operator = form.watch(`paths.${i}.data.path.condition.operator`);
+    const fieldType = form.watch(`paths.${i}.data.path.condition.type`);
 
 
     useEffect(() => {
@@ -81,7 +81,7 @@ export default function PathComponent({ form, i, extractionVariables }: PathComp
     }, [fieldType])
 
     const handleFieldChange = useCallback((value: 'string' | 'number' | 'boolean') => {
-        form.setValue(`paths.${i}.options.path.condition.type`, value);
+        form.setValue(`paths.${i}.data.path.condition.type`, value);
 
         setOperators(ConditionOperators[value]);
         setOpen(false);
@@ -98,12 +98,12 @@ export default function PathComponent({ form, i, extractionVariables }: PathComp
 
         <Collapsible defaultOpen={true}>
             <div className="grid grid-cols-10 gap-2">
-                <Input type="hidden" {...form.register(`paths.${i}.options.path.condition.type`)} />
+                <Input type="hidden" {...form.register(`paths.${i}.data.path.condition.type`)} />
                 <fieldset className="col-span-9">
 
                     < FormField
                         control={form.control}
-                        name={`paths.${i}.node.label`}
+                        name={`paths.${i}.data.label`}
                         render={({ field }) => (
                             <FormItem >
                                 <FormControl>
@@ -127,7 +127,7 @@ export default function PathComponent({ form, i, extractionVariables }: PathComp
                 <fieldset className="col-span-9 grid grid-cols-10 gap-1">
                     < FormField
                         control={form.control}
-                        name={`paths.${i}.options.path.condition.field`}
+                        name={`paths.${i}.data.path.condition.field`}
                         render={({ field }) => (
                             <FormItem className="col-span-3 space-y-0" >
                                 <Popover open={open} onOpenChange={setOpen}>
@@ -179,7 +179,7 @@ export default function PathComponent({ form, i, extractionVariables }: PathComp
                     />
                     <FormField
                         control={form.control}
-                        name={`paths.${i}.options.path.condition.operator`}
+                        name={`paths.${i}.data.path.condition.operator`}
                         render={({ field }) => (
                             <FormItem className="col-span-3 space-y-0" >
                                 <Select onValueChange={(value) => (value && field.onChange(value))} defaultValue={field.value} value={field.value} >
@@ -205,7 +205,7 @@ export default function PathComponent({ form, i, extractionVariables }: PathComp
                     {operator && (
                         <FormField
                             control={form.control}
-                            name={`paths.${i}.options.path.condition.value`}
+                            name={`paths.${i}.data.path.condition.value`}
                             render={({ field }) => (
                                 <FormItem className={
                                     fieldType === "boolean" ? "col-span-7" : "col-span-4"

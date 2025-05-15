@@ -14,43 +14,32 @@ import {
 } from "@/components/forms"
 
 
-import { useBotBuilder, useHierarchy } from '../../providers/AIBotProvider';
-import { NodeDataType } from "@/types";
 import { useEffect, useState } from "react";
 import { sleep, } from "@/libs/utils";
-import { Node, useReactFlow } from "@xyflow/react";
+import { useReactFlow } from "@xyflow/react";
 import { DelayNodeSchema } from "./schemas";
 import NodeSettingFooter from "../ui/SettingFooter";
-import { NodeSettingsProps } from "../NodeSettings";
+import { useBotUpdate } from "../../providers"
 
 
-
-
-export function DelayNodeSettings({ updateNode, addNodes }: NodeSettingsProps) {
+export function DelayNodeSettings() {
     const [loading, setLoading] = useState<boolean>(false);
-    const { hasChanged, currentNode, setCurrentNode } = useBotBuilder();
-
+    const { update, add, currentNode } = useBotUpdate();
+    const { getNode } = useReactFlow();
     useEffect(() => {
         if (currentNode) {
-            form.reset({
-                node: currentNode.node,
-                options: currentNode.options
-            })
+            form.reset(currentNode.data)
         }
     }, [currentNode])
 
     const form = useForm<z.infer<typeof DelayNodeSchema>>({
         resolver: zodResolver(DelayNodeSchema),
         defaultValues: {
-            node: {
-                label: '',
-            },
-            options: {
-                delay: {
-                    mode: "exact",
-                    time: 0,
-                    interval: 0
-                }
+            label: '',
+            delay: {
+                mode: "exact",
+                time: 0,
+                interval: 0
             }
         },
 
@@ -61,11 +50,14 @@ export function DelayNodeSettings({ updateNode, addNodes }: NodeSettingsProps) {
     async function handleUpdate(v: z.infer<typeof DelayNodeSchema>) {
         if (!currentNode) return;
         setLoading(true);
-        hasChanged(true);
-        const { node, options, ...rest } = currentNode;
-
         await sleep(2000);
         setLoading(false);
+        const current = getNode(currentNode.id);
+        if (current) {
+            update(v);
+        } else {
+            add([{ ...currentNode, data: { ...v } }]);
+        }
     }
 
     return (
@@ -82,7 +74,7 @@ export function DelayNodeSettings({ updateNode, addNodes }: NodeSettingsProps) {
 
                                 <FormField
                                     control={form.control}
-                                    name="node.label"
+                                    name="label"
                                     render={({ field }) => (
                                         <FormItem className="col-span-6 ">
                                             <FormControl>
@@ -105,7 +97,7 @@ export function DelayNodeSettings({ updateNode, addNodes }: NodeSettingsProps) {
 
                                 < FormField
                                     control={form.control}
-                                    name={`options.delay.mode`}
+                                    name="delay.mode"
                                     render={({ field }) => (
                                         <FormItem className="col-span-6 " >
                                             <Select onValueChange={(value) => {
@@ -134,7 +126,7 @@ export function DelayNodeSettings({ updateNode, addNodes }: NodeSettingsProps) {
                                 />
 
                             </fieldset>
-                            {form.getValues("options.delay.mode") === "exact" && (
+                            {form.getValues("delay.mode") === "exact" && (
                                 <fieldset className="grid grid-cols-10 gap-4">
                                     <div className="col-span-4">
                                         <FormLabel>Delay Amount</FormLabel>

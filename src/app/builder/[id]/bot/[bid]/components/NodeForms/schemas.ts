@@ -1,4 +1,3 @@
-import { interval } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
 
@@ -9,42 +8,33 @@ const NodeLabelSchema = z.object({
 })
 
 export const AINodeSchema = z.object({
-    options: z.object({
-        ai: z.object({
-            goal: z.string().min(4, { message: "goal is too short." }),
-            instructions: z.string().optional(),
-            maxChars: z.coerce.number().min(1).max(250),
-            maxAttempts: z.coerce.number().min(1).max(10),
-        })
-    }),
-}).extend({
-    node: NodeLabelSchema
-});
-
+    ai: z.object({
+        goal: z.string().min(4, { message: "goal is too short." }),
+        instructions: z.string().optional(),
+        maxChars: z.coerce.number().min(1).max(250),
+        maxAttempts: z.coerce.number().min(1).max(10),
+    })
+}).merge(NodeLabelSchema)
 
 export const RetrievalNodeSchema = z.object({
-    options: z.object({
-        retrieval: z.object({
-            goal: z.string().min(4, { message: "goal is too short." }),
-            knowledgeBase: z.enum(["website", "api", 'internal']),
-            instructions: z.string(),
-            maxAttempts: z.number().min(1).max(10),
-            maxChars: z.number().min(1).max(250),
-            api: z.object({
-                service: z.enum(["ghl"]),
-                action: z.enum(["getCalendarSlots"]),
-                integrationId: z.coerce.number(),
-                calendarId: z.string(),
-            }).optional(),
-            website: z.object({
-                url: z.string().optional(),
-            }).optional()
-        })
-    }),
-}).extend({
-    node: NodeLabelSchema
-}).superRefine((data, ctx) => {
-    if (data.options.retrieval.knowledgeBase === "api" && !data.options.retrieval.api) {
+    retrieval: z.object({
+        goal: z.string().min(4, { message: "goal is too short." }),
+        knowledgeBase: z.enum(["website", "api", 'internal']),
+        instructions: z.string(),
+        maxAttempts: z.number().min(1).max(10),
+        maxChars: z.number().min(1).max(250),
+        api: z.object({
+            service: z.enum(["ghl"]),
+            action: z.enum(["getCalendarSlots"]),
+            integrationId: z.coerce.number(),
+            calendarId: z.string(),
+        }).optional(),
+        website: z.object({
+            url: z.string().optional(),
+        }).optional()
+    })
+}).merge(NodeLabelSchema).superRefine((data, ctx) => {
+    if (data.retrieval.knowledgeBase === "api" && !data.retrieval.api) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "API is required for API retrieval",
@@ -53,11 +43,10 @@ export const RetrievalNodeSchema = z.object({
 })
 
 export const ConditionNodeSchema = z.object({
-    node: NodeLabelSchema,
     paths: z.array(z.object({
         id: z.string().optional(),
-        node: NodeLabelSchema,
-        options: z.object({
+        data: z.object({
+            label: z.string().min(2, { message: "label is too short." }).max(30, { message: "label is too long." }),
             path: z.object({
                 isDefault: z.boolean(),
                 condition: z.object({
@@ -77,74 +66,65 @@ export const ConditionNodeSchema = z.object({
             })
         })
     }))
-})
+}).merge(NodeLabelSchema)
 
 
 export const DelayNodeSchema = z.object({
-    node: NodeLabelSchema,
-    options: z.object({
-        delay: z.object({
-            mode: z.enum(["exact", "interval"]).default("exact"),
-            time: z.number().int().min(1).optional(),
-            interval: z.number().int().min(1).optional(),
-        }).superRefine(({ mode, time }, ctx) => {
-            if (mode === "interval" && !interval) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: "interval is required.",
-                })
-            }
-        })
+    delay: z.object({
+        mode: z.enum(["exact", "interval"]).default("exact"),
+        time: z.number().int().min(1).optional(),
+        interval: z.number().int().min(1).optional(),
     })
+}).merge(NodeLabelSchema).superRefine(({ delay }, ctx) => {
+    if (delay.mode === "interval" && !delay.interval) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "interval is required.",
+        })
+    }
 })
 
 
 export const ExtractionNodeSchema = z.object({
-    node: NodeLabelSchema,
-    options: z.object({
-        extraction: z.object({
-            variables: z.array(z.object({
-                key: z.string().max(50, { message: "variable is too long." }).min(3, { message: "variable is too short." }),
-                returnType: z.enum(["string", "number", "boolean"]),
-                description: z.string().max(300, { message: "value is too long." }).min(10, { message: "value is too short." }),
-            }))
-        })
+    extraction: z.object({
+        variables: z.array(z.object({
+            key: z.string().max(50, { message: "variable is too long." }).min(3, { message: "variable is too short." }),
+            returnType: z.enum(["string", "number", "boolean"]),
+            description: z.string().max(300, { message: "value is too long." }).min(10, { message: "value is too short." }),
+        }))
     })
-})
+}).merge(NodeLabelSchema)
 
 
 
 export const GHLIntegrationSchema = z.object({
-    node: NodeLabelSchema,
-    options: z.object({
-        integration: z.object({
-            service: z.enum(["ghl"]),
-            action: z.enum(["addToCalendar", "updateOrCreateContact", "addToWorkflow"]),
-            integrationId: z.coerce.number(),
-            calendarId: z.string().optional(),
-            contactId: z.string().optional(),
-            workflowId: z.string().optional()
-        }).superRefine((data, ctx) => {
-            if (data.action === "addToCalendar" && !data.calendarId) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: "Calendar ID is required for addToCalendar action",
-                })
-            }
-            if (data.action === "addToWorkflow" && !data.workflowId) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: "Workflow ID is required for addToWorkflow action",
-                })
-            }
-            if (data.action === "updateOrCreateContact" && !data.contactId) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: "Contact ID is required for updateOrCreateContact action",
-                })
-            }
+    integration: z.object({
+        service: z.enum(["ghl"]),
+        action: z.enum(["addToCalendar", "updateOrCreateContact", "addToWorkflow"]),
+        integrationId: z.coerce.number(),
+        calendarId: z.string().optional(),
+        contactId: z.string().optional(),
+        workflowId: z.string().optional()
+    }).superRefine((data, ctx) => {
+        if (data.action === "addToCalendar" && !data.calendarId) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Calendar ID is required for addToCalendar action",
+            })
+        }
+        if (data.action === "addToWorkflow" && !data.workflowId) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Workflow ID is required for addToWorkflow action",
+            })
+        }
+        if (data.action === "updateOrCreateContact" && !data.contactId) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Contact ID is required for updateOrCreateContact action",
+            })
+        }
 
-        })
     })
-})
+}).merge(NodeLabelSchema)
 

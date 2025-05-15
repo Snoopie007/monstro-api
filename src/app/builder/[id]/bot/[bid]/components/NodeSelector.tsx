@@ -1,7 +1,6 @@
 'use client'
 
 import { Edge, Node, useReactFlow } from "@xyflow/react";
-
 import {
     Command,
     CommandEmpty,
@@ -10,8 +9,8 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
-import { FlowTemplate, NodeDataType, NodeSettings } from "@/types";
-import { useBotBuilder, useHierarchy } from '../providers';
+import { NodeDataType, FlowTemplate } from "@/types";
+import { useBotBuilder } from '../providers';
 import { NodeSelectorContent, NodeSelectorDialog } from "./ui/SelectorDialog";
 import {
     Bot,
@@ -21,58 +20,71 @@ import {
     Split,
 } from "lucide-react";
 import { SetStateAction, Dispatch, useState } from "react";
-import { DefaultPosition, Logics, Nodes, Templates } from "../data/templates";
+import { Logics, Nodes, Templates } from "../data/templates";
 import Image from "next/image";
-import { nanoid } from "nanoid";
-import { generateNodeId, updateHierarchy } from "../data/utils";
-import { stratify } from "d3-hierarchy";
-
-interface EdgeDialogProps {
-    open: boolean;
-    setOpen: Dispatch<SetStateAction<boolean>>;
-}
+import { generateNodeId } from "../data/utils";
+import { useBotUpdate } from "../providers";
 
 
 
-function NodeSelector({ open, setOpen }: EdgeDialogProps) {
-    const { setCurrentNode, currentEdge, hasChanged, updateInvalidNodes } = useBotBuilder();
+
+function NodeSelector({ open, setOpen }: { open: boolean, setOpen: Dispatch<SetStateAction<boolean>> }) {
+
+    const { hasChanged } = useBotBuilder();
+    const { setCurrentNode, currentEdge, add } = useBotUpdate();
     const [filter, setFilter] = useState<'All' | 'Nodes' | 'Templates' | 'Logics'>('All');
-    const { setHierarchy } = useHierarchy();
-    const { getNodes, setNodes } = useReactFlow();
+    const { getNode } = useReactFlow();
+    const { invalidNodes } = useBotBuilder();
 
-    const nodes = getNodes();
-    if (!currentEdge) return null;
-    const { source, target } = currentEdge;
-    // const sourceType = hierarchy.find((node) => node.id === source)?.data.type;
-
-    // function isDisabled(templateType: string) {
-    //     switch (templateType) {
-    //         case 'Conditional Paths':
-    //             return sourceType === 'path';
-    //         default:
-    //             return false
-    //     }
-    // }
 
     function handleTemplate(template: FlowTemplate) {
-        const newNodes = templateToNodes(template, source, updateInvalidNodes);
+        if (!currentEdge) return;
 
-        const targetIndex = nodes.findIndex((node) => node.id === target);
-        nodes.splice(targetIndex, 0, ...newNodes);
-        const parentId = newNodes[newNodes.length - 1].id;
-        const { updatedHierarchy, updatedNodes } = updateHierarchy(nodes, parentId, target);
-        setHierarchy(stratify<NodeSettings>()(updatedHierarchy));
-        setNodes(updatedNodes);
-        hasChanged(true);
+        const newNodes: Node<NodeDataType>[] = [];
+        const newEdges: Edge[] = [];
+        const groupParentId = generateNodeId();
+
+        template.nodes.forEach((n, index) => {
+            const { data, ...rest } = n;
+            const id = index === 0 ? groupParentId : generateNodeId();
+
+            newNodes.push({
+                ...rest,
+                id,
+                data: {
+                    ...data,
+                    groupParentId: groupParentId
+                },
+                position: { x: 0, y: 0 }
+            });
+            if (index > 0) {
+                newEdges.push({
+                    id: `${newNodes[index - 1].id}->${id}`,
+                    source: newNodes[index - 1].id,
+                    target: id,
+                    type: 'locked',
+                });
+            }
+            if (n.data.editable) {
+                invalidNodes.push(id);
+            }
+        });
+        add(newNodes, newEdges);
+
         setOpen(false);
     }
 
     function handleNewNode(node: { label: string, value: string }) {
+
+        if (!currentEdge) return;
+        const parent = getNode(currentEdge.source);
+
+        if (!parent) return;
         setCurrentNode({
+            id: generateNodeId(),
             type: node.value,
-            parentId: source,
-            node: { label: node.label },
-            position: DefaultPosition
+            data: { label: node.label },
+            position: { x: 0, y: 0 }
         });
         hasChanged(true);
         setOpen(false);
@@ -146,31 +158,6 @@ function NodeSelector({ open, setOpen }: EdgeDialogProps) {
 }
 
 
-
-function templateToNodes(template: FlowTemplate, source: string, updateInvalidNodes: (nodeIds: string[]) => void) {
-    const newNodes: Node<NodeDataType>[] = [];
-    const groupParentId = generateNodeId();
-    const invalidNodes: string[] = [];
-    template.nodes.forEach((n, index) => {
-        const { node, options, ...rest } = n;
-        const id = index === 0 ? groupParentId : generateNodeId();
-
-        newNodes.push({
-            ...rest,
-            id,
-            data: {
-                node: { ...node, groupParentId: groupParentId },
-                options: options
-            },
-            parentId: index === 0 ? source : newNodes[newNodes.length - 1].id
-        });
-        if (n.node.editable) {
-            invalidNodes.push(id);
-        }
-    });
-    updateInvalidNodes(invalidNodes);
-    return newNodes;
-}
 
 function SelectorItem({ label, img }: { label: string, img?: string }) {
     function getIcon(label: string) {

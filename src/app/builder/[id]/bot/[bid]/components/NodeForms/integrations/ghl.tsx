@@ -13,13 +13,12 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { NodeSettingsProps } from "../../NodeSettings"
-import { useBotBuilder } from "../../../providers/AIBotProvider"
+import { useBotBuilder, useBotUpdate } from "../../../providers/"
 import { SheetSection } from "@/components/ui/sheet"
 import { cn, sleep, tryCatch } from "@/libs/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 import NodeSettingFooter from "../../ui/SettingFooter"
-import { generateNodeId } from "../../../data/utils"
+import { useReactFlow } from "@xyflow/react"
 
 const GHL_ACTIONS = [
     {
@@ -36,29 +35,26 @@ const GHL_ACTIONS = [
     }
 ]
 
-export function GHLIntegration({ addNodes, updateNode }: NodeSettingsProps) {
+export function GHLIntegration() {
     const [loading, setLoading] = useState(false)
-    const { currentNode, integrations, partnerData, setPartnerData, hasChanged } = useBotBuilder()
-
+    const { integrations, partnerData, setPartnerData, hasChanged } = useBotBuilder()
+    const { currentNode, add, update } = useBotUpdate()
+    const { getNode } = useReactFlow();
     const filteredIntegrations = integrations?.filter((integration) => integration.service === 'ghl')
 
-    const { options } = currentNode || {}
+    const { data } = currentNode || {}
 
     const form = useForm<z.infer<typeof GHLIntegrationSchema>>({
         resolver: zodResolver(GHLIntegrationSchema),
         defaultValues: {
-            node: {
-                label: '',
-            },
-            options: {
-                integration: {
-                    service: options?.integration?.service || undefined,
-                    action: options?.integration?.action || undefined,
-                    integrationId: options?.integration?.integrationId || undefined,
-                    workflowId: options?.integration?.workflowId || undefined,
-                    calendarId: options?.integration?.calendarId || undefined,
-                    contactId: options?.integration?.contactId || undefined
-                }
+            label: '',
+            integration: {
+                service: data?.integration?.service || undefined,
+                action: data?.integration?.action || undefined,
+                integrationId: data?.integration?.integrationId || undefined,
+                workflowId: data?.integration?.workflowId || undefined,
+                calendarId: data?.integration?.calendarId || undefined,
+                contactId: data?.integration?.contactId || undefined
             }
         },
         mode: "onChange",
@@ -66,14 +62,15 @@ export function GHLIntegration({ addNodes, updateNode }: NodeSettingsProps) {
 
 
 
-    const action = form.watch('options.integration.action')
-    const integrationId = form.watch('options.integration.integrationId')
+    const action = form.watch('integration.action')
+    const integrationId = form.watch('integration.integrationId')
 
 
     useEffect(() => {
         if (currentNode?.id) {
-            form.reset({ ...currentNode })
-            const action = currentNode.options?.integration?.action
+            const { data, ...rest } = currentNode;
+            form.reset(data)
+            const action = data?.integration?.action
             if (action && action === 'addToCalendar') {
                 fetchGHLData(action)
             }
@@ -114,14 +111,14 @@ export function GHLIntegration({ addNodes, updateNode }: NodeSettingsProps) {
         setLoading(true);
         hasChanged(true);
 
-        const { node, options, ...rest } = currentNode;
+        const { data, ...rest } = currentNode;
         await sleep(2000);
         setLoading(false);
-
-        if (currentNode.id) {
-            updateNode(v);
+        const current = getNode(currentNode.id);
+        if (current) {
+            update(v);
         } else {
-            addNodes([{ ...rest, data: { node: { ...node, ...v.node }, options: v.options }, id: `${generateNodeId()}` }]);
+            add([{ ...currentNode, data: { ...v } }]);
         }
     }
 
@@ -134,7 +131,7 @@ export function GHLIntegration({ addNodes, updateNode }: NodeSettingsProps) {
                         <fieldset>
                             <FormField
                                 control={form.control}
-                                name={`node.label`}
+                                name={`label`}
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Label</FormLabel>
@@ -171,7 +168,7 @@ export function GHLIntegration({ addNodes, updateNode }: NodeSettingsProps) {
                             <fieldset className="flex flex-row gap-2">
                                 <FormField
                                     control={form.control}
-                                    name={`options.integration.integrationId`}
+                                    name={`integration.integrationId`}
                                     render={({ field }) => (
                                         <FormItem className="flex-1">
                                             <FormLabel size="tiny">Select an Account</FormLabel>
@@ -204,7 +201,7 @@ export function GHLIntegration({ addNodes, updateNode }: NodeSettingsProps) {
                                 {integrationId && (
                                     <FormField
                                         control={form.control}
-                                        name={`options.integration.action`}
+                                        name={`integration.action`}
                                         render={({ field }) => (
                                             <FormItem className="flex-1">
                                                 <FormLabel size="tiny">Action</FormLabel>
@@ -244,7 +241,7 @@ export function GHLIntegration({ addNodes, updateNode }: NodeSettingsProps) {
 
                                 <FormField
                                     control={form.control}
-                                    name={`options.integration.workflowId`}
+                                    name={`integration.workflowId`}
                                     render={({ field }) => (
                                         <FormItem  >
                                             <FormLabel size="tiny">Select Workflow</FormLabel>
@@ -284,7 +281,7 @@ export function GHLIntegration({ addNodes, updateNode }: NodeSettingsProps) {
 
                                 <FormField
                                     control={form.control}
-                                    name={`options.integration.calendarId`}
+                                    name={`integration.calendarId`}
                                     render={({ field }) => (
                                         <FormItem  >
                                             <FormLabel size="tiny">Select Calendar</FormLabel>

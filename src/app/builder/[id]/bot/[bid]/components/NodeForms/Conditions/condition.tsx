@@ -12,16 +12,12 @@ import {
     Input
 } from "@/components/forms"
 
-
-import { useBotBuilder, useHierarchy } from '../../../providers/AIBotProvider';
-import { NodeDataType, FieldOption, NodeSettings } from "@/types";
+import { NodeDataType, FieldOption } from "@/types";
 import { useEffect, useState } from "react";
 import { cn, sleep, } from "@/libs/utils";
 
-import { Node } from "@xyflow/react";
+import { Edge, Node } from "@xyflow/react";
 import { ConditionNodeSchema } from "../schemas";
-import { endNodeTemplate } from "../../../data/templates";
-
 import NodeSettingFooter from "../../ui/SettingFooter";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/ScrollArea";
@@ -29,34 +25,29 @@ import { X } from "lucide-react";
 import {
     SheetSection,
 } from "@/components/ui"
-import { generateNodeId, updateHierarchy } from "../../../data/utils"
+import { generateNodeId } from "../../../data/utils"
 import DefaultPath from "./default"
 import PathComponent from "./path"
 import { useReactFlow } from "@xyflow/react";
-import { HierarchyNode, stratify } from "d3-hierarchy"
+import { useBotUpdate } from "../../../providers"
 
 
-export function ConditionNodeSettings({ addNodes }: { addNodes: (nodes: Node<NodeDataType>[]) => void }) {
+export function ConditionNodeSettings() {
     const [loading, setLoading] = useState<boolean>(false);
-    const { hierarchy, setHierarchy } = useHierarchy();
-    const { hasChanged, currentNode, setCurrentNode, currentEdge } = useBotBuilder();
+
     const [extractionVariables, setExtractionVariables] = useState<FieldOption[]>([]);
-    const { getNodes, setNodes } = useReactFlow();
-    const nodes = getNodes();
+    const { getNodes, getEdges, updateNodeData } = useReactFlow<Node<NodeDataType>, Edge>();
+    const { hierarchy, currentNode, currentEdge, add, updateFlow } = useBotUpdate();
 
     const form = useForm<z.infer<typeof ConditionNodeSchema>>({
         resolver: zodResolver(ConditionNodeSchema),
         defaultValues: {
-            node: {
-                label: 'Condition Name',
-
-            },
+            label: 'Condition Name',
             paths: [
                 {
-                    node: {
+                    id: '',
+                    data: {
                         label: 'Path A',
-                    },
-                    options: {
                         path: {
                             isDefault: false,
                             condition: {
@@ -67,12 +58,11 @@ export function ConditionNodeSettings({ addNodes }: { addNodes: (nodes: Node<Nod
                             }
                         }
                     }
+
                 },
                 {
-                    node: {
+                    data: {
                         label: 'Default Path',
-                    },
-                    options: {
                         path: {
                             isDefault: true,
                         }
@@ -89,16 +79,19 @@ export function ConditionNodeSettings({ addNodes }: { addNodes: (nodes: Node<Nod
     });
 
     useEffect(() => {
+        if (!hierarchy) return;
         const current = hierarchy.find(node => node.id === currentNode?.id);
         let target = current;
+
         let extractionVariables: FieldOption[] = [];
         if (!current) {
             target = hierarchy.find(node => node.id === currentEdge?.target);
         }
-        target?.ancestors().forEach((node) => {
-            const { options, ...rest } = node.data;
-            if (options?.extraction?.variables) {
-                options.extraction.variables.forEach((v) => {
+
+        target?.ancestors().map((n) => n.data).forEach((node) => {
+            const { data, ...rest } = node;
+            if (data?.extraction?.variables) {
+                data.extraction.variables.forEach((v) => {
                     extractionVariables.push({
                         key: v.key,
                         type: v.returnType,
@@ -108,136 +101,119 @@ export function ConditionNodeSettings({ addNodes }: { addNodes: (nodes: Node<Nod
         });
 
         setExtractionVariables(extractionVariables);
+
         if (current && current.children) {
-            const paths = current.children.map((node) => ({
-                id: node.id,
-                node: node.data.node,
-                options: node.data.options,
-            }));
+            const paths = current.children.map((node) => (node.data));
             form.reset({
-                node: current.data.node,
+                label: current.data.data.label,
                 paths
             }, { keepDefaultValues: false });
         };
 
     }, [currentNode])
 
-    function calculateXPosition(index: number, totalPaths: number): number {
-        if (totalPaths % 2 === 0) {
-            return (index - (totalPaths - 1) / 2) * 250;
-        }
-        return (index % 2 === 0 ? 1 : -1) * ((index - (totalPaths - 1) / 2) * 250);
-    };
-
-
-    function updateParentCondition(parentPath: HierarchyNode<NodeSettings>, length: number) {
-        const parentCondition = parentPath.parent
-        if (!parentCondition) return;
-        parentCondition.children?.forEach((child) => {
-            if (child.id === parentPath.id) {
-                console.log(child);
-            }
-        });
-    }
-
-
 
     async function saveCondition(condition: z.infer<typeof ConditionNodeSchema>) {
-        if (!currentNode) return;
-        hasChanged(true);
+        if (!currentNode || !hierarchy) return;
         setLoading(true);
-        const { node, ...rest } = currentNode;
-        const parent = hierarchy.find((node) => node.id === (currentNode.parentId || currentEdge?.source));
-        const conditionNode = { ...rest, data: { node: condition.node }, id: generateNodeId() };
+        const { data, ...rest } = currentNode;
+        const conditionNode = { ...rest, data: { label: condition.label } };
+        const currentCondition = hierarchy.find(node => node.id === currentNode.id);
 
 
-        const parentPath = parent?.ancestors().find((node) => node.data.type === "path");
-        if (parentPath) {
-            updateParentCondition(parentPath, condition.paths.length);
-        }
+        if (currentCondition) {
+            const nodes = getNodes();
+            const edges = getEdges();
+            updateNodeData(conditionNode.id, { label: condition.label })
 
-        if (currentNode.id) {
-            const un = updateCondition(condition, conditionNode.id);
-            const sourceIndex = nodes.findIndex((node) => node.id === currentNode?.id);
-            nodes.splice(sourceIndex, nodes.length - 1, ...un);
-            // Create a new hierarchy with the new nodes inserted at the correct position
-            const parentId = un[un.length - 1].id;
-            const { updatedHierarchy, updatedNodes } = updateHierarchy(nodes, parentId);
+            const newPaths = condition.paths.filter(path => !path.id || path.id === '');
+            const existingPaths = condition.paths.filter(path => path.id && path.id !== '');
+            const removedPaths = currentCondition.children?.filter(child => {
+                return !existingPaths.some(path => path.id === child.data.id);
+            });
 
-            // Update the state of the bot builder with the new hierarchy
-            setHierarchy(stratify<NodeSettings>()(updatedHierarchy));
-            setNodes([conditionNode, ...updatedNodes]);
+
+
+            existingPaths.forEach((path) => {
+                updateNodeData(path.id!, { ...path.data })
+            });
+
+            // TODO: Remove path from hierarchy
+            // removedPaths?.forEach((path) => {
+
+            // })
+            const { newNodes, newEdges } = processNewCondition(newPaths, conditionNode.id);
+            const defaultPathId = existingPaths.find(path => path.data.path.isDefault)?.id;
+            const defaultPathIndex = nodes.findIndex(node => node.id === defaultPathId);
+            if (defaultPathIndex !== -1) {
+                const positionedNodes = [
+                    ...nodes.slice(0, defaultPathIndex),
+                    ...newNodes,
+                    ...nodes.slice(defaultPathIndex)
+                ];
+                updateFlow(positionedNodes, [...edges, ...newEdges])
+            }
         } else {
-            const newNodes = processNewCondition(condition, conditionNode.id);
-            addNodes([conditionNode, ...newNodes]);
+            const { newNodes, newEdges } = processNewCondition(condition.paths, conditionNode.id);
+            add([conditionNode, ...newNodes], newEdges)
         }
-
 
         await sleep(2000);
         setLoading(false);
     }
 
-
-    function processNewCondition(condition: z.infer<typeof ConditionNodeSchema>, conditionId: string) {
+    function processNewCondition(paths: Record<string, any>[], conditionId: string) {
         const newNodes: Node<NodeDataType>[] = [];
-        const firstXPosition = calculateXPosition(0, condition.paths.length);
-        condition.paths.forEach((path, i) => {
+        const newEdges: Edge[] = [];
+
+        paths.forEach((path, i) => {
+            // Create path node
             const pathId = generateNodeId();
-            const xPosition = i === 0 ? firstXPosition : firstXPosition + (i * 250);
-            newNodes.push({ id: pathId, data: { ...path }, parentId: conditionId, position: { x: xPosition, y: 120 }, type: 'path' });
-            if (i < condition.paths.length - 1) {
-                newNodes.push({ ...endNodeTemplate, id: generateNodeId(), parentId: pathId });
-            }
-        });
-        return newNodes;
-    }
+            newNodes.push({
+                id: pathId,
+                data: { label: path.data.label, path: path.data.path },
+                position: { x: 0, y: 0 },
+                type: 'path'
+            });
 
+            // Connect condition to path
+            newEdges.push({
+                id: `${conditionId}->${pathId}`,
+                source: conditionId,
+                target: pathId,
+                animated: true,
+                type: 'smoothstep'
+            });
 
-    function updateCondition(condition: z.infer<typeof ConditionNodeSchema>, conditionId: string) {
-
-        const updatedNodes: Node<NodeDataType>[] = [];
-        const firstXPosition = calculateXPosition(0, condition.paths.length);
-
-        condition.paths.forEach((path, i) => {
-
-            const xPosition = i === 0 ? firstXPosition : firstXPosition + (i * 250);
-            const existing = hierarchy.find((node) => node.id === path.id);
-            if (existing) {
-                const { id, ...rest } = path;
-
-                updatedNodes.push({
-                    ...existing.data,
-                    data: { ...rest },
-                    position: { x: xPosition, y: 120 }
+            if (!path.data.path.isDefault) {
+                const endNodeId = generateNodeId();
+                newNodes.push({
+                    id: endNodeId,
+                    data: { label: 'End' },
+                    position: { x: 0, y: 0 },
+                    type: 'end'
                 });
-                if (existing.children) {
-                    existing.eachBefore((child) => {
-                        if (child.id === existing.data.id) return;
-                        const { node, options, ...rest } = child.data;
-                        updatedNodes.push({ ...rest, data: { node: node } })
-                    });
-                }
-            } else {
-                const pathId = generateNodeId();
-                updatedNodes.push({ id: pathId, data: { ...path }, parentId: conditionId, position: { x: xPosition, y: 120 }, type: 'path' });
-                if (i < condition.paths.length - 1) {
-                    updatedNodes.push({ ...endNodeTemplate, id: generateNodeId(), parentId: pathId });
-                }
+                newEdges.push({
+                    id: `${pathId}->${endNodeId}`,
+                    source: pathId,
+                    target: endNodeId,
+                    type: 'plus'
+                });
             }
         });
-        return updatedNodes;
+        return { newNodes, newEdges };
     }
+
 
     return (
         <Form {...form} >
             <form className="" >
                 <ScrollArea className="h-[calc(100vh-100px)]">
-
                     <SheetSection>
                         <fieldset >
                             <FormField
                                 control={form.control}
-                                name="node.label"
+                                name="label"
                                 render={({ field }) => (
                                     <FormItem >
                                         <FormLabel size="sm">Label</FormLabel>
@@ -272,8 +248,8 @@ export function ConditionNodeSettings({ addNodes }: { addNodes: (nodes: Node<Nod
                                         <X size={14} />
                                     </Button>
                                     <input type="hidden" name={`paths.${i}.id`} value={field.id} />
-                                    <input type="hidden" name={`paths.${i}.options.path.isDefault`} value={field.options.path.isDefault} />
-                                    {field.options.path.isDefault ? (
+                                    <input type="hidden" name={`paths.${i}.data.path.isDefault`} value={field.data.path.isDefault} />
+                                    {field.data.path.isDefault ? (
                                         <DefaultPath form={form} i={i} />
                                     ) : (
                                         <PathComponent form={form} i={i} extractionVariables={extractionVariables} />
@@ -285,11 +261,8 @@ export function ConditionNodeSettings({ addNodes }: { addNodes: (nodes: Node<Nod
                             onClick={(e) => {
                                 e.preventDefault();
                                 insert(fields.length - 1, {
-                                    node: {
+                                    data: {
                                         label: `Path ${String.fromCharCode(65 + (fields.length - 2))}`,
-
-                                    },
-                                    options: {
                                         path: {
                                             isDefault: false,
                                             condition: {

@@ -1,7 +1,8 @@
 import { integer, serial, text, timestamp, pgTable, boolean, jsonb, json, unique, vector } from "drizzle-orm/pg-core";
 import { relations, sql } from 'drizzle-orm';
-import { AILogState, NodeSettings } from "@/types";
+import { AILogState, NodeDataType } from "@/types";
 import { locations } from "./locations";
+import { Node } from "@xyflow/react";
 
 
 export const aiBots = pgTable("ai_bots", {
@@ -18,7 +19,7 @@ export const aiBots = pgTable("ai_bots", {
     maxTokens: integer("max_tokens").notNull().default(0),
     model: text("model").notNull(),
     invalidNodes: text("invalid_nodes").array().notNull().default(sql`[]::text[]`),
-    objectives: jsonb("objectives").array().$type<NodeSettings[]>(),
+    objectives: jsonb("objectives").array().$type<Node<NodeDataType>[]>(),
     status: text("status", { enum: ['Draft', 'Active', 'Pause', 'Deleted'] }).notNull().default("Draft"),
     created: timestamp("created_at", { precision: 6, withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { precision: 6, withTimezone: true }),

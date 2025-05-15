@@ -1,14 +1,11 @@
-
 import BotFlow from './BotBuilder';
 import { BotSettings } from './components';
-import { AIBot } from '@/types';
+import { AIBot, NodeDataType, Integration } from '@/types';
 import { db } from '@/db/db';
 import { AIBotProvider } from './providers/AIBotProvider';
-import { ReactFlowProvider } from '@xyflow/react';
-import { Integration } from '@/types';
+import { Edge, Node, ReactFlowProvider } from '@xyflow/react';
 
 import Error from './error';
-import { decodeId } from '@/libs/server/sqids';
 
 async function fetchBot(bid: number): Promise<AIBot | undefined> {
     try {
@@ -24,8 +21,7 @@ async function fetchBot(bid: number): Promise<AIBot | undefined> {
     }
 }
 
-async function fetchIntegrations(id: string): Promise<Integration[] | undefined> {
-    const lid = decodeId(id);
+async function fetchIntegrations(lid: number): Promise<Integration[] | undefined> {
     try {
         const integrations = await db.query.integrations.findMany({
             where: (integrations, { eq }) => (eq(integrations.locationId, lid))
@@ -36,24 +32,61 @@ async function fetchIntegrations(id: string): Promise<Integration[] | undefined>
     }
 }
 
-export default async function BotBuilder(props: { params: Promise<{ id: string, bid: number }> }) {
+
+
+
+function generateEdges(objectives: Node<NodeDataType>[]) {
+    let edges: Edge[] = [];
+    objectives.forEach((objective) => {
+        if (!objective.parentId) return;
+        let type = "plus";
+
+        if (objective.type === "path") {
+            type = "smoothstep";
+        }
+
+        if (objective.data.groupParentId == objective.parentId) {
+            type = "lock";
+        }
+        edges.push({
+            id: `${objective.parentId}-${objective.id}`,
+            source: objective.parentId,
+            target: objective.id,
+            type: type,
+        });
+    });
+    return edges;
+}
+
+
+export default async function BotBuilder(props: { params: Promise<{ lid: number, bid: number }> }) {
     const params = await props.params;
     const bot = await fetchBot(params.bid);
-    const integrations = await fetchIntegrations(params.id);
+    const integrations = await fetchIntegrations(params.lid);
 
     if (!bot) return <Error />
 
+
+    const initialNodes = bot.objectives?.map((o) => {
+        const { parentId, ...rest } = o;
+        return {
+            ...rest
+        }
+    }) || [];
+    const initialEdges = generateEdges(bot.objectives || []);
+
     return (
         <div className='w-screen h-screen relative  '>
-            <AIBotProvider integrations={integrations} bot={bot} lid={params.id}>
-                <ReactFlowProvider>
-                    <BotSettings bot={bot} lid={params.id} />
-                    <div className='h-full w-full bg-gray-100'>
-                        <BotFlow />
-                    </div>
-                </ReactFlowProvider>
-            </AIBotProvider>
+            <ReactFlowProvider>
+                <AIBotProvider integrations={integrations} bot={bot}>
 
+                    <BotSettings bot={bot} lid={params.lid} />
+                    <div className='h-full w-full bg-gray-100'>
+                        <BotFlow initialNodes={initialNodes} initialEdges={initialEdges} />
+                    </div>
+
+                </AIBotProvider>
+            </ReactFlowProvider>
         </div >
     )
 }

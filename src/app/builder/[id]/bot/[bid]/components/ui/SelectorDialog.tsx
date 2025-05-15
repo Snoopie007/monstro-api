@@ -1,6 +1,6 @@
 "use client"
 import { X } from 'lucide-react';
-import React, { useEffect } from 'react'
+import React from 'react'
 
 interface NodeSelectorDialogProps extends React.HTMLAttributes<HTMLDialogElement> {
     open?: boolean;

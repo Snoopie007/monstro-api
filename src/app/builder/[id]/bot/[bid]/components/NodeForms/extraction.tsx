@@ -14,9 +14,6 @@ import {
     Textarea
 } from "@/components/forms"
 
-
-
-import { useBotBuilder } from '../../providers/AIBotProvider';
 import { useEffect, useState } from "react";
 import { cn, sleep, } from "@/libs/utils";
 import { ExtractionNodeSchema } from "./schemas";
@@ -24,51 +21,47 @@ import NodeSettingFooter from "../ui/SettingFooter";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { MoveDiagonal, Trash2 } from "lucide-react";
 import { SheetSection } from "@/components/ui";
-import { NodeSettingsProps } from "../NodeSettings";
 import { PreDefinedVariables } from "../../data/templates";
-import { generateNodeId } from "../../data/utils"
+import { useBotUpdate } from "../../providers"
+import { useReactFlow } from "@xyflow/react"
 
-export function ExtractionNodeSettings({ updateNode, addNodes }: NodeSettingsProps) {
+
+export function ExtractionNodeSettings() {
     const [loading, setLoading] = useState<boolean>(false);
-    const { hasChanged, currentNode } = useBotBuilder();
+    const { update, add, currentNode } = useBotUpdate();
+    const { getNode } = useReactFlow();
 
     const form = useForm<z.infer<typeof ExtractionNodeSchema>>({
         resolver: zodResolver(ExtractionNodeSchema),
         defaultValues: {
-            node: {
-                label: '',
-            },
-            options: {
-                extraction: {
-                    variables: []
-                }
+            label: '',
+            extraction: {
+                variables: []
             }
         },
-
         mode: "onChange",
     });
 
     const { fields, append, remove } = useFieldArray({
         control: form.control,
-        name: "options.extraction.variables"
+        name: "extraction.variables"
     })
 
     useEffect(() => {
         if (currentNode) {
-            form.reset(currentNode)
+            form.reset(currentNode.data)
         }
     }, [currentNode])
 
     async function handleUpdate(v: z.infer<typeof ExtractionNodeSchema>) {
         if (!currentNode) return;
         setLoading(true);
-        hasChanged(true);
 
-        const { node, options, ...rest } = currentNode;
-        if (currentNode.id) {
-            updateNode(v);
+        const exist = getNode(currentNode.id)
+        if (exist) {
+            update(v);
         } else {
-            addNodes([{ ...rest, data: { node: { ...node, ...v.node }, options: v.options }, id: `${generateNodeId()}` }]);
+            add([{ ...currentNode, data: { ...v } }]);
         }
 
         await sleep(2000);
@@ -85,7 +78,7 @@ export function ExtractionNodeSettings({ updateNode, addNodes }: NodeSettingsPro
                                 <fieldset className="">
                                     <FormField
                                         control={form.control}
-                                        name="node.label"
+                                        name="label"
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel size="tiny">Label</FormLabel>
@@ -178,7 +171,7 @@ function ExtractionVariables({ form, i, remove }: ExtractionVariablesProps) {
 
                 <FormField
                     control={form.control}
-                    name={`options.extraction.variables.${i}.key`}
+                    name={`extraction.variables.${i}.key`}
                     render={({ field }) => (
                         <FormItem className="col-span-2 space-y-0">
 
@@ -191,7 +184,7 @@ function ExtractionVariables({ form, i, remove }: ExtractionVariablesProps) {
                 />
                 < FormField
                     control={form.control}
-                    name={`options.extraction.variables.${i}.returnType`}
+                    name={`extraction.variables.${i}.returnType`}
                     render={({ field }) => (
                         <FormItem className="col-span-2 space-y-0" >
 
@@ -219,7 +212,7 @@ function ExtractionVariables({ form, i, remove }: ExtractionVariablesProps) {
                     )}
                 />
                 <div className="col-span-5 bg-background  flex flex-row justify-between border border-foreground/10 text-sm h-10 items-center rounded-sm  p-2 text-nowrap text-overflow-ellipsis">
-                    <span className="flex-1">{form.watch(`options.extraction.variables.${i}.description`).slice(0, 35)}...</span>
+                    <span className="flex-1">{form.watch(`extraction.variables.${i}.description`).slice(0, 35)}...</span>
                     <div className="justify-end text-muted-foreground flex  items-center flex-1" onClick={(e) => {
                         setExpanded(!expanded)
                     }}>
@@ -244,7 +237,7 @@ function ExtractionVariables({ form, i, remove }: ExtractionVariablesProps) {
 
                 <FormField
                     control={form.control}
-                    name={`options.extraction.variables.${i}.description`}
+                    name={`extraction.variables.${i}.description`}
                     render={({ field }) => (
                         <FormItem className="col-span-9" >
                             <FormControl>

@@ -1,7 +1,6 @@
 'use client';
-import { AIBot, FieldOptionGroup, NodeSettings, PartialNodeSettings } from "@/types";
-import { Integration } from "@/types";
-import { Edge } from "@xyflow/react";
+import { Integration, NodeDataType, AIBot, FieldOptionGroup } from "@/types";
+import { Edge, Node } from "@xyflow/react";
 import { HierarchyNode, stratify } from "d3-hierarchy";
 
 import {
@@ -9,43 +8,40 @@ import {
     ReactNode,
     useCallback,
     useContext,
-    useReducer
+    useReducer,
 } from "react";
 
 enum ActionType {
     SET_HIERARCHY,
     SET_CHANGES,
     UPDATE_INVALID_NODES,
-    REMOVE_INVALID_NODE,
-    SET_CURRENT_NODE,
-    SET_CURRENT_EDGE,
     UPDATE_VARIABLES,
-    SET_PARTNER_DATA
+    SET_PARTNER_DATA,
+    SET_CURRENT_NODE,
+    SET_CURRENT_EDGE
 }
 
 
 type StateType = {
-    hierarchy: HierarchyNode<NodeSettings> | null
+    hierarchy: HierarchyNode<Node<NodeDataType>> | null
     changed: boolean
-    lid: string
     variables: FieldOptionGroup[]
-    currentNode: PartialNodeSettings | null
-    currentEdge: Edge | null
     integrations: Integration[] | undefined
     partnerData: Record<string, any>
     invalidNodes: string[]
+    currentNode: Node<NodeDataType> | null
+    currentEdge: Edge | null
 }
 
 const initState: StateType = {
     hierarchy: null,
-    lid: "",
     changed: false,
     variables: [],
-    currentNode: null,
-    currentEdge: null,
     integrations: undefined,
     partnerData: {},
-    invalidNodes: []
+    invalidNodes: [],
+    currentNode: null,
+    currentEdge: null
 }
 
 type ReducerAction = {
@@ -55,54 +51,41 @@ type ReducerAction = {
 
 const reducer = (state: StateType, action: ReducerAction): StateType => {
     switch (action.type) {
-        case ActionType.SET_CURRENT_NODE:
-            return { ...state, currentNode: action.payload }
-        case ActionType.SET_CURRENT_EDGE:
-            return { ...state, currentEdge: action.payload }
         case ActionType.SET_CHANGES:
             return { ...state, changed: action.payload }
-        case ActionType.SET_HIERARCHY:
-            return { ...state, hierarchy: action.payload }
         case ActionType.UPDATE_INVALID_NODES:
-            return { ...state, invalidNodes: action.payload }
-        case ActionType.REMOVE_INVALID_NODE:
             return { ...state, invalidNodes: action.payload }
         case ActionType.UPDATE_VARIABLES:
             return { ...state, variables: action.payload }
         case ActionType.SET_PARTNER_DATA:
             return { ...state, partnerData: action.payload }
+        case ActionType.SET_CURRENT_NODE:
+            return { ...state, currentNode: action.payload }
+        case ActionType.SET_CURRENT_EDGE:
+            return { ...state, currentEdge: action.payload }
+        case ActionType.SET_HIERARCHY:
+            return { ...state, hierarchy: action.payload }
         default:
             throw new Error("Unknown action type")
     }
 }
 
+
 const AIBotContextReturns = (initState: StateType) => {
     const [state, dispatch] = useReducer(reducer, initState);
-
-    const setCurrentNode = useCallback((node: PartialNodeSettings | null) => {
-        dispatch({ type: ActionType.SET_CURRENT_NODE, payload: node })
-    }, []);
-
-    const setCurrentEdge = useCallback((edge: Edge | null) => {
-        dispatch({ type: ActionType.SET_CURRENT_EDGE, payload: edge })
-    }, []);
-
-    const setHierarchy = useCallback((hierarchy: HierarchyNode<NodeSettings>) => {
-        dispatch({ type: ActionType.SET_CURRENT_NODE, payload: null })
-        dispatch({ type: ActionType.SET_HIERARCHY, payload: hierarchy })
-    }, []);
 
     const hasChanged = useCallback((change: boolean) => {
         dispatch({ type: ActionType.SET_CHANGES, payload: change })
     }, []);
 
-    const updateInvalidNodes = useCallback((nodeIds: string[]) => {
-        const uniqueNodeIds = [...new Set([...state.invalidNodes, ...nodeIds])];
-        dispatch({ type: ActionType.UPDATE_INVALID_NODES, payload: uniqueNodeIds })
-    }, [state.invalidNodes]);
-
-    const removeInvalidNode = useCallback((nodeId: string) => {
-        dispatch({ type: ActionType.REMOVE_INVALID_NODE, payload: state.invalidNodes.filter(id => id !== nodeId) })
+    const updateInvalidNodes = useCallback((nodeIds: string[] | ((prev: string[]) => string[])) => {
+        if (typeof nodeIds === 'function') {
+            const updatedNodes = nodeIds(state.invalidNodes);
+            dispatch({ type: ActionType.UPDATE_INVALID_NODES, payload: updatedNodes });
+        } else {
+            const uniqueNodeIds = [...new Set([...state.invalidNodes, ...nodeIds])];
+            dispatch({ type: ActionType.UPDATE_INVALID_NODES, payload: uniqueNodeIds });
+        }
     }, [state.invalidNodes]);
 
     const updateVariables = useCallback((variables: Record<string, any>) => {
@@ -113,99 +96,87 @@ const AIBotContextReturns = (initState: StateType) => {
         dispatch({ type: ActionType.SET_PARTNER_DATA, payload: partnerData })
     }, []);
 
+    const setCurrentNode = useCallback((node: Node<NodeDataType> | null) => {
+        dispatch({ type: ActionType.SET_CURRENT_NODE, payload: node })
+    }, []);
+
+    const setCurrentEdge = useCallback((edge: Edge | null) => {
+        dispatch({ type: ActionType.SET_CURRENT_EDGE, payload: edge })
+    }, []);
+
+    const setHierarchy = useCallback((hierarchy: HierarchyNode<Node<NodeDataType>> | null) => {
+        dispatch({ type: ActionType.SET_HIERARCHY, payload: hierarchy })
+    }, []);
+
     return {
         state,
-        setHierarchy,
-        setCurrentNode,
-        setCurrentEdge,
         hasChanged,
         updateInvalidNodes,
-        removeInvalidNode,
         updateVariables,
-        setPartnerData
+        setPartnerData,
+        setCurrentNode,
+        setCurrentEdge,
+        setHierarchy
     }
 }
 
 type AIBotContextType = ReturnType<typeof AIBotContextReturns>
 
-const AIBotContext = createContext<AIBotContextType>({
+export const AIBotContext = createContext<AIBotContextType>({
     state: initState,
-    setHierarchy: () => { },
-    setCurrentNode: () => { },
-    setCurrentEdge: () => { },
     hasChanged: () => { },
     updateInvalidNodes: () => { },
-    removeInvalidNode: () => { },
     updateVariables: () => { },
-    setPartnerData: () => { }
+    setPartnerData: () => { },
+    setCurrentNode: () => { },
+    setCurrentEdge: () => { },
+    setHierarchy: () => { }
 })
 
 interface AIBotProviderProps {
     children: ReactNode,
     bot: AIBot | undefined,
     integrations: Integration[] | undefined,
-    lid: string
 }
 
-const DEFAULT_START_NODES: NodeSettings[] = [{
-    id: "start", node: { label: "Start" }, type: "start", position: { x: 0, y: 0 }
-}, {
-    id: "end", node: { label: "End" }, type: "end", position: { x: 0, y: 100 }, parentId: "start"
-}]
-
-export function AIBotProvider({ children, bot, integrations, lid }: AIBotProviderProps) {
+export function AIBotProvider({ children, bot, integrations }: AIBotProviderProps) {
     if (!bot) {
         throw new Error("Bot not found")
     }
-    const objectives = bot.objectives || DEFAULT_START_NODES;
-    const hierarchy = stratify<NodeSettings>()(objectives);
+
+    const objectives = bot.objectives || [];
+
+    const hierarchy = stratify<Node<NodeDataType>>()(objectives)
+
 
     return (
-        <AIBotContext.Provider value={AIBotContextReturns({ ...initState, hierarchy, integrations, invalidNodes: bot.invalidNodes, lid })}>
+        <AIBotContext.Provider value={AIBotContextReturns({ ...initState, integrations, invalidNodes: bot.invalidNodes, hierarchy })}>
             {children}
         </AIBotContext.Provider>
     )
 }
 
-export function useHierarchy() {
-    const { state: { hierarchy }, setHierarchy } = useContext(AIBotContext);
 
-    if (!hierarchy) {
-        throw new Error("Hierarchy not found")
-    }
-
-    return { hierarchy, setHierarchy };
-}
 
 export function useBotBuilder() {
     const {
-        state: { currentNode, changed, currentEdge, invalidNodes, integrations, variables, partnerData, lid },
+        state,
         hasChanged,
-        setCurrentNode,
-        setCurrentEdge,
-        updateInvalidNodes,
-        removeInvalidNode,
         updateVariables,
-        setPartnerData
+        setPartnerData,
     } = useContext(AIBotContext);
 
-
+    const { integrations, changed, invalidNodes, variables, partnerData } = state;
 
     return {
-        lid,
         integrations,
         changed,
         hasChanged,
-        setCurrentNode,
-        currentNode,
-        currentEdge,
-        setCurrentEdge,
         invalidNodes,
-        updateInvalidNodes,
-        removeInvalidNode,
         variables,
         updateVariables,
         partnerData,
         setPartnerData
     };
 }
+

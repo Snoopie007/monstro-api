@@ -1,12 +1,12 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { useBotBuilder, useHierarchy } from "../providers/AIBotProvider";
+import { useBotBuilder } from "../providers/AIBotProvider";
 import { cn, sleep, tryCatch } from "@/libs/utils";
-import { ChevronLeft, Moon, Settings2Icon, Sun } from "lucide-react";
+import { ChevronLeft, Loader2, Moon, Settings2Icon, Sun } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { MouseEvent, useState, useEffect, useRef } from "react";
-import { Loader2 } from "lucide-react";
+
 import { toast } from "react-toastify";
 import {
     AlertDialog,
@@ -19,27 +19,28 @@ import {
     AlertDialogTitle,
 } from "@/components/ui"
 import { useTheme } from "next-themes";
-import { AIBot, NodeSettings } from "@/types";
+import { AIBot } from "@/types";
 import Link from "next/link";
 import { Switch } from "@/components/ui";
+import { useReactFlow } from "@xyflow/react";
 
 interface BotSettingsProps {
     bot: AIBot;
-    lid: string;
+    lid: number;
 }
 
 const BTN_STYLE = "rounded-none h-10 bg-foreground py-0 hover:bg-indigo-900 text-background hover:text-white"
-const AUTO_SAVE_INTERVAL = 15 * 60 * 1000; // 15 minutes
+const AUTO_SAVE_INTERVAL = 20 * 60 * 1000; // 20 minutes
 
 export function BotSettings({ lid, bot }: BotSettingsProps) {
     const { theme, setTheme } = useTheme()
     const { changed, invalidNodes, hasChanged } = useBotBuilder();
-    const { hierarchy } = useHierarchy();
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { push } = useRouter();
     const [currentBot, updateBot] = useState<AIBot>(bot);
     const lastSaveTime = useRef(Date.now());
+    const { getNodes, getEdges } = useReactFlow();
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -50,28 +51,36 @@ export function BotSettings({ lid, bot }: BotSettingsProps) {
         }, AUTO_SAVE_INTERVAL);
 
         return () => clearInterval(interval);
-    }, [hierarchy, invalidNodes.length, changed]);
+    }, [getNodes, invalidNodes.length, changed]);
 
     async function autoSave() {
-        if (!hierarchy || invalidNodes.length !== 0 || !changed) return;
+        if (invalidNodes.length !== 0 || !changed) return;
         await update();
     }
 
     async function update() {
-        const nodes: NodeSettings[] = []
-        hierarchy.descendants().forEach(node => {
-
-            if (node.data.id === "root") return;
-            nodes.push(node.data);
+        const nodes = getNodes();
+        const edges = getEdges();
+        const objectives = nodes.map(node => {
+            const { data, ...rest } = node;
+            const edge = edges.find(edge => edge.target === rest.id);
+            return {
+                id: rest.id,
+                position: rest.position,
+                ...(edge?.source ? { parentId: edge.source } : {}),
+                type: rest.type,
+                data
+            }
         });
+
         setLoading(true);
         await sleep(2000);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/bots/${bot.id}`, {
+            fetch(`/api/protected/locations/${lid}/bots/${bot.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    objectives: nodes,
+                    objectives,
                     invalidNodes: invalidNodes
                 }),
             })
@@ -91,7 +100,6 @@ export function BotSettings({ lid, bot }: BotSettingsProps) {
 
     async function save(e?: MouseEvent<HTMLButtonElement>) {
         e?.preventDefault();
-        if (!hierarchy) return;
         if (invalidNodes.length !== 0) {
             return toast.error("There are incomplete nodes. Please complete them before saving.");
         }
@@ -104,7 +112,7 @@ export function BotSettings({ lid, bot }: BotSettingsProps) {
         }
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/bots/${bot.id}`, {
+            fetch(`/api/protected/locations/${lid}/bots/${bot.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status: checked ? "Active" : "Draft" }),
@@ -124,7 +132,7 @@ export function BotSettings({ lid, bot }: BotSettingsProps) {
         if (changed) {
             setOpen(true);
         } else {
-            push(`/dashboard/location/${lid}/ai`);
+            push(`/dashboard/locations/profile/${lid}/ai`);
         }
     }
 
@@ -144,7 +152,7 @@ export function BotSettings({ lid, bot }: BotSettingsProps) {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className="rounded-sm">Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => push(`/dashboard/location/${lid}/ai`)} className="rounded-sm">Continue</AlertDialogAction>
+                        <AlertDialogAction onClick={() => push(`/dashboard/locations/profile/${lid}/ai`)} className="rounded-sm">Continue</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

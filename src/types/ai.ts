@@ -1,3 +1,4 @@
+import { Node } from "@xyflow/react"
 
 export type AIBot = {
     id: number
@@ -9,7 +10,7 @@ export type AIBot = {
     botName: string
     reason: string
     responseDetails: string
-    objectives: NodeSettings[] | null
+    objectives: Node<NodeDataType>[] | null
     personality: string[]
     temperature: number
     maxTokens: number
@@ -74,13 +75,13 @@ export type Condition = {
     field: string
     operator: string
     value: string
-    type: "string" | "number" | "boolean"
+    type: 'string' | 'number' | 'boolean'
 }
 
 export type VariableSchema = {
     key: string;
     description: string,
-    returnType: "string" | "number" | "boolean"
+    returnType: 'string' | 'number' | 'boolean'
 }
 
 export type FieldOption = {
@@ -120,8 +121,8 @@ export type AINodeOptions = {
 
 export type DelayNodeOptions = {
     time?: number
-    event: string
-    date?: Date
+    mode?: 'exact' | 'interval'
+    interval?: number
 }
 
 type APIRetrievalOptions = {
@@ -150,7 +151,11 @@ export type RetrievalNodeOptions = {
     maxChars?: number
 }
 
-export type NodeOptions = {
+export type NodeDataType = {
+    label: string
+    editable?: boolean
+    groupParentId?: string
+    hasRelated?: boolean
     ai?: AINodeOptions
     extraction?: ExtractionNodeOptions
     integration?: IntegrationNodeOptions
@@ -158,33 +163,6 @@ export type NodeOptions = {
     delay?: DelayNodeOptions
     retrieval?: RetrievalNodeOptions
 }
-export type NodeDataType = {
-    node: NodeLabelType,
-    options?: NodeOptions
-}
-
-export type NodeLabelType = {
-    label: string
-    editable?: boolean
-    groupParentId?: string
-    hasRelated?: boolean
-}
-
-export type NodeSettings = {
-    id: string
-    type: string
-    parentId?: string
-    node: NodeLabelType,
-    position: {
-        x: number
-        y: number
-    }
-    options?: NodeOptions
-    children?: NodeSettings[]
-}
-
-
-export type PartialNodeSettings = Omit<NodeSettings, 'id'> & { id?: string }
 
 export type FlowTemplateGroup = {
     category: string,
@@ -196,15 +174,5 @@ export type FlowTemplateGroup = {
 export type FlowTemplate = {
     label: string,
     description: string,
-    nodes: NodeTemplate[]
-}
-
-export type NodeTemplate = {
-    type: string
-    node: NodeLabelType
-    position: {
-        x: number
-        y: number
-    }
-    options?: NodeOptions
+    nodes: Omit<Node<NodeDataType>, 'id' | 'position'>[]
 }

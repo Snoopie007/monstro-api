@@ -18,74 +18,70 @@ import {
     SelectItem
 } from "@/components/forms"
 
-import { useBotBuilder, useHierarchy } from '../../providers/AIBotProvider';
 import { useEffect, useState } from "react";
 import { cn, sleep, } from "@/libs/utils";
 import { RetrievalNodeSchema } from "./schemas";
 import NodeSettingFooter from "../ui/SettingFooter";
 import { Editor } from '@tiptap/core'
 import { EditorContent } from '@tiptap/react'
-import { ScrollArea } from "@/components/ui";
+import { ScrollArea } from "@/components/ui/ScrollArea";
 import { AIExtensionKit } from "@/components/extensions";
 import { SheetSection } from "@/components/ui/sheet"
-import { NodeSettingsProps } from "../NodeSettings";
 import { APIFields } from "./RetrievalFields";
-import { generateNodeId } from "../../data/utils"
 import { WebsiteFields } from "./RetrievalFields/WebsiteFields"
+import { useBotUpdate } from "../../providers"
+import { useReactFlow } from "@xyflow/react"
 
-export function RetrievalNodeSettings({ addNodes, updateNode }: NodeSettingsProps) {
+export function RetrievalNodeSettings() {
     const [loading, setLoading] = useState<boolean>(false);
+    const { update, add, currentNode } = useBotUpdate();
+    const { getNode } = useReactFlow();
 
-    const { hasChanged, currentNode } = useBotBuilder();
-    const { hierarchy } = useHierarchy();
+    const { data } = currentNode || {}
+    useEffect(() => {
+        if (currentNode) {
+            form.reset(currentNode.data)
+        }
+    }, [currentNode])
 
-    const { options } = currentNode || {}
     const form = useForm<z.infer<typeof RetrievalNodeSchema>>({
         resolver: zodResolver(RetrievalNodeSchema),
         defaultValues: {
-            node: {
-                label: '',
-            },
-            options: {
-                retrieval: {
-                    knowledgeBase: options?.retrieval?.knowledgeBase,
-                    goal: '',
-                    maxAttempts: 3,
-                    maxChars: 100,
-                    instructions: '',
-                    api: {
-                        service: options?.retrieval?.api?.service,
-                        action: options?.retrieval?.api?.action,
-                        integrationId: options?.retrieval?.api?.integrationId,
-                        calendarId: options?.retrieval?.api?.calendarId
-                    }
+            label: '',
+            retrieval: {
+                knowledgeBase: data?.retrieval?.knowledgeBase,
+                goal: '',
+                maxAttempts: 3,
+                maxChars: 100,
+                instructions: '',
+                api: {
+                    service: data?.retrieval?.api?.service,
+                    action: data?.retrieval?.api?.action,
+                    integrationId: data?.retrieval?.api?.integrationId,
+                    calendarId: data?.retrieval?.api?.calendarId
                 }
             }
         },
         mode: "onChange",
     });
 
-    const knowledgeBase = form.watch("options.retrieval.knowledgeBase")
-    useEffect(() => {
-        if (currentNode) {
-            form.reset(currentNode)
-        }
-    }, [currentNode])
+    const knowledgeBase = form.watch("retrieval.knowledgeBase")
+
 
 
     const goalEditor = new Editor({
         extensions: [...AIExtensionKit()],
-        content: form.getValues("options.retrieval.goal") || '',
+        content: form.getValues("retrieval.goal") || '',
         onUpdate: ({ editor }) => {
-            form.setValue("options.retrieval.goal", editor.getHTML())
+            form.setValue("retrieval.goal", editor.getHTML())
         }
     });
 
     const instructionsEditor = new Editor({
         extensions: [...AIExtensionKit()],
-        content: form.getValues("options.retrieval.instructions") || '',
+        content: form.getValues("retrieval.instructions") || '',
         onUpdate: ({ editor }) => {
-            form.setValue("options.retrieval.instructions", editor.getHTML())
+            form.setValue("retrieval.instructions", editor.getHTML())
         }
     })
 
@@ -93,14 +89,13 @@ export function RetrievalNodeSettings({ addNodes, updateNode }: NodeSettingsProp
     async function handleUpdate(v: z.infer<typeof RetrievalNodeSchema>) {
         if (!currentNode) return;
         setLoading(true);
-        hasChanged(true);
         await sleep(2000);
         setLoading(false);
-        if (currentNode.id) {
-            updateNode(v);
+        const current = getNode(currentNode.id);
+        if (current) {
+            update(v);
         } else {
-            const { node, options, ...rest } = currentNode;
-            addNodes([{ ...rest, data: { ...v }, id: `${generateNodeId()}` }]);
+            add([{ ...currentNode, data: { ...v } }]);
         }
     }
 
@@ -113,7 +108,7 @@ export function RetrievalNodeSettings({ addNodes, updateNode }: NodeSettingsProp
                             <fieldset>
                                 <FormField
                                     control={form.control}
-                                    name="node.label"
+                                    name="label"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size="tiny">Node Label</FormLabel>
@@ -129,7 +124,7 @@ export function RetrievalNodeSettings({ addNodes, updateNode }: NodeSettingsProp
                             <fieldset>
                                 <FormField
                                     control={form.control}
-                                    name="options.retrieval.knowledgeBase"
+                                    name="retrieval.knowledgeBase"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size="tiny">Knowledge Base</FormLabel>
@@ -189,7 +184,7 @@ export function RetrievalNodeSettings({ addNodes, updateNode }: NodeSettingsProp
                             <fieldset className="grid grid-cols-2 gap-2">
                                 <FormField
                                     control={form.control}
-                                    name="options.retrieval.maxAttempts"
+                                    name="retrieval.maxAttempts"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size="tiny">Max Attempts</FormLabel>
@@ -203,7 +198,7 @@ export function RetrievalNodeSettings({ addNodes, updateNode }: NodeSettingsProp
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="options.retrieval.maxChars"
+                                    name="retrieval.maxChars"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size="tiny">Max Tokens</FormLabel>

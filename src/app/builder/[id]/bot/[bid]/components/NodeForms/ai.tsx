@@ -14,41 +14,36 @@ import {
 } from "@/components/forms"
 
 
-import { useBotBuilder } from '../../providers/AIBotProvider';
 import { useEffect, useState } from "react";
 import { cn, sleep, } from "@/libs/utils";
 import { AINodeSchema } from "./schemas";
 import NodeSettingFooter from "../ui/SettingFooter";
 import { Editor } from '@tiptap/core'
 import { EditorContent } from '@tiptap/react'
-import { ScrollArea } from "@/components/ui";
+import { ScrollArea } from "@/components/ui/ScrollArea";
 import { AIExtensionKit } from "@/components/extensions";
 import { SheetSection } from "@/components/ui/sheet"
-import { NodeSettingsProps } from "../NodeSettings";
-import { generateNodeId } from "../../data/utils"
 
+import { useReactFlow } from "@xyflow/react";
+import { useBotUpdate } from "../../providers"
 
-export function AINodeSettings({ addNodes, updateNode }: NodeSettingsProps) {
+export function AINodeSettings() {
     const [loading, setLoading] = useState<boolean>(false);
-
-    const { hasChanged, currentNode } = useBotBuilder();
+    const { currentNode, update, add } = useBotUpdate();
+    const { getNode } = useReactFlow();
 
     const form = useForm<z.infer<typeof AINodeSchema>>({
         resolver: zodResolver(AINodeSchema),
         defaultValues: {
-            node: {
-                label: '',
-            },
-            options: {
-                ai: {
-                    goal: '',
-                    maxAttempts: 3,
-                    maxChars: 100,
-                    instructions: '',
-                }
+            label: '',
+            ai: {
+                goal: '',
+                maxAttempts: 3,
+                maxChars: 100,
+                instructions: '',
             }
-        },
 
+        },
         mode: "onChange",
     });
 
@@ -56,42 +51,40 @@ export function AINodeSettings({ addNodes, updateNode }: NodeSettingsProps) {
 
     useEffect(() => {
         if (currentNode) {
-            form.reset(currentNode)
+            form.reset({ ...currentNode.data })
         }
     }, [currentNode])
 
     const goalEditor = new Editor({
         extensions: [...AIExtensionKit()],
-        content: form.getValues("options.ai.goal") || '',
+        content: form.getValues("ai.goal") || '',
         onUpdate: ({ editor }) => {
-            form.setValue("options.ai.goal", editor.getHTML())
+            form.setValue("ai.goal", editor.getHTML())
         }
     });
 
     const instructionsEditor = new Editor({
         extensions: [...AIExtensionKit()],
-        content: form.getValues("options.ai.instructions") || '',
+        content: form.getValues("ai.instructions") || '',
         onUpdate: ({ editor }) => {
-            form.setValue("options.ai.instructions", editor.getHTML())
+            form.setValue("ai.instructions", editor.getHTML())
         }
     })
 
 
-    async function handleUpdate(v: z.infer<typeof AINodeSchema>) {
 
+    async function handleUpdate(v: z.infer<typeof AINodeSchema>) {
         if (!currentNode) return;
         setLoading(true);
-        hasChanged(true);
         await sleep(2000);
         setLoading(false);
-        const { node, options, ...rest } = currentNode;
-        if (currentNode.id) {
-            updateNode(v);
+        const current = getNode(currentNode.id);
+        if (current) {
+            update(v);
         } else {
-            addNodes([{ ...rest, data: { node: { ...node, ...v.node }, options: v.options }, id: `${generateNodeId()}` }]);
+            add([{ ...currentNode, data: { ...v } }]);
         }
     }
-
 
 
     return (
@@ -103,7 +96,7 @@ export function AINodeSettings({ addNodes, updateNode }: NodeSettingsProps) {
                             <fieldset >
                                 <FormField
                                     control={form.control}
-                                    name="node.label"
+                                    name="label"
                                     render={({ field }) => (
                                         <FormItem className="col-span-6 ">
                                             <FormLabel size="tiny" >Label</FormLabel>
@@ -144,7 +137,7 @@ export function AINodeSettings({ addNodes, updateNode }: NodeSettingsProps) {
                             <fieldset className="grid grid-cols-2 gap-2">
                                 <FormField
                                     control={form.control}
-                                    name="options.ai.maxAttempts"
+                                    name="ai.maxAttempts"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size="tiny">Max Attempts</FormLabel>
@@ -158,7 +151,7 @@ export function AINodeSettings({ addNodes, updateNode }: NodeSettingsProps) {
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="options.ai.maxChars"
+                                    name="ai.maxChars"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size="tiny">Max Tokens</FormLabel>

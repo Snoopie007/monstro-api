@@ -3,6 +3,7 @@ import * as React from "react"
 import { Handle, Node, NodeProps, Position } from "@xyflow/react"
 import { NodeDataType } from "@/types"
 import { cn } from "@/libs/utils"
+import { useMemo } from "react"
 
 
 export interface NodeWrapperProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -13,7 +14,7 @@ export interface NodeWrapperProps extends React.HTMLAttributes<HTMLDivElement> {
 const NodeWrapper = React.forwardRef<HTMLDivElement, NodeWrapperProps>(
     ({ className, currentNode, children, isValid, ...props }, ref) => {
 
-        const isGroup = currentNode.data.node.groupParentId
+        const isGroup = useMemo(() => currentNode.data.groupParentId ? true : false, [currentNode.data.groupParentId])
         return (
             <div ref={ref}
                 className={cn('w-[200px] h-[40px] border border-gray-800 flex flex-row items-center rounded-sm py-1.5 px-2 bg-white dark:bg-black relative',

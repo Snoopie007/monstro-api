@@ -14,7 +14,7 @@ import {
 import { RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { db } from '@/db/db';
 import { getAIRestClient } from '@/libs/server/redis';
-import { IntegrationNodeOptions, NodeSettings, RetrievalNodeOptions } from '@/types';
+import { IntegrationNodeOptions, NodeDataType, RetrievalNodeOptions } from '@/types';
 import { type HierarchyNode, stratify } from 'd3-hierarchy';
 import {
     chunkedStream, evaluateCondition,
@@ -28,6 +28,7 @@ import { VendorGHL } from '@/libs/server/ghl';
 import { Integration } from '@/types';
 import { interpolate } from '@/libs/utils';
 import { chargeWallet, checkWalletBalance } from '@/libs/server/db';
+import { Node } from '@xyflow/react';
 
 type ChatDataType = {
     messages: ChatCompletionMessageParam[],
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     const bot = location.bots[0];
 
-    const objectives = stratify<NodeSettings>()(bot.objectives!);
+    const objectives = stratify<Node<NodeDataType>>()(bot.objectives!);
     let tracker: ChatBotTracker | null = await redis.json.get(`tracker:${data.botId}`);
 
     if (!tracker) {
@@ -158,7 +159,7 @@ export async function POST(req: NextRequest) {
             ]
         });
 
-        let options = nextNode.data.type === "ai" ? nextNode.data.options?.ai : nextNode.data.options?.retrieval;
+        let options = nextNode.data.type === "ai" ? nextNode.data.data?.ai : nextNode.data.data?.retrieval;
         if (!options) { throw new Error("Invalid Objective Options") }
 
         let retrievalData: string = "";
@@ -238,7 +239,7 @@ export async function POST(req: NextRequest) {
 
 
 
-function nextNode(tracker: ChatBotTracker, currentObjective: HierarchyNode<NodeSettings>): HierarchyNode<NodeSettings> {
+function nextNode(tracker: ChatBotTracker, currentObjective: HierarchyNode<Node<NodeDataType>>): HierarchyNode<Node<NodeDataType>> {
     tracker.completedNodes.push(tracker.currentNode);
     tracker.attempts = 0;
     if (currentObjective.children) {
@@ -252,16 +253,16 @@ function nextNode(tracker: ChatBotTracker, currentObjective: HierarchyNode<NodeS
 
 
 async function traverse(
-    currentNode: HierarchyNode<NodeSettings>,
+    currentNode: HierarchyNode<Node<NodeDataType>>,
     tracker: ChatBotTracker,
     session: SessionContext
-): Promise<HierarchyNode<NodeSettings>> {
+): Promise<HierarchyNode<Node<NodeDataType>>> {
 
     if (currentNode.data.type === "start") {
         return await traverse(nextNode(tracker, currentNode)!, tracker, session)
     }
 
-    const nodeOptions = currentNode.data.options;
+    const nodeOptions = currentNode.data.data;
     let analysis;
     console.log(currentNode.data.type)
     switch (currentNode.data.type) {
@@ -296,7 +297,6 @@ async function traverse(
                 instructions: options.instructions
             });
 
-
             session.cost += analysis.cost;
 
             await addLog(session.botId, {
@@ -326,7 +326,7 @@ async function traverse(
             const evaluationResults: Record<string, unknown>[] = [];
             // First try to find a path where the condition evaluates to true
             let nextPath = currentNode.children?.find(path => {
-                const options = path.data.options?.path;
+                const options = path.data.data?.path;
                 if (!options) throw new Error("Invalid Path Options");
                 // Skip default paths without conditions
                 if (options.isDefault && !options.condition) return false;
@@ -334,10 +334,10 @@ async function traverse(
                 // Evaluate the condition
                 const results = evaluateCondition(tracker.metadata.variables, options.condition!);
 
-                // Log the evaluation
+                const { data } = path;
                 evaluationResults.push({
-                    id: path.data.id,
-                    path: path.data.node.label,
+                    id: data.id,
+                    path: data.data.label,
                     condition: options.condition,
                     results
                 });
@@ -348,13 +348,13 @@ async function traverse(
             // If no matching path found, use the default path
             if (!nextPath) {
                 nextPath = currentNode.children?.find(path =>
-                    path.data.options?.path?.isDefault
+                    path.data.data?.path?.isDefault
                 );
 
-                // Log the default path selection
+                const { data: options } = nextPath!;
                 evaluationResults.push({
-                    id: nextPath?.data.id,
-                    path: nextPath?.data.node.label,
+                    id: options.id,
+                    path: options.data.label,
                     condition: undefined,
                     results: true
                 });

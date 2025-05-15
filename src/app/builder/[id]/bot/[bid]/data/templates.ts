@@ -1,19 +1,9 @@
-import { FlowTemplate, FlowTemplateGroup } from "@/types"
-
+import { FlowTemplate } from "@/types"
 
 const DefaultAISettings = {
     maxAttempts: 10,
     maxChars: 150,
 }
-
-export const DefaultPosition = { x: 0, y: 100 }
-
-export const endNodeTemplate = {
-    type: "end",
-    data: { node: { label: "End" } },
-    position: DefaultPosition,
-}
-
 
 export const Nodes = [
     { label: "AI Goal", value: "ai" },
@@ -90,12 +80,9 @@ export const Templates: FlowTemplate[] = [
         nodes: [
             {
                 type: 'retrieval',
-                node: {
+                data: {
                     label: "Book Appointment",
-                    editable: true
-                },
-                position: DefaultPosition,
-                options: {
+                    editable: true,
                     retrieval: {
                         ...DefaultAISettings,
                         goal: `Book a trial class for the ${FirstNameVariable} using the available schedules provided, do not make up time.`,
@@ -106,11 +93,10 @@ export const Templates: FlowTemplate[] = [
             },
             {
                 type: 'extraction',
-                node: {
+
+                data: {
                     label: "Extract Appointment Time",
-                    editable: false
-                },
-                options: {
+                    editable: false,
                     extraction: {
                         "variables": [
                             {
@@ -120,23 +106,19 @@ export const Templates: FlowTemplate[] = [
                             }
                         ]
                     }
-                },
-                position: DefaultPosition,
+                }
             },
             {
                 type: 'integration',
-                node: {
+                data: {
                     label: "[GHL] Add to Calendar",
-                    editable: true
-                },
-                options: {
+                    editable: true,
                     integration: {
                         action: undefined,
                         service: "ghl",
                         calendarId: undefined,
                     }
-                },
-                position: DefaultPosition,
+                }
             }
         ]
     },
@@ -146,16 +128,14 @@ export const Templates: FlowTemplate[] = [
         nodes: [
             {
                 type: 'ai',
-                node: {
+                data: {
                     label: "Collect Information",
-                },
-                position: DefaultPosition,
-                options: {
+                    editable: true,
                     ai: {
                         ...DefaultAISettings,
                         goal: `Collect the email and phone number of the ${FirstNameVariable}.`,
                     }
-                }
+                },
             }
         ]
     },
@@ -166,11 +146,9 @@ export const Templates: FlowTemplate[] = [
         nodes: [
             {
                 type: 'ai',
-                node: {
+                data: {
                     label: "Send Link",
-                },
-                position: DefaultPosition,
-                options: {
+                    editable: true,
                     ai: {
                         ...DefaultAISettings,
                         goal: `Send a relevant link to the ${FirstNameVariable}.`,
