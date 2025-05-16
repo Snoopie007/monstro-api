@@ -1,6 +1,5 @@
 import { NodeDataType } from "@/types";
 import { Edge, getConnectedEdges, Node, useReactFlow } from "@xyflow/react";
-import { stratify } from "d3-hierarchy";
 import { useContext } from "react";
 import { updateLayout, AIBotContext } from ".";
 
@@ -23,28 +22,24 @@ export function useBotUpdate() {
         const nodes = getNodes();
         const edges = getEdges();
         const node = getNode(currentNode.id);
-        if (!node) return;
+        if (!node || !hierarchy) return;
 
         let removedNodes = [node];
 
+        const current = hierarchy.find(n => n.id === currentNode.id);
         if (currentNode.data.groupParentId) {
             removedNodes = [...removedNodes, ...nodes.filter(n => n.data.groupParentId === currentNode.id)];
         } else if (currentNode.type === "condition") {
-            const hierarchy = stratify<Node<NodeDataType>>()
-                .id(d => d.id)
-                .parentId(d => edges.find(e => e.target === d.id)?.source)
-                (nodes);
-
-            const descendants = hierarchy.find(n => n.id === currentNode.id)?.descendants().map(n => n.data);
+            const descendants = current?.descendants().map(n => n.data).slice(0, -1);
             if (descendants) removedNodes = [...removedNodes, ...descendants];
         }
 
         const connectedEdges = getConnectedEdges(removedNodes, edges);
-        const [source, target] = [connectedEdges[0]?.source, connectedEdges[connectedEdges.length - 1]?.target];
 
         const virtualEdges = edges.filter(e => !connectedEdges.some(ce => ce.id === e.id));
         const virtualNodes = nodes.filter(n => !removedNodes.some(rn => rn.id === n.id));
-
+        const source = connectedEdges.find(e => virtualNodes.some(n => n.id === e.source))?.source;
+        const target = connectedEdges.find(e => virtualNodes.some(n => n.id === e.target))?.target;
         if (source && target) {
             virtualEdges.push({ id: `${source}->${target}`, source, target, type: 'plus' });
         }
