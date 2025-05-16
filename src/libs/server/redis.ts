@@ -15,9 +15,9 @@ const getRedisClient = () => {
 
 
 const getAIRestClient = () => {
-    if (!process.env.UPSTASH_AI_REST_URL || !process.env.UPSTASH_AI_REST_TOKEN) {
-        throw new Error("UPSTASH_AI_REST_URL and UPSTASH_AI_REST_TOKEN must be set in the environment");
-    }
+    // if (!process.env.UPSTASH_AI_REST_URL || !process.env.UPSTASH_AI_REST_TOKEN) {
+    //     throw new Error("UPSTASH_AI_REST_URL and UPSTASH_AI_REST_TOKEN must be set in the environment");
+    // }
     const client = new Redis({
         url: process.env.UPSTASH_AI_REST_URL,
         token: process.env.UPSTASH_AI_REST_TOKEN,
