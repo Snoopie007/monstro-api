@@ -51,18 +51,31 @@ export const ConditionNodeSchema = z.object({
                 isDefault: z.boolean(),
                 condition: z.object({
                     operator: z.string().max(25, { message: "operator is too long." }).min(1, { message: "operator is too short." }),
-                    value: z.string().max(25, { message: "value is too long." }).min(1, { message: "value is too short." }),
+                    value: z.string(),
                     field: z.string().max(100, { message: "variable is too long." }).min(3, { message: "variable is too short." }),
                     type: z.enum(["string", "number", "boolean"]),
                 }).optional(),
             }).superRefine((data, ctx) => {
-                if (!data.isDefault && !data.condition) {
-                    ctx.addIssue({
-                        code: z.ZodIssueCode.custom,
-                        message: "Condition is required for non-default paths",
-                        path: ["condition"]
-                    });
+                if (!data.isDefault) {
+                    if (!data.condition) {
+                        ctx.addIssue({
+                            code: z.ZodIssueCode.custom,
+                            message: "Condition is required for non-default paths",
+                            path: ["condition"]
+                        });
+                    }
+
+                    if (data.condition?.type === "string" && data.condition?.operator === "contains") {
+                        if (!["Is Empty", "Is Not Empty"].includes(data.condition?.operator) && !data.condition?.value) {
+                            ctx.addIssue({
+                                code: z.ZodIssueCode.custom,
+                                message: "Value is required for contains operator",
+                                path: ["condition", "value"]
+                            });
+                        }
+                    }
                 }
+
             })
         })
     }))
