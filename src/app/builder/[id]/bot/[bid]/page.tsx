@@ -32,28 +32,26 @@ async function fetchIntegrations(lid: number): Promise<Integration[] | undefined
     }
 }
 
-
-
-
 function generateEdges(objectives: Node<NodeDataType>[]) {
     let edges: Edge[] = [];
     objectives.forEach((objective) => {
         if (!objective.parentId) return;
-        let type = "plus";
 
-        if (objective.type === "path") {
-            type = "smoothstep";
-        }
-
-        if (objective.data.groupParentId == objective.parentId) {
-            type = "lock";
-        }
-        edges.push({
+        const newEdge: Edge = {
             id: `${objective.parentId}-${objective.id}`,
             source: objective.parentId,
             target: objective.id,
-            type: type,
-        });
+            type: "plus",
+        }
+        if (objective.type === "path") {
+            newEdge.type = "smoothstep";
+            newEdge.animated = true;
+        }
+
+        if (objective.data.groupParentId == objective.parentId) {
+            newEdge.type = "lock";
+        }
+        edges.push(newEdge);
     });
     return edges;
 }
