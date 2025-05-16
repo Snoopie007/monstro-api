@@ -56,10 +56,10 @@ export default function NodeActions({ currentNode }: NodeActionsProps) {
                 {actions.map(({ icon: Icon, label, onClick }) => (
                     <DropdownMenuLabel
                         key={label}
-                        className='cursor-pointer flex items-center gap-2'
+                        className='cursor-pointer flex text-xs items-center gap-2 hover:bg-foreground/5 rounded-xs hover:text-indigo-500'
                         onClick={onClick}
                     >
-                        <Icon className='size-4' />
+                        <Icon className='size-3' />
                         {label}
                     </DropdownMenuLabel>
                 ))}

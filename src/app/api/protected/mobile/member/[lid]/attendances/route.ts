@@ -1,9 +1,14 @@
 
-// import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 // import { db } from '@/db/db';
 // import { authenticateMember } from '@/libs/utils';
 // import { achievements } from '@/db/schemas';
 // import { ExtendedAttendance } from '@/types';
+
+export async function GET(req: NextRequest, props: { params: Promise<{ lid: number }> }) {
+    const params = await props.params;
+    return NextResponse.json({ message: 'Hello, world!' }, { status: 200 });
+}
 
 
 // export async function GET(req: NextRequest, props: { params: Promise<{ lid: number }> }) {

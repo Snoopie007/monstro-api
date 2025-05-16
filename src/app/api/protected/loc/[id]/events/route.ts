@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { CalendarEvent, Reservation } from "@/types";
-import { endOfMonth, startOfMonth, addDays, isBefore } from "date-fns";
+import { endOfMonth, startOfMonth, addDays } from "date-fns";
 import { NextResponse, NextRequest } from "next/server";
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: number }> }) {

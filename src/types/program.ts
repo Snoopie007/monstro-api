@@ -1,4 +1,4 @@
-import { Reservation } from "./attendance";
+import { RecurringReservation, Reservation } from "./attendance";
 import { MemberPlan } from "./member";
 import { Location } from "./location";
 import { Interval, ProgramStatus } from "./DatabaseEnums";
@@ -37,7 +37,7 @@ export type PlanProgram = {
 }
 
 export type ProgramSession = {
-		recurringReservations: any;
+    recurringReservations?: RecurringReservation[];
     id: number,
     duration: number,
     programId: number,
