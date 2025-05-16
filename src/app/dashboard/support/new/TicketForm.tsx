@@ -24,8 +24,8 @@ import { cn, sleep } from '@/libs/utils';
 import { Input } from '@/components/forms/input';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { SupportFormSchema } from "../schemas";
-import { SupportCategories } from "./support-categories";
+import { SupportFormSchema } from "../components/schemas";
+import { SupportCategories } from "./SupportCategories";
 
 export default function TicketForm() {
     const [state, setState] = useState<"loading" | "success" | "error" | null>();

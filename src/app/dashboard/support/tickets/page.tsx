@@ -1,9 +1,9 @@
 import { auth } from "@/auth";
 
 import { SupportTicket } from "@/types"
-import CopyTicket from "./copy-ticket";
+import CopyTicket from "./CopyTicket";
 
-import MessageArea from "./message-area";
+import MessageArea from "./MessageArea";
 
 async function getTicket(id: string, locationId: string): Promise<SupportTicket | null> {
     // const res = await fetch(`/api/tickets/${id}?locationId=${locationId}`, {

@@ -1,7 +1,8 @@
-import { Input } from "@/components/forms/input";
+
 import { SupportTicket } from "@/types";
 import Link from "next/link";
-import TicketList from "./ticket-list";
+import TicketList from "./components/TicketList";
+import { Button } from "@/components/ui";
 
 
 async function getTickets(vendorId: string): Promise<SupportTicket[]> {
@@ -24,24 +25,22 @@ async function getTickets(vendorId: string): Promise<SupportTicket[]> {
 export default async function SupportPage() {
     const tickets = await getTickets("vendorId");
     return (
-        <div className="max-w-5xl w-full m-auto mt-6">
-            <div>
-                <div className="border-b mb-4 pb-4 ">
-                    <h1 className="text-2xl font-semibold font-poppins">Support Center</h1>
-                    <p>Request and manage your support requests.</p>
+        <div className="max-w-4xl w-full m-auto mt-6">
+            <div className="border-b  mb-4 pb-4 flex flex-row justify-between items-center">
+                <div className="flex flex-col">
+                    <h1 className="text-lg font-semibold">Monstro Support Center</h1>
+                    <p className="text-sm text-gray-500">Request and manage your support requests.</p>
                 </div>
-                <div className="flex flex-row gap-4 bg">
-                    <div className="flex-1"><Input placeholder="Search..." className="rounded-sm h-auto  text-sm py-2 " /></div>
-                    <Link href={"/dashboard/support/create-ticket"} className="bg-white inline-block justify-center text-sm text-black border-none font-semibold px-4 py-2 rounded-sm">
-                        Create Ticket
-                    </Link>
-
+                <div>
+                    <Button variant="foreground" asChild >
+                        <Link href={"/dashboard/support/create-ticket"} >
+                            Create Ticket
+                        </Link>
+                    </Button>
                 </div>
             </div>
-            <div className="border mt-4 rounded-sm ">
-                <TicketList tickets={tickets} />
 
-            </div>
+            <TicketList tickets={tickets} />
         </div >
     )
 }

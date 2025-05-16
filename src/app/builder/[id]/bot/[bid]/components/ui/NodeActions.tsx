@@ -14,6 +14,7 @@ import {
 } from '@/components/ui';
 import { useBotUpdate } from '../../providers';
 import { EllipsisVertical, MoveHorizontal, Copy, Trash } from 'lucide-react';
+import { useReactFlow } from '@xyflow/react';
 
 interface NodeActionsProps {
     currentNode: NodeProps<Node<NodeDataType>>;
@@ -21,11 +22,20 @@ interface NodeActionsProps {
 
 export default function NodeActions({ currentNode }: NodeActionsProps) {
     const [open, setOpen] = useState(false);
+    const { getEdges, updateEdge } = useReactFlow()
     const { remove } = useBotUpdate()
 
     const moveNode = useCallback((e: MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
+        const edges = getEdges()
 
+        edges.forEach(edge => {
+            if (edge.type === 'plus') {
+                updateEdge(edge.id, {
+                    type: 'move'
+                })
+            }
+        })
     }, [currentNode]);
 
     const copyNode = useCallback((e: MouseEvent<HTMLDivElement>) => {
@@ -52,7 +62,7 @@ export default function NodeActions({ currentNode }: NodeActionsProps) {
                     <EllipsisVertical className='size-4 text-indigo-700 dark:text-black' />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align='start' side='right' className=' rounded text-indigo-800'>
+            <DropdownMenuContent align='start' side='right' >
                 {actions.map(({ icon: Icon, label, onClick }) => (
                     <DropdownMenuLabel
                         key={label}
@@ -60,11 +70,10 @@ export default function NodeActions({ currentNode }: NodeActionsProps) {
                         onClick={onClick}
                     >
                         <Icon className='size-3' />
-                        {label}
+                        <span> {label}</span>
                     </DropdownMenuLabel>
                 ))}
             </DropdownMenuContent>
         </DropdownMenu>
     )
 }
-

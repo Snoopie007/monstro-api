@@ -1,13 +1,13 @@
 
 import { auth } from '@/auth';
 
-import TicketForm from './ticket-form';
+import TicketForm from './TicketForm';
 
 
 const InputStyle = "py-6 px-4 border w-full rounded-sm border-gray-300 text-black text-base";
 
 
-export default async function SupportTicket() {
+export default async function NewTicketPage() {
 
 
     const session = await auth();

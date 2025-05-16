@@ -51,9 +51,10 @@ export default function BotFlow({ initialNodes, initialEdges }: { initialNodes: 
         setCurrentNode(n);
     }
 
+
     function handleEdgeClicked(e: React.MouseEvent, edge: Edge) {
         e.preventDefault();
-        if (edge.type === 'lockedEdge') return;
+        if (['locked', 'move'].includes(edge.type!)) return;
         setCurrentEdge(edge);
         setOpen(true);
     }
