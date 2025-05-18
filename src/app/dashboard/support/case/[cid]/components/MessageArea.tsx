@@ -5,15 +5,16 @@ import { ChangeEvent, RefObject, useEffect, useMemo, useRef, useState } from 're
 import { ArrowUp, ChevronUp, Loader2 } from "lucide-react"
 import { IoAttach } from "react-icons/io5";
 import { format } from 'date-fns'
-import { SupportCase } from '@/types/admin'
+import { SupportCase, SupportCaseLog } from '@/types/admin'
 import { SupportCaseMessage } from '@/types/admin'
 import {
     Collapsible, CollapsibleContent, CollapsibleTrigger,
-    Button, Avatar, AvatarFallback, AvatarImage
+    Button, Avatar, AvatarFallback, AvatarImage,
+    Badge
 } from '@/components/ui'
 import { ExtendedUser } from '@/types/next-auth';
 import { toast } from 'react-toastify';
-import { Editor, EditorContent, useEditor } from '@tiptap/react';
+import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 
@@ -35,11 +36,16 @@ function scrollToBottom(container: RefObject<HTMLDivElement | null>, smooth = fa
 
 export default function MessageArea({ c, user }: { c: SupportCase, user: ExtendedUser }) {
     const container = useRef<HTMLDivElement | null>(null);
-    const [messages, setMessages] = useState<SupportCaseMessage[]>([]);
+    const [events, setEvents] = useState<(SupportCaseMessage | SupportCaseLog)[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        setMessages(c.messages || [])
+        const logs = c.logs || []
+        const messages = c.messages || []
+        const combined = [...logs, ...messages].sort((a, b) =>
+            new Date(a.created).getTime() - new Date(b.created).getTime()
+        )
+        setEvents(combined)
         scrollToBottom(container, true)
     }, [c])
 
@@ -95,6 +101,7 @@ export default function MessageArea({ c, user }: { c: SupportCase, user: Extende
             toast.error(error?.message || "Failed to send message")
         }
         const data = await result?.json()
+        setEvents(prev => [...prev, data])
         editor.commands.clearContent()
 
     }
@@ -102,70 +109,98 @@ export default function MessageArea({ c, user }: { c: SupportCase, user: Extende
     return (
         <div className='space-y-4'>
             <div className='border border-foreground/10 overflow-hidden rounded-md'>
-                {messages.map((message, index) => {
-                    const isRecent = index >= messages.length - 2;
+                {events.map((event, index) => {
+
+                    if ('from' in event) { // Type guard to check if event is SupportCaseLog
+                        return <EventLogItem key={index} log={event} />
+                    }
                     return (
-                        <Collapsible key={index}
-                            defaultOpen={isRecent}
-                            className='border-b group bg-background border-foreground/10 last:border-b-0' >
-                            <CollapsibleTrigger className='flex flex-row items-center justify-between  p-4 w-full'>
-                                <div className='flex flex-row gap-2'>
-                                    <Avatar>
-                                        <AvatarImage src={message.agentId ? "/monstro-logo.png" : user?.image || ""} />
-                                        <AvatarFallback className='bg-foreground/10 text-foreground/50 font-bold'>
-                                            {message.agentId ? "M" : user?.name?.charAt(0)}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex flex-col text-sm">
-                                        <div className='font-medium text-left'>{message.agentId ? "Monstro Support" : user?.name} </div>
-                                        <span className="text-muted-foreground text-xs">
-                                            {format(message.created, 'MMM d, yyyy h:mm a')}
-                                        </span>
-                                    </div>
-                                </div>
-                                <ChevronUp className='size-5 text-muted-foreground group-data-[state=open]:rotate-180 transition-transform duration-300' />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className='px-4 pb-10 text-base text-foreground/80'>
-                                <div
-                                    className="prose py-4 prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6"
-                                    dangerouslySetInnerHTML={{ __html: message.content }}
-                                />
-                            </CollapsibleContent>
-                        </Collapsible>
+                        <EventMessageItem key={index} message={event} user={user} isOpen={index >= events.length - 1} />
                     );
                 })}
             </div>
 
 
-            <div className="bg-foreground/5 flexflex-col gap-1.5 rounded-sm border p-2">
-                <div className="flex w-full flex-col p-1.5 px-4">
-
-                    <EditorContent editor={editor} id="reply" className=" min-h-[100px] max-h-[200px] overflow-y-auto focus:outline-none " />
-
-                    {/* <Textarea placeholder="Type a reply" onChange={handleTextareaChange} rows={1} value={content} ref={textAreaRef}
-                        className={cn(
-                            "resize-none border-0 bg-transparent px-0 py-2 focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0  ",
-                        )}
-                    /> */}
-                </div>
-                <div className="flex flex-row items-center justify-between px-2">
-                    <div>
-                        <IoAttach size={20} className="cursor-pointer" />
+            {c.status === "open" && (
+                <div className="bg-foreground/5 flexflex-col gap-1.5 rounded-sm border p-2">
+                    <div className="flex w-full flex-col p-1.5 px-4">
+                        <EditorContent editor={editor} id="reply" className=" min-h-[100px] max-h-[200px] overflow-y-auto focus:outline-none " />
                     </div>
-                    <div>
-                        <Button
-                            size="sm"
-                            onClick={send}
-                            disabled={isLoading || contentLength < 10}
-                            variant="default"
-                            className='flex flex-row gap-1 text-muted-foreground hover:text-background'
-                        >
-                            {isLoading ? <Loader2 className='size-4 animate-spin' /> : <ArrowUp size={14} className="" />}
-                            <span>Send</span>
-                        </Button>
+                    <div className="flex flex-row items-center justify-between px-2">
+                        <div>
+                            <IoAttach size={20} className="cursor-pointer" />
+                        </div>
+                        <div>
+                            <Button
+                                size="sm"
+                                onClick={send}
+                                disabled={isLoading || contentLength < 10}
+                                variant="default"
+                                className='flex flex-row gap-1 text-muted-foreground hover:text-background'
+                            >
+                                {isLoading ? <Loader2 className='size-4 animate-spin' /> : <ArrowUp size={14} className="" />}
+                                <span>Send</span>
+                            </Button>
+                        </div>
                     </div>
                 </div>
+            )}
+        </div>
+    )
+}
+
+interface EventLogItemProps {
+    log: SupportCaseLog;
+}
+
+function EventLogItem({ log }: EventLogItemProps) {
+    return (
+        <div className='border-b bg-foreground/5 border-foreground/10 last:border-b-0 p-4 pl-16'>
+            <div className='text-sm font-medium flex flex-row gap-1.5'>
+                Status changed from
+                <Badge status={log.from} className='capitalize rounded-full'>{log.from}</Badge>
+                <span className='text-muted-foreground'>to</span>
+                <Badge status={log.to} className='capitalize rounded-full'>{log.to}</Badge>
+                on {format(log.created, 'MMMM d, yyyy \'at\' h:mm a')}
             </div>
         </div>
+    )
+}
+
+interface EventMessageItemProps {
+    message: SupportCaseMessage;
+    user: ExtendedUser;
+    isOpen: boolean;
+}
+
+function EventMessageItem({ message, user, isOpen }: EventMessageItemProps) {
+    return (
+        <Collapsible
+            defaultOpen={isOpen}
+            className='border-b group bg-background border-foreground/10 last:border-b-0' >
+            <CollapsibleTrigger className='flex flex-row items-center justify-between  p-4 w-full'>
+                <div className='flex flex-row gap-2'>
+                    <Avatar>
+                        <AvatarImage src={message.agentId ? "/monstro-logo.png" : user?.image || ""} />
+                        <AvatarFallback className='bg-foreground/10 text-foreground/50 font-bold'>
+                            {message.agentId ? "M" : user?.name?.charAt(0)}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col text-sm">
+                        <div className='font-medium text-left'>{message.agentId ? "Monstro Support" : user?.name} </div>
+                        <span className="text-muted-foreground text-xs">
+                            {format(message.created, 'MMM d, yyyy h:mm a')}
+                        </span>
+                    </div>
+                </div>
+                <ChevronUp className='size-5 text-muted-foreground group-data-[state=open]:rotate-180 transition-transform duration-300' />
+            </CollapsibleTrigger>
+            <CollapsibleContent className='px-4 pb-10 text-base text-foreground/80'>
+                <div
+                    className="prose py-4 prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6"
+                    dangerouslySetInnerHTML={{ __html: message.content }}
+                />
+            </CollapsibleContent>
+        </Collapsible>
     )
 }

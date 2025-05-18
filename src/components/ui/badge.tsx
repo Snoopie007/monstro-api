@@ -76,7 +76,11 @@ const badgeVariants = cva(
         failed: "bg-red-300 text-red-800",
         incomplete: "bg-yellow-300 text-yellow-800",
       },
-
+      status: {
+        open: "bg-indigo-300 text-indigo-800",
+        closed: "bg-gray-300 text-gray-800",
+        escalated: "bg-orange-300 text-orange-800",
+      },
       severity: {
         low: "bg-green-300 text-green-800",
         medium: "bg-yellow-300 text-yellow-800",
@@ -96,11 +100,11 @@ export interface BadgeProps
 
 function Badge({ className, variant,
   roles, sub, pkg, transaction,
-  size, inv, member, severity, ...props }: BadgeProps) {
+  status, size, inv, member, severity, ...props }: BadgeProps) {
   return (
     <div className={cn(badgeVariants({
       variant, roles, sub, pkg, transaction,
-      size, inv, member, severity
+      status, size, inv, member, severity
     }), className)} {...props} />
   )
 }

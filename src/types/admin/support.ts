@@ -26,6 +26,16 @@ export type SupportCaseNote = {
     agent?: AdminUser;
 }
 
+export type SupportCaseLog = {
+    id?: number;
+    from: CaseStatus;
+    to: CaseStatus;
+    created: Date;
+    caseId: number;
+    agentId: number | null;
+    agent?: AdminUser;
+    case?: SupportCase;
+}
 export type SupportCase = {
     id: number;
     subject: string;
@@ -43,5 +53,6 @@ export type SupportCase = {
     metadata: Record<string, unknown>;
     messages?: SupportCaseMessage[];
     notes?: SupportCaseNote[];
+    logs?: SupportCaseLog[];
     messagesCount?: number;
 }

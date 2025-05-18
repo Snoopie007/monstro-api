@@ -68,13 +68,23 @@ export const supportCaseMessages = pgTable("support_case_messages", {
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
+export const supportCaseLogs = pgTable("support_case_logs", {
+    id: serial("id").primaryKey(),
+    caseId: integer("case_id").references(() => supportCases.id).notNull(),
+    agentId: integer("agent_id").references(() => adminUsers.id),
+    from: SupportCaseStatusEnum("from_status").notNull(),
+    to: SupportCaseStatusEnum("to_status").notNull(),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 export const supportCasesRelations = relations(supportCases, ({ one, many }) => ({
     agent: one(adminUsers, {
         fields: [supportCases.agentId],
         references: [adminUsers.id],
     }),
     messages: many(supportCaseMessages),
-    notes: many(supportCaseNotes)
+    notes: many(supportCaseNotes),
+    logs: many(supportCaseLogs)
 }));
 
 export const supportCaseMessagesRelations = relations(supportCaseMessages, ({ one }) => ({
@@ -95,6 +105,17 @@ export const supportCaseNotesRelations = relations(supportCaseNotes, ({ one }) =
     }),
     agent: one(adminUsers, {
         fields: [supportCaseNotes.agentId],
+        references: [adminUsers.id]
+    })
+}));
+
+export const supportCaseLogsRelations = relations(supportCaseLogs, ({ one }) => ({
+    case: one(supportCases, {
+        fields: [supportCaseLogs.caseId],
+        references: [supportCases.id]
+    }),
+    agent: one(adminUsers, {
+        fields: [supportCaseLogs.agentId],
         references: [adminUsers.id]
     })
 }));
