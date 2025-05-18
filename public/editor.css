@@ -8,7 +8,7 @@
   @apply lg:pl-3 lg:pr-3 pl-3 pr-3 py-2;
 }
 
-#aiForm .ProseMirror {
+#aiForm .ProseMirror, #reply .ProseMirror {
   @apply lg:pl-0 lg:pr-0;
 }
 
