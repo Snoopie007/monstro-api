@@ -1,14 +1,13 @@
 import useSWR from "swr";
 
-async function fetcher(data: { url: string }) {
-    const res = await fetch(`/api/protected/vendor/${data.url}`);
+async function fetcher([url, id, query]: [string, string, string]) {
+    const res = await fetch(`/api/protected/vendor/${id}/${url}${query ? `?${query}` : ""}`);
     if (!res.ok) {
         throw new Error("An error occurred while fetching the data.");
     }
 
     return await res.json();
 }
-
 
 
 

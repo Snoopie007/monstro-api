@@ -20,7 +20,7 @@ export default async function SupportLayout(props: SupportLayoutProps) {
 
             <TooltipProvider>
                 <SupportNav />
-                <div className="relative flex flex-1 flex-row justify-start items-start  w-full">
+                <div className="relative flex flex-1 flex-row overflow-scroll  justify-start items-start  w-full">
 
                     <div className="flex-1 h-full">
                         {children}

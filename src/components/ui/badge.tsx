@@ -76,6 +76,13 @@ const badgeVariants = cva(
         failed: "bg-red-300 text-red-800",
         incomplete: "bg-yellow-300 text-yellow-800",
       },
+
+      severity: {
+        low: "bg-green-300 text-green-800",
+        medium: "bg-yellow-300 text-yellow-800",
+        high: "bg-orange-300 text-orange-800",
+        urgent: "bg-red-300 text-red-800",
+      },
     },
     defaultVariants: {
       variant: "default",
@@ -87,9 +94,14 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
   VariantProps<typeof badgeVariants> { }
 
-function Badge({ className, variant, roles, sub, pkg, transaction, size, inv, member, ...props }: BadgeProps) {
+function Badge({ className, variant,
+  roles, sub, pkg, transaction,
+  size, inv, member, severity, ...props }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ variant, roles, sub, pkg, transaction, size, inv, member }), className)} {...props} />
+    <div className={cn(badgeVariants({
+      variant, roles, sub, pkg, transaction,
+      size, inv, member, severity
+    }), className)} {...props} />
   )
 }
 

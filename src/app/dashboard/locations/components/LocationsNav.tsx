@@ -1,6 +1,6 @@
 'use client'
 import { Bell } from 'lucide-react';
-import { SupportMenu, UserMenu } from '@/components/navs';
+import { AlertMenu, SupportMenu, UserMenu } from '@/components/navs';
 
 import React from 'react';
 import { cn } from '@/libs/utils';
@@ -16,19 +16,10 @@ export function LocationsNav() {
                     <Image src='/images/monstro-icon.webp' alt='' width={24} height={24} />
                 </div>
             </div>
-            <div className='flex flex-row items-center gap-3'>
-
-                <div>
-                    <div className='px-3'>
-                        <Bell size={16} />
-                    </div>
-                </div>
-                <div className='items-center'>
-                    <SupportMenu />
-                </div>
-                <div>
-                    <UserMenu />
-                </div>
+            <div className='flex flex-row items-center gap-2'>
+                <AlertMenu />
+                <SupportMenu />
+                <UserMenu />
             </div>
         </div>
     )

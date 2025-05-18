@@ -3,8 +3,7 @@ import { cn } from '@/libs/utils';
 import Image from 'next/image';
 
 import LocationSelect from './SelectLocation';
-import { Bell } from 'lucide-react';
-import { SupportMenu, UserMenu } from '@/components/navs';
+import { AlertMenu, SupportMenu, UserMenu } from '@/components/navs';
 
 import React from 'react';
 import { usePathname } from 'next/navigation';
@@ -27,19 +26,11 @@ export function LocationTopNav({ lid }: { lid: string }) {
 
 
             </div>
-            <div className='flex flex-row items-center gap-3'>
+            <div className='flex flex-row items-center gap-2'>
 
-                <div>
-                    <div className='px-3'>
-                        <Bell size={16} />
-                    </div>
-                </div>
-                <div className='items-center'>
-                    <SupportMenu />
-                </div>
-                <div>
-                    <UserMenu />
-                </div>
+                <AlertMenu />
+                <SupportMenu />
+                <UserMenu />
             </div>
         </div>
     )

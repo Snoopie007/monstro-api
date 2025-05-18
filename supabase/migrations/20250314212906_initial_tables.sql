@@ -11,7 +11,6 @@ CREATE TYPE reservation_status AS ENUM('active', 'expired', 'canceled');
 CREATE TYPE role_color AS ENUM('red', 'green', 'blue', 'pink', 'cyan', 'lime', 'orange', 'fuchsia', 'sky', 'lemon', 'purple', 'yellow');
 CREATE TYPE transaction_status AS ENUM('paid', 'failed', 'incomplete');
 CREATE TYPE staff_status AS ENUM('active', 'inactive');
-CREATE TYPE support_ticket_status AS ENUM('open', 'updated', 'closed');
 CREATE TYPE program_status AS ENUM('active', 'inactive');
 CREATE TYPE import_status AS ENUM('pending', 'processing', 'completed', 'failed');
 
@@ -776,23 +775,6 @@ CREATE TABLE IF NOT EXISTS wallet_usage (
   CONSTRAINT wallet_usage_wallet_id_foreign FOREIGN KEY (wallet_id) REFERENCES wallet (id) ON DELETE CASCADE
 );
 
-
-CREATE TABLE IF NOT EXISTS support_tickets (
-  id bigserial PRIMARY KEY NOT NULL,
-  subject text NOT NULL,
-  issue text NOT NULL,
-  video text,
-  account_id text NOT NULL,
-  description text,
-  status support_ticket_status NOT NULL DEFAULT 'open',
-  location_id bigint NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  CONSTRAINT support_tickets_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_support_tickets_location_id ON support_tickets (location_id);
 
 CREATE TABLE IF NOT EXISTS import_members (
   id bigserial PRIMARY KEY NOT NULL,

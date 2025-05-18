@@ -2,7 +2,7 @@
 import useSWR from "swr";
 
 
-async function newfetcher([url, id, query]: [string, string, string]) {
+async function fetcher([url, id, query]: [string, string, string]) {
     const res = await fetch(`/api/protected/loc/${id}/${url}${query ? `?${query}` : ""}`);
     if (!res.ok) {
         throw new Error("An error occurred while fetching the data.");
@@ -11,14 +11,14 @@ async function newfetcher([url, id, query]: [string, string, string]) {
     return await res.json();
 }
 
-async function fetcher(data: { url: string, id: string, query?: string }) {
-    const res = await fetch(`/api/protected/loc/${data.id}/${data.url}${data.query ? `?${data.query}` : ""}`);
-    if (!res.ok) {
-        throw new Error("An error occurred while fetching the data.");
-    }
+// async function fetcher(data: { url: string, id: string, query?: string }) {
+//     const res = await fetch(`/api/protected/loc/${data.id}/${data.url}${data.query ? `?${data.query}` : ""}`);
+//     if (!res.ok) {
+//         throw new Error("An error occurred while fetching the data.");
+//     }
 
-    return await res.json();
-}
+//     return await res.json();
+// }
 
 
 
@@ -155,5 +155,4 @@ export {
     useMemberPackages,
     useActions,
     useMemberInvoices,
-    newfetcher
 };

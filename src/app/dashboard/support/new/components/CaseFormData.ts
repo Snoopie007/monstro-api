@@ -1,11 +1,10 @@
+export const SeverityOptions = ['low', 'medium', 'high', 'urgent']
+
 export const SupportCategories = [
     {
         category: "General",
         issues: [
-            "Business Info",
-            "Profile",
             "A2P 10DLC",
-            "Media",
             "Domains",
             "Emails",
             "Phone",
@@ -78,10 +77,7 @@ export const SupportCategories = [
     {
         category: "Payments",
         issues: [
-            "Products",
             "Invoice",
-            "Coupons",
-            "Orders",
             "Subscription",
             "Transcations",
             "Intergrations",
