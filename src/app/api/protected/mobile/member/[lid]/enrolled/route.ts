@@ -29,13 +29,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
               with: {
                 program: {
                   with: {
-                    sessions: {
-                      with: {
-                        reservations: {
-                          where: (r, { eq }) => eq(r.memberId, Number(authMember.member?.id))
-                        }
-                      }
-                    }
+                    sessions: true
                   }
                 }
               }
