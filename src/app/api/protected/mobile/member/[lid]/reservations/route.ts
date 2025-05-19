@@ -37,30 +37,26 @@ export async function GET(request: NextRequest, props: { params: Promise<{ lid: 
             return NextResponse.json({ error: "Date is required" }, { status: 400 });
         }
 
-        console.log("Resolved IDs => memberId:", authMember.member.id, "locationId:", locationId);
+        if (!sessionIds) {
+            return NextResponse.json({ error: "Session IDs are required" }, { status: 400 });
+        }
+
+        //console.log("Resolved IDs => memberId:", authMember.member.id, "locationId:", locationId);
 
         // Parse session IDs if provided
-        const ids = sessionIds 
-            ? sessionIds.split(",")
-                .map(id => parseInt(id))
-                .filter(id => !isNaN(id))
-            : [];
+        const ids = sessionIds.split(",").map(id => parseInt(id))
 
-        const startDate = new Date(date);
+        const startDate = new Date(date).toISOString();
         const endDate = addDays(startDate, 6);
 
-        // Get all reservations for the member in this date range
-        const allReservations = await db.query.reservations.findMany({
-            where: (r, { and, between, inArray, eq }) => and(
-                eq(r.memberId, Number(authMember.member.id)),
-                ...(ids.length > 0 ? [inArray(r.sessionId, ids)] : []),
-                between(r.startDate, startDate.toISOString(), endDate.toISOString())
-            ),
-            with: {
-                session: true,
-                attendance: true
-            }
-        });
+
+        const reservations = await db.query.reservations.findMany({
+            where: (reservations, { and, between, inArray }) => and(
+                inArray(reservations.sessionId, ids),
+                between(reservations.startDate,startDate , endDate.toISOString())
+            )
+        })
+
 
         // Get member's active subscription
         const subscription = await db.query.memberSubscriptions.findFirst({
@@ -77,71 +73,62 @@ export async function GET(request: NextRequest, props: { params: Promise<{ lid: 
 
         // Get recurring reservations
         const recurrings = await db.query.recurringReservations.findMany({
-            where: (rr, { and, inArray, lte, or, isNull, gte, eq }) => and(
-                eq(rr.memberId, Number(authMember.member.id)),
-                ...(ids.length > 0 ? [inArray(rr.sessionId, ids)] : []),
-                lte(rr.startDate, endDate.toISOString()),
+            where: (rr, { and, gte, or, isNull, lte, inArray }) => and(
+                inArray(rr.sessionId, ids),
+                lte(rr.startDate, startDate),
                 or(
                     isNull(rr.canceledOn),
-                    gte(rr.canceledOn, startDate.toISOString())
+                    gte(rr.canceledOn, startDate)
                 )
             ),
             with: {
                 exceptions: true,
                 session: true
             }
-        });
+        })
 
         // Generate recurring reservation instances
-        const generatedRecurringReservations: Reservation[] = [];
-        for (const r of recurrings) {
-            if (!r.session) continue;
-
+       let recurringReservations: Reservation[] = [];
+        recurrings.forEach(rr => {
             let currentDate = new Date(startDate);
-            const sessionDay = r.session.day;
-            
-            // Adjust to the next occurrence of this session's day
-            if (currentDate.getDay() !== sessionDay) {
-                currentDate = addDays(currentDate, (sessionDay - currentDate.getDay() + 7) % 7);
+            const sessionDay = rr.session?.day;
+            const currentDay = currentDate.getDay();
+
+            if (currentDay !== sessionDay) {
+                currentDate = addDays(currentDate, (sessionDay - currentDay + 7) % 7);
             }
+
+
 
             while (currentDate <= endDate) {
                 const currentDateString = currentDate.toISOString().split('T')[0];
-                
-                // Check for exceptions or existing reservations with same date and session ID
-                const exception = r.exceptions?.find(e => e.occurrenceDate === currentDateString);
-                const existingReservation = allReservations.find(res => 
-                    res.startDate === currentDateString && res.sessionId === r.sessionId
-                );
+                const exception = rr.exceptions?.find(e => e.occurrenceDate === currentDateString);
+                const existingReservation = reservations.find(r => {
+                    return r.startDate === currentDateString && r.sessionId === rr.sessionId
+                });
 
                 if (exception || existingReservation) {
-                    currentDate = addDays(currentDate, (r.intervalThreshold || 1) * 7);
+                    currentDate = addDays(currentDate, (rr.intervalThreshold || 1) * 7);
                     continue;
                 }
 
-                generatedRecurringReservations.push({
-                    ...r,
-                    id: 0, // Placeholder since these are virtual reservations
-                    recurringId: r.id,
+
+                const { id, intervalThreshold, interval, exceptions, session, ...rest } = rr;
+                recurringReservations.push({
+                    ...rest,
+                    recurringId: rr.id,
                     isRecurring: true,
-                    startDate: currentDate.toISOString(),
-                    memberSubscriptionId: subscription.id,
-                    session: r.session // Preserve session information
-                });
-
-                // Move to next interval
-                currentDate = addDays(currentDate, (r.intervalThreshold || 1) * 7);
+                })
+                currentDate = addDays(currentDate, (rr.intervalThreshold || 1) * 7);
             }
-        }
+        })
 
-        return NextResponse.json([
-            ...allReservations,
-            ...generatedRecurringReservations
-        ], { status: 200 });
+        const sortedReservations = [...reservations, ...recurringReservations];
 
+        return NextResponse.json(sortedReservations, { status: 200 })
     } catch (error) {
         console.error("Error fetching reservations:", error);
-        return NextResponse.json({ 
+        return NextResponse.json({
             error: "Internal server error",
             details: error instanceof Error ? error.message : String(error)
         }, { status: 500 });
