@@ -1,6 +1,6 @@
 'use client'
 import { sleep, tryCatch } from '@/libs/utils'
-import { ChangeEvent, RefObject, useEffect, useMemo, useRef, useState } from 'react'
+import { RefObject, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ArrowUp, ChevronUp, Loader2 } from "lucide-react"
 import { IoAttach } from "react-icons/io5";
@@ -17,8 +17,6 @@ import { toast } from 'react-toastify';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-
-
 
 
 function scrollToBottom(container: RefObject<HTMLDivElement | null>, smooth = false) {
