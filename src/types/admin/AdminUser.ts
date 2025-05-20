@@ -1,5 +1,5 @@
 export type AdminUser = {
-    id?: string
+    id?: number
     name?: string
     image?: string | null
     role?: string | null

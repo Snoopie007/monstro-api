@@ -113,7 +113,7 @@ export default function MessageArea({ c, user }: { c: SupportCase, user: Extende
                         return <EventLogItem key={index} log={event} />
                     }
                     return (
-                        <EventMessageItem key={index} message={event} user={user} isOpen={index >= events.length - 1} />
+                        <EventMessageItem key={index} message={event} c={c} isOpen={index >= events.length - 1} />
                     );
                 })}
             </div>
@@ -167,11 +167,11 @@ function EventLogItem({ log }: EventLogItemProps) {
 
 interface EventMessageItemProps {
     message: SupportCaseMessage;
-    user: ExtendedUser;
+    c: SupportCase;
     isOpen: boolean;
 }
 
-function EventMessageItem({ message, user, isOpen }: EventMessageItemProps) {
+function EventMessageItem({ message, c, isOpen }: EventMessageItemProps) {
     return (
         <Collapsible
             defaultOpen={isOpen}
@@ -179,13 +179,13 @@ function EventMessageItem({ message, user, isOpen }: EventMessageItemProps) {
             <CollapsibleTrigger className='flex flex-row items-center justify-between  p-4 w-full'>
                 <div className='flex flex-row gap-2'>
                     <Avatar>
-                        <AvatarImage src={message.agentId ? "/monstro-logo.png" : user?.image || ""} />
+                        <AvatarImage src={message.agentId ? "/monstro-logo.png" : c.metadata.avatar || ""} />
                         <AvatarFallback className='bg-foreground/10 text-foreground/50 font-bold'>
-                            {message.agentId ? "M" : user?.name?.charAt(0)}
+                            {message.agentId ? message.agent?.name?.charAt(0) : c.metadata.firstName?.charAt(0)}
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col text-sm">
-                        <div className='font-medium text-left'>{message.agentId ? "Monstro Support" : user?.name} </div>
+                        <div className='font-medium text-left'>{message.agentId ? "Monstro Support" : c.metadata.firstName} </div>
                         <span className="text-muted-foreground text-xs">
                             {format(message.created, 'MMM d, yyyy h:mm a')}
                         </span>
@@ -195,7 +195,7 @@ function EventMessageItem({ message, user, isOpen }: EventMessageItemProps) {
             </CollapsibleTrigger>
             <CollapsibleContent className='px-4 pb-10 text-base text-foreground/80'>
                 <div
-                    className="prose py-4 prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6"
+                    className="prose pb-4 prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6"
                     dangerouslySetInnerHTML={{ __html: message.content }}
                 />
             </CollapsibleContent>

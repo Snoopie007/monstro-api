@@ -1,4 +1,6 @@
+import { Vendor } from "../vendor";
 import { AdminUser } from "./AdminUser";
+
 
 export type MessageType = 'message' | 'email' | 'call' | 'live chat';
 export type MessageRole = 'user' | 'agent' | 'ai';
@@ -13,14 +15,14 @@ export type SupportCaseMessage = {
     created: Date;
     caseId: number;
     agentId: number | null;
-    agent?: AdminUser;
+    agent?: AdminUser | null;
 }
 
 export type SupportCaseNote = {
     id?: number;
     note: string;
     created: Date;
-    updated?: Date;
+    updated: Date | null;
     caseId: number;
     agentId: number;
     agent?: AdminUser;
@@ -48,11 +50,20 @@ export type SupportCase = {
     updated: Date | null;
     agentId: number | null;
     locationId: number;
-    accountId: string;
-    agent?: AdminUser;
-    metadata: Record<string, unknown>;
+    userId: number;
+    agent?: AdminUser | null;
+    metadata: SupportCaseMetadata;
     messages?: SupportCaseMessage[];
     notes?: SupportCaseNote[];
     logs?: SupportCaseLog[];
     messagesCount?: number;
+    vendor?: Vendor;
+}
+
+export type SupportCaseMetadata = {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    avatar?: string;
 }

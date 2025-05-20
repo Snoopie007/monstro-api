@@ -101,9 +101,9 @@ export function NewCase({ locations }: { locations: SimpleLocation[] }) {
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent className='max-h-[200px] scroll-smooth'>
-                                            {locations.map((location) => (
-                                                <SelectItem key={location.id} value={location.id.toString()}>
-                                                    {location.name}
+                                            {filteredLocations.map((l) => (
+                                                <SelectItem key={l.id} value={l.id.toString()}>
+                                                    {l.name}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

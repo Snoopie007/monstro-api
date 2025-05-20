@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 	try {
 
 		const cases = await admindb.query.supportCases.findMany({
-			where: (supportCases, { eq }) => eq(supportCases.accountId, session?.user.vendorId),
+			where: (supportCases, { eq }) => eq(supportCases.userId, session?.user.vendorId),
 			with: {
 				messages: true,
 			},
@@ -43,12 +43,23 @@ export async function POST(req: NextRequest) {
 	}
 
 	const decodedLocationId = decodeId(locationId);
+
+	const [firstName, lastName] = session.user.name?.split(" ") || [];
 	try {
 		const newCase = await admindb.transaction(async (tx) => {
 			const [newCase] = await tx.insert(supportCases).values({
 				...rest,
-				accountId: session?.user.vendorId,
-				locationId: decodedLocationId
+				userId: session?.user.vendorId,
+				locationId: decodedLocationId,
+				metadata: {
+					firstName,
+					lastName,
+					email: session.user.email,
+					phone: session.user.phone,
+					avatar: session.user.image,
+					stripeCustomerId: session.user.stripeCustomerId,
+					role: session.user.role,
+				}
 			}).returning();
 
 

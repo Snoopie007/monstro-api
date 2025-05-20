@@ -11,7 +11,6 @@ import { useCases } from "@/hooks";
 import { SupportCase } from "@/types/admin";
 import { StatusTabGroup } from "./CaseStatusTabs";
 import { useSession } from "next-auth/react";
-import { ExtendedUser } from "@/types/next-auth";
 
 
 const SortTabs = ['Last Updated', 'Date Created', 'Serverity'];
@@ -42,7 +41,7 @@ export function Caselist() {
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="bg-background flex items-center gap-2 text-xs">
-                            <span>  Sort by {sortBy}</span>
+                            <span>Sort by {sortBy}</span>
                             <ChevronDownIcon className="size-4 " />
                         </Button>
                     </DropdownMenuTrigger>
@@ -64,7 +63,7 @@ export function Caselist() {
             {cases && (
                 <ul className="border rounded-sm border-foreground/10">
                     {filteredCases.map((c: SupportCase) => (
-                        <CaseItem key={c.id} c={c} user={session?.user} />
+                        <CaseItem key={c.id} c={c} />
                     ))}
                 </ul>
             )}
@@ -87,7 +86,7 @@ export function Caselist() {
 
 
 
-function CaseItem({ c, user }: { c: SupportCase, user: ExtendedUser }) {
+function CaseItem({ c }: { c: SupportCase }) {
     return (
         <li className="p-4  cursor-pointer hover:bg-accent/50 transition-colors border-b border-foreground/10 last:border-b-0">
             <div className="flex flex-row justify-between gap-2">
@@ -115,7 +114,7 @@ function CaseItem({ c, user }: { c: SupportCase, user: ExtendedUser }) {
                 <div className="flex items-center text-sm text-muted-foreground  gap-2">
                     <span>#{c.id}</span>
 
-                    <span >{user?.name}</span>
+                    <span >{c.metadata.firstName} {c.metadata.lastName}</span>
 
                     <span >
                         {format(new Date(c.created), 'MM/d/yy')}

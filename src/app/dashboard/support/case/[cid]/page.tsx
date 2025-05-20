@@ -11,7 +11,11 @@ async function getCase(id: number): Promise<SupportCase | undefined> {
         const c = await admindb.query.supportCases.findFirst({
             where: (supportCases, { eq }) => eq(supportCases.id, id),
             with: {
-                messages: true,
+                messages: {
+                    with: {
+                        agent: true
+                    }
+                },
                 logs: true
             }
         })
