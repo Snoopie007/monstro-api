@@ -6,20 +6,20 @@ import { supportCaseMessages } from "@/db/admin";
 
 
 export async function POST(req: NextRequest) {
-    const { locationId, ...rest } = await req.json();
+    const data = await req.json();
     const session = await auth();
     if (!session || !session.user.vendorId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
-        const msg = await admindb.insert(supportCaseMessages).values({
-            caseId: rest.caseId,
+        const [msg] = await admindb.insert(supportCaseMessages).values({
+            caseId: data.caseId,
             agentId: null,
-            content: rest.content,
+            content: data.content,
             role: "user",
             type: "message"
-        })
+        }).returning();
         return NextResponse.json(msg, { status: 200 });
     } catch (err) {
         console.log(err);

@@ -63,7 +63,7 @@ export default function MessageArea({ c, user }: { c: SupportCase, user: Extende
     const contentLength = useMemo(() => {
         if (!editor || !editor.getHTML()) return 0
         return editor.getHTML().length
-    }, [editor])
+    }, [editor, editor?.getHTML()])
 
 
     function parseContent(content: string) {
