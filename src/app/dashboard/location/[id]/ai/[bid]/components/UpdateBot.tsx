@@ -54,7 +54,7 @@ export function UpdateBot({ lid, bid }: UpdateBotProps) {
 
         setLoading(true);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/locations/${lid}/bots/${bid}`, {
+            fetch(`/api/protected/loc/${lid}/bots/${bid}`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
@@ -69,7 +69,7 @@ export function UpdateBot({ lid, bid }: UpdateBotProps) {
         }
         toast.success("Bot updated")
 
-        const url = from === "builder" ? `/builder/${lid}/bot/${bid}` : `/dashboard/locations/profile/${lid}/ai/`
+        const url = from === "builder" ? `/builder/${lid}/bot/${bid}` : `/dashboard/location/${lid}/ai`
         router.push(url)
     }
 
