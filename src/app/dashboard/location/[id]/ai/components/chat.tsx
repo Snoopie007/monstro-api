@@ -69,7 +69,7 @@ export function AIChat({ bot, setSelectedBot, location, lid }: AIChatProps) {
 
     return (
         <div className="flex flex-1 h-full flex-col relative ">
-            <div className="flex flex-row items-center justify-between border-b border-foreground/10 flex-initial  px-4 h-[80px]">
+            <div className="flex flex-row items-center justify-between border-b border-foreground/10 flex-initial  px-4 h-[41px]">
                 <span className="text-sm font-medium">
                     {bot ? bot.title : ""}
                 </span>
