@@ -2,6 +2,7 @@ import useSWR from "swr";
 import { fetcher } from "./hooks";
 
 export const useBot = (id: string, bid: number) => {
+
     const { data: bot, isLoading, error, mutate } = useSWR({ url: `/bots/${bid}`, id }, fetcher);
     return {
         bot,

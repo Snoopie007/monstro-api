@@ -1,10 +1,9 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { locations, locationState, vendorLevels } from '@/db/schemas';
+import { locations, locationState } from '@/db/schemas';
 import { encodeId } from '@/libs/server/sqids';
 import { formatPhoneNumber } from '@/libs/server/db';
-import { sql } from 'drizzle-orm';
 
 const DEFAULT_LOCATION_STATE = {
     planId: null,

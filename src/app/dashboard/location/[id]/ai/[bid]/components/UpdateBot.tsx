@@ -51,6 +51,7 @@ export function UpdateBot({ lid, bid }: UpdateBotProps) {
     }, [bot])
 
     async function save(v: z.infer<typeof AIBotSchema>) {
+
         setLoading(true);
         const { result, error } = await tryCatch(
             fetch(`/api/protected/locations/${lid}/bots/${bid}`, {

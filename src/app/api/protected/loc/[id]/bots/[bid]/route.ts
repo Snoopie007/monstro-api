@@ -1,8 +1,23 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getRedisClient } from "@/libs/server/redis";
+import { db } from "@/db/db";
 
 const redis = getRedisClient();
+
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string, bid: number }> }) {
+    const { bid } = await props.params;
+    try {
+        const bot = await db.query.aiBots.findFirst({
+            where: (aiBots, { eq }) => eq(aiBots.id, bid)
+        });
+        return NextResponse.json(bot, { status: 200 });
+    } catch (error) {
+        console.log("Error ", error);
+        return NextResponse.json({ message: "Error" }, { status: 500 })
+    }
+}
+
 
 export async function PUT(req: NextRequest, props: { params: Promise<{ bid: string }> }) {
     const { bid } = await props.params;

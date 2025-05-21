@@ -4,6 +4,9 @@ import { admindb } from "@/db/db";
 import { supportCases, supportCaseMessages } from "@/db/admin";
 import { decodeId } from "@/libs/server/sqids";
 import { sql } from "drizzle-orm";
+import { EmailSender } from "@/libs/server/emails";
+import { MonstroData } from "@/libs/data";
+import { SupportConfirmation } from "@/templates/emails";
 
 export async function GET(req: NextRequest) {
 	const session = await auth();
@@ -34,7 +37,6 @@ export async function GET(req: NextRequest) {
 	}
 }
 
-
 export async function POST(req: NextRequest) {
 	const { locationId, ...rest } = await req.json();
 	const session = await auth();
@@ -45,6 +47,15 @@ export async function POST(req: NextRequest) {
 	const decodedLocationId = decodeId(locationId);
 
 	const [firstName, lastName] = session.user.name?.split(" ") || [];
+	const user = {
+		firstName,
+		lastName,
+		email: session.user.email,
+		phone: session.user.phone,
+		avatar: session.user.image,
+		stripeCustomerId: session.user.stripeCustomerId,
+		role: session.user.role,
+	}
 	try {
 		const newCase = await admindb.transaction(async (tx) => {
 			const [newCase] = await tx.insert(supportCases).values({
@@ -52,13 +63,7 @@ export async function POST(req: NextRequest) {
 				userId: session?.user.vendorId,
 				locationId: decodedLocationId,
 				metadata: {
-					firstName,
-					lastName,
-					email: session.user.email,
-					phone: session.user.phone,
-					avatar: session.user.image,
-					stripeCustomerId: session.user.stripeCustomerId,
-					role: session.user.role,
+					...user
 				}
 			}).returning();
 
@@ -71,6 +76,22 @@ export async function POST(req: NextRequest) {
 			})
 			return newCase;
 		})
+
+		const emailSender = new EmailSender();
+		await emailSender.send(
+			session.user.email,
+			`Case #${newCase.id} - created successfully`,
+			SupportConfirmation,
+			{
+				vendor: {
+					...user
+				},
+				case: {
+					...newCase,
+					id: 100 + newCase.id
+				},
+			});
+
 		return NextResponse.json(newCase, { status: 200 });
 	} catch (err) {
 		console.log(err);
