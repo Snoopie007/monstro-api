@@ -76,7 +76,7 @@ export function BotSettings({ lid, bot }: BotSettingsProps) {
         setLoading(true);
         await sleep(2000);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/locations/${lid}/bots/${bot.id}`, {
+            fetch(`/api/protected/loc/${lid}/bots/${bot.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -112,7 +112,7 @@ export function BotSettings({ lid, bot }: BotSettingsProps) {
         }
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/locations/${lid}/bots/${bot.id}`, {
+            fetch(`/api/protected/loc/${lid}/bots/${bot.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status: checked ? "Active" : "Draft" }),
@@ -132,7 +132,7 @@ export function BotSettings({ lid, bot }: BotSettingsProps) {
         if (changed) {
             setOpen(true);
         } else {
-            push(`/dashboard/locations/profile/${lid}/ai`);
+            push(`/dashboard/location/${lid}/ai`);
         }
     }
 
@@ -191,7 +191,7 @@ export function BotSettings({ lid, bot }: BotSettingsProps) {
                 </Button>
 
                 <Button variant={'ghost'} className={cn(BTN_STYLE, 'border-x border-background/10')} asChild>
-                    <Link href={`/dashboard/locations/profile/${lid}/ai/${bot.id}?from=builder`}>
+                    <Link href={`/dashboard/location/${lid}/ai/${bot.id}?from=builder`}>
                         <Settings2Icon size={14} />
                     </Link>
                 </Button>
