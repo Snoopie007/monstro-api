@@ -26,7 +26,7 @@ import { useReactFlow } from "@xyflow/react";
 
 interface BotSettingsProps {
     bot: AIBot;
-    lid: number;
+    lid: string;
 }
 
 const BTN_STYLE = "rounded-none h-10 bg-foreground py-0 hover:bg-indigo-900 text-background hover:text-white"

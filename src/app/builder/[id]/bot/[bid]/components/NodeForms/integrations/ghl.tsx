@@ -40,7 +40,7 @@ export function GHLIntegration() {
     const { integrations, partnerData, setPartnerData, hasChanged } = useBotBuilder()
     const { currentNode, add, update } = useBotUpdate()
     const { getNode } = useReactFlow();
-    const filteredIntegrations = integrations?.filter((integration) => integration.service === 'ghl')
+    const filteredIntegrations = integrations ? integrations.filter((integration) => integration.service === 'ghl') : []
 
     const { data } = currentNode || {}
 

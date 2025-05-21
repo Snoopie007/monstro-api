@@ -6,6 +6,7 @@ import { AIBotProvider } from './providers/AIBotProvider';
 import { Edge, Node, ReactFlowProvider } from '@xyflow/react';
 
 import Error from './error';
+import { decodeId } from '@/libs/server/sqids';
 
 async function fetchBot(bid: number): Promise<AIBot | undefined> {
     try {
@@ -21,10 +22,11 @@ async function fetchBot(bid: number): Promise<AIBot | undefined> {
     }
 }
 
-async function fetchIntegrations(lid: number): Promise<Integration[] | undefined> {
+async function fetchIntegrations(id: string): Promise<Integration[] | undefined> {
+    const decodedId = decodeId(id)
     try {
         const integrations = await db.query.integrations.findMany({
-            where: (integrations, { eq }) => (eq(integrations.locationId, lid))
+            where: (integrations, { eq }) => (eq(integrations.locationId, decodedId))
         });
         return integrations;
     } catch (error) {
@@ -34,6 +36,7 @@ async function fetchIntegrations(lid: number): Promise<Integration[] | undefined
 
 function generateEdges(objectives: Node<NodeDataType>[]) {
     let edges: Edge[] = [];
+    let currentGroup = "";
     objectives.forEach((objective) => {
         if (!objective.parentId) return;
 
@@ -48,19 +51,24 @@ function generateEdges(objectives: Node<NodeDataType>[]) {
             newEdge.animated = true;
         }
 
-        if (objective.data.groupParentId == objective.parentId) {
-            newEdge.type = "lock";
+        if (objective.data.groupParentId) {
+            if (objective.data.groupParentId === objective.id) {
+                currentGroup = objective.id;
+            } else if (objective.data.groupParentId === currentGroup) {
+                newEdge.type = "locked";
+            }
         }
+
         edges.push(newEdge);
     });
     return edges;
 }
 
 
-export default async function BotBuilder(props: { params: Promise<{ lid: number, bid: number }> }) {
+export default async function BotBuilder(props: { params: Promise<{ id: string, bid: number }> }) {
     const params = await props.params;
     const bot = await fetchBot(params.bid);
-    const integrations = await fetchIntegrations(params.lid);
+    const integrations = await fetchIntegrations(params.id);
 
     if (!bot) return <Error />
 
@@ -78,7 +86,7 @@ export default async function BotBuilder(props: { params: Promise<{ lid: number,
             <ReactFlowProvider>
                 <AIBotProvider integrations={integrations} bot={bot}>
 
-                    <BotSettings bot={bot} lid={params.lid} />
+                    <BotSettings bot={bot} lid={params.id} />
                     <div className='h-full w-full bg-gray-100'>
                         <BotFlow initialNodes={initialNodes} initialEdges={initialEdges} />
                     </div>
