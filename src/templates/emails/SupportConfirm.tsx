@@ -28,7 +28,7 @@ export const SupportConfirmation = `
       }
     </style>
 </head>
-<body style="padding: 20px;">
+<body style="padding-right: 20px;">
   <p>Hi {{vendor.firstName}},</p>
 
   <p>We've received your support request and created a case:</p>

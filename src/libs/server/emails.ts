@@ -2,6 +2,14 @@ import * as sendgrid from '@sendgrid/mail';
 import { interEmailsAndText } from '../utils';
 
 
+type SupportEmailOptions = {
+    options: {
+        to: string;
+        subject: string;
+    },
+    template: string;
+    data: Record<string, any>;
+}
 
 
 export class EmailSender {
@@ -17,6 +25,20 @@ export class EmailSender {
     }
 
 
+
+    public async sendSupportEmail(props: SupportEmailOptions) {
+        const html = interEmailsAndText(props.template, props.data);
+
+        await this._sender.send({
+            ...props.options,
+            from: {
+                email: 'support@mymonstro.com',
+                name: 'Monstro Support'
+            },
+            replyTo: `case+${props.data.case.id}@mymonstro.com`,
+            html
+        });
+    }
 
 
     public async send(email: string, subject: string, template: string, data: Record<string, any>) {

@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
 	}
 
 	try {
-
 		const cases = await admindb.query.supportCases.findMany({
 			where: (supportCases, { eq }) => eq(supportCases.userId, session?.user.vendorId),
 			with: {
@@ -55,42 +54,42 @@ export async function POST(req: NextRequest) {
 		avatar: session.user.image,
 		stripeCustomerId: session.user.stripeCustomerId,
 		role: session.user.role,
-	}
+	};
+
 	try {
 		const newCase = await admindb.transaction(async (tx) => {
 			const [newCase] = await tx.insert(supportCases).values({
 				...rest,
 				userId: session?.user.vendorId,
 				locationId: decodedLocationId,
-				metadata: {
-					...user
-				}
+				metadata: user
 			}).returning();
-
 
 			await tx.insert(supportCaseMessages).values({
 				caseId: newCase.id,
 				content: rest.message,
 				role: "user",
 				type: "message"
-			})
-			return newCase;
-		})
-
-		const emailSender = new EmailSender();
-		await emailSender.send(
-			session.user.email,
-			`Case #${newCase.id} - created successfully`,
-			SupportConfirmation,
-			{
-				vendor: {
-					...user
-				},
-				case: {
-					...newCase,
-					id: 100 + newCase.id
-				},
 			});
+			const emailSender = new EmailSender();
+			await emailSender.sendSupportEmail({
+				options: {
+					to: 'steve.y@mymonstro.com',
+					subject: `Case#${newCase.id} created successfully`,
+				},
+				template: SupportConfirmation,
+				data: {
+					vendor: user,
+					case: {
+						...newCase,
+						id: 100 + newCase.id
+					}
+				}
+			});
+			return newCase;
+		});
+
+
 
 		return NextResponse.json(newCase, { status: 200 });
 	} catch (err) {
