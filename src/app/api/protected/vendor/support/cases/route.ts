@@ -77,10 +77,10 @@ export async function POST(req: NextRequest) {
 				},
 				template: 'SupportConfirmation',
 				data: {
-					vendor: user,
+					customer: user,
 					case: {
 						...newCase,
-						id: 100 + newCase.id
+						id: 100 + Number(newCase.id)
 					}
 				}
 			});
