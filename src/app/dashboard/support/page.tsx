@@ -8,12 +8,12 @@ import { Caselist } from "./components";
 export default async function SupportPage() {
     return (
         <div className="max-w-4xl w-full m-auto mt-6">
-            <div className="border-b  mb-4 pb-4 flex flex-row justify-between items-center gap-2">
+            <div className="pb-4 flex flex-row justify-between items-center gap-2">
                 <div className="flex flex-col">
                     <h1 className="text-lg font-semibold">Monstro Support Center</h1>
-                    <p className="text-sm text-gray-500">Request and manage your support requests.</p>
+                    <p className="text-sm text-muted-foreground">Request and manage your support requests.</p>
                 </div>
-                <Button variant="foreground" asChild >
+                <Button variant="foreground" asChild size="sm">
                     <Link href={"/dashboard/support/new"} >
                         Create Case
                     </Link>

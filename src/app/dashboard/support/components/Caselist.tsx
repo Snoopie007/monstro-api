@@ -10,26 +10,43 @@ import Link from "next/link";
 import { useCases } from "@/hooks";
 import { SupportCase } from "@/types/admin";
 import { StatusTabGroup } from "./CaseStatusTabs";
-import { useSession } from "next-auth/react";
 
 
 const SortTabs = ['Last Updated', 'Date Created', 'Serverity'];
+const severityOrder = { undefined: 4, high: 3, medium: 2, low: 1 };
+type Severity = keyof typeof severityOrder;
 
 export function Caselist() {
     const { cases, isLoading, error } = useCases();
     const [sortBy, setSortBy] = useState('Last Updated');
     const [activeTab, setActiveTab] = useState('All');
     const [filteredCases, setFilteredCases] = useState<SupportCase[]>([]);
-    const { data: session } = useSession();
+
+
 
     useEffect(() => {
         if (!cases) return;
-        const filteredCases = cases.filter((c: SupportCase) => {
+        let filtered = cases.filter((c: SupportCase) => {
             if (activeTab === 'All') return true;
             return c.status === activeTab.toLowerCase();
         });
-        setFilteredCases(filteredCases);
-    }, [activeTab, cases]);
+
+        // Apply sorting
+        filtered = [...filtered].sort((a, b) => {
+            switch (sortBy) {
+                case 'Last Updated':
+                    return new Date(b.updated).getTime() - new Date(a.updated).getTime();
+                case 'Date Created':
+                    return new Date(b.created).getTime() - new Date(a.created).getTime();
+                case 'Serverity':
+                    return severityOrder[b.severity as Severity] - severityOrder[a.severity as Severity];
+                default:
+                    return 0;
+            }
+        });
+
+        setFilteredCases(filtered);
+    }, [activeTab, cases, sortBy]);
 
     return (
         <div className="space-y-4">
@@ -40,7 +57,8 @@ export function Caselist() {
                 <StatusTabGroup activeTab={activeTab} setActiveTab={setActiveTab} />
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="bg-background flex items-center gap-2 text-xs">
+                        <Button variant="outline" className={cn("bg-background justify-between flex items-center",
+                            "gap-2 text-xs border-foreground/10 min-w-44")}>
                             <span>Sort by {sortBy}</span>
                             <ChevronDownIcon className="size-4 " />
                         </Button>
@@ -92,7 +110,7 @@ function CaseItem({ c }: { c: SupportCase }) {
             <div className="flex flex-row justify-between gap-2">
                 <div className="flex flex-row gap-3 items-center">
                     <div className="flex flex-row gap-3 items-center">
-                        <Badge size="tiny" variant="default" className="rounded-full capitalize">
+                        <Badge size="tiny" status={c.status} className="rounded-full capitalize">
                             {c.status}
                         </Badge>
                         <Badge size="tiny" severity={c.severity} className="rounded-full capitalize">
