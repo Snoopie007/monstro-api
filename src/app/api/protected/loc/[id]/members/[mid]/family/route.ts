@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 
 import { db } from '@/db/db';
 import { eq, and, sql, isNull } from 'drizzle-orm';
-import { memberSubscriptions, memberPlans, memberPackages } from '@/db/schemas/MemberPlans';
-import { familyMembers, locations, memberLocations, members, users } from '@/db/schemas';
+
+import {
+    familyMembers, locations, memberLocations, members, users,
+    memberSubscriptions, memberPlans, memberPackages
+} from '@/db/schemas';
 import { MonstroData } from '@/libs/data';
-import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { EmailSender } from '@/libs/server/emails';
 
 
@@ -13,7 +15,7 @@ type Props = {
     mid: number,
     id: number
 }
-
+const emailSender = new EmailSender();
 export async function GET(req: Request, props: { params: Promise<Props> }) {
     const params = await props.params;
     try {
@@ -238,12 +240,19 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
         });
 
         if (newMember) {
-            const emailSender = new EmailSender();
-            await emailSender.send(email, 'Welcome to Monstro', InviteEmailTemplate, {
-                ui: { button: "Join the class.", btnUrl: emailUrl },
-                location: { name: location?.name },
-                monstro: MonstroData,
-                member: { name: firstName },
+
+            await emailSender.send({
+                options: {
+                    to: member.email,
+                    subject: 'Family Member Invitation',
+                },
+                template: 'InviteEmailTemplate',
+                data: {
+                    ui: { button: "Join the class.", btnUrl: emailUrl },
+                    location: { name: location?.name },
+                    monstro: MonstroData,
+                    member: { name: firstName },
+                }
             });
         } else {
             // add email template for members who already have an account

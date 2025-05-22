@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { eq, and, isNull, sql, Column, SQL } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { memberSubscriptions, memberPackages } from '@/db/schemas/MemberPlans';
 import { familyMembers, locations, memberLocations, members, users } from '@/db/schemas';
 import { MonstroData } from '@/libs/data';
-import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { EmailSender } from '@/libs/server/emails';
 import { authenticateMember } from '@/libs/utils';
 
 type Props = {
     lid: number
 }
-
+const emailSender = new EmailSender();
 export async function GET(req: NextRequest, props: { params: Promise<Props> }) {
     const params = await props.params;
     try {
@@ -199,12 +198,18 @@ export async function POST(req: NextRequest, props: { params: Promise<Props> }) 
         });
 
         if (newMember) {
-            const emailSender = new EmailSender();
-            await emailSender.send(email, 'Welcome to Monstro', InviteEmailTemplate, {
-                ui: { button: "Join the class.", btnUrl: emailUrl },
-                location: { name: location?.name },
-                monstro: MonstroData,
-                member: { name: firstName },
+            await emailSender.send({
+                options: {
+                    to: email,
+                    subject: 'Welcome to Monstro',
+                },
+                template: 'InviteEmailTemplate',
+                data: {
+                    ui: { button: "Join the class.", btnUrl: emailUrl },
+                    location: { name: location?.name },
+                    monstro: MonstroData,
+                    member: { name: firstName },
+                }
             });
         }
 

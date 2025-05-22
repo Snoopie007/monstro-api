@@ -27,14 +27,21 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
 
         const { member, location } = ml
         const emailSender = new EmailSender();
-        await emailSender.send(member.email, `Welcome to ${location.name}`, InviteEmailTemplate, {
-            ui: {
-                btnText: "Accept Invite",
-                btnUrl: `https://member.mymonstroapp.com/invite/${encodeId(params.id)}?email=${member.email}`
+        await emailSender.send({
+            options: {
+                to: member.email,
+                subject: `Welcome to ${location.name}`,
             },
-            location,
-            monstro: MonstroData,
-            member
+            template: 'InviteEmailTemplate',
+            data: {
+                ui: {
+                    btnText: "Accept Invite",
+                    btnUrl: `https://member.mymonstroapp.com/invite/${encodeId(params.id)}?email=${member.email}`
+                },
+                location,
+                monstro: MonstroData,
+                member
+            }
         });
         await db.update(memberLocations).set({
             inviteDate: new Date(),

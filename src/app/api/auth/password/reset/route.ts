@@ -1,7 +1,6 @@
 
 import { db } from "@/db/db";
 import { users } from "@/db/schemas";
-import { ResetSuccessEmail } from "@/templates/emails";
 import { MonstroData } from "@/libs/data";
 import { EmailSender } from "@/libs/server/emails";
 import { decodeId } from "@/libs/server/sqids";
@@ -11,7 +10,7 @@ import { getRedisClient } from "@/libs/server/redis";
 import bcrypt from "bcryptjs";
 
 const redis = getRedisClient();
-
+const emailSender = new EmailSender();
 export async function POST(req: NextRequest) {
     const { password, confirmPassword, ...rest } = await req.json()
 
@@ -51,15 +50,22 @@ export async function POST(req: NextRequest) {
             password: hashedPassword
         }).where(eq(users.id, user.id))
 
-        const emailSender = new EmailSender();
+
         const [firstName, lastName] = user.name.split(" ")
-        await emailSender.send(user.email, 'Password reset successful', ResetSuccessEmail, {
-            member: {
-                firstName,
-                lastName,
-                email: user.email
+        await emailSender.send({
+            options: {
+                to: user.email,
+                subject: 'Password reset successful',
             },
-            monstro: MonstroData
+            template: 'ResetSuccessEmail',
+            data: {
+                member: {
+                    firstName,
+                    lastName,
+                    email: user.email
+                },
+                monstro: MonstroData
+            }
         });
         // Remove 
         await redis.del(RedisKey);

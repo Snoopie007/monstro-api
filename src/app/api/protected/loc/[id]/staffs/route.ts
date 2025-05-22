@@ -12,7 +12,7 @@ import { EmailSender } from "@/libs/server/emails";
 type StaffProps = {
     id: number
 }
-
+const emailSender = new EmailSender();
 export async function GET(req: Request, props: { params: Promise<StaffProps> }) {
     const params = await props.params;
     try {
@@ -20,7 +20,7 @@ export async function GET(req: Request, props: { params: Promise<StaffProps> }) 
             where: (staffsLocations, { eq }) => and(eq(staffsLocations.locationId, params.id)),
             with: {
                 staff: true,
-                roles: true    
+                roles: true
             }
         })
         return NextResponse.json(staffs, { status: 200 });
@@ -46,12 +46,19 @@ export async function POST(req: Request, props: { params: Promise<StaffProps> })
 
     if (existingUser) {
         try {
-            const emailSender = new EmailSender();
-            await emailSender.send(existingUser.email, 'Welcome to Monstro', InviteEmailTemplate, {
-                ui: { button: "Join the class." },
-                location: { name: existingUser?.name },
-                monstro: MonstroData,
-                member: { name:  existingUser?.name },
+
+            await emailSender.send({
+                options: {
+                    to: existingUser.email,
+                    subject: 'Welcome to Monstro',
+                },
+                template: 'InviteEmailTemplate',
+                data: {
+                    ui: { button: "Join the class." },
+                    location: { name: existingUser?.name },
+                    monstro: MonstroData,
+                    member: { name: existingUser?.name },
+                }
             });
             console.log(`Email sent to ${existingUser.email}`);
             return NextResponse.json({ success: true }, { status: 200 })
@@ -69,22 +76,25 @@ export async function POST(req: Request, props: { params: Promise<StaffProps> })
         })
 
         try {
-            const emailSender = new EmailSender();
-            await emailSender.send(data.email, 'Welcome to Monstro', InviteEmailTemplate, {
-                ui: { button: "Join the class." },
-                location: { name: data?.name },
-                monstro: MonstroData,
-                member: { name:  data?.name },
+            await emailSender.send({
+                options: {
+                    to: data.email,
+                    subject: 'Welcome to Monstro',
+                },
+                template: 'InviteEmailTemplate',
+                data: {
+                    ui: { button: "Join the class." },
+                    location: { name: data?.name },
+                    monstro: MonstroData,
+                    member: { name: data?.name },
+                }
             });
-            console.log(`Email sent to ${data.email}`);
+
             return NextResponse.json({ success: true }, { status: 200 })
         } catch (emailError) {
             console.error(`Failed to send email to ${data.email}:`, emailError);
             return NextResponse.json({ error: emailError }, { status: 500 })
         }
-        
-    }
-        
 
-    
+    }
 }

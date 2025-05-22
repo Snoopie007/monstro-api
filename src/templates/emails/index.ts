@@ -1,7 +1,18 @@
-export * from "./OTPEmail";
-export * from "./ResetPasswordEmail";
-export * from "./SimpleOTP";
-export * from "./ResetSuccessEmail";
-export * from "./MemberInvite";
-export * from "./LoginTokenEmail";
-export * from "./SupportConfirm";
+import { SupportConfirmation } from "./SupportConfirm";
+import { LoginTokenEmail } from "./LoginTokenEmail";
+import { InviteEmailTemplate } from "./MemberInvite";
+import { OTPEmailTemplate } from "./OTPEmail";
+import { ResetPasswordEmail } from "./ResetPasswordEmail";
+import { ResetSuccessEmail } from "./ResetSuccessEmail";
+import { SimpleOTPEmail } from "./SimpleOTP";
+
+export const EmailTemplates = {
+
+    LoginTokenEmail,
+    InviteEmailTemplate,
+    OTPEmailTemplate,
+    ResetPasswordEmail,
+    ResetSuccessEmail,
+    SimpleOTPEmail,
+    SupportConfirmation
+}

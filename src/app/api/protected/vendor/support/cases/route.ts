@@ -5,8 +5,6 @@ import { supportCases, supportCaseMessages } from "@/db/admin";
 import { decodeId } from "@/libs/server/sqids";
 import { sql } from "drizzle-orm";
 import { EmailSender } from "@/libs/server/emails";
-import { MonstroData } from "@/libs/data";
-import { SupportConfirmation } from "@/templates/emails";
 
 export async function GET(req: NextRequest) {
 	const session = await auth();
@@ -77,7 +75,7 @@ export async function POST(req: NextRequest) {
 					to: 'steve.y@mymonstro.com',
 					subject: `Case#${newCase.id} created successfully`,
 				},
-				template: SupportConfirmation,
+				template: 'SupportConfirmation',
 				data: {
 					vendor: user,
 					case: {

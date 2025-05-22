@@ -2,7 +2,6 @@ import { db } from "@/db/db";
 import { NextRequest, NextResponse } from "next/server";
 import { getRedisClient } from "@/libs/server/redis";
 import { EmailSender } from "@/libs/server/emails";
-import { ResetPasswordEmail } from "@/templates/emails";
 import { MonstroData } from "@/libs/data";
 import { encodeId } from "@/libs/server/sqids";
 const redis = getRedisClient();
@@ -17,7 +16,7 @@ function generateResetToken() {
 	}
 	return token;
 }
-
+const emailSender = new EmailSender();
 export async function POST(req: NextRequest) {
 	const { email } = await req.json()
 	try {
@@ -32,18 +31,25 @@ export async function POST(req: NextRequest) {
 			redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt })
 			const [firstName, lastName] = user.name.split(" ")
 			const encodedUserId = encodeId(user.id)
-			const emailSender = new EmailSender();
-			await emailSender.send(user.email, 'Reset your password', ResetPasswordEmail, {
-				ui: {
-					btnText: "Reset Password",
-					btnUrl: `${req.nextUrl.origin}/login/password/reset/${token}+${encodedUserId}`
+
+			await emailSender.send({
+				options: {
+					to: user.email,
+					subject: 'Reset your password',
 				},
-				member: {
-					firstName,
-					lastName,
-					email
-				},
-				monstro: MonstroData
+				template: 'ResetPasswordEmail',
+				data: {
+					ui: {
+						btnText: "Reset Password",
+						btnUrl: `${req.nextUrl.origin}/login/password/reset/${token}+${encodedUserId}`
+					},
+					member: {
+						firstName,
+						lastName,
+						email
+					},
+					monstro: MonstroData
+				}
 			});
 		}
 
@@ -69,18 +75,25 @@ export async function PUT(req: NextRequest) {
 		await redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt });
 		const encodedUserId = encodeId(user.id)
 		const [firstName, lastName] = user.name.split(" ")
-		const emailSender = new EmailSender();
-		await emailSender.send(user.email, 'Reset your password', ResetPasswordEmail, {
-			member: {
-				firstName,
-				lastName,
-				email
+
+		await emailSender.send({
+			options: {
+				to: user.email,
+				subject: 'Reset your password',
 			},
-			ui: {
-				btnText: "Reset Password",
-				btnUrl: `${req.nextUrl.origin}/auth/password/reset/${token}+${encodedUserId}`
+			template: 'ResetPasswordEmail',
+			data: {
+				member: {
+					firstName,
+					lastName,
+					email
+				},
+				ui: {
+					btnText: "Reset Password",
+					btnUrl: `${req.nextUrl.origin}/auth/password/reset/${token}+${encodedUserId}`
+				},
+				monstro: MonstroData
 			},
-			monstro: MonstroData
 		});
 
 	} catch (error) {

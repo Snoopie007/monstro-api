@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { decodeId, encodeId } from "@/libs/server/sqids";
+import { decodeId } from "@/libs/server/sqids";
 export async function POST(req: NextRequest) {
     const { email, password, lid } = await req.json()
 

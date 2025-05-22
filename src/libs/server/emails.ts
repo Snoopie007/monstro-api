@@ -1,13 +1,14 @@
 import * as sendgrid from '@sendgrid/mail';
 import { interEmailsAndText } from '../utils';
+import { EmailTemplates } from '../../templates/emails';
 
-
-type SupportEmailOptions = {
+type EmailOptions = {
     options: {
         to: string;
         subject: string;
+        headers?: Record<string, string>;
     },
-    template: string;
+    template: keyof typeof EmailTemplates;
     data: Record<string, any>;
 }
 
@@ -25,9 +26,8 @@ export class EmailSender {
     }
 
 
-
-    public async sendSupportEmail(props: SupportEmailOptions) {
-        const html = interEmailsAndText(props.template, props.data);
+    public async sendSupportEmail(props: EmailOptions) {
+        const html = interEmailsAndText(EmailTemplates[props.template], props.data);
 
         await this._sender.send({
             ...props.options,
@@ -35,19 +35,21 @@ export class EmailSender {
                 email: 'support@mymonstro.com',
                 name: 'Monstro Support'
             },
-            replyTo: `case+${props.data.case.id}@mymonstro.com`,
+            replyTo: `case+${props.data.case.id}@support.mymonstro.com`,
             html
         });
     }
 
 
-    public async send(email: string, subject: string, template: string, data: Record<string, any>) {
-        const html = interEmailsAndText(template, data);
+    public async send(props: EmailOptions) {
+        const html = interEmailsAndText(EmailTemplates[props.template], props.data);
 
         await this._sender.send({
-            to: email,
-            from: this._fromEmail,
-            subject: subject,
+            ...props.options,
+            from: {
+                email: this._fromEmail,
+                name: 'Monstro'
+            },
             html
         });
     }
