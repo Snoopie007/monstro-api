@@ -35,7 +35,7 @@ export function SupportMenu() {
                         </p>
                         <div className="flex flex-row gap-2">
                             <Button variant='outline' size='xs' className={SupportButtonStyle} asChild>
-                                <Link href="/dashboard/support">
+                                <Link href="/support/cases">
                                     <Mail size={14} className="mr-1" />
                                     Contact Support
                                 </Link>
@@ -54,13 +54,13 @@ export function SupportMenu() {
                         </p>
                         <div className="flex flex-row gap-2">
                             <Button variant='outline' size='xs' className={SupportButtonStyle} asChild>
-                                <Link href="/dashboard/support">
+                                <Link href="/support/booking/zoom">
                                     <Webcam size={14} className="mr-1" />
                                     Book a Zoom Call
                                 </Link>
                             </Button>
                             <Button variant='outline' size='xs' className={SupportButtonStyle} asChild>
-                                <Link href="/support">
+                                <Link href="/support/booking">
                                     <Phone size={14} className="mr-1" />
                                     Book a Call
                                 </Link>

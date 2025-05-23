@@ -11,14 +11,16 @@ export function SupportNav() {
     const { data: session } = useSession();
     return (
         <div className={cn(
-            " w-full border-b border-foreground/5 py-1 px-3 flex flex-initial justify-between"
+            " w-full border-b border-foreground/5 flex-initial "
         )}>
 
-            <div className={cn("w-full", { "max-w-6xl mx-auto flex flex-row justify-between py-2": !session })}>
+            <div className={cn("w-full flex flex-row justify-between py-2 px-3 ",
+                { "max-w-6xl mx-auto  py-2 px-0 ": !session })}
+            >
                 <div className='flex flex-row items-center gap-2'>
                     <div className={cn('logo  flex flex-row items-center gap-2')}>
                         <Image src='/images/monstro-icon.webp' alt='' width={24} height={24} />
-                        <span className='text-base font-bold'>Monstro Support</span>
+                        <span className='text-sm font-semibold'>Monstro Support</span>
                     </div>
                 </div>
 

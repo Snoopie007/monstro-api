@@ -92,7 +92,7 @@ export function Caselist() {
                 )}>
                     <p>No cases found</p>
                     <Button variant="outline" className="bg-transparent text-foreground hover:bg-transparent hover:border-foreground" size="sm" asChild>
-                        <Link href={"/dashboard/support/new"}>
+                        <Link href={"/support/cases/new"}>
                             Create Case
                         </Link>
                     </Button>
@@ -119,7 +119,7 @@ function CaseItem({ c }: { c: SupportCase }) {
 
                     </div>
                     <div className="flex flex-row items-center gap-3">
-                        <Link href={`/dashboard/support/case/${c.id}`} className="font-medium text-sm truncate">
+                        <Link href={`/support/cases/case/${c.id}`} className="font-medium text-sm truncate">
                             {c.subject}
                         </Link>
                         <div className="text-sm text-muted-foreground flex flex-row items-center gap-1">

@@ -67,7 +67,7 @@ export default auth(async (req) => {
 		/* Handle authentication redirects */
 		if (!isLoggedin) {
 
-			if (publicPaths.some((path) => pathname.startsWith(path))) {
+			if (pathname.startsWith("/api/auth") || publicPaths.some((path) => pathname.startsWith(path))) {
 				return NextResponse.next()
 			}
 
@@ -83,9 +83,14 @@ export default auth(async (req) => {
 		/* Handle home page and dashboard redirects (only for web, not for mobile) */
 		if (isLoggedin && !isMobileApp) {
 
-			if (pathname.startsWith("/api/") || pathname.startsWith("/support")) {
+			if (pathname.startsWith("/api/")) {
 				return NextResponse.next()
 			}
+
+			if (pathname.startsWith("/support")) {
+				return NextResponse.next()
+			}
+
 			/* Redirect to Dashboard if no locations */
 			if (pathname === "/" || publicPaths.some((path) => pathname.startsWith(path))) {
 				return NextResponse.redirect(new URL(`/dashboard/locations`, req.nextUrl.origin))

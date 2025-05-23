@@ -120,7 +120,7 @@ export default function MessageArea({ c, user }: { c: SupportCase, user: Extende
 
 
             {c.status === "open" && (
-                <div className="bg-foreground/5 flexflex-col gap-1.5 rounded-sm border p-2">
+                <div className="bg-foreground/5 flexflex-col gap-1.5 rounded-sm border border-foreground/10  p-2">
                     <div className="flex w-full flex-col p-1.5 px-4">
                         <EditorContent editor={editor} id="reply" className=" min-h-[100px] max-h-[200px] overflow-y-auto focus:outline-none " />
                     </div>
