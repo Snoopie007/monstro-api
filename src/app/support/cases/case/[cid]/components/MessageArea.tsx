@@ -2,8 +2,8 @@
 import { sleep, tryCatch } from '@/libs/utils'
 import { RefObject, useEffect, useMemo, useRef, useState } from 'react'
 
-import { ArrowUp, ChevronUp, Loader2 } from "lucide-react"
-import { IoAttach } from "react-icons/io5";
+import { ArrowUp, ChevronUp, Loader2, Paperclip } from "lucide-react"
+
 import { format } from 'date-fns'
 import { SupportCase, SupportCaseLog } from '@/types/admin'
 import { SupportCaseMessage } from '@/types/admin'
@@ -126,7 +126,7 @@ export default function MessageArea({ c, user }: { c: SupportCase, user: Extende
                     </div>
                     <div className="flex flex-row items-center justify-between px-2">
                         <div>
-                            <IoAttach size={20} className="cursor-pointer" />
+                            <Paperclip size={20} className="cursor-pointer" />
                         </div>
                         <div>
                             <Button

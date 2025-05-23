@@ -42,6 +42,7 @@ export const {
 	session: {
 		strategy: "jwt",
 	},
+
 	callbacks: {
 		jwt: async ({ user, token, session, trigger }) => {
 
