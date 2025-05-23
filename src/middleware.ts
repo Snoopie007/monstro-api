@@ -93,7 +93,7 @@ export default auth(async (req) => {
 				return NextResponse.redirect(new URL("/dashboard/locations/new", req.nextUrl.origin))
 			}
 
-			const [, path, locationId] = pathname.match(/^\/dashboard\/location\/([^/]+)(\/.*)?$/) || []
+			const [_, locationId, path] = pathname.match(/^\/dashboard\/location\/([^/]+)(\/.*)?$/) || []
 
 			if (locationId) {
 				/* Check if locationId is a valid location */

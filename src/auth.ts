@@ -46,7 +46,7 @@ export const {
 	},
 	cookies: {
 		sessionToken: {
-			name: `__Secure-next-auth.session-token`,
+			name: isProduction ? `__Secure-next-auth.session-token` : `next-auth.session-token`,
 			options: {
 				domain: isProduction ? ".mymonstroapp.com" : undefined,
 				path: "/",
@@ -56,7 +56,6 @@ export const {
 			},
 		},
 	},
-
 	callbacks: {
 		jwt: async ({ user, token, session, trigger }) => {
 
