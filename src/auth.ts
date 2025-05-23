@@ -26,6 +26,8 @@ import { ExtendedUser } from "./types/next-auth";
 // 	}
 // }
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export const {
 	handlers: { GET, POST },
 	auth,
@@ -41,6 +43,18 @@ export const {
 	},
 	session: {
 		strategy: "jwt",
+	},
+	cookies: {
+		sessionToken: {
+			name: `__Secure-next-auth.session-token`,
+			options: {
+				domain: isProduction ? ".mymonstroapp.com" : undefined,
+				path: "/",
+				httpOnly: true,
+				sameSite: "lax",
+				secure: isProduction,
+			},
+		},
 	},
 
 	callbacks: {
