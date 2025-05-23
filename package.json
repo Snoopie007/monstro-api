@@ -95,8 +95,6 @@
     "react-toastify": "^11.0.3",
     "reactflow": "^11.11.4",
     "recharts": "^2.15.1",
-    "rehype-autolink-headings": "^7.1.0",
-    "rehype-slug": "^6.0.0",
     "sqids": "^0.3.0",
     "stripe": "^17.7.0",
     "swr": "^2.3.2",
