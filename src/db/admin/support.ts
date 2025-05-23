@@ -70,7 +70,7 @@ export const supportDocMeta = pgTable("support_doc_metas", {
 });
 
 export const supportCategoriesRelation = relations(supportCategories, ({ many }) => ({
-    docMetas: many(supportDocMeta)
+    metas: many(supportDocMeta)
 }));
 
 export const supportDocMetaRelation = relations(supportDocMeta, ({ one }) => ({

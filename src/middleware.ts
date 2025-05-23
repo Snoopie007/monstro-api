@@ -3,7 +3,12 @@ import { auth } from "./auth"
 import { decodeId } from "./libs/server/sqids"
 import { jwtVerify } from "jose";
 
-const publicPaths = ["/login", "/api/auth", "/api/location", "/join", "/api/webhooks","/api/quickbooks","/callbacks"]
+const publicPaths = [
+	"/login",
+	"/join",
+	"/callbacks",
+	'/api/webhooks',
+]
 
 async function verifyToken(token: string): Promise<boolean> {
 	try {
@@ -23,9 +28,9 @@ export default auth(async (req) => {
 		const isLoggedin = !!req.auth
 		const locations = req.auth?.user?.locations || []
 
-		// Check for mobile app requests
+		/* Check for mobile app requests */
 		const isMobileApp = req.headers.get("X-Mobile-App") === "true" && pathname.includes("mobile")
-		// Verify mobile app token
+		/* Verify mobile app token */
 		let isMobileAuthenticated = false
 		if (isMobileApp) {
 			const token = req.headers.get("Authorization")?.split(" ")[1]
@@ -59,62 +64,59 @@ export default auth(async (req) => {
 				: NextResponse.json({ message: "Invalid location" }, { status: 400 })
 		}
 
-		// Handle authentication redirects
-		if (!isLoggedin && !(isMobileApp && isMobileAuthenticated) && !publicPaths.some((path) => pathname.startsWith(path))) {
-			// Need a token to check traffic source?
-			// if (pathname.startsWith("/api/public")) {
+		/* Handle authentication redirects */
+		if (!isLoggedin) {
 
-			// 	return NextResponse.next()
-			// }
-			return NextResponse.redirect(new URL("/login", req.nextUrl.origin))
-		}
-
-		// Handle home page and dashboard redirects (only for web, not for mobile)
-		if (isLoggedin && !isMobileApp) {
-
-
-			if (pathname.startsWith("/api/")) {
+			if (publicPaths.some((path) => pathname.startsWith(path))) {
 				return NextResponse.next()
 			}
 
-			const NewLocationPath = "/dashboard/locations/new";
-
-			if (locations.length === 0 && pathname !== NewLocationPath) {
-				return NextResponse.redirect(new URL(NewLocationPath, req.nextUrl.origin))
+			if (pathname.startsWith("/support") && !pathname.startsWith("/support/cases")) {
+				return NextResponse.next()
 			}
 
-			if (pathname === "/" || publicPaths.includes(pathname) || pathname.startsWith("/join")) {
+			const url = new URL("/login", req.nextUrl.origin)
+			url.searchParams.set("callbackUrl", pathname)
+			return NextResponse.redirect(url)
+		}
+
+		/* Handle home page and dashboard redirects (only for web, not for mobile) */
+		if (isLoggedin && !isMobileApp) {
+
+			if (pathname.startsWith("/api/") || pathname.startsWith("/support")) {
+				return NextResponse.next()
+			}
+			/* Redirect to Dashboard if no locations */
+			if (pathname === "/" || publicPaths.some((path) => pathname.startsWith(path))) {
 				return NextResponse.redirect(new URL(`/dashboard/locations`, req.nextUrl.origin))
 			}
 
-			const [, path, locationId] = pathname.match(/^\/((?:dashboard\/location|dashboard\/locations\/new))\/([^/]+)(\/.*)?$/) || []
+			/* No Locations Redirect to New Location */
+			if (locations.length === 0 && pathname !== "/dashboard/locations/new") {
+				return NextResponse.redirect(new URL("/dashboard/locations/new", req.nextUrl.origin))
+			}
+
+			const [, path, locationId] = pathname.match(/^\/dashboard\/location\/([^/]+)(\/.*)?$/) || []
 
 			if (locationId) {
-				/** Check if locationId is a valid location */
+				/* Check if locationId is a valid location */
 				const next = locations.find((loc: { id: string }) => loc.id === locationId)
 
 				if (!next) {
 					return NextResponse.redirect(new URL("/dashboard/locations", req.nextUrl.origin))
 				}
 
-				/** If the path is not allowed for the current location, redirect to the dashboard of the next location */
+				/* If the path is not allowed for the current location, redirect to the dashboard of the next location */
 				const allowedInactivePaths = [`/dashboard/location/${next.id}/suspended`]
 				if (!["active", "incomplete"].includes(next.status) && !allowedInactivePaths.includes(path)) {
 					return NextResponse.redirect(new URL(`/dashboard/location/${next.id}/suspended`, req.nextUrl.origin))
 				}
 
 				return NextResponse.next()
-
-				// const isOnboarding = next.status === "incomplete"
-				// const targetPath = isOnboarding ? NewLocationPath : "dashboard/location"
-
-				// if (path !== targetPath) {
-				// 	return NextResponse.redirect(new URL(`/${targetPath}/${next.id}`, req.nextUrl.origin))
-				// }
 			}
 		}
 
-		// Set cache headers for API and dashboard routes
+		/* Set cache headers for API and dashboard routes */
 		const response = NextResponse.next()
 		if (pathname.startsWith("/api/") || pathname.startsWith("/dashboard/")) {
 			response.headers.set("Cache-Control", "no-store, max-age=0")

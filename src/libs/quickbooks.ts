@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+
 import { Buffer } from 'buffer';
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
@@ -10,6 +10,8 @@ const QB_BASE_URL = process.env.QUICKBOOKS_ENVIRONMENT === 'production'
 	? 'https://quickbooks.api.intuit.com'
 	: 'https://sandbox-quickbooks.api.intuit.com';
 
+const QB_OAUTH_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
+
 interface TokenResponse {
 	access_token: string;
 	refresh_token: string;
@@ -18,28 +20,26 @@ interface TokenResponse {
 	x_refresh_token_expires_in: number;
 }
 
-interface ErrorResponse {
-	error: string;
-	error_description: string;
+
+interface PaymentCard {
+	name: string;
+	number: string;
+	expMonth: string;
+	expYear: string;
+	cvc: string;
+	address?: {
+		streetAddress: string;
+		city: string;
+		region: string;
+		country: string;
+		postalCode: string;
+	};
 }
 
 interface PaymentRequest {
 	amount: number;
 	currency: string;
-	card: {
-		name: string;
-		number: string;
-		address?: {
-			streetAddress: string;
-			city: string;
-			region: string;
-			country: string;
-			postalCode: string;
-		};
-		expMonth: string;
-		expYear: string;
-		cvc: string;
-	};
+	card: PaymentCard;
 	context?: {
 		mobile?: boolean;
 		isEcommerce?: boolean;
@@ -63,35 +63,41 @@ export interface QuickbooksSettings {
 	};
 }
 
+const getAuthHeader = () => {
+	const credentials = `${process.env.NEXT_PUBLIC_QUICKBOOKS_CLIENT_ID}:${process.env.QUICKBOOKS_CLIENT_SECRET}`;
+	return `Basic ${Buffer.from(credentials).toString('base64')}`;
+};
+
+const handleQuickbooksError = async (response: Response, context: string) => {
+	const data = await response.json();
+	console.error(`[QuickBooks ${context} Error]`, data || response.statusText);
+	throw new Error(`${context.toUpperCase().replace(/\s+/g, '_')}_FAILED`);
+};
+
 export async function exchangeCodeForToken(
 	code: string,
 	redirectUri: string,
 	realmId?: string
 ): Promise<TokenResponse & { realmId?: string }> {
-	try {
-		const response = await axios.post<TokenResponse>(
-			'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
-			new URLSearchParams({
-				grant_type: 'authorization_code',
-				code,
-				redirect_uri: redirectUri,
-			}).toString(),
-			{
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-					'Authorization': `Basic ${Buffer.from(
-						`${process.env.NEXT_PUBLIC_QUICKBOOKS_CLIENT_ID}:${process.env.QUICKBOOKS_CLIENT_SECRET}`
-					).toString('base64')}`,
-				},
-			}
-		);
+	const response = await fetch(QB_OAUTH_URL, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/x-www-form-urlencoded',
+			'Authorization': getAuthHeader(),
+		},
+		body: new URLSearchParams({
+			grant_type: 'authorization_code',
+			code,
+			redirect_uri: redirectUri,
+		}).toString()
+	});
 
-		return { ...response.data, realmId };
-	} catch (error) {
-		const err = error as AxiosError<ErrorResponse>;
-		console.error('[QuickBooks Token Exchange Error]', err.response?.data || err.message);
-		throw new Error('Failed to exchange code for tokens');
+	if (!response.ok) {
+		await handleQuickbooksError(response, 'Token Exchange');
 	}
+
+	const data = await response.json();
+	return { ...data, realmId };
 }
 
 export function getQuickbooksSettings(token: TokenResponse & { realmId?: string }): QuickbooksSettings {
@@ -108,36 +114,35 @@ export function getQuickbooksSettings(token: TokenResponse & { realmId?: string 
 }
 
 export async function refreshTokens(refreshToken: string, realmId?: string): Promise<TokenResponse> {
-	try {
-		const response = await axios.post<TokenResponse>(
-			'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
-			new URLSearchParams({
-				grant_type: 'refresh_token',
-				refresh_token: refreshToken,
-			}).toString(),
-			{
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-					'Authorization': `Basic ${Buffer.from(
-						`${process.env.NEXT_PUBLIC_QUICKBOOKS_CLIENT_ID}:${process.env.QUICKBOOKS_CLIENT_SECRET}`
-					).toString('base64')}`,
-				},
-			}
-		);
+	const response = await fetch(QB_OAUTH_URL, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/x-www-form-urlencoded',
+			'Authorization': getAuthHeader(),
+		},
+		body: new URLSearchParams({
+			grant_type: 'refresh_token',
+			refresh_token: refreshToken,
+		}).toString()
+	});
 
-		await db.update(integrations).set({
-			accessToken: response.data.access_token,
-			refreshToken: response.data.refresh_token,
-			expires: Date.now() + (response.data.expires_in * 1000),
-			...(realmId && { integrationId: realmId })
-		}).where(eq(integrations.service, "quickbooks"));
-
-		return response.data;
-	} catch (error) {
-		const err = error as AxiosError<ErrorResponse>;
-		console.error('[QuickBooks Refresh Error]', err.response?.data || err.message);
-		throw new Error('TOKEN_REFRESH_FAILED');
+	if (!response.ok) {
+		await handleQuickbooksError(response, 'Refresh');
 	}
+
+	const data = await response.json();
+	const expiryTime = Date.now() + (data.expires_in * 1000);
+
+	await db.update(integrations)
+		.set({
+			accessToken: data.access_token,
+			refreshToken: data.refresh_token,
+			expires: expiryTime,
+			...(realmId && { integrationId: realmId })
+		})
+		.where(eq(integrations.service, "quickbooks"));
+
+	return data;
 }
 
 export async function makePayment(
@@ -145,56 +150,51 @@ export async function makePayment(
 	realmId: string,
 	paymentData: PaymentRequest
 ): Promise<PaymentResponse> {
-	try {
-		const response = await axios.post<PaymentResponse>(
-			`${QB_BASE_URL}/quickbooks/v4/payments/charges`,
-			paymentData,
-			{
-				headers: {
-					'Authorization': `Bearer ${accessToken}`,
-					'Request-Id': crypto.randomUUID(),
-					'Content-Type': 'application/json',
-				}
-			}
-		);
-		return response.data;
-	} catch (error) {
-		const err = error as AxiosError<ErrorResponse>;
+	const response = await fetch(`${QB_BASE_URL}/quickbooks/v4/payments/charges`, {
+		method: 'POST',
+		headers: {
+			'Authorization': `Bearer ${accessToken}`,
+			'Request-Id': crypto.randomUUID(),
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(paymentData)
+	});
+
+	if (!response.ok) {
+		const data = await response.json();
 		console.error('[QuickBooks Payment Error]', {
-			error: err.response?.data || err.message,
+			error: data || response.statusText,
 			paymentData
 		});
 		throw new Error('PAYMENT_FAILED');
 	}
+
+	return response.json();
 }
 
 export async function revokeToken(token: string): Promise<boolean> {
-	try {
-		await axios.post(
-			'https://developer.api.intuit.com/v2/oauth2/tokens/revoke',
-			new URLSearchParams({ token }).toString(),
-			{
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-					'Authorization': `Basic ${Buffer.from(
-						`${process.env.NEXT_PUBLIC_QUICKBOOKS_CLIENT_ID}:${process.env.QUICKBOOKS_CLIENT_SECRET}`
-					).toString('base64')}`,
-				},
-			}
-		);
+	const response = await fetch('https://developer.api.intuit.com/v2/oauth2/tokens/revoke', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/x-www-form-urlencoded',
+			'Authorization': getAuthHeader(),
+		},
+		body: new URLSearchParams({ token }).toString()
+	});
 
-		await db.update(integrations).set({
+	if (!response.ok) {
+		await handleQuickbooksError(response, 'Revoke');
+	}
+
+	await db.update(integrations)
+		.set({
 			accessToken: null,
 			refreshToken: null,
 			expires: null,
-		}).where(eq(integrations.service, "quickbooks"));
+		})
+		.where(eq(integrations.service, "quickbooks"));
 
-		return true;
-	} catch (error) {
-		const err = error as AxiosError<ErrorResponse>;
-		console.error('[QuickBooks Revoke Error]', err.response?.data || err.message);
-		throw new Error('REVOKE_FAILED');
-	}
+	return true;
 }
 
 export async function getAccessToken(integration: Integration | AdminIntegration): Promise<string> {
@@ -220,9 +220,9 @@ export const vendorQuickBooks = {
 	getAccessToken,
 	makePayment,
 	exchangeCodeForToken
-};
+} as const;
 
 export const adminQuickBooks = {
 	getAccessToken,
 	revokeToken
-};
+} as const;

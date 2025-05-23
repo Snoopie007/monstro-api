@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import React, { useState } from 'react'
 import { sleep, cn } from '@/libs/utils'
 import { z } from 'zod'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { FormControl, FormField } from '@/components/forms'
 import { FormItem } from '@/components/forms'
 import { UseFormReturn } from 'react-hook-form'
@@ -20,7 +20,7 @@ interface VerifyOTPProps {
 }
 
 export default function VerifyOTP({ form }: VerifyOTPProps) {
-
+    const searchParams = useSearchParams();
     const [loading, setLoading] = useState(false);
     const router = useRouter();
     const { type, ...rest } = form.getValues();
@@ -46,8 +46,9 @@ export default function VerifyOTP({ form }: VerifyOTPProps) {
             toast.error(res.code || 'Something went wrong. Please contact support at support@monstro.com.');
             return;
         }
-
-        return router.push('/dashboard/locations');
+        const redirect = searchParams.get('redirect');
+        const redirectUrl = redirect ? decodeURIComponent(redirect) : '/dashboard/locations';
+        return router.push(redirectUrl);
 
     }
 

@@ -1,6 +1,7 @@
 import { cn } from "@/libs/utils";
 import { SupportNav } from "./components";
 import { TooltipProvider } from "@/components/ui";
+import { auth } from "@/auth";
 
 
 interface SupportLayoutProps {
@@ -9,14 +10,17 @@ interface SupportLayoutProps {
 
 
 
-export default async function SupportLayout(props: SupportLayoutProps) {
 
+export default async function SupportLayout(props: SupportLayoutProps) {
+    const session = await auth();
     const { children } = props;
 
 
 
     return (
-        <main className={cn("min-h-screen max-h-screen h-screen overflow-hidden flex flex-col w-full  bg-background")}>
+        <main className={cn(
+            "min-h-screen max-h-screen h-screen overflow-hidden flex flex-col w-full  bg-background",
+        )}>
 
             <TooltipProvider>
                 <SupportNav />

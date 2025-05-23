@@ -1,3 +1,5 @@
+import { JSXElementConstructor } from "react";
+import { ReactElement } from "react";
 import { Vendor } from "../vendor";
 import { AdminUser } from "./AdminUser";
 
@@ -66,4 +68,37 @@ export type SupportCaseMetadata = {
     email?: string;
     phone?: string;
     avatar?: string;
+}
+
+
+
+export type SupportCategory = {
+    id: number,
+    name: string,
+    description: string | null,
+    metas?: SupportDocMeta[]
+}
+
+
+export type SupportDoc = {
+    toc: DocToC[]
+    meta: SupportDocMeta
+    content?: ReactElement<any, string | JSXElementConstructor<any>>
+
+}
+
+export type SupportDocMeta = {
+    id?: number
+    title: string
+    file?: string
+    description: string | null
+    published?: boolean
+    duration?: string
+    tags: string[] | null
+}
+
+export type DocToC = {
+    level: number | undefined
+    headline: string | undefined
+    slug: string | undefined
 }
