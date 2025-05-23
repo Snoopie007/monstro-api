@@ -71,10 +71,6 @@ export default auth(async (req) => {
 				return NextResponse.next()
 			}
 
-			if (pathname.startsWith("/support") && !pathname.startsWith("/support/cases")) {
-				return NextResponse.next()
-			}
-
 			const url = new URL("/login", req.nextUrl.origin)
 			url.searchParams.set("callbackUrl", pathname)
 			return NextResponse.redirect(url)
@@ -84,10 +80,6 @@ export default auth(async (req) => {
 		if (isLoggedin && !isMobileApp) {
 
 			if (pathname.startsWith("/api/")) {
-				return NextResponse.next()
-			}
-
-			if (pathname.startsWith("/support")) {
 				return NextResponse.next()
 			}
 

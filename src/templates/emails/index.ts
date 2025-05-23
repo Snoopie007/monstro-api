@@ -1,4 +1,4 @@
-import { SupportConfirmation } from "./SupportConfirm";
+
 import { LoginTokenEmail } from "./LoginTokenEmail";
 import { InviteEmailTemplate } from "./MemberInvite";
 import { OTPEmailTemplate } from "./OTPEmail";
@@ -13,6 +13,5 @@ export const EmailTemplates = {
     OTPEmailTemplate,
     ResetPasswordEmail,
     ResetSuccessEmail,
-    SimpleOTPEmail,
-    SupportConfirmation
+    SimpleOTPEmail
 }
