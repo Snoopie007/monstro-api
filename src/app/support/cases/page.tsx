@@ -14,7 +14,7 @@ export default async function SupportPage() {
                     <p className="text-sm text-muted-foreground">Request and manage your support requests.</p>
                 </div>
                 <Button variant="foreground" asChild size="sm">
-                    <Link href={"/dashboard/support/new"} >
+                    <Link href={"/support/cases/new"} >
                         Create Case
                     </Link>
                 </Button>
