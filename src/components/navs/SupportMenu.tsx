@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Book, CircleHelp, Mail, Phone, Webcam } from "lucide-react";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 
 const SupportButtonStyle = 'text-foreground hover:bg-transparent hover:border-foreground rounded-sm'
 const SupportURL = 'https://support.mymonstroapp.com'
@@ -77,7 +78,7 @@ export function SupportMenu() {
 
                 <DropdownMenuSeparator />
 
-                <div className="px-2 py-4">
+                <div className="px-2 py-4 space-y-3">
                     <div className="space-y-1">
                         <div className="text-sm font-medium">
                             Reach out to our community
@@ -85,6 +86,24 @@ export function SupportMenu() {
                         <p className="text-xs text-muted-foreground">
                             For other support, including questions on our client libraries, advice, or best practices.
                         </p>
+                    </div>
+                    <div className="relative rounded-sm overflow-hidden h-[90px]">
+                        <div className="absolute inset-0 bg-black/20 z-10" />
+                        <Image
+                            src="/images/fb-bg-small.webp"
+                            alt="Monstro"
+                            width={450}
+                            height={120}
+                            className="object-cover h-[90px] w-full"
+                        />
+                        <Button size="xs" variant="foreground"
+                            className="flex flex-row gap-2 absolute z-20 top-[20px] left-[10px]"
+                            asChild
+                        >
+                            <Link href="https://www.facebook.com/groups/monstromembers" target="_blank">
+                                Join our Facebook group
+                            </Link>
+                        </Button>
                     </div>
                 </div>
             </DropdownMenuContent>
