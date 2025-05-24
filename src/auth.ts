@@ -46,7 +46,7 @@ export const {
 	},
 	cookies: {
 		sessionToken: {
-			name: isProduction ? `__Secure-next-auth.session-token` : `next-auth.session-token`,
+			name: isProduction ? `__Secure-next-auth.monstro-session-token` : `next-auth.session-token`,
 			options: {
 				domain: isProduction ? ".mymonstroapp.com" : undefined,
 				path: "/",
