@@ -57,3 +57,13 @@ export type VendorClaimedReward = {
     claimed: Date | null;
     reward?: VendorReward;
 }
+
+export type VendorSupportPlan = {
+    id: number;
+    name: string;
+    price: number;
+    supportCalls: boolean;
+    sessionsPerMonth: number;
+    created: Date;
+    updated: Date | null;
+}

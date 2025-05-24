@@ -19,6 +19,18 @@ export const vendors = pgTable("vendors", {
     deleted: timestamp("deleted_at", { withTimezone: true }),
 });
 
+export const supportPlans = pgTable("support_plans", {
+    id: serial("id").primaryKey(),
+    vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    price: integer("price").notNull(),
+    supportCalls: boolean("support_calls").notNull().default(false),
+    sessionsPerMonth: integer("sessions_per_month").notNull().default(0),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
+});
+
+
 export const vendorsRelations = relations(vendors, ({ one, many }) => ({
     user: one(users, {
         fields: [vendors.userId],
@@ -34,5 +46,17 @@ export const vendorsRelations = relations(vendors, ({ one, many }) => ({
         fields: [vendors.id],
         references: [vendorReferrals.referralId],
         relationName: "referee",
+    }),
+    supportPlans: one(supportPlans, {
+        fields: [vendors.id],
+        references: [supportPlans.vendorId],
+    }),
+}));
+
+
+export const supportPlansRelations = relations(supportPlans, ({ one }) => ({
+    vendor: one(vendors, {
+        fields: [supportPlans.vendorId],
+        references: [vendors.id],
     }),
 }));

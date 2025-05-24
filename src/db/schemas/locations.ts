@@ -1,6 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import { boolean, primaryKey, serial, text, timestamp, pgTable, jsonb, integer } from "drizzle-orm/pg-core";
-import { memberInvoices, members } from "./members";
+import { memberInvoices, memberPointsHistory, memberReferrals, members } from "./members";
 import { integrations } from "./integrations";
 import { programs } from "./programs";
 import { transactions } from "./transactions";
@@ -98,6 +98,8 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
     memberPlans: many(memberPlans),
     memberSubscriptions: many(memberSubscriptions),
     memberInvoices: many(memberInvoices),
+    pointsHistory: many(memberPointsHistory),
+    referrals: many(memberReferrals),
     bots: many(aiBots),
     locationState: one(locationState, {
         fields: [locations.id],

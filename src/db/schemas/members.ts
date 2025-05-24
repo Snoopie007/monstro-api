@@ -1,11 +1,11 @@
 import { relations, sql } from "drizzle-orm";
-import { integer, primaryKey, serial, text, timestamp, pgTable, boolean, jsonb, smallint } from "drizzle-orm/pg-core";
+import { integer, primaryKey, serial, text, timestamp, pgTable, boolean, jsonb, smallint, unique } from "drizzle-orm/pg-core";
 import { locations, memberLocations } from "./locations";
 import { users } from "./users";
 import { achievements } from "./achievements";
 import { rewards } from "./rewards";
 import { contractTemplates } from "./ContractTemplates";
-import { memberPackages, memberPlans } from "./MemberPlans";
+import { memberPackages } from "./MemberPlans";
 import { memberSubscriptions } from "./MemberPlans";
 import { InvoiceStatusEnum, MemberRelationshipEnum } from "./DatabaseEnums";
 
@@ -36,6 +36,32 @@ export const memberAchievements = pgTable("member_achievements", {
     dateAchieved: timestamp("date_achieved", { withTimezone: true }).notNull().defaultNow(),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.memberId, t.achievementId] })]);
+
+
+export const memberPointsHistory = pgTable("member_points_history", {
+    id: serial("id").primaryKey(),
+    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }).notNull(),
+    memberId: integer("member_id").references(() => members.id, { onDelete: "cascade" }).notNull(),
+    points: integer("points").notNull().default(0),
+    achievementId: integer("achievement_id").references(() => achievements.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    removed: boolean("removed").notNull().default(false),
+    removedReason: text("removed_reason"),
+    removedOn: timestamp("removed_on", { withTimezone: true }),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
+});
+
+export const memberReferrals = pgTable("member_referrals", {
+    memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    referredMemberId: integer("referred_member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
+}, (t) => [
+    primaryKey({ columns: [t.memberId, t.referredMemberId, t.locationId] }),
+    unique("unique_referred_member_location").on(t.referredMemberId, t.locationId, t.memberId)
+]);
 
 export const memberRewards = pgTable("reward_claims", {
     id: serial("id").primaryKey(),
@@ -113,7 +139,13 @@ export const membersRelations = relations(members, ({ many, one }) => ({
     }),
     packages: many(memberPackages),
     subscriptions: many(memberSubscriptions),
-
+    pointsHistory: many(memberPointsHistory),
+    referrals: many(memberReferrals),
+    referredBy: one(memberReferrals, {
+        relationName: "referredByMember",
+        fields: [members.id],
+        references: [memberReferrals.referredMemberId],
+    }),
 }));
 
 export const familyMemberRelations = relations(familyMembers, ({ one, many }) => ({
@@ -141,6 +173,20 @@ export const memberAchievementsRelations = relations(memberAchievements, ({ one 
     }),
 }));
 
+export const memberPointsHistoryRelations = relations(memberPointsHistory, ({ one }) => ({
+    member: one(members, {
+        fields: [memberPointsHistory.memberId],
+        references: [members.id],
+    }),
+    location: one(locations, {
+        fields: [memberPointsHistory.locationId],
+        references: [locations.id],
+    }),
+    achievement: one(achievements, {
+        fields: [memberPointsHistory.achievementId],
+        references: [achievements.id],
+    }),
+}));
 
 
 export const memberContractsRelations = relations(memberContracts, ({ many, one }) => ({
@@ -190,5 +236,21 @@ export const memberRewardRelations = relations(memberRewards, ({ one }) => ({
     member: one(members, {
         fields: [memberRewards.memberId],
         references: [members.id],
+    }),
+}));
+
+
+export const memberReferralsRelations = relations(memberReferrals, ({ one }) => ({
+    member: one(members, {
+        fields: [memberReferrals.memberId],
+        references: [members.id],
+    }),
+    referredMember: one(members, {
+        fields: [memberReferrals.referredMemberId],
+        references: [members.id],
+    }),
+    location: one(locations, {
+        fields: [memberReferrals.locationId],
+        references: [locations.id],
     }),
 }));

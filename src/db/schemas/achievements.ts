@@ -1,8 +1,8 @@
 import { relations } from "drizzle-orm";
-import { bigint, text, serial, timestamp, pgTable, integer } from "drizzle-orm/pg-core";
+import { bigint, text, serial, timestamp, pgTable, integer, boolean } from "drizzle-orm/pg-core";
 import { programs } from "./programs";
 import { locations } from "./locations";
-import { memberAchievements } from "./members";
+import { memberAchievements, memberPointsHistory, members } from "./members";
 
 export const achievements = pgTable("achievements", {
     id: serial("id").primaryKey(),
@@ -33,9 +33,12 @@ export const achievementsActions = pgTable("achievement_actions", {
     updated: timestamp('updated_at', { withTimezone: true }),
 });
 
+
+
 export const achievementsRelations = relations(achievements, ({ many }) => ({
     members: many(memberAchievements),
     actions: many(achievementsActions),
+    pointsHistory: many(memberPointsHistory),
 }));
 
 export const achievementsActionsRelations = relations(achievementsActions, ({ one }) => ({

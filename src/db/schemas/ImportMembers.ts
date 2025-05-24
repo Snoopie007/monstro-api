@@ -1,7 +1,6 @@
 import { boolean, date, bigint, pgTable, serial, timestamp, text, integer } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
-import { programs } from "./programs";
 import { memberPlans } from "./MemberPlans";
 import { members } from "./members";
 

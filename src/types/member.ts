@@ -22,6 +22,8 @@ export type Member = {
     memberLocation?: MemberLocation;
     subscriptions?: MemberSubscription[];
     packages?: MemberPackage[];
+    referrals?: MemberReferral[];
+    referredBy?: MemberReferral;
     created: Date;
     updated: Date | null;
     deleted: Date | null;
@@ -192,4 +194,26 @@ export type ImportMember = {
     processed: boolean;
     locationId: number;
 }
+
+export type MemberPointsHistory = {
+    id: number;
+    memberId: number;
+    locationId: number;
+    points: number;
+    type: string;
+    removed: boolean;
+    removedReason: string | null;
+    removedOn: Date | null;
+    created: Date;
+    updated: Date | null;
+}
+
+export type MemberReferral = {
+    memberId: number;
+    referredMemberId: number;
+    locationId: number;
+    created: Date;
+    updated: Date | null;
+}
+
 
