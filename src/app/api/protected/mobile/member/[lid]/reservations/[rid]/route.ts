@@ -9,6 +9,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ lid: n
   const authMember = authenticateMember(req);
 
   try {
+    console.log(authMember.member.id)
       // 1. Find the reservation with all necessary relations
       const reservation = await db.query.reservations.findFirst({
           where: (r, { eq, and }) => and(
@@ -46,14 +47,19 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ lid: n
       // 4. Handle recurring reservations
       if (reservation.memberSubscriptionId) {
           try {
+
+            console.log("Reservation found: ", reservation.sessionId,reservation.memberSubscriptionId);
               // Try to find parent recurring reservation
               const recurringReservation = await db.query.recurringReservations.findFirst({
                   where: (rr, { eq, and }) => and(
-                      eq(rr?.memberSubscriptionId, reservation?.memberSubscriptionId ?? -1),
+                      eq(rr.memberSubscriptionId, reservation.memberSubscriptionId as number),
                       eq(rr.sessionId, reservation.sessionId),
                       isNull(rr.canceledOn)
                   )
-              });
+              })
+              ;
+
+              console.log("Recurring reservation found: ", recurringReservation);
 
               if (recurringReservation) {
                   // Create exception for this occurrence

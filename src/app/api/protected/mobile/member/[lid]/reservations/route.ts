@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { authenticateMember } from '@/libs/utils';
 import { recurringReservations, reservations } from '@/db/schemas';
 import { getSessionState, isSessionPasted } from "@/libs/server/db";
@@ -53,7 +53,8 @@ export async function GET(request: NextRequest, props: { params: Promise<{ lid: 
         const reservations = await db.query.reservations.findMany({
             where: (reservations, { and, between, inArray }) => and(
                 inArray(reservations.sessionId, ids),
-                between(reservations.startDate,startDate , endDate.toISOString())
+                between(reservations.startDate,startDate , endDate.toISOString()),
+                isNull(reservations.canceledDate)
             )
         })
 
@@ -137,12 +138,12 @@ export async function GET(request: NextRequest, props: { params: Promise<{ lid: 
 
 
 export async function POST(req: NextRequest, props: { params: Promise<Params> }) {
-    const { startdate, sessionId, ...rest } = await req.json();
+    const { startDate, sessionId, ...rest } = await req.json();
     const { lid } = await props.params;
     const authMember = authenticateMember(req);
     const mid = Number(authMember.member.id);
 
-    console.log(startdate, sessionId, rest);
+    console.log(startDate, sessionId, rest);
 
     try {
         // 1. Validate member's active subscription
@@ -170,11 +171,11 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
             with: {
                 program: true,
                 reservations: {
-                    where: (r, { eq }) => eq(r.startDate, startdate.split("T")[0])
+                    where: (r, { eq }) => eq(r.startDate, startDate.split("T")[0])
                 },
                 recurringReservations: {
                     where: (rr, { lte, isNull, and }) => and(
-                        lte(rr.startDate, startdate.split("T")[0]),
+                        lte(rr.startDate, startDate.split("T")[0]),
                         isNull(rr.canceledOn)
                     ),
                     with: {
@@ -189,7 +190,7 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
         }
 
         // 3. Check if session is in the past
-        const isPasted = isSessionPasted(session, startdate);
+        const isPasted = isSessionPasted(session, startDate);
         if (isPasted) {
             return NextResponse.json({ error: "Session is in the past" }, { status: 400 });
         }
@@ -207,7 +208,7 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
                 memberId: mid,
                 locationId: lid,
                 sessionId: sessionId,
-                startDate: startdate,
+                startDate: startDate,
                 memberSubscriptionId: memberPlan.id
             }).returning();
             reservation = r[0];
@@ -216,12 +217,13 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
                 memberId: mid,
                 locationId: lid,
                 sessionId: sessionId,
-                startDate: startdate,
+                startDate: startDate,
+                memberSubscriptionId: memberPlan.id
             }).returning();
             const { id, intervalThreshold, interval, ...rest } = rr[0];
             reservation = {
                 ...rest,
-                startDate: startdate,
+                startDate: startDate,
                 isRecurring: true,
                 recurringId: id
             };
