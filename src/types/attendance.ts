@@ -35,6 +35,7 @@ export type RecurringReservation = typeof recurringReservations.$inferInsert & {
     session?: ProgramSession
     location?: Location
     member?: Member
+    exceptions?: RecurringReservationException[]
 }
 
 export type RecurringReservationException = typeof recurringReservationsExceptions.$inferInsert & {

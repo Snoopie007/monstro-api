@@ -35,17 +35,17 @@ function generateOtp() {
 }
 
 function isSessionPasted(session: ProgramSession, selectedDay: Date) {
-    const today = new Date();
-    const sessionTime = getSessionTime(session);
-    const isPasted = isBefore(selectedDay, today) ? sessionTime.getTime() < today.getTime() : false;
-    return isPasted;
+	const today = new Date();
+	const sessionTime = getSessionTime(session);
+	const isPasted = isBefore(selectedDay, today) ? sessionTime.getTime() < today.getTime() : false;
+	return isPasted;
 }
 
 function getSessionTime(session: ProgramSession) {
-    const [hours, minutes] = session.time.split(':').map(Number);
-    const sessionTime = new Date();
-    sessionTime.setHours(hours, minutes, 0, 0);
-    return sessionTime;
+	const [hours, minutes] = session.time.split(':').map(Number);
+	const sessionTime = new Date();
+	sessionTime.setHours(hours, minutes, 0, 0);
+	return sessionTime;
 }
 
 async function checkWalletBalance(location: Location) {
@@ -124,22 +124,23 @@ async function chargeWallet(location: Location, amount: number, description: str
 		throw new Error("Error charging wallet");
 	}
 }
+
 function getSessionState(session: ProgramSession, mid: number) {
-    const reservations = session.reservations?.length ?? 0;
-    let recurringReservations = 0;
-    if (session.recurringReservations && session.recurringReservations.length > 0) {
-        recurringReservations = session.recurringReservations.filter(rr => rr.exceptions?.length === 0).length;
-    }
-    const availability = (session.program?.capacity!) - (reservations + recurringReservations);
+	const reservations = session.reservations?.length ?? 0;
+	let recurringReservations = 0;
+	if (session.recurringReservations && session.recurringReservations.length > 0) {
+		recurringReservations = session.recurringReservations.filter(rr => rr.exceptions?.length === 0).length;
+	}
+	const availability = (session.program?.capacity!) - (reservations + recurringReservations);
 
-    const hasRecurringReservations = session.recurringReservations?.some(r => r.memberId === mid) ?? false;
-    const hasReservations = session.reservations?.some(r => r.memberId === mid) ?? false;
+	const hasRecurringReservations = session.recurringReservations?.some(r => r.memberId === mid) ?? false;
+	const hasReservations = session.reservations?.some(r => r.memberId === mid) ?? false;
 
-    const isReserved = hasRecurringReservations || hasReservations;
+	const isReserved = hasRecurringReservations || hasReservations;
 
-    const isFull = availability <= 0;
+	const isFull = availability <= 0;
 
-    return { isReserved, isFull };
+	return { isReserved, isFull };
 }
 
 
