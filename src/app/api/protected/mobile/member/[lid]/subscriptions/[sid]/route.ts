@@ -4,7 +4,7 @@ import { authenticateMember } from "@/libs/utils";
 import { NextResponse, NextRequest } from "next/server";
 import { and } from "drizzle-orm";
 
-export async function GET(req: NextRequest, props: { params: { lid: number, sid: number } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ lid: number, sid: number }> }) {
     const params =await props.params;
     const authMember = authenticateMember(req);
 
