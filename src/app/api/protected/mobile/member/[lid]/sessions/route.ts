@@ -31,11 +31,13 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
                                             where: (r, { eq }) => eq(r.memberId, memberId)
                                         }
                                     }
+
                                 }
                             }
                         }
                     }
-                }
+                },
+
             }
         });
 
@@ -47,14 +49,14 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
                     ...planProgram.program,
                     sessions: planProgram.program.sessions.map(session => ({
                         ...session,
-                        reservations: session.reservations, 
-                        isReserved: session.reservations.length > 0 
+                        reservations: session.reservations,
+                        isReserved: session.reservations.length > 0
                     }))
                 }
             }))
         }));
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             plans: transformedPlans
         });
     } catch (error) {

@@ -126,10 +126,13 @@ async function chargeWallet(location: Location, amount: number, description: str
 }
 function getSessionState(session: ProgramSession, mid: number) {
     const reservations = session.reservations?.length ?? 0;
-    const recurringReservations = session.recurringReservations?.length ?? 0;
-    const availability = (session.program?.capacity ?? 0) - (reservations + recurringReservations);
+    let recurringReservations = 0;
+    if (session.recurringReservations && session.recurringReservations.length > 0) {
+        recurringReservations = session.recurringReservations.filter(rr => rr.exceptions?.length === 0).length;
+    }
+    const availability = (session.program?.capacity!) - (reservations + recurringReservations);
 
-	const hasRecurringReservations = session.recurringReservations?.some((r: { memberId: number }) => r.memberId === mid) ?? false;
+    const hasRecurringReservations = session.recurringReservations?.some(r => r.memberId === mid) ?? false;
     const hasReservations = session.reservations?.some(r => r.memberId === mid) ?? false;
 
     const isReserved = hasRecurringReservations || hasReservations;

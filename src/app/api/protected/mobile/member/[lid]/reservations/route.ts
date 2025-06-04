@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { and, eq, isNull } from 'drizzle-orm';
 import { authenticateMember } from '@/libs/utils';
-import { recurringReservations, reservations } from '@/db/schemas';
+import { recurringReservations, recurringReservationsExceptions, reservations } from '@/db/schemas';
 import { getSessionState, isSessionPasted } from "@/libs/server/db";
 import { MemberSubscription, Reservation } from '@/types';
 import { addDays } from 'date-fns';
@@ -19,8 +19,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ lid: 
     const { searchParams } = new URL(request.url);
     const sessionIds = searchParams.get("sessionIds");
     const date = searchParams.get("date");
+    console.log("Session IDs:", sessionIds, "Date:", date);
 
     const params = await props.params;
+
 
     try {
         const authMember = authenticateMember(request);
@@ -57,7 +59,6 @@ export async function GET(request: NextRequest, props: { params: Promise<{ lid: 
                 isNull(reservations.canceledDate)
             )
         })
-
 
         // Get member's active subscription
         const subscription = await db.query.memberSubscriptions.findFirst({
@@ -162,7 +163,7 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
             return NextResponse.json({ error: "No active subscription found" }, { status: 404 });
         }
 
-        console.log("Member Plan: ", memberPlan.id);
+        
 
 
         // 2. Check if session exists with additional data
@@ -179,7 +180,9 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
                         isNull(rr.canceledOn)
                     ),
                     with: {
-                        exceptions: true
+                        exceptions: {
+                             where: (exceptions, { eq }) => eq(exceptions.occurrenceDate, startDate.split("T")[0])
+                        }
                     }
                 }
             }
@@ -189,14 +192,33 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
             return NextResponse.json({ error: "Session not found" }, { status: 404 });
         }
 
+        const exception = await db.query.recurringReservationsExceptions.findFirst({
+            where: (e, { eq }) => eq(e.occurrenceDate, startDate.split("T")[0])
+        })
+
+         if (exception) {
+            let reservation;
+            const exceptionDate = await db.delete(recurringReservationsExceptions)
+            .where(eq(recurringReservationsExceptions.occurrenceDate, startDate.split("T")[0])).returning();
+              reservation = {
+                id: exceptionDate[0].recurringReservationId,
+                occurrenceDate: exceptionDate[0].occurrenceDate
+                
+            };
+
+
+            return NextResponse.json({ message: `Reservation created successfully for this ${startDate} `, reservation }, { status: 200 });
+
+        }
+
         // 3. Check if session is in the past
         const isPasted = isSessionPasted(session, startDate);
         if (isPasted) {
             return NextResponse.json({ error: "Session is in the past" }, { status: 400 });
         }
 
-        // 4. Check session state
         const sessionState = getSessionState(session, mid);
+        console.log(sessionState)
         if (sessionState.isFull || sessionState.isReserved) {
             const error = sessionState.isReserved ? "Session is already reserved" : "Session is full";
             return NextResponse.json({ error }, { status: 400 });
@@ -212,7 +234,7 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
                 memberSubscriptionId: memberPlan.id
             }).returning();
             reservation = r[0];
-        } else {
+        }else {
             const rr = await db.insert(recurringReservations).values({
                 memberId: mid,
                 locationId: lid,
