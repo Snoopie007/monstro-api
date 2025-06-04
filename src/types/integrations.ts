@@ -12,5 +12,6 @@ export type Integration = {
     created?: Date;
     updated?: Date | null;
     deleted?: Date | null;
+
 }
 
