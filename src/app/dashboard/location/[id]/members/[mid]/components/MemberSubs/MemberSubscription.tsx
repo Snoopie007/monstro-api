@@ -9,7 +9,7 @@ import {
 } from '@/components/ui'
 import { Input } from '@/components/forms'
 import { formatAmountForDisplay } from '@/libs/utils'
-import MemberSubscriptionActions from './actions'
+import { SubscriptionCancelDialog } from './actions'
 import { CircleProgress } from '@/components/ui/circle-progress';
 
 import { CreateSubscription } from './CreateSub/CreateSubscription'
@@ -17,7 +17,26 @@ import { MemberSubscription } from '@/types'
 import { useMemberStatus } from '../../providers/MemberContext'
 import { SubscriptionStatus } from './SubscriptionStatus'
 import { getUnixTime, format } from 'date-fns'
+import { SubscriptionUpdateDialog } from './update'
 
+
+interface Subscription {
+  id: number;
+  status: string;
+  currentPeriodEnd: Date;
+  paymentMethod: string;
+  stripeSubscriptionId?: string | null;
+  plan: {
+    id: number;
+    name: string;
+    description: string;
+    price: number;
+    currency: string;
+    interval: string;
+    allowProration: boolean;
+    stripePriceId?: string;
+  };
+}
 function calculateProgress(start: number, end: number) {
     const currentDate: Date = new Date();
     const startDate = new Date(start);
@@ -75,8 +94,10 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
     return (
 
         <>
-            {subscriptions.map((sub: MemberSubscription) => (
-                <TableRow key={sub.id}>
+            {subscriptions
+                .filter((sub: MemberSubscription) => typeof sub.id === 'number')
+                .map((sub: MemberSubscription) => (
+                <TableRow key={sub.id as number}>
 
                     <TableCell>
                         <div className='flex flex-row gap-2 items-center'>
@@ -107,7 +128,8 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
                         <SubscriptionStatus sub={sub} />
                     </TableCell>
                     <TableCell className='flex flex-row items-center'>
-                        <MemberSubscriptionActions />
+                      <SubscriptionCancelDialog subscription={{ ...sub, id: sub.id as number }} />
+                      <SubscriptionUpdateDialog subscription={sub as Subscription} />
                     </TableCell>
                 </TableRow>
             ))}

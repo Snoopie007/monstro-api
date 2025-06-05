@@ -14,14 +14,12 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 
 			const templates = await db.query.contractTemplates.findMany({
 				where: (templates, { eq, and, isNull, inArray }) => (and(eq(templates.locationId, params.id), eq(templates.deleted, isNull(templates.deleted)), inArray(templates.isDraft, query === 'true' ? [true, false] : [false]))),
-				with: {
-					plans: true
-				}
-			});
+				});
 
 			return NextResponse.json(templates, { status: 200 });
 		}
 	} catch (err) {
+		console.log(err);
 		return NextResponse.json({ error: err }, { status: 500 })
 	}
 }

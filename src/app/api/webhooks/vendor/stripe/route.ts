@@ -92,18 +92,35 @@ async function processEvent(event: Stripe.Event) {
 }
 
 async function processSubscriptionEvent(event: Stripe.Event) {
-    console.log("subscription event ", event.type)
-    const subscription = event.data?.object as Stripe.Subscription;
-
+    const subscription = event.data.object as Stripe.Subscription;
     const { locationId } = subscription.metadata;
-    if (!locationId) return;
+    
+    if (!locationId) {
+        console.warn('No locationId in subscription metadata');
+        return;
+    }
 
-
-    if (subscription.status) {
-        await db.update(locationState).set({
-            status: subscription.status,
-            updated: new Date(),
-        }).where(eq(locationState.locationId, parseInt(locationId)));
+    const decodedId = decodeId(locationId);
+    
+    try {
+        switch (event.type) {
+            case 'customer.subscription.updated':
+                await handleSubscriptionUpdate(decodedId, subscription);
+                break;
+                
+            case 'customer.subscription.deleted':
+                await handleSubscriptionDeletion(decodedId);
+                break;
+                
+            default:
+                await db.update(locationState).set({
+                    status: subscription.status,
+                    updated: new Date(),
+                }).where(eq(locationState.locationId, decodedId));
+        }
+    } catch (error) {
+        console.error(`Error processing subscription event ${event.type}:`, error);
+        throw error;
     }
 }
 /**
@@ -159,6 +176,40 @@ async function processInvoiceEvent(event: Stripe.Event) {
             console.error("Error updating location", error)
         }
     }
+}
+
+
+async function handleSubscriptionUpdate(locationId: number, subscription: Stripe.Subscription) {
+    const updateData = {
+        status: subscription.status,
+        stripeSubscriptionId: subscription.id,
+        updated: new Date(),
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        ...(subscription.cancel_at_period_end && { 
+            willCancelAt: new Date(subscription.current_period_end * 1000),
+            isActiveUntil: new Date(subscription.current_period_end * 1000)
+        }),
+        ...(subscription.cancel_at && {
+            canceledAt: new Date(subscription.cancel_at * 1000)
+        }),
+        ...(subscription.trial_end && {
+            trialEndsAt: new Date(subscription.trial_end * 1000)
+        })
+    };
+
+    await db.update(locationState)
+        .set(updateData)
+        .where(eq(locationState.locationId, locationId));
+}
+
+async function handleSubscriptionDeletion(locationId: number) {
+    await db.update(locationState)
+        .set({
+            status: 'canceled',
+            updated: new Date()
+        })
+        .where(eq(locationState.locationId, locationId));
 }
 
 

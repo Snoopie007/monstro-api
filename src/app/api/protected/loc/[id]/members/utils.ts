@@ -183,7 +183,7 @@ function createSubscription(data: SubscriptionData, plan: MemberPlan, tax: numbe
         forPeriodEnd: periodEnd,
     }
 
-    return { newSubscription, newTransaction, newInvoice };
+    return { newSubscription, newTransaction, newInvoice, };
 }
 
 
@@ -193,5 +193,6 @@ export {
     calculateInvoice,
     createPackage,
     createSubscription,
-    createInvoice
+    createInvoice,
+    createTransaction
 }
