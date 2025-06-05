@@ -16,6 +16,7 @@ export default class S3Bucket {
         });
     }
 
+
     /**
      * Uploads a file to AWS S3 bucket
      * @param file - The file object to upload
