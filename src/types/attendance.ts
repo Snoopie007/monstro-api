@@ -29,6 +29,7 @@ export type Reservation = typeof reservations.$inferInsert & {
     recurringId?: number;
     session?: ProgramSession
     member?: Member
+    exceptions?: RecurringReservationException[]
 }
 
 export type RecurringReservation = typeof recurringReservations.$inferInsert & {
@@ -52,7 +53,7 @@ export type CalendarEvent = {
     data: CalendarEventData
 }
 
-type CalendarEventData = {
+export type CalendarEventData = {
     reservationId?: number
     recurringId?: number
     programId: number
@@ -63,7 +64,7 @@ type CalendarEventData = {
 }
 
 
-type CalendarEventMember = {
+export type CalendarEventMember = {
     memberId?: number
     name: string
     avatar?: string | null

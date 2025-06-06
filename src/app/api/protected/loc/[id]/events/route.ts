@@ -91,6 +91,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
             addEventToCalendar(events, reservation);
         });
 
+
         return NextResponse.json(events, { status: 200 });
     } catch (err) {
         console.error("Error fetching calendar events:", err);
@@ -126,7 +127,7 @@ function addEventToCalendar(
     } else {
         // Create new event
         events.push({
-            id,
+            id: reservation.session.program.id.toString(), 
             title: reservation.session.program.name,
             start,
             end,
