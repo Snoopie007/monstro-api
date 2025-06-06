@@ -23,6 +23,7 @@ import { toast } from "react-toastify";
 import { PaymentMethod } from "@stripe/stripe-js";
 import { useVendorPaymentMethods } from "@/hooks";
 import BillingFields from "./BillingFields";
+import { useTheme } from "next-themes";
 
 
 
@@ -34,6 +35,7 @@ export default function AddPaymentMethod() {
     const [validCard, setValidCard] = useState(false)
     const stripe = useStripe();
     const elements = useElements();
+    const { theme } = useTheme();
 
     const form = useForm<z.infer<typeof VendorBillingSchema>>({
         resolver: zodResolver(VendorBillingSchema),
@@ -78,12 +80,12 @@ export default function AddPaymentMethod() {
     return (
 
         <div className="relative group" data-open={open}>
-            <div className="cursor-pointer group-data-[open=true]:hidden text-sm border-dashed border-gray-300 rounded-sm p-2 border text-center"
-                onClick={() => setOpen(true)}
+            <Button variant={"outline"} size={"sm"} onClick={() => setOpen(true)}
+                className="cursor-pointer group-data-[open=true]:hidden w-full border-dashed border-foreground/10 "
             >
                 + Payment Method
-            </div>
-            <div className="hidden bg-white pt-2 px-4 pb-4 rounded-sm border group-data-[open=true]:block">
+            </Button>
+            <div className="hidden bg-foreground/5 border border-foreground/10 pt-2 px-4 pb-4 rounded-sm group-data-[open=true]:block">
                 <Form {...form} >
                     <form>
                         <fieldset>
@@ -92,10 +94,15 @@ export default function AddPaymentMethod() {
                                     Card details
                                 </FormLabel>
                                 <CardElement
-                                    className={cn("border   focus-visible:ring-0 focus-visible:outline-hidden py-2.5 h-auto rounded-sm  bg-white w-full px-4")}
+                                    className={cn("border bg-background  rounded-sm border-foreground/10 py-2.5 w-full px-4")}
                                     options={{
                                         ...StripeCardOptions,
-                                        hidePostalCode: true
+                                        hidePostalCode: true,
+                                        style: {
+                                            base: {
+                                                color: theme === "dark" ? "white" : "black",
+                                            },
+                                        },
                                     }}
                                     onChange={(e) => {
                                         setErrorMessage(

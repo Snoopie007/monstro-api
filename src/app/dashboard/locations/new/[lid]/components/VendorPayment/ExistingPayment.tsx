@@ -1,7 +1,5 @@
-
-import { Fragment, useCallback, useEffect, useState } from 'react';
-import { useNewLocation } from '../../provider/NewLocationContext';
-
+import { useEffect, useState } from 'react';
+import { useNewLocation } from '../../provider';
 import { useVendorPaymentMethods } from '@/hooks';
 import { Stripe } from 'stripe';
 import { cn, sleep, tryCatch } from '@/libs/utils';
@@ -19,34 +17,40 @@ export default function ExistingVendorPayment({ lid }: { lid: string }) {
     const { locationState } = useNewLocation();
     const { data: session, update } = useSession();
     const router = useRouter();
-    const { methods, error, isLoading } = useVendorPaymentMethods();
+    const { methods, isLoading } = useVendorPaymentMethods();
     const [paymentMethod, setPaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
     const [loading, setLoading] = useState(false);
+    const [filteredMethods, setFilteredMethods] = useState<Stripe.PaymentMethod[]>([]);
 
-    const isSelected = useCallback((id: string) => {
-        if (!paymentMethod) return false;
-        return paymentMethod?.id === id;
-    }, [paymentMethod]);
-
+    useEffect(() => {
+        if (!methods) return;
+        const cardMethods = methods.filter((method: Stripe.PaymentMethod) => method.card);
+        setFilteredMethods(cardMethods);
+        if (cardMethods.length > 0) {
+            setPaymentMethod(cardMethods[0]);
+        }
+    }, [methods]);
 
     async function handleSubmit() {
         if (!paymentMethod) return;
-        const toastRef = toast.loading("Processing payment...", { className: 'text-sm font-medium ' });
-        console.log(paymentMethod)
+
+        const toastRef = toast.loading("Processing payment...", {
+            className: 'text-sm font-medium'
+        });
 
         setLoading(true);
         const { result, error } = await tryCatch(
             fetch(`/api/protected/vendor/locations/${lid}/existing`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    paymentMethodId: paymentMethod?.id,
+                    paymentMethodId: paymentMethod.id,
                     state: locationState
                 }),
             })
-
-        )
+        );
         setLoading(false);
-        if (error || !result || !result.ok) {
+
+        if (error || !result?.ok) {
             toast.update(toastRef, {
                 render: "An error occurred while processing your payment.",
                 type: "error",
@@ -71,71 +75,85 @@ export default function ExistingVendorPayment({ lid }: { lid: string }) {
             isLoading: false,
             autoClose: 100
         });
-        await sleep(100)
-        return router.push(`/dashboard/location/${lid}`)
+
+        await sleep(100);
+        router.push(`/dashboard/location/${lid}`);
     }
+
     return (
         <div className='flex flex-col gap-2'>
-            <div className='text-sm font-medium'>Select a payment method</div>
+            <div className='text-sm font-medium text-foreground'>Select a payment method</div>
             <ul className="flex flex-col gap-2">
                 {isLoading && (
                     <div className="flex flex-col gap-2">
-                        <Skeleton className="w-full h-10" />
-                        <Skeleton className="w-full h-10" />
-                        <Skeleton className="w-full h-10" />
+                        {[...Array(3)].map((_, i) => (
+                            <Skeleton key={i} className="w-full h-10" />
+                        ))}
                     </div>
                 )}
-                {methods && methods.map((method: Stripe.PaymentMethod, index: number) => (
-                    <Fragment key={index}>
-                        {method.card && (
-                            <li className={cn("flex flex-row items-center bg-white",
-                                "hover:bg-indigo-50 hover:text-black",
-                                "justify-between gap-4 p-2 border rounded-sm cursor-pointer ",
-                                { "bg-indigo-600 text-white": isSelected(method.id) }
-                            )}
-                                onClick={() => setPaymentMethod(method)}
-                            >
-                                <div className="flex flex-row items-center gap-2">
-                                    <img src={`/images/cards/${method.card.brand}.svg`} alt={method.card.brand} className="h-7 w-7" />
-                                    <span className="text-sm capitalize">{method.card.brand} •••• {method.card.last4}</span>
-                                </div>
-                                <span className="text-sm">{method.card.exp_month} / {method.card.exp_year}</span>
-                            </li>
-                        )}
-                    </Fragment>
+                {filteredMethods?.map((method, index) => (
+                    <MethodItem
+                        key={index}
+                        method={method}
+                        paymentMethod={paymentMethod}
+                        setPaymentMethod={setPaymentMethod}
+                    />
                 ))}
-
             </ul>
-            <Elements
-                stripe={getStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY)}
-                options={{
-                    appearance: {
-                        variables: {
-                            colorIcon: "#6772e5",
-                            fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
-                        },
-                    },
-                }}
-            >
-                <AddPaymentMethod />
-            </Elements>
+
+            <AddPaymentMethod />
+
             <div className="flex justify-end">
                 <Button
-                    size={"sm"}
+                    size="sm"
+                    variant="continue"
                     className={cn("cursor-pointer", {
                         "children:inline-block": loading,
                         "children:hidden": !loading
                     })}
-                    onClick={() => handleSubmit()}
+                    onClick={handleSubmit}
                     disabled={loading}
-
                 >
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 size-4 animate-spin" />
                     Complete
                 </Button>
             </div>
         </div>
-
-    )
+    );
 }
 
+interface MethodItemProps {
+    method: Stripe.PaymentMethod;
+    paymentMethod: Stripe.PaymentMethod | null;
+    setPaymentMethod: (method: Stripe.PaymentMethod) => void;
+}
+
+function MethodItem({ method, paymentMethod, setPaymentMethod }: MethodItemProps) {
+    if (!method.card) return null;
+
+
+    return (
+        <li
+            className={cn(
+                "flex items-center justify-between py-2 px-3 gap-4 cursor-pointer",
+                "rounded-sm hover:bg-foreground/5",
+                { "bg-foreground/5": paymentMethod?.id === method.id }
+            )}
+            onClick={() => setPaymentMethod(method)}
+        >
+            <div className="flex items-center gap-2">
+                <img
+                    src={`/images/cards/${method.card.brand}.svg`}
+                    alt={method.card.brand}
+                    className="size-7"
+                />
+                <span className="text-sm capitalize">
+                    {method.card.brand} •••• {method.card.last4}
+                </span>
+            </div>
+            <span className="text-sm">
+                {method.card.exp_month} / {method.card.exp_year}
+            </span>
+        </li>
+    );
+}

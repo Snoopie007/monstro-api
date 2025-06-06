@@ -1,4 +1,3 @@
-
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter, SheetClose, Button, ScrollArea, SheetFieldSet, SheetFieldLabel, SheetFieldInput, SheetSection } from '@/components/ui';
 import { z } from "zod";
 import React, { SetStateAction, Dispatch, useState, useEffect } from 'react'
@@ -10,7 +9,6 @@ import {
 } from '@/components/forms';
 import { cn, tryCatch } from '@/libs/utils';
 import { Input } from "@/components/forms/input"
-
 import { toast } from 'react-toastify';
 import useSWR from 'swr';
 import { RewardsSchema } from '../schemas';
@@ -18,20 +16,20 @@ import { Textarea } from '@/components/forms/textarea';
 import { RewardImages } from './RewardImages';
 import { Loader2 } from 'lucide-react';
 
-const InputStyle = "border bg-transparent w-full rounded-[4px] text-sm text-black py-2 px-4 border-white h-auto  font-roboto";
+const InputStyle = "border border-foreground/10 ";
 
 export interface AddrewardProps {
 	reward: Reward | undefined,
 	locationId: string,
 	setCurrentReward: Dispatch<SetStateAction<Reward | undefined>>
-
 }
 
 export function UpsertReward({ reward, locationId, setCurrentReward }: AddrewardProps) {
-
 	const { mutate } = useSWR(`/api/protected/${locationId}/rewards`);
 	const [loading, setLoading] = useState(false);
 	const [removedImages, setRemovedImages] = useState<string[]>([]);
+	const [files, setFiles] = useState<File[]>([]);
+
 	const form = useForm<z.infer<typeof RewardsSchema>>({
 		resolver: zodResolver(RewardsSchema),
 		defaultValues: {
@@ -41,7 +39,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 			totalLimit: reward?.totalLimit || "Unlimited",
 			limitPerMember: reward?.limitPerMember || 0,
 		},
-		mode: "onSubmit",
+		mode: "onChange",
 	})
 
 	useEffect(() => {
@@ -51,184 +49,146 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 	}, [reward]);
 
 
-	async function submit(e: React.FormEvent<HTMLFormElement>) {
-		e.preventDefault();
 
 
+	async function handleSubmit(data: z.infer<typeof RewardsSchema>) {
 		if (!form.formState.isValid) return form.trigger();
 
 		setLoading(true);
-		const formData = new FormData(e.currentTarget);
-		const files = formData.get('files') || formData.getAll('files');
-		if (!files || (Array.isArray(files) && files.length === 0)) {
-			toast.error("Please upload at least one image");
-			setLoading(false);
+		const formData = new FormData();
+
+		// Add form data fields using Object.entries
+		Object.entries(data).forEach(([key, value]) => {
+			formData.append(key, value.toString());
+		});
+
+		// Handle removed images
+		removedImages.forEach(image => {
+			formData.append('removedImages', image);
+		});
+
+		// Handle existing images
+		reward?.images?.forEach(image => {
+			formData.append('images', image);
+		});
+
+		// Handle new files
+		files.forEach(file => {
+			formData.append('files', file);
+		});
+
+		const { result, error } = await tryCatch(
+			fetch(`/api/protected/loc/${locationId}/rewards${reward?.id ? `/${reward.id}` : ''}`, {
+				method: reward?.id ? 'PUT' : 'POST',
+				body: formData,
+			})
+		)
+
+		setLoading(false);
+		if (error || !result) {
+			toast.error("Something went wrong, please try again later");
 			return;
 		}
 
-		if (removedImages.length > 0) {
-			for (const image of removedImages) {
-				formData.append('removedImages', image);
-			}
-		}
+		await mutate();
+		setRemovedImages([]);
+		setFiles([]);
+		toast.success("Reward Updated");
+		form.reset();
+		setCurrentReward(undefined);
 
-		if (reward?.images) {
-			for (const image of reward.images) {
-				formData.append('images', image);
-			}
-		}
-
-		try {
-
-			const { result, error } = await tryCatch(
-				fetch(`/api/protected/loc/${locationId}/rewards${reward?.id ? `/${reward.id}` : ''}`, {
-					method: reward?.id ? 'PUT' : 'POST',
-					body: formData,
-				})
-			)
-			console.log(result, error);
-			setLoading(false);
-			if (error || !result) {
-				toast.error("Something went wrong, please try again later");
-				return;
-			}
-
-			await mutate();
-			toast.success("Reward Updated");
-			form.reset();
-			setCurrentReward(undefined);
-		} catch (error) {
-			console.error("Error:", error);
-			setCurrentReward(undefined);
-			toast.error("Something went wrong, please try again later");
-		}
 	};
+
 
 	return (
 		<Sheet open={!!reward} onOpenChange={(open) => !open && setCurrentReward(undefined)}>
-			<SheetContent className="bg-background sm:max-w-[550px] sm:w-[550px] p-0">
-				<SheetHeader className="px-3 py-3">
-
+			<SheetContent className="bg-background border-foreground/10 sm:max-w-[550px] sm:w-[550px] p-0">
+				<SheetHeader className="py-3 border-b border-foreground/10">
 					<SheetTitle className='text-sm font-semibold'>{reward?.id ? "Update Reward" : "Create Reward"}</SheetTitle>
 				</SheetHeader>
 				<ScrollArea className="h-[calc(100vh-150px)] w-full ">
 					<Form {...form}>
-						<form onSubmit={submit} id='reward' >
+						<form >
 							<SheetSection>
-								<SheetFieldSet>
-									<SheetFieldLabel>
-										<FormLabel>Reward Name</FormLabel>
-									</SheetFieldLabel>
-									<SheetFieldInput>
-										<FormField
-											control={form.control}
-											name="name"
-											render={({ field }) => (
-												<FormItem className='space-y-0'>
-
-													<FormControl>
-														<Input type='text' className={cn(InputStyle)} placeholder="Reward Name" {...field} />
-													</FormControl>
-													<FormMessage />
-												</FormItem>
-
-											)}
-										/>
-									</SheetFieldInput>
-								</SheetFieldSet>
-								<SheetFieldSet>
-									<SheetFieldLabel>
-										<FormLabel>Description</FormLabel>
-									</SheetFieldLabel>
-									<SheetFieldInput>
-										<FormField
-											control={form.control}
-											name="description"
-											render={({ field }) => (
-												<FormItem className='space-y-0'>
-													<FormControl>
-														<Textarea className={cn(InputStyle)} placeholder="Description" {...field} />
-													</FormControl>
-													<FormMessage />
-												</FormItem>
-											)}
-										/>
-									</SheetFieldInput>
-								</SheetFieldSet>
-								<SheetFieldSet>
-									<SheetFieldLabel>
-										<FormLabel>Limit Per Member</FormLabel>
-									</SheetFieldLabel>
-									<SheetFieldInput>
-										<FormField
-											control={form.control}
-											name="limitPerMember"
-											render={({ field }) => (
-												<FormItem className='space-y-0'>
-													<FormControl>
-														<Input type='text' className={cn(InputStyle)} placeholder="Limit" {...field}  onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
-													</FormControl>
-													<FormMessage />
-												</FormItem>
-											)}
-										/>
-									</SheetFieldInput>
-								</SheetFieldSet>
-								<SheetFieldSet>
-									<SheetFieldLabel>
-										<FormLabel>Limit Total(Leaving it empty will set it to unlimited)</FormLabel>
-									</SheetFieldLabel>
-									<SheetFieldInput>
-										<FormField
-											control={form.control}
-											name="totalLimit"
-											render={({ field }) => (
-												<FormItem className='space-y-0'>
-													<FormControl>
-														<Input type='number' className={cn(InputStyle)} placeholder="Limit" {...field}  onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
-													</FormControl>
-													<FormMessage />
-												</FormItem>
-											)}
-										/>
-									</SheetFieldInput>
-								</SheetFieldSet>
-								<SheetFieldSet>
-									<SheetFieldLabel>
-										<FormLabel>Points</FormLabel>
-									</SheetFieldLabel>
-									<SheetFieldInput>
-										<FormField
-											control={form.control}
-											name="requiredPoints"
-											render={({ field }) => (
-												<FormItem className='space-y-0'>
-
-													<FormControl>
-														<Input type='number' className={cn(InputStyle)} placeholder="Reward" {...field}  onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
-													</FormControl>
-													<FormMessage />
-												</FormItem>
-
-											)}
-										/>
-									</SheetFieldInput>
-								</SheetFieldSet>
+								<FormField
+									control={form.control}
+									name="name"
+									render={({ field }) => (
+										<FormItem className='space-y-0'>
+											<FormLabel size="tiny">Reward Name</FormLabel>
+											<FormControl>
+												<Input type='text' className={cn(InputStyle)} placeholder="Reward Name" {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="description"
+									render={({ field }) => (
+										<FormItem className='space-y-0'>
+											<FormLabel size="tiny">Description</FormLabel>
+											<FormControl>
+												<Textarea className={cn(InputStyle)} placeholder="Description" {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="limitPerMember"
+									render={({ field }) => (
+										<FormItem className='space-y-0'>
+											<FormLabel size="tiny">Limit Per Member</FormLabel>
+											<FormControl>
+												<Input type='text' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="totalLimit"
+									render={({ field }) => (
+										<FormItem className='space-y-0'>
+											<FormLabel size="tiny">Limit Total(Leaving it empty will set it to unlimited)</FormLabel>
+											<FormControl>
+												<Input type='number' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="requiredPoints"
+									render={({ field }) => (
+										<FormItem className='space-y-0'>
+											<FormLabel size="tiny">Points</FormLabel>
+											<FormControl>
+												<Input type='number' className={cn(InputStyle)} placeholder="Reward" {...field}
+													onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
 							</SheetSection>
 							<SheetSection>
 								<RewardImages
 									images={reward?.images || []}
 									onRemoveImage={(url) => setRemovedImages([...removedImages, url])}
 									name='files'
+									onFileChange={(files) => setFiles(files)}
 								/>
 							</SheetSection>
-
-
-
 						</form>
 					</Form>
 				</ScrollArea>
-				<SheetFooter className='border-t py-3 px-4'>
+				<SheetFooter className='border-t py-3 px-4 border-foreground/10'>
 					<SheetClose asChild>
 						<Button variant={'outline'} size={'sm'} onClick={() => setCurrentReward(undefined)}>
 							Cancel
@@ -237,17 +197,15 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 					<Button variant={'foreground'} size={'sm'}
 						form='reward'
 						type='submit'
+						onClick={form.handleSubmit(handleSubmit)}
 						disabled={loading || !form.formState.isValid}
 						className={cn("children:hidden", { "children:block": loading })}
 					>
 						<Loader2 size={16} className={"animate-spin mr-2"} />
 						Save
 					</Button>
-					
 				</SheetFooter>
-
-
-			</SheetContent >
-		</Sheet >
+			</SheetContent>
+		</Sheet>
 	)
 }

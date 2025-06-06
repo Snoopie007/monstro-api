@@ -30,9 +30,9 @@ export function TermsAndConditions({ checked, setChecked, tos }: TermsAndConditi
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <div className="items-center relative bg-gray-50 flex space-x-1 border group border-gray-200 px-2 py-2.5 rounded-sm cursor-pointer">
+                <div className="items-center  flex space-x-1 border group border-foreground/10 px-2 py-2.5 rounded-sm cursor-pointer">
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="group" data-checked={checked}>
-                        <rect x="1" y="1" width="14" height="14" rx="2" strokeWidth="1.5" className="stroke-gray-600" />
+                        <rect x="1" y="1" width="14" height="14" rx="2" strokeWidth="1.5" className="stroke-foreground/50" />
                         <path d="M12 5L6.5 10.5L4 8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
                             className={cn("stroke-gray-600 opacity-0 ",
                                 " group-data-[checked=true]:opacity-100 "

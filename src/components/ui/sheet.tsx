@@ -134,7 +134,7 @@ const SheetSection = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
 	<div
 		className={cn(
-			"p-4 border-b space-y-2 last:border-b-0 last:border-none",
+			"p-4 border-b border-foreground/10 space-y-2 last:border-b-0 last:border-none",
 			className
 		)}
 		{...props}

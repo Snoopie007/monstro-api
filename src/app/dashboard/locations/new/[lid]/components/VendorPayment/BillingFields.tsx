@@ -14,7 +14,13 @@ import { VendorBillingSchema } from "@/libs/FormSchemas/schemas";
 import { z } from "zod";
 
 
-export default function BillingFields({ form }: { form: UseFormReturn<z.infer<typeof VendorBillingSchema>> }) {
+const INPUT_STYLES = "bg-background text-foreground border-foreground/10"
+
+interface BillingFieldsProps {
+    form: UseFormReturn<z.infer<typeof VendorBillingSchema>>
+}
+
+export default function BillingFields({ form }: BillingFieldsProps) {
     return (
         <>
             <fieldset >
@@ -24,7 +30,7 @@ export default function BillingFields({ form }: { form: UseFormReturn<z.infer<ty
                             Name on card
                         </FormLabel>
                         <FormControl>
-                            <Input type="text" className="bg-white text-black border-gray-200 border" placeholder="Name on card" {...field} />
+                            <Input type="text" className={INPUT_STYLES} placeholder="Name on card" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -38,7 +44,7 @@ export default function BillingFields({ form }: { form: UseFormReturn<z.infer<ty
                             Billing addres
                         </FormLabel>
                         <FormControl>
-                            <Input type="text" className="bg-white  border-gray-200 border" placeholder="Billing address" {...field} />
+                            <Input type="text" className={INPUT_STYLES} placeholder="Billing address" {...field} />
                         </FormControl>
 
                         <FormMessage />
@@ -54,7 +60,7 @@ export default function BillingFields({ form }: { form: UseFormReturn<z.infer<ty
                         </FormLabel>
 
                         <FormControl>
-                            <RegionSelect value={field.value} onChange={field.onChange} className="bg-white text-black" />
+                            <RegionSelect value={field.value} onChange={field.onChange} className={INPUT_STYLES} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -67,7 +73,7 @@ export default function BillingFields({ form }: { form: UseFormReturn<z.infer<ty
                         </FormLabel>
 
                         <FormControl>
-                            <Input type="text" className="bg-white text-black border-gray-200 border" placeholder="City" {...field} />
+                            <Input type="text" className={INPUT_STYLES} placeholder="City" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -78,7 +84,7 @@ export default function BillingFields({ form }: { form: UseFormReturn<z.infer<ty
                             Zip
                         </FormLabel>
                         <FormControl>
-                            <Input type="text" className="bg-white text-black autofill:text-black border-gray-200 border" placeholder="Zip" {...field} />
+                            <Input type="text" className={INPUT_STYLES} placeholder="Zip" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>

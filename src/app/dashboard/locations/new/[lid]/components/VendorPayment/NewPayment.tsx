@@ -18,6 +18,7 @@ import { decodeId } from "@/libs/server/sqids";
 import { TermsAndConditions } from "@/components/terms";
 import { FormLabel, FormItem, Form } from "@/components/forms";
 import BillingFields from "./BillingFields";
+import { useTheme } from "next-themes";
 
 
 
@@ -40,7 +41,7 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
     const stripe = useStripe();
     const elements = useElements();
     const router = useRouter();
-
+    const { theme } = useTheme();
 
 
     const form = useForm<z.infer<typeof VendorBillingSchema>>({
@@ -113,7 +114,7 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
 
     return (
         <div className="space-y-3 pb-3 ">
-            <div className="flex flex-col gap-2 bg-white border border-gray-200 rounded-sm p-4 pb-6 space-y-3 shadow-xs">
+            <div className="flex flex-col gap-2  border border-foreground/10 rounded-sm p-4 pb-6 space-y-3 shadow-xs">
                 <Form   {...form}>
 
                     <form>
@@ -125,10 +126,15 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
                                     Card details
                                 </FormLabel>
                                 <CardElement
-                                    className={cn("border   focus-visible:ring-0 focus-visible:outline-hidden py-2.5 h-auto rounded-sm  bg-white w-full px-4")}
+                                    className={cn("border border-foreground/10  py-2.5 h-auto rounded-sm   w-full px-4")}
                                     options={{
                                         ...StripeCardOptions,
-                                        hidePostalCode: true
+                                        hidePostalCode: true,
+                                        style: {
+                                            base: {
+                                                color: theme === "dark" ? "#fff" : "#000",
+                                            },
+                                        },
                                     }}
                                     onChange={(e) => {
                                         setErrorMessage(
@@ -138,7 +144,7 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
                                     }}
                                 />
 
-                                <span className="flex flex-row items-center  text-gray-400">
+                                <span className="flex flex-row items-center  text-foreground/50">
                                     <LockIcon size={12} className="" />
                                     <span className="text-xs leading-none">
                                         This is secure 128-bit SSL encrypted payment.
@@ -164,7 +170,8 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
             <div className="flex justify-end">
                 <Button
                     size={"sm"}
-                    className={cn("cursor-pointer bg-red-500 rounded-xs", {
+                    variant={"continue"}
+                    className={cn("cursor-pointer", {
                         "children:inline-block": loading,
                         "children:hidden": !loading
                     })}
@@ -172,7 +179,7 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
                     disabled={loading || !form.formState.isValid || !locationState.agreeToTerms || !validCard}
 
                 >
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 size-4 animate-spin" />
                     Register
                 </Button>
             </div>

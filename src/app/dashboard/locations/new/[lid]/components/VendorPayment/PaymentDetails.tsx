@@ -30,9 +30,9 @@ export default function PaymentDetails({ userSelection }: { userSelection: any }
     }, [userSelection.paymentPlan]);
 
     return (
-        <div className="bg-white border border-gray-200 rounded-sm p-4 shadow-xs">
+        <div className="bg-foreground/5 border border-foreground/10 rounded-sm p-4">
             <div className='grid grid-cols-6 gap-2'>
-                <div className='col-span-3 grid grid-cols-2  '>
+                <div className='col-span-3 grid grid-cols-2   text-foreground'>
                     <div className='space-y-0 flex flex-col'>
                         <span className='text-[0.65rem] uppercase  text-muted-foreground'>{userSelection.pkg ? "Package" : "Plan"}</span>
                         <span className='text-sm font-bold '>
@@ -72,7 +72,7 @@ export default function PaymentDetails({ userSelection }: { userSelection: any }
 
 
                 </div>
-                <div className="flex flex-col gap-2 text-xs col-span-3">
+                <div className="flex flex-col gap-2 text-xs col-span-3 text-foreground">
 
 
                     {!userSelection.pkg && userSelection.plan

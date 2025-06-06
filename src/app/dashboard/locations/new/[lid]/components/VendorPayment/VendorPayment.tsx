@@ -55,6 +55,7 @@ export function VendorPayment({ lid }: { lid: string }) {
                 ) : (
                     <NewVendorPayment lid={lid} />
                 )}
+
             </Elements>
         </div>
     )

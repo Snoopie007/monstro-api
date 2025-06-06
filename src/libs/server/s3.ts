@@ -1,7 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { tryCatch } from "../utils";
 
-
 export default class S3Bucket {
     private s3Client: S3Client;
     private REGION = process.env.AWS_REGION || '';
@@ -15,7 +14,6 @@ export default class S3Bucket {
             }
         });
     }
-
 
     /**
      * Uploads a file to AWS S3 bucket
@@ -37,24 +35,25 @@ export default class S3Bucket {
             ContentType: file.type, /** Sets proper MIME type for serving the file */
         };
 
+        /** Create a managed upload for better control */
+        const command = new PutObjectCommand(uploadParams);
+
         /** Attempt to upload the file to S3 */
-        const { result, error } = await tryCatch(
-            this.s3Client.send(new PutObjectCommand(uploadParams))
-        )
+        const { result, error } = await tryCatch(this.s3Client.send(command));
+
         if (error) throw error;
 
         /** Return the upload result along with the public URL of the file */
         return {
-            ...result,
             url: `https://${uploadParams.Bucket}.s3.${this.REGION}.amazonaws.com/${uploadParams.Key}`,
         };
     }
 
-    async removeFile(fileUrl: string) {
-        const { result, error } = await tryCatch(
-            this.s3Client.send(new DeleteObjectCommand({ Bucket: 'monstro-bucket', Key: fileUrl }))
-        )
+    async removeFile(fileDirectory: string, name: string) {
+        const command = new DeleteObjectCommand({ Bucket: 'monstro-bucket', Key: `${fileDirectory}/${name}` })
+        const { result, error } = await tryCatch(this.s3Client.send(command))
         if (error) throw error;
         return result;
     }
+
 }

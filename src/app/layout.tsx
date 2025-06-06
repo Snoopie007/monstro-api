@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Poppins, Roboto } from "next/font/google";
 import { ToastContainer } from "react-toastify";
 import "@public/globals.css";
-import "@public/editor.css";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { ThemeProvider } from "@/providers/ThemeProvider";

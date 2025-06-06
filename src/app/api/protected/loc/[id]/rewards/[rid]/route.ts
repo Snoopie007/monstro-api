@@ -43,7 +43,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<RewardPr
 export async function PUT(req: NextRequest, props: { params: Promise<RewardProps> }) {
 	const params = await props.params;
 	const data = await req.formData()
-	const files = data.getAll('files');
+	const files = data.getAll('files') as File[];
 	const images = data.getAll('images') as string[];
 	const removedImages = data.getAll('removedImages') as string[];
 
@@ -53,10 +53,13 @@ export async function PUT(req: NextRequest, props: { params: Promise<RewardProps
 
 		if (removedImages.length > 0) {
 			await Promise.all(removedImages.map(async (image) => {
-				await s3.removeFile(image);
+				const name = image.split('/').pop() || '';
+				console.log(name)
+				await s3.removeFile("reward-images", name);
 			}))
 			newImages = newImages.filter(image => !removedImages.includes(image));
 		}
+
 		if (filteredFiles.length > 0) {
 			const results = await Promise.all(filteredFiles.map(async (file) => {
 				if (file instanceof Blob) {
@@ -64,7 +67,8 @@ export async function PUT(req: NextRequest, props: { params: Promise<RewardProps
 					return result;
 				}
 			}))
-			newImages = [...results.map((result) => result?.url || ""), ...images];
+			const newUrls = results.map((result) => result?.url || "");
+			newImages = newImages.concat(newUrls);
 		}
 
 		await db.update(rewards).set({

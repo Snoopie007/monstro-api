@@ -14,8 +14,6 @@ export default async function LocationsLayout(props: LocationLayoutProps) {
 
     const { children } = props;
 
-
-
     return (
         <main className={cn("min-h-screen max-h-screen h-screen overflow-hidden flex flex-col w-full  bg-background")}>
 

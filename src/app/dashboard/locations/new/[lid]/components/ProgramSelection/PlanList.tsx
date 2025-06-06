@@ -35,8 +35,8 @@ export default function PlanList() {
             {plans.map((plan, i) => (
                 <div key={i} onClick={() => handlePlanSelect(plan)} data-selected={isSelected(plan)} data-expanded={isExpanded(plan)}
                     className={cn(
-                        "flex flex-col gap-2 text-black group cursor-pointer",
-                        " hover:border-indigo-500 border border-gray-200  shadow-xs p-4 rounded-sm",
+                        "flex flex-col gap-2 text-foreground group cursor-pointer",
+                        " hover:border-indigo-500 border border-foreground/10 p-4 rounded-sm",
                         "data-[selected=true]:border-indigo-500 ",
 
                     )}
@@ -50,7 +50,7 @@ export default function PlanList() {
                                 ${plan.price}{plan.id !== 1 && `/${plan.threshold} ${plan.interval}`}
                             </span>
                         </div>
-                        <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: plan.description }} />
+                        <p className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: plan.description }} />
                     </div>
 
                     <button

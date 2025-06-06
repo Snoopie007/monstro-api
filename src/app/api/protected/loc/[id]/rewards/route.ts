@@ -1,4 +1,3 @@
-
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { rewards } from "@/db/schemas";
@@ -9,51 +8,55 @@ type RewardProps = {
 	params: Promise<{ id: number }>
 }
 
-export async function GET(req: NextRequest, props: RewardProps) {
-	const params = await props.params;
+export async function GET(req: NextRequest, { params }: RewardProps) {
+	const locationId = await params;
 	const session = await auth();
+
+	if (!session) {
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	}
+
 	try {
-		if (session) {
-			const rewards = await db.query.rewards.findMany({
-				where: (rewards, { eq }) => eq(rewards.locationId, params.id),
-			});
-			return NextResponse.json(rewards, { status: 200 });
-		}
+		const rewardsList = await db.query.rewards.findMany({
+			where: (rewards, { eq }) => eq(rewards.locationId, locationId.id),
+		});
+		return NextResponse.json(rewardsList);
 	} catch (err) {
-		return NextResponse.json({ error: err }, { status: 500 })
+		return NextResponse.json({ error: err }, { status: 500 });
 	}
 }
 
-export async function POST(req: NextRequest, props: RewardProps) {
-	const params = await props.params;
+export async function POST(req: NextRequest, { params }: RewardProps) {
+	const locationId = await params;
 	const s3 = new S3Bucket();
 	const data = await req.formData();
-	const files = data.getAll('files'); // Get all files from the form
-	const filteredFiles = files.filter(file => file instanceof Blob && file.size > 0);
+
+	const files = data.getAll('files')
+		.filter(file => file instanceof Blob && file.size > 0);
+
 	try {
+		const uploadedImages = await Promise.all(
+			files.map(async (file) => {
+				if (file instanceof Blob) {
+					const result = await s3.uploadFile(file, "reward-images");
+					return result?.url;
+				}
+			})
+		);
 
-		const uploadResults = await Promise.all(filteredFiles.map(async (file) => {
-			if (file instanceof Blob) {
-				const result = await s3.uploadFile(file, "reward-images" as string);
-				return result;
-			}
-		}));
-
-		const [{ id }] = await db.insert(rewards).values({
+		const [reward] = await db.insert(rewards).values({
 			name: data.get('name') as string,
-			
 			description: data.get('description') as string,
 			requiredPoints: Number(data.get('requiredPoints')),
 			limitPerMember: Number(data.get('limitPerMember')),
-			totalLimit:data.get('totalLimit') as string,
-			images: uploadResults.map((result) => result?.url || ""),
-			locationId: params.id,
-			created: new Date(),
+			totalLimit: data.get('totalLimit') as string,
+			images: uploadedImages.filter(Boolean) as string[],
+			locationId: locationId.id
 		}).returning({ id: rewards.id });
 
-		return NextResponse.json({ id }, { status: 200 });
+		return NextResponse.json(reward);
 	} catch (err) {
-		console.log(err)
-		return NextResponse.json({ error: err }, { status: 500 })
+		console.log(err);
+		return NextResponse.json({ error: err }, { status: 500 });
 	}
 }

@@ -18,6 +18,8 @@ interface SelectPlanProps {
 
 }
 
+const TAB_STYLES = "text-sm cursor-pointer data-[state=active]:bg-indigo-500 data-[state=active]:text-white"
+
 export function SelectPlan({ setCurrentStep }: SelectPlanProps) {
     const { locationState, updateLocationState } = useNewLocation()
     const [loading, setLoading] = useState(false);
@@ -40,9 +42,9 @@ export function SelectPlan({ setCurrentStep }: SelectPlanProps) {
     return (
         <div className="flex flex-col gap-4">
             <Tabs defaultValue="plans" >
-                <TabsList className="grid w-full grid-cols-2 rounded-xs bg-gray-200" >
-                    <TabsTrigger value="plans" className="rounded-xs text-sm cursor-pointer data-[state=active]:bg-indigo-500 data-[state=active]:text-white">Plans</TabsTrigger>
-                    <TabsTrigger value="packages" className="rounded-xs text-sm cursor-pointer data-[state=active]:bg-indigo-500 data-[state=active]:text-white">Packages</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 bg-foreground/10" >
+                    <TabsTrigger value="plans" className={TAB_STYLES}>Plans</TabsTrigger>
+                    <TabsTrigger value="packages" className={TAB_STYLES}>Packages</TabsTrigger>
                 </TabsList>
                 <TabsContent value="plans" >
                     <PlanList />
