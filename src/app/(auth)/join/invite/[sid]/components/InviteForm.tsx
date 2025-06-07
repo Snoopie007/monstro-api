@@ -9,6 +9,7 @@ import {
     FormLabel,
     FormControl,
     Input,
+    FormMessage,
 
 } from "@/components/forms";
 import { useEffect, useState } from "react";
@@ -55,8 +56,8 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
 
 
     async function onSubmit(v: z.infer<typeof VendorInviteSchema>) {
-        await form.trigger()
-        if (!form.formState.isValid) return;
+
+        if (!form.getValues('password')) return;
 
         setLoading(true);
         const { result, error } = await tryCatch(
@@ -123,6 +124,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                                     <FormControl>
                                         <Input type="password" placeholder="••••••••" className="bg-white border border-gray-200  rounded-sm p-4 text-sm shadow-none [&:not(:placeholder-shown)]:text-lg" {...field} />
                                     </FormControl>
+                                    <FormMessage />
                                 </FormItem>
                             )} />
                         </fieldset>
