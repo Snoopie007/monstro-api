@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { Botlist } from "./components";
+
 import { decodeId } from "@/libs/server/sqids";
 
 
@@ -28,7 +28,7 @@ export default async function AIBotsPage(props: { params: Promise<{ id: string }
     }
     return (
         <div className='flex flex-row  h-[calc(100vh-50px)]'>
-            <Botlist lid={params.id} location={location} />
+            Coming soon
         </div>
     )
 }
