@@ -8,7 +8,6 @@ import { vendors } from "./vendors";
 import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import { IncompletePlan, LocationSettings } from "@/types";
-import { aiBots } from "./ai";
 
 
 export const locations = pgTable("locations", {
@@ -100,7 +99,6 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
     memberInvoices: many(memberInvoices),
     pointsHistory: many(memberPointsHistory),
     referrals: many(memberReferrals),
-    bots: many(aiBots),
     locationState: one(locationState, {
         fields: [locations.id],
         references: [locationState.locationId],

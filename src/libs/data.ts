@@ -1,4 +1,4 @@
-import { CustomVariableGroup } from "@/types"
+
 
 const CountryCodes = [
     { name: "Canada", code: "CA", shortName: "CAD" },
@@ -130,46 +130,46 @@ const Industries = [
 
 
 
-const DEFAULT_VARIABLE_GROUPS: CustomVariableGroup[] = [
+// const DEFAULT_VARIABLE_GROUPS: CustomVariableGroup[] = [
 
-    {
-        name: "Contact Information",
-        variables: [
-            { id: 1, label: 'First Name', value: 'prospect.firstName' },
-            { id: 2, label: 'Last Name', value: 'prospect.lastName' },
-            { id: 3, label: 'Full Name', value: 'prospect.fullName' },
-            { id: 4, label: 'Email', value: 'prospect.email' },
-            { id: 5, label: 'Phone', value: 'prospect.phone' }
-        ]
-    },
-    {
-        name: "Company Information",
-        variables: [
-            { id: 10, label: 'Location Name', value: 'location.name' },
-            { id: 11, label: 'Location Address', value: 'location.address' },
-            { id: 12, label: 'Location City', value: 'location.city' },
-            { id: 13, label: 'Location State', value: 'location.state' },
-            { id: 14, label: 'Location Postal Code', value: 'location.postalCode' },
-            { id: 15, label: 'Location Email', value: 'location.email' },
-            { id: 16, label: 'Location Phone', value: 'location.phone' },
-        ]
-    },
-    {
-        name: "User",
-        variables: [
-            { id: 22, label: 'User First Name', value: 'user.firstName' },
-            { id: 23, label: 'User Last Name', value: 'user.lastName' },
-            { id: 24, label: 'User Email', value: 'user.email' },
-            { id: 25, label: 'User Phone', value: 'user.phone' },
-        ]
-    },
-    {
-        name: "Other",
-        variables: [
-            { id: 26, label: 'Bot Name', value: 'bot.name' }
-        ]
-    },
-]
+//     {
+//         name: "Contact Information",
+//         variables: [
+//             { id: 1, label: 'First Name', value: 'prospect.firstName' },
+//             { id: 2, label: 'Last Name', value: 'prospect.lastName' },
+//             { id: 3, label: 'Full Name', value: 'prospect.fullName' },
+//             { id: 4, label: 'Email', value: 'prospect.email' },
+//             { id: 5, label: 'Phone', value: 'prospect.phone' }
+//         ]
+//     },
+//     {
+//         name: "Company Information",
+//         variables: [
+//             { id: 10, label: 'Location Name', value: 'location.name' },
+//             { id: 11, label: 'Location Address', value: 'location.address' },
+//             { id: 12, label: 'Location City', value: 'location.city' },
+//             { id: 13, label: 'Location State', value: 'location.state' },
+//             { id: 14, label: 'Location Postal Code', value: 'location.postalCode' },
+//             { id: 15, label: 'Location Email', value: 'location.email' },
+//             { id: 16, label: 'Location Phone', value: 'location.phone' },
+//         ]
+//     },
+//     {
+//         name: "User",
+//         variables: [
+//             { id: 22, label: 'User First Name', value: 'user.firstName' },
+//             { id: 23, label: 'User Last Name', value: 'user.lastName' },
+//             { id: 24, label: 'User Email', value: 'user.email' },
+//             { id: 25, label: 'User Phone', value: 'user.phone' },
+//         ]
+//     },
+//     {
+//         name: "Other",
+//         variables: [
+//             { id: 26, label: 'Bot Name', value: 'bot.name' }
+//         ]
+//     },
+// ]
 
 export {
     CountryCodes,
@@ -178,5 +178,4 @@ export {
     Industries,
     MonstroData,
     PaymentMethods,
-    DEFAULT_VARIABLE_GROUPS
 }
