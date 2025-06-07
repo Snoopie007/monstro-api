@@ -62,7 +62,6 @@ CREATE TABLE IF NOT EXISTS ai_messages (
     CONSTRAINT ai_messages_conversation_id_fk FOREIGN KEY (conversation_id) REFERENCES ai_conversations(id) ON DELETE CASCADE
 );
 
-
 CREATE TABLE IF NOT EXISTS bot_logs (
     id serial PRIMARY KEY,
     conversation_id bigint NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
