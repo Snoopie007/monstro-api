@@ -97,7 +97,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
             await sendInvite(m);
         }
         setLoading(false);
-        router.push(`/dashboard/${lid}/members/${m?.id}`)
+        router.push(`/dashboard/${lid}/members`)
     }
 
     async function sendInvite(m: Member | undefined) {

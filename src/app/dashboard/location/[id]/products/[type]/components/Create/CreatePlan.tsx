@@ -80,7 +80,10 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
     async function submitForm(v: z.infer<typeof NewPlanSchema>) {
         setLoading(true)
         const { pkg, sub, ...rest } = v
-
+        if (!v.programs || v.programs.length === 0) {
+            toast.error("Please select at least one program");
+            return;
+        }
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/plans/${type === "recurring" ? "subs" : "pkgs"}`, {
                 method: 'POST',
@@ -182,7 +185,12 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                                                 Select at least one program that this plan will include.
                                             </FormDescription>
                                             <FormControl>
-                                                <AddPrograms value={field.value} onChange={field.onChange} />
+                                                <AddPrograms
+                                                    value={field.value || []}
+                                                    onChange={(selectedPrograms) => {
+                                                        field.onChange(selectedPrograms);
+                                                    }}
+                                                />
                                             </FormControl>
                                             <FormMessage />
 
@@ -205,7 +213,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                         <DialogClose asChild>
                             <Button size={"sm"} onClick={form.handleSubmit(submitForm)} variant={"foreground"}
                                 className={cn("children:hidden", { "children:inline-block": loading })}
-                                disabled={form.formState.isSubmitting || !form.formState.isValid || loading}
+                            // disabled={form.formState.isSubmitting || !form.formState.isValid || loading}
                             >
                                 <Loader2 className="size-3 mr-2 animate-spin" />
                                 Save

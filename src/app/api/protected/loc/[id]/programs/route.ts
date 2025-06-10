@@ -62,7 +62,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number }
 			}).returning({ id: programs.id });
 
 
-			await tx.insert(programSessions).values(sessions.map((s: ProgramSession) => ({
+			await tx.insert(programSessions).values(sessions.map(({ id, ...s }: ProgramSession)  => ({
 				...s,
 				status: 1,
 				programId: program.id,

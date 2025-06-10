@@ -38,7 +38,7 @@ export default async function Products(props: { params: Promise<{ id: string, ty
 
             <TablePage>
                 <TablePageHeader>
-                    <TablePageHeaderTitle>{params.type === "sub" ? "Subscriptions" : "Packages"}</TablePageHeaderTitle>
+                    <TablePageHeaderTitle>{params.type === "subs" ? "Subscriptions" : "Packages"}</TablePageHeaderTitle>
                     <TablePageHeaderSection>
                         <SearchInput />
                         <CreatePlan lid={params.id} type={params.type === "subs" ? "recurring" : "one-time"} />

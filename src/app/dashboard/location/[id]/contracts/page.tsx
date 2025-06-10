@@ -54,7 +54,7 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                     <TablePageHeaderTitle>Signed Contracts</TablePageHeaderTitle>
                     <TablePageHeaderSection>
                         <Link
-                            href={`/dashboard/${params.id}/contracts/templates`}
+                            href={`/dashboard/location/${params.id}/contracts/templates`}
                             className='bg-foreground text-background  h-auto inline-flex flex-row items-center  px-2 py-1 rounded-xs font-bold text-xs'
                         >
                             View Templates
