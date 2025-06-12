@@ -13,7 +13,6 @@ import { signIn } from 'next-auth/react'
 import { Loader2 } from 'lucide-react'
 import OTPRetry from './OTPRetry'
 import { LoginSchema } from '@/libs/FormSchemas/schemas'
-import { useLoginStatus } from '../../login/providers/LoginStatusProvider'
 
 interface VerifyOTPProps {
     form: UseFormReturn<z.infer<typeof LoginSchema>>;
