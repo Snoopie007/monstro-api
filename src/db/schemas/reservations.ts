@@ -39,7 +39,6 @@ export const recurringReservations = pgTable("recurring_reservations", {
 
 
 export const recurringReservationsExceptions = pgTable("recurring_reservations_exceptions", {
-    id: serial("id").primaryKey().notNull(),
     recurringReservationId: integer("recurring_reservation_id").notNull().references(() => recurringReservations.id, { onDelete: "cascade" }),
     occurrenceDate: date("occurrence_date").notNull(),
 }, (t) => [unique("unique_exception_recurring").on(t.recurringReservationId, t.occurrenceDate)]);

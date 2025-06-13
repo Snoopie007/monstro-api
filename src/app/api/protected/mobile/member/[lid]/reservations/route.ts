@@ -84,7 +84,14 @@ export async function GET(request: NextRequest, props: { params: Promise<{ lid: 
                 )
             ),
             with: {
-                exceptions: true,
+                exceptions:{
+                    columns: {
+                
+                recurringReservationId: true,
+                occurrenceDate: true,
+                
+            }
+                },
                 session: true
             }
         })
@@ -158,6 +165,7 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
                 plan: true
             }
         });
+        
 
         if (!memberPlan) {
             return NextResponse.json({ error: "No active subscription found" }, { status: 404 });
