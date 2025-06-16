@@ -163,7 +163,6 @@ export function UpsertAchivement({ achievement, locationId, setCurrentAchievemen
 											/>
 										</div>
 									</fieldset>
-
 								</SheetSection>
 								<SheetSection>
 									<div className='bg-foreground/5 p-4 rounded-sm space-y-2'>
