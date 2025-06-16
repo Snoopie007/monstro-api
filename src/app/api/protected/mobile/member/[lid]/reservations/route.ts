@@ -55,7 +55,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ lid: 
         const reservations = await db.query.reservations.findMany({
             where: (reservations, { and, between, inArray }) => and(
                 inArray(reservations.sessionId, ids),
-                between(reservations.startDate,startDate , endDate.toISOString()),
+                between(reservations.startDate, startDate, endDate.toISOString()),
                 isNull(reservations.canceledDate)
             )
         })
@@ -84,20 +84,20 @@ export async function GET(request: NextRequest, props: { params: Promise<{ lid: 
                 )
             ),
             with: {
-                exceptions:{
+                exceptions: {
                     columns: {
-                
-                recurringReservationId: true,
-                occurrenceDate: true,
-                
-            }
+
+                        recurringReservationId: true,
+                        occurrenceDate: true,
+
+                    }
                 },
                 session: true
             }
         })
 
         // Generate recurring reservation instances
-       let recurringReservations: Reservation[] = [];
+        let recurringReservations: Reservation[] = [];
         recurrings.forEach(rr => {
             let currentDate = new Date(startDate);
             const sessionDay = rr.session?.day;
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ lid: 
 
 
 export async function POST(req: NextRequest, props: { params: Promise<Params> }) {
-    const { startDate, sessionId, ...rest } = await req.json();
+    const { startDate, sessionId, memberPlanId, ...rest } = await req.json();
     const { lid } = await props.params;
     const authMember = authenticateMember(req);
     const mid = Number(authMember.member.id);
@@ -155,8 +155,9 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
 
     try {
         // 1. Validate member's active subscription
-        const memberPlan: MemberSubscription | undefined = await db.query.memberSubscriptions.findFirst({
+        const memberSub: MemberSubscription | undefined = await db.query.memberSubscriptions.findFirst({
             where: (s, { eq, and }) => and(
+                eq(s.id, memberPlanId),
                 eq(s.memberId, mid),
                 eq(s.locationId, lid),
                 eq(s.status, 'active')
@@ -165,13 +166,24 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
                 plan: true
             }
         });
-        
 
-        if (!memberPlan) {
+        const memberPkg = await db.query.memberPackages.findFirst({
+            where: (s, { eq, and }) => and(
+                eq(s.id, memberPlanId),
+                eq(s.memberId, mid),
+                eq(s.locationId, lid),
+                eq(s.status, 'active')
+            ),
+            with: {
+                plan: true
+            }
+        });
+
+        if (!memberSub && !memberPkg) {
             return NextResponse.json({ error: "No active subscription found" }, { status: 404 });
         }
 
-        
+
 
 
         // 2. Check if session exists with additional data
@@ -189,7 +201,7 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
                     ),
                     with: {
                         exceptions: {
-                             where: (exceptions, { eq }) => eq(exceptions.occurrenceDate, startDate.split("T")[0])
+                            where: (exceptions, { eq }) => eq(exceptions.occurrenceDate, startDate.split("T")[0])
                         }
                     }
                 }
@@ -204,14 +216,14 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
             where: (e, { eq }) => eq(e.occurrenceDate, startDate.split("T")[0])
         })
 
-         if (exception) {
+        if (exception) {
             let reservation;
             const exceptionDate = await db.delete(recurringReservationsExceptions)
-            .where(eq(recurringReservationsExceptions.occurrenceDate, startDate.split("T")[0])).returning();
-              reservation = {
+                .where(eq(recurringReservationsExceptions.occurrenceDate, startDate.split("T")[0])).returning();
+            reservation = {
                 id: exceptionDate[0].recurringReservationId,
                 occurrenceDate: exceptionDate[0].occurrenceDate
-                
+
             };
 
 
@@ -239,16 +251,18 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
                 locationId: lid,
                 sessionId: sessionId,
                 startDate: startDate,
-                memberSubscriptionId: memberPlan.id
+                memberSubscriptionId: memberSub?.id,
+                memberPackageId: memberPkg?.id
             }).returning();
             reservation = r[0];
-        }else {
+        } else {
             const rr = await db.insert(recurringReservations).values({
                 memberId: mid,
                 locationId: lid,
                 sessionId: sessionId,
                 startDate: startDate,
-                memberSubscriptionId: memberPlan.id
+                memberSubscriptionId: memberSub?.id,
+                memberPackageId: memberPkg?.id
             }).returning();
             const { id, intervalThreshold, interval, ...rest } = rr[0];
             reservation = {

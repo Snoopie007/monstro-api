@@ -12,54 +12,117 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
         if (!authMember.member.id) {
             return NextResponse.json(
                 { error: "Unauthorized" },
-                { status: 401 }
+                { status: 401 } 
             );
         }
 
         const memberId = authMember.member.id;
 
-        const allPlans = await db.query.memberPlans.findMany({
-            where: (p, { eq }) => eq(p.locationId, Number(params.lid)),
-            with: {
-                planPrograms: {
+        // const allPlans = await db.query.memberPlans.findMany({
+        //     where: (p, { eq }) => eq(p.locationId, Number(params.lid)),
+        //     with: {
+        //         planPrograms: {
+        //             with: {
+        //                 program: {
+        //                     with: {
+        //                         sessions: {
+        //                             with: {
+        //                                 reservations: {
+        //                                     where: (r, { eq }) => eq(r.memberId, memberId)
+        //                                 }
+        //                             }
+
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         },
+
+        //     }
+        // });
+
+        // const transformedPlans = allPlans.map(plan => ({
+        //     ...plan,
+        //     planPrograms: plan.planPrograms.map(planProgram => ({
+        //         ...planProgram,
+        //         program: {
+        //             ...planProgram.program,
+        //             sessions: planProgram.program.sessions.map(session => ({
+        //                 ...session,
+        //                 reservations: session.reservations,
+        //                 isReserved: session.reservations.length > 0
+        //             }))
+        //         }
+        //     }))
+        // }));
+
+
+        const subscriptions = await db.query.memberSubscriptions.findMany({
+                    where: (memberSubscriptions, { eq, and }) => and(
+                        eq(memberSubscriptions.memberId, Number(authMember.member?.id)),
+                        eq(memberSubscriptions.locationId, params.lid),
+                        eq(memberSubscriptions.status, 'active')
+                    ),
                     with: {
-                        program: {
+                        plan: {
                             with: {
-                                sessions: {
+                                planPrograms: {
                                     with: {
-                                        reservations: {
-                                            where: (r, { eq }) => eq(r.memberId, memberId)
+                                        program: {
+                                            with: {
+                                                sessions: true,
+                                            }
                                         }
                                     }
-
                                 }
                             }
-                        }
+                        },
                     }
-                },
+                });
 
-            }
-        });
+                const packages = await db.query.memberPackages.findMany({
+                    where: (memberPackages, { eq, and }) => and(
+                        eq(memberPackages.memberId, Number(authMember.member?.id)),
+                        eq(memberPackages.locationId, params.lid),
+                        eq(memberPackages.status, 'active')
+                    ),
+                    with: {
+                        plan: {
+                            with: {
+                                planPrograms: {
+                                    with: {
+                                        program: {
+                                            with: {
+                                                sessions: true,
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    }
+                });
 
-        const transformedPlans = allPlans.map(plan => ({
-            ...plan,
-            planPrograms: plan.planPrograms.map(planProgram => ({
-                ...planProgram,
-                program: {
-                    ...planProgram.program,
-                    sessions: planProgram.program.sessions.map(session => ({
-                        ...session,
-                        reservations: session.reservations,
-                        isReserved: session.reservations.length > 0
+                const transformedPlans = [...subscriptions, ...packages].map(plan => ({
+                    ...plan,
+                    planPrograms: plan.plan.planPrograms.map(planProgram => ({
+                        ...planProgram,
+                        program: {
+                            ...planProgram.program,
+                            sessions: planProgram.program.sessions.map(session => ({
+                                ...session,
+                                reservations: [], // Placeholder, will populate below
+                                isReserved: false // Placeholder, will populate below
+                            }))
+                        }
                     }))
-                }
-            }))
-        }));
+                }));
 
-        return NextResponse.json({
-            plans: transformedPlans
-        });
-    } catch (error) {
+
+
+
+            
+        return NextResponse.json({ subscriptions: [...subscriptions, ...packages] }, { status: 200 });    } catch (error) {
         console.error(error);
         return NextResponse.json(
             { error: "Internal Server Error" },

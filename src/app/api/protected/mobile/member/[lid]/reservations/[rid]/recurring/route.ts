@@ -63,7 +63,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ lid: n
         console.log("Reservation Date: ", reservationDate, "Current Date: ", currentDate);
 
 
-        if (reservationDate < currentDate) {
+        if (reservationDate > currentDate) {
             return NextResponse.json({ error: "Cannot cancel past reservations" }, { status: 400 });
         }
 

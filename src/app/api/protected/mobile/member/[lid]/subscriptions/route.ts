@@ -10,7 +10,8 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
         const subscriptions = await db.query.memberSubscriptions.findMany({
             where: (memberSubscriptions, { eq, and }) => and(
                 eq(memberSubscriptions.memberId, Number(authMember.member?.id)),
-                eq(memberSubscriptions.locationId, params.lid)
+                eq(memberSubscriptions.locationId, params.lid),
+                eq(memberSubscriptions.status, 'active')
             ),
             with: {
                 reservations: {
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
                 },
             }
         });
+        
         return NextResponse.json(subscriptions, { status: 200 })
     } catch (err) {
         return NextResponse.json({ error: err }, { status: 500 })
