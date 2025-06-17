@@ -1,9 +1,14 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { tryCatch } from "../utils";
+
+type Result = {
+    key: string;
+    url: string;
+};
 
 export default class S3Bucket {
     private s3Client: S3Client;
-    private REGION = process.env.AWS_REGION || '';
+    private REGION = process.env.AWS_REGION || 'us-east-1';
 
     constructor() {
         this.s3Client = new S3Client({
@@ -55,5 +60,35 @@ export default class S3Bucket {
         if (error) throw error;
         return result;
     }
+
+
+
+     /**
+     * Lists all files in a specific directory of the S3 bucket
+     * @param directory - The directory path in S3 (e.g., 'badges')
+     * @returns Array of public URLs for the files
+     */
+
+    async listImages(directory: string): Promise<Result[]> {
+        const command = new ListObjectsV2Command({
+            Bucket: 'monstro-bucket',
+            Prefix: directory + '/', // Ensure it ends with a slash
+        });
+
+        const { result, error } = await tryCatch(this.s3Client.send(command));
+
+        if (error) throw error;
+
+        if (!result?.Contents) return [];
+
+        // Filter out the directory itself and map to public URLs
+        return result.Contents
+            .filter(item => item.Key !== directory + '/') // Exclude the directory itself
+            .map(item => ({
+                key: item.Key || '',
+                url: `https://${command.input.Bucket}.s3.${this.REGION}.amazonaws.com/${item.Key}`
+            }));
+    }
+
 
 }
