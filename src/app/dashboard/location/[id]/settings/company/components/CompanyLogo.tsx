@@ -44,9 +44,9 @@ export default function CompanyLogo({ logo, locationId }: { logo: string | null,
     }
 
     const LogoUploadInfo = () => (
-        <div className="flex-1">
+        <div className="flex-1  text-left">
             <b className="font-semibold text-base">Upload Your Company Logo</b>
-            <p className="text-xs mt-1 leading-5">
+            <p className="text-xs leading-5">
                 The proposed size is 350px * 180px. No bigger than 2.5 MB. Only PNG, JPG, JPEG are allowed.
             </p>
         </div>
@@ -56,9 +56,16 @@ export default function CompanyLogo({ logo, locationId }: { logo: string | null,
         <Card className="rounded-sm  border-foreground/10">
             <input type='file' ref={fileRef} onInput={uploadLogo} className='hidden' />
 
-            <div className="flex flex-row gap-10 items-center p-6">
+            <div className="flex flex-row gap-5  p-6">
                 {logoUrl ? (
                     <>
+                        <div className='avatar group shrink relative items-end flex'>
+                            <Image src={logoUrl} width={100} height={100} className="size-[100px] bg-foreground/5 rounded-md"
+                                priority={true} alt='company logo'
+                                onError={() => setLogoUrl(null)}
+                            />
+                        </div>
+
                         <div className="flex-1 flex flex-col gap-3">
                             <LogoUploadInfo />
                             <div className="flex gap-2">
@@ -69,12 +76,6 @@ export default function CompanyLogo({ logo, locationId }: { logo: string | null,
                                     {loading ? <Loader2 className="animate-spin size-3.5" /> : <Trash2 className="size-3.5" />}
                                 </Button>
                             </div>
-                        </div>
-                        <div className='avatar group shrink relative items-end flex'>
-                            <Image src={logoUrl} width={100} height={100} className="size-[100px] bg-foreground/5 rounded-md"
-                                priority={true} alt='company logo'
-                                onError={() => setLogoUrl(null)}
-                            />
                         </div>
 
                     </>
