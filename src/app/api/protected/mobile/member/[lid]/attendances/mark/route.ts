@@ -7,7 +7,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: num
 
   try {
     const body = await req.json();
-    const { startTime, endTime, checkInTime, checkOutTime, ipAddress, macAddress, lat, lng, rId } = body;
+    const { startTime, endTime, checkInTime, checkOutTime, ipAddress, macAddress, lat, lng, rId, type } = body;
 
     if (!startTime || !endTime || !checkInTime) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -51,8 +51,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: num
       }
     }
 
+
+
     const newAttendance = await db.insert(attendances).values({
-      reservationId: rId,
+      [type == "packages" ? 'subscriptions' : 'recurringId']: rId,
       startTime: parsedStartTime,
       endTime: parsedEndTime,
       checkInTime: parsedCheckInTime,

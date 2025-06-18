@@ -20,7 +20,8 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
                 reservations: {
                     where: (reservations, { eq }) => eq(reservations.memberId, Number(authMember.member?.id)),
                     with: {
-                        session: true
+                        session: true,
+                        attendance: true
                     }
                 },
                 plan: {
