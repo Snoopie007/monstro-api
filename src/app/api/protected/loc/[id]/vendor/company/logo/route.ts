@@ -15,7 +15,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number }
         return NextResponse.json({ message: 'No file uploaded' }, { status: 400 });
     }
     try {
-        const res = await s3.uploadFile(file, `/locs/logos`);
+        const res = await s3.uploadFile(file, `locs/logos`);
         const url = res?.url || null;
 
         await db.update(locations).set({
@@ -40,7 +40,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: number
             }
         })
         if (loc?.logoUrl) {
-            await s3.removeFile(`/locs/logos`, loc.logoUrl);
+            await s3.removeFile(`locs/logos`, loc.logoUrl);
             await db.update(locations).set({
                 logoUrl: null,
             }).where(eq(locations.id, params.id))
