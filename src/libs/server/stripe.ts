@@ -14,6 +14,15 @@ type Customer = {
 }
 
 const isProd = process.env.NODE_ENV === "production"
+const STRIPE_FEE_PERCENT = 2.9
+const STRIPE_FEE_AMOUNT = 0.30
+
+
+
+function calculatePercentage(amount: number) {
+    const additionalPercentage = Number(((STRIPE_FEE_AMOUNT / (amount / 100)) * 100).toFixed(2))
+    return additionalPercentage + STRIPE_FEE_PERCENT
+}
 
 abstract class BaseStripePayments {
     protected _stripe: Stripe;
@@ -352,16 +361,24 @@ class MemberStripePayments extends BaseStripePayments {
         this._accountId = accountId || null;
     }
 
+
     async createPaymentIntent(amount: number, settings?: PaymentIntentSettings) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
 
-        const applicationFeeAmount = Math.floor((amount * ((settings?.applicationFeePercent || 0) / 100)));
+        const percentage = calculatePercentage(amount) + (settings?.applicationFeePercent || 0)
+        const applicationFeeAmount = Math.floor((amount / 100) * (percentage / 100));
 
         const option: Stripe.PaymentIntentCreateParams = {
             amount,
             description: settings?.description,
+            transfer_data: {
+                destination: this._accountId,
+            },
             automatic_payment_methods: { enabled: true },
             currency: settings?.currency || "usd",
             confirm: true,
@@ -382,21 +399,37 @@ class MemberStripePayments extends BaseStripePayments {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
         const { trialEnd, paymentMethod, applicationFeePercent, allowProration, cancelAt, ...rest } = settings;
 
         if (!plan.stripePriceId) {
             throw new Error("Price not found");
         }
         const isAllowProration = plan.interval === "month" || plan.interval === "year"
+        const taxSettings = await this.retrieveTaxSettings()
+        const stripePercentage = calculatePercentage(plan.price)
+
+        const automaticTax = taxSettings.status === 'active';
+
+        const accountDestination = {
+            type: "account" as const,
+            account: this._accountId
+        }
         const options: Stripe.SubscriptionCreateParams = {
             ...rest,
             customer: this._customer,
-            automatic_tax: { enabled: true },
+            transfer_data: {
+                destination: this._accountId,
+            },
+            automatic_tax: { enabled: automaticTax, liability: accountDestination },
+            invoice_settings: { issuer: accountDestination },
             description: `Subscription to ${plan.name}`,
             items: [{ price: plan.stripePriceId as string }],
             collection_method: "charge_automatically",
-            application_fee_percent: (applicationFeePercent || 0),
             default_payment_method: paymentMethod || undefined,
+            application_fee_percent: stripePercentage + (applicationFeePercent || 0),
             cancel_at: cancelAt ? cancelAt.getTime() / 1000 : undefined,
             trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
         };
@@ -413,12 +446,20 @@ class MemberStripePayments extends BaseStripePayments {
 
         return this._stripe.subscriptions.create(options);
     }
+
     createSubSchedule(priceId: string, startDate: Date, settings: MemberSubscriptionSettings): Promise<Stripe.SubscriptionSchedule> {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
         const { cancelAt, trialEnd, paymentMethod, applicationFeePercent, ...rest } = settings;
 
+        const accountDestination = {
+            type: "account" as const,
+            account: this._accountId
+        }
         const options: Stripe.SubscriptionScheduleCreateParams = {
             customer: this._customer,
             start_date: new Date(startDate).getTime() / 1000,
@@ -426,6 +467,11 @@ class MemberStripePayments extends BaseStripePayments {
 
             phases: [{
                 items: [{ price: priceId }],
+                transfer_data: {
+                    destination: this._accountId,
+                },
+
+                invoice_settings: { issuer: accountDestination },
                 billing_cycle_anchor: 'automatic',
                 application_fee_percent: (applicationFeePercent || 0),
                 ...(cancelAt && { end_date: new Date(cancelAt).getTime() / 1000 }),
