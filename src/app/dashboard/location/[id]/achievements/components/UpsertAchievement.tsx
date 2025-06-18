@@ -60,23 +60,40 @@ export function UpsertAchivement({ achievement, locationId, setCurrentAchievemen
 
 
 	async function submitForm(v: z.infer<typeof AchievementSchema>) {
-		const body = v;
+    const formData = new FormData();
+    
+    
+    Object.entries(v).forEach(([key, value]) => {
+        if (key !== 'badge' && value !== undefined) {
+            formData.append(key, value.toString());
+        }
+    });
 
-		const { result, error } = await tryCatch(
-			fetch(`/api/protected/loc/${locationId}/achievements`, {
-				method: achievement?.id ? 'PUT' : 'POST',
-				body: JSON.stringify(body),
-			})
-		)
+    
+    if (v.badge && v.badge.startsWith('blob:')) {
+        const blob = await fetch(v.badge).then(r => r.blob());
+        formData.append('file', blob, 'badge.png');
+    } else if (v.badge) {
+        formData.append('badge', v.badge);
+    }
 
-		if (error || !result || !result.ok) {
-			toast.error("Something went wrong, please try again later");
-		}
-		await mutate();
-		toast.success("Achievement Saved");
+    const { result, error } = await tryCatch(
+        fetch(`/api/protected/loc/${locationId}/achievements${achievement?.id ? `/${achievement.id}` : ''}`, {
+            method: achievement?.id ? 'PUT' : 'POST',
+            body: formData,
+        })
+    );
 
-
-	};
+    if (error || !result || !result.ok) {
+        toast.error("Something went wrong, please try again later");
+        return;
+    }
+    
+    await mutate();
+    toast.success("Achievement Saved");
+    form.reset();
+    setCurrentAchievement(undefined);
+}
 	return (
 		<div>
 			<Sheet open={!!achievement} onOpenChange={(setOpen) => {

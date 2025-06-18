@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from "@/auth";
 import { db } from '@/db/db';
 import { achievements, achievementsActions } from '@/db/schemas';
@@ -33,63 +33,43 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 	}
 }
 
-export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: number }> }) {
     const params = await props.params;
-    const session = await auth();
-    const formData = await req.formData();
     const s3 = new S3Bucket();
-    
+    const data = await req.formData();
+    const file = data.get('file') as Blob | null;
+
     try {
-        // Extract all fields from formData
-        const data = {
-            badge: formData.get('badge') as string,
-            title: formData.get('title') as string,
-            description: formData.get('description') as string,
-            points: Number(formData.get('points')),
-            actionCount: Number(formData.get('actionCount')),
-            action: Number(formData.get('action')),
-            program: Number(formData.get('program')),
-        };
-
-      const icon = formData.get('badge');
-      console.log(icon);
-      let uploadedImageUrl: string | null = null;
-
-      if (icon && icon instanceof Blob) {
-          console.log("starting to upload");
-          const file = new File([icon], `${params.id}-achievement-icon.png`, { 
-              type: icon.type || "image/png", 
-              lastModified: Date.now() 
-          });
-          console.log(file);
-          const result = await s3.uploadFile(file, "achievement-icon");
-          console.log(result);
-          uploadedImageUrl = result?.url || null;
-          console.log(uploadedImageUrl);
-      } else {
-          console.log("No valid file found for badge upload.");
-      }
+        let badgeUrl = data.get('badge') as string | null;
+        
+        
+        if (file instanceof Blob && file.size > 0) {
+            const fileObject = new File([file], 'badge.png', { type: file.type });
+            const result = await s3.uploadFile(fileObject, `badges/custom/${params.id}`);
+            badgeUrl = result?.url || null;
+        }
 
         await db.transaction(async (trx) => {
             const [achievement] = await trx.insert(achievements).values({
-                badge: data.badge,
-                title: data.title,
-                description: data.description,
-                icon: uploadedImageUrl || '',
-                points: data.points,
+                badge: badgeUrl || '',
+                title: data.get('title') as string,
+                description: data.get('description') as string,
+                icon: data.get('icon') as string,
+                points: Number(data.get('points')),
                 locationId: Number(params.id),
             }).returning({ id: achievements.id });
 
             await trx.insert(achievementsActions).values({
-                count: data.actionCount,
+                count: Number(data.get('actionCount')),
                 achievementId: achievement.id,
-                actionId: data.action,
+                actionId: Number(data.get('action')),
             }).returning();
         });
-        return NextResponse.json("added", { status: 200 });
+
+        return NextResponse.json({ success: true }, { status: 200 });
 
     } catch (err) {
-        console.log(err)
-        return NextResponse.json({ error: err }, { status: 500 })
+        console.log(err);
+        return NextResponse.json({ error: err }, { status: 500 });
     }
 }
