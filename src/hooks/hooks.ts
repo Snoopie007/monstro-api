@@ -62,11 +62,12 @@ function useMemberPrograms(id: string, mId: number) {
 }
 
 function useIntegrations(id: string) {
-    const { data, error, isLoading } = useSWR({ url: `integrations/`, id: id }, fetcher);
+    const { data, error, isLoading, mutate } = useSWR({ url: `integrations/`, id: id }, fetcher);
     return {
         integrations: data,
         error,
         isLoading,
+        mutate,
     };
 }
 

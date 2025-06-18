@@ -44,10 +44,12 @@ async function completeIntegration(name: string, searchParams: IntegrationSearch
 
 		if (name === 'stripe') {
 			if (!searchParams.scope) return false;
+			console.log(searchParams);
 			const stripe = new VendorStripePayments();
 			const token = await stripe.connectOAuth(searchParams.code, searchParams.scope);
 			if (!token?.stripe_user_id) return false;
 			newIntegration = getStripeSettings(token);
+
 		} else if (name === 'quickbooks') {
 			if (searchParams.error || !searchParams.code) return false;
 			const tokenData = await exchangeCodeForToken(searchParams.code, process.env.QUICKBOOKS_REDIRECT_URI!, searchParams.realmId);

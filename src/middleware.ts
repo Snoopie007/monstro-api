@@ -79,7 +79,7 @@ export default auth(async (req) => {
 		/* Handle home page and dashboard redirects (only for web, not for mobile) */
 		if (isLoggedin && !isMobileApp) {
 
-			if (pathname.startsWith("/api/")) {
+			if (pathname.startsWith("/api/") || pathname.startsWith("/callbacks")) {
 				return NextResponse.next()
 			}
 

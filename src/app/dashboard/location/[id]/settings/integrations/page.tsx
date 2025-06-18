@@ -1,17 +1,17 @@
 'use client';
 import { use } from "react";
-import IntegrationList from './integrations'
 import { useIntegrations } from '@/hooks'
-import { Button, Skeleton } from '@/components/ui'
+import { Button } from '@/components/ui'
 import SectionLoader from '@/components/SectionLoading'
-import { useRouter } from "next/navigation";
 import { Input } from "@/components/forms";
 import Link from "next/link";
+import { IntegrationItem } from "./IntegrationItem";
+import { Integration } from "@/types";
 
 export default function IntegrationPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { integrations, isLoading } = useIntegrations(params.id);
-    const router = useRouter();
+
     return (
         <section className="text-black-100">
             <div className="mb-4">
@@ -28,7 +28,13 @@ export default function IntegrationPage(props: { params: Promise<{ id: string }>
                 </div>
             </div>
             {(!isLoading) ? (
-                <IntegrationList integrations={integrations} locationId={params.id} />
+                integrations.length > 0 ? (
+                    <ul className="grid grid-cols-2 gap-2">
+                        {integrations.map((integration: Integration, index: number) => (
+                            <IntegrationItem key={index} integration={integration} lid={params.id} />
+                        ))}
+                    </ul>
+                ) : <div className='text-center'>No integrations found.</div>
             ) : (
                 <SectionLoader />
             )}

@@ -123,6 +123,10 @@ abstract class BaseStripePayments {
         return await this._stripe.refunds.create({ charge: chargeId });
     }
 
+    async removeAccount(accountId: string) {
+
+        return await this._stripe.accounts.del(accountId);
+    }
 
     async calculateTax(amount: number, quantity: number, reference: string) {
         if (!this._customer) {

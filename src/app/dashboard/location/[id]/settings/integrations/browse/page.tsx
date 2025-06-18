@@ -65,18 +65,18 @@ export default function BrowseIntegrationPage(props: { params: Promise<{ id: str
                             <div className="rounded-full overflow-hidden size-10 flex">
                                 <Image src={`/images/partners/${partner.logo}`} alt={partner.name} width={45} height={45} />
                             </div>
-                            <div className="text-base font-bold flex-1 text-foreground text-left">
+                            <div className="text-sm font-bold flex-1 text-foreground text-left">
                                 {partner.name}
                                 <div className="text-xs">
                                     {partner.tags.map((tag, i) => (
-                                        <Badge key={i} size='tiny' className="bg-indigo-500 rounded-xs">{tag}</Badge>
+                                        <Badge key={i} size='tiny' className="rounded-sm">{tag}</Badge>
                                     ))}
                                 </div>
                             </div>
                         </div>
                         <div>
                             <p className='text-sm text-foreground mb-2'>{partner.description}</p>
-                            <Button variant="foreground" size="sm">Connect</Button>
+                            <Button variant="outline" size="sm" className="rounded-sm bg-indigo-500 text-white">Connect</Button>
                         </div>
                     </Link>
                 ))}
