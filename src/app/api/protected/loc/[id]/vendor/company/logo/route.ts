@@ -40,7 +40,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: number
             }
         })
         if (loc?.logoUrl) {
-            await s3.removeFile(`locs/logos`, loc.logoUrl);
+            await s3.removeFile(`/locs/logos`, loc.logoUrl);
             await db.update(locations).set({
                 logoUrl: null,
             }).where(eq(locations.id, params.id))
