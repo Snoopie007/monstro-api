@@ -6,8 +6,6 @@ import { memberPlans, planPrograms } from '@/db/schemas';
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: number }> }) {
     const params = await props.params;
-
-
     try {
 
         const pkgs = await db.query.memberPlans.findMany({
@@ -20,9 +18,6 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
                 },
             }
         })
-
-
-
 
         return NextResponse.json(pkgs, { status: 200 });
     } catch (err) {

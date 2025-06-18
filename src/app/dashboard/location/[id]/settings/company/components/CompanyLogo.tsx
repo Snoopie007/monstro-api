@@ -1,29 +1,46 @@
 'use client'
-import { CameraIcon } from "lucide-react";
+import { CameraIcon, Loader2, Trash2 } from "lucide-react";
 import React, { useRef, useState } from 'react'
 import Image from "next/image";
 import { Button, Card, CardFooter } from "@/components/ui";
 import { tryCatch } from "@/libs/utils";
+import { toast } from "react-toastify";
 
 export default function CompanyLogo({ logo, locationId }: { logo: string | null, locationId: number }) {
     const fileRef = useRef<HTMLInputElement | null>(null)
     const [loading, setLoading] = useState(false);
+    const [logoUrl, setLogoUrl] = useState<string | null>(logo);
     async function uploadLogo() {
         const file = fileRef.current?.files?.[0]
         if (!file) return;
 
         const formData = new FormData()
         formData.append("file", file)
-        formData.append("fileDirectory", 'business-logo');
-
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${locationId}/upload`, {
+            fetch(`/api/protected/loc/${locationId}/vendor/company/logo`, {
                 method: "POST",
                 body: formData
             })
         )
-        if (error || !result) throw error;
-        const data = await result.json();
+        if (error || !result) {
+            toast.error("Failed to upload logo");
+        };
+        const data = await result?.json();
+        setLogoUrl(data?.url);
+    }
+
+    async function removeLogo() {
+        setLoading(true);
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${locationId}/vendor/company/logo`, {
+                method: "DELETE"
+            })
+        )
+        setLoading(false);
+        if (error || !result) {
+            toast.error("Failed to remove logo");
+        };
+        setLogoUrl(null);
     }
 
     const LogoUploadInfo = () => (
@@ -40,42 +57,40 @@ export default function CompanyLogo({ logo, locationId }: { logo: string | null,
             <input type='file' ref={fileRef} onInput={uploadLogo} className='hidden' />
 
             <div className="flex flex-row gap-10 items-center p-6">
-                {logo ? (
+                {logoUrl ? (
                     <>
                         <div className="flex-1 flex flex-col gap-3">
                             <LogoUploadInfo />
                             <div className="flex gap-2">
-                                <Button variant="outline" size="xs" onClick={() => fileRef.current?.click()}>
+                                <Button variant="outline" size="xs" onClick={() => fileRef.current?.click()} disabled={loading} className="rounded-sm">
                                     Upload
                                 </Button>
-                                <Button variant="destructive" size="xs">
-                                    Remove
+                                <Button variant="destructive" size="icon" onClick={removeLogo} disabled={loading} className="size-7">
+                                    {loading ? <Loader2 className="animate-spin size-3.5" /> : <Trash2 className="size-3.5" />}
                                 </Button>
                             </div>
                         </div>
                         <div className='avatar group shrink relative items-end flex'>
-                            <Image src={logo} width={100} height={100} className="aspect-square bg-gray-200 rounded-sm" priority={true} alt='company logo' />
+                            <Image src={logoUrl} width={100} height={100} className="size-[100px] bg-foreground/5 rounded-md"
+                                priority={true} alt='company logo'
+                                onError={() => setLogoUrl(null)}
+                            />
                         </div>
 
                     </>
                 ) : (
                     <>
                         <div
-                            className='flex-1 border h-[80px] border-dashed rounded-sm cursor-pointer group:hover:border-white flex flex-row items-center justify-center'
+                            className='flex-1 border h-[80px] border-dashed rounded-sm cursor-pointer border-foreground/10 flex flex-row items-center justify-center'
                             onClick={() => fileRef.current?.click()}
                         >
-                            <CameraIcon size={30} className='stroke-accent' />
+                            {loading ? <Loader2 className="animate-spin size-3.5" /> : <CameraIcon size={30} className='text-muted-foreground/50' />}
                         </div>
                         <LogoUploadInfo />
                     </>
                 )}
             </div>
-            <CardFooter className="flex justify-end border-t px-6 py-3 border-foreground/10 bg-foreground/5">
-                <Button variant="foreground" size="sm">
-                    Save
-                </Button>
 
-            </CardFooter>
         </Card>
     )
 }

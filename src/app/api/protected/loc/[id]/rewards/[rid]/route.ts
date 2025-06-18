@@ -54,8 +54,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<RewardProps
 		if (removedImages.length > 0) {
 			await Promise.all(removedImages.map(async (image) => {
 				const name = image.split('/').pop() || '';
-				console.log(name)
-				await s3.removeFile("reward-images", name);
+				await s3.removeFile(`locs/${params.id}/rewards`, name);
 			}))
 			newImages = newImages.filter(image => !removedImages.includes(image));
 		}
@@ -63,7 +62,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<RewardProps
 		if (filteredFiles.length > 0) {
 			const results = await Promise.all(filteredFiles.map(async (file) => {
 				if (file instanceof Blob) {
-					const result = await s3.uploadFile(file, "reward-images" as string);
+					const result = await s3.uploadFile(file, `locs/${params.id}/rewards`);
 					return result;
 				}
 			}))

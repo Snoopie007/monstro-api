@@ -26,8 +26,8 @@ export async function GET(req: NextRequest, { params }: RewardProps) {
 	}
 }
 
-export async function POST(req: NextRequest, { params }: RewardProps) {
-	const locationId = await params;
+export async function POST(req: NextRequest, props: RewardProps) {
+	const params = await props.params;
 	const s3 = new S3Bucket();
 	const data = await req.formData();
 
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, { params }: RewardProps) {
 		const uploadedImages = await Promise.all(
 			files.map(async (file) => {
 				if (file instanceof Blob) {
-					const result = await s3.uploadFile(file, "reward-images");
+					const result = await s3.uploadFile(file, `locs/${params.id}/rewards`);
 					return result?.url;
 				}
 			})
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, { params }: RewardProps) {
 			limitPerMember: Number(data.get('limitPerMember')),
 			totalLimit: data.get('totalLimit') as string,
 			images: uploadedImages.filter(Boolean) as string[],
-			locationId: locationId.id
+			locationId: params.id
 		}).returning({ id: rewards.id });
 
 		return NextResponse.json(reward);

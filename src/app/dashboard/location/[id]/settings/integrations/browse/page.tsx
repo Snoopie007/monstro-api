@@ -34,10 +34,11 @@ export default function BrowseIntegrationPage(props: { params: Promise<{ id: str
                     return `${key}=${encodeURIComponent(params.id)}`;
                 }
 
-                // Handle redirect_uri by adding origin for relative paths
-                if (key === "redirect_uri" && typeof value === 'string' && value.startsWith('/')) {
-                    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                    return `${key}=${encodeURIComponent(`${origin}${value}`)}`;
+                // Handle redirect_uri by prepending the base URL if it's a relative path
+                if (key === "redirect_uri" && typeof value === 'string') {
+                    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+                    const fullUrl = value.startsWith('/') ? `${baseUrl}${value}` : value;
+                    return `${key}=${encodeURIComponent(fullUrl)}`;
                 }
 
                 // Properly encode all parameter values

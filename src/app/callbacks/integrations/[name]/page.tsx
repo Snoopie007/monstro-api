@@ -2,7 +2,7 @@ import { auth } from '@/auth';
 import { db } from '@/db/db';
 import { integrations } from '@/db/schemas';
 import { decodeId } from '@/libs/server/sqids';
-import { VendorStripePayments } from '@/libs/server/stripe';
+import { MemberStripePayments } from '@/libs/server/stripe';
 import Stripe from 'stripe';
 import { Integration } from '@/types/integrations';
 import { getQuickbooksSettings, exchangeCodeForToken } from '@/libs/quickbooks';
@@ -44,8 +44,7 @@ async function completeIntegration(name: string, searchParams: IntegrationSearch
 
 		if (name === 'stripe') {
 			if (!searchParams.scope) return false;
-			console.log(searchParams);
-			const stripe = new VendorStripePayments();
+			const stripe = new MemberStripePayments();
 			const token = await stripe.connectOAuth(searchParams.code, searchParams.scope);
 			if (!token?.stripe_user_id) return false;
 			newIntegration = getStripeSettings(token);
@@ -55,7 +54,9 @@ async function completeIntegration(name: string, searchParams: IntegrationSearch
 			const tokenData = await exchangeCodeForToken(searchParams.code, process.env.QUICKBOOKS_REDIRECT_URI!, searchParams.realmId);
 			if (!tokenData.access_token) return false;
 			newIntegration = getQuickbooksSettings({ ...tokenData, realmId: searchParams.realmId });
+
 		} else if (name === 'gl') {
+
 			if (searchParams.error || !searchParams.code) return false;
 
 			const ghl = new VendorGHL();

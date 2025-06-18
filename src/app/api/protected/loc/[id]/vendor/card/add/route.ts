@@ -11,21 +11,7 @@ export async function POST(req: Request) {
 
     try {
 
-        // const paymentMethod = await stripe.paymentMethods.create({
-        //     type: 'card',
-        //     card: {
-        //         token: data.token,
-        //     },
-        //     billing_details: {
-        //         name: data.name,
-        //         address: data.address,
-        //     },
-        // });
-        // const res = await stripe.paymentMethods.attach(
-        //     paymentMethod.id, {
-        //     customer: data.customerId,
-        // });
-        const method = await stripe.setupIntent(data.token, data.customerId);
+        await stripe.setupIntent(data.token, data.customerId);
 
         return NextResponse.json({ message: "Success" }, { status: 200 });
 

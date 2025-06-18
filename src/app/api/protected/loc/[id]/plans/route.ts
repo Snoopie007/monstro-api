@@ -6,8 +6,6 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
     const params = await props.params;
 
     try {
-
-
         const subs = await db.query.memberPlans.findMany({
             where: (memberPlans, { eq, and }) => and(eq(memberPlans.locationId, params.id)),
             with: {

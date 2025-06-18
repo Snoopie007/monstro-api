@@ -11,7 +11,6 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
 
     try {
 
-
         const subs = await db.query.memberPlans.findMany({
             where: (memberPlans, { eq, and }) => and(eq(memberPlans.locationId, params.id), eq(memberPlans.type, 'recurring')),
             with: {
@@ -37,20 +36,20 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
     const formatedAmount = amount * 100
     try {
 
-        const interation = await db.query.integrations.findFirst({
+        const integration = await db.query.integrations.findFirst({
             where: (interations, { eq }) => and(
                 eq(interations.locationId, params.id),
                 eq(interations.service, "stripe")
             )
         });
 
-        if (!interation || !interation.secretKey) {
+        if (!integration) {
             return NextResponse.json({ error: "Stripe integration not found" }, { status: 400 })
         }
-        const stripe = new MemberStripePayments(interation.secretKey);
+        const stripe = new MemberStripePayments();
         const stripePrice = await stripe.createStripeProduct(
             { ...data, price: formatedAmount, programId: params.pid },
-            encodeId(params.id)
+            { locationId: encodeId(params.id), planId: data.id, vendorAccountId: integration.integrationId }
         )
 
 

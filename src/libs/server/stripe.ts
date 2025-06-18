@@ -1,14 +1,16 @@
 import { db } from "@/db/db";
 import { MemberPlan } from "@/types";
 import { MonstroPlan, PackagePaymentPlan } from "@/types/admin";
+import { AddressParam } from "@stripe/stripe-js";
 import { isAfter, addDays, addWeeks } from "date-fns";
 import Stripe from "stripe";
 
 type Customer = {
     firstName: string;
-    lastName: string;
+    lastName: string | null;
     email: string;
-    phone: string;
+    phone: string | null;
+    address?: AddressParam;
 }
 
 const isProd = process.env.NODE_ENV === "production"
@@ -19,6 +21,7 @@ abstract class BaseStripePayments {
 
 
     constructor(key: string) {
+        console.log("key", key)
         this._stripe = new Stripe(key, {
             apiVersion: "2025-02-24.acacia",
             appInfo: {
@@ -32,14 +35,27 @@ abstract class BaseStripePayments {
         this._customer = customer;
         return this
     }
+    async connectOAuth(code: string, scope?: string) {
+        return await this._stripe.oauth.token({
+            grant_type: "authorization_code",
+            code,
+            scope: scope || "read_write"
+        });
+    }
 
     public async createCustomer(customer: Customer, token: string | undefined, metadata?: Record<string, any>) {
         const c = await this._stripe.customers.create({
             name: `${customer.firstName} ${customer.lastName}`,
             email: customer.email,
-            phone: customer.phone,
+            phone: customer.phone || undefined,
             ...(token && { source: token }),
-            metadata: metadata || undefined
+            ...(customer.address && {
+                address: {
+                    ...customer.address,
+                    country: customer.address.country || "US"
+                }
+            }),
+            metadata: metadata || undefined,
         });
         this.setCustomer(c.id)
         return c
@@ -162,13 +178,7 @@ class VendorStripePayments extends BaseStripePayments {
         super(process.env.STRIPE_SECRET_KEY!);
     }
 
-    async connectOAuth(code: string, scope?: string) {
-        return await this._stripe.oauth.token({
-            grant_type: "authorization_code",
-            code,
-            scope: scope || "read_write"
-        });
-    }
+
 
     /**
      * Create a payment intent
@@ -336,8 +346,10 @@ interface PaymentIntentSettings extends BaseStripeSettings {
 }
 
 class MemberStripePayments extends BaseStripePayments {
-    constructor(key: string) {
-        super(key);
+    private _accountId: string | null;
+    constructor(accountId?: string, secretKey?: string) {
+        super(secretKey || process.env.STRIPE_MEMBER_SECRET_KEY!);
+        this._accountId = accountId || null;
     }
 
     async createPaymentIntent(amount: number, settings?: PaymentIntentSettings) {
@@ -426,28 +438,22 @@ class MemberStripePayments extends BaseStripePayments {
         return this._stripe.subscriptionSchedules.create(options);
     }
 
-    async createStripeProduct(data: MemberPlan, locationId: string): Promise<Stripe.Price> {
+    async createStripeProduct(data: MemberPlan, metadata: Record<string, any>): Promise<Stripe.Price> {
         const { interval, price, intervalThreshold } = data
         const product = await this._stripe.products.create({
             name: data.name,
             description: data.description,
             active: true,
             default_price_data: {
-
                 currency: data.currency || "usd",
                 recurring: {
                     interval: interval as Stripe.PriceCreateParams.Recurring.Interval,
                     interval_count: intervalThreshold || 1
                 },
                 unit_amount: price,
-                metadata: {
-                    locationId: locationId,
-                    planId: data.id!
-                }
+                metadata
             },
-            metadata: {
-                locationId: locationId,
-            },
+            metadata,
             expand: ["default_price"]
         });
 
@@ -485,29 +491,20 @@ class MemberStripePayments extends BaseStripePayments {
             active_from: 'now'
         });
     }
-
 }
+
+
 async function getStripeCustomer(params: { id: number, mid: number }) {
 
-    const memberLocation = await db.query.memberLocations.findFirst({
-        where: (memberLocation, { eq, and }) => and(eq(memberLocation.memberId, params.mid), eq(memberLocation.locationId, params.id))
+    const member = await db.query.members.findFirst({
+        where: (member, { eq }) => eq(member.id, params.mid)
     })
 
-    if (!memberLocation || !memberLocation.stripeCustomerId) {
-        throw new Error("Member location not found")
+    if (!member || !member.stripeCustomerId) {
+        throw new Error("Member not found")
     }
 
-    const integrations = await db.query.integrations.findFirst({
-        where: (integration, { eq }) => eq(integration.locationId, params.id),
-        columns: {
-            secretKey: true
-        }
-    })
-
-    if (!integrations?.secretKey) {
-        throw new Error("Stripe integration not found")
-    }
-    const stripe = new MemberStripePayments(integrations.secretKey).setCustomer(memberLocation.stripeCustomerId);
+    const stripe = new MemberStripePayments().setCustomer(member.stripeCustomerId);
     return stripe
 }
 

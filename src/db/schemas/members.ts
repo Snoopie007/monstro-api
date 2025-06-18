@@ -21,6 +21,7 @@ export const members = pgTable("members", {
     gender: text("gender"),
     dob: timestamp("dob"),
     avatar: text("avatar"),
+    stripeCustomerId: text("stripe_customer_id"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true }),

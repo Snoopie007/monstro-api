@@ -5,7 +5,6 @@ export async function POST(request: Request, props: { params: Promise<{ id: numb
 
   const data = await request.formData();
   const file = data.get('file');
-  const programId = data.get('programId');
   const planId = data.get('planId');
 
   const params = await props.params;

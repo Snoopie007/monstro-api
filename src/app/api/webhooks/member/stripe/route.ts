@@ -4,9 +4,8 @@ import Stripe from "stripe";
 import { db } from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
 import { eq } from "drizzle-orm";
-import { MemberSubscription } from "@/types";
 import { waitUntil } from "@vercel/functions";
-import { VendorStripePayments } from "@/libs/server/stripe";
+import { MemberStripePayments } from "@/libs/server/stripe";
 import { tryCatch } from "@/libs/utils";
 
 
@@ -35,7 +34,7 @@ export async function POST(req: NextRequest) {
 	};
 
 
-	const stripe = new VendorStripePayments();
+	const stripe = new MemberStripePayments();
 	async function doEventProcessing(): Promise<void> {
 		if (typeof signature !== "string") {
 			throw new Error("Stripe Hook Signature is not a string");

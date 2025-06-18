@@ -2,7 +2,6 @@
 import { EmailSender } from '@/libs/server/emails';
 import { MonstroData } from '@/libs/data';
 import { NextRequest, NextResponse, } from 'next/server';
-import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { db } from '@/db/db';
 import { memberLocations } from '@/db/schemas';
 import { eq, and } from 'drizzle-orm';

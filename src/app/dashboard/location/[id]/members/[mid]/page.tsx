@@ -13,7 +13,7 @@ import {
 import { cn } from '@/libs/utils'
 import { PaymentMethods, MemberProfile } from './components'
 import { db } from "@/db/db"
-import { and, sql } from "drizzle-orm"
+import { and } from "drizzle-orm"
 import { decodeId } from "@/libs/server/sqids"
 import { MemberProvider } from "./providers/MemberContext"
 import { Member, MemberLocation } from "@/types"
@@ -24,7 +24,6 @@ import { MemberInvoices } from "./components/MemberInvoices/MemberInvoices"
 
 
 type PromiseReturnType = {
-    stripeIntegration: { apiKey: string | null, accessToken: string | null } | undefined,
     member: Member | undefined,
     ml: MemberLocation | undefined
 }
@@ -36,14 +35,6 @@ async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnTy
     const decodedId = decodeId(id);
 
     try {
-        const integrations = await db.query.integrations.findFirst({
-            where: (integration, { eq }) => (and(eq(integration.locationId, decodedId), eq(integration.service, "stripe"))),
-            columns: {
-                accessToken: true,
-                apiKey: true
-            }
-        })
-
         const ml = await db.query.memberLocations.findFirst({
             where: (ml, { eq }) => and(eq(ml.memberId, mid), eq(ml.locationId, decodedId)),
             with: {
@@ -80,7 +71,7 @@ async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnTy
         }
         const { member, ...rest } = ml
 
-        return { stripeIntegration: integrations, member, ml: rest };
+        return { member, ml: rest };
 
     } catch (error) {
         console.log("error", error);
@@ -88,19 +79,16 @@ async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnTy
     }
 }
 
-async function fetchStripePyamentMethods(accessToken: string, customerId: string): Promise<Stripe.PaymentMethod[]> {
-
+async function fetchStripePyamentMethods(customerId: string): Promise<Stripe.PaymentMethod[]> {
     try {
-        const stripe = new MemberStripePayments(accessToken);
+        const stripe = new MemberStripePayments();
         const paymentMethods = await stripe.getPaymentMethods(customerId, 25)
-
         return paymentMethods.data;
     } catch (error) {
         console.log("error", error);
         return [];
     }
 }
-
 
 const MemberDetailsMenu = [
     "Subscriptions",
@@ -123,9 +111,10 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
     if (!res || !res.member || !res.ml) {
         return <div>Member not found</div>
     }
-    const { stripeIntegration, member, ml } = res
-    if (stripeIntegration?.accessToken && ml?.stripeCustomerId) {
-        paymentMethods = await fetchStripePyamentMethods(stripeIntegration.accessToken, ml.stripeCustomerId);
+    const { member, ml } = res
+
+    if (member.stripeCustomerId) {
+        paymentMethods = await fetchStripePyamentMethods(member.stripeCustomerId);
     }
 
     return (
@@ -133,7 +122,7 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
             <MemberProvider member={member} paymentMethods={paymentMethods} ml={ml}>
                 <div className='col-span-4  border-r   '>
                     <MemberProfile params={params} />
-                    <PaymentMethods stripeKey={stripeIntegration ? stripeIntegration?.apiKey : ''} params={params} />
+                    <PaymentMethods params={params} />
                     <MemberFamilies params={params} familyMembers={member.familyMembers} />
                 </div>
                 <div className='col-span-8'>

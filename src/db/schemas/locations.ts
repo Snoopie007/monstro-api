@@ -79,9 +79,7 @@ export const walletUsages = pgTable("wallet_usages", {
 export const memberLocations = pgTable("member_locations", {
     memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    stripeCustomerId: text("stripe_customer_id"),
     status: LocationStatusEnum("status").notNull().default("incomplete"),
-    incompletePlan: jsonb("incomplete_plan").$type<IncompletePlan>(),
     inviteDate: timestamp("invite_date", { withTimezone: true }),
     inviteAcceptedDate: timestamp("invite_accepted_date", { withTimezone: true }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

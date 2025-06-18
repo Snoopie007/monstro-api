@@ -10,14 +10,13 @@ import AddPaymentMethod from "./AddMethod"
 import { Elements } from "@stripe/react-stripe-js"
 import { getStripe } from "@/libs/client/stripe"
 import PaymentMethodsActions from "./actions"
-import { useMemberStatus, useMemberPaymentMethods } from "../../providers/MemberContext"
+import { useMemberStatus, useMemberPaymentMethods } from "../../providers"
 
 interface PaymentMethodsProps {
-    stripeKey: string | null
     params: { id: string, mid: number },
 }
 
-export function PaymentMethods({ stripeKey, params }: PaymentMethodsProps) {
+export function PaymentMethods({ params }: PaymentMethodsProps) {
     const { member } = useMemberStatus()
     const { paymentMethods, addPaymentMethods } = useMemberPaymentMethods()
 
@@ -27,21 +26,19 @@ export function PaymentMethods({ stripeKey, params }: PaymentMethodsProps) {
                 <CardTitle className="text-sm  px-4">
                     Payment Methods
                 </CardTitle>
-                {stripeKey && (
-                    <Elements
-                        stripe={getStripe(stripeKey)}
-                        options={{
-                            appearance: {
-                                variables: {
-                                    colorIcon: "#6772e5",
-                                    fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
-                                },
+                <Elements
+                    stripe={getStripe(process.env.STRIPE_MEMBER_SECRET_KEY!)}
+                    options={{
+                        appearance: {
+                            variables: {
+                                colorIcon: "#6772e5",
+                                fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
                             },
-                        }}
-                    >
-                        <AddPaymentMethod member={member} locationId={params.id} />
-                    </Elements>
-                )}
+                        },
+                    }}
+                >
+                    <AddPaymentMethod member={member} locationId={params.id} />
+                </Elements>
 
 
             </CardHeader>

@@ -1,10 +1,8 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberLocations, memberPackages, transactions } from "@/db/schemas";
+import { memberInvoices, memberPackages, transactions } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
 import { createPackage } from "../../utils";
 import { NextRequest, NextResponse } from "next/server";
-import { and } from "drizzle-orm";
-import { eq } from "drizzle-orm";
 
 type PackageProps = {
     id: number,
@@ -92,7 +90,6 @@ export async function POST(req: NextRequest, props: { params: Promise<PackagePro
             newInvoice.status = "paid"
         }
 
-
         const newPackage = await db.transaction(async (tx) => {
             /** Create Member Package */
             const [{ mpid }] = await tx.insert(memberPackages).values(newPkg).returning({ mpid: memberPackages.id })
@@ -109,15 +106,7 @@ export async function POST(req: NextRequest, props: { params: Promise<PackagePro
             })
             return { id: mpid }
         })
-        if (hasIncompletePlan) {
-            await db.update(memberLocations).set({
-                incompletePlan: null,
-                status: "active",
-            }).where(and(
-                eq(memberLocations.memberId, params.mid),
-                eq(memberLocations.locationId, params.id)
-            ))
-        }
+
         return NextResponse.json({ id: newPackage.id }, { status: 200 })
     } catch (err) {
         console.log(err)

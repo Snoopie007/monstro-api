@@ -16,7 +16,7 @@ export type Member = {
     avatar: string | null;
     phone: string | null;
     activityStatus?: string;
-    stripeCustomerId?: string;
+    stripeCustomerId: string | null;
     familyMembers?: FamilyMember[];
     relatedByFamily?: FamilyMember[];
     memberLocation?: MemberLocation;
@@ -154,9 +154,7 @@ export type MemberLocation = {
     status: LocationStatus;
     location?: Location;
     inviteDate: Date | null;
-    stripeCustomerId: string | null;
     inviteAcceptedDate: Date | null;
-    incompletePlan?: IncompletePlan | null;
     member?: Member;
     created: Date;
     updated: Date | null;

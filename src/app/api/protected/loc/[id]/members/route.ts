@@ -41,7 +41,6 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 					avatar: members.avatar,
 					memberLocation: {
 						status: memberLocations.status,
-						progress: memberLocations.incompletePlan
 					}
 				})
 				.from(memberLocations)
@@ -145,7 +144,6 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
 				locationId: params.id,
 				memberId: member.id,
 				status: "incomplete",
-				incompletePlan: INCOMPLETE_PLAN
 			})
 			return member
 		})

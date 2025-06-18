@@ -115,15 +115,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
 
             return sid
         })
-        if (hasIncompletePlan) {
-            await db.update(memberLocations).set({
-                incompletePlan: null,
-                status: "active",
-            }).where(and(
-                eq(memberLocations.memberId, params.mid),
-                eq(memberLocations.locationId, params.id)
-            ))
-        }
+
 
         if (data.paymentMethod === "cash" && !newSubscription.cancelAt) {
             newInvoice.status = "draft"
@@ -162,7 +154,7 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: number
             .set({
                 status: "canceled",
                 cancelAt: new Date(),
-                
+
             })
             .where(and(
                 eq(memberSubscriptions.id, subscriptionId),

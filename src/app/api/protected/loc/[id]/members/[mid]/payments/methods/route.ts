@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/db/db";
-import { memberLocations } from "@/db/schemas";
+import { members } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -8,42 +8,42 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
     const params = await props.params;
 
-    const { token, member, ...data } = await req.json();
+    const { token, member, address, ...data } = await req.json();
 
     try {
-        const integrations = await db.query.integrations.findFirst({
-            where: (integration, { eq, and }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
-            columns: {
-                accessToken: true,
-                secretKey: true
-            }
+        // const integrations = await db.query.integrations.findFirst({
+        //     where: (integration, { eq, and }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
+        //     columns: {
+        //         accessToken: true,
+        //         secretKey: true
+        //     }
+        // })
+
+        // if (!integrations || !integrations.secretKey) {
+        //     return NextResponse.json({ error: "Stripe integration not found" }, { status: 404 })
+        // }
+        const member = await db.query.members.findFirst({
+            where: (member, { eq }) => eq(member.id, params.mid)
         })
 
-        if (!integrations || !integrations.secretKey) {
-            return NextResponse.json({ error: "Stripe integration not found" }, { status: 404 })
-        }
-        const memberLocation = await db.query.memberLocations.findFirst({
-            where: (memberLocation, { eq, and }) => and(eq(memberLocation.memberId, params.mid), eq(memberLocation.locationId, params.id))
-        })
-
-        if (!memberLocation) {
+        if (!member) {
             return NextResponse.json({ error: "Member location not found" }, { status: 404 })
         }
 
         let isDefault = data.default;
-        const stripe = new MemberStripePayments(integrations?.secretKey);
-        if (!memberLocation.stripeCustomerId) {
+        const stripe = new MemberStripePayments();
+        if (!member.stripeCustomerId) {
             const customer = await stripe.createCustomer(member, undefined, {
                 locationId: params.id,
                 memberId: params.mid
             });
 
-            memberLocation.stripeCustomerId = customer.id;
+            member.stripeCustomerId = customer.id;
             isDefault = true;
-            await db.update(memberLocations).set({ stripeCustomerId: customer.id, updated: new Date() })
-                .where(and(eq(memberLocations.locationId, params.id), eq(memberLocations.memberId, params.mid)))
+            await db.update(members).set({ stripeCustomerId: customer.id, updated: new Date() })
+                .where(eq(members.id, params.mid))
         }
-        stripe.setCustomer(memberLocation.stripeCustomerId)
+        stripe.setCustomer(member.stripeCustomerId)
 
         const { paymentMethod } = await stripe.setupIntent(token);
         if (isDefault) {
