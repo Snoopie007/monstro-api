@@ -5,7 +5,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { and } from "drizzle-orm";
 
 export async function GET(req: NextRequest, props: { params: Promise<{ lid: number, sid: number }> }) {
-    const params =await props.params;
+    const params = await props.params;
     const authMember = authenticateMember(req);
 
     try {
@@ -16,10 +16,11 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
                 eq(memberSubscriptions.id, params.sid)
             ),
             with: {
-                reservations: {
-                    where: (reservations, { eq }) => eq(reservations.memberId, Number(authMember.member?.id)),
+                recurrings: {
+                    where: (recurrings, { eq }) => eq(recurrings.memberId, Number(authMember.member?.id)),
                     with: {
-                        session: true
+                        session: true,
+                        attendances: true
                     }
                 },
                 plan: {
