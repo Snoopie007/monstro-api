@@ -59,7 +59,7 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
                     onChange={(e) => setValue(e.target.value)}
                 />
             </div>
-            <CardFooter className="flex justify-end border-t px-6 py-3 bg-foreground/5 border-foreground/10">
+            <CardFooter className="flex justify-end border-t px-6 py-3 bg-foreground/5 border-foreground/5">
                 <Button
                     variant="foreground"
                     size="sm"

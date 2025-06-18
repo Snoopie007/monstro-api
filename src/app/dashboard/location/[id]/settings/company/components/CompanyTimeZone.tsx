@@ -45,7 +45,7 @@ export default function CompanyLogo({ location }: { location: Location }) {
                 </CardHeader>
                 <Select onValueChange={setTimezone} value={timezone ?? undefined} >
 
-                    <SelectTrigger className="rounded-sm w-60">
+                    <SelectTrigger className="rounded-sm w-60 text-left">
                         <SelectValue placeholder="Select your timezone" />
                     </SelectTrigger>
 

@@ -71,7 +71,7 @@ export default function CompanyPhone({ location }: { location: Location }) {
                     />
                 </div>
             </div>
-            <CardFooter className="flex justify-end border-t px-6 py-3 bg-foreground/5 border-foreground/10">
+            <CardFooter className="flex justify-end border-t px-6 py-3 bg-foreground/5 border-foreground/5">
                 <Button variant="foreground" size="sm" disabled={loading} onClick={update}
                     className={cn('children:hidden', loading && 'children:block')}
                 >
