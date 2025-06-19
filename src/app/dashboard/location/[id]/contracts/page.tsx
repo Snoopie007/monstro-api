@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/TablePage";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
+import { format } from "date-fns";
+import { CloudDownloadIcon } from "lucide-react";
+import { Contract, MemberContract } from "@/types";
 
 
 export default function MemberContractsPage(props: { params: Promise<{ id: string }> }) {
@@ -27,21 +30,22 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
     const { contracts, isLoading } = useSignedContracts(params.id);
 
     async function downloadContract(signedId: number) {
+        // const { result, error } = await tryCatch(
+        //     fetch(`/api/protected/loc/${params.id}/contracts/signed/${signedId}`)
+        // );
 
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${params.id}/contracts/signed/${signedId}`)
-        )
+        // if (error || !result || !result.ok) {
+        //     return toast.error(error?.message || "Error downloading contract");
+        // }
 
-        if (error || !result || !result.ok) {
-            return toast.error(error?.message || "Error downloading contract");
-        }
-        const data = await result.json();
-        const link = document.createElement('a');
-        link.href = data.pdfUrl; // URL from the backend
-        link.download = 'contract.pdf'; // Suggested filename for the downloaded PDF
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // const data = await result.json();
+        // console.log(data);
+        // const link = document.createElement('a');
+        // link.href = data.pdfUrl;
+        // link.download = 'contract.pdf';
+        // document.body.appendChild(link);
+        // link.click();
+        // document.body.removeChild(link);
     }
 
     if (isLoading) {
@@ -65,8 +69,8 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                     <Table className=" w-auto border-r border-b border-foreground/10 ">
                         <TableHeader className=" text-xs  border-foreground/10">
                             <TableRow className='bg-foreground/10 ' >
-                                {["Title", "Member", "Signed Date", "Download"].map((title) => (
-                                    <TableHead key={title} className="font-semibold text-foreground h-auto py-2 border border-foreground/10 text-xs" >
+                                {["Title", "Member", "Signed Date"].map((title) => (
+                                    <TableHead key={title} className="font-semibold text-foreground h-auto py-2 border border-l-0 border-foreground/10 text-xs" >
                                         {title}
                                     </TableHead>
                                 ))}
@@ -75,25 +79,27 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                         <TableBody>
                             {contracts.length > 0 ? (
                                 <>
-                                    {contracts.map((contract: any, index: number) => (
-                                        <TableRow key={index} className='cursor-pointer '>
-                                            <TableCell className="text-sm py-1 border border-foreground/10">
-                                                {contract.contractTemplate.title}
+                                    {contracts.map((contract: MemberContract, index: number) => (
+                                        <TableRow key={index} className='cursor-pointer  '>
+                                            <TableCell className="text-sm py-1 w-[200px]  flex flex-row items-center justify-between">
+                                                {contract.contractTemplate?.title}
+                                                <Button variant={"ghost"} size={"icon"}
+                                                    onClick={() => downloadContract(contract.id)}
+                                                    //asChild
+                                                    className="size-6 hover:bg-foreground/5 text-foreground/50 rounded-sm">
+                                                    {/* <Link href={""} target="_blank"> */}
+                                                    <CloudDownloadIcon className="size-3.5" />
+                                                    {/* </Link> */}
+                                                </Button>
                                             </TableCell>
 
 
                                             <TableCell className="text-sm  py-1 border border-foreground/10">
-                                                {contract.member.firstName} {contract.member.lastName}
+                                                {contract.member?.firstName} {contract.member?.lastName}
                                             </TableCell>
 
                                             <TableCell className="text-sm py-1 border border-foreground/10">
-                                                {contract.created}
-                                            </TableCell>
-
-                                            <TableCell className="text-sm flex flex-row items-center justify-center  py-1 border border-foreground/10">
-                                                <Button variant={"ghost"} onClick={() => downloadContract(contract.id)} className="h-auto p-1">
-                                                    <Icon name="Download" />
-                                                </Button>
+                                                {format(contract.created, "MM/dd/yyyy")}
                                             </TableCell>
                                         </TableRow>
                                     ))}

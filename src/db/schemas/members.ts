@@ -82,6 +82,7 @@ export const memberContracts = pgTable("member_contracts", {
     signature: text("signature"),
     variables: jsonb("variables").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     signed: boolean("signed").notNull().default(false),
+    pdfUrl: text("pdf_url"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     deleted: timestamp('deleted_at', { withTimezone: true }),

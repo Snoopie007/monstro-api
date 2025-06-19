@@ -7,7 +7,7 @@ import { cn, sleep, tryCatch } from "@/libs/utils";
 import { Button } from "@/components/ui";
 import { Loader2 } from "lucide-react";
 import { LocationSetupSchema } from "@/libs/FormSchemas/schemas";
-import { AutoComplete } from "./GoogleAutoComplete";
+import { AutoComplete } from ".";
 import {
     Form,
     FormItem,
@@ -28,6 +28,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import { Industries } from "@/libs/data";
 import { useRouter } from "next/navigation";
+import { GoogleMapProvider } from "../providers";
 
 
 export function AddLocation({ saleId }: { saleId: string | null }) {
@@ -50,26 +51,62 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             country: "USA",
             state: "",
             postalCode: "",
-            logoUrl: "",
         },
         mode: "onChange",
     });
 
-    function selectAddress(result: Record<string, any>) {
-        const { metadata, ...rest } = result;
+    function selectAddress(place: google.maps.places.Place | undefined) {
+        if (!place) return;
+
+        let address: Record<string, string> = {};
+
+        const addressMapping: Record<string, { field: string, useShort?: boolean }> = {
+            'locality': { field: 'city' },
+            'administrative_area_level_1': { field: 'state', useShort: true },
+            'postal_code': { field: 'postalCode' },
+            'country': { field: 'country', useShort: true }
+        };
+
+        place.addressComponents?.forEach(component => {
+            const type = component.types[0];
+
+            // Handle street address components
+            if (type === 'street_number') {
+                address.streetNumber = component.longText || '';
+            } else if (type === 'route') {
+                address.route = component.longText || '';
+            }
+
+            const mapping = addressMapping[type];
+            if (mapping) {
+                const value = mapping.useShort ? component.shortText : component.longText;
+                address[mapping.field] = value || '';
+            }
+        });
+
+        const { displayName, internationalPhoneNumber, websiteURI } = place;
+
+
 
         form.reset({
-            name: rest.name || "",
-            industry: rest.industry || "",
-            phone: rest.phone || "",
-            website: rest.website || "",
-            address: rest.address || "",
-            city: rest.city || "",
-            state: rest.state || "",
-            postalCode: rest.postalCode || "",
-            logoUrl: rest.logoUrl || "",
-            country: rest.country || "USA",
+            name: displayName || "",
+            industry: "",
+            phone: internationalPhoneNumber?.toString().replaceAll(/[ ()-]/g, '') || "",
+            website: websiteURI?.toString().replace(/^(https?:\/\/[^\/]+).*$/, '$1') || "",
+            address: `${address.streetNumber} ${address.route}`,
+            city: address.city || "",
+            state: address.state || "",
+            postalCode: address.postalCode || "",
+            country: address.country || "USA",
+
         });
+        const metadata = {
+            placeId: place.id,
+            rating: place.rating,
+            userRatingCount: place.userRatingCount,
+            lat: place.location?.lat(),
+            lng: place.location?.lng(),
+        }
 
         setMetadata(metadata);
         setEdit(true);
@@ -124,16 +161,18 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
     return (
         <div className="space-y-4">
             <div className="space-y-1">
-                <AutoComplete onSelectChange={selectAddress} />
-                <div className="text-sm text-black flex items-center gap-1">
+                <GoogleMapProvider>
+                    <AutoComplete onSelect={selectAddress} />
+                </GoogleMapProvider>
+                <div className="text-sm text-black flex items-center gap-1 pl-0.5">
                     Cannot find your business on Google?
-
                     <span className="inline-block text-indigo-600 underline cursor-pointer" onClick={() => setEdit(true)}>
                         Manually add one.
 
                     </span>
                 </div>
             </div>
+
             {edit && (
                 <div className="bg-white border border-gray-200 shadow-xs text-black p-4 pb-8 space-y-2 rounded-sm">
                     <p className="text-sm font-medium border-b border-gray-100  pb-2">Double check your information.</p>
@@ -142,7 +181,6 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                         {form.formState.errors && Object.keys(form.formState.errors).map((key) => (
                             <li key={key} className=" text-red-500 text-xs">
                                 {form.formState.errors[key as keyof z.infer<typeof LocationSetupSchema>]?.message}
-
                             </li>
                         ))}
 

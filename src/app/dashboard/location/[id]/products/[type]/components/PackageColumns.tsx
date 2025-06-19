@@ -25,13 +25,19 @@ export const PkgColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => 
             const planPrograms = row.original.planPrograms
             const programCount = planPrograms?.length || 0
             return (
-                <div className="flex flex-wrap">
-
-                    {programCount > 0 ? planPrograms?.map((planProgram: PlanProgram) => (
-                        <div key={planProgram.program?.id} className="text-xs ">
-                            {planProgram.program?.name.slice(0, 1)}
-                        </div>
-                    )) : (
+                <div className="flex flex-wrap gap-1">
+                    {programCount > 0 ? (
+                        <>
+                            {planPrograms?.slice(0, 3).map((planProgram: PlanProgram) => (
+                                <Badge key={planProgram.program?.id} size={"tiny"} variant={"default"} className="rounded-sm">
+                                    {planProgram.program?.name}
+                                </Badge>
+                            ))}
+                            {programCount > 3 && (
+                                <span>   +{programCount - 3}</span>
+                            )}
+                        </>
+                    ) : (
                         <div className="text-sm">
                             No programs
                         </div>

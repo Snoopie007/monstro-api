@@ -19,11 +19,6 @@ export const ProgramColumns = (locationId: string): ColumnDef<Program, any>[] =>
         },
     },
     {
-        accessorKey: "planCounts",
-        header: "Plans",
-
-    },
-    {
         accessorKey: "Age Range",
         header: "Age Range",
         cell: ({ row }) => {

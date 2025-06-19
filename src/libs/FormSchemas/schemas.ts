@@ -80,7 +80,6 @@ export const LocationSetupSchema = z.object({
     postalCode: z.string({ message: "Postal code is required." }).min(3),
     website: z.string().optional(),
     phone: z.string({ message: "Phone number is required." }).min(11),
-    logoUrl: z.string().optional(),
 });
 
 export const VendorBillingSchema = z.object({

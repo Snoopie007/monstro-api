@@ -12,13 +12,13 @@ export const AchievementColumns = (): ColumnDef<Achievement, any>[] => [
             const achievement = row.original
             return (
 
-                <div className="flex flex-row items-center gap-2">
+                <div className="flex flex-row items-center gap-1">
 
-                    <Avatar className="group-hover:bg-violet-600 max-w-full flex items-center justify-center text-black-100 w-5 h-5 mr-2 bg-gray-200 rounded-full">
+                    <Avatar className="max-w-full flex items-center justify-center text-black-100 size-6 bg-foreground/5 rounded-full">
                         <AvatarImage
                             src={achievement.icon ? achievement.icon : ''}
                         />
-                        <AvatarFallback className=" bg-gray-200 text-gray-400 text-xs ">
+                        <AvatarFallback className=" bg-foreground/5 text-foreground/50 text-xs size-6 ">
                             {achievement.title.charAt(0)}
                         </AvatarFallback>
                     </Avatar>

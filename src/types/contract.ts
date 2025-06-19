@@ -1,6 +1,6 @@
 import { ContractType } from "./DatabaseEnums";
 import { Location } from "./location";
-import { MemberPackage } from "./member";
+import { Member, MemberPackage } from "./member";
 import { MemberSubscription } from "./member";
 
 export type Contract = {
@@ -30,6 +30,8 @@ export type MemberContract = {
     contract?: Contract;
     subscription?: MemberSubscription | null;
     package?: MemberPackage | null;
+    contractTemplate?: Contract;
+    member?: Member;
     created: Date;
     updated?: Date | null;
     deleted?: Date | null;
