@@ -1,7 +1,6 @@
 
 import EditorToolBar from "./partials/EitorToolbar";
 import { Editor } from "@tiptap/react";
-import { Icon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { cn, sleep, tryCatch } from "@/libs/utils";
 import { Contract } from "@/types";
@@ -9,6 +8,8 @@ import { MouseEvent, useState } from "react";
 import { toast } from "react-toastify";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChevronLeft, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ThemeMenu } from "@/app/builder/components";
 
 interface TopMenuProps {
     contract: Contract
@@ -18,7 +19,7 @@ interface TopMenuProps {
     locationId: string
 }
 
-const LeftMenuButtonStyle = "font-medium text-sm flex flex-row items-center cursor-pointer children:hidden border-foreground/20 h-full text-nowrap px-4 flex-1"
+const ButtonStyle = "text-muted-foreground hover:text-foreground hover:bg-foreground/5 rounded-md"
 
 export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, locationId }: TopMenuProps) {
     const [savingDraft, setSavingDraft] = useState<boolean>(false)
@@ -79,45 +80,51 @@ export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, locati
     }
 
     return (
-        <div className="flex-initial   flex items-center h-[50px] px-2 border-b  border-foreground/20 ">
-            <div className="flex-initial  h-full flex items-center w-[130px]">
-                <Button
-                    className="bg-transparent  mr-3  rounded-sm focus-visible:ring-0 focus-visible:ring-offset-0  overflow-hidden text-foreground hover:bg-accent h-auto p-1.5"
-                    onClick={toggleSidebar}
-                >
-                    <Icon name={(isSidebarOpen ? 'PanelLeftClose' : 'PanelLeftOpen')} size={18} />
-                </Button>
-                <Link
-                    href={`/dashboard/location/${locationId}/contracts`}
-                    className={cn(LeftMenuButtonStyle, "text-sm justify-center  h-full py-2 border-x")}
-                >
-                    Back
-                </Link>
-            </div>
-            <div className="flex-1 w-full items-center justify-center flex flex-row py-2">
+        <div className="fixed top-2 left-1/2 -translate-x-1/2  z-10 shadow-xs border border-foreground/10 px-2 rounded-lg py-1 flex items-center  ">
+            <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={toggleSidebar}
+                        className={cn(ButtonStyle, "size-6")}
+                    >
+                        {isSidebarOpen ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" className={cn(ButtonStyle, "size-6")} asChild>
+                        <Link
+                            href={`/dashboard/location/${locationId}/contracts`}
 
+                        >
+                            <ChevronLeft size={18} />
+                        </Link>
+                    </Button>
+                </div>
                 <EditorToolBar editor={editor} />
+                <ThemeMenu />
+                <div className="flex  items-center">
 
-            </div>
-            <div className="flex-initial  h-full flex justify-end w-[250px] " >
-
-                <div className="flex  items-center h-full ">
-
-                    <button
-                        className={cn(LeftMenuButtonStyle, " border-x", { "children:inline-block": savingDraft })}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(ButtonStyle, "children:hidden", { "children:inline-block": savingDraft })}
                         onClick={saveDraft}
                     >
-                        <Icon name="LoaderCircle" size={14} className="mr-2 animate-spin" />
+                        <Loader2 size={14} className="mr-2 animate-spin" />
                         Save
-                    </button>
-                    <button className={cn(LeftMenuButtonStyle, { "children:inline-block": loading })}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(ButtonStyle, 'children:hidden ', { "children:inline-block": loading })}
                         onClick={publish}
                     >
-                        <Icon name="LoaderCircle" size={14} className="mr-2 animate-spin" />
+                        <Loader2 size={14} className="mr-2 animate-spin" />
                         Publish
-                    </button>
+                    </Button>
                 </div>
             </div>
+
         </div>
     )
 }

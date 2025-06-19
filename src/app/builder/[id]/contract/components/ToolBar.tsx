@@ -17,7 +17,7 @@ export type ToolbarDividerProps = {
 
 const ToolbarDivider = forwardRef<HTMLDivElement, ToolbarDividerProps>(({ horizontal, className, ...rest }, ref) => {
     const dividerClassName = cn(
-        'bg-neutral-200 dark:bg-neutral-800',
+        'bg-foreground/5',
         horizontal
             ? 'w-full min-w-[1.5rem] h-[1px] my-1 first:mt-0 last:mt-0'
             : 'h-full min-h-[1.5rem] w-[1px] mx-1 first:ml-0 last:mr-0',
@@ -41,11 +41,12 @@ const ToolbarButton = forwardRef<HTMLButtonElement, ToolbarButtonProps>(({
     children, variant = 'ghost', active, className, tooltip, tooltipShortcut, activeClassname, ...rest
 }, ref,) => {
 
-    const buttonClass = cn('px-0 p-1.5 h-auto', className)
     return (
         <Button
-            className={cn(buttonClass, { "bg-accent": active }, activeClassname)}
-            variant={variant}
+            className={cn('size-6 text-muted-foreground hover:text-foreground hover:bg-foreground/5 rounded-md',
+                className, { "bg-foreground/10 text-foreground": active }, activeClassname)}
+            variant="ghost"
+            size="icon"
             ref={ref}
             {...rest}
         >

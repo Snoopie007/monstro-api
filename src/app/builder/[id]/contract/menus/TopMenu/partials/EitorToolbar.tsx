@@ -1,13 +1,9 @@
 import { memo } from 'react'
 import { Editor } from '@tiptap/react'
-import { FontSizePicker } from '../../../components';
-import { Toolbar } from '../../../components/ToolBar';
 import { useTextmenuCommands, useTextmenuStates } from '../hooks';
-import { Icon } from '@/components/icons';
-import { VariablePicker } from '../../../components/VariablePicker';
+import { FontSizePicker, Toolbar, VariablePicker } from '../../../components';
+import { Undo, Redo, Bold, Italic, Underline, Strikethrough, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
 
-// We memorize the button so each button is not rerendered
-// on every editor state change
 const MemoButton = memo(Toolbar.Button)
 const MemoFontSizePicker = memo(FontSizePicker)
 const MemoVariablePicker = memo(VariablePicker)
@@ -21,13 +17,13 @@ export default function EditorToolBar({ editor }: EditorMenuProps) {
     const commands = useTextmenuCommands(editor)
     const states = useTextmenuStates(editor)
     return (
-        <div className='flex  flex-row items-center gap-2'>
-            <MemoButton onClick={commands.onUndo}>
-                <Icon name="Undo" />
+        <div className='flex  flex-row items-center gap-1.5'>
+            <MemoButton onClick={commands.onUndo} variant="ghost" className=''>
+                <Undo className='size-4' />
             </MemoButton>
 
-            <MemoButton onClick={commands.onRedo}            >
-                <Icon name="Redo" />
+            <MemoButton onClick={commands.onRedo} variant="ghost" className=''>
+                <Redo className='size-4' />
             </MemoButton>
             <Toolbar.Divider />
             <MemoFontSizePicker onChange={commands.onSetFontSize} value={states.currentSize || ''} />
@@ -35,50 +31,50 @@ export default function EditorToolBar({ editor }: EditorMenuProps) {
                 onClick={commands.onBold}
                 active={states.isBold}
             >
-                <Icon name="Bold" />
+                <Bold className='size-4' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onItalic}
                 active={states.isItalic}
             >
-                <Icon name="Italic" />
+                <Italic className='size-4' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onUnderline}
                 active={states.isUnderline}
             >
-                <Icon name="Underline" />
+                <Underline className='size-4' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onStrike}
                 active={states.isStrike}
             >
-                <Icon name="Strikethrough" />
+                <Strikethrough className='size-4' />
             </MemoButton>
             <Toolbar.Divider />
             <MemoButton
                 onClick={commands.onAlignLeft}
                 active={states.isAlignLeft}
             >
-                <Icon name="AlignLeft" />
+                <AlignLeft className='size-4' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onAlignCenter}
                 active={states.isAlignCenter}
             >
-                <Icon name="AlignCenter" />
+                <AlignCenter className='size-4' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onAlignRight}
                 active={states.isAlignRight}
             >
-                <Icon name="AlignRight" />
+                <AlignRight className='size-4' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onAlignJustify}
                 active={states.isAlignJustify}
             >
-                <Icon name="AlignJustify" />
+                <AlignJustify className='size-4' />
             </MemoButton>
             <Toolbar.Divider />
             <MemoVariablePicker onChange={(variable) => { commands.onInsertVariable(variable) }} />

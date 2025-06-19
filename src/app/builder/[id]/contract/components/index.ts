@@ -1,3 +1,5 @@
 export * from './FontSizePicker';
 export * from './ToolBar';
-export * from '../../../../../components/extensions/Variables';
+export * from './VariablePicker';
+export * from './ToolBar';
+export * from './Sidebar';

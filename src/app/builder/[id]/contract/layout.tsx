@@ -1,12 +1,15 @@
 import "@public/editor.css";
-import { auth } from "@/auth"
 
 export default async function DashLayout({
     children,
 }: {
     children: React.ReactNode
 }) {
-    const session = await auth()
 
-    return (<>{children}</>)
+    return (
+        <>
+            {children}
+        </>
+    )
+
 }

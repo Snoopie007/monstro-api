@@ -3,9 +3,9 @@ import { EditorContent } from '@tiptap/react'
 import { TopMenu, ContentMenu } from '../menus'
 import { useBlockEditor } from '../hooks/useBlockEditor'
 import { ScrollArea } from '@/components/ui/ScrollArea'
-import { Sidebar } from '../components/Sidebar'
+import { Sidebar } from '../components'
 import { useMemo, useState } from 'react'
-import { DarkModeSwitcher } from '../components/DarkModeSwitcher'
+
 import { Contract } from '@/types'
 import { Input } from '@/components/forms'
 import { Skeleton } from '@/components/ui'
@@ -38,12 +38,13 @@ export default function ContractEditor({ contractRef, locationId }: ContractEdit
     return (
         <>
             <Sidebar isOpen={sidebar.isOpen} onClose={sidebar.close} editor={editor} />
-            <div className='flex flex-col flex-1 h-full overflow-hidden'>
-                <TopMenu contract={contract} editor={editor} isSidebarOpen={sidebar.isOpen} toggleSidebar={sidebar.toggle} locationId={locationId} />
-                <ScrollArea className='h-[100vh-50px] pt-10  pb-2 flex-1'>
-                    <div className=' max-w-2xl h-full rounded-sm m-auto w-full font-roboto'>
+            <TopMenu contract={contract} editor={editor} isSidebarOpen={sidebar.isOpen} toggleSidebar={sidebar.toggle} locationId={locationId} />
+            <div className='flex flex-col h-full overflow-hidden'>
+
+                <ScrollArea className='h-full pt-18  pb-2 flex-1'>
+                    <div className=' max-w-2xl h-full rounded-sm m-auto w-full'>
                         <Input
-                            className='font-semibold focus-visible:ring-0 rounded-none outline-hidden border-transparent block text-3xl px-8'
+                            className='font-semibold focus-visible:ring-0 rounded-none border-none outline-hidden block text-lg h-auto py-0'
                             defaultValue={`${contractRef.title ? contractRef.title : ''} #${contractRef.id}`} onChange={(v) => {
                                 setContract({ ...contract, title: v.target.value })
                             }}
@@ -55,7 +56,6 @@ export default function ContractEditor({ contractRef, locationId }: ContractEdit
                     </div>
                 </ScrollArea>
             </div>
-            <DarkModeSwitcher />
         </>
     )
 }

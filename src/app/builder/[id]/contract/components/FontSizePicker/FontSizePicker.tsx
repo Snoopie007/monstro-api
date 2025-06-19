@@ -1,9 +1,10 @@
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui'
-import { Icon } from '@/components/icons'
+
 import { useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/libs/utils'
+import { ChevronDown } from 'lucide-react'
 
 
 const FontSizes = [
@@ -28,15 +29,15 @@ export const FontSizePicker = ({ onChange, value }: FontSizePickerProps) => {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant={'ghost'} className='h-auto pt-1.5 pb-1 rounded-sm border-foreground/50'>
+                <Button variant={'ghost'} size="sm" className='text-xs hover:bg-foreground/5 rounded-md font-bold'>
                     {currentSizeLabel}
-                    <Icon name="ChevronDown" className="w-2 h-2" />
+                    <ChevronDown className="size-3.5 ml-1 text-muted-foreground" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
                 {FontSizes.map(size => (
                     <DropdownMenuItem
-                        className={cn({ 'bg-accent': size.value === value })}
+                        className={cn({ 'bg-foreground/5 font-medium': size.value === value })}
                         onClick={selectSize(size.value)}
                         key={`${size.label}${size.value}`}
                     >
