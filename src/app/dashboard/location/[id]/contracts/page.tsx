@@ -29,23 +29,23 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
     const params = use(props.params);
     const { contracts, isLoading } = useSignedContracts(params.id);
 
-    async function downloadContract(signedId: number) {
-        // const { result, error } = await tryCatch(
-        //     fetch(`/api/protected/loc/${params.id}/contracts/signed/${signedId}`)
-        // );
+    async function downloadContract(signedId: number, memberId: number) {
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${params.id}/contracts/signed/${signedId}/${memberId}`)
+        );
 
-        // if (error || !result || !result.ok) {
-        //     return toast.error(error?.message || "Error downloading contract");
-        // }
+        if (error || !result || !result.ok) {
+            return toast.error(error?.message || "Error downloading contract");
+        }
 
-        // const data = await result.json();
-        // console.log(data);
-        // const link = document.createElement('a');
-        // link.href = data.pdfUrl;
-        // link.download = 'contract.pdf';
-        // document.body.appendChild(link);
-        // link.click();
-        // document.body.removeChild(link);
+        const data = await result.json();
+        console.log(data);
+        const link = document.createElement('a');
+        link.href = data.pdfUrl;
+        link.download = 'contract.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     if (isLoading) {
@@ -84,7 +84,7 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                                             <TableCell className="text-sm py-1 w-[200px]  flex flex-row items-center justify-between">
                                                 {contract.contractTemplate?.title}
                                                 <Button variant={"ghost"} size={"icon"}
-                                                    onClick={() => downloadContract(contract.id)}
+                                                    onClick={() => downloadContract(contract.id, contract.memberId)}
                                                     //asChild
                                                     className="size-6 hover:bg-foreground/5 text-foreground/50 rounded-sm">
                                                     {/* <Link href={""} target="_blank"> */}
