@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 			process.env.STRIPE_WEBHOOK_SECRET
 		);
 
-		waitUntil(processEvent(await req.json()));
+		waitUntil(processEvent(event));
 	}
 
 	const { error } = await tryCatch(doEventProcessing());
