@@ -48,12 +48,12 @@ export async function POST(req: NextRequest) {
 			throw new Error("Stripe Member webhook secret not found");
 		}
 
-		// const rawText = await req.text();
-		// const event = await stripe.constructEvent(
-		// 	Buffer.from(rawText),
-		// 	signature,
-		// 	process.env.STRIPE_WEBHOOK_SECRET
-		// );
+		const rawText = await req.text();
+		const event = await stripe.constructEvent(
+			Buffer.from(rawText),
+			signature,
+			process.env.STRIPE_WEBHOOK_SECRET
+		);
 
 		waitUntil(processEvent(await req.json()));
 	}
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function processEvent(event: Stripe.Event) {
-	console.log(event.type)
+
 	if (!allowedEvents.includes(event.type)) return;
 
 	switch (event.type) {
@@ -123,7 +123,7 @@ async function handleSubscriptionPaid(event: Stripe.Event) {
 			const commonFields = {
 				memberId: subscription.memberId,
 				locationId: subscription.locationId,
-				description: `Subscription to ${subscription.plan?.name}`,
+				description: invoice.description,
 				currency: invoice.currency,
 				tax,
 			};
@@ -163,7 +163,6 @@ async function handleSubscriptionPaid(event: Stripe.Event) {
 				paymentMethod: "card",
 				amount: invoice.amount_paid,
 				item: subscription.plan?.name,
-				metadata: {}
 			});
 		});
 	} catch (error) {
