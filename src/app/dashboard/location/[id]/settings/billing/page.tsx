@@ -27,6 +27,7 @@ import { db } from '@/db/db';
 import { decodeId } from '@/libs/server/sqids';
 import { AlertCircleIcon } from 'lucide-react';
 import { format } from 'date-fns';
+
 type Subscription = {
     subscriptionId: string | null;
     name: string;
@@ -58,15 +59,15 @@ async function fetchClientStripe(customerId: string, locationId: string, locatio
             subscriptions = res.data
                 .filter(sub => sub.metadata.locationId === locationId)
                 .map(sub => {
-                    const plan = sub.items.data[0]?.plan;
+                    const item = sub.items.data[0];
 
                     return {
                         subscriptionId: sub.id,
-                        name: plan?.nickname || "N/A",
-                        amount: plan?.amount || 0,
-                        nextInvoice: format(sub.current_period_end * 1000, 'MMM d, yyyy'),
+                        name: item?.plan?.nickname || "N/A",
+                        amount: item?.plan?.amount || 0,
+                        nextInvoice: format(item.current_period_end * 1000, 'MMM d, yyyy'),
                         endDate: sub.cancel_at ? format(sub.cancel_at * 1000, 'MMM d, yyyy') : "N/A",
-                        currency: plan?.currency || "USD",
+                        currency: item?.plan?.currency || "USD",
                         status: sub.status,
                         invoiceId: sub.latest_invoice
                     }

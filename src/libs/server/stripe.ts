@@ -123,12 +123,8 @@ abstract class BaseStripePayments {
     }
 
     async getSubscriptions(customerId: string, limit?: number) {
-        return await this._stripe.subscriptions.list({ customer: customerId, limit: 10 });
-    }
-
-    async getCharges(limit?: number) {
-        const res = await this._stripe.charges.list({ limit: limit || 10 });
-        return res.data;
+        const list = await this._stripe.subscriptions.list({ customer: customerId, limit: limit || 10 });
+        return list
     }
 
     async getInvoices(limit?: number) {
