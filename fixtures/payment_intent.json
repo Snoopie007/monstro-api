@@ -1,0 +1,45 @@
+{
+    "_meta": {
+        "template_version": 0
+    },
+    "fixtures": [
+        {
+            "name": "payment_method",
+            "path": "/v1/payment_methods",
+            "method": "post",
+            "params": {
+                "type": "card",
+                "card": {
+                    "token": "tok_visa"
+                }
+            }
+        },
+        {
+            "name": "payment_intent",
+            "path": "/v1/payment_intents",
+            "method": "post", 
+            "params": {
+                "amount": 1000,
+                "currency": "usd",
+                "payment_method": "${payment_method:id}",
+                "confirm": true,
+                "customer": "cus_SXIBYOQ0Mkcus2",
+                "description": "Test PaymentIntent",
+                "return_url": "https://example.com",
+                "automatic_payment_methods": {
+                    "enabled": true,
+                    "allow_redirects": "never"
+                },
+                "shipping": {
+                    "address": {
+                        "city": "San Francisco",
+                        "country": "US",
+                        "line1": "510 Townsend St", 
+                        "postal_code": "94107"
+                    },
+                    "name": "John Doe"
+                }
+            }
+        }
+    ]
+}

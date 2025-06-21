@@ -58,7 +58,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
         const tax = Math.floor(plan.price * (locationState.taxRate / 10000))
 
 
-        let { newSubscription, newTransaction, newInvoice } = createSubscription({
+        let { newSubscription, newInvoice, newTransaction } = createSubscription({
             ...data,
             memberId: params.mid,
             locationId: params.id,
@@ -84,16 +84,11 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 return NextResponse.json({ error: "Failed to create subscription" }, { status: 500 })
             }
 
-            newTransaction.metadata = {
-                card: { brand: stripePaymentMethod.card?.brand, last4: stripePaymentMethod.card?.last4 }
-            }
             newSubscription.stripeSubscriptionId = sub.id
         }
 
         if (data.paymentMethod !== "card") {
             newSubscription.status = "active"
-            newTransaction.status = "paid"
-            newInvoice.status = "paid"
         }
 
 
@@ -101,29 +96,26 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             const [{ sid }] = await tx.insert(memberSubscriptions).values({
                 ...newSubscription
             }).returning({ sid: memberSubscriptions.id })
-            const [{ invoiceId }] = await tx.insert(memberInvoices).values({
-                ...newInvoice,
-                memberSubscriptionId: sid
-            }).returning({ invoiceId: memberInvoices.id });
-
-            await tx.insert(transactions).values({
-                ...newTransaction,
-                invoiceId,
-                subscriptionId: sid,
-            });
 
 
+            if (data.paymentMethod === "cash") {
+
+                const [{ invoiceId }] = await tx.insert(memberInvoices).values({
+                    ...newInvoice,
+                    status: "draft",
+                    memberSubscriptionId: sid
+                }).returning({ invoiceId: memberInvoices.id });
+                await tx.insert(transactions).values({
+                    ...newTransaction,
+                    invoiceId,
+                    subscriptionId: sid,
+                    status: "paid",
+                });
+            }
             return sid
         })
 
 
-        if (data.paymentMethod === "cash" && !newSubscription.cancelAt) {
-            newInvoice.status = "draft"
-            await db.insert(memberInvoices).values({
-                ...newInvoice,
-                memberSubscriptionId: sid
-            }).returning({ invoiceId: memberInvoices.id });
-        }
 
         return NextResponse.json({ sid }, { status: 200 })
     } catch (err) {

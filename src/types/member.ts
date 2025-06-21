@@ -70,6 +70,7 @@ export type MemberPackage = {
     expireDate: Date | null;
     status: PackageStatus;
     paymentMethod: PaymentMethod;
+    stripePaymentId?: string | null;
     totalClassAttended?: number;
     totalClassLimit: number;
     metadata?: Record<string, unknown>;

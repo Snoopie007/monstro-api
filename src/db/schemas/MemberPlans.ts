@@ -74,6 +74,7 @@ export const memberPackages = pgTable("member_packages", {
 	locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
 	memberContractId: integer("member_contract_id").references(() => memberContracts.id),
+	stripePaymentId: text("stripe_payment_id"),
 	parentId: integer("parent_id"),
 	startDate: timestamp("start_date", { withTimezone: true }).notNull(),
 	expireDate: timestamp("expire_date", { withTimezone: true }),

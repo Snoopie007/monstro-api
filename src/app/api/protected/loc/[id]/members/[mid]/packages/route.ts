@@ -3,6 +3,7 @@ import { memberInvoices, memberPackages, transactions } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
 import { createPackage } from "../../utils";
 import { NextRequest, NextResponse } from "next/server";
+import { encodeId } from "@/libs/server/sqids";
 
 type PackageProps = {
     id: number,
@@ -52,8 +53,6 @@ export async function POST(req: NextRequest, props: { params: Promise<PackagePro
             return NextResponse.json({ error: "No valid location not found" }, { status: 404 })
         }
 
-
-        // Apply tax to the plan price
         const tax = Math.floor(plan.price * (locationState.taxRate / 10000))
         const amount = plan.price + tax
 
@@ -64,35 +63,45 @@ export async function POST(req: NextRequest, props: { params: Promise<PackagePro
         }, plan, tax)
 
         let clientSecret: string | undefined;
+        let md = {}
+
         if (data.paymentMethod === "card") {
-
             const stripe = await getStripeCustomer(params)
-
             const res = await stripe.createPaymentIntent(amount, {
                 paymentMethod: stripePaymentMethod.id,
                 currency: plan.currency,
                 applicationFeePercent: (locationState.usagePercent / 100),
-                description: `One time payment for ${plan.name}`
-            })
-
-            if (res.clientSecret) {
-                clientSecret = res.clientSecret
-                newTransaction.metadata = {
-                    card: { brand: stripePaymentMethod.card?.brand, last4: stripePaymentMethod.card?.last4 }
+                description: `One time payment for ${plan.name}`,
+                metadata: {
+                    planId: plan.id,
+                    tax,
+                    startDate: newPkg.startDate,
+                    locationId: encodeId(params.id),
+                    memberId: params.mid,
                 }
-
+            })
+            if (!res.clientSecret) {
+                return NextResponse.json({ error: "Failed to create payment intent" }, { status: 500 })
             }
-        }
-
-        if (data.paymentType !== "card" || clientSecret) {
             newTransaction.status = "paid"
             newPkg.status = "active"
             newInvoice.status = "paid"
+            const cardInfo = data.token?.card || data.stripePaymentMethod?.card || null;
+
+            if (cardInfo) {
+                md = {
+                    card: { brand: cardInfo.brand, last4: cardInfo.last4 }
+                }
+            }
         }
 
         const newPackage = await db.transaction(async (tx) => {
-            /** Create Member Package */
-            const [{ mpid }] = await tx.insert(memberPackages).values(newPkg).returning({ mpid: memberPackages.id })
+            const stripePaymentId = clientSecret?.split('_secret_')[0]
+            const [{ mpid }] = await tx.insert(memberPackages).values({
+                ...newPkg,
+                stripePaymentId,
+                metadata: md
+            }).returning({ mpid: memberPackages.id })
             /** Create Invoice */
             const [{ iid }] = await tx.insert(memberInvoices).values({
                 ...newInvoice,
@@ -102,7 +111,8 @@ export async function POST(req: NextRequest, props: { params: Promise<PackagePro
             await tx.insert(transactions).values({
                 ...newTransaction,
                 invoiceId: iid,
-                packageId: mpid
+                packageId: mpid,
+                metadata: md
             })
             return { id: mpid }
         })
