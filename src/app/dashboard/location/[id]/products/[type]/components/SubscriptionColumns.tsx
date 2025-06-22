@@ -9,14 +9,6 @@ export const SubColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => 
     {
         accessorKey: "name",
         header: "Name",
-        cell: ({ row }) => {
-            const plan = row.original
-            return (
-                <Link href={`/dashboard/location/${locationId}/products/${plan.id}`} className="" >
-                    {plan.name}
-                </Link>
-            )
-        },
     },
     {
         accessorKey: "Programs",
