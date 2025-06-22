@@ -24,6 +24,7 @@ import { Icon } from '@/components/icons';
 
 import { toast } from 'react-toastify';
 import { usePrograms } from '@/hooks/usePrograms';
+import { mutate as globalMutate } from 'swr';
 
 
 
@@ -53,22 +54,42 @@ export function AddProgram({ lid }: { lid: string }) {
 
 
     async function submitForm(v: z.infer<typeof NewProgramSchema>) {
+        if (loading) return; // Prevent multiple submissions
 
         setLoading(true);
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/programs`, {
-                method: "POST",
-                body: JSON.stringify(v)
-            })
-        )
-        setLoading(false);
-        if (error || !result || !result.ok) {
-            toast.error(error?.message || "Something went wrong");
-            return;
+        
+        try {
+            const { result, error } = await tryCatch(
+                fetch(`/api/protected/loc/${lid}/programs`, {
+                    method: "POST",
+                    body: JSON.stringify(v)
+                })
+            )
+            
+            if (error || !result || !result.ok) {
+                toast.error(error?.message || "Something went wrong");
+                return;
+            }
+            
+            toast.success("Program created successfully");
+            
+            // Refresh the data - force revalidation of ALL cache
+            await mutate();
+            await globalMutate((key) => typeof key === "string" && key.includes(`/api/protected/loc/${lid}/programs`));
+            
+            await sleep(1000);
+            setOpen(false);
+        } catch (error) {
+            console.error("Error creating program:", error);
+            toast.error("Failed to create program");
+        } finally {
+            setLoading(false);
         }
-        await mutate();
-        await sleep(1000);
-        setOpen(false);
+    };
+
+    const handleSaveClick = () => {
+        if (loading) return; // Prevent clicking when already loading
+        form.handleSubmit(submitForm)();
     };
 
 
@@ -182,18 +203,16 @@ export function AddProgram({ lid }: { lid: string }) {
                     <SheetClose asChild>
                         <Button variant={"outline"} size={"sm"}>Cancel</Button>
                     </SheetClose>
-                    <SheetClose asChild>
-                        <Button
-                            variant={"foreground"}
-                            size={"sm"}
-                            onClick={form.handleSubmit(submitForm)}
-                            disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
-                            className={cn("children:hidden  ", (loading && "children:inline-block"))}
-                        >
-                            <Icon name="LoaderCircle" className="mr-2  animate-spin" />
-                            Save
-                        </Button>
-                    </SheetClose>
+                    <Button
+                        variant={"foreground"}
+                        size={"sm"}
+                        onClick={handleSaveClick}
+                        disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
+                        className={cn("children:hidden  ", (loading && "children:inline-block"))}
+                    >
+                        <Icon name="LoaderCircle" className="mr-2  animate-spin" />
+                        Save
+                    </Button>
                 </SheetFooter>
 
 

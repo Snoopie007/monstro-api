@@ -39,6 +39,7 @@ import useSWR from "swr";
 import { Loader2 } from "lucide-react";
 import { PlanPkgFields } from "./PkgFields";
 import AddPrograms from "../AddPrograms";
+import { mutate as globalMutate } from 'swr';
 
 interface CreatePlanProps {
     lid: string
@@ -47,9 +48,9 @@ interface CreatePlanProps {
 
 export function CreatePlan({ lid, type }: CreatePlanProps) {
     const { mutate } = useSWR(`/api/protected/loc/${lid}/plans/${type === "recurring" ? "subs" : "pkgs"}`);
-
-    const [loading, setLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [open, setOpen] = useState(false);
+    
     const form = useForm<z.infer<typeof NewPlanSchema>>({
         resolver: zodResolver(NewPlanSchema),
         defaultValues: {
@@ -78,63 +79,88 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
     })
 
     async function submitForm(v: z.infer<typeof NewPlanSchema>) {
-        setLoading(true)
-        const { pkg, sub, ...rest } = v
-        if (!v.programs || v.programs.length === 0) {
-            toast.error("Please select at least one program");
-            return;
-        }
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/plans/${type === "recurring" ? "subs" : "pkgs"}`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    ...rest,
-                    ...(type === 'recurring' ? { ...sub } : { ...pkg })
+        if (isSubmitting) return;
+        
+        setIsSubmitting(true);
+        
+        try {
+            if (!v.programs || v.programs.length === 0) {
+                toast.error("Please select at least one program");
+                setIsSubmitting(false);
+                return;
+            }
+            
+            const { pkg, sub, ...rest } = v;
+            const { result, error } = await tryCatch(
+                fetch(`/api/protected/loc/${lid}/plans/${type === "recurring" ? "subs" : "pkgs"}`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        ...rest,
+                        ...(type === 'recurring' ? { ...sub } : { ...pkg })
+                    })
                 })
-            })
-        )
-        if (error || !result || !result.ok) {
-            toast.error(error?.message || "Something went wrong")
-            setLoading(false)
-            return
-        }
+            )
+            
+            if (error || !result || !result.ok) {
+                toast.error(error?.message || "Something went wrong");
+                setIsSubmitting(false);
+                return;
+            }
 
-        toast.success("Subscription created successfully")
-        setLoading(false)
-        form.reset()
-        mutate()
-        setOpen(false)
+            toast.success(type === "recurring" ? "Subscription created successfully" : "Package created successfully");
+            
+            await globalMutate((key) => typeof key === "string" && key.includes(`/api/protected/loc/${lid}/plans/${type === "recurring" ? "subs" : "pkgs"}`));
+            await mutate();
+            
+          
+            form.reset();
+            setOpen(false);
+        } catch (error) {
+            console.error("Error creating plan:", error);
+            toast.error("Failed to create plan");
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
+    const handleFormSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (isSubmitting) return; 
+        form.handleSubmit(submitForm)(e);
+    };
+
+    const handleSaveClick = () => {
+        if (isSubmitting) return; // Prevent clicking when already submitting
+        form.handleSubmit(submitForm)();
+    };
+
     return (
-        <Dialog open={open} onOpenChange={setOpen} >
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant={"foreground"} size={"xs"}  >
+                <Button variant={"foreground"} size={"xs"}>
                     + {type === "recurring" ? "Subscription" : "Package"}
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
-                <DialogHeader className="space-y-0" >
+                <DialogHeader className="space-y-0">
                     <DialogTitle>{type === "recurring" ? "Create Subscription" : "Create Package"}</DialogTitle>
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <DialogBody>
                     <Form {...form}>
-                        <form action="" className="space-y-2">
-
+                        <form onSubmit={handleFormSubmit} className="space-y-2">
                             <fieldset className="grid grid-cols-2 gap-2">
                                 <FormField
                                     control={form.control}
                                     name="name"
                                     render={({ field }) => (
-                                        <FormItem >
+                                        <FormItem>
                                             <FormLabel size={"tiny"}>Name</FormLabel>
                                             <FormControl>
                                                 <Input type='text' className={cn("")} placeholder="Name" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
-
                                     )}
                                 />
                                 <FormField
@@ -146,7 +172,14 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                                             <FormControl>
                                                 <div className="relative">
                                                     <span className="absolute left-3 top-[50%] -translate-y-[50%] text-sm text-foreground/50">$</span>
-                                                    <Input {...field} type="number" step="0.01" min="0.00" className="pl-6" placeholder="0.00" value={field.value || ""}
+                                                    <Input 
+                                                        {...field} 
+                                                        type="number" 
+                                                        step="0.01" 
+                                                        min="0.00" 
+                                                        className="pl-6" 
+                                                        placeholder="0.00" 
+                                                        value={field.value || ""}
                                                         onChange={(e) => {
                                                             const value = e.target.value ? Math.floor(parseFloat(e.target.value) * 100) / 100 : "";
                                                             field.onChange(value);
@@ -159,12 +192,12 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                                     )}
                                 />
                             </fieldset>
-                            <fieldset >
+                            <fieldset>
                                 <FormField
                                     control={form.control}
                                     name="description"
                                     render={({ field }) => (
-                                        <FormItem >
+                                        <FormItem>
                                             <FormLabel size={"tiny"}>Description</FormLabel>
                                             <FormControl>
                                                 <Textarea className={"resize-none min-h-8"} placeholder="Short description" {...field} />
@@ -181,7 +214,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size={"tiny"}>Select Programs</FormLabel>
-                                            <FormDescription className="text-xs ">
+                                            <FormDescription className="text-xs">
                                                 Select at least one program that this plan will include.
                                             </FormDescription>
                                             <FormControl>
@@ -193,7 +226,6 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                                                 />
                                             </FormControl>
                                             <FormMessage />
-
                                         </FormItem>
                                     )}
                                 />
@@ -201,8 +233,8 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                             {type === "recurring" && <PlanSubFields lid={lid} form={form} />}
                             {type === "one-time" && <PlanPkgFields lid={lid} form={form} />}
                         </form>
-                    </Form >
-                </DialogBody >
+                    </Form>
+                </DialogBody>
                 <DialogFooter>
                     <div className="flex flex-row gap-2 items-center">
                         <DialogClose asChild>
@@ -210,18 +242,22 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                                 Cancel
                             </Button>
                         </DialogClose>
-                        <DialogClose asChild>
-                            <Button size={"sm"} onClick={form.handleSubmit(submitForm)} variant={"foreground"}
-                                className={cn("children:hidden", { "children:inline-block": loading })}
-                            // disabled={form.formState.isSubmitting || !form.formState.isValid || loading}
-                            >
-                                <Loader2 className="size-3 mr-2 animate-spin" />
-                                Save
-                            </Button>
-                        </DialogClose>
+                        <Button 
+                            size={"sm"} 
+                            onClick={handleSaveClick} 
+                            variant={"foreground"}
+                            disabled={isSubmitting || !form.formState.isValid}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="size-3 mr-2 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : "Save"}
+                        </Button>
                     </div>
                 </DialogFooter>
-            </DialogContent >
-        </Dialog >
+            </DialogContent>
+        </Dialog>
     )
 }
