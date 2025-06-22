@@ -19,7 +19,7 @@ export const members = pgTable("members", {
     referralCode: text("referral_code").notNull(),
     currentPoints: integer("current_points").notNull().default(0),
     gender: text("gender"),
-    dob: timestamp("dob"),
+    dob: timestamp('dob', { withTimezone: true, mode: 'date' }).default(sql`NULL`),
     avatar: text("avatar"),
     stripeCustomerId: text("stripe_customer_id"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
