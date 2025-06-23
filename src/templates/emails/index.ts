@@ -1,15 +1,14 @@
 
 import { LoginTokenEmail } from "./LoginTokenEmail";
-import { InviteEmailTemplate } from "./MemberInvite";
+import { MemberInvite } from "./MemberInvite";
 import { OTPEmailTemplate } from "./OTPEmail";
 import { ResetPasswordEmail } from "./ResetPasswordEmail";
 import { ResetSuccessEmail } from "./ResetSuccessEmail";
 import { SimpleOTPEmail } from "./SimpleOTP";
 
 export const EmailTemplates = {
-
     LoginTokenEmail,
-    InviteEmailTemplate,
+    MemberInvite,
     OTPEmailTemplate,
     ResetPasswordEmail,
     ResetSuccessEmail,

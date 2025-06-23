@@ -28,7 +28,7 @@ export class EmailSender {
 
     public async sendSupportEmail(props: EmailOptions) {
         const html = interEmailsAndText(EmailTemplates[props.template], props.data);
-
+        console.log(html);
         await this._sender.send({
             ...props.options,
             from: {
