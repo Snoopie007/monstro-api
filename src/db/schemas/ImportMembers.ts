@@ -11,16 +11,13 @@ export const importMembers = pgTable("import_members", {
     email: text("email").notNull(),
     phone: text("phone"),
     lastRenewalDay: date("last_renewal_day").notNull(),
-    status: text("status").notNull().default("Active"),
-    terms: text("terms").notNull().default("months"),
-    termCount: integer("term_count").notNull(),
+    status: text("status").notNull().default("pending"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
     planId: integer("plan_id").references(() => memberPlans.id),
     memberId: integer("member_id").references(() => members.id),
-    isFamilyPlan: boolean("is_family_plan").notNull().default(false),
     isPrimaryMember: boolean("is_primary_member").notNull().default(false),
-    processed: boolean("processed").notNull().default(false),
+    oauth: boolean("oauth").notNull().default(false),
     locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 });
 

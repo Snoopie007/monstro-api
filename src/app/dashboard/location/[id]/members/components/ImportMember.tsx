@@ -25,10 +25,8 @@ export default function ImportMembers({ lid }: { lid: string }) {
     const [preview, setPreview] = useState<FilePreviewType | null>(null);
     const [error, setError] = useState<string | null>(null);
     const { plans } = useMemberPlans(lid);
-    const requiredHeaders = ['first_name', 'last_name', 'email', 'phone', 'last_renewal_day', 'terms', 'term_count', 'status'];
+    const requiredHeaders = ['first_name', 'last_name', 'email', 'phone', 'last_renewal_day'];
     const normalizedRequiredHeaders = requiredHeaders.map(header => header.toLowerCase());
-    const validTerms = ['month', 'week', 'year', 'day'];
-    const validStatus = ['active', 'in active'];
     const dateFormatRegex = /^\d{4}-\d{2}-\d{2}$/;
 
     useEffect(() => {
@@ -66,18 +64,6 @@ export default function ImportMembers({ lid }: { lid: string }) {
                 const validRows = results.data.filter((row: any, index) => {
                     if (!row.last_renewal_day.match(dateFormatRegex)) {
                         validationErrors.push(`Row ${index + 1}: Invalid date format (YYYY-MM-DD) for 'last_renewal_day'.`);
-                        return false;
-                    }
-                    if (!validTerms.includes(row.terms.toLowerCase())) {
-                        validationErrors.push(`Row ${index + 1}: 'terms' must be one of [${validTerms.join(', ')}].`);
-                        return false;
-                    }
-                    if (isNaN(Number(row.term_count))) {
-                        validationErrors.push(`Row ${index + 1}: 'term_count' must be a number.`);
-                        return false;
-                    }
-                    if (!validStatus.includes(row.status.toLowerCase())) {
-                        validationErrors.push(`Row ${index + 1}: 'status' must be either 'active' or 'inactive'.`);
                         return false;
                     }
                     return true;
