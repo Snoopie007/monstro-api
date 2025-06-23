@@ -84,7 +84,8 @@ export async function POST(request: Request, props: { params: Promise<{ id: numb
 			}
 			return NextResponse.json({ sample: records.slice(0, 3) }, { status: 200 });
 		} catch (error) {
-			return NextResponse.json({ status: 'fail', message: 'No file uploaded', error: error }, { status: 500 });
+			console.error(error);
+			return NextResponse.json({ status: 500 });
 		}
 	}
 }
