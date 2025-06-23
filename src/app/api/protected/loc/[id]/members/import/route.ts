@@ -47,7 +47,6 @@ export async function POST(request: Request, props: { params: Promise<{ id: numb
 							email: record.email,
 							phone: record.phone,
 							lastRenewalDay: record.last_renewal_day,
-							status: record.status,
 							planId: planId && typeof planId === 'string' ? parseInt(planId, 10) : null,
 							locationId: params.id
 						});
