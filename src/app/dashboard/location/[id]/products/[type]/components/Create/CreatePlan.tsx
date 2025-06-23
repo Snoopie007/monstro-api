@@ -47,7 +47,8 @@ interface CreatePlanProps {
 }
 
 export function CreatePlan({ lid, type }: CreatePlanProps) {
-    const { mutate } = useSWR(`/api/protected/loc/${lid}/plans/${type === "recurring" ? "subs" : "pkgs"}`);
+     const types = type === "recurring" ? "subs" : "pkgs";
+    const { mutate } = useSWR(`/api/protected/loc/${lid}/plans/${types}`);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [open, setOpen] = useState(false);
     
@@ -82,7 +83,9 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
         if (isSubmitting) return;
         
         setIsSubmitting(true);
-        
+
+        const types = type === "recurring" ? "subs" : "pkgs";
+
         try {
             if (!v.programs || v.programs.length === 0) {
                 toast.error("Please select at least one program");
@@ -92,7 +95,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
             
             const { pkg, sub, ...rest } = v;
             const { result, error } = await tryCatch(
-                fetch(`/api/protected/loc/${lid}/plans/${type === "recurring" ? "subs" : "pkgs"}`, {
+                fetch(`/api/protected/loc/${lid}/plans/${types}`, {
                     method: 'POST',
                     body: JSON.stringify({
                         ...rest,
@@ -109,7 +112,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 
             toast.success(type === "recurring" ? "Subscription created successfully" : "Package created successfully");
             
-            await globalMutate((key) => typeof key === "string" && key.includes(`/api/protected/loc/${lid}/plans/${type === "recurring" ? "subs" : "pkgs"}`));
+            await globalMutate((key) => typeof key === "string" && key.includes(`/api/protected/loc/${lid}/plans/${types}`));
             await mutate();
             
           

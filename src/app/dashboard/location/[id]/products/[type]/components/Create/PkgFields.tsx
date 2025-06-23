@@ -1,4 +1,3 @@
-
 import {
     FormControl, FormField, FormMessage, FormItem, FormLabel,
     Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -97,9 +96,17 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                                 name="pkg.expireThreshold"
                                 render={({ field }) => (
                                     <FormItem className="col-span-1">
-
                                         <FormControl>
-                                            <Input type='number' placeholder="1" {...field} />
+                                            <Input 
+                                                type='number' 
+                                                placeholder="1" 
+                                                {...field}
+                                                value={field.value || ""}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    field.onChange(value ? parseInt(value) : "");
+                                                }}
+                                            />
                                         </FormControl>
                                     </FormItem>
                                 )}
@@ -110,7 +117,7 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                                 render={({ field }) => (
                                     <FormItem className="col-span-2">
 
-                                        <Select onValueChange={field.onChange} value={field.value}  >
+                                        <Select onValueChange={field.onChange} value={field.value || ""}  >
 
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select interval..." />
@@ -140,7 +147,7 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
 
                                     <FormControl>
                                         <Switch
-                                            checked={field.value}
+                                            checked={field.value || false}
                                             onCheckedChange={field.onChange}
                                         />
                                     </FormControl>
@@ -167,7 +174,11 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                                         <FormControl>
                                             <Input type='number' className={cn("")}
                                                 {...field}
-                                                onChange={(e) => e.target.value && field.onChange(parseInt(e.target.value))}
+                                                value={field.value || ""}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    field.onChange(value ? parseInt(value) : "");
+                                                }}
                                             />
                                         </FormControl>
                                         <FormMessage />
@@ -185,4 +196,3 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
 
     )
 }
-
