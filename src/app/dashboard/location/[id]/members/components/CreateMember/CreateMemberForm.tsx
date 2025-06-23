@@ -97,7 +97,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
             await sendInvite(m);
         }
         setLoading(false);
-        router.push(`/dashboard/${lid}/members`)
+        router.push(`/dashboard/location/${lid}/members/${m.id}`)
     }
 
     async function sendInvite(m: Member | undefined) {
@@ -112,7 +112,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
         }
         if (retry) {
             toast.success("Invite sent successfully.");
-            router.push(`/dashboard/${lid}/members/${m.id}`)
+            router.push(`/dashboard/location/${lid}/members/${m.id}`)
         }
     }
 
