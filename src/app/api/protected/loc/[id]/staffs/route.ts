@@ -4,7 +4,6 @@ import { db } from "@/db/db";
 import { users } from "@/db/schemas";
 import { and } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { InviteEmailTemplate } from '@/templates/emails/MemberInvite';
 import { MonstroData } from '@/libs/data';
 import { EmailSender } from "@/libs/server/emails";
 
@@ -52,7 +51,7 @@ export async function POST(req: Request, props: { params: Promise<StaffProps> })
                     to: existingUser.email,
                     subject: 'Welcome to Monstro',
                 },
-                template: 'InviteEmailTemplate',
+                template: 'MemberInvite',
                 data: {
                     ui: { button: "Join the class." },
                     location: { name: existingUser?.name },
@@ -60,7 +59,6 @@ export async function POST(req: Request, props: { params: Promise<StaffProps> })
                     member: { name: existingUser?.name },
                 }
             });
-            console.log(`Email sent to ${existingUser.email}`);
             return NextResponse.json({ success: true }, { status: 200 })
         } catch (emailError) {
             console.error(`Failed to send email to ${existingUser.email}:`, emailError);
@@ -81,7 +79,7 @@ export async function POST(req: Request, props: { params: Promise<StaffProps> })
                     to: data.email,
                     subject: 'Welcome to Monstro',
                 },
-                template: 'InviteEmailTemplate',
+                template: 'MemberInvite',
                 data: {
                     ui: { button: "Join the class." },
                     location: { name: data?.name },

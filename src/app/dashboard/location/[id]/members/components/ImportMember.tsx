@@ -122,7 +122,7 @@ export default function ImportMembers({ lid }: { lid: string }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className='h-auto py-1 text-xs rounded-xs border'>
+                <Button variant="ghost" size="icon" className='h-auto py-1 text-xs rounded-sm border bg-foreground/5 border-foreground/10 text-foreground/50'>
                     <FileDown size={16} />
                 </Button>
             </DialogTrigger>
@@ -133,7 +133,7 @@ export default function ImportMembers({ lid }: { lid: string }) {
                     </DialogTitle>
                     <DialogDescription className='text-xs'>
                         {step === 0
-                            ? "Upload a CSV file. Ensure the date format is YYYY-MM-DD, 'terms' contains valid values, 'term_count' is a number, and 'status' is either 'active' or 'inactive'. Required headers: first_name, last_name, email, phone, last_renewal_day, terms, term_count, status. if you violate   any rules, the import will fail."
+                            ? "Upload a CSV file. Ensure the date format is YYYY-MM-DD. Required headers: first_name, last_name, email, phone, last_renewal_day. You must follow the format exactly."
                             : "You can optionally bulk enroll members in a program and plan. If not selected, members can be assigned a plan later."}
                     </DialogDescription>
                 </DialogHeader>

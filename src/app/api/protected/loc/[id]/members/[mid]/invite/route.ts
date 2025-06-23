@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
                 to: member.email,
                 subject: `Welcome to ${location.name}`,
             },
-            template: 'InviteEmailTemplate',
+            template: 'MemberInvite',
             data: {
                 ui: {
                     btnText: "Accept Invite",

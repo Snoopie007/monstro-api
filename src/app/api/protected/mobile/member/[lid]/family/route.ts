@@ -203,7 +203,7 @@ export async function POST(req: NextRequest, props: { params: Promise<Props> }) 
                     to: email,
                     subject: 'Welcome to Monstro',
                 },
-                template: 'InviteEmailTemplate',
+                template: 'MemberInvite',
                 data: {
                     ui: { button: "Join the class.", btnUrl: emailUrl },
                     location: { name: location?.name },

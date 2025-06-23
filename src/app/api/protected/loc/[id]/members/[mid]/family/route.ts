@@ -246,7 +246,7 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
                     to: member.email,
                     subject: 'Family Member Invitation',
                 },
-                template: 'InviteEmailTemplate',
+                template: 'MemberInvite',
                 data: {
                     ui: { button: "Join the class.", btnUrl: emailUrl },
                     location: { name: location?.name },
