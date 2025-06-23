@@ -143,7 +143,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 										<FormItem className='space-y-0'>
 											<FormLabel size="tiny">Limit Per Member</FormLabel>
 											<FormControl>
-												<Input type='text' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
+												<Input type='number' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(Number(e.currentTarget.value) || 0)} />
 											</FormControl>
 											<FormMessage />
 										</FormItem>
@@ -156,7 +156,7 @@ export function UpsertReward({ reward, locationId, setCurrentReward }: Addreward
 										<FormItem className='space-y-0'>
 											<FormLabel size="tiny">Limit Total(Leaving it empty will set it to unlimited)</FormLabel>
 											<FormControl>
-												<Input type='number' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(Number(e.currentTarget.value))} />
+												<Input type='number' className={cn(InputStyle)} placeholder="Limit" {...field} onChange={(e) => field.onChange(e.currentTarget.value || "Unlimited")} />
 											</FormControl>
 											<FormMessage />
 										</FormItem>
