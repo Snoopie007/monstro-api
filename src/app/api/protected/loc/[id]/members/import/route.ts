@@ -1,6 +1,10 @@
 import { db } from '@/db/db';
 import { importMembers } from '@/db/schemas/ImportMembers';
 import { NextResponse } from 'next/server';
+import { EmailSender } from "@/libs/server/emails";
+import { MonstroData } from '@/libs/data';
+
+const emailSender = new EmailSender();
 export async function POST(request: Request, props: { params: Promise<{ id: number }> }) {
 
   const data = await request.formData();
@@ -29,24 +33,50 @@ export async function POST(request: Request, props: { params: Promise<{ id: numb
       });
       const addedRecords = [];
       // Example: Looping over each record
-      for (const record of records) {
-        try {
-          const inserted = await db.insert(importMembers).values({
-            firstName: record.first_name,
-            lastName: record.last_name,
-            email: record.email,
-            phone: record.phone,
-            lastRenewalDay: record.last_renewal_day,
-            status: record.status,
-            planId: planId && typeof planId === 'string' ? parseInt(planId, 10) : null,
-            created: new Date(),
-            locationId: params.id
-          });
+      const location = await db.query.locations.findFirst({
+        where: (locations, { eq }) => eq(locations.id, params.id),
+      });
+      if (location) {
+        for (const record of records) {
+          try {
+            const inserted = await db.insert(importMembers).values({
+              firstName: record.first_name,
+              lastName: record.last_name,
+              email: record.email,
+              phone: record.phone,
+              lastRenewalDay: record.last_renewal_day,
+              status: record.status,
+              planId: planId && typeof planId === 'string' ? parseInt(planId, 10) : null,
+              created: new Date(),
+              locationId: params.id
+            });
 
-          addedRecords.push(inserted);
-        } catch (error) {
-          console.error(`Error inserting record: ${record.email}`, error);
+            addedRecords.push(inserted);
+            const subject = `You've been invited to join ${location?.name} on Monstro`;
+            await emailSender.send({
+              options: {
+                to: record.email,
+                subject,
+              },
+              template: 'InviteEmailTemplate',
+              data: {
+                member: {
+                  firstName: record.first_name
+                },
+                ui: {
+                  btnText: "Accept Invite",
+                  btnUrl: `https://member.mymonstroapp.com/invite/${params.id}?email=${record.email}`
+                },
+                monstro: MonstroData
+              }
+            });
+
+
+          } catch (error) {
+            console.error(`Error inserting record: ${record.email}`, error);
+          }
         }
+
       }
       return NextResponse.json({ status: 'success', message: 'File uploaded successfully', data: { sample: records.slice(0, 3) } });
     } catch (error) {
