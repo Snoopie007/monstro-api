@@ -17,7 +17,6 @@ export default function ClubRegistration({
 
                 {children}
             </div>
-
             <footer className="w-full max-w-4xl flex-initial py-4">
                 <p className="text-sm text-gray-500 text-center">
                     &copy; {new Date().getFullYear()} Monstro. All rights reserved.
