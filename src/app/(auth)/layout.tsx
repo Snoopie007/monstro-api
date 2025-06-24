@@ -9,7 +9,7 @@ export default function ClubRegistration({
     children: React.ReactNode
 }) {
     return (
-        <main className="min-h-screen flex flex-col  text-black  items-center bg-gray-50  ">
+        <main className="flex flex-col  h-screen text-black  items-center bg-gray-50  ">
             <header className="w-full max-w-4xl py-2 flex-initial">
                 <Image src="/images/logo.png" alt="Monstro" width={100} height={100} />
             </header>
@@ -19,7 +19,7 @@ export default function ClubRegistration({
             </div>
 
             <footer className="w-full max-w-4xl flex-initial py-4">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 text-center">
                     &copy; {new Date().getFullYear()} Monstro. All rights reserved.
                 </p>
             </footer>

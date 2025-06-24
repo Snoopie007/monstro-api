@@ -5,6 +5,7 @@ import "@public/globals.css";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import Script from "next/script";
 
 export const metadata: Metadata = {
     title: "Monstro",
@@ -33,19 +34,18 @@ export default async function RootLayout({
     return (
         <SessionProvider session={session}>
             <html suppressHydrationWarning lang="en" className={`${poppins.variable} ${roboto.variable}`} >
-                <head>
-                    <script
-                        crossOrigin="anonymous"
+                {process.env.NODE_ENV === "development" && (
+                    <Script
                         src="//unpkg.com/react-scan/dist/auto.global.js"
+                        crossOrigin="anonymous"
                     />
-                </head>
+                )}
                 <body className={"font-roboto"}>
                     {/* <Monitoring
                         apiKey="-OqpEnrUNsFguu-tRoISM0H5Lgsx7qIo" // Safe to expose publically
                         url="https://monitoring.react-scan.com/api/v1/ingest"
                     /> */}
                     <ThemeProvider
-
                         defaultTheme="system"
                         enableSystem
                         disableTransitionOnChange
@@ -60,8 +60,6 @@ export default async function RootLayout({
                         stacked={true}
                     />
                 </body>
-
-
             </html>
         </SessionProvider>
     );
