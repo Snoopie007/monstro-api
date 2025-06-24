@@ -48,7 +48,7 @@ export const {
 		sessionToken: {
 			name: isProduction ? `__Secure-next-auth.monstro-session-token` : `next-auth.session-token`,
 			options: {
-				domain: isProduction ? ".mymonstroapp.com" : undefined,
+				domain: isProduction ? ".monstro-x.com" : undefined,
 				path: "/",
 				httpOnly: true,
 				sameSite: "lax",
