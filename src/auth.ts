@@ -25,7 +25,6 @@ import { ExtendedUser } from "./types/next-auth";
 // 		return locations;
 // 	}
 // }
-
 const isProduction = process.env.NODE_ENV === "production";
 
 export const {
