@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
             data: {
                 ui: {
                     btnText: "Accept Invite",
-                    btnUrl: `https://member.mymonstroapp.com/invite/${encodeId(params.id)}?email=${member.email}`
+                    btnUrl: `https://m.monstro-x.com/invite/${encodeId(params.id)}?email=${member.email}`
                 },
                 location,
                 monstro: MonstroData,

@@ -1,5 +1,3 @@
-
-import 'react-toastify/dist/ReactToastify.css';
 import Image from 'next/image';
 
 
