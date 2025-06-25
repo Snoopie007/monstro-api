@@ -145,7 +145,7 @@ export function ImportMembers({ lid }: { lid: string }) {
                                 Any invalid email, phone, or renewal date will be skipped.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className='p-4 '>
+                        <div className='p-4  space-y-2'>
 
                             <ImportMemberForm file={file} setFile={setFile} />
                             {errors.length > 0 && (
@@ -179,7 +179,7 @@ export function ImportMembers({ lid }: { lid: string }) {
                                 </div>
                             )}
                         </div>
-                        <DialogFooter className='p-4 md:justify-between'>
+                        <DialogFooter className='px-4 pb-4 pt-0 md:justify-between'>
                             <DialogClose asChild>
                                 <Button variant="clear" size="sm" disabled={isLoading}>
                                     Cancel

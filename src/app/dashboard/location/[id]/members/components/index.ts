@@ -1,2 +1,2 @@
 export * from './MemberList';
-export * from './Import/ImportMember';
+export * from './Import';
