@@ -25,10 +25,13 @@ import { ExtendedUser } from "./types/next-auth";
 // 		return locations;
 // 	}
 // }
-
 const isProduction = process.env.NODE_ENV === "production";
+<<<<<<< HEAD
 
 console.log(process.env.NODE_ENV)
+=======
+const isPreview = process.env.VERCEL_ENV === "preview";
+>>>>>>> preview
 export const {
 	handlers: { GET, POST },
 	auth,
@@ -49,7 +52,11 @@ export const {
 		sessionToken: {
 			name: isProduction ? `__Secure-next-auth.monstro-session-token` : `next-auth.session-token`,
 			options: {
+<<<<<<< HEAD
 				domain: isProduction ? ".monstro-x.com" : undefined,
+=======
+				domain: isProduction ? ".monstro-x.com" : isPreview ? ".monstrox.vercel.app" : undefined,
+>>>>>>> preview
 				path: "/",
 				httpOnly: true,
 				sameSite: "lax",
