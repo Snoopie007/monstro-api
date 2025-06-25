@@ -22,27 +22,27 @@ export function PaymentMethods({ params }: PaymentMethodsProps) {
 
     return (
         <Card className='border-x-0 border-t border-b-0 border-foreground/10'>
-            <CardHeader className='border-b border-foreground/10 space-y-0 bg-foreground/5 p-0 flex justify-between flex-row items-center ' >
-                <CardTitle className="text-sm  px-4">
-                    Payment Methods
-                </CardTitle>
-                <Elements
-                    stripe={getStripe(process.env.STRIPE_MEMBER_SECRET_KEY!)}
-                    options={{
-                        appearance: {
-                            variables: {
-                                colorIcon: "#6772e5",
-                                fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
-                            },
-                        },
-                    }}
-                >
-                    <AddPaymentMethod member={member} locationId={params.id} />
-                </Elements>
 
-
-            </CardHeader>
             <CardContent className='p-0' >
+                <div className="px-4 py-1 flex justify-between items-center  border-foreground/10 bg-foreground/5 ">
+                    <CardTitle className="text-sm  ">
+                        Payment Methods
+                    </CardTitle>
+                    <Elements
+                        stripe={getStripe(process.env.NEXT_PUBLIC_MEMBER_STRIPE_PUBLIC_KEY!)}
+                        options={{
+                            appearance: {
+                                variables: {
+                                    colorIcon: "#6772e5",
+                                    fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
+                                },
+                            },
+                        }}
+                    >
+                        <AddPaymentMethod member={member} locationId={params.id} />
+                    </Elements>
+
+                </div>
                 {paymentMethods.length === 0 && (
                     <div className='text-center py-4'>
                         <p className='text-sm text-muted-foreground'>No payment methods found</p>

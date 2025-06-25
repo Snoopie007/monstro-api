@@ -17,7 +17,7 @@ import { Member } from "@/types";
 
 import { DialogDescription, DialogTrigger } from "@radix-ui/react-dialog";
 import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight, Loader2, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { cn, StripeCardOptions } from "@/libs/utils";
@@ -49,6 +49,14 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
         defaultValues: {
             name: "",
             default: false,
+            address: {
+                line1: "",
+                line2: "",
+                city: "",
+                state: "",
+                country: "US",
+                postal_code: "",
+            }
         },
         mode: "onChange",
     });
@@ -72,7 +80,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                     },
                     body: JSON.stringify({
                         token: tokenRef.token.id,
-                        default: v.default,
+                        ...v,
                         member: {
                             email: member.email,
                             firstName: member.firstName,
@@ -81,6 +89,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                         }
                     }),
                 });
+                setLoading(false)
                 if (res.ok) {
                     const data = await res.json()
                     addPaymentMethods(data)
@@ -88,8 +97,10 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                     toast.success("Card added successfully", { theme: "dark" });
                     setOpen(false);
                 }
+                ;
             }
         } catch (error) {
+            console.log(error)
             setLoading(false);
         }
     }
@@ -100,9 +111,11 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
 
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant={"ghost"} className="border-l text-lg rounded-none border-foreground/10">+</Button>
+                <Button variant={"ghost"} size={"icon"} className="size-8 rounded-sm">
+                    <PlusIcon className="size-4" />
+                </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[525px] rounded-sm">
+            <DialogContent className="sm:max-w-[525px] rounded-sm border-foreground/10">
                 <DialogHeader>
                     <DialogTitle>Add a Card</DialogTitle>
                     <DialogDescription></DialogDescription>
@@ -127,6 +140,70 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                                     )} />
 
                             </fieldset>
+
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="address.line1"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size="tiny">
+                                                Billing Address
+                                            </FormLabel>
+
+                                            <FormControl>
+                                                <Input type="text" placeholder="Billing Address" className=" border-none rounded-sm  p-3 w-full" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+
+                            </fieldset>
+                            <fieldset className="grid grid-cols-3 items-center gap-2">
+                                <FormField
+                                    control={form.control}
+                                    name="address.city"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-1">
+
+                                            <FormControl>
+                                                <Input type="text" className="border-none  rounded-sm" placeholder="City" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem >
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="address.state"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-1">
+
+                                            <FormControl>
+                                                <RegionSelect value={field.value}
+                                                    onChange={(value) => field.onChange(value)}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem >
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="address.postal_code"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-1">
+
+                                            <FormControl>
+                                                <Input type="text" className="border-none rounded-sm" placeholder="Zipcode" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
                             <fieldset>
                                 <FormItem className="flex-1">
                                     <FormLabel size="tiny">
@@ -142,7 +219,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                                                     iconColor: theme === "dark" || theme === "system" ? "#fff" : "#000",
                                                 }
                                             },
-                                            hidePostalCode: false
+                                            hidePostalCode: true
                                         }}
                                         onChange={(e) => {
                                             setValidCard(e.complete);
@@ -176,86 +253,12 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                                     )}
                                 />
                             </fieldset>
-                            <Collapsible >
-                                <CollapsibleTrigger className="flex group flex-row items-center gap-1  text-sm text-indigo-500">
-                                    <ChevronRight size={16} className="group-data-[state=open]:rotate-90" />
-                                    <span className="font-medium">More options</span>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent className="p-4 bg-foreground/10 rounded-sm mt-4 space-y-2">
-                                    <fieldset>
-                                        <FormField
-                                            control={form.control}
-                                            name="address_line1"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel size="tiny">
-                                                        Billing Address
-                                                    </FormLabel>
-
-                                                    <FormControl>
-                                                        <Input type="text" placeholder="Billing Address" className=" border-none rounded-sm  p-3 w-full" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-
-
-                                    </fieldset>
-                                    <fieldset className="grid grid-cols-3 items-center gap-2">
-                                        <FormField
-                                            control={form.control}
-                                            name="address_city"
-                                            render={({ field }) => (
-                                                <FormItem className="col-span-1">
-
-                                                    <FormControl>
-                                                        <Input type="text" className="border-none  rounded-sm" placeholder="City" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem >
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="address_state"
-                                            render={({ field }) => (
-                                                <FormItem className="col-span-1">
-
-                                                    <FormControl>
-                                                        <RegionSelect value={field.value}
-                                                            onChange={(value) => field.onChange(value)}
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem >
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="address_zip"
-                                            render={({ field }) => (
-                                                <FormItem className="col-span-1">
-
-                                                    <FormControl>
-                                                        <Input type="text" className="border-none rounded-sm" placeholder="Zipcode" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </fieldset>
-                                </CollapsibleContent>
-                            </Collapsible>
-
-
-
                         </form>
                     </Form>
                 </DialogBody>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button type="button" variant="outline" size={"sm"}>Cancel</Button>
+                        <Button type="button" variant="outline" className="border-foreground/10" size={"sm"}>Cancel</Button>
                     </DialogClose>
                     <Button
                         className={cn("children:hidden", { "children:inline-flex": loading })}

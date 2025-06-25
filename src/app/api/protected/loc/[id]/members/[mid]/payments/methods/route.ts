@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { members } from "@/db/schemas";
+import { encodeId } from "@/libs/server/sqids";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -11,17 +12,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
     const { token, member, address, ...data } = await req.json();
 
     try {
-        // const integrations = await db.query.integrations.findFirst({
-        //     where: (integration, { eq, and }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
-        //     columns: {
-        //         accessToken: true,
-        //         secretKey: true
-        //     }
-        // })
 
-        // if (!integrations || !integrations.secretKey) {
-        //     return NextResponse.json({ error: "Stripe integration not found" }, { status: 404 })
-        // }
         const member = await db.query.members.findFirst({
             where: (member, { eq }) => eq(member.id, params.mid)
         })
@@ -33,8 +24,14 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
         let isDefault = data.default;
         const stripe = new MemberStripePayments();
         if (!member.stripeCustomerId) {
-            const customer = await stripe.createCustomer(member, undefined, {
-                locationId: params.id,
+            const customer = await stripe.createCustomer({
+                firstName: member.firstName,
+                lastName: member.lastName,
+                email: member.email,
+                phone: member.phone,
+                address
+            }, undefined, {
+                locationId: encodeId(params.id),
                 memberId: params.mid
             });
 
@@ -44,7 +41,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 .where(eq(members.id, params.mid))
         }
         stripe.setCustomer(member.stripeCustomerId)
-
+        console.log(token)
         const { paymentMethod } = await stripe.setupIntent(token);
         if (isDefault) {
             await stripe.updateCustomer({

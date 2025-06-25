@@ -37,10 +37,14 @@ export const RegisterSchema = z.object({
 export const AddCreditCardSchema = z.object({
     name: z.string().min(2, { message: "Required" }),
     default: z.boolean().optional(),
-    address_line1: z.string().optional(),
-    address_city: z.string().optional(),
-    address_state: z.string().optional(),
-    address_zip: z.string().optional(),
+    address: z.object({
+        line1: z.string().optional(),
+        line2: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        country: z.string().optional(),
+        postal_code: z.string().optional(),
+    })
 });
 
 
