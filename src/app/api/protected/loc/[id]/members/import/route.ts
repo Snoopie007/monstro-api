@@ -17,8 +17,6 @@ export async function POST(request: Request, props: { params: Promise<{ id: numb
 		return NextResponse.json({ status: 'fail', message: 'No file uploaded' }, { status: 400 });
 	}
 
-
-
 	// Example: Looping over each record
 	const location = await db.query.locations.findFirst({
 		where: (locations, { eq }) => eq(locations.id, params.id),
