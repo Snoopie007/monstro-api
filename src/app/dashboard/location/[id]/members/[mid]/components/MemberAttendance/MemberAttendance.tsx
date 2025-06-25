@@ -45,7 +45,6 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
         },
     })
 
-
     return (
         <div className="space-y-0">
             <div className="flex flex-row justify-between items-center px-4 py-2  bg-foreground/5  gap-2">
