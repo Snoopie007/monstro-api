@@ -37,12 +37,13 @@ import {
 import useSWR from 'swr';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
-import { CalendarIcon, Router } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { BirthdayField } from './DOBField';
 
 
 
-export default function CreateMemberForm({ lid }: { lid: string }) {
+export function CreateMemberForm({ lid }: { lid: string }) {
     const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
     const { mutate } = useSWR(`/api/protected/members`);
     const [existingMember, setExistingMember] = useState<Member | undefined>(undefined);
@@ -128,9 +129,10 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                                 <p className='text-base text-foreground font-medium'>This member already exists.
                                 </p>
                                 <p className='text-sm text-muted-foreground'>
-
                                     To add subscription or packages to this member, please go to the {" "}
-                                    <Link href={`/dashboard/${lid}/members/${member?.id}`} className='text-indigo-400 underline'>member profile</Link>
+                                    <Link href={`/dashboard/${lid}/members/${member?.id}`} className='text-indigo-400 underline'>
+                                        member profile
+                                    </Link>
                                 </p>
                             </div>
                             <div className="flex flex-row gap-4 items-center border border-indigo-500 rounded-sm px-4 py-3">
@@ -160,7 +162,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                                             <FormItem className="flex-1">
                                                 <FormLabel size='tiny'>First Name</FormLabel>
                                                 <FormControl>
-                                                    <Input type='text' placeholder="First Name" {...field} />
+                                                    <Input type='text' placeholder="First Name" {...field} className='border-foreground/10' />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -174,7 +176,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                                             <FormItem className="flex-1">
                                                 <FormLabel size='tiny'>Last Name</FormLabel>
                                                 <FormControl>
-                                                    <Input type='text' placeholder="Last Name" {...field} />
+                                                    <Input type='text' placeholder="Last Name" {...field} className='border-foreground/10' />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -190,7 +192,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                                             <FormItem>
                                                 <FormLabel size='tiny'>Email</FormLabel>
                                                 <FormControl>
-                                                    <Input type='email' placeholder="Email" {...field} />
+                                                    <Input type='email' placeholder="Email" {...field} className='border-foreground/10' />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -204,7 +206,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                                         <div className="flex flex-row gap-1">
                                             <Select onValueChange={(value: string) => { setPhoneRegion(value as CountryCode) }} defaultValue={phoneRegion}>
 
-                                                <SelectTrigger className="rounded-sm w-[30%] h-auto" >
+                                                <SelectTrigger className="rounded-sm w-[30%] h-auto border-foreground/10" >
                                                     <SelectValue defaultValue={"US"} />
                                                 </SelectTrigger>
 
@@ -226,7 +228,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
 
                                                             <PhoneInput
                                                                 type="tel"
-                                                                className="rounded-sm bg-background inline-block w-full border py-1.5 px-4"
+                                                                className="rounded-sm bg-background inline-block w-full border px-4 h-10 border-foreground/10"
                                                                 value={value}
                                                                 withCountryCallingCode={true}
                                                                 international={true}
@@ -261,7 +263,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                                     </div>
                                 </fieldset>
                                 <div className='space-y-1'>
-                                    <p className='text-sm text-muted-foreground uppercase '>Optional</p>
+                                    <p className='text-xs text-muted-foreground uppercase '>Optional</p>
                                     <fieldset className="grid grid-cols-5 gap-2 bg-foreground/10 px-3 py-2 rounded-sm">
 
                                         <FormField control={form.control} name="gender" render={({ field }) => (
@@ -271,7 +273,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                                                 </FormLabel>
                                                 <FormControl>
                                                     <Select value={field.value} onValueChange={field.onChange}>
-                                                        <SelectTrigger className="w-full py-2 px-3 border border-gray-300 rounded-sm focus:outline-none focus:ring focus:border-blue-300">
+                                                        <SelectTrigger className="w-full py-2 px-3 border border-foreground/10 rounded-sm focus:outline-none focus:ring focus:border-blue-300">
                                                             <SelectValue placeholder="Gender" />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -293,40 +295,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
                                                 <FormLabel size="tiny">
                                                     Date of Birth
                                                 </FormLabel>
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <FormControl>
-                                                            <Button
-                                                                variant={"outline"}
-                                                                className={cn("w-full pl-3 text-left font-normal",
-                                                                    !field.value && "text-muted-foreground"
-                                                                )}
-                                                            >
-                                                                {field.value ? (
-                                                                    format(field.value, "PPP")
-                                                                ) : (
-                                                                    <span>Pick a date</span>
-                                                                )}
-                                                                <CalendarIcon className="ml-auto size-4 opacity-50" />
-                                                            </Button>
-                                                        </FormControl>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0" align="start">
-                                                        <Calendar
-                                                            mode="single"
-                                                            selected={field.value ? new Date(field.value) : undefined}
-                                                            onSelect={(date) => {
-                                                                if (date) {
-                                                                    field.onChange(new Date(date));
-                                                                }
-                                                            }}
-
-                                                            disabled={(date) => date > new Date()}
-
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
-
+                                                <BirthdayField value={field.value} onChange={field.onChange} />
                                             </FormItem>
                                         )} />
                                     </fieldset>
@@ -338,7 +307,7 @@ export default function CreateMemberForm({ lid }: { lid: string }) {
             </DialogBody>
             <DialogFooter >
                 <DialogClose asChild>
-                    <Button variant={"outline"} size={"sm"} className="">Cancel</Button>
+                    <Button variant={"outline"} size={"sm"} className="border-foreground/10">Cancel</Button>
                 </DialogClose>
                 {(!existingMember && !retry) && (
                     <DialogClose asChild >

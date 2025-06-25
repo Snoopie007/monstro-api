@@ -9,9 +9,8 @@ import {
 } from '@/components/ui';
 
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion';
 
-import CreateMemberForm from './CreateMemberForm';
+import { CreateMemberForm } from '.';
 import { Member } from '@/types';
 import { Stripe } from 'stripe';
 
@@ -36,31 +35,20 @@ export function AddMember({ lid, stripeKey }: CreateMemberProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size={"sm"} variant={"foreground"} className='h-auto py-1 text-xs rounded-xs border'>
+                <Button size={"sm"} variant={"ghost"}
+                    className='flex-1 items-center gap-1 rounded-sm bg-foreground/10 hover:bg-foreground/10' >
                     + Member
                 </Button>
             </DialogTrigger>
 
-            <DialogContent className="max-w-lg" aria-modal>
+            <DialogContent className="max-w-lg border-foreground/10" aria-modal>
                 <DialogHeader className="space-y-0">
                     <DialogTitle className='text-sm font-medium flex flex-row items-center gap-1'>
                         Create Account
                     </DialogTitle>
                     <DialogDescription className='hidden'></DialogDescription>
                 </DialogHeader>
-
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key="step1"
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: -20, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        <CreateMemberForm lid={lid} />
-                    </motion.div>
-
-                </AnimatePresence>
+                <CreateMemberForm lid={lid} />
             </DialogContent>
         </Dialog>
     )

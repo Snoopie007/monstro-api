@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-table";
 import { useState, useMemo } from "react";
 import { MemberColumns } from "./MemberColumns";
-import { Input } from "@/components/forms/input";
+import { Input } from "@/components/forms";
 import { MemberTable } from "./MemberTable";
 import ErrorComponent from "@/components/error";
 import { AddMember } from "./CreateMember";
@@ -19,13 +19,13 @@ import { Member } from "@/types/member";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { debounce } from "@tiptap-pro/extension-table-of-contents";
-import ImportMembers from "./ImportMember";
 import { Separator } from "@/components/ui";
 import {
     TablePage, TablePageContent,
     TablePageFooter,
     TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle
 } from "@/components/ui/TablePage";
+import { ImportMembers } from ".";
 
 
 export function MemberList({ params, stripeKey }: { params: { id: string }, stripeKey: string | null }) {
@@ -91,21 +91,23 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
 
     return (
         <TablePage>
-            <TablePageHeader>
-                <TablePageHeaderTitle>Members</TablePageHeaderTitle>
+            <TablePageHeader className="px-4 bg-foreground/5 border-b border-foreground/5">
+
                 <TablePageHeaderSection>
-                    <Input
-                        placeholder="Find a member..."
-                        // value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-                        onChange={(event) => {
-                            const value = event.target.value;
-                            // table.getColumn("name")?.setFilterValue(value);
-                            handleSearch(value);
-                        }}
-                        className="border text-xs h-auto py-1 border-foreground/10 rounded-xs"
-                    />
-                    <AddMember lid={params.id} stripeKey={stripeKey} />
-                    <ImportMembers lid={params.id} />
+                    <div className="flex flex-row items-center gap-2">
+                        <Input
+                            placeholder="Find a member..."
+                            // value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+                            onChange={(event) => {
+                                const value = event.target.value;
+                                // table.getColumn("name")?.setFilterValue(value);
+                                handleSearch(value);
+                            }}
+                            className="border  h-8.5 border-foreground/10 rounded-md w-auto"
+                        />
+                        <AddMember lid={params.id} stripeKey={stripeKey} />
+                        <ImportMembers lid={params.id} />
+                    </div>
                 </TablePageHeaderSection>
             </TablePageHeader>
             <TablePageContent>
