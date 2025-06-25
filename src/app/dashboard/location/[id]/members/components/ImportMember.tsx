@@ -7,7 +7,7 @@ import {
 } from '@/components/ui';
 import React, { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react'
 import Papa from 'papaparse';
-import { FileDown, FileIcon } from 'lucide-react';
+import { FileDown, FileIcon, Loader2 } from 'lucide-react';
 import { cn, tryCatch } from '@/libs/utils';
 import {
     Select, SelectTrigger,
@@ -18,7 +18,7 @@ import { useMemberPlans } from '@/hooks';
 import Link from 'next/link';
 
 const FILE_TYPES = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .csv";
-const REQUIRED_HEADERS = ['first_name', 'last_name', 'email', 'phone', 'last_renewal_day'];
+const REQUIRED_HEADERS = ['fn', 'ln', 'email', 'phone', 'renewal'];
 
 const DATE_FORMAT_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -28,6 +28,7 @@ type FilePreviewType = {
 };
 
 export function ImportMembers({ lid }: { lid: string }) {
+    const [isLoading, setIsLoading] = useState(false);
     const [file, setFile] = useState<File | undefined>(undefined);
     const [planId, setPlanId] = useState<Number | null>(null);
     const [preview, setPreview] = useState<FilePreviewType | null>(null);
@@ -65,8 +66,8 @@ export function ImportMembers({ lid }: { lid: string }) {
                 const validationErrors: string[] = [];
 
                 const validRows = results.data.filter((row: any, index) => {
-                    if (!row.last_renewal_day.match(DATE_FORMAT_REGEX)) {
-                        validationErrors.push(`Row ${index + 1}: Invalid date format (YYYY-MM-DD) for 'last_renewal_day'.`);
+                    if (!row.renewal.match(DATE_FORMAT_REGEX)) {
+                        validationErrors.push(`Row ${index + 1}: Invalid date format (YYYY-MM-DD) for 'renewal'.`);
                         return false;
                     }
                     return true;
@@ -87,6 +88,7 @@ export function ImportMembers({ lid }: { lid: string }) {
 
     function handleOpenChange(open: boolean) {
         setOpen(open);
+        setIsLoading(false);
         if (!open) {
             setFile(undefined);
             setPreview(null);
@@ -98,6 +100,8 @@ export function ImportMembers({ lid }: { lid: string }) {
             toast.error("No valid data to upload.");
             return;
         }
+
+        setIsLoading(true);
         const formData = new FormData();
 
         formData.append('file', file as File);
@@ -113,13 +117,13 @@ export function ImportMembers({ lid }: { lid: string }) {
         );
 
         if (error || !result || !result.ok) {
+            setIsLoading(false);
             toast.error("Something went wrong, please try again later");
             return;
         }
 
         toast.success("Members uploaded successfully");
-        setFile(undefined);
-        setPreview(null);
+        handleOpenChange(false);
     }
 
 
@@ -146,22 +150,33 @@ export function ImportMembers({ lid }: { lid: string }) {
                     </DialogDescription>
                 </DialogHeader>
                 <div className='p-4 space-y-4'>
-                    <ImportMemberForm file={file} setFile={setFile} />
-                    {error && <p className="text-red-500 text-xs">{error}</p>}
-                    {preview && <ImportPreview preview={preview} />}
-                    {file && (
-                        <div className='space-y-2'>
-                            <SelectField data={plans} onChange={setPlanId} label="Select a Plan" />
-                            <p className='text-xs text-yellow-400'>If no selection is made, members will be added without a program or plan. You can assign one later.</p>
+                    {isLoading ? (
+                        <div className='flex items-center justify-center h-full gap-2'>
+                            <Loader2 className='size-4 animate-spin' /> Importing members...
                         </div>
+                    ) : (
+                        <>
+                            <ImportMemberForm file={file} setFile={setFile} />
+                            {error && <p className="text-red-500 text-xs">{error}</p>}
+                            {preview && <ImportPreview preview={preview} />}
+                            {file && (
+                                <div className='space-y-2'>
+                                    <SelectField data={plans} onChange={setPlanId} label="Select a Plan" />
+                                    <p className='text-xs text-yellow-400'>If no selection is made, members will be added without a program or plan. You can assign one later.</p>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
                 <DialogFooter className='p-4 md:justify-between'>
                     <DialogClose asChild>
-                        <Button variant="clear" size="sm" className='rounded-xs'>Cancel</Button>
+                        <Button variant="clear" size="sm" disabled={isLoading}>
+                            Cancel
+
+                        </Button>
                     </DialogClose>
-                    <Button variant="continue" size="sm" onClick={handleUpload} className='rounded-xs'
-                        disabled={!file || !preview || preview.rows.length === 0 || !planId}>
+                    <Button variant="continue" size="sm" onClick={handleUpload}
+                        disabled={!file || !preview || preview.rows.length === 0 || !planId || isLoading}>
                         Import
                     </Button>
                 </DialogFooter>
