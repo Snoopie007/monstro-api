@@ -181,16 +181,11 @@ export type ImportMember = {
     phone: string | null;
     lastRenewalDay: Date;
     status: string;
-    terms: string;
-    termCount: number;
     created: Date;
     updated: Date | null;
-    programId: number | null;
     planId: number | null;
     memberId: number | null;
-    isFamilyPlan: boolean;
     isPrimaryMember: boolean;
-    processed: boolean;
     locationId: number;
 }
 
