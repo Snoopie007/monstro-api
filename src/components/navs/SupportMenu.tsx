@@ -9,16 +9,13 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Book, CircleHelp, Mail, Phone, Webcam } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Image from "next/image";
 
 const SupportButtonStyle = 'text-foreground hover:bg-transparent hover:border-foreground rounded-sm'
-const SupportURL = 'https://support.mymonstroapp.com'
+const SupportURL = 'https://support.monstro-x.com'
 
 
 export function SupportMenu() {
-    const { data: session } = useSession()
-
 
     return (
         <DropdownMenu>
