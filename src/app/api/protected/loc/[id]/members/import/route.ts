@@ -52,29 +52,29 @@ export async function POST(request: Request, props: { params: Promise<{ id: numb
 
 		await db.insert(importMembers).values(membersToInsert);
 
-		// await Promise.all(records.map(record => {
-		// 	const subject = `You've been invited to join ${location?.name} on Monstro`;
-		// 	return emailSender.send({
-		// 		options: {
-		// 			to: record.email,
-		// 			subject,
-		// 		},
-		// 		template: 'MemberInvite',
-		// 		data: {
-		// 			location: {
-		// 				name: location?.name
-		// 			},
-		// 			member: {
-		// 				firstName: record.first_name
-		// 			},
-		// 			ui: {
-		// 				btnText: "Accept Invite",
-		// 				btnUrl: `https://m.monstro-x.com/invite/${encodeId(params.id)}?email=${record.email}`
-		// 			},
-		// 			monstro: MonstroData
-		// 		}
-		// 	});
-		// }));
+		await Promise.all(records.map(record => {
+			const subject = `You've been invited to join ${location?.name} on Monstro`;
+			return emailSender.send({
+				options: {
+					to: record.email,
+					subject,
+				},
+				template: 'MemberInvite',
+				data: {
+					location: {
+						name: location?.name
+					},
+					member: {
+						firstName: record.first_name
+					},
+					ui: {
+						btnText: "Accept Invite",
+						btnUrl: `https://m.monstro-x.com/invite/${encodeId(params.id)}?email=${record.email}`
+					},
+					monstro: MonstroData
+				}
+			});
+		}));
 		return NextResponse.json({ sample: records.slice(0, 3) }, { status: 200 });
 	} catch (error) {
 		console.error(error);
