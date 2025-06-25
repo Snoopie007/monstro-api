@@ -65,7 +65,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: numb
 						name: location?.name
 					},
 					member: {
-						firstName: record.first_name
+						firstName: record.fn
 					},
 					ui: {
 						btnText: "Accept Invite",
@@ -75,7 +75,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: numb
 				}
 			});
 		}));
-		return NextResponse.json({ sample: records.slice(0, 3) }, { status: 200 });
+		return NextResponse.json({ success: true }, { status: 200 });
 	} catch (error) {
 		console.error(error);
 		return NextResponse.json({ status: 500 });
