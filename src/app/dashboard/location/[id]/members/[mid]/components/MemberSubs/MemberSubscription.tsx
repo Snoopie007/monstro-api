@@ -31,16 +31,12 @@ function calculateProgress(start: number, end: number) {
 export function MemberSubs({ params }: { params: { id: string, mid: number }, }) {
     const { member } = useMemberStatus();
     return (
-        <div className='space-y-2'>
-            <div className='w-full flex flex-row items-center px-4  gap-2'>
-                <div className='flex-initial'>
-                    <Input placeholder='Search subs...' className='w-[250px] h-8 py-2  text-xs rounded-sm' />
-                </div>
-                <div>
-                    <CreateSubscription params={params} />
-                </div>
+        <div className='space-y-0'>
+            <div className='w-full flex flex-row items-center px-4 py-2  bg-foreground/5  gap-2'>
+                <Input placeholder='Search subs...' className='w-auto bg-background border-foreground/10 h-9' />
+                <CreateSubscription params={params} />
             </div>
-            <div className='border-y'>
+            <div className='border-y border-foreground/10'>
                 <Table className=''>
                     <TableHeader>
                         <TableRow >

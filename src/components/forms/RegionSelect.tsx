@@ -28,14 +28,14 @@ export function RegionSelect({ value, onChange, className }: RegionSelectProps) 
                     <Button
                         variant="outline"
                         role="combobox"
-                        className={cn("w-full bg-background border border-gray-200 cursor-pointer  rounded-xs font-normal justify-between", className)}
+                        className={cn("w-full bg-background border border-foreground/10 cursor-pointer  rounded-xs font-normal justify-between", className)}
                     >
                         {selected ? selected : "Select a state"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </FormControl>
             </PopoverTrigger>
-            <PopoverContent align="start" className={cn("w-[200px] p-0 rounded-sm")}>
+            <PopoverContent align="start" className={cn("w-[200px] p-0 rounded-sm border-foreground/10")}>
                 <Command className={cn("bg-background text-foreground rounded-sm ")}>
                     <CommandInput placeholder="Seach state" className="h-auto py-2" />
                     <CommandList >
@@ -60,7 +60,5 @@ export function RegionSelect({ value, onChange, className }: RegionSelectProps) 
                 </Command>
             </PopoverContent>
         </Popover>
-
-
     )
 }

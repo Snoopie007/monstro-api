@@ -21,16 +21,12 @@ export function MemberPackages({ params }: { params: { id: string, mid: number }
     const { packages, isLoading } = useMemberPackages(params.id, params.mid)
 
     return (
-        <div className='space-y-2'>
-            <div className='w-full flex flex-row items-center px-4  gap-2'>
-                <div className='flex-initial'>
-                    <Input placeholder='Search packages...' className='w-[250px] text-xs h-8 py-2 rounded-sm' />
-                </div>
-                <div>
-                    <CreatePackage params={params} />
-                </div>
+        <div className='space-y-0'>
+            <div className='w-full flex flex-row items-center px-4 py-2  bg-foreground/5  gap-2'>
+                <Input placeholder='Search packages...' className='w-auto bg-background border-foreground/10 h-9' />
+                <CreatePackage params={params} />
             </div>
-            <div className='border-y'>
+            <div className='border-y border-foreground/10'>
                 <Table className=''>
                     <TableHeader>
                         <TableRow>

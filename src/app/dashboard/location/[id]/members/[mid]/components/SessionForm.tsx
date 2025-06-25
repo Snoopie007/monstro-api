@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { Clock, Loader2 } from "lucide-react";
 import { cn, formatTime, tryCatch } from "@/libs/utils";
 import { useMemo, useCallback } from "react";
-import { MemberPackage, MemberPlan, Program, ProgramSession } from "@/types";
+import { MemberPlan, Program, ProgramSession } from "@/types";
 import { DAYS } from "../schema";
 import { PulsingStatus } from "@/components/ui/PulsingStatus";
 import { toast } from "react-toastify";

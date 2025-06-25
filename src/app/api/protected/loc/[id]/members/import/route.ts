@@ -4,20 +4,23 @@ import { NextResponse } from 'next/server';
 import { EmailSender } from "@/libs/server/emails";
 import { MonstroData } from '@/libs/data';
 import { encodeId } from '@/libs/server/sqids';
-
+import { parsePhoneNumberFromString } from 'libphonenumber-js'
+import { ImportMember } from '@/types';
+import { ImportedMemberStatusEnum } from '@/db/schemas/DatabaseEnums';
 const emailSender = new EmailSender();
+const DATE_FORMAT_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
 export async function POST(request: Request, props: { params: Promise<{ id: number }> }) {
 	const params = await props.params;
 
 	const data = await request.formData();
 	const file = data.get('file');
 	const planId = data.get('planId');
+	const fieldMapping = JSON.parse(data.get('fieldMapping') as string);
 
 	if (!file || !(file instanceof Blob)) {
 		return NextResponse.json({ status: 'fail', message: 'No file uploaded' }, { status: 400 });
 	}
-
-
 
 	// Example: Looping over each record
 	const location = await db.query.locations.findFirst({
@@ -29,7 +32,6 @@ export async function POST(request: Request, props: { params: Promise<{ id: numb
 	}
 
 	try {
-
 		const arrayBuffer = await file.arrayBuffer();
 		const content = new TextDecoder('utf-8').decode(arrayBuffer);
 
@@ -40,45 +42,68 @@ export async function POST(request: Request, props: { params: Promise<{ id: numb
 			const values = row.split(',').map(v => v.trim());
 			return Object.fromEntries(headers.map((header, index) => [header, values[index]]));
 		});
-		const membersToInsert = records.map(record => ({
-			firstName: record.fn,
-			lastName: record.ln,
-			email: record.email,
-			phone: record.phone,
-			lastRenewalDay: record.renewal,
-			planId: planId ? Number(planId) : null,
-			locationId: params.id
-		}));
 
-		await db.insert(importMembers).values(membersToInsert);
+		const insertMembers = [];
+		for (const record of records) {
+			const formattedPhone = parsePhoneNumberFromString(record[fieldMapping.phone], 'US');
+			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+			const email = record[fieldMapping.email];
+			const lastRenewalDate = record[fieldMapping.lastRenewalDate];
 
-		await Promise.all(records.map(record => {
-			const subject = `You've been invited to join ${location?.name} on Monstro`;
+			if (!formattedPhone || !formattedPhone.isValid()) {
+				continue;
+			}
+
+			if (!emailRegex.test(email)) {
+				continue;
+			}
+
+			if (!DATE_FORMAT_REGEX.test(lastRenewalDate)) {
+				continue;
+			}
+
+			insertMembers.push({
+				firstName: record[fieldMapping.firstName],
+				lastName: record[fieldMapping.lastName],
+				email: email,
+				phone: formattedPhone.number,
+				lastRenewalDay: lastRenewalDate,
+				planId: planId ? Number(planId) : null,
+				locationId: params.id,
+			});
+		}
+
+		if (insertMembers.length === 0) {
+			return NextResponse.json({ message: 'No valid members to insert' }, { status: 400 });
+		}
+
+		await db.insert(importMembers).values(insertMembers);
+
+		await Promise.all(insertMembers.map(m => {
+			const subject = `You've been invited to join ${location.name} on Monstro`;
 			return emailSender.send({
 				options: {
-					to: record.email,
+					to: m.email,
 					subject,
 				},
 				template: 'MemberInvite',
 				data: {
 					location: {
-						name: location?.name
+						name: location.name
 					},
-					member: {
-						firstName: record.fn
-					},
+					member: m,
 					ui: {
 						btnText: "Accept Invite",
-						btnUrl: `https://m.monstro-x.com/invite/${encodeId(params.id)}?email=${record.email}`
+						btnUrl: `https://m.monstro-x.com/invite/${encodeId(params.id)}?email=${m.email}`
 					},
 					monstro: MonstroData
 				}
 			});
 		}));
-		return NextResponse.json({ success: true }, { status: 200 });
+
+		return NextResponse.json({ sample: records.slice(0, 3) }, { status: 200 });
 	} catch (error) {
 		console.error(error);
 		return NextResponse.json({ status: 500 });
 	}
 }
-

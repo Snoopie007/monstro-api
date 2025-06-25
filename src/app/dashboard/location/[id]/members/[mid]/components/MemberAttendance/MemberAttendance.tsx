@@ -45,15 +45,14 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
         },
     })
 
-
     return (
-        <div className="space-y-2">
-            <div className="flex flex-row justify-between items-center px-4 gap-2">
+        <div className="space-y-0">
+            <div className="flex flex-row justify-between items-center px-4 py-2  bg-foreground/5  gap-2">
                 <div className="flex flex-row gap-2 items-center">
                     <Select onValueChange={(value) => {
                         table.getColumn("programName")?.setFilterValue(value)
                     }}>
-                        <SelectTrigger>
+                        <SelectTrigger className="text-xs h-9">
                             <SelectValue placeholder="Filter by program" />
                         </SelectTrigger>
                         <SelectContent>
@@ -66,7 +65,7 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
                     </Select>
                 </div>
             </div>
-            <Card className="border-y border-x-0">
+            <Card className="border-y border-x-0 border-foreground/10">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (

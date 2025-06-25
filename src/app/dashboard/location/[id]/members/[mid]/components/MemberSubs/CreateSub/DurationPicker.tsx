@@ -10,7 +10,7 @@ interface DurationPickerProps {
 
 }
 
-export default function DurationPicker({ onChange }: DurationPickerProps) {
+export function DurationPicker({ onChange }: DurationPickerProps) {
     const [open, setOpen] = useState(false);
     const [selected, setSelected] = useState<'start' | 'end' | null>(null);
     const [date, setDate] = useState<DateRange>({
@@ -92,7 +92,7 @@ export default function DurationPicker({ onChange }: DurationPickerProps) {
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger>
-                <div className="h-10 border rounded-sm px-3 py-2 flex flex-row items-center bg-background gap-1">
+                <div className="h-10 border border-foreground/10 rounded-sm px-3 py-2 flex flex-row items-center bg-background gap-1">
                     <CalendarIcon size={16} className="-mt-0.5 mr-1" />
                     <div className="flex flex-row items-center text-sm gap-3 text-foreground/80">
                         <span
@@ -111,17 +111,14 @@ export default function DurationPicker({ onChange }: DurationPickerProps) {
                     </div>
                 </div>
             </PopoverTrigger>
-            <PopoverContent className="w-auto flex flex-row p-0" align="start" side="bottom">
+            <PopoverContent className="w-auto flex flex-row overflow-hidden border-foreground/10  p-0" align="start" side="bottom">
                 <Calendar
-                    initialFocus
                     mode="range"
-                    month={selected === 'end' && date.from ? date.from : undefined}
-                    fromDate={selected === 'start' ? new Date() : date.from}
-
+                    // month={selected === 'end' && date.from ? date.from : undefined}
+                    disabled={(d) => d < (selected === 'start' ? new Date() : date.from || new Date())}
                     numberOfMonths={1}
                     selected={date}
                     onDayClick={handleDateSelect}
-                // onSelect={handleDateSelect}
                 />
                 <div className="bg-foreground/5 p-4 w-[150px]">
                     <ul className="space-y-2">

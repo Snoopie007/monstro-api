@@ -15,13 +15,10 @@ export function MemberAchievements({ params }: { params: { id: string, mid: numb
 
     return (
         <div className='space-y-2'>
-            <div className='w-full flex flex-row items-center px-4  gap-2'>
-                <div className='flex-initial'>
-                    <Input placeholder='Filter' className='w-[250px] h-auto py-2 rounded-sm' />
-                </div>
-
+            <div className='w-full flex flex-row items-center px-4 py-2  bg-foreground/5  gap-2'>
+                <Input placeholder='Search rewards...' className='w-auto bg-background border-foreground/10 h-9' />
             </div>
-            <div className='border-y'>
+            <div className='border-y border-foreground/10'>
                 <Table className=''>
                     <TableHeader>
                         <TableRow>

@@ -11,16 +11,11 @@ import { formatAmountForDisplay } from "@/libs/utils"
 export function MemberInvoices({ params }: { params: { id: string, mid: number } }) {
     const { invoices, isLoading, error } = useMemberInvoices(params.id, params.mid)
     return (
-        <div className='space-y-2'>
-            <div className='w-full flex flex-row items-center px-4  gap-2'>
-                <div className='flex-initial'>
-                    <Input placeholder='Search invoices...' className='w-[250px] text-xs h-8 py-2 rounded-xs' />
-                </div>
-                <div>
-
-                </div>
+        <div className='space-y-0'>
+            <div className='w-full flex flex-row items-center px-4 py-2  bg-foreground/5  gap-2'>
+                <Input placeholder='Search subs...' className='w-auto bg-background border-foreground/10 h-9' />
             </div>
-            <div className='border-y'>
+            <div className='border-y border-foreground/10'>
                 <Table className=''>
                     <TableHeader>
                         <TableRow>

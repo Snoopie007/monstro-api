@@ -550,7 +550,18 @@ async function getStripeCustomer(params: { id: number, mid: number }) {
         throw new Error("Member not found")
     }
 
-    const stripe = new MemberStripePayments().setCustomer(member.stripeCustomerId);
+    const integration = await db.query.integrations.findFirst({
+        where: (integration, { eq, and }) => and(eq(integration.locationId, params.id), eq(integration.service, "stripe")),
+        columns: {
+            integrationId: true
+        }
+    })
+
+    if (!integration) {
+        throw new Error("Integration not found")
+    }
+
+    const stripe = new MemberStripePayments(integration.integrationId).setCustomer(member.stripeCustomerId);
     return stripe
 }
 
