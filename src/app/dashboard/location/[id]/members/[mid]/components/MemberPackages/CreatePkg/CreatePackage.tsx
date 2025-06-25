@@ -5,45 +5,29 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-
     DialogDescription,
-
 } from "@/components/ui";
-
 import { useState } from "react";
-
 import React from "react";
-
 import { PkgForm } from "./PkgForm";
-import { DEFAULT_PROGRESS, SubPackageProgress } from "../../SessionForm";
 
 export function CreatePackage({ params }: { params: { id: string, mid: number } }) {
-    const [progress, setProgress] = useState<SubPackageProgress>(DEFAULT_PROGRESS);
 
     const [open, setOpen] = useState<boolean>(false);
-
-    function handleOpenChange(open: boolean) {
-        setOpen(open)
-        if (!open) {
-            setProgress(DEFAULT_PROGRESS)
-        }
-    }
-
-
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
+        <Dialog open={open} onOpenChange={setOpen}>
 
             <DialogTrigger asChild>
-                <Button variant={"foreground"} size={"sm"} className=''>+ Package</Button>
+                <Button variant={"foreground"} size={"sm"} >+ Package</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[450px]">
+            <DialogContent className="max-w-[450px] border-foreground/10">
                 <DialogHeader className="space-y-0">
                     <DialogTitle className='text-sm font-medium flex flex-row items-center gap-1'>
                         Add Member Package
                     </DialogTitle>
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
-                <PkgForm params={params} progress={progress} setProgress={setProgress} />
+                <PkgForm params={params} setOpen={setOpen} />
             </DialogContent>
         </Dialog >
     )

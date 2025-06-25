@@ -100,7 +100,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
 
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant={"ghost"} className="border-l text-lg rounded-none">+</Button>
+                <Button variant={"ghost"} className="border-l text-lg rounded-none border-foreground/10">+</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[525px] rounded-sm">
                 <DialogHeader>

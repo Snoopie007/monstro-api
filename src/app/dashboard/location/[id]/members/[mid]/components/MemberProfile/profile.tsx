@@ -3,6 +3,7 @@ import {
     Avatar,
     AvatarFallback,
     AvatarImage,
+    Button,
     Card,
     CardContent,
     CardHeader,
@@ -10,8 +11,8 @@ import {
 } from "@/components/ui";
 
 import { ChevronLeft, Mail, PhoneCall } from "lucide-react";
-import { useRouter } from 'next/navigation'
 import { useMemberStatus } from "../../providers/MemberContext";
+import { useRouter } from "next/navigation";
 
 interface MemberProfileProps {
     params: { id: string, mid: number }
@@ -23,21 +24,17 @@ export function MemberProfile({ params }: MemberProfileProps) {
 
     return (
         <Card className='border-none'>
-            <CardHeader className='border-b py-0 px-0 text-left ' >
-                <div className='flex justify-between flex-row items-center '>
-                    <div className=' '>
-                        <button onClick={() => { router.back() }} className=" border-r px-4 py-2 text-foreground" >
-                            <ChevronLeft className="inline-block text-muted-foreground cursor-pointer" size={20} />
-                        </button>
-                    </div>
+
+            <CardContent className='px-0' >
+                <div className='flex justify-between flex-row items-center px-4 py-2'>
+                    <Button variant="ghost" size="icon" onClick={() => { router.back() }} className="bg-foreground/5 size-6" >
+                        <ChevronLeft className="size-4" />
+                    </Button>
                     <div>
 
 
                     </div>
                 </div>
-
-            </CardHeader>
-            <CardContent className='px-0 py-6' >
 
                 <div className="flex px-4 py-4 gap-6">
                     <div className="flex-initial relative">

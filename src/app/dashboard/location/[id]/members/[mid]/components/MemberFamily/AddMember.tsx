@@ -78,7 +78,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
             setOpen(open)
         }}>
             <DialogTrigger asChild>
-                <Button variant="outline" className="border-y-0 border-r-0 rounded-none">
+                <Button variant="outline" className="border-y-0 border-r-0 rounded-none border-foreground/10">
                     + Family to Plan
                 </Button>
             </DialogTrigger>

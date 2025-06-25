@@ -29,7 +29,7 @@ import {
 
 import { SetStateAction, Dispatch, useState } from "react";
 import { NewPackageSchema } from "../../../schema";
-import { useForm } from "react-hook-form";
+import { useForm, UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
@@ -41,15 +41,13 @@ import { MemberPlan } from "@/types";
 import { Stripe } from "stripe";
 import { toast } from "react-toastify";
 import { useMemberPackages, usePackages } from "@/hooks";
-import { SubPackageProgress } from "../../SessionForm";
 
 interface PkgFormProps {
-    params: { id: string, mid: number },
-    progress: SubPackageProgress,
-    setProgress: Dispatch<SetStateAction<SubPackageProgress>>
+    params: { id: string, mid: number }
+    setOpen: Dispatch<SetStateAction<boolean>>
 }
 
-export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
+export function PkgForm({ params, setOpen }: PkgFormProps) {
     const { mutate } = useMemberPackages(params.id, params.mid)
     const { ml } = useMemberStatus()
     const [loading, setLoading] = useState(false);
@@ -94,6 +92,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
         form.reset()
         mutate()
         toast.success("Package created successfully")
+        setOpen(false)
     }
 
 
@@ -113,7 +112,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                         <FormLabel size="tiny">Select a Plan</FormLabel>
                                         <Select onValueChange={(value) => field.onChange(Number(value))} >
                                             <FormControl>
-                                                <SelectTrigger className="rounded-sm">
+                                                <SelectTrigger >
                                                     <SelectValue placeholder="Select a plan" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -138,11 +137,11 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                     <FormItem className="col-span-2 ">
                                         <FormLabel size="tiny">Payment Method</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!form.getValues("memberPlanId")} >
-                                            <SelectTrigger className="rounded-sm capitalize" >
+                                            <SelectTrigger className="rounded-sm capitalize text-left align-start" >
                                                 <SelectValue placeholder="Select a payment method" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {['card', "cash", "zelle", "bank payment", "cheque"].map((method) => (
+                                                {['card', "cash"].map((method) => (
                                                     <SelectItem key={method} value={method.toLowerCase()} className="capitalize">
                                                         {method}
                                                     </SelectItem>
@@ -159,23 +158,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                 render={({ field }) => (
                                     <FormItem className="col-span-4">
                                         <FormLabel size="tiny">Expire Date (Optional)</FormLabel>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                    {field.value ? format(field.value, "PPP") : "Pick a date"}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    fromDate={new Date(Date.now() + 86400000)}
-                                                    selected={field.value}
-                                                    onSelect={field.onChange}
-                                                    initialFocus
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
+                                        <DatePicker value={field.value} onChange={field.onChange} />
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -233,7 +216,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                 <ChevronRight size={16} className="group-data-[state=open]:rotate-90" />
                                 <span className="font-medium">Overwrite</span>
                             </CollapsibleTrigger>
-                            <CollapsibleContent className="p-4 bg-foreground/5 rounded-sm mt-4 space-y-2">
+                            <CollapsibleContent className="p-4 bg-foreground/5 rounded-sm  space-y-2">
 
                                 <fieldset >
 
@@ -245,7 +228,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                                 <FormLabel size="tiny">Total Class Limit</FormLabel>
 
                                                 <FormControl>
-                                                    <Input type="number" className="border-none" max={100} placeholder="Total Class Limit" {...field} />
+                                                    <Input type="number" max={100} placeholder="Total Class Limit" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                                 <FormDescription className="text-xs">You may overwrite the total class limit for this package.</FormDescription>
@@ -261,24 +244,7 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
                                         render={({ field }) => (
                                             <FormItem className="col-span-1">
                                                 <FormLabel size="tiny">Start Date</FormLabel>
-
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <Button variant="outline" className={cn("w-full border-none pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                            {field.value ? format(field.value, "PPP") : "Pick a date"}
-                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                        </Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto p-0" align="start">
-                                                        <Calendar
-                                                            mode="single"
-                                                            fromDate={new Date()}
-                                                            selected={field.value}
-                                                            onSelect={field.onChange}
-                                                            initialFocus
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
+                                                <DatePicker value={field.value} onChange={field.onChange} />
                                                 <FormMessage />
                                                 <FormDescription className="text-xs">
                                                     The start date is set to today's date by default.
@@ -313,4 +279,35 @@ export function PkgForm({ params, progress, setProgress }: PkgFormProps) {
         </>
     )
 }
+
+
+
+function DatePicker({ value, onChange }: { value: Date | undefined, onChange: (date: Date) => void }) {
+    const [open, setOpen] = useState(false)
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline"
+                    className={cn("w-full pl-3 text-left font-normal bg-background border-foreground/10 rounded-sm", !value && "text-muted-foreground")}>
+                    {value ? format(value, "PPP") : "Pick a date"}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 border-foreground/10 overflow-hidden" align="start">
+                <Calendar
+                    mode="single"
+                    disabled={(d) => d < new Date()}
+                    selected={value}
+                    onSelect={(d) => {
+                        onChange(d || new Date())
+                        setOpen(false)
+                    }}
+
+                />
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+
 

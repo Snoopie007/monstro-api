@@ -23,29 +23,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { cn, sleep, tryCatch } from "@/libs/utils";
-import { useMemberPaymentMethods } from "../../../providers/MemberContext";
+import { useMemberPaymentMethods, useMemberStatus } from "../../../providers";
 import React from "react";
 import { MemberPlan } from "@/types";
 import { Stripe } from "stripe";
-import DurationPicker from "../../../../components/DurationPicker";
+import { DurationPicker } from ".";
 import { toast } from "react-toastify";
-import { SubPackageProgress } from "../../SessionForm";
-import { useMemberStatus } from "../../../providers/MemberContext";
 import { useSubscriptions } from "@/hooks";
 
 type SubFormProps = {
     params: { id: string, mid: number },
-    progress: SubPackageProgress,
-    setProgress: Dispatch<SetStateAction<SubPackageProgress>>
+    setOpen: Dispatch<SetStateAction<boolean>>
 }
 
-export function SubForm({ params, progress, setProgress }: SubFormProps) {
+export function SubForm({ params, setOpen }: SubFormProps) {
 
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods()
     const { ml } = useMemberStatus()
     const { subscriptions } = useSubscriptions(params.id)
-    const [plans, setPlans] = useState<MemberPlan[]>([]);
     const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
 
 
@@ -83,12 +79,11 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
         await sleep(1000)
         setLoading(false)
         if (error || !result || !result?.ok) return;
-        const { sid } = await result.json()
 
-        const plan = plans.find((plan: MemberPlan) => plan.id === v.memberPlanId)
 
         form.reset()
         toast.success("Subscription created successfully")
+        setOpen(false)
     }
 
 
@@ -109,7 +104,7 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
                                         <FormLabel size="tiny">Plan</FormLabel>
                                         <Select onValueChange={(value) => field.onChange(Number(value))} >
                                             <FormControl>
-                                                <SelectTrigger className="rounded-sm">
+                                                <SelectTrigger >
                                                     <SelectValue placeholder="Select a plan" />
                                                 </SelectTrigger>
                                             </FormControl>
@@ -133,11 +128,11 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
                                     <FormItem className="">
                                         <FormLabel size="tiny">Payment Method</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!form.getValues("memberPlanId")}>
-                                            <SelectTrigger className="rounded-sm capitalize">
+                                            <SelectTrigger className="capitalize">
                                                 <SelectValue placeholder="Select a payment method" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {['card', "cash", "zelle", "bank payment", "cheque"].map((method) => (
+                                                {['card', "cash"].map((method) => (
                                                     <SelectItem key={method} value={method.toLowerCase()} className="capitalize">
                                                         {method}
                                                     </SelectItem>
@@ -255,7 +250,7 @@ export function SubForm({ params, progress, setProgress }: SubFormProps) {
             </DialogBody>
             <DialogFooter>
                 <DialogClose asChild>
-                    <Button type="button" variant="outline" size={"sm"}>Cancel</Button>
+                    <Button type="button" variant="outline" size={"sm"} className="border-foreground/10">Cancel</Button>
                 </DialogClose>
                 <Button
                     className={cn("children:hidden", loading && "children:block")}
