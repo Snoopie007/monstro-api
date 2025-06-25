@@ -31,7 +31,7 @@ export function MemberTable<TData, TValue>({
                     <TableRow key={headerGroup.id} className="align-middle text-sm  bg-foreground/5">
                         {headerGroup.headers.map((header) => {
                             return (
-                                <TableHead key={header.id} className="h-auto border-l border-foreground/5  py-1  text-foreground" >
+                                <TableHead key={header.id} className="h-auto border-l border-foreground/5 py-1  text-foreground" >
                                     {header.isPlaceholder ? null : flexRender(
                                         header.column.columnDef.header,
                                         header.getContext()

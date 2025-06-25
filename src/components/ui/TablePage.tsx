@@ -26,18 +26,11 @@ const TableHeaderContext = React.createContext(false);
 
 const TablePageHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
     ({ children, ...props }, ref) => {
-        // Validate that children only contain TablePageHeaderTitle and TablePageHeaderSection
-        // React.Children.forEach(children, child => {
-        //     if (React.isValidElement(child)) {
-        //         if (child.type !== TablePageHeaderTitle && child.type !== TablePageHeaderSection) {
-        //             throw new Error('TablePageHeader children must be either TablePageHeaderTitle or TablePageHeaderSection');
-        //         }
-        //     }
-        // });
+
 
         return (
             <TableHeaderContext.Provider value={true}>
-                <div ref={ref} className='flex flex-row border-b border-foreground/10 flex-initial justify-start items-center gap-2 '>
+                <div ref={ref} className={cn('flex flex-row border-b border-foreground/10 flex-initial justify-start items-center gap-2 ', props.className)} {...props}>
                     {children}
                 </div>
             </TableHeaderContext.Provider>
