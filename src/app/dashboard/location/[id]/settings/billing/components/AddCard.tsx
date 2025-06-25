@@ -42,6 +42,15 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
         resolver: zodResolver(AddCreditCardSchema),
         defaultValues: {
             name: "",
+            address: {
+                line1: "",
+                line2: "",
+                city: "",
+                state: "CA",
+                postal_code: "",
+                country: "US"
+
+            }
         },
         mode: "onChange",
     });
@@ -148,7 +157,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                                     <fieldset>
                                         <FormField
                                             control={form.control}
-                                            name="address_line1"
+                                            name="address.line1"
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>
@@ -168,7 +177,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                                     <fieldset className="grid grid-cols-3 items-center gap-2">
                                         <FormField
                                             control={form.control}
-                                            name="address_city"
+                                            name="address.city"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-1">
 
@@ -181,7 +190,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="address_state"
+                                            name="address.state"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-1">
 
@@ -196,7 +205,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="address_zip"
+                                            name="address.postal_code"
                                             render={({ field }) => (
                                                 <FormItem className="col-span-1">
 
