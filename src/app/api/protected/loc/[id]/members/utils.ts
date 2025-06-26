@@ -193,5 +193,6 @@ export {
     calculateInvoice,
     createPackage,
     createSubscription,
-    createInvoice
+    createInvoice,
+    createTransaction
 }

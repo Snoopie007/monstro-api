@@ -46,11 +46,16 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
         if (!integration) {
             return NextResponse.json({ error: "Stripe integration not found" }, { status: 400 })
         }
-        const stripe = new MemberStripePayments();
+        const stripe = new MemberStripePayments(String(integration.id));
+        
         const stripePrice = await stripe.createStripeProduct(
             { ...data, price: formatedAmount, programId: params.pid },
             { locationId: encodeId(params.id), planId: data.id, vendorAccountId: integration.integrationId }
         )
+
+        if (!stripePrice) {
+            return NextResponse.json({ error: "Failed to create Stripe product" }, { status: 500 })
+        }
 
 
 

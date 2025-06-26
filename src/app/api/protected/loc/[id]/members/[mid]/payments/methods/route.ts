@@ -12,7 +12,13 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
     const { token, member, address, ...data } = await req.json();
 
     try {
+        const integrations = await db.query.integrations.findFirst({
+            where: (integration, { eq, and }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
+        })
 
+        if (!integrations || !integrations.integrationId) {
+            return NextResponse.json({ error: "Stripe integration not found" }, { status: 404 })
+        }
         const member = await db.query.members.findFirst({
             where: (member, { eq }) => eq(member.id, params.mid)
         })
@@ -22,7 +28,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
         }
 
         let isDefault = data.default;
-        const stripe = new MemberStripePayments();
+        const stripe = new MemberStripePayments(String(integrations.integrationId));
         if (!member.stripeCustomerId) {
             const customer = await stripe.createCustomer({
                 firstName: member.firstName,

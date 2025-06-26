@@ -193,6 +193,37 @@ abstract class BaseStripePayments {
         });
         return res;
     }
+    async attachPaymentMethod(paymentMethodId: string) {
+        if (!this._customer) {
+            throw new Error('Customer ID is required');
+        }
+
+        try {
+            const paymentMethod = await this._stripe.paymentMethods.attach(paymentMethodId, {
+                customer: this._customer,
+            });
+
+            return paymentMethod;
+        } catch (error) {
+            console.error('Error attaching payment method:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Detach a payment method from a customer
+     */
+    async detachPaymentMethod(paymentMethodId: string) {
+        try {
+            const paymentMethod = await this._stripe.paymentMethods.detach(paymentMethodId);
+            return paymentMethod;
+        } catch (error) {
+            console.error('Error detaching payment method:', error);
+            throw error;
+        }
+    }
+
+
 }
 
 interface VendorPaymentIntentOptions {
@@ -341,6 +372,8 @@ class VendorStripePayments extends BaseStripePayments {
     async updateSchedule(scheduleId: string, updates: Stripe.SubscriptionScheduleUpdateParams) {
         return await this._stripe.subscriptionSchedules.update(scheduleId, updates);
     }
+
+
 
     async createGHLSubscription(metadata: Record<string, any>) {
         const price = isProd ? "price_1R4WblDePDUzIffAvMQrZRFE" : "price_1R4S9xDePDUzIffAFUKu0ROH"
@@ -540,6 +573,69 @@ class MemberStripePayments extends BaseStripePayments {
             active_from: 'now'
         });
     }
+
+    async updateSubscription(
+        subscriptionId: string,
+        updates: {
+            price?: string;
+            cancel_at_period_end?: boolean;
+            proration_behavior?: "always_invoice" | "create_prorations" | "none";
+            metadata?: Record<string, string>;
+        }
+    ): Promise<Stripe.Subscription> {
+        const params: Stripe.SubscriptionUpdateParams = {
+            ...(updates.price && {
+                items: [
+                    {
+                        price: updates.price,
+                    },
+                ],
+            }),
+            cancel_at_period_end: updates.cancel_at_period_end,
+            proration_behavior: updates.proration_behavior,
+            metadata: updates.metadata,
+        };
+
+        return this._stripe.subscriptions.update(subscriptionId, params);
+    }
+
+    async cancelSubscription(
+        subscriptionId: string,
+        cancelAtPeriodEnd: boolean = false
+    ): Promise<Stripe.Subscription | { id: string; object: "subscription"; deleted: true }> {
+        if (cancelAtPeriodEnd) {
+            return this._stripe.subscriptions.update(subscriptionId, {
+                cancel_at_period_end: true,
+            });
+        } else {
+            return this._stripe.subscriptions.cancel(subscriptionId);
+        }
+    }
+
+
+    async getLatestInvoice() {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        const res = await this._stripe.invoices.list({ customer: this._customer, limit: 1 });
+        return res.data[0];
+    }
+
+
+    async createRefund(params: {
+        payment_intent: string;
+        amount?: number;
+        reason?: "duplicate" | "fraudulent" | "requested_by_customer";
+        metadata?: Record<string, string>;
+    }): Promise<Stripe.Refund> {
+        return this._stripe.refunds.create({
+            payment_intent: params.payment_intent,
+            amount: params.amount,
+            reason: params.reason,
+            metadata: params.metadata,
+        });
+    }
+
 }
 
 
@@ -568,4 +664,6 @@ async function getStripeCustomer(params: { id: number, mid: number }) {
     return stripe
 }
 
-export { VendorStripePayments, MemberStripePayments, getStripeCustomer };
+
+
+export { VendorStripePayments, MemberStripePayments, getStripeCustomer, };

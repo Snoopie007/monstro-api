@@ -61,7 +61,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
         mode: "onChange",
     });
 
-    async function onSubmit(v: z.infer<typeof AddCreditCardSchema>) {
+      async function onSubmit(v: z.infer<typeof AddCreditCardSchema>) {
 
         if (!elements || !stripe || !validCard) return;
         setLoading(true);
