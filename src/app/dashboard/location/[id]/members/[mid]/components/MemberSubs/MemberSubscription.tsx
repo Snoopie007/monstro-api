@@ -103,7 +103,7 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
                         <SubscriptionStatus sub={sub} />
                     </TableCell>
                     <TableCell className='flex flex-row items-center'>
-                        <MemberSubscriptionActions />
+                        <MemberSubscriptionActions subscription={sub} />
                     </TableCell>
                 </TableRow>
             ))}

@@ -48,14 +48,14 @@ export async function POST(req: NextRequest) {
 			throw new Error("Stripe Member webhook secret not found");
 		}
 
-		const rawText = await req.text();
-		const event = await stripe.constructEvent(
-			Buffer.from(rawText),
-			signature,
-			process.env.STRIPE_WEBHOOK_SECRET
-		);
+		// const rawText = await req.text();
+		// const event = await stripe.constructEvent(
+		// 	Buffer.from(rawText),
+		// 	signature,
+		// 	process.env.STRIPE_WEBHOOK_SECRET
+		// );
 
-		waitUntil(processEvent(event));
+		waitUntil(processEvent(await req.json()));
 	}
 
 	const { error } = await tryCatch(doEventProcessing());

@@ -13,6 +13,25 @@ type Customer = {
     address?: AddressParam;
 }
 
+type BaseStripeSettings = {
+    description?: string,
+    applicationFeePercent?: number,
+    currency?: string,
+    returnUrl?: string,
+    paymentMethod?: string,
+    metadata?: Record<string, any>
+}
+
+interface MemberSubscriptionSettings extends BaseStripeSettings {
+    cancelAt: Date | null | undefined,
+    trialEnd: Date | null | undefined,
+    allowProration?: boolean
+}
+
+interface PaymentIntentSettings extends BaseStripeSettings {
+    authorizeOnly?: boolean,
+}
+
 const isProd = process.env.NODE_ENV === "production"
 const STRIPE_FEE_PERCENT = 2.9
 const STRIPE_FEE_AMOUNT = 0.30
@@ -153,6 +172,12 @@ abstract class BaseStripePayments {
         return await this._stripe.accounts.del(accountId);
     }
 
+    async getSubscription(subscriptionId: string) {
+        return await this._stripe.subscriptions.retrieve(subscriptionId, {
+            expand: ["latest_invoice"]
+        });
+    }
+
     async calculateTax(amount: number, quantity: number, reference: string) {
         if (!this._customer) {
             throw new Error("Customer not set");
@@ -186,8 +211,6 @@ class VendorStripePayments extends BaseStripePayments {
     constructor() {
         super(process.env.STRIPE_SECRET_KEY!);
     }
-
-
 
     /**
      * Create a payment intent
@@ -335,32 +358,12 @@ class VendorStripePayments extends BaseStripePayments {
     }
 }
 
-type BaseStripeSettings = {
-    description?: string,
-    applicationFeePercent?: number,
-    currency?: string,
-    returnUrl?: string,
-    paymentMethod?: string,
-    metadata?: Record<string, any>
-}
-
-interface MemberSubscriptionSettings extends BaseStripeSettings {
-    cancelAt: Date | null | undefined,
-    trialEnd: Date | null | undefined,
-    allowProration?: boolean
-}
-
-interface PaymentIntentSettings extends BaseStripeSettings {
-    authorizeOnly?: boolean,
-}
-
 class MemberStripePayments extends BaseStripePayments {
     private _accountId: string | null;
     constructor(accountId?: string, secretKey?: string) {
         super(secretKey || process.env.STRIPE_MEMBER_SECRET_KEY!);
         this._accountId = accountId || null;
     }
-
 
     async createPaymentIntent(amount: number, settings?: PaymentIntentSettings) {
         if (!this._customer) {

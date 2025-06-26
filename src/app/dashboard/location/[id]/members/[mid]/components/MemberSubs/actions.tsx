@@ -1,29 +1,24 @@
-import { Icon } from '@/components/icons'
+'use client'
 import {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem,
     Button,
+    DropdownMenuSeparator,
 } from '@/components/ui'
-import { useState } from 'react'
+import { use, useState } from 'react'
 import { toast } from 'react-toastify'
-import { Loader2 } from 'lucide-react'
+import { EllipsisVertical, Loader2, Pencil, Trash2 } from 'lucide-react'
+import { MemberSubscription } from '@/types'
 import { useParams } from 'next/navigation'
+import { tryCatch } from '@/libs/utils'
+import { auth } from '@/auth'
 
-interface MemberSubscriptionActionsProps {
-    subscription?: {
-        id: number
-        plan: string
-        status: string
-    } | null
-}
-
-export default function MemberSubscriptionActions({ subscription }: MemberSubscriptionActionsProps) {
+export default function MemberSubscriptionActions({ subscription }: { subscription: MemberSubscription }) {
+    const { id: locationId, mid: memberId } = useParams()
     const [loading, setLoading] = useState(false)
-    const params = useParams()
-    const locationId = params?.lid
-    const memberId = params?.mid
+
 
     async function onCancel() {
         if (!subscription?.id) {
@@ -31,62 +26,47 @@ export default function MemberSubscriptionActions({ subscription }: MemberSubscr
             return
         }
 
-        if (!locationId || !memberId) {
-            toast.error('Missing location or member information')
-            return
-        }
 
-        setLoading(true)
-        try {
-            const response = await fetch(
-                `/api/loc/${locationId}/member/${memberId}/subscriptions`, 
+        const { error, result } = await tryCatch(
+            fetch(`/api/protected/loc/${locationId}/plans/subs/${subscription.id}`,
                 {
-                    method: 'DELETE',
+                    method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ subscriptionId: subscription.id })
                 }
             )
+        )
 
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.error || 'Failed to cancel subscription')
-            }
 
-            toast.success('Subscription cancelled successfully')
-            // Optionally refresh data here or use a callback
-        } catch (error) {
-            toast.error((error instanceof Error ? error.message : 'An unknown error occurred'))
-        } finally {
-            setLoading(false)
-        }
     }
 
 
     return (
-        <div>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant={'ghost'} className='h-auto py-0 px-0 hover:bg-transparent'>
-                        <Icon name="EllipsisVertical" size={16} className="dark:text-white" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className='w-[180px] border-foreground/20 p-2'>
-                    <DropdownMenuItem
-                        className='cursor-pointer bg-red-500 text-white hover:bg-red-600'
-                        onClick={onCancel}
-                        disabled={loading || !subscription}
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 size={16} className="animate-spin mr-2" />
-                                Cancelling...
-                            </>
-                        ) : (
-                            'Cancel Subscription'
-                        )}
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </div>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant={'ghost'} size={'icon'} className='size-5'>
+                    <EllipsisVertical className='size-4' />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className='w-[180px] bg-muted border-foreground/10 space-y-1'>
+                <DropdownMenuItem
+                    className='cursor-pointer text-sm flex flex-row items-center justify-between gap-2'
+                    onClick={onCancel}
+                    disabled={!subscription}
+                >
+                    <span className='text-xs'> Update</span>
+                    <Pencil className='size-3' />
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                    className='cursor-pointer text-sm flex flex-row items-center justify-between gap-2'
+                    onClick={onCancel}
+                    disabled={!subscription}
+                >
+                    <span className='text-xs'> Cancel</span>
+                    <Trash2 className='size-3' />
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
     )
 }
