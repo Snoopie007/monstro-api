@@ -83,6 +83,7 @@ export const LocationSetupSchema = z.object({
     country: z.string({ message: "Country is required." }).min(2),
     postalCode: z.string({ message: "Postal code is required." }).min(3),
     website: z.string().optional(),
+    slug: z.string(),
     phone: z.string({ message: "Phone number is required." }).min(11),
 });
 

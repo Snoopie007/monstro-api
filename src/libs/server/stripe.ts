@@ -373,18 +373,15 @@ class VendorStripePayments extends BaseStripePayments {
         return await this._stripe.subscriptionSchedules.update(scheduleId, updates);
     }
 
-
-
     async createGHLSubscription(metadata: Record<string, any>) {
         const price = isProd ? "price_1R4WblDePDUzIffAvMQrZRFE" : "price_1R4S9xDePDUzIffAFUKu0ROH"
-        const coupon = isProd ? "kQcIf0sW" : "7Yt7dfGs"
         if (!this._customer) {
             throw new Error("Customer not set");
         }
         const options: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
             description: `Monstro Marketing Suite Subscription`,
-            items: [{ price, discounts: [{ coupon }] }],
+            items: [{ price }],
             metadata
         };
         return this._stripe.subscriptions.create(options);

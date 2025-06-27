@@ -51,6 +51,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             country: "USA",
             state: "",
             postalCode: "",
+            slug: "",
         },
         mode: "onChange",
     });
@@ -98,7 +99,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             state: address.state || "",
             postalCode: address.postalCode || "",
             country: address.country || "USA",
-
+            slug: `${displayName?.toLowerCase().replace(/ /g, '')}`
         });
         const metadata = {
             placeId: place.id,
@@ -139,7 +140,9 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
 
         if (!result || error || !result.ok) {
             setLoading(false);
-            return toast.error("Failed to add location, please try again.");
+            const error = await result?.json();
+            console.log(error)
+            return toast.error(error?.error || "Failed to add location, please try again.");
         }
         const data = await result.json();
 
@@ -257,6 +260,21 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                     )}
                                 >
                                 </FormField>
+                            </fieldset>
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="slug"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-[0.65rem] uppercase font-semibold">Unique Business Handle</FormLabel>
+                                            <FormControl>
+                                                <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </fieldset>
 
                             <fieldset>
