@@ -1,3 +1,4 @@
+'use client'
 import {
     Button,
     DialogBody,
@@ -110,8 +111,8 @@ export function SubForm({ params, setOpen }: SubFormProps) {
                                             </FormControl>
                                             <SelectContent>
                                                 {subscriptions && subscriptions.map((sub: MemberPlan, index: number) => (
-                                                    (sub.id) ? 
-                                                    <SelectItem key={index} value={sub.id?.toString()}>{sub.name}</SelectItem> : null
+                                                    (sub.id) ?
+                                                        <SelectItem key={index} value={sub.id?.toString()}>{sub.name}</SelectItem> : null
                                                 ))}
                                             </SelectContent>
                                         </Select>

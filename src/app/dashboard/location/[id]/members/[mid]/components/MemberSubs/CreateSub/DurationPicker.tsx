@@ -1,6 +1,7 @@
+'use client'
 import { CalendarIcon } from "lucide-react";
 import { format, startOfMonth, addMonths } from "date-fns";
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui";
 import { DateRange } from "react-day-picker";

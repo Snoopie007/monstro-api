@@ -1,3 +1,4 @@
+'use client'
 import {
     Button,
     Dialog,
@@ -7,8 +8,6 @@ import {
     DialogTrigger,
     DialogDescription,
 } from "@/components/ui";
-
-
 import { useState } from "react";
 import React from "react";
 import { SubForm } from "./SubForm";

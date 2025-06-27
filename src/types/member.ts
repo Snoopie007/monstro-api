@@ -118,6 +118,8 @@ export type MemberPlan = {
     created: Date;
     updated: Date | null;
     deleted: Date | null;
+    metadata?: Record<string, any>;
+    newPlan?: boolean;
 };
 
 

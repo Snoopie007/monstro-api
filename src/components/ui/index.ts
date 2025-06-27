@@ -15,6 +15,7 @@ export * from './popover';
 export * from './switch';
 export * from './badge';
 export * from './tabs';
+export * from './circle-progress';
 export * from './breadcrumb';
 export * from './calendar';
 export * from './separator';

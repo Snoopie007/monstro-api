@@ -15,11 +15,21 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 				eq(templates.deleted, isNull(templates.deleted)),
 				inArray(templates.isDraft, query === 'true' ? [true, false] : [false]))),
 
+<<<<<<< HEAD
 		});
+=======
+			const templates = await db.query.contractTemplates.findMany({
+				where: (templates, { eq, and, isNull, inArray }) => (and(eq(templates.locationId, params.id), eq(templates.deleted, isNull(templates.deleted)), inArray(templates.isDraft, query === 'true' ? [true, false] : [false]))),
+				});
+>>>>>>> subs
 
 		return NextResponse.json(templates, { status: 200 });
 	} catch (err) {
+<<<<<<< HEAD
 		console.error(err)
+=======
+		console.log(err);
+>>>>>>> subs
 		return NextResponse.json({ error: err }, { status: 500 })
 	}
 }

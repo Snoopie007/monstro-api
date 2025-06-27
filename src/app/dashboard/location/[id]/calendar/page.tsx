@@ -22,9 +22,10 @@ export default function CalendarPage(props: { params: Promise<{ id: string }> })
 			fetchEvents();
 		}
 	}, [currentDate]);
+	
 
 
-	async function fetchEvents() {
+async function fetchEvents() {
 		setIsLoading(true)
 		const { result, error } = await tryCatch(
 			fetch(`/api/protected/loc/${id}/events?date=${currentDate.toISOString().split("T")[0]}`)
@@ -35,6 +36,7 @@ export default function CalendarPage(props: { params: Promise<{ id: string }> })
 			return
 		}
 		const data = await result.json()
+		console.log("Fetched events:", data)
 		setEvents(data)
 		setIsLoading(false)
 	}

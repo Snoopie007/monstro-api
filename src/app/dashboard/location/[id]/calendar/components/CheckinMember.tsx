@@ -1,25 +1,75 @@
+// components/CheckinButton.tsx
+"use client";
 
-import {
-    Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-    Button
-} from "@/components/ui";
-import { Member } from "@/types/member";
-import { Calendar } from "lucide-react";
+import { useState } from 'react';
+import { CalendarEvent } from '@/types';
+import { tryCatch } from '@/libs/utils';
 
+interface CheckinButtonProps {
+  memberId: string;
+  event: CalendarEvent;
+  lid: string;
+  rid: string;
+}
 
-export function CheckinMember({ member }: { member: Member }) {
-    return (
-        <Dialog>
-            <DialogTrigger asChild >
-                <Button variant={"ghost"} size={"icon"} className="size-5 hover:bg-indigo-100">
-                    <Calendar className="size-3" />
-                </Button>
-            </DialogTrigger>
-            < DialogContent >
-                <DialogHeader>
-                    <DialogTitle>Checkin a Member</DialogTitle>
-                </DialogHeader>
-            </DialogContent>
-        </Dialog>
-    )
+export function CheckinButton({ memberId, event, lid, rid }: CheckinButtonProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+
+  const handleCheckIn = async () => {
+    setIsLoading(true);
+    try {
+      const url = `/api/protected/loc/${lid}/members/${memberId}/attendances/${rid}`;
+      const payload = {
+        startTime: event.start,
+        endTime: event.end,
+        checkInTime: new Date().toISOString(),
+        sessionId: event.data.sessionId,
+        reservationId: event.data.reservationId
+      };
+
+      const { result, error } = await tryCatch(fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      }));
+
+      if (error || !result?.ok) {
+        throw error || new Error('Failed to check in');
+      }
+
+      setIsCheckedIn(true);
+    } catch (error) {
+      console.error('Error checking in:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isWithinTimeWindow = () => {
+    const now = new Date();
+    const start = new Date(event.start);
+    const end = new Date(event.end);
+    const buffer = 15 * 60 * 1000; // 15 minute buffer
+    return now >= new Date(start.getTime() - buffer) && 
+           now <= new Date(end.getTime() + buffer);
+  };
+
+  if (!isWithinTimeWindow()) return null;
+
+  return (
+    <button
+      className={`px-2 py-1 rounded text-xs ${
+        isCheckedIn 
+          ? "bg-gray-200 text-gray-500 cursor-not-allowed" 
+          : "bg-green-500 hover:bg-green-600 text-white"
+      }`}
+      onClick={handleCheckIn}
+      disabled={isLoading || isCheckedIn}
+    >
+      {isLoading ? "Processing..." : "Check In"}
+    </button>
+  );
 }
