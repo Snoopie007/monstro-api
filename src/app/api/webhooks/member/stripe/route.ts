@@ -31,6 +31,7 @@ const allowedEvents: Stripe.Event.Type[] = [
 
 ];
 
+const isProduction = process.env.NODE_ENV === 'production';
 const stripe = new MemberStripePayments();
 export async function POST(req: NextRequest) {
 	const signature = (await headers()).get("Stripe-Signature");
@@ -48,14 +49,16 @@ export async function POST(req: NextRequest) {
 			throw new Error("Stripe Member webhook secret not found");
 		}
 
-		// const rawText = await req.text();
-		// const event = await stripe.constructEvent(
-		// 	Buffer.from(rawText),
-		// 	signature,
-		// 	process.env.STRIPE_WEBHOOK_SECRET
-		// );
+		const rawText = await req.text();
 
-		waitUntil(processEvent(await req.json()));
+
+		const event = isProduction ? await stripe.constructEvent(
+			Buffer.from(rawText),
+			signature,
+			process.env.STRIPE_WEBHOOK_SECRET
+		) : await req.json();
+
+		waitUntil(processEvent(event));
 	}
 
 	const { error } = await tryCatch(doEventProcessing());
