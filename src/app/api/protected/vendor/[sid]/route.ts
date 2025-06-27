@@ -81,16 +81,15 @@ export async function POST(req: Request) {
             const downPayment = Number(paymentPlan.downPayment - paymentPlan.discount) * 100;
 
             const promises = [];
-            promises.push(
-                stripe.createGHLSubscription(metadata),
-                stripe.createPackageSubscriptions(metadata)
-            );
-
             if (paymentPlan.downPayment > 0) {
                 promises.push(stripe.createPaymentIntent(downPayment, undefined, {
                     metadata
                 }));
             }
+            promises.push(
+                stripe.createGHLSubscription(metadata),
+                stripe.createPackageSubscriptions(metadata)
+            );
 
             if (paymentPlan.monthlyPayment > 0 && paymentPlan.priceId) {
                 promises.push(stripe.createPaymentPlan(paymentPlan, sale.coupon || undefined, metadata));

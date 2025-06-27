@@ -341,6 +341,15 @@ class VendorStripePayments extends BaseStripePayments {
         const phaseOnePrice = isProd ? "price_1R9XXWDePDUzIffAbDo18Rtf" : "price_1R4UUNDePDUzIffArAlN6mq6"
         const phaseTwoPrice = isProd ? "price_1R4WeVDePDUzIffAZQPObJhE" : "price_1R4SG5DePDUzIffAz3GU05uZ"
 
+
+        const commonPhaseOptions = {
+            billing_cycle_anchor: 'automatic' as const,
+            currency: 'usd',
+            ...(paymentMethodId && { default_payment_method: paymentMethodId }),
+            collection_method: 'charge_automatically' as const,
+            metadata
+        };
+
         const options: Stripe.SubscriptionScheduleCreateParams = {
             customer: this._customer,
             start_date: "now",
@@ -348,18 +357,10 @@ class VendorStripePayments extends BaseStripePayments {
             phases: [{
                 items: [{ price: phaseOnePrice, discounts: [{ coupon: phaseOneCoupon }] }],
                 iterations: 12,
-                billing_cycle_anchor: 'automatic',
-                currency: 'usd',
-                ...(paymentMethodId && { default_payment_method: paymentMethodId }),
-                collection_method: 'charge_automatically',
-                metadata
+                ...commonPhaseOptions
             }, {
                 items: [{ price: phaseTwoPrice }],
-                billing_cycle_anchor: 'automatic',
-                currency: 'usd',
-                ...(paymentMethodId && { default_payment_method: paymentMethodId }),
-                collection_method: 'charge_automatically',
-                metadata
+                ...commonPhaseOptions
             }],
             metadata,
             expand: ["subscription"]
