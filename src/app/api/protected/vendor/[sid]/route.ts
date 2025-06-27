@@ -18,6 +18,7 @@ const stripe = new VendorStripePayments();
 
 export async function POST(req: Request) {
     const { saleId, vendorId, ...data } = await req.json();
+    console.log('Data', data)
     try {
 
         const sale = await admindb.query.sales.findFirst({
@@ -25,7 +26,40 @@ export async function POST(req: Request) {
         })
 
         if (!sale || !sale.stripeCustomerId) {
-            return NextResponse.json({ error: "Sale not found" }, { status: 400 })
+            throw new Error("We couldn't find your process id, please contact your sales rep.")
+        }
+
+        const today = new Date();
+
+        let location: Location | undefined = undefined;
+        location = await db.query.locations.findFirst({
+            where: (location, { eq, or }) => or(eq(location.name, data.name), eq(location.slug, data.slug)),
+            with: {
+                locationState: true
+            }
+        });
+
+        console.log('Existing location', location)
+        console.log('Location state', location?.locationState)
+
+        const state = location?.locationState;
+
+        if (state && state.status === "active") {
+            throw new Error("There is already an active location with that name.")
+        }
+
+        if (!location) {
+            const [loc] = await db.insert(locations).values({
+                ...data,
+                vendorId,
+                phone: formatPhoneNumber(data.phone),
+                slug: data.slug
+            }).returning()
+            location = loc;
+        }
+
+        if (!location) {
+            throw new Error("Failed to create location")
         }
 
         let paymentPlan: PackagePaymentPlan | null = null;
@@ -38,48 +72,31 @@ export async function POST(req: Request) {
             paymentPlan = await getPaymentPlan(sale.paymentId, sale.packageId)
         }
 
-        const today = new Date();
 
-        let location: Location | undefined = undefined;
-        location = await db.query.locations.findFirst({
-            where: (location, { eq }) => eq(location.name, data.name),
-            with: {
-                locationState: true
-            }
-        })
-
-        if (location && location.locationState?.status === "active") {
-            return NextResponse.json({ error: "Location already exists" }, { status: 400 })
-        }
-
-        if (!location) {
-            const [loc] = await db.insert(locations).values({
-                ...data,
-                vendorId,
-                phone: formatPhoneNumber(data.phone),
-                slug: data.name.toLowerCase().replace(/ /g, '')
-            }).returning()
-            location = loc;
-        }
 
         const metadata = { vendorId, locationId: location.id }
 
         stripe.setCustomer(sale.stripeCustomerId)
         if (paymentPlan) {
-
             const downPayment = Number(paymentPlan.downPayment - paymentPlan.discount) * 100;
+
+            const promises = [];
+            promises.push(
+                stripe.createGHLSubscription(metadata),
+                stripe.createPackageSubscriptions(metadata)
+            );
+
             if (paymentPlan.downPayment > 0) {
-                await stripe.createPaymentIntent(downPayment, undefined, {
+                promises.push(stripe.createPaymentIntent(downPayment, undefined, {
                     metadata
-                })
+                }));
             }
+
             if (paymentPlan.monthlyPayment > 0 && paymentPlan.priceId) {
-                await stripe.createPaymentPlan(paymentPlan, sale.coupon || undefined, metadata)
+                promises.push(stripe.createPaymentPlan(paymentPlan, sale.coupon || undefined, metadata));
             }
-            await Promise.all([
-                stripe.createPackageSubscriptions(metadata),
-                stripe.createGHLSubscription(metadata)
-            ]);
+
+            await Promise.all(promises);
         }
 
         if (plan && ![1, 4].includes(plan.id)) {
@@ -99,8 +116,6 @@ export async function POST(req: Request) {
                 lastRenewalDate: today,
             })
 
-
-
             await tx.insert(wallets).values({
                 locationId: location.id,
                 balance: 0,
@@ -111,6 +126,7 @@ export async function POST(req: Request) {
 
         await admindb.update(sales).set({
             status: "Completed",
+            locationId: location.id,
             closedOn: today,
             updated: today
         }).where(eq(sales.id, saleId));
@@ -120,8 +136,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ ...location, id: encodedId, status: "active" }, { status: 200 })
     } catch (err) {
-        console.log(err)
-        return NextResponse.json({ error: err }, { status: 500 })
+        return NextResponse.json({ error: err instanceof Error ? err.message : "An unknown error occurred" }, { status: 500 })
     }
 }
 
