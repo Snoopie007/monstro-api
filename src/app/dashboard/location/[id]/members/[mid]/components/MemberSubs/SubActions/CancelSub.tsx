@@ -4,10 +4,14 @@ import {
     DialogFooter,
     Button,
     DialogClose,
+    Popover,
+    PopoverTrigger,
+    PopoverContent,
+    Calendar,
 } from "@/components/ui";
 import { RadioGroup, RadioGroupItem, Label, Textarea } from '@/components/forms';
 import { format } from 'date-fns';
-import { Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { MemberSubscription } from '@/types/member';
 import { cn, tryCatch } from '@/libs/utils';
@@ -28,12 +32,11 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
         cancelOption: 'now' as 'now' | 'end' | 'custom',
         customDate: '',
         refundAmount: 0,
-        refundReason: '',
+        reason: '',
     });
 
 
     const handleSubmit = async () => {
-        // Validate inputs first
         if (!sub?.id || !params?.id || !params?.mid) {
             console.log(sub.id, params.id, params.mid);
             toast.error('Missing required information');
@@ -44,15 +47,9 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
             toast.error('Please select a cancellation date');
             return;
         }
-
-
         setLoading(true);
-
-
-
-
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${params.id}/members/${params.mid}/subscriptions`, {
+            fetch(`/api/protected/loc/${params.id}/plans/subs/${sub.id}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formState),
@@ -62,7 +59,7 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
         setLoading(false);
 
         if (error || !result || !result.ok) {
-            const errorData = await result?.json().catch(() => ({}));
+            const errorData = await result?.json();
             toast.error(errorData.error || 'Failed to cancel subscription');
             return;
         }
@@ -107,18 +104,22 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
                             </div>
                         </div>
 
-                        <div className="flex flex-row items-center gap-3">
-                            <RadioGroupItem value="custom_date" id="custom" />
+                        <div className="flex flex-row items-start gap-3">
+                            <RadioGroupItem value="custom" id="custom" />
 
-                            <div className='space-y-0'>
+                            <div className='w-full flex flex-col gap-1'>
                                 <Label htmlFor="custom" className='text-sm cursor-pointer'>
                                     On custom date
                                 </Label>
                                 {formState.cancelOption === 'custom' && (
-                                    <></>
+                                    <CancelDateField
+                                        value={formState.customDate}
+                                        onChange={(date) => setFormState(prev => ({ ...prev, customDate: date || '' }))}
+                                    />
                                 )}
                             </div>
                         </div>
+
                     </RadioGroup>
                 </div>
 
@@ -138,9 +139,9 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
                     <Label className='text-sm col-span-1'>Reason</Label>
                     <Textarea
                         id="reason"
-                        value={formState.refundReason}
+                        value={formState.reason}
                         className='border-foreground/10 col-span-3 resize-none'
-                        onChange={(e) => setFormState(prev => ({ ...prev, refundReason: e.target.value }))}
+                        onChange={(e) => setFormState(prev => ({ ...prev, reason: e.target.value }))}
                         placeholder="Help us improve by sharing your reason for cancellation"
                         rows={3}
                     />
@@ -168,3 +169,47 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
 }
 
 
+
+interface CancelDateFieldProps {
+    value: string | undefined;
+    onChange: (date: string | undefined) => void;
+}
+
+export function CancelDateField({ value, onChange }: CancelDateFieldProps) {
+    const [open, setOpen] = useState(false);
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant={"outline"}
+                    className={cn("w-2/3 flex items-center justify-between text-left font-normal rounded-md border-foreground/10",
+                        !value && "text-muted-foreground"
+                    )}
+                >
+                    {value ? (
+                        <span className="text-sm">{format(value, "PPP")}</span>
+                    ) : (
+                        <span>Pick a date</span>
+                    )}
+                    <CalendarIcon className="ml-auto size-4 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 border-foreground/10 overflow-hidden" align="start">
+                <Calendar
+                    mode="single"
+                    selected={value ? new Date(value) : undefined}
+                    onSelect={(date) => {
+                        if (date) {
+                            onChange(date.toISOString());
+                        }
+                        setOpen(false);
+                    }}
+                    disabled={(date) =>
+                        date < new Date()
+                    }
+
+                />
+            </PopoverContent>
+        </Popover>
+    )
+}

@@ -27,8 +27,7 @@ const allowedEvents: Stripe.Event.Type[] = [
 	"invoice.payment_succeeded",
 	"payment_intent.canceled",
 	"payment_intent.succeeded",
-	// 'charge.succeeded'
-
+	// "charge.succeeded"
 ];
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -49,15 +48,18 @@ export async function POST(req: NextRequest) {
 			throw new Error("Stripe Member webhook secret not found");
 		}
 
-		const rawText = await req.text();
 
-
-		const event = isProduction ? await stripe.constructEvent(
-			Buffer.from(rawText),
-			signature,
-			process.env.STRIPE_WEBHOOK_SECRET
-		) : await req.json();
-
+		let event: Stripe.Event;
+		if (isProduction) {
+			const rawText = await req.text();
+			event = await stripe.constructEvent(
+				Buffer.from(rawText),
+				signature,
+				process.env.STRIPE_WEBHOOK_SECRET
+			)
+		} else {
+			event = await req.json();
+		}
 		waitUntil(processEvent(event));
 	}
 
@@ -84,6 +86,7 @@ async function processEvent(event: Stripe.Event) {
 		case "invoice.payment_failed":
 			await handleInvoicePaymentFailed(event);
 			break;
+
 		case "invoice.payment_succeeded":
 			await handleSubscriptionPaid(event);
 			break;
@@ -91,6 +94,8 @@ async function processEvent(event: Stripe.Event) {
 			console.warn(`Unhandled event type: ${event.type}`);
 	}
 }
+
+
 
 async function handleSubscriptionPaid(event: Stripe.Event) {
 	const invoice = event.data.object as Stripe.Invoice;
@@ -122,7 +127,7 @@ async function handleSubscriptionPaid(event: Stripe.Event) {
 			tax = invoice.total_taxes.map((tax) => tax.amount).reduce((acc, curr) => acc + curr, 0);
 		}
 
-		db.transaction(async (tx) => {
+		await db.transaction(async (tx) => {
 			const commonFields = {
 				memberId: subscription.memberId,
 				locationId: subscription.locationId,
@@ -175,12 +180,11 @@ async function handleSubscriptionPaid(event: Stripe.Event) {
 
 async function updateSubscriptionStatus(event: Stripe.Event) {
 	const subscription = event.data.object as Stripe.Subscription;
-	db.update(memberSubscriptions).set({
+
+	await db.update(memberSubscriptions).set({
 		status: subscription.status
 	}).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id));
 
-	console.log("Subscription updated");
-	// Update subscription status to paused in your database
 }
 
 
@@ -189,6 +193,7 @@ async function handleInvoicePaymentFailed(event: Stripe.Event) {
 
 	const subscription = invoice.parent?.subscription_details?.subscription as string;
 	if (subscription) {
+
 		try {
 			await db.update(memberSubscriptions).set({
 				status: 'past_due'

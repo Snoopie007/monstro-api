@@ -27,9 +27,11 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
         <>
             <Dialog open={action !== undefined} onOpenChange={handleClose}>
                 <DialogContent className="max-w-lg border-foreground/10 sm:rounded-lg overflow-hidden">
-                    <DialogHeader className='hidden'>
-                        <DialogTitle></DialogTitle>
-                        <DialogDescription></DialogDescription>
+                    <DialogHeader className='pb-0 pt-5'>
+                        <DialogTitle className='text-sm'>
+                            {action === 'cancel' ? 'Cancel Subscription' : 'Update Subscription'}
+                        </DialogTitle>
+                        <DialogDescription className='hidden'></DialogDescription>
                     </DialogHeader>
                     <CancelSub sub={sub} show={action === 'cancel'} close={() => handleClose(false)} />
                 </DialogContent>
@@ -79,9 +81,6 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
             </div>
         </>
     )
-
-
-
 }
 
 

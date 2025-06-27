@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import { MemberPlan } from "@/types";
 import { MonstroPlan, PackagePaymentPlan } from "@/types/admin";
 import { AddressParam } from "@stripe/stripe-js";
-import { isAfter, addDays, addWeeks } from "date-fns";
+import { isAfter, addDays, addWeeks, isSameDay } from "date-fns";
 import Stripe from "stripe";
 
 type Customer = {
@@ -91,6 +91,7 @@ abstract class BaseStripePayments {
     async constructEvent(body: Buffer, sig: string, key: string): Promise<Stripe.Event> {
         return await this._stripe.webhooks.constructEvent(body, sig, key);
     }
+
     async updatePaymentMethod(id: string, update: Stripe.PaymentMethodUpdateParams) {
         return await this._stripe.paymentMethods.update(id, update);
     }
@@ -108,6 +109,15 @@ abstract class BaseStripePayments {
     async retrievePaymentMethod(customerId: string, paymentId: string) {
         return await this._stripe.customers.retrievePaymentMethod(customerId, paymentId);
     }
+
+    async getInvoice(invoiceId: string) {
+        return await this._stripe.invoices.retrieve(invoiceId);
+    }
+
+    async getPaymentIntent(paymentIntentId: string) {
+        return await this._stripe.paymentIntents.retrieve(paymentIntentId);
+    }
+
 
     async updateCustomer(updates: Stripe.CustomerUpdateParams) {
         if (!this._customer) {
@@ -168,13 +178,13 @@ abstract class BaseStripePayments {
     }
 
     async removeAccount(accountId: string) {
-
         return await this._stripe.accounts.del(accountId);
     }
 
+
     async getSubscription(subscriptionId: string) {
         return await this._stripe.subscriptions.retrieve(subscriptionId, {
-            expand: ["latest_invoice"]
+            expand: ["latest_invoice", 'latest_invoice.payments', 'latest_invoice.payment_intent']
         });
     }
 
@@ -395,6 +405,13 @@ class MemberStripePayments extends BaseStripePayments {
         super(secretKey || process.env.STRIPE_MEMBER_SECRET_KEY!);
         this._accountId = accountId || null;
     }
+    async getCharges(limit?: number) {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        const res = await this._stripe.charges.list({ limit: limit || 10, customer: this._customer });
+        return res.data;
+    }
 
     async createPaymentIntent(amount: number, settings?: PaymentIntentSettings) {
         if (!this._customer) {
@@ -541,6 +558,8 @@ class MemberStripePayments extends BaseStripePayments {
         return product.default_price as Stripe.Price
     }
 
+
+
     async retrieveTaxSettings() {
         const res = await this._stripe.tax.settings.retrieve();
         return res;
@@ -599,38 +618,33 @@ class MemberStripePayments extends BaseStripePayments {
 
     async cancelSubscription(
         subscriptionId: string,
-        cancelAtPeriodEnd: boolean = false
-    ): Promise<Stripe.Subscription | { id: string; object: "subscription"; deleted: true }> {
-        if (cancelAtPeriodEnd) {
-            return this._stripe.subscriptions.update(subscriptionId, {
-                cancel_at_period_end: true,
-            });
-        } else {
+        endOfPeriod: boolean,
+        cancelDate?: Date,
+    ) {
+        const today = new Date();
+        if (cancelDate && isSameDay(cancelDate, today)) {
+
             return this._stripe.subscriptions.cancel(subscriptionId);
+        } else {
+            return this._stripe.subscriptions.update(subscriptionId, {
+                cancel_at_period_end: endOfPeriod,
+                ...(!endOfPeriod && { cancel_at: cancelDate ? cancelDate.getTime() / 1000 : undefined })
+            });
         }
-    }
 
-
-    async getLatestInvoice() {
-        if (!this._customer) {
-            throw new Error("Customer not set");
-        }
-        const res = await this._stripe.invoices.list({ customer: this._customer, limit: 1 });
-        return res.data[0];
     }
 
 
     async createRefund(params: {
-        payment_intent: string;
-        amount?: number;
-        reason?: "duplicate" | "fraudulent" | "requested_by_customer";
-        metadata?: Record<string, string>;
+        payment_intent?: string;
+        charge?: string;
     }): Promise<Stripe.Refund> {
         return this._stripe.refunds.create({
-            payment_intent: params.payment_intent,
-            amount: params.amount,
-            reason: params.reason,
-            metadata: params.metadata,
+            ...(params.payment_intent && { payment_intent: params.payment_intent }),
+            ...(params.charge && { charge: params.charge }),
+            refund_application_fee: false,
+            reverse_transfer: true,
+            reason: "requested_by_customer"
         });
     }
 
