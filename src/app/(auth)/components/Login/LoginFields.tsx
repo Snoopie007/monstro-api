@@ -1,3 +1,4 @@
+"use client"
 import React, { useState } from 'react'
 import {
     FormControl,
@@ -12,15 +13,15 @@ import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { toast } from 'react-toastify';
-import { useLoginStatus } from '../../login/providers/LoginStatusProvider'
+import { useLogin } from '../../providers'
 
 interface LoginFieldsProps {
     form: UseFormReturn<z.infer<typeof LoginSchema>>;
 }
 
-export default function LoginFields({ form }: LoginFieldsProps) {
+export function LoginFields({ form }: LoginFieldsProps) {
     const [loading, setLoading] = useState(false);
-    const { setStep, setUser } = useLoginStatus();
+    const { setStep, setUser } = useLogin();
 
     async function verifyEmailAndPassword() {
 
@@ -87,7 +88,7 @@ export default function LoginFields({ form }: LoginFieldsProps) {
                         <FormItem>
                             <FormLabel className="flex flex-row justify-between">
                                 <span className="text-[0.65rem] font-semibold  uppercase">Password</span>
-                                <Link href={"/auth/forgot-password"} className={"font-semibold text-[0.65rem]  uppercase"}					>
+                                <Link href={"/login/forgot"} className={"font-semibold text-[0.65rem]  uppercase"}					>
                                     Forgot your password?
                                 </Link>
 

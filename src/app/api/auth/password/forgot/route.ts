@@ -16,6 +16,7 @@ function generateResetToken() {
 	}
 	return token;
 }
+
 const emailSender = new EmailSender();
 export async function POST(req: NextRequest) {
 	const { email } = await req.json()
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
 				data: {
 					ui: {
 						btnText: "Reset Password",
-						btnUrl: `${req.nextUrl.origin}/login/password/reset/${token}+${encodedUserId}`
+						btnUrl: `${req.nextUrl.origin}/login/reset/${token}+${encodedUserId}`
 					},
 					member: {
 						firstName,
@@ -55,7 +56,8 @@ export async function POST(req: NextRequest) {
 
 		return NextResponse.json({ success: true }, { status: 200 });
 	} catch (err) {
-		return NextResponse.json({ err }, { status: 500 })
+
+		return NextResponse.json({ message: (err as Error).message || "Something went wrong" }, { status: 500 })
 	}
 }
 
@@ -90,29 +92,35 @@ export async function PUT(req: NextRequest) {
 				},
 				ui: {
 					btnText: "Reset Password",
-					btnUrl: `${req.nextUrl.origin}/auth/password/reset/${token}+${encodedUserId}`
+					btnUrl: `${req.nextUrl.origin}/login/reset/${token}+${encodedUserId}`
 				},
 				monstro: MonstroData
 			},
 		});
 
+		return NextResponse.json({ success: true }, { status: 200 })
 	} catch (error) {
 		console.log(error)
 		return NextResponse.json({ error }, { status: 500 })
 	}
 
-	return NextResponse.json({ success: true }, { status: 200 })
 }
 
 async function findUser(email: string) {
-	if (!email) {
-		throw new Error("Email is required")
-	}
+
+
+
 	const user = await db.query.users.findFirst({
-		where: (user, { eq }) => eq(user.email, email)
+		where: (user, { eq }) => eq(user.email, email),
+		with: {
+			vendor: true
+		}
 	})
 	if (!user) {
 		throw new Error("User not found")
+	}
+	if (!user.vendor) {
+		throw new Error("This email is not associated with a vendor account.")
 	}
 	return user
 }

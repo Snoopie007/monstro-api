@@ -11,7 +11,7 @@ export default function ClubRegistration({
             <header className="w-full max-w-4xl py-2 flex-initial">
                 <Image src="/images/logo.png" alt="Monstro" width={100} height={100} />
             </header>
-            <div className="w-full max-w-4xl py-16 flex-grow flex-1">
+            <div className="w-full max-w-lg py-16 flex-grow flex-1">
 
                 {children}
             </div>

@@ -1,9 +1,8 @@
 "use client";
-import * as z from "zod";
 
 import { Input } from "@/components/forms/input";
 
-import { cn, sleep, tryCatch } from "@/libs/utils";
+import { cn, tryCatch } from "@/libs/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";;
@@ -27,12 +26,13 @@ export function ForgotPassword() {
         const { result, error } = await tryCatch(
             fetch("/api/auth/password/forgot", {
                 method: "POST",
-                body: JSON.stringify({ email, type: "email" })
+                body: JSON.stringify({ email })
             })
         )
         setLoading(false)
-        if (!result || error || !result.ok || !result.ok) {
-            setError(error?.message || "Something went wrong")
+        if (!result || error || !result.ok) {
+            const data = await result?.json()
+            setError(data?.message || "Something went wrong")
             return
         }
         setSuccess(true)

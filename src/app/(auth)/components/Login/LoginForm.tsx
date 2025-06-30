@@ -7,13 +7,11 @@ import {
 } from "@/components/forms";
 
 import { LoginSchema } from "@/libs/FormSchemas/schemas";
-import OTPFields from "./OTPFields";
-import LoginFields from "./LoginFields";
-import TypeFields from "./TypeFields";
-import { useLoginStatus } from "../../login/providers/LoginStatusProvider";
+import { VerifyOTP, LoginFields, TypeFields } from "./";
+import { useLogin } from "../../providers";
 
-export default function LoginForm() {
-	const { step } = useLoginStatus();
+export function LoginForm() {
+	const { step } = useLogin();
 
 	const form = useForm<z.infer<typeof LoginSchema>>({
 		resolver: zodResolver(LoginSchema),
@@ -34,7 +32,7 @@ export default function LoginForm() {
 
 					{step === 1 && <LoginFields form={form} />}
 					{step === 2 && <TypeFields form={form} />}
-					{step === 3 && <OTPFields form={form} />}
+					{step === 3 && <VerifyOTP form={form} />}
 				</form>
 
 			</Form>

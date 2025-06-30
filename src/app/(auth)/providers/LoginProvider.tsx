@@ -26,37 +26,37 @@ const reducer = (state: StateType, action: Action): StateType => {
     }
 }
 
-export const LoginStatusContext = createContext<{
+export const LoginContext = createContext<{
     state: StateType;
     dispatch: React.Dispatch<Action>;
 } | null>(null)
 
-interface LoginStatusProviderProps {
+interface LoginProviderProps {
     children: ReactNode;
 }
 
-export const LoginStatusProvider = ({ children }: LoginStatusProviderProps): ReactElement => {
+export const LoginProvider = ({ children }: LoginProviderProps): ReactElement => {
     const [state, dispatch] = useReducer(reducer, { step: 1, user: null });
 
 
     return (
-        <LoginStatusContext.Provider value={{ state, dispatch }}>
+        <LoginContext.Provider value={{ state, dispatch }}>
             {children}
-        </LoginStatusContext.Provider>
+        </LoginContext.Provider>
     );
 };
 
-type UseLoginStatusHookType = {
+type UseLoginHookType = {
     step: number;
     user: LoginUser | null;
     setStep: (step: number) => void;
     setUser: (user: LoginUser | null) => void;
 }
 
-export const useLoginStatus = (): UseLoginStatusHookType => {
-    const context = useContext(LoginStatusContext)
+export const useLogin = (): UseLoginHookType => {
+    const context = useContext(LoginContext)
     if (!context) {
-        throw new Error('useLoginStatus must be used within a LoginStatusProvider')
+        throw new Error('useLogin must be used within a LoginProvider')
     }
 
     const { state, dispatch } = context;

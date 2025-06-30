@@ -1,13 +1,13 @@
 
 import Link from "next/link";
-import LoginForm from "../components/Login/LoginForm";
-import { LoginStatusProvider } from "./providers/LoginStatusProvider";
+import { LoginForm } from "../components";
+import { LoginProvider } from "../providers";
 
 export default async function SignIn() {
 
     return (
         <div className="flex text-black  flex-col items-center py-[10%]">
-            <LoginStatusProvider>
+            <LoginProvider>
                 <div className="w-full max-w-sm border  rounded-sm shadow-xs p-1">
                     <div className="p-6 space-y-6">
 
@@ -22,7 +22,7 @@ export default async function SignIn() {
                         </p>
                     </div>
                 </div>
-            </LoginStatusProvider>
+            </LoginProvider>
 
         </div>
     );

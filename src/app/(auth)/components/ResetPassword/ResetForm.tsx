@@ -18,6 +18,7 @@ import { toast } from 'react-toastify';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+
 export function ResetPasswordForm({ token }: { token: string }) {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
