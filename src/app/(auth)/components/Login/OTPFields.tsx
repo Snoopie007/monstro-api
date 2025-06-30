@@ -1,8 +1,8 @@
-
+"use client"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/forms'
 import { Button } from '@/components/ui/button'
 import React, { useState } from 'react'
-import { sleep, cn } from '@/libs/utils'
+import { cn } from '@/libs/utils'
 import { z } from 'zod'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FormControl, FormField } from '@/components/forms'
@@ -11,14 +11,14 @@ import { UseFormReturn } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import { signIn } from 'next-auth/react'
 import { Loader2 } from 'lucide-react'
-import OTPRetry from './OTPRetry'
+import { OTPRetry } from './OTPRetry'
 import { LoginSchema } from '@/libs/FormSchemas/schemas'
 
 interface VerifyOTPProps {
     form: UseFormReturn<z.infer<typeof LoginSchema>>;
 }
 
-export default function VerifyOTP({ form }: VerifyOTPProps) {
+export function VerifyOTP({ form }: VerifyOTPProps) {
     const searchParams = useSearchParams();
     const [loading, setLoading] = useState(false);
     const router = useRouter();

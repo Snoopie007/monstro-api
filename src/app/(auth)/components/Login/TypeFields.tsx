@@ -1,3 +1,4 @@
+"use client"
 import React, { useState } from 'react'
 import {
     FormField, FormItem, FormControl, FormLabel,
@@ -9,13 +10,13 @@ import { UseFormReturn } from 'react-hook-form'
 import { z } from 'zod'
 import { Button } from '@/components/ui'
 import { cn, formatEmail, formatPhone, tryCatch } from '@/libs/utils'
-import { useLoginStatus } from '../../login/providers/LoginStatusProvider'
+import { useLogin } from '../../providers'
 import { toast } from 'react-toastify'
 import { Loader2 } from 'lucide-react'
 
 
-export default function TypeFields({ form }: { form: UseFormReturn<z.infer<typeof LoginSchema>> }) {
-    const { user, setStep } = useLoginStatus();
+export function TypeFields({ form }: { form: UseFormReturn<z.infer<typeof LoginSchema>> }) {
+    const { user, setStep } = useLogin();
     const [loading, setLoading] = useState(false);
 
     async function handleGetToken() {

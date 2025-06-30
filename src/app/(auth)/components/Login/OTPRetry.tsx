@@ -1,17 +1,18 @@
+"use client"
 import { Loader2 } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 import { sleep } from '@/libs/utils'
-import { useLoginStatus } from '../../login/providers/LoginStatusProvider';
+import { useLogin } from '../../providers';
 
 interface OTPRetryProps {
     type: string | undefined;
 }
 
 
-export default function OTPRetry({ type }: OTPRetryProps) {
+export function OTPRetry({ type }: OTPRetryProps) {
     const [countdown, setCountdown] = useState(60);
-    const { user } = useLoginStatus();
+    const { user } = useLogin();
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {

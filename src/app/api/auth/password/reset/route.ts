@@ -67,7 +67,6 @@ export async function POST(req: NextRequest) {
                 monstro: MonstroData
             }
         });
-        // Remove 
         await redis.del(RedisKey);
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (err) {

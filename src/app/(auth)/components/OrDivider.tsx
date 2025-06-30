@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function OrDivider() {
+export function OrDivider() {
     return (
         <div className="relative">
             <div className="absolute inset-0 flex items-center">
