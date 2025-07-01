@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { CalendarEvent } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { X, Clock, User, Plus } from 'lucide-react';
+import { Clock, User, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui';
 import { cn } from '@/libs/utils';
@@ -102,7 +102,7 @@ export function AddReservation({ event, onRemoveReservation, lid, rid }: AddRese
                               memberId={String(member.memberId)}
                               event={event}
                               lid={lid}
-                              rid={String(rid)} 
+                              rid={String(rid)}
                             />
                             <button
                               className="px-2 py-1 rounded text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200"

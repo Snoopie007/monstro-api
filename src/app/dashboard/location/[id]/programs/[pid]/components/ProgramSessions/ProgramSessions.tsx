@@ -36,7 +36,7 @@ export function ProgramSessions({ sessions, pid, lid }: ProgramSessionsProps) {
         <>
 
             <Card className="border-x-0 border-y border-foreground/10">
-                <CardHeader className="p-0 flex flex-row items-center justify-between p-4">
+                <CardHeader className="flex flex-row items-center justify-between p-4">
                     <div className="flex-1 text-sm  font-semibold  ">
                         Sessions
                     </div>

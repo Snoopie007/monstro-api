@@ -15,9 +15,8 @@ interface ContractEditorProps {
     locationId: string
 }
 
-
 export default function ContractEditor({ contractRef, locationId }: ContractEditorProps) {
-    const { editor } = useBlockEditor(contractRef.content)
+    const { editor } = useBlockEditor(contractRef.content!)
     const [contract, setContract] = useState<Contract | null>(contractRef)
     const [isOpen, setIsOpen] = useState(false)
     const sidebar = useMemo(() => {
