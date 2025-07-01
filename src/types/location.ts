@@ -1,38 +1,13 @@
-<<<<<<< HEAD
-
-import { MemberInvoice, MemberPointsHistory, MemberReferral, MemberSubscription } from "./member";
-import { Program } from "./program";
-import { Transaction } from "./transaction";
-import { Vendor } from "./vendor";
-import { Wallet } from "./wallet";
-import { locations, locationState } from "@/db/schemas";
-
-export type Location = typeof locations.$inferInsert & {
-    locationState?: LocationState;
-    programs?: Program[];
-    memberInvoices?: MemberInvoice[];
-    memberSubscriptions?: MemberSubscription[];
-    pointsHistory?: MemberPointsHistory[];
-    referrals?: MemberReferral[];
-    transactions?: Transaction[];
-    wallet?: Wallet;
-    vendor?: Vendor;
-};
-
-export type LocationState = typeof locationState.$inferInsert & {
-    location?: Location;
-}
-=======
-import {LocationStatus} from "./DatabaseEnums";
+import { LocationStatus } from "./DatabaseEnums";
 import {
   MemberInvoice,
   MemberPointsHistory,
   MemberReferral,
   MemberSubscription,
 } from "./member";
-import {Program} from "./program";
-import {Transaction} from "./transaction";
-import {Wallet} from "./wallet";
+import { Program } from "./program";
+import { Transaction } from "./transaction";
+import { Wallet } from "./wallet";
 
 export type Location = {
   id: number;
@@ -79,7 +54,6 @@ export type LocationState = {
   created: Date;
   updated: Date | null;
 };
->>>>>>> 22125ebf9f92d05da0f1397f845bbaa8d79a1fe6
 
 export type LocationSettings = {
   aibotsCount: number;
