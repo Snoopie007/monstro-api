@@ -1,3 +1,19 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE SCHEMA IF NOT EXISTS private;
+
+-- UUID to Base62 conversion function
+CREATE OR REPLACE FUNCTION uuid_base62(prefix text DEFAULT '') RETURNS text AS $$
+DECLARE
+    raw UUID := uuid_generate_v4();
+    b64 text;
+BEGIN
+    b64 := encode(uuid_send(raw), 'base64');
+    b64 := regexp_replace(b64, '[^a-zA-Z0-9]', '', 'g');
+    RETURN prefix || b64;
+END;
+$$ LANGUAGE plpgsql;
+
+
 -- Create ENUM types
 CREATE TYPE contract_type AS ENUM('contract', 'waiver');
 CREATE TYPE invoice_status AS ENUM('draft', 'paid', 'unpaid', 'uncollectible', 'void');
@@ -7,31 +23,42 @@ CREATE TYPE package_status AS ENUM('active', 'incomplete', 'expired', 'completed
 CREATE TYPE payment_method AS ENUM('card', 'cash', 'check', 'zelle', 'venmo', 'paypal', 'apple', 'google');
 CREATE TYPE plan_interval AS ENUM('day', 'week', 'month', 'year');
 CREATE TYPE plan_type AS ENUM('recurring', 'one-time');
-CREATE TYPE reservation_status AS ENUM('active', 'expired', 'canceled');
 CREATE TYPE role_color AS ENUM('red', 'green', 'blue', 'pink', 'cyan', 'lime', 'orange', 'fuchsia', 'sky', 'lemon', 'purple', 'yellow');
 CREATE TYPE transaction_status AS ENUM('paid', 'failed', 'incomplete');
 CREATE TYPE staff_status AS ENUM('active', 'inactive');
 CREATE TYPE program_status AS ENUM('active', 'inactive');
 CREATE TYPE import_status AS ENUM('pending', 'processing', 'completed', 'failed');
-
+CREATE TYPE transaction_type AS ENUM('inbound', 'outbound');
 
 -- Base tables with no foreign key dependencies
 CREATE TABLE IF NOT EXISTS users (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('usr_'),
   name text NOT NULL,
   email text NOT NULL UNIQUE,
   email_verified_at timestamp with time zone,
   image text,
   password text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  CONSTRAINT users_email_unique UNIQUE (email)
+  updated_at timestamp with time zone
 );
 
+CREATE TABLE IF NOT EXISTS sessions (
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('ses_'),
+  session_token text NOT NULL,
+  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
+  expires timestamp with time zone NOT NULL,
+  ip_address text,
+  browser_id text,
+  mac_address text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_session_token ON sessions (session_token);
 
 CREATE TABLE IF NOT EXISTS account (
-  user_id bigint,
+  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
   type text,
   provider text NOT NULL,
   provider_account_id text NOT NULL,
@@ -42,49 +69,41 @@ CREATE TABLE IF NOT EXISTS account (
   scope text,
   id_token text,
   session_state text,
-  CONSTRAINT account_pkey PRIMARY KEY (provider, provider_account_id),
-  CONSTRAINT account_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+  CONSTRAINT account_pkey PRIMARY KEY (provider, provider_account_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 -- Tables with dependencies on users
 CREATE TABLE IF NOT EXISTS vendors (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('vdr_'),
   first_name text NOT NULL,
   last_name text,
-  user_id bigint NOT NULL,
+  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
   stripe_customer_id text,
-  email text NOT NULL,
+  email text UNIQUE NOT NULL,
   avatar text,
   phone text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  CONSTRAINT vendors_email_unique UNIQUE (email),
-  CONSTRAINT vendors_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+  updated_at timestamp with time zone
 );
 
 CREATE INDEX IF NOT EXISTS idx_vendors_email ON vendors (email);
 CREATE INDEX IF NOT EXISTS idx_vendors_user_id ON vendors (user_id);
 
 CREATE TABLE IF NOT EXISTS members (
-  id bigserial PRIMARY KEY NOT NULL,
-  user_id bigint NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('mbr_'),
+  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
   email text NOT NULL,
   phone text,
-  referral_code text,
-  current_points integer DEFAULT 0,
+  referral_code text UNIQUE,
   avatar text,
+  stripe_customer_id text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
   first_name text,
   last_name text,
   gender text,
-  dob date,
-  CONSTRAINT members_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-  CONSTRAINT members_email_unique UNIQUE (email),
-  CONSTRAINT members_referral_code_unique UNIQUE (referral_code)
+  dob timestamp with time zone
 );
 
 CREATE INDEX IF NOT EXISTS idx_members_email ON members (email);
@@ -92,9 +111,10 @@ CREATE INDEX IF NOT EXISTS idx_members_user_id ON members (user_id);
 
 -- Tables with dependencies on vendors
 CREATE TABLE IF NOT EXISTS locations (
-  id bigserial PRIMARY KEY NOT NULL,
-  name text NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('acc_'),
+  name text UNIQUE NOT NULL,
   address text,
+  about text,
   city text,
   state text,
   logo_url text,
@@ -103,42 +123,35 @@ CREATE TABLE IF NOT EXISTS locations (
   website text,
   email text,
   phone text,
-  timezone text,
-  vendor_id bigint,
-  slug text NOT NULL,
-  meta_data jsonb DEFAULT '{}'::jsonb,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
+  timezone text NOT NULL DEFAULT 'America/New_York',
+  vendor_id text REFERENCES vendors (id) ON DELETE CASCADE NOT NULL,
+  slug text UNIQUE NOT NULL,
+  metadata jsonb DEFAULT '{}'::jsonb,
   industry text,
   legal_name text,
-  CONSTRAINT locations_address_key UNIQUE (address),
-  CONSTRAINT locations_slug_unique UNIQUE (slug),
-  CONSTRAINT locations_vendor_id_foreign FOREIGN KEY (vendor_id) REFERENCES vendors (id)
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone
 );
 
 CREATE INDEX IF NOT EXISTS idx_locations_vendor_id ON locations (vendor_id);
 
-
 -- Tables with dependencies on locations
 CREATE TABLE IF NOT EXISTS contracts (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   content text,
   title text NOT NULL,
   description text NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
   is_draft boolean NOT NULL DEFAULT false,
   editable boolean NOT NULL DEFAULT true,
-  location_id bigint NOT NULL,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
   type contract_type NOT NULL DEFAULT 'contract'::contract_type,
-  require_signature boolean NOT NULL DEFAULT false,
-  CONSTRAINT contracts_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON UPDATE CASCADE ON DELETE CASCADE
+  require_signature boolean NOT NULL DEFAULT false
 );
 
 CREATE TABLE IF NOT EXISTS location_state (
-  location_id bigint PRIMARY KEY NOT NULL,
+  location_id text PRIMARY KEY REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
   plan_id bigint,
   pkg_id bigint,
   payment_plan_id bigint,
@@ -146,49 +159,31 @@ CREATE TABLE IF NOT EXISTS location_state (
   agree_to_terms boolean NOT NULL DEFAULT false,
   last_renewal_date timestamp with time zone DEFAULT now(),
   start_date timestamp with time zone,
+  stripe_subscription_id text,
   settings jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   usage_percent integer NOT NULL DEFAULT 0,
-  waiver_id bigint,
-  CONSTRAINT location_state_location_id_key UNIQUE (location_id),
-  CONSTRAINT location_state_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT location_state_waiver_id_fkey FOREIGN KEY (waiver_id) REFERENCES contracts (id) ON DELETE SET NULL
+  waiver_id text REFERENCES contracts (id) ON DELETE SET NULL,
+  tax_rate integer NOT NULL DEFAULT 0,
+  CONSTRAINT location_state_location_id_key UNIQUE (location_id)
 );
-
-
-CREATE TABLE IF NOT EXISTS sessions (
-  id bigserial PRIMARY KEY NOT NULL,
-  session_token text NOT NULL,
-  user_id bigint NOT NULL,
-  expires timestamp with time zone NOT NULL,
-  ip_address text,
-  browser_id text,
-  machine_id text,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  CONSTRAINT sessions_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_session_token ON sessions (session_token);
 
 
 CREATE TABLE IF NOT EXISTS roles (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   name text NOT NULL,
   guard_name text NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
-  location_id bigint,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE,
   color role_color,
-  CONSTRAINT roles_name_guard_name_unique UNIQUE (name, guard_name),
-  CONSTRAINT roles_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id)
+  CONSTRAINT roles_name_guard_name_unique UNIQUE (name, guard_name)
 );
 
 
 CREATE TABLE IF NOT EXISTS permissions (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   name text NOT NULL,
   guard_name text NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -197,23 +192,17 @@ CREATE TABLE IF NOT EXISTS permissions (
   CONSTRAINT permissions_name_guard_name_unique UNIQUE (name, guard_name)
 );
 
-
-
 -- Tables with dependencies on roles
 CREATE TABLE IF NOT EXISTS role_has_permissions (
-  permission_id bigint NOT NULL,
-  role_id bigint NOT NULL,
-  CONSTRAINT role_has_permissions_pkey PRIMARY KEY (permission_id, role_id),
-  CONSTRAINT role_has_permissions_permission_id_foreign FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE,
-  CONSTRAINT role_has_permissions_role_id_foreign FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
+  permission_id text REFERENCES permissions (id) ON DELETE CASCADE NOT NULL,
+  role_id text REFERENCES roles (id) ON DELETE CASCADE NOT NULL,
+  CONSTRAINT role_has_permissions_pkey PRIMARY KEY (permission_id, role_id)
 );
 
 CREATE TABLE IF NOT EXISTS user_roles (
-  user_id bigint NOT NULL,
-  role_id bigint NOT NULL,
-  CONSTRAINT user_roles_pkey PRIMARY KEY (user_id, role_id),
-  CONSTRAINT user_roles_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-  CONSTRAINT user_roles_role_id_foreign FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
+  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
+  role_id text REFERENCES roles (id) ON DELETE CASCADE NOT NULL,
+  CONSTRAINT user_roles_pkey PRIMARY KEY (user_id, role_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles (user_id);
@@ -222,107 +211,117 @@ CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles (role_id);
 
 -- Tables with dependencies on roles, users, and locations
 CREATE TABLE IF NOT EXISTS staffs (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('stf_'),
   first_name text NOT NULL,
   last_name text NOT NULL,
   email text NOT NULL,
   phone text NOT NULL,
   avatar text,
-  user_id bigint NOT NULL,
-  role_id bigint,
-  location_id bigint,
+  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
+  role_id text REFERENCES roles (id) ON DELETE SET NULL,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  CONSTRAINT staffs_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT staffs_role_id_foreign FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE SET NULL,
-  CONSTRAINT staffs_user_id_foreign FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+  updated_at timestamp with time zone
 );
 
 CREATE TABLE IF NOT EXISTS programs (
-  id bigserial PRIMARY KEY NOT NULL,
-  location_id bigint NOT NULL,
-  instructor_id bigint,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
+  instructor_id text REFERENCES staffs (id) ON DELETE SET NULL,
   name text NOT NULL,
   description text NOT NULL,
   icon text,
-  benefits text[] NOT NULL DEFAULT '{}',
   capacity integer NOT NULL,
   min_age integer NOT NULL,
   max_age integer NOT NULL,
   status program_status NOT NULL DEFAULT 'active',
   interval plan_interval NOT NULL DEFAULT 'week',
   interval_threshold smallint NOT NULL DEFAULT 1,
+  cancelation_threshold integer NOT NULL DEFAULT 24,
+  allow_waitlist boolean NOT NULL DEFAULT false,
+  waitlist_capacity integer NOT NULL DEFAULT 0,
+  allow_make_up_class boolean NOT NULL DEFAULT false,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  CONSTRAINT programs_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT programs_instructor_id_foreign FOREIGN KEY (instructor_id) REFERENCES staffs (id) ON DELETE SET NULL
+  updated_at timestamp with time zone
 );
 
 CREATE INDEX IF NOT EXISTS idx_programs_location_id ON programs (location_id);
 
 CREATE TABLE IF NOT EXISTS program_tags (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   name text NOT NULL,
   CONSTRAINT program_tags_name_unique UNIQUE (name)
 );
 
 CREATE TABLE IF NOT EXISTS program_has_tags (
-  program_id bigint NOT NULL,
-  tag_id bigint NOT NULL,
-  CONSTRAINT program_has_tags_program_id_foreign FOREIGN KEY (program_id) REFERENCES programs (id) ON DELETE CASCADE,
-  CONSTRAINT program_has_tags_tag_id_foreign FOREIGN KEY (tag_id) REFERENCES program_tags (id) ON DELETE CASCADE
+  program_id text REFERENCES programs (id) ON DELETE CASCADE NOT NULL,
+  tag_id text REFERENCES program_tags (id) ON DELETE CASCADE NOT NULL,
+  CONSTRAINT program_has_tags_pkey PRIMARY KEY (program_id, tag_id)
 );
 
 CREATE TABLE IF NOT EXISTS program_sessions (
-  id bigserial PRIMARY KEY NOT NULL,
-  program_id bigint NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('pss_'),
+  program_id text REFERENCES programs (id) ON DELETE CASCADE NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   time time NOT NULL,
   duration smallint NOT NULL DEFAULT 0,
   day smallint NOT NULL DEFAULT 1 CHECK (day BETWEEN 1 AND 7),
-  CONSTRAINT program_sessions_program_id_foreign FOREIGN KEY (program_id) REFERENCES programs (id) ON DELETE CASCADE,
   CONSTRAINT unique_program_session UNIQUE (program_id, day, time, duration)
 );
 
-
-
 CREATE INDEX IF NOT EXISTS idx_program_sessions_program_id ON program_sessions (program_id);
 
--- Tables with dependencies on members and locations
-CREATE TABLE IF NOT EXISTS member_locations (
-  location_id bigint NOT NULL,
-  member_id bigint NOT NULL,
+
+CREATE TABLE IF NOT EXISTS session_waitlist (
+    session_id text REFERENCES program_sessions (id) ON DELETE CASCADE NOT NULL,
+    member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+    session_date timestamp with time zone NOT NULL,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone,
+    CONSTRAINT session_waitlist_unique UNIQUE (session_id, member_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_waitlist_session_id ON session_waitlist (session_id);
+CREATE INDEX IF NOT EXISTS idx_session_waitlist_member_id ON session_waitlist (member_id);
+
+-- Tables with dependencies on members and contracts
+CREATE TABLE IF NOT EXISTS member_contracts (
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  contract_id text REFERENCES contracts (id) ON DELETE CASCADE NOT NULL,
+  signed boolean NOT NULL DEFAULT false,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
-  stripe_customer_id text,
+  variables jsonb NOT NULL DEFAULT '{}'::jsonb,
+  signature text,
+  CONSTRAINT member_contracts_unique UNIQUE (member_id, contract_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_member_contracts_member_id ON member_contracts (member_id);
+-- Tables with dependencies on members and locations
+CREATE TABLE IF NOT EXISTS member_locations (
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
+  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone,
   status location_status NOT NULL DEFAULT 'incomplete',
   invite_date timestamp with time zone,
   invite_accepted_date timestamp with time zone,
-  incomplete_plan jsonb,
-  waiver_id bigint,
+  waiver_id text REFERENCES member_contracts (id) ON DELETE SET NULL,
   CONSTRAINT member_locations_pkey PRIMARY KEY (location_id, member_id),
-  CONSTRAINT member_locations_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT member_locations_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE,
-  CONSTRAINT member_locations_waiver_id_fkey FOREIGN KEY (waiver_id) REFERENCES contracts (id) ON DELETE SET NULL,
   CONSTRAINT member_locations_unique UNIQUE (location_id, member_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_member_locations_location_member ON member_locations (location_id, member_id);
 
 CREATE TABLE IF NOT EXISTS family_members (
-  id bigserial PRIMARY KEY NOT NULL,
-  member_id bigint NOT NULL,
-  related_member_id bigint NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  related_member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
   relationship relationship NOT NULL,
-  is_payer boolean NOT NULL DEFAULT false,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  CONSTRAINT family_members_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE,
-  CONSTRAINT family_members_related_member_id_foreign FOREIGN KEY (related_member_id) REFERENCES members (id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_family_members_member_id ON family_members (member_id);
@@ -330,16 +329,13 @@ CREATE INDEX IF NOT EXISTS idx_family_members_related_member_id ON family_member
 
 -- Tables with dependencies on programs
 CREATE TABLE IF NOT EXISTS member_plans (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   name character varying(255) NOT NULL,
   description character varying(255) NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
   family boolean NOT NULL DEFAULT false,
-  program_id bigint,
   family_member_limit integer NOT NULL DEFAULT 0,
-  contract_id bigint,
+  contract_id text REFERENCES contracts (id) ON DELETE SET NULL,
   type plan_type NOT NULL DEFAULT 'recurring',
   interval plan_interval NOT NULL DEFAULT 'month',
   interval_threshold smallint NOT NULL DEFAULT 1,
@@ -350,48 +346,23 @@ CREATE TABLE IF NOT EXISTS member_plans (
   total_class_limit integer,
   class_limit_interval plan_interval,
   billing_anchor_config jsonb,
+  marketing_details jsonb NOT NULL DEFAULT '{}'::jsonb,
   allow_proration boolean NOT NULL DEFAULT false,
   archived boolean NOT NULL DEFAULT false,
   class_limit_threshold smallint,
   expire_interval plan_interval,
   expire_threshold smallint,
-  CONSTRAINT member_plans_contract_id_foreign FOREIGN KEY (contract_id) REFERENCES contracts (id) ON DELETE CASCADE,
-  CONSTRAINT member_plans_program_id_foreign FOREIGN KEY (program_id) REFERENCES programs (id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_member_plans_program_id ON member_plans (program_id);
-
-
-
-
-
--- Tables with dependencies on members and contracts
-CREATE TABLE IF NOT EXISTS member_contracts (
-  id bigserial PRIMARY KEY NOT NULL,
-  member_id bigint NOT NULL,
-  contract_id bigint NOT NULL,
-  member_plan_id bigint,
-  signed boolean NOT NULL DEFAULT false,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  location_id bigint,
-  variables jsonb NOT NULL DEFAULT '{}'::jsonb,
-  signature text,
-  CONSTRAINT member_contracts_contract_id_foreign FOREIGN KEY (contract_id) REFERENCES contracts (id) ON DELETE CASCADE,
-  CONSTRAINT member_contracts_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT member_contracts_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE,
-  CONSTRAINT member_contracts_member_plan_id_fkey FOREIGN KEY (member_plan_id) REFERENCES member_plans (id) ON DELETE SET NULL
+  updated_at timestamp with time zone
 );
 
-CREATE INDEX IF NOT EXISTS idx_member_contracts_member_id ON member_contracts (member_id);
 
 -- Tables with dependencies on members, member_plans, and program_levels
 CREATE TABLE IF NOT EXISTS member_subscriptions (
-  id bigserial PRIMARY KEY NOT NULL,
-  parent_id bigint,
-  member_id bigint NOT NULL,
-  member_plan_id bigint,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('sub_'),
+  parent_id text REFERENCES member_subscriptions (id) ON DELETE SET NULL,
+  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  member_plan_id text REFERENCES member_plans (id) ON DELETE CASCADE NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   stripe_subscription_id text,
@@ -401,20 +372,13 @@ CREATE TABLE IF NOT EXISTS member_subscriptions (
   current_period_end timestamp with time zone,
   cancel_at timestamp with time zone,
   cancel_at_period_end boolean NOT NULL DEFAULT false,
-  location_id bigint,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE,
   trial_end timestamp with time zone,
   ended_at timestamp with time zone,
-  payment_method payment_method NOT NULL DEFAULT 'card',
+  payment_method payment_method NOT NULL DEFAULT 'cash',
   metadata jsonb NOT NULL DEFAULT '{}',
-  program_id bigint,
-  member_contract_id bigint,
-  is_participant boolean NOT NULL DEFAULT true,
-  CONSTRAINT member_subscriptions_member_plan_id_fkey FOREIGN KEY (member_plan_id) REFERENCES member_plans (id) ON DELETE SET NULL,
-  CONSTRAINT member_subscriptions_parent_id_foreign FOREIGN KEY (parent_id) REFERENCES member_subscriptions (id) ON DELETE CASCADE,
-  CONSTRAINT member_subscriptions_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT member_subscriptions_member_contract_id_fkey FOREIGN KEY (member_contract_id) REFERENCES member_contracts (id),
-  CONSTRAINT member_subscriptions_program_id_fkey FOREIGN KEY (program_id) REFERENCES programs (id),
-  CONSTRAINT member_subscriptions_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE
+  member_contract_id text REFERENCES member_contracts (id) ON DELETE CASCADE,
+  is_participant boolean NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_member_subscriptions_member_id ON member_subscriptions (member_id);
@@ -423,29 +387,22 @@ CREATE INDEX IF NOT EXISTS idx_member_subscriptions_status ON member_subscriptio
 
 -- Tables with dependencies on members, member_plans, and program_levels
 CREATE TABLE IF NOT EXISTS member_packages (
-  id bigserial PRIMARY KEY NOT NULL,
-  member_plan_id bigint NOT NULL,
-  member_id bigint NOT NULL,
-  parent_id bigint,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('pkg_'),
+  member_plan_id text REFERENCES member_plans (id) ON DELETE CASCADE NOT NULL,
+  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  parent_id text REFERENCES member_packages (id) ON DELETE SET NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   status package_status NOT NULL DEFAULT 'incomplete',
   start_date timestamp with time zone NOT NULL,
-  payment_method payment_method,
+  payment_method payment_method NOT NULL DEFAULT 'cash',
   metadata jsonb DEFAULT '{}'::jsonb,
   total_class_attended integer NOT NULL DEFAULT 0,
   total_class_limit integer NOT NULL DEFAULT 0,
   expire_date timestamp with time zone,
-  location_id bigint NOT NULL,
-  program_id bigint,
-  member_contract_id bigint,
-  is_participant boolean NOT NULL DEFAULT true,
-  CONSTRAINT member_packages_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT member_packages_member_contract_id_fkey FOREIGN KEY (member_contract_id) REFERENCES member_contracts (id),
-  CONSTRAINT member_packages_member_id_fkey FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE,
-  CONSTRAINT member_packages_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES member_packages (id) ON DELETE CASCADE,
-  CONSTRAINT member_packages_program_id_fkey FOREIGN KEY (program_id) REFERENCES programs (id),
-  CONSTRAINT member_packages_member_plan_id_fkey FOREIGN KEY (member_plan_id) REFERENCES member_plans (id) ON DELETE CASCADE
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
+  member_contract_id text REFERENCES member_contracts (id) ON DELETE CASCADE,
+  is_participant boolean NOT NULL DEFAULT true
 );
 
 CREATE INDEX IF NOT EXISTS idx_member_packages_member_id ON member_packages (member_id);
@@ -454,11 +411,10 @@ CREATE INDEX IF NOT EXISTS idx_member_packages_status ON member_packages (status
 
 -- Tables with dependencies on members, locations, and member_subscriptions/packages
 CREATE TABLE IF NOT EXISTS member_invoices (
-  id bigserial PRIMARY KEY NOT NULL,
-  settings jsonb DEFAULT '{}'::jsonb,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('inv_'),
   currency text,
-  member_id bigint NOT NULL,
-  location_id bigint NOT NULL,
+  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
   description text,
   items jsonb[] DEFAULT '{}'::jsonb[],
   paid boolean NOT NULL DEFAULT false,
@@ -470,20 +426,13 @@ CREATE TABLE IF NOT EXISTS member_invoices (
   attempt_count integer NOT NULL DEFAULT 0,
   invoice_pdf text,
   status invoice_status NOT NULL DEFAULT 'draft',
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
-  member_subscription_id bigint,
-  member_package_id bigint,
+  member_subscription_id text REFERENCES member_subscriptions (id) ON DELETE CASCADE,
+  member_package_id text REFERENCES member_packages (id) ON DELETE CASCADE,
   for_period_start timestamp with time zone,
-  for_period_end timestamp with time zone,
-  CONSTRAINT member_invoices_location_id_fkey FOREIGN KEY (location_id) 
-    REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT member_invoices_member_id_fkey FOREIGN KEY (member_id) 
-    REFERENCES members (id) ON DELETE CASCADE,
-  CONSTRAINT member_invoices_member_package_id_fkey FOREIGN KEY (member_package_id) 
-    REFERENCES member_packages (id) ON DELETE CASCADE,
-  CONSTRAINT member_invoices_member_subscription_id_fkey FOREIGN KEY (member_subscription_id) 
-    REFERENCES member_subscriptions (id) ON DELETE CASCADE
+  for_period_end timestamp with time zone
 );
 
 CREATE INDEX IF NOT EXISTS idx_member_invoices_member_id ON member_invoices (member_id);
@@ -492,80 +441,61 @@ CREATE INDEX IF NOT EXISTS idx_member_invoices_status ON member_invoices (status
 
 
 CREATE TABLE IF NOT EXISTS transactions (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('txn_'),
   description text,
-  payment_method payment_method NOT NULL,
-  transaction_type text NOT NULL,
+  type transaction_type NOT NULL,
   amount integer NOT NULL,
+  tax_amount integer NOT NULL DEFAULT 0,
   status transaction_status NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  location_id bigint NOT NULL,
-  member_id bigint,
-  payment_type plan_type NOT NULL DEFAULT 'one-time',
-  item text,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
+  member_id text REFERENCES members (id) ON DELETE CASCADE,
+  payment_method payment_method NOT NULL,
+  items jsonb[] DEFAULT '{}'::jsonb[],
   charge_date timestamp with time zone DEFAULT now(),
   currency text NOT NULL DEFAULT 'USD',
   metadata jsonb NOT NULL DEFAULT '{}',
   refunded boolean NOT NULL DEFAULT false,
-  invoice_id bigint,
-  subscription_id bigint,
-  package_id bigint,
-  CONSTRAINT transactions_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT transactions_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE,
-  CONSTRAINT transactions_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES member_invoices (id),
-  CONSTRAINT transactions_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES member_subscriptions (id) ON DELETE CASCADE,
-  CONSTRAINT transactions_package_id_fkey FOREIGN KEY (package_id) REFERENCES member_packages (id) ON DELETE CASCADE,
-  CONSTRAINT transactions_invoice_id_key UNIQUE (invoice_id),
-  CONSTRAINT transactions_transaction_type_check CHECK (transaction_type IN ('incoming', 'refund', 'pending'))
+  invoice_id text REFERENCES member_invoices (id) ON DELETE CASCADE,
+  subscription_id text REFERENCES member_subscriptions (id) ON DELETE CASCADE,
+  package_id text REFERENCES member_packages (id) ON DELETE CASCADE
 );
 
 
 CREATE TABLE IF NOT EXISTS reservations (
-  id bigserial PRIMARY KEY NOT NULL,
-  session_id bigint NOT NULL,
-  status reservation_status NOT NULL DEFAULT 'active',
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('rsv_'),
+  session_id text REFERENCES sessions (id) ON DELETE CASCADE NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,  
-  location_id bigint NOT NULL, 
-  expired_on timestamp with time zone,
-  member_subscription_id bigint,
-  canceled_on timestamp with time zone,
-  member_package_id bigint,
-  member_id bigint NOT NULL,
-  CONSTRAINT reservations_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT reservations_member_id_fkey FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE,
-  CONSTRAINT reservations_member_package_id_fkey FOREIGN KEY (member_package_id) REFERENCES member_packages (id) ON DELETE CASCADE,
-  CONSTRAINT reservations_member_subscription_id_fkey FOREIGN KEY (member_subscription_id) REFERENCES member_subscriptions (id) ON DELETE CASCADE,
-  CONSTRAINT reservations_session_id_foreign FOREIGN KEY (session_id) REFERENCES program_sessions (id) ON DELETE CASCADE,
-  CONSTRAINT reservations_session_subscription_unique UNIQUE (session_id, member_id, location_id, member_subscription_id),
-  CONSTRAINT reservations_session_package_unique UNIQUE (session_id, member_id, location_id, member_package_id)
+  start_on timestamp with time zone NOT NULL,
+  end_on timestamp with time zone NOT NULL,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL, 
+  member_subscription_id text REFERENCES member_subscriptions (id) ON DELETE CASCADE,
+  member_package_id text REFERENCES member_packages (id) ON DELETE CASCADE,
+  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  CONSTRAINT session_subscription_unique UNIQUE (start_on, member_id, session_id, member_subscription_id),
+  CONSTRAINT session_package_unique UNIQUE (start_on, member_id, session_id, member_package_id)
 );
-
 
 
 CREATE INDEX IF NOT EXISTS idx_reservations_member_id ON reservations (member_id);
 CREATE INDEX IF NOT EXISTS idx_reservations_location_id ON reservations (location_id);
 CREATE INDEX IF NOT EXISTS idx_reservations_session_id ON reservations (session_id);
-CREATE INDEX IF NOT EXISTS idx_reservations_status ON reservations (status);
 
 
 CREATE TABLE IF NOT EXISTS check_ins (
-  id bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  reservation_id bigint NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('chk_'),
+  reservation_id text REFERENCES reservations (id) ON DELETE CASCADE NOT NULL,
   start_time timestamp with time zone NOT NULL,
+  end_time timestamp with time zone NOT NULL,
   check_in_time timestamp with time zone NOT NULL,
   check_out_time timestamp with time zone,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  deleted_at timestamp with time zone,
-  end_time timestamp with time zone NOT NULL,
-  ip_address inet,
+  ip_address text,
   lat numeric,
   lng numeric,
-  mac_address text,
-  CONSTRAINT check_ins_reservation_id_foreign FOREIGN KEY (reservation_id) REFERENCES reservations (id) ON DELETE CASCADE
+  mac_address text
 );
 
 CREATE INDEX IF NOT EXISTS idx_check_ins_reservation_id ON check_ins (reservation_id);
@@ -573,11 +503,11 @@ CREATE INDEX IF NOT EXISTS idx_check_ins_check_in_time ON check_ins (check_in_ti
 
 
 CREATE TABLE IF NOT EXISTS achievements (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   title text NOT NULL,
   badge text NOT NULL,
-  location_id bigint NOT NULL,
-  points bigint NOT NULL,
+  location_id text NOT NULL,
+  points integer NOT NULL,
   description text,
   icon text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -586,16 +516,16 @@ CREATE TABLE IF NOT EXISTS achievements (
 );
 
 CREATE TABLE IF NOT EXISTS actions (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   name text NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
 
 CREATE TABLE IF NOT EXISTS achievement_actions (
-  id bigserial PRIMARY KEY NOT NULL,
-  action_id bigint NOT NULL,
-  achievement_id bigint NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  action_id text NOT NULL,
+  achievement_id text NOT NULL,
   count integer NOT NULL,
   metadata text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -608,12 +538,11 @@ CREATE INDEX IF NOT EXISTS idx_achievement_actions_achievement_id ON achievement
 CREATE INDEX IF NOT EXISTS idx_achievement_actions_action_id ON achievement_actions (action_id);
 
 
-
 CREATE TABLE IF NOT EXISTS rewards (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   name text NOT NULL,
   description text NOT NULL,
-  location_id bigint NOT NULL,
+  location_id text NOT NULL,
   icon text,
   required_points integer NOT NULL,
   limit_per_member integer NOT NULL,
@@ -625,11 +554,10 @@ CREATE TABLE IF NOT EXISTS rewards (
 );
 
 
-
 CREATE TABLE IF NOT EXISTS reward_claims (
-  id bigserial PRIMARY KEY NOT NULL,
-  reward_id bigint NOT NULL,
-  member_id bigint NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  reward_id text NOT NULL,
+  member_id text NOT NULL,
   previous_points integer,
   date_claimed timestamp with time zone,
   status smallint NOT NULL DEFAULT 0,
@@ -643,10 +571,10 @@ CREATE TABLE IF NOT EXISTS reward_claims (
 
 
 CREATE TABLE IF NOT EXISTS member_achievements (
-  id bigserial PRIMARY KEY NOT NULL,
-  achievement_id bigint NOT NULL,
-  member_id bigint NOT NULL,
-  location_id bigint NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  achievement_id text NOT NULL,
+  member_id text NOT NULL,
+  location_id text NOT NULL,
   status text NOT NULL,
   note text,
   progress integer NOT NULL DEFAULT 0,
@@ -659,52 +587,47 @@ CREATE TABLE IF NOT EXISTS member_achievements (
 );
 
 CREATE TABLE IF NOT EXISTS member_referrals (
-  id bigserial PRIMARY KEY NOT NULL,
-  member_id bigint NOT NULL,
-  referred_member_id bigint NOT NULL,
-  location_id bigint NOT NULL,
+  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  referred_member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
-  CONSTRAINT member_referrals_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT member_referrals_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE CASCADE,
-  CONSTRAINT member_referrals_referred_member_id_foreign FOREIGN KEY (referred_member_id) REFERENCES members (id) ON DELETE CASCADE
+  CONSTRAINT member_referrals_pkey PRIMARY KEY (member_id, referred_member_id, location_id),
+  CONSTRAINT member_referrals_unique UNIQUE (member_id, referred_member_id, location_id)
 );
 
 
 CREATE TABLE IF NOT EXISTS integrations (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   service text NOT NULL,
   api_key text,
   secret_key text,
   access_token text,
   refresh_token text,
   expires_at bigint,
-  integration_id text NOT NULL,
+  account_id text NOT NULL,
   settings jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone,
-  location_id bigint NOT NULL,
+  location_id text NOT NULL,
   CONSTRAINT unique_service_location UNIQUE (service, location_id),
   CONSTRAINT integrations_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE
 );
 
 -- Tables with dependencies on vendors and locations
 CREATE TABLE IF NOT EXISTS vendor_levels (
-  id bigserial PRIMARY KEY NOT NULL,
-  vendor_id bigint,
-  location_id bigint NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  vendor_id text REFERENCES vendors (id) ON DELETE CASCADE NOT NULL,
   points integer NOT NULL DEFAULT 0,
   total_points integer NOT NULL DEFAULT 0,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  CONSTRAINT vendor_levels_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT vendor_levels_vendor_id_foreign FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
+  updated_at timestamp with time zone
 );
 
 CREATE TABLE IF NOT EXISTS vendor_badges (
-  id bigserial PRIMARY KEY NOT NULL,
-  vendor_level_id bigint NOT NULL,
-  badge_id bigint NOT NULL, -- this is the badge id is hardcoded
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  vendor_level_id text NOT NULL,
+  badge_id text NOT NULL, -- this is the badge id is hardcoded
   progress integer NOT NULL,
   completed boolean NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -714,7 +637,7 @@ CREATE TABLE IF NOT EXISTS vendor_badges (
 
 
 CREATE TABLE IF NOT EXISTS vendor_rewards (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   name text NOT NULL,
   description text NOT NULL,
   images text NOT NULL,
@@ -726,87 +649,73 @@ CREATE TABLE IF NOT EXISTS vendor_rewards (
 
 -- Tables with dependencies on vendor_levels and vendor_rewards
 CREATE TABLE IF NOT EXISTS vendor_claimed_rewards (
-  id bigserial PRIMARY KEY NOT NULL,
-  vendor_level_id bigint NOT NULL,
-  reward_id bigint NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  vendor_level_id text NOT NULL,
+  reward_id text NOT NULL,
   claimed_at timestamp with time zone NOT NULL,
   CONSTRAINT vendor_claimed_rewards_reward_id_foreign FOREIGN KEY (reward_id) REFERENCES vendor_rewards (id) ON DELETE CASCADE,
   CONSTRAINT vendor_claimed_rewards_vendor_level_id_foreign FOREIGN KEY (vendor_level_id) REFERENCES vendor_levels (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS vendor_referrals (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   amount integer NOT NULL,
-  vendor_id bigint NOT NULL,
-  referral_id bigint NOT NULL,
+  vendor_id text NOT NULL,
+  referral_id text NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   accepted_at timestamp with time zone,
   CONSTRAINT vendor_referrals_vendor_id_foreign FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
 );
-CREATE TABLE IF NOT EXISTS wallet (
-  id bigserial PRIMARY KEY NOT NULL,
-  location_id bigint NOT NULL,
+
+CREATE TABLE IF NOT EXISTS wallets (
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  location_id text UNIQUE REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
   balance bigint NOT NULL DEFAULT 0,
-  credit bigint NOT NULL DEFAULT 0,
-  recharge_amount bigint NOT NULL DEFAULT 20,
-  recharge_threshold bigint NOT NULL DEFAULT 10,
+  credits bigint NOT NULL DEFAULT 0,
+  recharge_amount bigint NOT NULL DEFAULT 2500,
+  recharge_threshold bigint NOT NULL DEFAULT 1000,
   last_charged timestamp with time zone,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  CONSTRAINT wallet_location_id_key UNIQUE (location_id),
-  CONSTRAINT wallet_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE
+  updated_at timestamp with time zone
 );
 
 -- Tables with dependencies on wallet
-CREATE TABLE IF NOT EXISTS wallet_usage (
-  id bigserial PRIMARY KEY NOT NULL,
-  wallet_id bigint NOT NULL,
+CREATE TABLE IF NOT EXISTS wallet_usages (
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('wlt_'),
+  wallet_id text REFERENCES wallets (id) ON DELETE CASCADE NOT NULL,
+  is_credit boolean NOT NULL DEFAULT false,
   description text NOT NULL,
-  category text NOT NULL,
   amount integer NOT NULL DEFAULT 0,
-  event_id bigint NOT NULL DEFAULT 0,
   balance integer NOT NULL DEFAULT 0,
-  recharge_threshold integer NOT NULL DEFAULT 0,
-  activity_date date NOT NULL,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  CONSTRAINT wallet_usage_wallet_id_foreign FOREIGN KEY (wallet_id) REFERENCES wallet (id) ON DELETE CASCADE
+  activity_date timestamp with time zone,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
 
 CREATE TABLE IF NOT EXISTS import_members (
-  id bigserial PRIMARY KEY NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   first_name text NOT NULL,
   last_name text NOT NULL,
-  member_id bigint,
-  is_family_plan boolean NOT NULL DEFAULT false,
-  is_primary_member boolean NOT NULL DEFAULT false,
+  member_id text REFERENCES members (id) ON DELETE SET NULL,
   email text NOT NULL,
   phone text NOT NULL,
+  accepted_at timestamp with time zone,
   last_renewal_day timestamp with time zone NOT NULL,
   status import_status NOT NULL DEFAULT 'pending',
-  terms plan_interval NOT NULL DEFAULT 'month',
-  term_count integer NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone,
-  program_id bigint,
-  plan_id bigint,
-  processed boolean NOT NULL DEFAULT false,
-  location_id bigint NOT NULL,
-  CONSTRAINT import_members_location_id_fkey FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
-  CONSTRAINT import_members_member_id_fkey FOREIGN KEY (member_id) REFERENCES members (id) ON DELETE SET NULL,
-  CONSTRAINT import_members_program_id_fkey FOREIGN KEY (program_id) REFERENCES programs (id) ON DELETE SET NULL,
-  CONSTRAINT import_members_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES member_plans (id) ON DELETE SET NULL
+  plan_id text REFERENCES member_plans (id) ON DELETE SET NULL,
+  oauth boolean NOT NULL DEFAULT false,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL
 );
 
 
 -- Tables with dependencies on staffs and locations
 CREATE TABLE IF NOT EXISTS staff_locations (
-  id bigserial PRIMARY KEY NOT NULL,
-  staff_id bigint NOT NULL,
-  location_id bigint NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  staff_id text NOT NULL,
+  location_id text NOT NULL,
   status staff_status NOT NULL DEFAULT 'active',
   CONSTRAINT staff_locations_staff_id_foreign FOREIGN KEY (staff_id) REFERENCES staffs (id) ON DELETE CASCADE,
   CONSTRAINT staff_locations_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE,
@@ -817,8 +726,8 @@ CREATE INDEX IF NOT EXISTS idx_staff_locations_staff_id ON staff_locations (staf
 CREATE INDEX IF NOT EXISTS idx_staff_locations_location_id ON staff_locations (location_id);
 
 CREATE TABLE IF NOT EXISTS staff_location_roles (
-  staff_location_id bigint NOT NULL,
-  role_id bigint NOT NULL,
+  staff_location_id text NOT NULL,
+  role_id text NOT NULL,
   CONSTRAINT staff_location_roles_pkey PRIMARY KEY (staff_location_id, role_id),
   CONSTRAINT staff_location_roles_staff_location_fkey FOREIGN KEY (staff_location_id) REFERENCES staff_locations (id) ON DELETE CASCADE,
   CONSTRAINT staff_location_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE

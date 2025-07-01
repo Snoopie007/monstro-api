@@ -1,1 +1,0 @@
-ALTER TABLE locations ALTER COLUMN vendor_id SET NOT NULL;

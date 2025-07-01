@@ -1,27 +1,26 @@
-import { text, timestamp, pgTable, integer, serial, boolean } from "drizzle-orm/pg-core";
+import { text, timestamp, pgTable, integer, serial, boolean, uuid } from "drizzle-orm/pg-core";
 import { users } from "./users";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { vendorLevels } from "./VendorProgress";
 import { vendorReferrals } from "./VendorReferrals";
 import { locations } from "./locations";
 
 export const vendors = pgTable("vendors", {
-    id: serial("id").primaryKey(),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
     firstName: text("first_name").notNull(),
     lastName: text("last_name"),
     stripeCustomerId: text("stripe_customer_id"),
     phone: text("phone"),
     email: text("email"),
     avatar: text("avatar"),
-    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: true }),
-    deleted: timestamp("deleted_at", { withTimezone: true }),
+    updated: timestamp("updated_at", { withTimezone: true })
 });
 
 export const supportPlans = pgTable("support_plans", {
-    id: serial("id").primaryKey(),
-    vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+    vendorId: uuid("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     price: integer("price").notNull(),
     supportCalls: boolean("support_calls").notNull().default(false),

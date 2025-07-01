@@ -1,4 +1,4 @@
-import { TransactionStatus } from "./DatabaseEnums";
+import { TransactionStatus, TransactionType } from "./DatabaseEnums";
 import { Member, MemberInvoice, MemberPackage, MemberSubscription } from "./member";
 
 
@@ -10,29 +10,27 @@ type TransactionMetadata = {
 } & Record<string, unknown>;
 
 export type Transaction = {
-    id?: number;
+    id?: string;
     description: string | null;
-    transactionType: string;
+    type: TransactionType;
     paymentMethod: string;
-    paymentType: string;
     amount: number;
-    locationId: number;
-    memberId?: number | null;
+    locationId: string;
+    memberId?: string | null;
     member?: Member;
     status: TransactionStatus;
     item: string | null;
     tax: number;
-    subscriptionId?: number | null;
+    subscriptionId?: string | null;
     subscription?: MemberSubscription;
-    packageId?: number | null;
+    packageId?: string | null;
     package?: MemberPackage;
     chargeDate: Date;
     currency: string;
     metadata?: TransactionMetadata;
     refunded?: boolean;
-    invoiceId?: number | null;
+    invoiceId?: string | null;
     invoice?: MemberInvoice;
     created?: Date;
     updated?: Date | null;
-    deleted?: Date | null;
 };

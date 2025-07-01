@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, serial, text, timestamp, pgTable, integer } from "drizzle-orm/pg-core";
+import { boolean, text, timestamp, pgTable, integer, uuid } from "drizzle-orm/pg-core";
 
 import { locations } from "./locations";
 import { memberContracts } from "./members";
@@ -7,14 +7,13 @@ import { memberPlans } from "./MemberPlans";
 import { ContractTypeEnum } from "./DatabaseEnums";
 
 export const contractTemplates = pgTable("contracts", {
-    id: serial("id").primaryKey(),
-    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade", onUpdate: "cascade" }),
+    id: uuid("id").primaryKey(),
+    locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade", onUpdate: "cascade" }),
     content: text("content"),
     title: text("title").notNull(),
     description: text("description").notNull(),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
-    deleted: timestamp("deleted_at", { withTimezone: true }),
     isDraft: boolean("is_draft").notNull().default(false),
     editable: boolean("editable").notNull().default(true),
     requireSignature: boolean("require_signature").notNull().default(false),

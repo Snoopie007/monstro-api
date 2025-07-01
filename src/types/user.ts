@@ -1,11 +1,8 @@
 import { Member } from "./member";
 import { Vendor } from "./vendor";
+import { users } from "@/db/schemas";
 
-export type User = {
-    id: number;
-    name: string;
-    email: string;
-    emailVerified: Date | null;
+export type User = typeof users.$inferInsert & {
     password?: string;
     vendor?: Vendor;
     member?: Member;

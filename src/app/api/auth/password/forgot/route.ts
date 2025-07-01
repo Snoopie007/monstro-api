@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRedisClient } from "@/libs/server/redis";
 import { EmailSender } from "@/libs/server/emails";
 import { MonstroData } from "@/libs/data";
-import { encodeId } from "@/libs/server/sqids";
+
 const redis = getRedisClient();
 
 const expiresAt = 60 * 30 + 30; // 30 minutes and 30 seconds
@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
 		if (!exists) {
 			redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt })
 			const [firstName, lastName] = user.name.split(" ")
-			const encodedUserId = encodeId(user.id)
 
 			await emailSender.send({
 				options: {
@@ -42,7 +41,7 @@ export async function POST(req: NextRequest) {
 				data: {
 					ui: {
 						btnText: "Reset Password",
-						btnUrl: `${req.nextUrl.origin}/login/reset/${token}+${encodedUserId}`
+						btnUrl: `${req.nextUrl.origin}/login/reset/${token}+${user.id}`
 					},
 					member: {
 						firstName,
@@ -75,7 +74,7 @@ export async function PUT(req: NextRequest) {
 
 		// Store the new OTP in Redis
 		await redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt });
-		const encodedUserId = encodeId(user.id)
+
 		const [firstName, lastName] = user.name.split(" ")
 
 		await emailSender.send({
@@ -92,7 +91,7 @@ export async function PUT(req: NextRequest) {
 				},
 				ui: {
 					btnText: "Reset Password",
-					btnUrl: `${req.nextUrl.origin}/login/reset/${token}+${encodedUserId}`
+					btnUrl: `${req.nextUrl.origin}/login/reset/${token}+${user.id}`
 				},
 				monstro: MonstroData
 			},

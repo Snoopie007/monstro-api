@@ -1,20 +1,20 @@
-import { serial, text, timestamp, time, smallint, pgTable, integer, unique, boolean, primaryKey } from "drizzle-orm/pg-core";
+import { serial, text, timestamp, time, smallint, pgTable, integer, unique, boolean, primaryKey, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { memberPlans } from "./MemberPlans";
 import { recurringReservations, reservations } from "./reservations";
 import { staffs } from "./staffs";
 import { PlanInterval, ProgramStatusEnum } from "./DatabaseEnums";
 
 export const programs = pgTable("programs", {
-    id: serial("id").primaryKey(),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
     name: text("name").notNull(),
     description: text("description"),
     capacity: integer("capacity").notNull(),
     minAge: integer("min_age").notNull(),
     maxAge: integer("max_age").notNull(),
-    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    instructorId: integer("instructor_id").references(() => staffs.id, { onDelete: "set null" }),
+    locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    instructorId: text("instructor_id").references(() => staffs.id, { onDelete: "set null" }),
     interval: PlanInterval("interval").notNull().default("week"),
     intervalThreshold: smallint("interval_threshold").notNull().default(1),
     icon: text("icon"),
@@ -24,19 +24,18 @@ export const programs = pgTable("programs", {
     cancelationThreshold: smallint("cancelation_threshold").notNull().default(0),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     status: ProgramStatusEnum("status").notNull().default("active"),
-    updated: timestamp('updated_at', { withTimezone: true }),
-    deleted: timestamp('deleted_at', { withTimezone: true })
+    updated: timestamp('updated_at', { withTimezone: true })
 });
 
 export const planPrograms = pgTable("plan_programs", {
-    planId: integer("plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
-    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+    planId: text("plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
+    programId: text("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
 }, (t) => [primaryKey({ columns: [t.planId, t.programId] })]);
 
 
 export const programSessions = pgTable("program_sessions", {
-    id: serial("id").primaryKey(),
-    programId: integer("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+    programId: text("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
     time: time("time").notNull(),
     duration: smallint("duration").notNull().default(0),
     day: smallint("day").notNull().default(1),

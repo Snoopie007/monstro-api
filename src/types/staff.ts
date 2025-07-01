@@ -1,14 +1,8 @@
+import { staffs } from "@/db/schemas";
 import { Role } from "./role";
+import { User } from "./user";
 
-export type Staff = {
-    id?: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    image: string;
-    phone: string;
-    role: Role | null | undefined;
-    status: string;
-    created: Date;
-    updated: Date;
+export type Staff = typeof staffs.$inferInsert & {
+    user?: User;
+    role?: Role;
 }

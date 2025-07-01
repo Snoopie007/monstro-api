@@ -1,12 +1,12 @@
 import { relations } from "drizzle-orm";
-import { text, pgTable, primaryKey, integer, serial } from "drizzle-orm/pg-core";
+import { text, pgTable, primaryKey, uuid } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { vendors } from "./vendors";
 import type { AdapterAccountType } from "next-auth/adapters";
 
 export const accounts = pgTable("account", {
-    userId: serial("user_id").references(() => users.id, { onDelete: "cascade" }),
-    vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    vendorId: text("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
     type: text("type").$type<AdapterAccountType>(),
     provider: text("provider").notNull(),
     providerAccountId: text("provider_account_id").notNull(),

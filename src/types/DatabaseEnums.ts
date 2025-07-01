@@ -11,3 +11,4 @@ export type TransactionStatus = 'paid' | 'failed' | 'incomplete';
 export type StaffStatus = 'active' | 'inactive';
 export type ProgramStatus = 'active' | 'inactive';
 export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type TransactionType = 'inbound' | 'outbound';

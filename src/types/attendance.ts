@@ -3,9 +3,9 @@ import { ProgramSession } from "@/types/program";
 import { Member } from "./member";
 
 export type Attendance = {
-    id: number;
-    reservationId: number | null;
-    recurringId: number | null;
+    id: string;
+    reservationId: string | null;
+    recurringId: string | null;
     checkInTime: Date;
     checkOutTime: Date | null;
     startTime: Date;
@@ -26,7 +26,7 @@ export type ExtendedAttendance = Attendance & {
 
 export type Reservation = typeof reservations.$inferInsert & {
     isRecurring?: boolean;
-    recurringId?: number;
+    recurringId?: string;
     session?: ProgramSession
     member?: Member
     exceptions?: RecurringReservationException[]

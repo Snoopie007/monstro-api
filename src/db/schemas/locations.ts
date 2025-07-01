@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { boolean, primaryKey, serial, text, timestamp, pgTable, jsonb, integer } from "drizzle-orm/pg-core";
+import { boolean, primaryKey, serial, text, timestamp, pgTable, jsonb, integer, uuid } from "drizzle-orm/pg-core";
 import { memberInvoices, memberPointsHistory, memberReferrals, members } from "./members";
 import { integrations } from "./integrations";
 import { programs } from "./programs";
@@ -7,11 +7,11 @@ import { transactions } from "./transactions";
 import { vendors } from "./vendors";
 import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
-import { IncompletePlan, LocationSettings } from "@/types";
+import { LocationSettings } from "@/types";
 
 
 export const locations = pgTable("locations", {
-    id: serial("id").primaryKey(),
+    id: uuid("id").primaryKey(),
     name: text("name").notNull().unique(),
     legalName: text("legal_name"),
     email: text("email"),
@@ -26,20 +26,19 @@ export const locations = pgTable("locations", {
     timezone: text("timezone"),
     logoUrl: text("logo_url"),
     slug: text("slug").unique().notNull(),
-    metadata: jsonb("meta_data"),
+    metadata: jsonb("metadata"),
     about: text("about"),
-    vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+    vendorId: text("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
-    deleted: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export const locationState = pgTable("location_state", {
-    locationId: integer("location_id").primaryKey().references(() => locations.id, { onDelete: "cascade" }),
+    locationId: text("location_id").primaryKey().references(() => locations.id, { onDelete: "cascade" }),
     planId: integer("plan_id"),
     pkgId: integer("pkg_id"),
     paymentPlanId: integer("payment_plan_id"),
-    waiverId: integer("waiver_id").references(() => locations.id, { onDelete: "set null" }),
+    waiverId: text("waiver_id").references(() => locations.id, { onDelete: "set null" }),
     agreeToTerms: boolean("agree_to_terms").notNull().default(false),
     lastRenewalDate: timestamp("last_renewal_date", { withTimezone: true }).defaultNow(),
     startDate: timestamp("start_date", { withTimezone: true }),
@@ -53,8 +52,8 @@ export const locationState = pgTable("location_state", {
 
 
 export const wallets = pgTable("wallets", {
-    id: serial("id").primaryKey(),
-    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey(),
+    locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     balance: integer("balance").notNull().default(0),
     credits: integer("credits").notNull().default(0),
     rechargeAmount: integer("recharge_amount").notNull().default(2500),
@@ -66,25 +65,25 @@ export const wallets = pgTable("wallets", {
 
 
 export const walletUsages = pgTable("wallet_usages", {
-    id: serial("id").primaryKey(),
-    walletId: integer("wallet_id").notNull().references(() => wallets.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey(),
+    walletId: text("wallet_id").notNull().references(() => wallets.id, { onDelete: "cascade" }),
     description: text("description").notNull(),
     amount: integer("amount").notNull().default(0),
     balance: integer("balance").notNull().default(0),
     isCredit: boolean("is_credit").notNull().default(false),
-    activityDate: timestamp("activity_date").notNull(),
+    activityDate: timestamp("activity_date", { withTimezone: true }).notNull(),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
 });
 
 export const memberLocations = pgTable("member_locations", {
-    memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     status: LocationStatusEnum("status").notNull().default("incomplete"),
     inviteDate: timestamp("invite_date", { withTimezone: true }),
     inviteAcceptedDate: timestamp("invite_accepted_date", { withTimezone: true }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: false }),
-    waiverId: integer("waiver_id").references(() => locations.id, { onDelete: "set null" }),
+    waiverId: text("waiver_id").references(() => locations.id, { onDelete: "set null" }),
 }, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);
 
 

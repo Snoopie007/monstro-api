@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { auth } from "./auth"
-import { decodeId } from "./libs/server/sqids"
 import { jwtVerify } from "jose";
 
 const publicPaths = [
@@ -24,7 +23,7 @@ async function verifyToken(token: string): Promise<boolean> {
 export default auth(async (req) => {
 
 	try {
-		const { pathname, searchParams } = req.nextUrl
+		const { pathname } = req.nextUrl
 		const isLoggedin = !!req.auth
 		const locations = req.auth?.user?.locations || []
 
@@ -48,20 +47,6 @@ export default auth(async (req) => {
 			if (!isLoggedin && !(isMobileApp && isMobileAuthenticated)) {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 			}
-
-			const [, encodedId, subpath = ""] = pathname.match(/^\/api\/protected\/loc\/([^/]+)(\/.*)?$/) || []
-
-			if (!encodedId || !isNaN(Number(encodedId))) {
-				return NextResponse.next()
-			}
-
-			const decodedId = decodeId(encodedId)
-
-			const url = new URL(`/api/protected/loc/${decodedId}${subpath}?${searchParams.toString()}`, req.url)
-
-			return decodedId
-				? NextResponse.rewrite(url)
-				: NextResponse.json({ message: "Invalid location" }, { status: 400 })
 		}
 
 		/* Handle authentication redirects */

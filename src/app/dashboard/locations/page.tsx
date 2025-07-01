@@ -2,11 +2,10 @@ import { db } from '@/db/db'
 import React from 'react'
 import { auth } from '@/auth'
 import { LocationsList } from './components/LocationsList'
-import { encodeId } from '@/libs/server/sqids'
 
 
 
-async function fetchLocations(vid: number) {
+async function fetchLocations(vid: string) {
     try {
         const locations = await db.query.locations.findMany({
             where: (locations, { eq }) => eq(locations.vendorId, vid),
@@ -15,9 +14,7 @@ async function fetchLocations(vid: number) {
             }
         })
 
-        locations.map(location => {
-            location.id = encodeId(location.id) as unknown as number
-        })
+
         return locations
     } catch (error) {
         console.error(error)

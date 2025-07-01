@@ -1,13 +1,13 @@
-import { serial, text, timestamp, pgTable } from "drizzle-orm/pg-core";
+import { serial, text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
 import { accounts } from "./accounts";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { members } from "./members";
 import { vendors } from "./vendors";
 import { userRoles } from "./permissions";
 import { staffs } from "./staffs";
 
 export const users = pgTable("users", {
-    id: serial("id").primaryKey(),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
     emailVerified: timestamp("email_verified_at", { withTimezone: true }),
@@ -15,7 +15,6 @@ export const users = pgTable("users", {
     password: text("password"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
-    deleted: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export const usersRelations = relations(users, ({ many, one }) => ({

@@ -1,38 +1,19 @@
-import { ContractType } from "./DatabaseEnums";
+
 import { Location } from "./location";
 import { Member, MemberPackage } from "./member";
 import { MemberSubscription } from "./member";
+import { contractTemplates, memberContracts } from "@/db/schemas";
 
-export type Contract = {
-    id: number;
-    title: string;
-    description: string | null;
-    locationId: number;
-    editable: boolean;
-    location: Location;
-    isDraft: boolean;
-    requireSignature: boolean;
-    type: ContractType;
-    content: string | null;
-    created: Date;
-    updated?: Date | null;
-    deleted?: Date | null;
+export type Contract = typeof contractTemplates.$inferInsert & {
+    location?: Location;
 }
 
 
-export type MemberContract = {
-    id: number;
-    memberId: number;
-    contractId: number;
-    signed: boolean;
-    variables: Record<string, unknown>;
-    signature: string;
+export type MemberContract = typeof memberContracts.$inferInsert & {
+    member?: Member;
     contract?: Contract;
     subscription?: MemberSubscription | null;
     package?: MemberPackage | null;
     contractTemplate?: Contract;
-    member?: Member;
-    created: Date;
-    updated?: Date | null;
-    deleted?: Date | null;
+    location?: Location;
 }

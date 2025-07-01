@@ -1,13 +1,13 @@
-import { text, integer, timestamp, pgTable, serial } from "drizzle-orm/pg-core";
+import { text, integer, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { memberRewards } from "./members";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 export const rewards = pgTable("rewards", {
-    id: serial("id").primaryKey(),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
     name: text("name").notNull(),
     description: text("description").notNull(),
-    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     icon: text("icon"),
     requiredPoints: integer("required_points").notNull(),
     limitPerMember: integer("limit_per_member").notNull(),

@@ -1,12 +1,11 @@
-import { serial, integer, timestamp, pgTable, boolean, text, jsonb } from "drizzle-orm/pg-core";
+import { serial, integer, timestamp, pgTable, boolean, text, jsonb, uuid } from "drizzle-orm/pg-core";
 import { vendors } from "./vendors";
-import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
 
 // Vendor Progress
 export const vendorLevels = pgTable("vendor_levels", {
-    id: serial("id").primaryKey(),
-    vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+    vendorId: text("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     points: integer("points").notNull().default(0),
     totalPoints: integer("total_points").notNull().default(0),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -15,8 +14,8 @@ export const vendorLevels = pgTable("vendor_levels", {
 
 // Vendor Badges
 export const vendorBadges = pgTable("vendor_badges", {
-    id: serial("id").primaryKey(),
-    vendorLevelId: integer("vendor_level_id").notNull().references(() => vendorLevels.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+    vendorLevelId: text("vendor_level_id").notNull().references(() => vendorLevels.id, { onDelete: "cascade" }),
     badgeId: integer("badge_id").notNull(),
     progress: integer("progress").notNull().default(0),
     completed: boolean("completed").notNull().default(false),
@@ -26,7 +25,7 @@ export const vendorBadges = pgTable("vendor_badges", {
 
 // Vendor Rewards
 export const vendorRewards = pgTable("vendor_rewards", {
-    id: serial("id").primaryKey(),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
     name: text("name").notNull(),
     description: text("description").notNull(),
     images: text("images").notNull(), // Matches "images" in SQL
@@ -38,9 +37,9 @@ export const vendorRewards = pgTable("vendor_rewards", {
 
 // Vendor Claimed Rewards
 export const vendorClaimedRewards = pgTable("vendor_claimed_rewards", {
-    id: serial("id").primaryKey(),
-    vendorLevelId: integer("vendor_level_id").notNull().references(() => vendorLevels.id, { onDelete: "cascade" }),
-    rewardId: integer("reward_id").notNull().references(() => vendorRewards.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+    vendorLevelId: text("vendor_level_id").notNull().references(() => vendorLevels.id, { onDelete: "cascade" }),
+    rewardId: text("reward_id").notNull().references(() => vendorRewards.id, { onDelete: "cascade" }),
     claimed: timestamp("claimed_at", { withTimezone: true }).notNull(),
 });
 

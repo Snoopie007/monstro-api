@@ -1,26 +1,26 @@
-import { boolean, date, bigint, pgTable, serial, timestamp, text, integer } from "drizzle-orm/pg-core";
+import { boolean, pgTable, timestamp, text, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations } from "drizzle-orm";
 import { memberPlans } from "./MemberPlans";
 import { members } from "./members";
+import { ImportedMemberStatusEnum } from "./DatabaseEnums";
 
 export const importMembers = pgTable("import_members", {
-    id: serial("id").primaryKey(),
+    id: uuid("id").primaryKey().notNull(),
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
+    memberId: text("member_id").references(() => members.id, { onDelete: "set null" }),
     email: text("email").notNull(),
-    phone: text("phone"),
-    lastRenewalDay: date("last_renewal_day").notNull(),
-    status: text("status").notNull().default("pending"),
-    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    phone: text("phone").notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    lastRenewalDay: timestamp("last_renewal_day", { withTimezone: true }).notNull(),
+    status: ImportedMemberStatusEnum("status").notNull().default("pending"),
+    created: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
-    planId: integer("plan_id").references(() => memberPlans.id),
-    memberId: integer("member_id").references(() => members.id),
-    isPrimaryMember: boolean("is_primary_member").notNull().default(false),
+    planId: text("plan_id").references(() => memberPlans.id, { onDelete: "set null" }),
     oauth: boolean("oauth").notNull().default(false),
-    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 });
-
 
 
 export const importedMembersRelations = relations(importMembers, ({ one }) => ({

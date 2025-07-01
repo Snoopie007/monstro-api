@@ -13,10 +13,12 @@ const TransactionStatusEnum = pgEnum("transaction_status", ["paid", "failed", "i
 const StaffStatusEnum = pgEnum("staff_status", ["active", "inactive"]);
 const ProgramStatusEnum = pgEnum("program_status", ["active", "inactive"]);
 const ImportedMemberStatusEnum = pgEnum("imported_member_status", ["pending", "processing", "completed", "failed"]);
+const TransactionTypeEnum = pgEnum("transaction_type", ["inbound", "outbound"]);
 
 export {
     LocationStatusEnum,
     PlanType,
+    TransactionTypeEnum,
     PlanInterval,
     PackageStatusEnum,
     PaymentMethodEnum,

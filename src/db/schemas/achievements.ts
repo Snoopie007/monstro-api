@@ -1,14 +1,14 @@
 import { relations } from "drizzle-orm";
-import { bigint, text, serial, timestamp, pgTable, integer, boolean } from "drizzle-orm/pg-core";
-import { programs } from "./programs";
+import { text, timestamp, pgTable, integer, uuid } from "drizzle-orm/pg-core";
+
 import { locations } from "./locations";
 import { memberAchievements, memberPointsHistory, members } from "./members";
 
 export const achievements = pgTable("achievements", {
-    id: serial("id").primaryKey(),
+    id: uuid("id").primaryKey(),
     title: text("title").notNull(),
     badge: text("badge").notNull(),
-    locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }).notNull(),
+    locationId: text("location_id").references(() => locations.id, { onDelete: "cascade" }).notNull(),
     points: integer("points").notNull(),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
@@ -17,16 +17,16 @@ export const achievements = pgTable("achievements", {
 });
 
 export const actions = pgTable("actions", {
-    id: serial("id").primaryKey(),
+    id: uuid("id").primaryKey(),
     name: text("name").notNull(),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });
 
 export const achievementsActions = pgTable("achievement_actions", {
-    id: serial("id").primaryKey(),
-    achievementId: integer("achievement_id").references(() => achievements.id, { onDelete: "cascade" }).notNull(),
-    actionId: integer("action_id").references(() => actions.id, { onDelete: "cascade" }).notNull(),
+    id: uuid("id").primaryKey(),
+    achievementId: text("achievement_id").references(() => achievements.id, { onDelete: "cascade" }).notNull(),
+    actionId: text("action_id").references(() => actions.id, { onDelete: "cascade" }).notNull(),
     count: integer("count").notNull(),
     metadata: text("metadata"),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

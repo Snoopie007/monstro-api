@@ -13,7 +13,7 @@ interface LocationLayoutProps {
 
 async function getLocationState(lid: string) {
     const locationState = await db.query.locationState.findFirst({
-        where: (locationState, { eq }) => eq(locationState.locationId, decodeId(lid))
+        where: (locationState, { eq }) => eq(locationState.locationId, lid)
     })
     return locationState
 }

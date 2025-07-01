@@ -1,4 +1,4 @@
-import { integer, boolean, text, timestamp, pgTable, serial, jsonb, foreignKey } from "drizzle-orm/pg-core";
+import { integer, boolean, text, timestamp, pgTable, serial, jsonb, foreignKey, uuid } from "drizzle-orm/pg-core";
 import { planPrograms } from "./programs";
 import { contractTemplates } from "./ContractTemplates";
 import { relations, sql } from "drizzle-orm";
@@ -11,13 +11,13 @@ import { BillingCycleAnchorConfig } from "@/types";
 import { LocationStatusEnum, PackageStatusEnum, PaymentMethodEnum, PlanInterval, PlanType } from "./DatabaseEnums";
 
 export const memberPlans = pgTable("member_plans", {
-	id: serial("id").primaryKey(),
+	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	name: text("name").notNull(),
 	description: text("description").notNull().default(""),
 	family: boolean("family").notNull().default(false),
 	familyMemberLimit: integer("family_member_limit").notNull().default(0),
 	archived: boolean("archived").notNull().default(false),
-	contractId: integer("contract_id").references(() => contractTemplates.id),
+	contractId: text("contract_id").references(() => contractTemplates.id),
 	interval: PlanInterval("interval").default("month"),
 	intervalThreshold: integer("interval_threshold").default(1),
 	type: PlanType("type").notNull().default("recurring"),
@@ -31,22 +31,21 @@ export const memberPlans = pgTable("member_plans", {
 	expireThreshold: integer("expire_threshold"),
 	billingAnchorConfig: jsonb("billing_anchor_config").$type<BillingCycleAnchorConfig>().default(sql`'{}'::jsonb`),
 	allowProration: boolean("allow_proration").notNull().default(false),
-	locationId: integer("location_id").notNull().references(() => locations.id),
+	locationId: text("location_id").notNull().references(() => locations.id),
 	created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-	updated: timestamp('updated_at', { withTimezone: true }),
-	deleted: timestamp('deleted_at', { withTimezone: true })
+	updated: timestamp('updated_at', { withTimezone: true })
 });
 
 
 
 
 export const memberSubscriptions = pgTable("member_subscriptions", {
-	id: serial("id").primaryKey(),
-	memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-	parentId: integer("parent_id"),
-	memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
-	memberContractId: integer("member_contract_id").references(() => memberContracts.id),
-	locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+	parentId: text("parent_id"),
+	memberPlanId: text("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
+	memberContractId: text("member_contract_id").references(() => memberContracts.id),
+	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	stripeSubscriptionId: text("stripe_subscription_id"),
 	status: LocationStatusEnum("status").notNull().default("incomplete"),
 	startDate: timestamp("start_date", { withTimezone: true }).notNull(),
@@ -69,11 +68,11 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 ]);
 
 export const memberPackages = pgTable("member_packages", {
-	id: serial("id").primaryKey(),
-	memberPlanId: integer("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
-	locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-	memberId: integer("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-	memberContractId: integer("member_contract_id").references(() => memberContracts.id),
+	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+	memberPlanId: text("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
+	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+	memberContractId: text("member_contract_id").references(() => memberContracts.id),
 	stripePaymentId: text("stripe_payment_id"),
 	parentId: integer("parent_id"),
 	startDate: timestamp("start_date", { withTimezone: true }).notNull(),

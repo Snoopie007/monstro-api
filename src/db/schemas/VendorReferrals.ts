@@ -1,11 +1,11 @@
-import { serial, integer, timestamp, pgTable } from "drizzle-orm/pg-core";
+import { integer, timestamp, pgTable, uuid, text } from "drizzle-orm/pg-core";
 import { vendors } from "./vendors";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 export const vendorReferrals = pgTable("vendor_referrals", {
-    id: serial("id").primaryKey(),
-    vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
-    referralId: integer("referral_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+    vendorId: text("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
+    referralId: text("referral_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
     amount: integer("amount").notNull().default(0),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     accepted: timestamp("accepted_at", { withTimezone: true }),

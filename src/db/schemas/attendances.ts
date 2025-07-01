@@ -1,11 +1,11 @@
 import { relations } from "drizzle-orm";
-import { serial, timestamp, pgTable, text, integer } from "drizzle-orm/pg-core";
+import { timestamp, pgTable, text, integer, uuid } from "drizzle-orm/pg-core";
 import { recurringReservations, reservations } from "./reservations";
 
 export const attendances = pgTable("check_ins", {
-    id: serial("id").primaryKey(),
-    reservationId: integer("reservation_id").references(() => reservations.id, { onDelete: "cascade" }),
-    recurringId: integer("recurring_id").references(() => recurringReservations.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey(),
+    reservationId: text("reservation_id").references(() => reservations.id, { onDelete: "cascade" }),
+    recurringId: text("recurring_id").references(() => recurringReservations.id, { onDelete: "cascade" }),
     startTime: timestamp("start_time", { withTimezone: true }).notNull(),
     endTime: timestamp("end_time", { withTimezone: true }).notNull(),
     checkInTime: timestamp("check_in_time", { withTimezone: true }).notNull().defaultNow(),
@@ -15,7 +15,6 @@ export const attendances = pgTable("check_ins", {
     lat: integer("lat"),
     lng: integer("lng"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: true }),
     deleted: timestamp("deleted_at", { withTimezone: true }),
 });
 

@@ -3,7 +3,7 @@ import supabase from "@/libs/client/supabase";
 import { createContext, useContext, ReactElement, ReactNode, useEffect, useReducer } from "react";
 import { LocationState } from "@/types/location";
 import { useSession } from "next-auth/react";
-import { decodeId } from "@/libs/server/sqids";
+import { LocationStatus } from "@/types";
 
 type StateType = {
     locationState: LocationState;
@@ -31,11 +31,11 @@ export const AccountStatusProvider = ({ children, locationState }: AccountStatus
     const [state, dispatch] = useReducer(reducer, { locationState });
     const { data: session, update } = useSession();
 
-    function updateLocations(newStatus: string) {
+    function updateLocations(newStatus: LocationStatus | undefined) {
+        if (!newStatus) return;
         update({
-            locations: session?.user.locations.map((location: { id: string, status: string }) => {
-                const decodedId = decodeId(location.id);
-                return decodedId === locationState.locationId
+            locations: session?.user.locations.map((location: { id: string, status: LocationStatus }) => {
+                return location.id === locationState.locationId
                     ? { ...location, status: newStatus }
                     : location
             })

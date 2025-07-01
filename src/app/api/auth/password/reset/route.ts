@@ -11,12 +11,12 @@ import bcrypt from "bcryptjs";
 
 const redis = getRedisClient();
 const emailSender = new EmailSender();
+
 export async function POST(req: NextRequest) {
     const { password, confirmPassword, ...rest } = await req.json()
 
     try {
-        const [token, encodedUserId] = rest.token.split("%2B")
-        const userId = decodeId(encodedUserId)
+        const [token, userId] = rest.token.split("%2B")
         if (password !== confirmPassword) {
             return NextResponse.json({ error: "Passwords do not match" }, { status: 400 })
         }

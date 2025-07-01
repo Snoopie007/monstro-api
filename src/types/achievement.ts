@@ -3,13 +3,13 @@ import { Program } from "./program";
 
 
 export type Action = {
-    id: number,
+    id: string,
     name: string,
     count: number
 }
 
 export type Achievement = {
-    id?: number,
+    id?: string,
     title: string,
     description: string | null,
     icon: string | null,

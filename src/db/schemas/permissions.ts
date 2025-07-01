@@ -1,14 +1,14 @@
-import { text, timestamp, pgTable, primaryKey, unique, integer, serial } from "drizzle-orm/pg-core";
+import { text, timestamp, pgTable, primaryKey, unique, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { users } from "./users";
 import { RoleColorEnum } from "./DatabaseEnums";
 
 export const roles = pgTable("roles", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
   name: text("name").notNull(),
   guardName: text("guard_name").notNull(),
-  locationId: integer("location_id").references(() => locations.id, { onDelete: "cascade" }),
+  locationId: text("location_id").references(() => locations.id, { onDelete: "cascade" }),
   color: RoleColorEnum("color"),
   created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp('updated_at', { withTimezone: true }),
@@ -17,7 +17,7 @@ export const roles = pgTable("roles", {
 ]);
 
 export const permissions = pgTable("permissions", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
   name: text("name").notNull(),
   guardName: text("guard_name").notNull(),
   description: text("description"),
@@ -28,14 +28,14 @@ export const permissions = pgTable("permissions", {
 ]);
 
 export const roleHasPermissions = pgTable("role_has_permissions", {
-  roleId: integer("role_id").references(() => roles.id, { onDelete: "cascade" }),
-  permissionId: integer("permission_id").references(() => permissions.id, { onDelete: "cascade" }),
+  roleId: text("role_id").references(() => roles.id, { onDelete: "cascade" }),
+  permissionId: text("permission_id").references(() => permissions.id, { onDelete: "cascade" }),
 }, (t) => [primaryKey({ columns: [t.roleId, t.permissionId] })]);
 
 
 export const userRoles = pgTable("user_roles", {
-  roleId: integer("role_id").references(() => roles.id, { onDelete: "cascade" }),
-  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  roleId: text("role_id").references(() => roles.id, { onDelete: "cascade" }),
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
 }, (t) => [
   primaryKey({ columns: [t.roleId, t.userId] }),
   unique().on(t.userId, t.roleId),

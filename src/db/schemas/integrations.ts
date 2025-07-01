@@ -1,17 +1,17 @@
 import { relations } from "drizzle-orm";
-import { integer, primaryKey, serial, text, timestamp, pgTable, jsonb, unique } from "drizzle-orm/pg-core";
+import { integer, primaryKey, text, timestamp, pgTable, jsonb, unique, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 
 
 export const integrations = pgTable("integrations", {
-    id: serial("id").primaryKey(),
-    locationId: integer("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey(),
+    locationId: uuid("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
     service: text("service").notNull(),
     apiKey: text("api_key"),
     secretKey: text("secret_key"),
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
-    integrationId: text("integration_id").notNull(),
+    accountId: text("account_id"),
     expires: integer("expires_at"),
     settings: jsonb("settings").$type<Record<string, unknown>>().notNull().default({}),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

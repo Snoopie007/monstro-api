@@ -17,7 +17,7 @@ class CustomLoginError extends CredentialsSignin {
 	}
 }
 
-async function validateToken(t: string, uid: number, type: string) {
+async function validateToken(t: string, uid: string, type: string) {
 	const redis = getRedisClient();
 	const RedisKey = `loginToken:${uid}:${type}`;
 	const otp = await redis.get(RedisKey);
@@ -54,6 +54,7 @@ export default {
 					return null;
 				}
 
+				console.log(credentials)
 				try {
 					const user = await db.query.users.findFirst({
 						where: (user, { eq }) => eq(user.email, `${credentials.email}`),
@@ -87,7 +88,7 @@ export default {
 
 					if (!user || !user.password) throw new CustomLoginError("No user found");
 
-					if (!user) throw new CustomLoginError("User not found");
+					if (!user || !user.vendor) throw new CustomLoginError("User not found");
 
 					const match = await bcrypt.compare(credentials.password.toString(), user.password);
 					if (!match) throw new CustomLoginError("Invalid password or email.");
@@ -103,7 +104,6 @@ export default {
 						const { locationState, ...restData } = location;
 						return {
 							...restData,
-							id: encodeId(location.id),
 							status: locationState ? locationState.status : "incomplete"
 						}
 					});
