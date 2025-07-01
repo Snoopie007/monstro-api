@@ -1,207 +1,208 @@
-import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
+import {NextRequest, NextResponse} from "next/server";
+import {headers} from "next/headers";
 import Stripe from "stripe";
-import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions, transactions } from "@/db/schemas";
-import { eq } from "drizzle-orm";
-import { waitUntil } from "@vercel/functions";
-import { MemberStripePayments } from "@/libs/server/stripe";
-import { tryCatch } from "@/libs/utils";
-
-
+import {db} from "@/db/db";
+import {memberInvoices, memberSubscriptions, transactions} from "@/db/schemas";
+import {eq} from "drizzle-orm";
+import {waitUntil} from "@vercel/functions";
+import {MemberStripePayments} from "@/libs/server/stripe";
+import {tryCatch} from "@/libs/utils";
 
 export const config = {
-	api: {
-		bodyParser: false, // Required for Stripe webhooks
-	},
+  api: {
+    bodyParser: false, // Required for Stripe webhooks
+  },
 };
 
 const allowedEvents: Stripe.Event.Type[] = [
-	"customer.subscription.updated",
-	"customer.subscription.deleted",
-	"customer.subscription.paused",
-	"customer.subscription.resumed",
-	"invoice.payment_failed",
-	"invoice.payment_action_required",
-	"invoice.payment_failed",
-	"invoice.payment_succeeded",
-	"payment_intent.canceled",
-	"payment_intent.succeeded",
-	// "charge.succeeded"
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "customer.subscription.paused",
+  "customer.subscription.resumed",
+  "invoice.payment_failed",
+  "invoice.payment_action_required",
+  "invoice.payment_failed",
+  "invoice.payment_succeeded",
+  "payment_intent.canceled",
+  "payment_intent.succeeded",
+  // "charge.succeeded"
 ];
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === "production";
 const stripe = new MemberStripePayments();
 export async function POST(req: NextRequest) {
-	const signature = (await headers()).get("Stripe-Signature");
+  const signature = (await headers()).get("Stripe-Signature");
 
-	if (!signature) {
-		return NextResponse.json({ message: "Invalid signature", status: 400 })
-	};
+  if (!signature) {
+    return NextResponse.json({message: "Invalid signature", status: 400});
+  }
 
+  async function doEventProcessing(): Promise<void> {
+    if (typeof signature !== "string") {
+      throw new Error("Stripe Hook Signature is not a string");
+    }
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      throw new Error("Stripe Member webhook secret not found");
+    }
 
-	async function doEventProcessing(): Promise<void> {
-		if (typeof signature !== "string") {
-			throw new Error("Stripe Hook Signature is not a string");
-		}
-		if (!process.env.STRIPE_WEBHOOK_SECRET) {
-			throw new Error("Stripe Member webhook secret not found");
-		}
+    let event: Stripe.Event;
+    if (isProduction) {
+      const rawText = await req.text();
+      event = await stripe.constructEvent(
+        Buffer.from(rawText),
+        signature,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } else {
+      event = await req.json();
+    }
+    waitUntil(processEvent(event));
+  }
 
+  const {error} = await tryCatch(doEventProcessing());
 
-		let event: Stripe.Event;
-		if (isProduction) {
-			const rawText = await req.text();
-			event = await stripe.constructEvent(
-				Buffer.from(rawText),
-				signature,
-				process.env.STRIPE_WEBHOOK_SECRET
-			)
-		} else {
-			event = await req.json();
-		}
-		waitUntil(processEvent(event));
-	}
+  if (error) {
+    console.error("[STRIPE HOOK] Error processing event", error);
+  }
 
-	const { error } = await tryCatch(doEventProcessing());
-
-	if (error) {
-		console.error("[STRIPE HOOK] Error processing event", error);
-	}
-
-	return NextResponse.json({ message: "Stripe webhook received", status: 200 });
+  return NextResponse.json({message: "Stripe webhook received", status: 200});
 }
 
 async function processEvent(event: Stripe.Event) {
+  if (!allowedEvents.includes(event.type)) return;
 
-	if (!allowedEvents.includes(event.type)) return;
+  switch (event.type) {
+    case "customer.subscription.deleted":
+    case "customer.subscription.paused":
+    case "customer.subscription.resumed":
+      await updateSubscriptionStatus(event);
+      break;
+    case "invoice.payment_failed":
+      await handleInvoicePaymentFailed(event);
+      break;
 
-	switch (event.type) {
-
-		case "customer.subscription.deleted":
-		case "customer.subscription.paused":
-		case "customer.subscription.resumed":
-			await updateSubscriptionStatus(event);
-			break;
-		case "invoice.payment_failed":
-			await handleInvoicePaymentFailed(event);
-			break;
-
-		case "invoice.payment_succeeded":
-			await handleSubscriptionPaid(event);
-			break;
-		default:
-			console.warn(`Unhandled event type: ${event.type}`);
-	}
+    case "invoice.payment_succeeded":
+      await handleSubscriptionPaid(event);
+      break;
+    default:
+      console.warn(`Unhandled event type: ${event.type}`);
+  }
 }
 
-
-
 async function handleSubscriptionPaid(event: Stripe.Event) {
-	const invoice = event.data.object as Stripe.Invoice;
-	const subscriptionDetails = invoice.parent?.subscription_details;
-	let subscriptionId: string | undefined;
+  const invoice = event.data.object as Stripe.Invoice;
+  const subscriptionDetails = invoice.parent?.subscription_details;
+  let subscriptionId: string | undefined;
 
-	if (typeof subscriptionDetails?.subscription === 'string') {
-		subscriptionId = subscriptionDetails.subscription;
-	} else {
-		subscriptionId = subscriptionDetails?.subscription?.id;
-	}
+  if (typeof subscriptionDetails?.subscription === "string") {
+    subscriptionId = subscriptionDetails.subscription;
+  } else {
+    subscriptionId = subscriptionDetails?.subscription?.id;
+  }
 
-	if (!subscriptionId) return;
-	try {
+  if (!subscriptionId) return;
+  try {
+    const subscription = await db.query.memberSubscriptions.findFirst({
+      where: eq(memberSubscriptions.stripeSubscriptionId, subscriptionId),
+      with: {
+        plan: true,
+        member: true,
+      },
+    });
 
-		const subscription = await db.query.memberSubscriptions.findFirst({
-			where: eq(memberSubscriptions.stripeSubscriptionId, subscriptionId),
-			with: {
-				plan: true,
-				member: true,
-			}
-		});
+    if (!subscription) return;
 
-		if (!subscription) return;
+    const metadata = subscriptionDetails?.metadata;
+    let tax = 0;
+    if (invoice.total_taxes && invoice.total_taxes.length > 0) {
+      tax = invoice.total_taxes
+        .map((tax) => tax.amount)
+        .reduce((acc, curr) => acc + curr, 0);
+    }
 
-		const metadata = subscriptionDetails?.metadata;
-		let tax = 0;
-		if (invoice.total_taxes && invoice.total_taxes.length > 0) {
-			tax = invoice.total_taxes.map((tax) => tax.amount).reduce((acc, curr) => acc + curr, 0);
-		}
+    await db.transaction(async (tx) => {
+      const commonFields = {
+        memberId: subscription.memberId,
+        locationId: subscription.locationId,
+        description: invoice.description,
+        currency: invoice.currency,
+        tax,
+      };
 
-		await db.transaction(async (tx) => {
-			const commonFields = {
-				memberId: subscription.memberId,
-				locationId: subscription.locationId,
-				description: invoice.description,
-				currency: invoice.currency,
-				tax,
-			};
+      const [{invoiceId}] = await tx
+        .insert(memberInvoices)
+        .values({
+          ...commonFields,
+          memberSubscriptionId: subscription.id,
+          status: "paid",
+          paid: true,
+          total: invoice.amount_paid,
+          subtotal: invoice.amount_paid,
+          discount: 0,
+          items: [
+            {
+              name: subscription.plan?.name,
+              quantity: 1,
+              price: invoice.amount_paid,
+            },
+          ],
+          forPeriodStart: new Date(invoice.period_start),
+          forPeriodEnd: new Date(invoice.period_end),
+          dueDate: new Date(invoice.created),
+          invoicePdf: invoice.invoice_pdf,
+          metadata: {
+            stripeInvoiceId: invoice.id,
+            invoiceUrl: invoice.hosted_invoice_url,
+            issuer: invoice.issuer,
+          },
+        })
+        .returning({invoiceId: memberInvoices.id});
 
-			const [{ invoiceId }] = await tx.insert(memberInvoices).values({
-				...commonFields,
-				memberSubscriptionId: subscription.id,
-				status: "paid",
-				paid: true,
-				total: invoice.amount_paid,
-				subtotal: invoice.amount_paid,
-				discount: 0,
-				items: [{
-					name: subscription.plan?.name,
-					quantity: 1,
-					price: invoice.amount_paid,
-				}],
-				forPeriodStart: new Date(invoice.period_start),
-				forPeriodEnd: new Date(invoice.period_end),
-				dueDate: new Date(invoice.created),
-				invoicePdf: invoice.invoice_pdf,
-				settings: {
-					stripeInvoiceId: invoice.id,
-					invoiceUrl: invoice.hosted_invoice_url,
-					issuer: invoice.issuer
-				}
-			}).returning({ invoiceId: memberInvoices.id });
-
-			await tx.insert(transactions).values({
-				...commonFields,
-				subscriptionId: subscription.id,
-				invoiceId,
-				chargeDate: new Date(invoice.created),
-				status: "paid",
-				transactionType: "incoming",
-				paymentType: 'recurring',
-				paymentMethod: "card",
-				amount: invoice.amount_paid,
-				item: subscription.plan?.name,
-			});
-		});
-	} catch (error) {
-		console.error("Error updating subscription", error);
-	}
+      await tx.insert(transactions).values({
+        ...commonFields,
+        subscriptionId: subscription.id,
+        invoiceId,
+        chargeDate: new Date(invoice.created),
+        status: "paid",
+        type: "inbound",
+        paymentMethod: "card",
+        amount: invoice.amount_paid,
+        description: subscription.plan?.name,
+      });
+    });
+  } catch (error) {
+    console.error("Error updating subscription", error);
+  }
 }
 
 async function updateSubscriptionStatus(event: Stripe.Event) {
-	const subscription = event.data.object as Stripe.Subscription;
+  const subscription = event.data.object as Stripe.Subscription;
 
-	await db.update(memberSubscriptions).set({
-		status: subscription.status
-	}).where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id));
-
+  await db
+    .update(memberSubscriptions)
+    .set({
+      status: subscription.status,
+    })
+    .where(eq(memberSubscriptions.stripeSubscriptionId, subscription.id));
 }
 
-
 async function handleInvoicePaymentFailed(event: Stripe.Event) {
-	const invoice = event.data.object as Stripe.Invoice;
+  const invoice = event.data.object as Stripe.Invoice;
 
-	const subscription = invoice.parent?.subscription_details?.subscription as string;
-	if (subscription) {
-
-		try {
-			await db.update(memberSubscriptions).set({
-				status: 'past_due'
-			}).where(eq(memberSubscriptions.stripeSubscriptionId, subscription));
-		} catch (error) {
-			console.error("Error updating subscription", error);
-		}
-	}
+  const subscription = invoice.parent?.subscription_details
+    ?.subscription as string;
+  if (subscription) {
+    try {
+      await db
+        .update(memberSubscriptions)
+        .set({
+          status: "past_due",
+        })
+        .where(eq(memberSubscriptions.stripeSubscriptionId, subscription));
+    } catch (error) {
+      console.error("Error updating subscription", error);
+    }
+  }
 }
 
 // async function handlePaymentIntentSucceeded(event: Stripe.Event) {

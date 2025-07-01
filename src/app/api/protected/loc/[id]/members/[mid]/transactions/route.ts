@@ -74,17 +74,14 @@ export async function PUT(
      * Only completed incoming payments can be refunded
      * Outgoing transactions or those with non-completed status (pending, failed) are ineligible
      */
-    if (
-      transaction.transactionType !== "incoming" ||
-      transaction.status !== "paid"
-    ) {
+    if (transaction.type !== "inbound" || transaction.status !== "paid") {
       return NextResponse.json(
         {error: "Only completed incoming transactions can be refunded"},
         {status: 400}
       );
     }
 
-    if (transaction.paymentType === "card") {
+    if (transaction.paymentMethod === "card") {
       if (!transaction.invoice || !transaction.invoice.subscription) {
         return NextResponse.json(
           {error: "Invoice or subscription not found"},
