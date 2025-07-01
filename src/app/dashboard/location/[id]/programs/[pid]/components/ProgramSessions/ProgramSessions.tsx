@@ -17,7 +17,7 @@ import { DaysOfWeek } from "../../../schemas";
 
 interface ProgramSessionsProps {
     sessions: ProgramSession[];
-    pid: number;
+    pid: string;
     lid: string;
 }
 
@@ -35,17 +35,15 @@ export function ProgramSessions({ sessions, pid, lid }: ProgramSessionsProps) {
     return (
         <>
 
-            <Card className="border-x-0 border-y">
-                <CardHeader className="p-0">
-                    <div className="flex flex-row items-center justify-between border-b ">
-                        <div className="flex-1 inline-block text-sm  px-4 font-semibold  ">
-                            Sessions
-                        </div>
-                        <div className="flex-initial fl ex flex-row items-center h-full">
+            <Card className="border-x-0 border-y border-foreground/10">
+                <CardHeader className="p-0 flex flex-row items-center justify-between p-4">
+                    <div className="flex-1 text-sm  font-semibold  ">
+                        Sessions
+                    </div>
+                    <div className="flex-initial fl ex flex-row items-center h-full">
 
-                            <CreateSession pid={pid} lid={lid} />
+                        <CreateSession pid={pid} lid={lid} />
 
-                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -65,10 +63,10 @@ export function ProgramSessions({ sessions, pid, lid }: ProgramSessionsProps) {
                                     return (
                                         <TableRow key={i} className="border-t  group cursor-pointer  ">
                                             <TableCell className={"text-xs"}>
-                                                {DaysOfWeek[session.day - 1]}
+                                                {DaysOfWeek[session.day! - 1]}
                                             </TableCell>
                                             <TableCell className={"text-xs"}>
-                                                {calculateTime(session.time, session.duration)}
+                                                {calculateTime(session.time, session.duration!)}
                                             </TableCell>
                                             <TableCell className={"text-xs"}>
                                                 {session.duration}

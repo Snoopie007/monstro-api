@@ -17,7 +17,7 @@ import { Member } from "@/types";
 import { useProgramMembers } from "@/hooks/usePrograms";
 
 
-export function ProgramMembers({ programId, locationId }: { programId: number, locationId: string }) {
+export function ProgramMembers({ programId, locationId }: { programId: string, locationId: string }) {
     const { members, error, isLoading } = useProgramMembers(locationId, programId)
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     // const [syncLoading, setSyncLoading] = useState<boolean>(false)

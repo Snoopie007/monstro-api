@@ -390,6 +390,7 @@ CREATE TABLE IF NOT EXISTS member_packages (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('pkg_'),
   member_plan_id text REFERENCES member_plans (id) ON DELETE CASCADE NOT NULL,
   member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  stripe_payment_id text,
   parent_id text REFERENCES member_packages (id) ON DELETE SET NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,

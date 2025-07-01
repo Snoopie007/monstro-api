@@ -14,21 +14,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { cn, sleep, tryCatch } from "@/libs/utils";
 import { z } from "zod";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { useProgram } from "@/hooks/usePrograms";
 import { toast } from "react-toastify";
 import { UpdateProgramSchema } from "../../schemas";
 
 export interface UpdateProgramProps {
-    programId: number,
-    locationId: string
+    pid: string,
+    lid: string
 }
 
-export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
+export function UpdateProgram({ pid, lid }: UpdateProgramProps) {
     const [loading, setLoading] = useState<boolean>(false);
-    const { program, mutate } = useProgram(locationId, programId);
+    const { program, mutate } = useProgram(lid, pid);
     const [open, setOpen] = useState<boolean>(false);
-    
+
     // Initialize form with default values that match your program structure
     const form = useForm<z.infer<typeof UpdateProgramSchema>>({
         resolver: zodResolver(UpdateProgramSchema),
@@ -60,7 +60,7 @@ export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
         try {
             await sleep(2000);
             const { result, error } = await tryCatch(
-                fetch(`/api/protected/loc/${locationId}/programs/${programId}`, {
+                fetch(`/api/protected/loc/${lid}/programs/${pid}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
                     body: JSON.stringify(v)
                 })
             );
-            
+
             if (error || !result || !result.ok) {
                 toast.error("Error updating the program, please try again.");
                 return;
@@ -88,7 +88,9 @@ export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="bg-transparent rounded-none text-foreground hover:bg-accent border-l">Edit</Button>
+                <Button variant={"ghost"} size={"icon"} className="size-6 bg-foreground/5 rounded-md">
+                    <Pencil className="size-3" />
+                </Button>
             </DialogTrigger>
 
             <DialogContent className="max-w-xl">
@@ -105,10 +107,10 @@ export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
                                     <FormItem>
                                         <FormLabel size={"tiny"}>Program Name</FormLabel>
                                         <FormControl>
-                                            <Input 
-                                                type='text' 
-                                                placeholder="Program Name" 
-                                                {...field} 
+                                            <Input
+                                                type='text'
+                                                placeholder="Program Name"
+                                                {...field}
                                                 value={field.value || ""} // Ensure value is never undefined
                                             />
                                         </FormControl>
@@ -142,10 +144,10 @@ export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
                                         <FormItem className="flex-1">
                                             <FormLabel size={"tiny"}>Capacity</FormLabel>
                                             <FormControl>
-                                                <Input 
-                                                    type='number' 
-                                                    placeholder='Capacity'  
-                                                    {...field} 
+                                                <Input
+                                                    type='number'
+                                                    placeholder='Capacity'
+                                                    {...field}
                                                     value={field.value ?? 0} // Ensure value is never undefined
                                                     onChange={(e) => field.onChange(Number(e.target.value))}
                                                 />
@@ -161,10 +163,10 @@ export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
                                         <FormItem className="flex-1">
                                             <FormLabel size={"tiny"}>Min Age</FormLabel>
                                             <FormControl>
-                                                <Input 
-                                                    type='number' 
-                                                    placeholder='Min Age' 
-                                                    {...field} 
+                                                <Input
+                                                    type='number'
+                                                    placeholder='Min Age'
+                                                    {...field}
                                                     value={field.value ?? 0} // Ensure value is never undefined
                                                     onChange={(e) => field.onChange(Number(e.target.value))}
                                                 />
@@ -180,10 +182,10 @@ export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
                                         <FormItem className="flex-1">
                                             <FormLabel size={"tiny"}>Max Age</FormLabel>
                                             <FormControl>
-                                                <Input 
-                                                    type='number' 
-                                                    placeholder='Max Age' 
-                                                    {...field} 
+                                                <Input
+                                                    type='number'
+                                                    placeholder='Max Age'
+                                                    {...field}
                                                     value={field.value ?? 0} // Ensure value is never undefined
                                                     onChange={(e) => field.onChange(Number(e.target.value))}
                                                 />
@@ -197,7 +199,7 @@ export function UpdateProgram({ programId, locationId }: UpdateProgramProps) {
                     </Form>
                 </DialogBody>
                 <DialogFooter>
-                    <Button 
+                    <Button
                         onClick={form.handleSubmit(submitForm)}
                         variant={"foreground"}
                         size={"sm"}

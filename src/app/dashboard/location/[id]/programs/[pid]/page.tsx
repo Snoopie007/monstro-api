@@ -10,7 +10,7 @@ import ErrorComponent from '@/components/error';
 import { Card, CardContent, CardHeader } from '@/components/ui';
 import { ProgramSessions } from './components/ProgramSessions';
 
-export default function Program(props: { params: Promise<{ id: string, pid: number }> }) {
+export default function Program(props: { params: Promise<{ id: string, pid: string }> }) {
     const params = use(props.params);
     const { program, error, isLoading } = useProgram(params.id, params.pid);
 
@@ -24,39 +24,23 @@ export default function Program(props: { params: Promise<{ id: string, pid: numb
 
                 <div className='col-span-3 border-r border-foreground/10 '>
                     <Card className='border-none'>
-                        <CardHeader className="p-0">
-                            <div className="border-b flex flex-row justify-between ">
-                                <div className="flex-initial flex flex-row items-center px-4">
-                                    <span className='text-sm font-semibold'> Program Overview</span>
-                                </div>
-                                <div className="flex-1 flex flex-row items-center justify-end ">
-                                    <div className="flex ">
-                                        <UpdateProgram programId={program.id} locationId={params.id} />
-                                    </div>
+                        <CardHeader className="px-4 pt-4 pb-2 flex flex-row justify-between">
+                            <div className="flex-initial flex flex-row items-center gap-2">
+                                <Avatar className="flex items-center justify-center text-black size-6 bg-foreground/5">
+                                    <AvatarImage className="rounded-full " src={program.avatar} />
+                                    <AvatarFallback className=" bg-gray-200 text-muted-foreground text-base font-black">
+                                        {program.name.charAt(0)}
+                                    </AvatarFallback>
 
-                                </div>
+                                </Avatar>
+                                <div className='text-foreground text-sm font-semibold'> {program.name}</div>
                             </div>
+                            <UpdateProgram pid={program.id} lid={params.id} />
                         </CardHeader>
-                        <CardContent className='p-4'>
-                            <div className="flex flex-col ">
-                                <div className="flex flex-row gap-4 items-start">
-                                    <Avatar className="flex items-center justify-center text-black w-[45px] h-[45px]  bg-white/50">
-                                        <AvatarImage className="rounded-full " src={program.avatar} />
-                                        <AvatarFallback className=" bg-gray-200 text-gray-400 text-lg font-black">
-                                            {program.name.charAt(0)}
-                                        </AvatarFallback>
-
-                                    </Avatar>
-                                    <div className='space-y-1'>
-                                        <div className='text-foreground text-base font-semibold'> {program.name}</div>
-                                        <p className=" text-muted-foreground text-sm">
-                                            {program.description}
-                                        </p>
-
-                                    </div>
-
-                                </div>
-                            </div>
+                        <CardContent className='px-4'>
+                            <p className=" text-muted-foreground text-sm">
+                                {program.description}
+                            </p>
                         </CardContent>
                     </Card>
                     <ProgramSessions sessions={program.sessions} pid={params.pid} lid={params.id} />

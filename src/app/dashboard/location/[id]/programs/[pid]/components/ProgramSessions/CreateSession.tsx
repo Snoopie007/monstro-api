@@ -21,8 +21,9 @@ import { SessionSchema } from "../../../schemas";
 import { DialogDescription } from "@/components/ui/dialog";
 import SessionFields from "./SessionFields";
 import { Form } from "@/components/forms";
+import { Plus } from "lucide-react";
 interface CreateSessionProps {
-    pid: number;
+    pid: string;
     lid: string
 }
 
@@ -69,8 +70,8 @@ export function CreateSession({ pid, lid }: CreateSessionProps) {
         <Dialog open={open} onOpenChange={setOpen} >
             <DialogTrigger asChild>
 
-                <Button variant={"ghost"} className={" h-full border-l  rounded-none"}>
-                    + Session
+                <Button variant={"ghost"} size={"icon"} className={" rounded-lg bg-foreground/5  size-6"}>
+                    <Plus className="size-3.5" />
                 </Button>
             </DialogTrigger>
             <DialogContent className="w-[500px] max-w-[500px]">
