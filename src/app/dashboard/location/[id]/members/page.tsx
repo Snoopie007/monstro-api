@@ -1,17 +1,14 @@
 
-import { Session } from "next-auth";
 import { MemberList } from "./components/MemberList";
 
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { and } from "drizzle-orm";
-import { decodeId } from "@/libs/server/sqids";
 
 async function fetchStripeKeys(id: string): Promise<string | null> {
-    const decodedId = decodeId(id);
     try {
         const integrations = await db.query.integrations.findFirst({
-            where: (integration, { eq }) => (and(eq(integration.locationId, decodedId), eq(integration.service, "stripe"))),
+            where: (integration, { eq }) => (and(eq(integration.locationId, id), eq(integration.service, "stripe"))),
             columns: {
                 apiKey: true
             }

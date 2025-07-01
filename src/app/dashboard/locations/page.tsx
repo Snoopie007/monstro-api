@@ -2,7 +2,6 @@ import { db } from '@/db/db'
 import React from 'react'
 import { auth } from '@/auth'
 import { LocationsList } from './components/LocationsList'
-import { encodeId } from '@/libs/server/sqids'
 
 
 
@@ -13,10 +12,6 @@ async function fetchLocations(vid: number) {
             with: {
                 locationState: true
             }
-        })
-
-        locations.map(location => {
-            location.id = encodeId(location.id) as unknown as number
         })
         return locations
     } catch (error) {

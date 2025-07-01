@@ -1,7 +1,6 @@
 import { LocationSideNav, LocationTopNav } from "./components";
 import { cn } from "@/libs/utils";
 import { AccountStatusProvider } from "./providers/AccountStatusProvider";
-import { decodeId } from "@/libs/server/sqids";
 import { db } from "@/db/db";
 import { redirect } from "next/navigation";
 import "@public/editor.css";
@@ -13,7 +12,7 @@ interface LocationLayoutProps {
 
 async function getLocationState(lid: string) {
     const locationState = await db.query.locationState.findFirst({
-        where: (locationState, { eq }) => eq(locationState.locationId, decodeId(lid))
+        where: (locationState, { eq }) => eq(locationState.locationId, lid)
     })
     return locationState
 }
