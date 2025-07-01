@@ -16,7 +16,7 @@ import { getCoreRowModel, getFilteredRowModel, flexRender, ColumnFiltersState, S
 import { useReactTable } from "@tanstack/react-table";
 import { MemberAttendanceColumns } from "./MemberAttendanceColumns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 
 export function MemberAttedance({ params }: { params: { id: string, mid: number } }) {
@@ -28,34 +28,93 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
         []
     )
 
-    const programs: string[] = attendances
-        ? Array.from(new Set(attendances.map((attendance: ExtendedAttendance) => attendance.programName)))
-        : [];
+    // Memoize the programs array to prevent recalculation on every render
+    const programs = useMemo(() => {
+        if (!attendances) return [];
+        return Array.from(new Set(attendances.map((attendance: ExtendedAttendance) => attendance.programName)));
+    }, [attendances]);
 
+    // Memoize the table data to prevent unnecessary re-renders
+    const tableData = useMemo(() => attendances || [], [attendances]);
+
+    // Memoize callback functions to prevent table re-creation
+    const onSortingChange = useCallback((updater: any) => setSorting(updater), []);
+    const onColumnFiltersChange = useCallback((updater: any) => setColumnFilters(updater), []);
+
+    // Memoize the table state
+    const tableState = useMemo(() => ({
+        sorting,
+        columnFilters,
+    }), [sorting, columnFilters]);
+
+    // Memoize the table configuration
     const table = useReactTable({
-        data: attendances || [],
+        data: tableData,
         columns: MemberAttendanceColumns,
         getCoreRowModel: getCoreRowModel(),
-        onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
+        onSortingChange,
+        onColumnFiltersChange,
         getFilteredRowModel: getFilteredRowModel(),
-        state: {
-            sorting,
-            columnFilters,
-        },
-    })
+        state: tableState,
+    });
+
+    // Memoize the filter change handler
+    const handleProgramFilter = useCallback((value: string) => {
+        table.getColumn("programName")?.setFilterValue(value === "all" ? "" : value);
+    }, [table]);
+
+    // Memoize the loading skeleton rows to prevent recreation
+    const skeletonRows = useMemo(() => {
+        if (!isLoading) return null;
+
+        return (
+            <TableRow>
+                {table.getHeaderGroups()[0]?.headers.map((header, i) => (
+                    <TableCell key={i}>
+                        <Skeleton className="w-full h-4 bg-gray-100" />
+                    </TableCell>
+                ))}
+            </TableRow>
+        );
+    }, [isLoading, table]);
+
+    // Memoize the table rows to prevent unnecessary re-renders
+    const tableRows = useMemo(() => {
+        if (isLoading) return skeletonRows;
+
+        const rows = table.getRowModel().rows;
+
+        if (!rows?.length) {
+            return (
+                <TableRow>
+                    <TableCell colSpan={MemberAttendanceColumns.length} className="h-6 w-full text-center">
+                        No results.
+                    </TableCell>
+                </TableRow>
+            );
+        }
+
+        return rows.map((row) => (
+            <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="py-2">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                ))}
+            </TableRow>
+        ));
+    }, [isLoading, skeletonRows, table]);
 
     return (
         <div className="space-y-0">
             <div className="flex flex-row justify-between items-center px-4 py-2  bg-foreground/5  gap-2">
                 <div className="flex flex-row gap-2 items-center">
-                    <Select onValueChange={(value) => {
-                        table.getColumn("programName")?.setFilterValue(value)
-                    }}>
+                    <Select onValueChange={handleProgramFilter}>
                         <SelectTrigger className="text-xs h-9">
                             <SelectValue placeholder="Filter by program" />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="all">All Programs</SelectItem>
                             {programs.map((program: string, index: number) => (
                                 <SelectItem key={`${program}-${index}`} value={program}>
                                     {program}
@@ -84,45 +143,10 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
                         ))}
                     </TableHeader>
                     <TableBody>
-                        {isLoading ? (
-                            <TableRow >
-                                {table.getHeaderGroups()[0].headers.map((header, i) => {
-                                    return (
-                                        <TableCell key={i}>
-                                            <Skeleton className="w-full h-4 bg-gray-100" />
-                                        </TableCell>
-                                    )
-                                })}
-                            </TableRow>
-                        ) : (
-                            <>
-                                {table.getRowModel().rows?.length ? (
-                                    table.getRowModel().rows.map((row) => (
-                                        <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} >
-                                            {row.getVisibleCells().map((cell) => (
-                                                <TableCell key={cell.id} className="py-2" >
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-
-                                                </TableCell>
-                                            ))}
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={MemberAttendanceColumns.length} className="h-6 w-full text-center">
-                                            No results.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </>
-                        )}
-
-
+                        {tableRows}
                     </TableBody>
                 </Table>
             </Card>
-
         </div>
     )
 }
-
