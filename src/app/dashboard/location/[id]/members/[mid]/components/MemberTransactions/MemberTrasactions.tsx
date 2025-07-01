@@ -105,4 +105,3 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
         </div>
     )
 }
-

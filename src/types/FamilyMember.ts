@@ -1,5 +1,5 @@
-import { MemberRelationship } from "./DatabaseEnums";
-import { Member } from "./member";
+import {MemberRelationship} from "./DatabaseEnums";
+import {Member} from "./member";
 
 export type FamilyMember = {
   id?: number;
@@ -11,6 +11,4 @@ export type FamilyMember = {
   isPayer: boolean;
   created: Date;
   updated: Date | null;
-  deleted: Date | null;
 };
-

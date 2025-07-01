@@ -1,62 +1,70 @@
-import { text, timestamp, pgTable, integer, serial, boolean } from "drizzle-orm/pg-core";
-import { users } from "./users";
-import { relations } from "drizzle-orm";
-import { vendorLevels } from "./VendorProgress";
-import { vendorReferrals } from "./VendorReferrals";
-import { locations } from "./locations";
+import {
+  text,
+  timestamp,
+  pgTable,
+  integer,
+  serial,
+  boolean,
+} from "drizzle-orm/pg-core";
+import {users} from "./users";
+import {relations} from "drizzle-orm";
+import {vendorLevels} from "./VendorProgress";
+import {vendorReferrals} from "./VendorReferrals";
+import {locations} from "./locations";
 
 export const vendors = pgTable("vendors", {
-    id: serial("id").primaryKey(),
-    firstName: text("first_name").notNull(),
-    lastName: text("last_name"),
-    stripeCustomerId: text("stripe_customer_id"),
-    phone: text("phone"),
-    email: text("email"),
-    avatar: text("avatar"),
-    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: true }),
-    deleted: timestamp("deleted_at", { withTimezone: true }),
+  id: serial("id").primaryKey(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name"),
+  stripeCustomerId: text("stripe_customer_id"),
+  phone: text("phone"),
+  email: text("email"),
+  avatar: text("avatar"),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, {onDelete: "cascade"}),
+  created: timestamp("created_at", {withTimezone: true}).notNull().defaultNow(),
+  updated: timestamp("updated_at", {withTimezone: true}),
 });
 
 export const supportPlans = pgTable("support_plans", {
-    id: serial("id").primaryKey(),
-    vendorId: integer("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    price: integer("price").notNull(),
-    supportCalls: boolean("support_calls").notNull().default(false),
-    sessionsPerMonth: integer("sessions_per_month").notNull().default(0),
-    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: true }),
+  id: serial("id").primaryKey(),
+  vendorId: integer("vendor_id")
+    .notNull()
+    .references(() => vendors.id, {onDelete: "cascade"}),
+  name: text("name").notNull(),
+  price: integer("price").notNull(),
+  supportCalls: boolean("support_calls").notNull().default(false),
+  sessionsPerMonth: integer("sessions_per_month").notNull().default(0),
+  created: timestamp("created_at", {withTimezone: true}).notNull().defaultNow(),
+  updated: timestamp("updated_at", {withTimezone: true}),
 });
 
-
-export const vendorsRelations = relations(vendors, ({ one, many }) => ({
-    user: one(users, {
-        fields: [vendors.userId],
-        references: [users.id],
-    }),
-    locations: many(locations),
-    vendorLevel: one(vendorLevels, {
-        fields: [vendors.id],
-        references: [vendorLevels.vendorId],
-    }),
-    referrals: many(vendorReferrals, { relationName: "referrals" }),
-    referee: one(vendorReferrals, {
-        fields: [vendors.id],
-        references: [vendorReferrals.referralId],
-        relationName: "referee",
-    }),
-    supportPlans: one(supportPlans, {
-        fields: [vendors.id],
-        references: [supportPlans.vendorId],
-    }),
+export const vendorsRelations = relations(vendors, ({one, many}) => ({
+  user: one(users, {
+    fields: [vendors.userId],
+    references: [users.id],
+  }),
+  locations: many(locations),
+  vendorLevel: one(vendorLevels, {
+    fields: [vendors.id],
+    references: [vendorLevels.vendorId],
+  }),
+  referrals: many(vendorReferrals, {relationName: "referrals"}),
+  referee: one(vendorReferrals, {
+    fields: [vendors.id],
+    references: [vendorReferrals.referralId],
+    relationName: "referee",
+  }),
+  supportPlans: one(supportPlans, {
+    fields: [vendors.id],
+    references: [supportPlans.vendorId],
+  }),
 }));
 
-
-export const supportPlansRelations = relations(supportPlans, ({ one }) => ({
-    vendor: one(vendors, {
-        fields: [supportPlans.vendorId],
-        references: [vendors.id],
-    }),
+export const supportPlansRelations = relations(supportPlans, ({one}) => ({
+  vendor: one(vendors, {
+    fields: [supportPlans.vendorId],
+    references: [vendors.id],
+  }),
 }));
