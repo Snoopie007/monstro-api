@@ -13,8 +13,6 @@ async function fetchLocations(vid: string) {
                 locationState: true
             }
         })
-
-
         return locations
     } catch (error) {
         console.error(error)

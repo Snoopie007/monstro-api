@@ -1,15 +1,13 @@
 
 
-import { decodeId } from "@/libs/server/sqids";
 import { db } from "@/db/db";
 import { TransactionsList } from "./components/TransactionsList";
 import { Transaction } from "@/types";
 
 async function fetchTransactions(id: string): Promise<Transaction[]> {
-    const decodedId = decodeId(id);
     try {
         const transactions = await db.query.transactions.findMany({
-            where: (transaction, { eq }) => eq(transaction.locationId, decodedId)
+            where: (transaction, { eq }) => eq(transaction.locationId, id)
         })
         return transactions;
     } catch (error) {
@@ -25,6 +23,5 @@ export default async function Transactions(props: { params: Promise<{ id: string
 
     return (
         <TransactionsList params={params} transactions={transactions} />
-
-    )
+    );
 }

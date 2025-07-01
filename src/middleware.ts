@@ -1,115 +1,170 @@
+<<<<<<< HEAD
 import { NextResponse } from "next/server"
 import { auth } from "./auth"
 import { jwtVerify } from "jose";
+=======
+import {NextResponse} from "next/server";
+import {auth} from "./auth";
+import {jwtVerify} from "jose";
+>>>>>>> 22125ebf9f92d05da0f1397f845bbaa8d79a1fe6
 
-const publicPaths = [
-	"/login",
-	"/join",
-	"/callbacks",
-	'/api/webhooks',
-]
+const publicPaths = ["/login", "/join", "/callbacks", "/api/webhooks"];
 
 async function verifyToken(token: string): Promise<boolean> {
-	try {
-		const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-		await jwtVerify(token, secret);
-		return true
-	} catch (error) {
-		console.log(error);
-		return false
-	}
+  try {
+    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+    await jwtVerify(token, secret);
+    return true;
+  } catch (error) {
+    console.log(error);
+    return false;
+  }
 }
 
 export default auth(async (req) => {
+  try {
+    const {pathname, searchParams} = req.nextUrl;
+    const isLoggedin = !!req.auth;
+    const locations = req.auth?.user?.locations || [];
 
+<<<<<<< HEAD
 	try {
 		const { pathname } = req.nextUrl
 		const isLoggedin = !!req.auth
 		const locations = req.auth?.user?.locations || []
+=======
+    /* Check for mobile app requests */
+    const isMobileApp =
+      req.headers.get("X-Mobile-App") === "true" && pathname.includes("mobile");
+    /* Verify mobile app token */
+    let isMobileAuthenticated = false;
+    if (isMobileApp) {
+      const token = req.headers.get("Authorization")?.split(" ")[1];
+      if (token) {
+        isMobileAuthenticated = await verifyToken(token);
+        if (isMobileAuthenticated) {
+          return NextResponse.next();
+        } else {
+          return NextResponse.json({message: "Unauthorized"}, {status: 401});
+        }
+      }
+    }
+>>>>>>> 22125ebf9f92d05da0f1397f845bbaa8d79a1fe6
 
-		/* Check for mobile app requests */
-		const isMobileApp = req.headers.get("X-Mobile-App") === "true" && pathname.includes("mobile")
-		/* Verify mobile app token */
-		let isMobileAuthenticated = false
-		if (isMobileApp) {
-			const token = req.headers.get("Authorization")?.split(" ")[1]
-			if (token) {
-				isMobileAuthenticated = await verifyToken(token)
-				if (isMobileAuthenticated) {
-					return NextResponse.next()
-				} else {
-					return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-				}
-			}
-		}
+    if (pathname.startsWith("/api/protected/loc")) {
+      if (!isLoggedin && !(isMobileApp && isMobileAuthenticated)) {
+        return NextResponse.json({message: "Unauthorized"}, {status: 401});
+      }
 
+<<<<<<< HEAD
 		if (pathname.startsWith("/api/protected/loc")) {
 			if (!isLoggedin && !(isMobileApp && isMobileAuthenticated)) {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 			}
 		}
+=======
+      const [, encodedId, subpath = ""] =
+        pathname.match(/^\/api\/protected\/loc\/([^/]+)(\/.*)?$/) || [];
 
-		/* Handle authentication redirects */
-		if (!isLoggedin) {
+      if (!encodedId || !isNaN(Number(encodedId))) {
+        return NextResponse.next();
+      }
 
-			if (pathname.startsWith("/api/auth") || publicPaths.some((path) => pathname.startsWith(path))) {
-				return NextResponse.next()
-			}
+      const url = new URL(
+        `/api/protected/loc/${encodedId}${subpath}?${searchParams.toString()}`,
+        req.url
+      );
 
-			const url = new URL("/login", req.nextUrl.origin)
-			url.searchParams.set("callbackUrl", pathname)
-			return NextResponse.redirect(url)
-		}
+      return encodedId
+        ? NextResponse.rewrite(url)
+        : NextResponse.json({message: "Invalid location"}, {status: 400});
+    }
 
-		/* Handle home page and dashboard redirects (only for web, not for mobile) */
-		if (isLoggedin && !isMobileApp) {
+    /* Handle authentication redirects */
+    if (!isLoggedin) {
+      if (
+        pathname.startsWith("/api/auth") ||
+        publicPaths.some((path) => pathname.startsWith(path))
+      ) {
+        return NextResponse.next();
+      }
 
-			if (pathname.startsWith("/api/") || pathname.startsWith("/callbacks")) {
-				return NextResponse.next()
-			}
+      const url = new URL("/login", req.nextUrl.origin);
+      url.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(url);
+    }
+>>>>>>> 22125ebf9f92d05da0f1397f845bbaa8d79a1fe6
 
-			/* Redirect to Dashboard if no locations */
-			if (pathname === "/" || publicPaths.some((path) => pathname.startsWith(path))) {
-				return NextResponse.redirect(new URL(`/dashboard/locations`, req.nextUrl.origin))
-			}
+    /* Handle home page and dashboard redirects (only for web, not for mobile) */
+    if (isLoggedin && !isMobileApp) {
+      if (pathname.startsWith("/api/") || pathname.startsWith("/callbacks")) {
+        return NextResponse.next();
+      }
 
-			/* No Locations Redirect to New Location */
-			if (locations.length === 0 && pathname !== "/dashboard/locations/new") {
-				return NextResponse.redirect(new URL("/dashboard/locations/new", req.nextUrl.origin))
-			}
+      /* Redirect to Dashboard if no locations */
+      if (
+        pathname === "/" ||
+        publicPaths.some((path) => pathname.startsWith(path))
+      ) {
+        return NextResponse.redirect(
+          new URL(`/dashboard/locations`, req.nextUrl.origin)
+        );
+      }
 
-			const [_, locationId, path] = pathname.match(/^\/dashboard\/location\/([^/]+)(\/.*)?$/) || []
+      /* No Locations Redirect to New Location */
+      if (locations.length === 0 && pathname !== "/dashboard/locations/new") {
+        return NextResponse.redirect(
+          new URL("/dashboard/locations/new", req.nextUrl.origin)
+        );
+      }
 
-			if (locationId) {
-				/* Check if locationId is a valid location */
-				const next = locations.find((loc: { id: string }) => loc.id === locationId)
+      const [_, locationId, path] =
+        pathname.match(/^\/dashboard\/location\/([^/]+)(\/.*)?$/) || [];
 
-				if (!next) {
-					return NextResponse.redirect(new URL("/dashboard/locations", req.nextUrl.origin))
-				}
+      if (locationId) {
+        /* Check if locationId is a valid location */
+        const next = locations.find(
+          (loc: {id: string}) => loc.id === locationId
+        );
 
-				/* If the path is not allowed for the current location, redirect to the dashboard of the next location */
-				const allowedInactivePaths = [`/dashboard/location/${next.id}/suspended`]
-				if (!["active", "incomplete"].includes(next.status) && !allowedInactivePaths.includes(path)) {
-					return NextResponse.redirect(new URL(`/dashboard/location/${next.id}/suspended`, req.nextUrl.origin))
-				}
+        if (!next) {
+          return NextResponse.redirect(
+            new URL("/dashboard/locations", req.nextUrl.origin)
+          );
+        }
 
-				return NextResponse.next()
-			}
-		}
+        /* If the path is not allowed for the current location, redirect to the dashboard of the next location */
+        const allowedInactivePaths = [
+          `/dashboard/location/${next.id}/suspended`,
+        ];
+        if (
+          !["active", "incomplete"].includes(next.status) &&
+          !allowedInactivePaths.includes(path)
+        ) {
+          return NextResponse.redirect(
+            new URL(
+              `/dashboard/location/${next.id}/suspended`,
+              req.nextUrl.origin
+            )
+          );
+        }
 
-		/* Set cache headers for API and dashboard routes */
-		const response = NextResponse.next()
-		if (pathname.startsWith("/api/") || pathname.startsWith("/dashboard/")) {
-			response.headers.set("Cache-Control", "no-store, max-age=0")
-		}
-		return response
-	} catch (error) {
-		console.error("Middleware error:", error)
-		return NextResponse.json({ message: "Internal Server Error" }, { status: 500 })
-	}
-})
+        return NextResponse.next();
+      }
+    }
+
+    /* Set cache headers for API and dashboard routes */
+    const response = NextResponse.next();
+    if (pathname.startsWith("/api/") || pathname.startsWith("/dashboard/")) {
+      response.headers.set("Cache-Control", "no-store, max-age=0");
+    }
+    return response;
+  } catch (error) {
+    console.error("Middleware error:", error);
+    return NextResponse.json({message: "Internal Server Error"}, {status: 500});
+  }
+});
 
 export const config = {
-	matcher: ["/((?!sign-in|_next/static|_next/image|images|favicon.ico).*)"],
-}
+  matcher: ["/((?!sign-in|_next/static|_next/image|images|favicon.ico).*)"],
+};

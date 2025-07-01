@@ -14,7 +14,6 @@ import { cn } from '@/libs/utils'
 import { PaymentMethods, MemberProfile } from './components'
 import { db } from "@/db/db"
 import { and } from "drizzle-orm"
-import { decodeId } from "@/libs/server/sqids"
 import { MemberProvider } from "./providers/MemberContext"
 import { Member, MemberLocation } from "@/types"
 import Stripe from "stripe"
@@ -32,11 +31,10 @@ async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnTy
     if (!id || !mid) {
         return null;
     }
-    const decodedId = decodeId(id);
 
     try {
         const ml = await db.query.memberLocations.findFirst({
-            where: (ml, { eq }) => and(eq(ml.memberId, mid), eq(ml.locationId, decodedId)),
+            where: (ml, { eq }) => and(eq(ml.memberId, mid), eq(ml.locationId, id)),
             with: {
                 member: {
                     with: {
@@ -48,7 +46,7 @@ async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnTy
                         subscriptions: {
                             where: (ms, { eq, and }) => and(
                                 eq(ms.memberId, mid),
-                                eq(ms.locationId, decodedId)
+                                eq(ms.locationId, id)
                             ),
                             with: {
                                 plan: {
@@ -161,5 +159,5 @@ export default async function MemberProfilePage(props: { params: Promise<{ id: s
                 </div>
             </MemberProvider>
         </div >
-    )
+    );
 }
