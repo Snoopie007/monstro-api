@@ -11,7 +11,7 @@ import {
 } from '@/components/ui';
 import { format } from 'date-fns';
 
-export function MemberRewards({ params }: { params: { id: string; mid: number } }) {
+export function MemberRewards({ params }: { params: { id: string; mid: string } }) {
     const [rewards, setRewards] = useState<Array<any>>([]);
     const [loading, setLoading] = useState<boolean>(true);
 

@@ -43,7 +43,7 @@ import { toast } from "react-toastify";
 import { useMemberPackages, usePackages } from "@/hooks";
 
 interface PkgFormProps {
-    params: { id: string, mid: number }
+    params: { id: string, mid: string }
     setOpen: Dispatch<SetStateAction<boolean>>
 }
 

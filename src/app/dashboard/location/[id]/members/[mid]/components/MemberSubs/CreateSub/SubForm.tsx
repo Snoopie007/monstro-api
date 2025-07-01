@@ -33,7 +33,7 @@ import { toast } from "react-toastify";
 import { useSubscriptions } from "@/hooks";
 
 type SubFormProps = {
-    params: { id: string, mid: number },
+    params: { id: string, mid: string },
     setOpen: Dispatch<SetStateAction<boolean>>
 }
 

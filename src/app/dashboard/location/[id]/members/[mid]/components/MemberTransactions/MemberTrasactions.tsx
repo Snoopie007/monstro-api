@@ -17,7 +17,7 @@ import { useMemberTransactions } from '@/hooks/hooks'
 import { format } from 'date-fns'
 import { Transaction } from '@/types/transaction'
 
-export function MemberTransactions({ params }: { params: { id: string, mid: number } }) {
+export function MemberTransactions({ params }: { params: { id: string, mid: string } }) {
     ;
     const { transactions, error, isLoading } = useMemberTransactions(params.id, params.mid);
     return (
@@ -92,7 +92,7 @@ export function MemberTransactions({ params }: { params: { id: string, mid: numb
                                         </TableCell>
 
                                         <TableCell className='flex flex-row items-center'>
-                                            <MemberPaymentActions transaction={t} memberId={params.mid} locationId={params.id} />
+                                            <MemberPaymentActions transaction={t} mid={params.mid} lid={params.id} />
                                         </TableCell>
                                     </TableRow>
                                 ))}

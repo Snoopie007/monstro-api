@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui"
 import { MemberInvoice } from "@/types/member"
 import { formatAmountForDisplay } from "@/libs/utils"
 
-export function MemberInvoices({ params }: { params: { id: string, mid: number } }) {
+export function MemberInvoices({ params }: { params: { id: string, mid: string } }) {
     const { invoices, isLoading, error } = useMemberInvoices(params.id, params.mid)
     return (
         <div className='space-y-0'>

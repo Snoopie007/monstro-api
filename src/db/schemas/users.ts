@@ -1,13 +1,14 @@
-import { serial, text, timestamp, pgTable } from "drizzle-orm/pg-core";
+import { serial, text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
 import { accounts } from "./accounts";
 import { relations } from "drizzle-orm";
 import { members } from "./members";
 import { vendors } from "./vendors";
 import { userRoles } from "./permissions";
 import { staffs } from "./staffs";
+import { sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: timestamp("email_verified_at", { withTimezone: true }),

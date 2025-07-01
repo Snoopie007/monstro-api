@@ -15,8 +15,8 @@ import AddChildMember from "./AddMember"
 
 
 interface MemberFamiliesProps {
-    params: { id: string, mid: number }
-    familyMembers: Array<FamilyMember> | undefined
+    params: { id: string, mid: string }
+    familyMembers: FamilyMember[] | undefined
 }
 
 export function MemberFamilies({ params, familyMembers }: MemberFamiliesProps) {

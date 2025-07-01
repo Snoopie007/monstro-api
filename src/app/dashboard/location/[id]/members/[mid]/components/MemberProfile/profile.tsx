@@ -6,8 +6,6 @@ import {
     Button,
     Card,
     CardContent,
-    CardHeader,
-    Skeleton,
 } from "@/components/ui";
 
 import { ChevronLeft, Mail, PhoneCall } from "lucide-react";
@@ -15,7 +13,7 @@ import { useMemberStatus } from "../../providers/MemberContext";
 import { useRouter } from "next/navigation";
 
 interface MemberProfileProps {
-    params: { id: string, mid: number }
+    params: { id: string, mid: string }
 }
 export function MemberProfile({ params }: MemberProfileProps) {
     const { member } = useMemberStatus()

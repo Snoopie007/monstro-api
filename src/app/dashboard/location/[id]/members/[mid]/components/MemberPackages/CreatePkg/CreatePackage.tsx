@@ -11,7 +11,7 @@ import { useState } from "react";
 import React from "react";
 import { PkgForm } from "./PkgForm";
 
-export function CreatePackage({ params }: { params: { id: string, mid: number } }) {
+export function CreatePackage({ params }: { params: { id: string, mid: string } }) {
 
     const [open, setOpen] = useState<boolean>(false);
     return (

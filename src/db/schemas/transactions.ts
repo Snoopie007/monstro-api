@@ -6,6 +6,7 @@ import {
   pgTable,
   jsonb,
   boolean,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
@@ -14,40 +15,21 @@ import { memberPackages, memberSubscriptions } from "./MemberPlans";
 import { TransactionStatusEnum, TransactionTypeEnum } from "./DatabaseEnums";
 
 export const transactions = pgTable("transactions", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
   description: text("description"),
-  items: jsonb("items")
-    .$type<Record<string, any>>()
-    .array()
-    .default(sql`'{}'::jsonb[]`),
+  items: jsonb("items").$type<Record<string, any>>().array().default(sql`'{}'::jsonb[]`),
   type: TransactionTypeEnum("type").notNull(),
   paymentMethod: text("payment_method").notNull(),
   amount: integer("amount").notNull().default(0),
   status: TransactionStatusEnum("status").notNull().default("incomplete"),
-  memberId: integer("member_id").references(() => members.id, {
-    onDelete: "cascade",
-  }),
-  locationId: integer("location_id")
-    .notNull()
-    .references(() => locations.id, { onDelete: "cascade" }),
-  invoiceId: integer("invoice_id")
-    .unique()
-    .references(() => memberInvoices.id, { onDelete: "cascade" }),
-  subscriptionId: integer("subscription_id").references(
-    () => memberSubscriptions.id,
-    { onDelete: "cascade" }
-  ),
-  packageId: integer("package_id").references(() => memberPackages.id, {
-    onDelete: "cascade",
-  }),
-  chargeDate: timestamp("charge_date", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  memberId: text("member_id").references(() => members.id, { onDelete: "cascade" }),
+  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+  invoiceId: text("invoice_id").unique().references(() => memberInvoices.id, { onDelete: "cascade" }),
+  subscriptionId: text("subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
+  packageId: text("package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
+  chargeDate: timestamp("charge_date", { withTimezone: true }).notNull().defaultNow(),
   currency: text("currency").notNull().default("USD"),
-  metadata: jsonb("metadata")
-    .$type<Record<string, any>>()
-    .notNull()
-    .default(sql`'{}'::jsonb`),
+  metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
   refunded: boolean("refunded").notNull().default(false),
   taxAmount: integer("tax_amount").notNull().default(0),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

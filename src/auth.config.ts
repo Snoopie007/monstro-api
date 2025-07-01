@@ -15,19 +15,11 @@ class CustomLoginError extends CredentialsSignin {
 	}
 }
 
-<<<<<<< HEAD
 async function validateToken(t: string, uid: string, type: string) {
 	const redis = getRedisClient();
 	const RedisKey = `loginToken:${uid}:${type}`;
 	const otp = await redis.get(RedisKey);
 	const [token, time] = otp?.toString().split("::") || [];
-=======
-async function validateToken(t: string, uid: number, type: string) {
-  const redis = getRedisClient();
-  const RedisKey = `loginToken:${uid}:${type}`;
-  const otp = await redis.get(RedisKey);
-  const [token, time] = otp?.toString().split("::") || [];
->>>>>>> 22125ebf9f92d05da0f1397f845bbaa8d79a1fe6
 
 	// Check if the token is expired (more than 30 minutes old)
 
@@ -96,14 +88,10 @@ export default {
 
 					if (!user) throw new CustomLoginError("User not found");
 
-					const match = await bcrypt.compare(credentials.password, user.password);
+					const match = await bcrypt.compare(credentials.password as string, user.password);
 					if (!match) throw new CustomLoginError("Invalid password or email.");
 					if (credentials.token && credentials.type) {
-						await validateToken(
-							credentials.token.toString(),
-							user.id,
-							credentials.type.toString()
-						);
+						await validateToken(credentials.token.toString(), user.id, credentials.type.toString());
 					}
 					// Create a JWT token
 					const secret = new TextEncoder().encode(process.env.AUTH_SECRET);

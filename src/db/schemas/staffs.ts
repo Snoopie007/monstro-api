@@ -5,15 +5,16 @@ import {
   pgTable,
   integer,
   primaryKey,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { users } from "./users";
 import { roles } from "./permissions";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { StaffStatusEnum } from "./DatabaseEnums";
 
 export const staffs = pgTable("staffs", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull(),
@@ -26,31 +27,19 @@ export const staffs = pgTable("staffs", {
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
-export const staffsLocations = pgTable(
-  "staff_locations",
-  {
-    id: serial("id").primaryKey(),
-    staffId: integer("staff_id")
-      .notNull()
-      .references(() => staffs.id, { onDelete: "cascade" }),
-    locationId: integer("location_id")
-      .notNull()
-      .references(() => locations.id, { onDelete: "cascade" }),
-    status: StaffStatusEnum("status").notNull().default("active"),
-  },
+export const staffsLocations = pgTable("staff_locations", {
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+  staffId: text("staff_id").notNull().references(() => staffs.id, { onDelete: "cascade" }),
+  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+  status: StaffStatusEnum("status").notNull().default("active"),
+},
   (t) => [primaryKey({ columns: [t.staffId, t.locationId] })]
 );
 
-export const staffsLocationRoles = pgTable(
-  "staff_location_roles",
-  {
-    staffLocationId: integer("staff_location_id")
-      .notNull()
-      .references(() => staffsLocations.id, { onDelete: "cascade" }),
-    roleId: integer("role_id")
-      .notNull()
-      .references(() => roles.id, { onDelete: "cascade" }),
-  },
+export const staffsLocationRoles = pgTable("staff_location_roles", {
+  staffLocationId: text("staff_location_id").notNull().references(() => staffsLocations.id, { onDelete: "cascade" }),
+  roleId: text("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+},
   (t) => [primaryKey({ columns: [t.staffLocationId, t.roleId] })]
 );
 

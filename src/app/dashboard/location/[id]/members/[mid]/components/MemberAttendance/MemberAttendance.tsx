@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useMemo, useCallback } from "react";
 
 
-export function MemberAttedance({ params }: { params: { id: string, mid: number } }) {
+export function MemberAttedance({ params }: { params: { id: string, mid: string } }) {
 
     const { attendances, error, isLoading } = useAttedance(params.id, params.mid);
 
@@ -29,7 +29,7 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
     )
 
     // Memoize the programs array to prevent recalculation on every render
-    const programs = useMemo(() => {
+    const programs: string[] = useMemo(() => {
         if (!attendances) return [];
         return Array.from(new Set(attendances.map((attendance: ExtendedAttendance) => attendance.programName)));
     }, [attendances]);
@@ -115,7 +115,7 @@ export function MemberAttedance({ params }: { params: { id: string, mid: number 
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Programs</SelectItem>
-                            {programs.map((program: string, index: number) => (
+                            {programs.map((program, index) => (
                                 <SelectItem key={`${program}-${index}`} value={program}>
                                     {program}
                                 </SelectItem>

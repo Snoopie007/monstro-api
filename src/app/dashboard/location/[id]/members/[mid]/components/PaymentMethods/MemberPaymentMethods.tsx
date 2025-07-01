@@ -13,7 +13,7 @@ import PaymentMethodsActions from "./actions"
 import { useMemberStatus, useMemberPaymentMethods } from "../../providers"
 
 interface PaymentMethodsProps {
-    params: { id: string, mid: number },
+    params: { id: string, mid: string },
 }
 
 export function PaymentMethods({ params }: PaymentMethodsProps) {
@@ -62,7 +62,7 @@ export function PaymentMethods({ params }: PaymentMethodsProps) {
                                 <div className='text-sm flex-1 text-right'>
                                     <p>expires on {method.card?.exp_month}/{method.card?.exp_year}</p>
                                 </div>
-                                <PaymentMethodsActions memberId={params.mid} paymentMethod={method} locationId={params.id} customerId={member.stripeCustomerId || ""} />
+                                <PaymentMethodsActions mid={params.mid} paymentMethod={method} lid={params.id} customerId={member.stripeCustomerId || ""} />
                             </li>
                         ))}
                     </ul>

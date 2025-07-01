@@ -10,7 +10,7 @@ import {
 } from '@/components/ui'
 import { useMemberAchievements } from '@/hooks/hooks'
 import { format } from 'date-fns'
-export function MemberAchievements({ params }: { params: { id: string, mid: number } }) {
+export function MemberAchievements({ params }: { params: { id: string, mid: string } }) {
     const { achievements, error, isLoading } = useMemberAchievements(params.id, params.mid)
 
     return (

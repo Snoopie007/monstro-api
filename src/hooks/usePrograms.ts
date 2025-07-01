@@ -2,7 +2,7 @@
 import useSWR from "swr";
 import { fetcher } from "./hooks";
 
-function usePrograms(id: string | number) {
+function usePrograms(id: string) {
 	const { data, error, isLoading, mutate } = useSWR({ url: `programs?page=1`, id: id }, fetcher);
 
 	return {

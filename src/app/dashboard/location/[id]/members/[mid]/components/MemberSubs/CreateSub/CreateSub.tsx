@@ -12,7 +12,7 @@ import { useState } from "react";
 import React from "react";
 import { SubForm } from "./SubForm";
 
-export function CreateSubscription({ params }: { params: { id: string, mid: number } }) {
+export function CreateSubscription({ params }: { params: { id: string, mid: string } }) {
     const [open, setOpen] = useState<boolean>(false);
 
 

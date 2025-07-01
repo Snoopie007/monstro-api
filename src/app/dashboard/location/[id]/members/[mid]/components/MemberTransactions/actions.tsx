@@ -12,17 +12,17 @@ import { Transaction } from '@/types/transaction';
 
 interface MemberPaymentActionsProps {
     transaction: Transaction,
-    memberId: number,
-    locationId: string
+    mid: string,
+    lid: string
 }
 
-export default function MemberPaymentActions({ transaction, memberId, locationId }: MemberPaymentActionsProps) {
+export default function MemberPaymentActions({ transaction, mid, lid }: MemberPaymentActionsProps) {
 
     async function makeARefund(id: number) {
 
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${locationId}/members/${memberId}/transactions`, {
+            fetch(`/api/protected/loc/${lid}/members/${mid}/transactions`, {
                 method: 'PUT',
                 body: JSON.stringify({ chargeId: id })
             })

@@ -1,11 +1,7 @@
 import useSWR from "swr";
 
-async function fetcher(data: {url: string; id: string; query?: string}) {
-  const res = await fetch(
-    `/api/protected/loc/${data.id}/${data.url}${
-      data.query ? `?${data.query}` : ""
-    }`
-  );
+async function fetcher(data: { url: string; id: string; query?: string }) {
+  const res = await fetch(`/api/protected/loc/${data.id}/${data.url}${data.query ? `?${data.query}` : ""}`);
   if (!res.ok) {
     throw new Error("An error occurred while fetching the data.");
   }
@@ -19,8 +15,8 @@ function useMembers(
   page: number = 1,
   size: number = 15
 ) {
-  const {data, error, isLoading} = useSWR(
-    {url: `members?query=${query}&page=${page}&size=${size}`, id: id},
+  const { data, error, isLoading } = useSWR(
+    { url: `members?query=${query}&page=${page}&size=${size}`, id: id },
     fetcher
   );
 
@@ -31,47 +27,8 @@ function useMembers(
   };
 }
 
-<<<<<<< HEAD
 function useMemberTransactions(id: string, mid: string) {
-    const { data, error, isLoading, mutate } = useSWR({ url: `members/${mid}/transactions`, id: id }, fetcher);
-    return {
-        transactions: data,
-        error,
-        isLoading,
-        mutate,
-    };
-}
-function useMemberAchievements(id: string, mid: string) {
-    const { data, error, isLoading } = useSWR({ url: `members/${mid}/achievements`, id: id }, fetcher);
-    return {
-        achievements: data,
-        error,
-        isLoading,
-    };
-}
-
-function useAttedance(id: string, mid: string) {
-    const { data, error, isLoading } = useSWR({ url: `members/${mid}/attendances`, id: id }, fetcher);
-    return {
-        attendances: data,
-        error,
-        isLoading,
-    };
-}
-
-function useMemberPrograms(id: string, mid: string) {
-    const { data, error, isLoading } = useSWR({ url: `members/${mid}/programs`, id: id }, fetcher);
-    return {
-        programs: data,
-        error,
-        isLoading,
-    };
-=======
-function useMemberTransactions(id: string, mid: number) {
-  const {data, error, isLoading, mutate} = useSWR(
-    {url: `members/${mid}/transactions`, id: id},
-    fetcher
-  );
+  const { data, error, isLoading, mutate } = useSWR({ url: `members/${mid}/transactions`, id: id }, fetcher);
   return {
     transactions: data,
     error,
@@ -79,11 +36,8 @@ function useMemberTransactions(id: string, mid: number) {
     mutate,
   };
 }
-function useMemberAchievements(id: string, mid: number) {
-  const {data, error, isLoading} = useSWR(
-    {url: `members/${mid}/achievements`, id: id},
-    fetcher
-  );
+function useMemberAchievements(id: string, mid: string) {
+  const { data, error, isLoading } = useSWR({ url: `members/${mid}/achievements`, id: id }, fetcher);
   return {
     achievements: data,
     error,
@@ -91,11 +45,8 @@ function useMemberAchievements(id: string, mid: number) {
   };
 }
 
-function useAttedance(id: string, mId: number) {
-  const {data, error, isLoading} = useSWR(
-    {url: `members/${mId}/attendances`, id: id},
-    fetcher
-  );
+function useAttedance(id: string, mid: string) {
+  const { data, error, isLoading } = useSWR({ url: `members/${mid}/attendances`, id: id }, fetcher);
   return {
     attendances: data,
     error,
@@ -103,22 +54,18 @@ function useAttedance(id: string, mId: number) {
   };
 }
 
-function useMemberPrograms(id: string, mId: number) {
-  const {data, error, isLoading} = useSWR(
-    {url: `members/${mId}/programs`, id: id},
-    fetcher
-  );
+function useMemberPrograms(id: string, mid: string) {
+  const { data, error, isLoading } = useSWR({ url: `members/${mid}/programs`, id: id }, fetcher);
   return {
     programs: data,
     error,
     isLoading,
   };
->>>>>>> 22125ebf9f92d05da0f1397f845bbaa8d79a1fe6
 }
 
 function useIntegrations(id: string) {
-  const {data, error, isLoading, mutate} = useSWR(
-    {url: `integrations/`, id: id},
+  const { data, error, isLoading, mutate } = useSWR(
+    { url: `integrations/`, id: id },
     fetcher
   );
   return {
@@ -130,8 +77,8 @@ function useIntegrations(id: string) {
 }
 
 function useAchievements(id: string) {
-  const {data, error, isLoading} = useSWR(
-    {url: `achievements`, id: id},
+  const { data, error, isLoading } = useSWR(
+    { url: `achievements`, id: id },
     fetcher
   );
 
@@ -142,16 +89,8 @@ function useAchievements(id: string) {
   };
 }
 
-<<<<<<< HEAD
 function useAchievement(id: string, aid: string) {
-    const { data, error, isLoading, mutate } = useSWR({ url: `achievements/${aid}`, id: id }, fetcher);
-=======
-function useAchievement(id: string, aid: number) {
-  const {data, error, isLoading, mutate} = useSWR(
-    {url: `achievements/${aid}`, id: id},
-    fetcher
-  );
->>>>>>> 22125ebf9f92d05da0f1397f845bbaa8d79a1fe6
+  const { data, error, isLoading, mutate } = useSWR({ url: `achievements/${aid}`, id: id }, fetcher);
 
   return {
     achievement: data,
@@ -162,8 +101,8 @@ function useAchievement(id: string, aid: number) {
 }
 
 function useActions(id: string) {
-  const {data, error, isLoading} = useSWR(
-    {url: `achievements/actions`, id: id},
+  const { data, error, isLoading } = useSWR(
+    { url: `achievements/actions`, id: id },
     fetcher
   );
 
@@ -174,8 +113,8 @@ function useActions(id: string) {
   };
 }
 function useWallet(id: string) {
-  const {data, error, isLoading, mutate} = useSWR(
-    {url: `vendor/wallet`, id: id},
+  const { data, error, isLoading, mutate } = useSWR(
+    { url: `vendor/wallet`, id: id },
     fetcher
   );
   return {
@@ -186,51 +125,24 @@ function useWallet(id: string) {
   };
 }
 
-<<<<<<< HEAD
 function useMemberPackages(id: string, mid: string) {
-    const { data, error, isLoading, mutate } = useSWR({ url: `members/${mid}/packages`, id: id }, fetcher);
-    return {
-        packages: data,
-        error,
-        isLoading,
-        mutate
-    };
-}
-
-function useMemberInvoices(id: string, mid: string) {
-    const { data, error, isLoading, mutate } = useSWR({ url: `members/${mid}/invoices`, id: id }, fetcher);
-    return {
-        invoices: data,
-        error,
-        isLoading,
-        mutate
-    };
-=======
-function useMemberPackages(id: string, mid: number) {
-  const {data, error, isLoading, mutate} = useSWR(
-    {url: `members/${mid}/packages`, id: id},
-    fetcher
-  );
+  const { data, error, isLoading, mutate } = useSWR({ url: `members/${mid}/packages`, id: id }, fetcher);
   return {
     packages: data,
     error,
     isLoading,
-    mutate,
+    mutate
   };
 }
 
-function useMemberInvoices(id: string, mid: number) {
-  const {data, error, isLoading, mutate} = useSWR(
-    {url: `members/${mid}/invoices`, id: id},
-    fetcher
-  );
+function useMemberInvoices(id: string, mid: string) {
+  const { data, error, isLoading, mutate } = useSWR({ url: `members/${mid}/invoices`, id: id }, fetcher);
   return {
     invoices: data,
     error,
     isLoading,
-    mutate,
+    mutate
   };
->>>>>>> 22125ebf9f92d05da0f1397f845bbaa8d79a1fe6
 }
 
 export {

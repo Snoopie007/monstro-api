@@ -1,30 +1,20 @@
-import { recurringReservations, recurringReservationsExceptions, reservations } from "@/db/schemas/reservations";
+import { attendances, recurringReservations, recurringReservationsExceptions, reservations } from "@/db/schemas";
 import { ProgramSession } from "@/types/program";
 import { Member } from "./member";
 
-export type Attendance = {
-    id: string;
-    reservationId: string | null;
-    recurringId: string | null;
-    checkInTime: Date;
-    checkOutTime: Date | null;
-    startTime: Date;
-    endTime: Date;
+
+export type Attendance = typeof attendances.$inferSelect & {
+
     recurring?: RecurringReservation
     reservation?: Reservation
-    ipAddress: string | null;
-    macAddress: string | null;
-    lat: number | null;
-    lng: number | null;
-    created: Date;
-    updated: Date | null;
+
 };
 
 export type ExtendedAttendance = Attendance & {
     programName: string;
 };
 
-export type Reservation = typeof reservations.$inferInsert & {
+export type Reservation = typeof reservations.$inferSelect & {
     isRecurring?: boolean;
     recurringId?: string;
     session?: ProgramSession
@@ -32,14 +22,14 @@ export type Reservation = typeof reservations.$inferInsert & {
     exceptions?: RecurringReservationException[]
 }
 
-export type RecurringReservation = typeof recurringReservations.$inferInsert & {
+export type RecurringReservation = typeof recurringReservations.$inferSelect & {
     session?: ProgramSession
     location?: Location
     member?: Member
     exceptions?: RecurringReservationException[]
 }
 
-export type RecurringReservationException = typeof recurringReservationsExceptions.$inferInsert & {
+export type RecurringReservationException = typeof recurringReservationsExceptions.$inferSelect & {
     recurring?: RecurringReservation
     reservation?: Reservation
 }

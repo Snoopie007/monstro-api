@@ -5,7 +5,7 @@ import { vendors } from "./vendors";
 import type { AdapterAccountType } from "next-auth/adapters";
 
 export const accounts = pgTable("account", {
-    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
     vendorId: text("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
     type: text("type").$type<AdapterAccountType>(),
     provider: text("provider").notNull(),

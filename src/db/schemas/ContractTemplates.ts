@@ -1,11 +1,11 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
-  serial,
   text,
   timestamp,
   pgTable,
   integer,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 import { locations } from "./locations";
@@ -14,10 +14,8 @@ import { memberPlans } from "./MemberPlans";
 import { ContractTypeEnum } from "./DatabaseEnums";
 
 export const contractTemplates = pgTable("contracts", {
-  id: serial("id").primaryKey(),
-  locationId: integer("location_id")
-    .notNull()
-    .references(() => locations.id, { onDelete: "cascade", onUpdate: "cascade" }),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade", onUpdate: "cascade" }),
   content: text("content"),
   title: text("title").notNull(),
   description: text("description").notNull(),

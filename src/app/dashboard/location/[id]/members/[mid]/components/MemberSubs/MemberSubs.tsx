@@ -28,7 +28,7 @@ function calculateProgress(start: number, end: number) {
     return Math.min(Math.max(parseFloat(progressPercentage.toFixed(2)), 0), 100);
 }
 
-export function MemberSubs({ params }: { params: { id: string, mid: number }, }) {
+export function MemberSubs({ params }: { params: { id: string, mid: string }, }) {
     const { member } = useMemberStatus();
     const [search, setSearch] = useState<string>('');
 

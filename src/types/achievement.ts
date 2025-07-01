@@ -1,22 +1,16 @@
+import { achievements, actions } from "@/db/schemas";
 import { Member } from "./member";
 import { Program } from "./program";
 
 
-export type Action = {
-    id: string,
-    name: string,
-    count: number
+export type Action = typeof actions.$inferSelect & {
+    achievement: Achievement
 }
 
-export type Achievement = {
-    id?: string,
-    title: string,
-    description: string | null,
-    icon: string | null,
-    badge: string,
-    points: number,
+export type Achievement = typeof achievements.$inferSelect & {
+
     actions: Action[] | [],
     program?: Program,
-    actionCount: number,
+
     members?: Member[]
 }

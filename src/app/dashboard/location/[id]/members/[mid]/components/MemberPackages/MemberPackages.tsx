@@ -17,7 +17,7 @@ import { MemberPackage } from '@/types/member'
 import { CreatePackage } from './CreatePkg/CreatePackage'
 import { Badge } from '@/components/ui'
 
-export function MemberPackages({ params }: { params: { id: string, mid: number } }) {
+export function MemberPackages({ params }: { params: { id: string, mid: string } }) {
     const { packages, isLoading } = useMemberPackages(params.id, params.mid)
 
     return (

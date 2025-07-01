@@ -27,7 +27,7 @@ type PromiseReturnType = {
     ml: MemberLocation | undefined
 }
 
-async function fetchStripeKeys(id: string, mid: number): Promise<PromiseReturnType | null> {
+async function fetchStripeKeys(id: string, mid: string): Promise<PromiseReturnType | null> {
     if (!id || !mid) {
         return null;
     }
@@ -98,7 +98,7 @@ const MemberDetailsMenu = [
     "Attendance"
 ]
 
-export default async function MemberProfilePage(props: { params: Promise<{ id: string, mid: number }> }) {
+export default async function MemberProfilePage(props: { params: Promise<{ id: string, mid: string }> }) {
     const params = await props.params;
 
     const res = await fetchStripeKeys(params.id, params.mid)

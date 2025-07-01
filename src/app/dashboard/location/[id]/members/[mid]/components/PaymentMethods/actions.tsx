@@ -13,15 +13,15 @@ import Stripe from 'stripe';
 
 interface PaymentMethodActionsProps {
     paymentMethod: Stripe.PaymentMethod | null,
-    memberId: number,
+    mid: string,
     customerId: string,
-    locationId: string,
+    lid: string,
 }
 
-export default function PaymentMethodsActions({ paymentMethod, memberId, locationId, customerId }: PaymentMethodActionsProps) {
+export default function PaymentMethodsActions({ paymentMethod, mid, lid, customerId }: PaymentMethodActionsProps) {
     async function detachPaymentMethod(id: string) {
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${locationId}/members/${memberId}/payments/methods?paymentMethodId=${id}`, {
+            fetch(`/api/protected/loc/${lid}/members/${mid}/payments/methods?paymentMethodId=${id}`, {
                 method: 'DELETE'
             })
         )
@@ -30,13 +30,13 @@ export default function PaymentMethodsActions({ paymentMethod, memberId, locatio
 
     async function makeDefualtPaymentMethod(id: string) {
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${locationId}/members/${memberId}/payments/methods?paymentMethodId=${id}`, {
+            fetch(`/api/protected/loc/${lid}/members/${mid}/payments/methods?paymentMethodId=${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    customerId: customerId, 
+                    customerId: customerId,
                     paymentMethodId: id,
                 }),
             })
