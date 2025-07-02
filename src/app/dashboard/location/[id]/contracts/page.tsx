@@ -29,9 +29,9 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
     const params = use(props.params);
     const { contracts, isLoading } = useSignedContracts(params.id);
 
-    async function downloadContract(signedId: number, memberId: number) {
+    async function downloadContract(signedId: string, mid: string) {
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${params.id}/contracts/signed/${signedId}/${memberId}`)
+            fetch(`/api/protected/loc/${params.id}/contracts/signed/${signedId}/${mid}`)
         );
 
         if (error || !result || !result.ok) {

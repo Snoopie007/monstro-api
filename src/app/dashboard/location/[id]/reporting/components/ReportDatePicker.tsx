@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/popover";
 import { useReportFilters } from '../provider/ReportContext'
 
-export default function ReportDatePicker() {
+export function ReportDatePicker() {
     const [date, setDate] = React.useState<DateRange | undefined>({
         from: new Date(2022, 0, 20),
         to: addDays(new Date(2022, 0, 20), 20),

@@ -17,7 +17,7 @@ export default function Rewards(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { rewards, isLoading, error } = useRewards(params.id)
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-    const [currentReward, setCurrentReward] = useState<Reward | undefined>(undefined);
+    const [currentReward, setCurrentReward] = useState<Partial<Reward> | undefined>(undefined);
 
     if (error) return <ErrorComponent error={error} />
 

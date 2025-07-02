@@ -112,9 +112,9 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
     )
 }
 
-function RemoveContract({ id, editable, lid }: { id: number, editable: boolean, lid: string }) {
+function RemoveContract({ id, editable, lid }: { id: string, editable: boolean, lid: string }) {
     const [loading, setLoading] = useState(false);
-    async function onDelete(id: number) {
+    async function onDelete(id: string) {
         if (!id) return;
         setLoading(true);
         const { result, error } = await tryCatch(

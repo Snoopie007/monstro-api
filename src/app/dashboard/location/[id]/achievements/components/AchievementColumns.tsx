@@ -16,14 +16,14 @@ export const AchievementColumns = (): ColumnDef<Achievement, any>[] => [
 
                     <Avatar className="max-w-full flex items-center justify-center text-black-100 size-6 bg-foreground/5 rounded-full">
                         <AvatarImage
-                            src={achievement.icon ? achievement.icon : ''}
+                            src={achievement.badge ? achievement.badge : ''}
                         />
                         <AvatarFallback className=" bg-foreground/5 text-foreground/50 text-xs size-6 ">
-                            {achievement.title.charAt(0)}
+                            {achievement.name.charAt(0)}
                         </AvatarFallback>
                     </Avatar>
                     <span className="text-sm">
-                        {achievement.title}
+                        {achievement.name}
                     </span>
                 </div>
             )
@@ -50,28 +50,5 @@ export const AchievementColumns = (): ColumnDef<Achievement, any>[] => [
             return <span>{achievement.members ? achievement.members.length : 0}</span>;
         },
     },
-    {
-        accessorKey: "actions",
-        header: "Action Name",
-        cell: ({ row }) => {
-            const achievement = row.original;
-            if (!achievement.actions || achievement.actions.length === 0) {
-                return <span>No actions</span>;
-            }
 
-            return (
-                <div className="flex flex-col gap-1">
-                    {achievement.actions.map((action) => (
-                        <span key={action.id} className="text-sm">
-                            {action.name} (x{action.count})
-                        </span>
-                    ))}
-                </div>
-            );
-        },
-    },
-    // {
-    //   accessorKey: "status",
-    //   header: "Status",
-    // },
 ];

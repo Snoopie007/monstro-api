@@ -1,16 +1,13 @@
-import { achievements, actions } from "@/db/schemas";
+import { achievements, achievementTriggers } from "@/db/schemas";
 import { Member } from "./member";
-import { Program } from "./program";
 
 
-export type Action = typeof actions.$inferSelect & {
+
+export type Trigger = typeof achievementTriggers.$inferSelect & {
     achievement: Achievement
 }
 
 export type Achievement = typeof achievements.$inferSelect & {
-
-    actions: Action[] | [],
-    program?: Program,
-
+    triggers?: Trigger[],
     members?: Member[]
 }

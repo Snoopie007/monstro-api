@@ -1,16 +1,16 @@
 'use client'
 import React, { use } from 'react'
-import { ScrollArea } from '@/components/ui/ScrollArea'
+import { ScrollArea } from '@/components/ui'
 import {
     RevenueChart,
     RecurringRevenueChart,
     NewCustomerChart,
     ChurnedMembers,
-    TopSpenders
+    TopSpenders,
+    CustomerLTVChart,
+    ReportDatePicker
 } from './components'
-import { CustomerLTVChart } from './components/LTVChart'
-import ReportDatePicker from './components/ReportDatePicker'
-import { ReportProvider } from './provider/ReportContext'
+import { ReportProvider } from './provider'
 import { useReport } from '@/hooks/useReports'
 
 

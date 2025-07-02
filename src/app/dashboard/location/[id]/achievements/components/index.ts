@@ -1,3 +1,5 @@
-export * from '../../rewards/components/UpsertReward';
-export * from './UpsertAchievement';
+
+export * from './UpdateAchievement';
 export * from './AchievementIcons';
+export * from './CreateAchievement';
+export * from './AchievementFields';

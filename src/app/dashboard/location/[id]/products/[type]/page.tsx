@@ -8,17 +8,16 @@ import {
 } from "@/components/ui";
 import { CreatePlan, SearchInput, SubscriptionList, PackageList } from "./components";
 import { db } from "@/db/db";
-import { decodeId } from "@/libs/server/sqids";
-import { ProductsProvider } from "./providers/ProductContext";
+import { ProductsProvider } from "./providers";
 import { Program } from "@/types";
 
 
 async function getPrograms(lid: string): Promise<Program[]> {
-    const decodedLid = decodeId(lid);
+
     try {
 
         const programs = await db.query.programs.findMany({
-            where: (program, { eq }) => eq(program.locationId, decodedLid)
+            where: (program, { eq }) => eq(program.locationId, lid)
         })
         return programs;
     } catch (error) {

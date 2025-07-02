@@ -1,6 +1,6 @@
 import { LocationSideNav, LocationTopNav } from "./components";
 import { cn } from "@/libs/utils";
-import { AccountStatusProvider } from "./providers/AccountStatusProvider";
+import { AccountStatusProvider } from "./providers";
 import { db } from "@/db/db";
 import { redirect } from "next/navigation";
 import "@public/editor.css";

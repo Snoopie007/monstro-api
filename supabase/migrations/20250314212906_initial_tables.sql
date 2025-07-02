@@ -492,7 +492,7 @@ CREATE TABLE IF NOT EXISTS check_ins (
   check_in_time timestamp with time zone NOT NULL,
   check_out_time timestamp with time zone,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone,
   ip_address text,
   lat numeric,
   lng numeric,
@@ -505,35 +505,35 @@ CREATE INDEX IF NOT EXISTS idx_check_ins_check_in_time ON check_ins (check_in_ti
 
 CREATE TABLE IF NOT EXISTS achievements (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
-  title text NOT NULL,
-  badge text NOT NULL,
-  location_id text NOT NULL,
-  points integer NOT NULL,
-  description text,
-  icon text,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  CONSTRAINT achievements_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS actions (
-  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   name text NOT NULL,
+  description text NOT NULL,
+  badge text NOT NULL,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
+  required_action_count integer NOT NULL,
+  points integer NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
 
-CREATE TABLE IF NOT EXISTS achievement_actions (
+CREATE TABLE IF NOT EXISTS achievement_triggers (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
-  action_id text NOT NULL,
-  achievement_id text NOT NULL,
-  count integer NOT NULL,
-  metadata text,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  CONSTRAINT achievement_actions_achievement_id_foreign FOREIGN KEY (achievement_id) REFERENCES achievements (id) ON DELETE CASCADE,
-  CONSTRAINT achievement_actions_action_id_foreign FOREIGN KEY (action_id) REFERENCES actions (id) ON DELETE CASCADE
+  type text NOT NULL,
+  achievement_id text REFERENCES achievements (id) ON DELETE CASCADE NOT NULL,
+  weight integer NOT NULL,
+  CONSTRAINT unique_achievement_trigger UNIQUE (achievement_id, type)
 );
+
+
+CREATE TABLE IF NOT EXISTS member_achievements (
+  achievement_id text REFERENCES achievements (id) ON DELETE CASCADE NOT NULL,
+  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
+  progress integer NOT NULL DEFAULT 0,
+  date_achieved timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone
+);
+
 
 CREATE INDEX IF NOT EXISTS idx_achievement_actions_achievement_id ON achievement_actions (achievement_id);
 CREATE INDEX IF NOT EXISTS idx_achievement_actions_action_id ON achievement_actions (action_id);
@@ -571,21 +571,6 @@ CREATE TABLE IF NOT EXISTS reward_claims (
 
 
 
-CREATE TABLE IF NOT EXISTS member_achievements (
-  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
-  achievement_id text NOT NULL,
-  member_id text NOT NULL,
-  location_id text NOT NULL,
-  status text NOT NULL,
-  note text,
-  progress integer NOT NULL DEFAULT 0,
-  date_achieved timestamp with time zone DEFAULT now(),
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  CONSTRAINT member_achievements_achievement_id_foreign FOREIGN KEY (achievement_id) REFERENCES achievements (id),
-  CONSTRAINT member_achievements_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id),
-  CONSTRAINT member_achievements_location_id_foreign FOREIGN KEY (location_id) REFERENCES locations (id)
-);
 
 CREATE TABLE IF NOT EXISTS member_referrals (
   member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,

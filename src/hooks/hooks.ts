@@ -100,18 +100,7 @@ function useAchievement(id: string, aid: string) {
   };
 }
 
-function useActions(id: string) {
-  const { data, error, isLoading } = useSWR(
-    { url: `achievements/actions`, id: id },
-    fetcher
-  );
 
-  return {
-    actions: data,
-    error,
-    isLoading,
-  };
-}
 function useWallet(id: string) {
   const { data, error, isLoading, mutate } = useSWR(
     { url: `vendor/wallet`, id: id },
@@ -157,6 +146,5 @@ export {
   useAchievements,
   useWallet,
   useMemberPackages,
-  useActions,
   useMemberInvoices,
 };

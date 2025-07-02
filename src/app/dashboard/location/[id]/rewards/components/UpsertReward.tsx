@@ -19,9 +19,9 @@ import { Loader2 } from 'lucide-react';
 const InputStyle = "border border-foreground/10 ";
 
 export interface AddrewardProps {
-	reward: Reward | undefined,
+	reward: Partial<Reward> | undefined,
 	locationId: string,
-	setCurrentReward: Dispatch<SetStateAction<Reward | undefined>>
+	setCurrentReward: Dispatch<SetStateAction<Partial<Reward> | undefined>>
 }
 
 export function UpsertReward({ reward, locationId, setCurrentReward }: AddrewardProps) {
