@@ -5,7 +5,7 @@ import S3Bucket from "@/libs/server/s3";
 import { NextResponse, NextRequest } from "next/server";
 
 type RewardProps = {
-	params: Promise<{ id: number }>
+	params: Promise<{ id: string }>
 }
 
 export async function GET(req: NextRequest, { params }: RewardProps) {

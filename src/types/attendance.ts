@@ -47,17 +47,17 @@ export type CalendarEvent = {
 };
 
 export type CalendarEventData = {
-  reservationId?: number;
-  recurringId?: number;
+  reservationId?: string;
+  recurringId?: string;
   programId: string;
   sessionId: string;
   members: CalendarEventMember[];
   isRecurring: boolean;
-  memberPlanId?: number;
+  memberPlanId?: string;
 };
 
 export type CalendarEventMember = {
-  memberId?: number;
+  memberId?: string;
   name: string;
   avatar?: string | null;
 };

@@ -136,6 +136,8 @@ export async function GET(
           recurringId: rr.id,
           isRecurring: true,
           startOn: new Date(currentDateString),
+          id: rr.id,
+          endOn: undefined
         });
         currentDate = addDays(currentDate, (rr.intervalThreshold || 1) * 7);
       }

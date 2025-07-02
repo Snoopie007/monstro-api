@@ -146,7 +146,9 @@ export async function GET(
             recurring;
           const vr: Reservation = {
             ...rest,
-            startOn: currentDate.toISOString().split("T")[0],
+            startOn: currentDate,
+            id: recurring.id,
+            endOn: new Date(currentDate.getTime() + (recurring.session?.duration || 0) * 60000),
           };
           addEventToCalendar(events, vr, recurring.id);
         }

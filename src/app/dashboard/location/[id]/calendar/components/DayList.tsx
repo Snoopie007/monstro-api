@@ -122,7 +122,7 @@ export function DayList({
                       handleRemoveReservation(c, memberId)
                     }
                     lid={lid}
-                    rid={c.data.reservationId ?? c.data.recurringId ?? 0}
+                    rid={c.data.reservationId ?? c.data.recurringId ?? ""}
                   />
                 </div>
                 <div className="flex flex-row items-center gap-2 text-xs">
