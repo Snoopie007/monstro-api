@@ -7,7 +7,7 @@ export const sales = pgTable("sales", {
     lastName: text("last_name").notNull(),
     email: text("email").notNull(),
     phone: text("phone").notNull(),
-    locationId: integer("location_id"),
+    locationId: text("location_id"),
     userId: integer("user_id"),
     planId: integer("plan_id"),
     packageId: integer("package_id"),

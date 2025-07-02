@@ -19,7 +19,7 @@ interface AddReservationProps {
   event?: CalendarEvent;
   onRemoveReservation?: (memberId: string) => void;
   lid: string;
-  rid: number;
+  rid: string;
 }
 
 export function AddReservation({ event, onRemoveReservation, lid, rid }: AddReservationProps) {

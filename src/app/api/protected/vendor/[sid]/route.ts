@@ -130,10 +130,8 @@ export async function POST(req: Request) {
             updated: today
         }).where(eq(sales.id, saleId));
 
-        const encodedId = encodeId(location.id)
 
-
-        return NextResponse.json({ ...location, id: encodedId, status: "active" }, { status: 200 })
+        return NextResponse.json({ ...location, id: location.id, status: "active" }, { status: 200 })
     } catch (err) {
         return NextResponse.json({ error: err instanceof Error ? err.message : "An unknown error occurred" }, { status: 500 })
     }

@@ -651,7 +651,7 @@ class MemberStripePayments extends BaseStripePayments {
 }
 
 
-async function getStripeCustomer(params: { id: number, mid: number }) {
+async function getStripeCustomer(params: { id: string, mid: string }) {
 
     const member = await db.query.members.findFirst({
         where: (member, { eq }) => eq(member.id, params.mid)
@@ -664,7 +664,7 @@ async function getStripeCustomer(params: { id: number, mid: number }) {
     const integration = await db.query.integrations.findFirst({
         where: (integration, { eq, and }) => and(eq(integration.locationId, params.id), eq(integration.service, "stripe")),
         columns: {
-            integrationId: true
+            accountId: true
         }
     })
 
@@ -672,7 +672,7 @@ async function getStripeCustomer(params: { id: number, mid: number }) {
         throw new Error("Integration not found")
     }
 
-    const stripe = new MemberStripePayments(integration.integrationId).setCustomer(member.stripeCustomerId);
+    const stripe = new MemberStripePayments(integration.accountId).setCustomer(member.stripeCustomerId);
     return stripe
 }
 

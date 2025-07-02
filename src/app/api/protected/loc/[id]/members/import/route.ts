@@ -78,8 +78,8 @@ export async function POST(
         lastName: record[fieldMapping.lastName],
         email: email,
         phone: formattedPhone.number,
-        lastRenewalDay: lastRenewalDate,
-        planId: planId ? Number(planId) : null,
+        lastRenewalDay: new Date(lastRenewalDate),
+        planId: planId ? planId.toString() : null,
         locationId: params.id,
       });
     }
