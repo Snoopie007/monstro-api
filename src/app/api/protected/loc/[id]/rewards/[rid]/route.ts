@@ -6,8 +6,8 @@ import S3Bucket from '@/libs/server/s3';
 
 
 type RewardProps = {
-	rid: number,
-	id: number
+	rid: string,
+	id: string
 }
 
 const s3 = new S3Bucket();

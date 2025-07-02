@@ -1,14 +1,13 @@
-
 export function generateContractHtml(data: {
-    contract: Record<string, any>;
-    memberName: string;
-    date: string;
-    contractId: number;
+  contract: Record<string, any>;
+  memberName: string;
+  date: string;
+  contractId: string;
 }): string {
-    const member = data.contract.variables.contact;
-    const location = data.contract.variables.location;
+  const member = data.contract.variables.contact;
+  const location = data.contract.variables.location;
 
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
   <html lang="en">
   <head>
       <meta charset="UTF-8">

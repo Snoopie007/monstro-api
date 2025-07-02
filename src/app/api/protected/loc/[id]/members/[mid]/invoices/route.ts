@@ -3,8 +3,8 @@ import {NextRequest, NextResponse} from "next/server";
 import {db} from "@/db/db";
 
 type InvoiceProps = {
-  mid: number;
-  id: number;
+  mid: string;
+  id: string;
 };
 
 export async function GET(

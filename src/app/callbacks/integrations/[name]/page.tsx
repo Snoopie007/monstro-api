@@ -96,6 +96,7 @@ async function completeIntegration(
         ...newIntegration,
         locationId: location.id,
         service: name,
+        accountId: newIntegration.accountId || "",
       })
       .onConflictDoUpdate({
         target: [integrations.locationId, integrations.service],

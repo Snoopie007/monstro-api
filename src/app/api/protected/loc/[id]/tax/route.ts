@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 
 type Props = {
-    params: Promise<{ id: number }>
+    params: Promise<{ id: string }>
 }
 
 

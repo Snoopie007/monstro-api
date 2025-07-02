@@ -211,7 +211,7 @@ export async function getAccessToken(integration: Integration | AdminIntegration
 
 	const tokens = await refreshTokens(
 		integration.refreshToken,
-		'integrationId' in integration ? integration.integrationId : undefined
+		'integrationId' in integration ? (integration.integrationId as string) : undefined
 	);
 	return tokens.access_token;
 }

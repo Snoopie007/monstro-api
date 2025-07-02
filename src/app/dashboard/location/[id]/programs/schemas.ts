@@ -2,7 +2,7 @@
 import { z } from "zod";
 
 const SessionSchema = z.object({
-    id: z.coerce.number().optional(),
+    id: z.string().optional(),
     day: z.coerce.number().min(1, { message: " required" }).max(7, { message: "required" }),
     time: z.string().min(1, { message: "required" }),
     duration: z.coerce.number().min(1, { message: "required" }),

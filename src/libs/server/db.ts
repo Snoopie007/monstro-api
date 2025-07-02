@@ -125,7 +125,7 @@ async function chargeWallet(location: Location, amount: number, description: str
 	}
 }
 
-function getSessionState(session: ProgramSession, mid: number) {
+function getSessionState(session: ProgramSession, mid: string) {
 	const reservations = session.reservations?.length ?? 0;
 	let recurringReservations = 0;
 	if (session.recurringReservations && session.recurringReservations.length > 0) {

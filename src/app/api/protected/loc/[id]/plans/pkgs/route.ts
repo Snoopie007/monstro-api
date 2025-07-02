@@ -4,7 +4,7 @@ import { db } from '@/db/db';
 import { memberPlans, planPrograms } from '@/db/schemas';
 
 
-export async function GET(req: NextRequest, props: { params: Promise<{ id: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     try {
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
     }
 }
 
-export async function POST(req: Request, props: { params: Promise<{ id: number, pid: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string, pid: string }> }) {
     const params = await props.params;
 
     const { amount, programs, ...data } = await req.json()

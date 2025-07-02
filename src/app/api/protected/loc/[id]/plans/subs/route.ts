@@ -4,9 +4,8 @@ import { db } from '@/db/db';
 import { memberPlans, planPrograms } from '@/db/schemas';
 import { and } from 'drizzle-orm';
 import { MemberStripePayments } from '@/libs/server/stripe';
-import { encodeId } from '@/libs/server/sqids';
 
-export async function GET(req: NextRequest, props: { params: Promise<{ id: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
 
     try {
@@ -28,7 +27,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
-export async function POST(req: Request, props: { params: Promise<{ id: number, pid: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string, pid: string }> }) {
     const params = await props.params;
 
     const { amount, programs, ...data } = await req.json()
@@ -50,7 +49,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
         
         const stripePrice = await stripe.createStripeProduct(
             { ...data, price: formatedAmount, programId: params.pid },
-            { locationId: encodeId(params.id), planId: data.id, vendorAccountId: integration.integrationId }
+            { locationId: params.id, planId: data.id, vendorAccountId: integration.accountId }
         )
 
         if (!stripePrice) {

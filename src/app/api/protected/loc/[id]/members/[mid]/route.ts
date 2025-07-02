@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 
-export async function GET(req: Request, props: { params: Promise<{ mid: number, id: number }> }) {
+export async function GET(req: Request, props: { params: Promise<{ mid: string, id: string }> }) {
 	const params = await props.params;
 	try {
 		const member = await db.query.members.findFirst({

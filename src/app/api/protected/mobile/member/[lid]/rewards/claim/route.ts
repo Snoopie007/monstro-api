@@ -6,7 +6,7 @@ import { memberRewards, members } from '@/db/schemas';
 import { eq } from 'drizzle-orm';
 
 
-export async function POST(req: NextRequest, props: { params: Promise<{ lid: number }> }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ lid: string }> }) {
   const params = await props.params;
   const data: any = await req.json()
   try {
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ lid: num
     const authMember = authenticateMember(req);
     const memberId = authMember.member?.id;
     const member = await db.query.members.findFirst({
-      where: (members, { eq }) => eq(members.id, Number(memberId)),
+      where: (members, { eq }) => eq(members.id, memberId),
     });
 
     if (!member) {
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ lid: num
       where: (reward, { eq, and }) => and(eq(reward.locationId, params.lid), eq(reward.id, data.rewardId)),
       with: {
         claims: {
-          where: (claims, { eq }) => eq(claims.memberId, Number(memberId)),
+          where: (claims, { eq }) => eq(claims.memberId, memberId),
         },
       },
     });
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ lid: num
 
     await db.transaction(async (trx) => {
       const [rewardClaim] = await trx.insert(memberRewards).values({
-        memberId: Number(memberId),
+        memberId: memberId,
         rewardId: reward.id,
         previousPoints: member.currentPoints,
         status: 1,

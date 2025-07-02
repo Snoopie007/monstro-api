@@ -6,8 +6,8 @@ import {NextRequest, NextResponse} from "next/server";
 import {encodeId} from "@/libs/server/sqids";
 
 type PackageProps = {
-  id: number;
-  mid: number;
+  id: string;
+  mid: string;
 };
 
 export async function GET(
@@ -93,7 +93,7 @@ export async function POST(
           planId: plan.id,
           tax,
           startDate: newPkg.startDate,
-          locationId: encodeId(params.id),
+          locationId: params.id,
           memberId: params.mid,
         },
       });

@@ -54,7 +54,7 @@ export default function SessionActions({ session, lid }: SessionActionsProps) {
         return session.reservations && session.reservations.length > 0
     }
 
-    async function onDelete(lid: number) {
+    async function onDelete(lid: string) {
         if (!lid) return
 
         setLoading(true)
@@ -159,5 +159,5 @@ export default function SessionActions({ session, lid }: SessionActionsProps) {
                 </DialogContent>
             </Dialog>
         </div>
-    )
+  );
 }

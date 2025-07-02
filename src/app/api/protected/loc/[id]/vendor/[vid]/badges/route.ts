@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 
-export async function POST(req: Request, props: { params: Promise<{ vid: number, id: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ vid: string, id: string }> }) {
     const params = await props.params;
     const data = await req.json()
 

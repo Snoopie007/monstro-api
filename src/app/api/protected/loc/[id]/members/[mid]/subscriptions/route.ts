@@ -17,7 +17,7 @@ interface SubscriptionUpdates {
     metadata?: Record<string, any>;
 }
 
-export async function GET(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string, mid: string }> }) {
     const params = await props.params;
 
     try {
@@ -46,7 +46,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number, m
 }
 
 
-export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string, mid: string }> }) {
     const params = await props.params;
     const { stripePaymentMethod, hasIncompletePlan, other, trialDays, ...data } = await req.json();
     try {
@@ -152,7 +152,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
 
 
 
-export async function PATCH(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string, mid: string }> }) {
     const params = await props.params;
     const { planId, stripePaymentMethod, trialDays, allowProration, cancelAt, metadata, ...data } = await req.json();
     console.log("Updating subscription for member:", params.mid, "at location:", params.id, "with data:", data, "and plan:", planId, "allowProration:", allowProration, "cancelAt:", cancelAt, "trialDays:", trialDays, "metadata:", metadata);

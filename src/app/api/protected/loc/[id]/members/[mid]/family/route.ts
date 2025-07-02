@@ -12,8 +12,8 @@ import { EmailSender } from '@/libs/server/emails';
 
 
 type Props = {
-    mid: number,
-    id: number
+    mid: string,
+    id: string
 }
 const emailSender = new EmailSender();
 export async function GET(req: Request, props: { params: Promise<Props> }) {

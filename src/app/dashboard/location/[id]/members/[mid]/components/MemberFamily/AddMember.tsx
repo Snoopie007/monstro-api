@@ -119,7 +119,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                         )}
                         {step === 2 && (
                             <SearchMember
-                                parentId={parent.id!}
+                                parentId={parent.id}
                                 lid={lid}
                                 familyMember={familyMember}
                                 setFamilyMember={setFamilyMember}

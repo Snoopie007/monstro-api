@@ -10,7 +10,7 @@ import {
 
 export async function DELETE(
   req: NextRequest,
-  props: {params: Promise<{lid: number; rid: number; mid: number}>}
+  props: {params: Promise<{lid: string; rid: string; mid: string}>}
 ) {
   const params = await props.params;
 
@@ -19,8 +19,8 @@ export async function DELETE(
       where: (r, {eq, and}) =>
         and(
           eq(r.id, params.rid),
-          eq(r.memberId, Number(params.mid)),
-          eq(r.locationId, Number(params.lid))
+          eq(r.memberId, params.mid),
+          eq(r.locationId, params.lid)
         ),
       with: {
         session: {

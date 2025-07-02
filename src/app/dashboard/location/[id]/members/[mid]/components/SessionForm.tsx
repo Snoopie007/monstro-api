@@ -25,7 +25,7 @@ export type SubPackageProgress = {
 }
 
 export type SessionFormProps = {
-    params: { id: string, mid: number },
+    params: { id: string, mid: string },
     progress: SubPackageProgress,
 }
 
@@ -43,7 +43,7 @@ export function SessionForm({ params, progress }: SessionFormProps) {
     const [loading, setLoading] = useState(false);
     const [sessionsLoading, setSessionsLoading] = useState(false);
     const [groupedSessions, setGroupedSessions] = useState<Map<number, ProgramSession[]>>(new Map());
-    const [sessionIds, setSessionIds] = useState<number[]>([]);
+    const [sessionIds, setSessionIds] = useState<string[]>([]);
     const [selectedDay, setSelectedDay] = useState<number>(1);
     const [filteredSessions, setFilteredSessions] = useState<ProgramSession[]>([]);
     const [originalSessions, setOriginalSessions] = useState<ProgramSession[]>([]);
@@ -94,7 +94,7 @@ export function SessionForm({ params, progress }: SessionFormProps) {
     }
 
 
-    function handleSessionSelection(sessionId: number) {
+    function handleSessionSelection(sessionId: string) {
         setSessionIds(prev => {
             /* If session is already selected, remove it */
             if (prev.includes(sessionId)) {
@@ -176,7 +176,7 @@ export function SessionForm({ params, progress }: SessionFormProps) {
                                         <SessionItem
                                             key={session.id}
                                             session={session}
-                                            isSelected={sessionIds.includes(session.id as number)}
+                                            isSelected={sessionIds.includes(session.id)}
                                             isFull={isFull(session)}
                                             handleSessionSelection={handleSessionSelection}
                                             sessionIds={sessionIds}
@@ -235,10 +235,10 @@ export function SessionForm({ params, progress }: SessionFormProps) {
 interface SessionItemProps {
     session: ProgramSession,
     isSelected: boolean,
-    sessionIds: number[],
+    sessionIds: string[],
     progress: SubPackageProgress,
     isFull: boolean,
-    handleSessionSelection: (sessionId: number) => void,
+    handleSessionSelection: (sessionId: string) => void,
 }
 
 function SessionItem({ session, isFull, handleSessionSelection, sessionIds, progress }: SessionItemProps) {
@@ -248,13 +248,13 @@ function SessionItem({ session, isFull, handleSessionSelection, sessionIds, prog
             key={session.id}
             className={cn(
                 "text-sm space-y-0.5 cursor-pointer hover:bg-indigo-500/40 py-2 px-3 rounded-sm bg-background border border-foreground/10",
-                sessionIds.includes(session.id as number) && "bg-indigo-500/40 border-indigo-500",
+                sessionIds.includes(session.id) && "bg-indigo-500/40 border-indigo-500",
                 "group data-[full=true]:opacity-50  data-[full=true]:cursor-not-allowed data-[full=true]:hover:bg-background"
             )}
             data-full={isFull}
             onClick={() => {
                 if (!isFull) {
-                    handleSessionSelection(session.id as number)
+                    handleSessionSelection(session.id)
                 }
             }}
         >
@@ -279,5 +279,5 @@ function SessionItem({ session, isFull, handleSessionSelection, sessionIds, prog
             </div>
 
         </div>
-    )
+  );
 }

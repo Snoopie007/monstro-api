@@ -12,15 +12,15 @@ import {MemberSubscription, Reservation} from "@/types";
 import {addDays} from "date-fns";
 
 type MemberReservationProps = {
-  params: Promise<{id: number}>;
+  params: Promise<{id: string}>;
 };
 type Params = {
-  lid: number;
+  lid: string;
 };
 
 export async function GET(
   request: NextRequest,
-  props: {params: Promise<{lid: number}>}
+  props: {params: Promise<{lid: string}>}
 ) {
   const {searchParams} = new URL(request.url);
   const sessionIds = searchParams.get("sessionIds");
@@ -35,10 +35,8 @@ export async function GET(
       return NextResponse.json({error: "Unauthorized"}, {status: 401});
     }
 
-    const locationId = Number(params.lid);
-    if (isNaN(locationId)) {
-      return NextResponse.json({error: "Invalid location ID"}, {status: 400});
-    }
+    const locationId = params.lid;
+
 
     if (!date) {
       return NextResponse.json({error: "Date is required"}, {status: 400});
@@ -54,7 +52,7 @@ export async function GET(
     //console.log("Resolved IDs => memberId:", authMember.member.id, "locationId:", locationId);
 
     // Parse session IDs if provided
-    const ids = sessionIds.split(",").map((id) => parseInt(id));
+    const ids = sessionIds.split(",").map((id) => id);
 
     const startDate = new Date(date).toISOString();
     const endDate = addDays(startDate, 6);
@@ -63,7 +61,7 @@ export async function GET(
       where: (reservations, {and, between, inArray}) =>
         and(
           inArray(reservations.sessionId, ids),
-          between(reservations.startOn, startDate, endDate.toISOString()),
+          between(reservations.startOn, new Date(startDate), new Date(endDate)),
           isNull(reservations.endOn)
         ),
     });
@@ -72,7 +70,7 @@ export async function GET(
     const subscription = await db.query.memberSubscriptions.findFirst({
       where: (s, {and, eq}) =>
         and(
-          eq(s.memberId, Number(authMember.member.id)),
+          eq(s.memberId, authMember.member.id),
           eq(s.locationId, locationId),
           eq(s.status, "active")
         ),
@@ -90,7 +88,7 @@ export async function GET(
       where: (rr, {and, gte, or, isNull, lte, inArray}) =>
         and(
           inArray(rr.sessionId, ids),
-          lte(rr.startDate, startDate),
+          lte(rr.startDate, new Date(startDate)),
           or(isNull(rr.canceledOn), gte(rr.canceledOn, startDate))
         ),
       with: {
@@ -118,11 +116,11 @@ export async function GET(
       while (currentDate <= endDate) {
         const currentDateString = currentDate.toISOString().split("T")[0];
         const exception = rr.exceptions?.find(
-          (e) => e.occurrenceDate === currentDateString
+          (e) => e.occurrenceDate === new Date(currentDateString)
         );
         const existingReservation = reservations.find((r) => {
           return (
-            r.startOn === currentDateString && r.sessionId === rr.sessionId
+            r.startOn === new Date(currentDateString) && r.sessionId === rr.sessionId
           );
         });
 
@@ -137,7 +135,7 @@ export async function GET(
           ...rest,
           recurringId: rr.id,
           isRecurring: true,
-          startOn: currentDateString,
+          startOn: new Date(currentDateString),
         });
         currentDate = addDays(currentDate, (rr.intervalThreshold || 1) * 7);
       }
@@ -162,7 +160,7 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
   const {startDate, sessionId, memberPlanId, ...rest} = await req.json();
   const {lid} = await props.params;
   const authMember = authenticateMember(req);
-  const mid = Number(authMember.member.id);
+  const mid = authMember.member.id;
 
   console.log(startDate, sessionId, rest);
 
@@ -285,7 +283,7 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
           memberId: mid,
           locationId: lid,
           sessionId: sessionId,
-          startOn: startDate.split("T")[0],
+          startOn: new Date(startDate.split("T")[0]),
           memberSubscriptionId: memberSub?.id,
           memberPackageId: memberPkg?.id,
         })
@@ -298,7 +296,7 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
           memberId: mid,
           locationId: lid,
           sessionId: sessionId,
-          startDate: startDate.split("T")[0],
+          startDate: new Date(startDate.split("T")[0]),
           memberSubscriptionId: memberSub?.id,
           memberPackageId: memberPkg?.id,
         })
@@ -306,7 +304,7 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
       const {id, intervalThreshold, interval, ...rest} = rr[0];
       reservation = {
         ...rest,
-        startOn: startDate.split("T")[0],
+        startOn: new Date(startDate.split("T")[0]),
         isRecurring: true,
         recurringId: id,
       };

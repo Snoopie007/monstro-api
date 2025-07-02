@@ -8,7 +8,7 @@ import { EmailSender } from '@/libs/server/emails';
 import { authenticateMember } from '@/libs/utils';
 
 type Props = {
-    lid: number
+    lid: string
 }
 const emailSender = new EmailSender();
 export async function GET(req: NextRequest, props: { params: Promise<Props> }) {
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, props: { params: Promise<Props> }) {
         const authMember = authenticateMember(req);
         const memberId = authMember.member?.id;
         const member = await db.query.members.findFirst({
-            where: (members, { eq }) => eq(members.id, Number(memberId)),
+            where: (members, { eq }) => eq(members.id, memberId),
         });
 
         if (!member) {

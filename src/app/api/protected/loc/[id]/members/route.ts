@@ -6,7 +6,7 @@ import { memberLocations, members, users } from '@/db/schemas';
 import { formatPhoneNumber } from '@/libs/server/db';
 import { encodeReferralCode } from '@/libs/server/sqids';
 
-export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
 	const params = await props.params;
 
 	const { searchParams } = new URL(req.url);
@@ -81,7 +81,7 @@ const INCOMPLETE_PLAN = {
 	completedSteps: []
 }
 
-export async function POST(req: NextRequest, props: { params: Promise<{ id: number }> }) {
+	export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
 	const params = await props.params;
 	const { invite, ...data } = await req.json();
 

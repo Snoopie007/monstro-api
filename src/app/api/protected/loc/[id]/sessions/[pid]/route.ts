@@ -5,7 +5,7 @@ import { NextResponse, NextRequest } from "next/server";
 
 
 
-export async function GET(req: NextRequest, props: { params: Promise<{ pid: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ pid: string }> }) {
   const params = await props.params;
   const { pid } = params;
   console.log("params", params);

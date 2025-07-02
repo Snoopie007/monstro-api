@@ -4,7 +4,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
 import { programSessions, reservations } from "@/db/schemas";
 
-export async function GET(req: NextRequest, props: { params: Promise<{ lid: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ lid: string }> }) {
     try {
         const params = await props.params;
         const authMember = authenticateMember(req);
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
 
         const subscriptions = await db.query.memberSubscriptions.findMany({
                     where: (memberSubscriptions, { eq, and }) => and(
-                        eq(memberSubscriptions.memberId, Number(authMember.member?.id)),
+                        eq(memberSubscriptions.memberId, authMember.member?.id),
                         eq(memberSubscriptions.locationId, params.lid),
                         eq(memberSubscriptions.status, 'active')
                     ),
@@ -82,7 +82,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
 
                 const packages = await db.query.memberPackages.findMany({
                     where: (memberPackages, { eq, and }) => and(
-                        eq(memberPackages.memberId, Number(authMember.member?.id)),
+                        eq(memberPackages.memberId, authMember.member?.id),
                         eq(memberPackages.locationId, params.lid),
                         eq(memberPackages.status, 'active')
                     ),

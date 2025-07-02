@@ -293,5 +293,5 @@ export function FamilyMemberForm({ familyMember, familyPlans, parent, lid, reset
 
         </>
 
-    )
+  );
 }
