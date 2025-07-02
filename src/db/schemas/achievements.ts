@@ -1,8 +1,8 @@
 import { relations, sql } from "drizzle-orm";
-import { text, timestamp, pgTable, integer, uuid } from "drizzle-orm/pg-core";
+import { text, timestamp, pgTable, integer, primaryKey, uuid, serial } from "drizzle-orm/pg-core";
 
 import { locations } from "./locations";
-import { memberAchievements, memberPointsHistory, members } from "./members";
+import { memberAchievements, memberPointsHistory } from "./members";
 
 export const achievements = pgTable("achievements", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -10,33 +10,54 @@ export const achievements = pgTable("achievements", {
     description: text("description").notNull(),
     badge: text("badge").notNull(),
     locationId: text("location_id").references(() => locations.id, { onDelete: "cascade" }).notNull(),
-    requiredActionCount: integer("required_action_count").notNull(),
-    points: integer("points").notNull(),
+    requiredCount: integer("required_count").notNull(),
+    awardedPoints: integer("awarded_points").notNull(),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 });
 
 
 export const achievementTriggers = pgTable("achievement_triggers", {
-    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
-    achievementId: text("achievement_id").references(() => achievements.id, { onDelete: "cascade" }).notNull(),
-    type: text("type").notNull(),
-    weight: integer("weight").notNull(),
-    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp('updated_at', { withTimezone: true }),
+    id: serial("id").primaryKey().notNull(),
+    name: text("name").notNull().unique()
 });
 
 
+export const triggeredAchievements = pgTable("triggered_achievements", {
+    achievementId: text("achievement_id").references(() => achievements.id, { onDelete: "cascade" }).notNull(),
+    triggerId: integer("trigger_id").references(() => achievementTriggers.id, { onDelete: "cascade" }).notNull(),
+    weight: integer("weight").notNull(),
+    timePeriod: integer("time_period"),
+    timePeriodUnit: text("time_period_unit", { enum: ["day", "week", "month", "year"] }).notNull()
+}, (table) => [primaryKey({ columns: [table.achievementId, table.triggerId] })]);
 
-export const achievementsRelations = relations(achievements, ({ many }) => ({
+
+
+export const achievementsRelations = relations(achievements, ({ many, one }) => ({
     members: many(memberAchievements),
-    triggers: many(achievementTriggers),
+    trigger: one(triggeredAchievements, {
+        fields: [achievements.id],
+        references: [triggeredAchievements.achievementId],
+    }),
     pointsHistory: many(memberPointsHistory),
 }));
 
-export const achievementTriggersRelations = relations(achievementTriggers, ({ one }) => ({
+export const triggeredAchievementsRelations = relations(triggeredAchievements, ({ one, many }) => ({
     achievement: one(achievements, {
-        fields: [achievementTriggers.achievementId],
+        fields: [triggeredAchievements.achievementId],
         references: [achievements.id],
-    })
+    }),
+    trigger: one(achievementTriggers, {
+        fields: [triggeredAchievements.triggerId],
+        references: [achievementTriggers.id],
+    }),
 }));
+
+export const achievementTriggersRelations = relations(achievementTriggers, ({ many }) => ({
+    triggeredAchievements: many(triggeredAchievements)
+}));
+
+
+
+
+

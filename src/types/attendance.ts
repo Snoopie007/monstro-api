@@ -4,10 +4,8 @@ import { Member } from "./member";
 
 
 export type Attendance = typeof attendances.$inferSelect & {
-
     recurring?: RecurringReservation
     reservation?: Reservation
-
 };
 
 export type ExtendedAttendance = Attendance & {

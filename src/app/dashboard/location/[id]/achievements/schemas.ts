@@ -4,6 +4,15 @@ export const AchievementSchema = z.object({
     name: z.string(),
     description: z.string(),
     badge: z.string(),
-    points: z.number(),
-    requiredActionCount: z.number(),
+    awardedPoints: z.number(),
+    requiredCount: z.number(),
+
+});
+
+export const TriggerSchema = z.object({
+    triggerId: z.string(),
+    weight: z.number().optional().default(1),
+    timePeriod: z.number().optional(),
+    timePeriodUnit: z.string().optional().default('day'),
+    planId: z.string().optional(),
 });

@@ -504,7 +504,7 @@ CREATE INDEX IF NOT EXISTS idx_check_ins_check_in_time ON check_ins (check_in_ti
 
 
 CREATE TABLE IF NOT EXISTS achievements (
-  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('ach_'),
   name text NOT NULL,
   description text NOT NULL,
   badge text NOT NULL,
@@ -516,11 +516,16 @@ CREATE TABLE IF NOT EXISTS achievements (
 );
 
 CREATE TABLE IF NOT EXISTS achievement_triggers (
-  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
-  type text NOT NULL,
+  id serial PRIMARY KEY UNIQUE NOT NULL,
+  name text NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS triggered_achievements (
+  trigger_id integer REFERENCES achievement_triggers (id) ON DELETE CASCADE NOT NULL,
   achievement_id text REFERENCES achievements (id) ON DELETE CASCADE NOT NULL,
   weight integer NOT NULL,
-  CONSTRAINT unique_achievement_trigger UNIQUE (achievement_id, type)
+  time_period integer,
+  time_period_unit enum('day', 'week', 'month', 'year')
 );
 
 
@@ -534,9 +539,6 @@ CREATE TABLE IF NOT EXISTS member_achievements (
   updated_at timestamp with time zone
 );
 
-
-CREATE INDEX IF NOT EXISTS idx_achievement_actions_achievement_id ON achievement_actions (achievement_id);
-CREATE INDEX IF NOT EXISTS idx_achievement_actions_action_id ON achievement_actions (action_id);
 
 
 CREATE TABLE IF NOT EXISTS rewards (

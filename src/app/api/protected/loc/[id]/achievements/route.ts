@@ -8,7 +8,10 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 
     try {
         const achievements = await db.query.achievements.findMany({
-            where: (achievements, { eq }) => eq(achievements.locationId, params.id)
+            where: (achievements, { eq }) => eq(achievements.locationId, params.id),
+            with: {
+                trigger: true,
+            }
         })
         return NextResponse.json(achievements, { status: 200 });
     } catch (err) {
@@ -33,20 +36,17 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
             badgeUrl = result?.url || null;
         }
 
-        await db.transaction(async (trx) => {
-            const [achievement] = await trx.insert(achievements).values({
-                badge: badgeUrl || '',
-                name: data.get('name') as string,
-                description: data.get('description') as string,
-                points: Number(data.get('points')),
-                requiredActionCount: Number(data.get('requiredActionCount')),
-                locationId: params.id,
-            }).returning({ id: achievements.id });
+        const [achievement] = await db.insert(achievements).values({
+            badge: badgeUrl || '',
+            name: data.get('name') as string,
+            description: data.get('description') as string,
+            awardedPoints: Number(data.get('awardedPoints')),
+            requiredCount: Number(data.get('requiredCount')),
+            locationId: params.id,
+        }).returning();
 
 
-        });
-
-        return NextResponse.json({ success: true }, { status: 200 });
+        return NextResponse.json(achievement, { status: 200 });
 
     } catch (err) {
         console.log(err);

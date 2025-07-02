@@ -76,18 +76,7 @@ export type ImportMember = typeof importMembers.$inferSelect & {
 
 }
 
-export type MemberPointsHistory = {
-  id: string;
-  memberId: string;
-  locationId: string;
-  points: number;
-  type: string;
-  removed: boolean;
-  removedReason: string | null;
-  removedOn: Date | null;
-  created: Date;
-  updated: Date | null;
-};
+
 
 export type MemberReferral = typeof memberReferrals.$inferSelect & {
   member?: Member;

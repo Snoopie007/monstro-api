@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
-import { auth } from "@/auth";
-import { db } from '@/db/db';
-import { achievements, achievementsActions } from '@/db/schemas';
+
 import S3Bucket from "@/libs/server/s3";
 
 export async function GET(req: Request,) {
 
-  try {
-    const s3 = new S3Bucket();
-    const badges = await s3.listImages('badges');
-    return NextResponse.json(badges);
-  } catch (error) {
-    console.error('Error fetching badges:', error);
-    return NextResponse.json({ error: 'Failed to fetch badges' }, { status: 500 });
-  }
-  
+	try {
+		const s3 = new S3Bucket();
+		const badges = await s3.listImages('badges');
+
+		return NextResponse.json(badges);
+	} catch (error) {
+		console.error('Error fetching badges:', error);
+		return NextResponse.json({ error: 'Failed to fetch badges' }, { status: 500 });
+	}
+
 }

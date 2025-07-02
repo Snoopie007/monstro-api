@@ -1,13 +1,26 @@
-import { achievements, achievementTriggers } from "@/db/schemas";
+import { achievements, achievementTriggers, memberPointsHistory, triggeredAchievements } from "@/db/schemas";
 import { Member } from "./member";
 
 
 
-export type Trigger = typeof achievementTriggers.$inferSelect & {
-    achievement: Achievement
-}
+export type AchievementTrigger = typeof achievementTriggers.$inferSelect
+
+
 
 export type Achievement = typeof achievements.$inferSelect & {
-    triggers?: Trigger[],
+    trigger?: TriggeredAchievement,
     members?: Member[]
 }
+
+
+export type TriggeredAchievement = typeof triggeredAchievements.$inferSelect & {
+    achievement?: Achievement,
+    trigger?: AchievementTrigger,
+}
+
+
+export type MemberPointsHistory = typeof memberPointsHistory.$inferSelect & {
+    member?: Member,
+    location?: Location,
+    achievement?: Achievement,
+};

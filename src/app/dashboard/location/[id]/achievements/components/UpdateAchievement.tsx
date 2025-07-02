@@ -14,7 +14,8 @@ import { toast } from 'react-toastify';
 import { AchievementSchema } from '../schemas';
 import { Achievement } from '@/types';
 import useSWR from 'swr';
-import { AchievementFields } from './AchievementFields';
+import { AchievementForm } from './AchievementForm';
+import { useState } from 'react';
 
 
 interface UpdateAchievementProps {
@@ -25,7 +26,7 @@ interface UpdateAchievementProps {
 
 export function UpdateAchievement({ lid, achievement }: UpdateAchievementProps) {
 	const { mutate } = useSWR(`/api/protected/achievements`);
-
+	const [open, setOpen] = useState(false);
 
 	const form = useForm<z.infer<typeof AchievementSchema>>({
 		resolver: zodResolver(AchievementSchema),
@@ -33,8 +34,8 @@ export function UpdateAchievement({ lid, achievement }: UpdateAchievementProps) 
 			name: achievement?.name ?? '',
 			description: achievement?.description ?? '',
 			badge: achievement?.badge ?? '',
-			points: achievement?.points ?? 0,
-			requiredActionCount: achievement?.requiredActionCount ?? 0,
+			awardedPoints: achievement?.awardedPoints ?? 0,
+			requiredCount: achievement?.requiredCount ?? 0,
 		},
 		mode: "onChange"
 	})
@@ -74,48 +75,42 @@ export function UpdateAchievement({ lid, achievement }: UpdateAchievementProps) 
 		toast.success("Achievement Saved");
 		form.reset();
 	}
+
+	function handleOpenChange(open: boolean) {
+		if (!open) {
+			form.reset();
+		}
+		setOpen(open);
+	}
+
 	return (
-		<div>
-			<Sheet open={!!achievement} onOpenChange={(setOpen) => {
-				if (!setOpen) {
-					form.reset();
-				}
-			}}>
-
-				<SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0">
-					<SheetHeader className=" border-b">
-						<SheetTitle className='text-base font-semibold'>
-							{achievement?.id ? 'Update Achievement' : 'Add Achievement'}
-						</SheetTitle>
-					</SheetHeader>
-					<ScrollArea className="h-[calc(100vh-150px)] w-full ">
-
-						<Form {...form}>
-							<AchievementFields form={form} />
-						</Form>
-					</ScrollArea>
-					<SheetFooter className='border-t py-3 px-4'>
-						<SheetClose asChild>
-							<Button
-								variant={"outline"} size={"xs"}
-								onClick={() => form.reset()}
-							>
-								Close
-							</Button>
-						</SheetClose>
-						<SheetClose asChild>
-							<Button
-								onClick={form.handleSubmit(submitForm)}
-								variant={"foreground"} size={"xs"}
-							>
-								Create
-							</Button>
-						</SheetClose>
-					</SheetFooter>
-
-
-				</SheetContent>
-			</Sheet >
-		</div >
+		<Sheet open={open} onOpenChange={handleOpenChange}>
+			<SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0">
+				<SheetHeader className=" border-b">
+					<SheetTitle className='text-base font-semibold'>
+						{achievement?.id ? 'Update Achievement' : 'Add Achievement'}
+					</SheetTitle>
+				</SheetHeader>
+				<AchievementForm lid={lid} onFinish={() => setOpen(false)} />
+				<SheetFooter className='border-t py-3 px-4'>
+					<SheetClose asChild>
+						<Button
+							variant={"outline"} size={"xs"}
+							onClick={() => form.reset()}
+						>
+							Close
+						</Button>
+					</SheetClose>
+					<SheetClose asChild>
+						<Button
+							onClick={form.handleSubmit(submitForm)}
+							variant={"foreground"} size={"xs"}
+						>
+							Update
+						</Button>
+					</SheetClose>
+				</SheetFooter>
+			</SheetContent>
+		</Sheet >
 	)
 }
