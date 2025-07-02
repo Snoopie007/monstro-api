@@ -5,9 +5,9 @@ import { ColumnDef } from "@tanstack/react-table";
 
 export const AchievementColumns = (): ColumnDef<Achievement, any>[] => [
     {
-        accessorKey: "title",
-        header: "Title",
-        id: "title",
+        accessorKey: "name",
+        header: "Name",
+        id: "name",
         cell: ({ row }) => {
             const achievement = row.original
             return (
@@ -41,14 +41,6 @@ export const AchievementColumns = (): ColumnDef<Achievement, any>[] => [
         accessorKey: "points",
         header: "Points",
 
-    },
-    {
-        accessorKey: "members",
-        header: "Member Count",
-        cell: ({ row }) => {
-            const achievement = row.original;
-            return <span>{achievement.members ? achievement.members.length : 0}</span>;
-        },
-    },
+    }
 
 ];

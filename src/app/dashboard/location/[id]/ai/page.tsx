@@ -1,13 +1,11 @@
 import { db } from "@/db/db";
 
-import { decodeId } from "@/libs/server/sqids";
-
 
 async function fetchLocation(lid: string) {
-    const decodedId = decodeId(lid);
+
     try {
         const location = await db.query.locations.findFirst({
-            where: (loc, { eq }) => eq(loc.id, decodedId),
+            where: (loc, { eq }) => eq(loc.id, lid),
 
         })
         return location;

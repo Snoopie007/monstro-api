@@ -19,13 +19,14 @@ import { toast } from 'react-toastify';
 import useSWR from 'swr';
 import { AchievementSchema } from '../schemas';
 import { AchievementFields } from './AchievementFields';
+import { useState } from 'react';
 
 
 
 
 export function CreateAchievement({ lid }: { lid: string }) {
     const { mutate } = useSWR(`/api/protected/achievements`);
-
+    const [open, setOpen] = useState(false);
     const form = useForm<z.infer<typeof AchievementSchema>>({
         resolver: zodResolver(AchievementSchema),
         defaultValues: {
@@ -72,22 +73,27 @@ export function CreateAchievement({ lid }: { lid: string }) {
         await mutate();
         toast.success("Achievement Saved");
         form.reset();
+        setOpen(false);
+    }
+
+    function handleOpenChange(open: boolean) {
+        if (!open) {
+            form.reset();
+        }
+        setOpen(open);
     }
     return (
         <div>
-            <Sheet open={true} onOpenChange={(setOpen) => {
-                if (!setOpen) {
-                    form.reset();
-                }
-            }}>
+            <Sheet open={open} onOpenChange={handleOpenChange}>
                 <SheetTrigger asChild>
-                    <Button variant={"foreground"} size={"sm"}>
+                    <Button size={"sm"} variant={"ghost"}
+                        className='flex-1 items-center gap-1 rounded-sm bg-foreground/10 hover:bg-foreground/10' >
                         Create Achievement
                     </Button>
                 </SheetTrigger>
 
-                <SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0">
-                    <SheetHeader className=" border-b">
+                <SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0 border-foreground/10">
+                    <SheetHeader className=" border-b border-foreground/10">
                         <SheetTitle className='text-base font-semibold'>
                             Create Achievement
                         </SheetTitle>
@@ -98,7 +104,7 @@ export function CreateAchievement({ lid }: { lid: string }) {
                             <AchievementFields form={form} />
                         </Form>
                     </ScrollArea>
-                    <SheetFooter className='border-t py-3 px-4'>
+                    <SheetFooter className='border-t border-foreground/10 py-3 px-4'>
                         <SheetClose asChild>
                             <Button
                                 variant={"outline"} size={"sm"}

@@ -20,16 +20,11 @@ import { Achievement } from '@/types';
 export default function Achievements(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { achievements, isLoading, error } = useAchievements(params.id);
-    const [filteredAchievements, setFilteredAchievements] = useState<Achievement[]>(achievements);
-
-    useEffect(() => {
-        setFilteredAchievements(achievements);
-    }, [achievements]);
 
 
     const columns = AchievementColumns();
     const table = useReactTable({
-        data: filteredAchievements,
+        data: achievements,
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
@@ -40,20 +35,20 @@ export default function Achievements(props: { params: Promise<{ id: string }> })
 
     return (
         <TablePage>
-            <TablePageHeader>
-                <TablePageHeaderTitle>Achievements</TablePageHeaderTitle>
+            <TablePageHeader className="px-4  border-b border-foreground/5">
+
+
                 <TablePageHeaderSection>
                     <Input
                         placeholder="Find a achievement..."
-                        // value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-                        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                        value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+                        onChange={(event) => {
                             const value = event.target.value;
-                            // table.getColumn("name")?.setFilterValue(value);
+                            table.getColumn("name")?.setFilterValue(value);
 
                         }}
-                        className="border text-xs h-auto py-1 border-foreground/10 rounded-xs"
+                        className="border  h-8.5 border-foreground/10 rounded-md w-auto"
                     />
-
                     <CreateAchievement lid={params.id} />
                 </TablePageHeaderSection>
             </TablePageHeader>

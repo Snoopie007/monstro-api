@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from "@/auth";
 import { db } from '@/db/db';
 import { achievements } from '@/db/schemas';
 import S3Bucket from "@/libs/server/s3";
@@ -9,21 +8,11 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 
     try {
         const achievements = await db.query.achievements.findMany({
-            where: (achievements, { eq }) => eq(achievements.locationId, params.id),
-            with: {
-                members: true,
-            }
-        }).then((achievements) =>
-            achievements.map((achievement) => ({
-                ...achievement,
-                // actions: achievement.actions.map(({ action, ...rest }) => ({
-                // 	...rest,
-                // 	...action, // Merge action object properties into the parent object
-                // })),
-            }))
-        )
+            where: (achievements, { eq }) => eq(achievements.locationId, params.id)
+        })
         return NextResponse.json(achievements, { status: 200 });
     } catch (err) {
+
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }

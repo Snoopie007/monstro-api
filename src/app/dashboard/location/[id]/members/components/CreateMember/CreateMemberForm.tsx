@@ -25,10 +25,7 @@ import { CreateMemberSchema } from '../../schema';
 import PhoneInput from 'react-phone-number-input/input';
 import { CountryCodes } from '@/libs/data';
 import { CountryCode, Member } from '@/types';
-import { format } from 'date-fns';
-import { Calendar } from '@/components/ui/calendar';
 import {
-    Popover, PopoverContent, PopoverTrigger,
     Avatar,
     AvatarFallback,
     AvatarImage
@@ -37,7 +34,6 @@ import {
 import useSWR from 'swr';
 import { toast } from 'react-toastify';
 import Link from 'next/link';
-import { CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { BirthdayField } from './DOBField';
 

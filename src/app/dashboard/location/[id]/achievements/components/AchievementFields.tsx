@@ -36,7 +36,7 @@ export function AchievementFields({ form }: { form: UseFormReturn<z.infer<typeof
                             <FormItem>
                                 <FormLabel size={'tiny'}> Description</FormLabel>
                                 <FormControl>
-                                    <Textarea className={cn('resize-none h-20')} placeholder="Description" {...field} />
+                                    <Textarea className={cn('resize-none h-20 border-foreground/10')} placeholder="Description" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
