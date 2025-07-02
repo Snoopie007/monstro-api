@@ -14,7 +14,11 @@ async function fetchAchievements(lid: string) {
         const achievements = await db.query.achievements.findMany({
             where: (achievements, { eq }) => eq(achievements.locationId, lid),
             with: {
-                trigger: true,
+                triggedAchievement: {
+                    with: {
+                        trigger: true,
+                    }
+                },
             }
         });
 

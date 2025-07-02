@@ -35,7 +35,7 @@ export const triggeredAchievements = pgTable("triggered_achievements", {
 
 export const achievementsRelations = relations(achievements, ({ many, one }) => ({
     members: many(memberAchievements),
-    trigger: one(triggeredAchievements, {
+    triggedAchievement: one(triggeredAchievements, {
         fields: [achievements.id],
         references: [triggeredAchievements.achievementId],
     }),

@@ -3,14 +3,18 @@ import { db } from '@/db/db';
 import { achievements } from '@/db/schemas';
 import S3Bucket from "@/libs/server/s3";
 
-export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
 
     try {
         const achievements = await db.query.achievements.findMany({
             where: (achievements, { eq }) => eq(achievements.locationId, params.id),
             with: {
-                trigger: true,
+                triggedAchievement: {
+                    with: {
+                        trigger: true,
+                    }
+                },
             }
         })
         return NextResponse.json(achievements, { status: 200 });

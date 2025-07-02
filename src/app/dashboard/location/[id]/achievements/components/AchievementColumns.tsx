@@ -1,7 +1,9 @@
-
+'use client'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui";
 import { Achievement } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
+import { UpdateAchievement } from ".";
+
 
 export const AchievementColumns = (): ColumnDef<Achievement, any>[] => [
     {
@@ -11,20 +13,23 @@ export const AchievementColumns = (): ColumnDef<Achievement, any>[] => [
         cell: ({ row }) => {
             const achievement = row.original
             return (
+                <div className="flex flex-row items-center justify-between w-[300px]">
 
-                <div className="flex flex-row items-center gap-2">
+                    <div className="flex flex-row items-center gap-2">
 
-                    <Avatar className="max-w-full flex items-center justify-center text-black-100 size-6 bg-foreground/5 rounded-full">
-                        <AvatarImage
-                            src={achievement.badge ? achievement.badge : ''}
-                        />
-                        <AvatarFallback className=" bg-foreground/5 text-foreground/50 text-xs size-6 ">
-                            {achievement.name.charAt(0)}
-                        </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-bold truncate max-w-[100px]">
-                        {achievement.name}
-                    </span>
+                        <Avatar className="max-w-full flex items-center justify-center text-black-100 size-6 bg-foreground/5 rounded-full">
+                            <AvatarImage
+                                src={achievement.badge ? achievement.badge : ''}
+                            />
+                            <AvatarFallback className=" bg-foreground/5 text-foreground/50 text-xs size-6 ">
+                                {achievement.name.charAt(0)}
+                            </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm font-bold truncate max-w-[150px]">
+                            {achievement.name}
+                        </span>
+                    </div>
+                    <UpdateAchievement achievement={achievement} />
                 </div>
             )
         },
@@ -53,6 +58,14 @@ export const AchievementColumns = (): ColumnDef<Achievement, any>[] => [
                 <span className="text-sm">{achievement.awardedPoints}</span>
             )
         }
+    },
+    {
+        accessorKey: "triggers",
+        header: "Trigger",
+        cell: ({ row }) => {
+            const achievement = row.original
+            const trigger = achievement.triggedAchievement?.trigger
+            return <span className="text-sm">{trigger?.name || 'None'}</span>
+        }
     }
-
 ];

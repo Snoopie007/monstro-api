@@ -8,7 +8,7 @@ export type AchievementTrigger = typeof achievementTriggers.$inferSelect
 
 
 export type Achievement = typeof achievements.$inferSelect & {
-    trigger?: TriggeredAchievement,
+    triggedAchievement?: TriggeredAchievement,
     members?: Member[]
 }
 

@@ -3,51 +3,106 @@
 import {
     Sheet, Button, SheetContent,
     SheetHeader, SheetTitle,
-    SheetTrigger
+    SheetTrigger,
+    SheetFooter,
+    SheetClose,
 } from '@/components/ui';
 
-import { AchievementForm, TriggerForm } from '.';
+import { AchievementForm } from '.';
 import { useState } from 'react';
 import { AchievementTrigger } from '@/types';
+import { AchievementSchema } from '../schemas';
+import { useForm } from 'react-hook-form';
+import { useAchievements } from '../providers';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'react-toastify';
+import { tryCatch } from '@/libs/utils';
+import { Loader2 } from 'lucide-react';
 
 interface CreateAchievementProps {
     lid: string;
-    triggers: AchievementTrigger[];
 }
 
-export function CreateAchievement({ lid, triggers }: CreateAchievementProps) {
+export function CreateAchievement({ lid }: CreateAchievementProps) {
 
     const [open, setOpen] = useState(false);
-    const [achievementId, setAchievementId] = useState<string | null>(null);
+    const { setAchievements } = useAchievements();
+
+    const form = useForm<z.infer<typeof AchievementSchema>>({
+        resolver: zodResolver(AchievementSchema),
+        defaultValues: {
+            name: '',
+            description: '',
+            badge: '',
+            awardedPoints: 0,
+            requiredCount: 0,
+
+        },
+        mode: "onChange"
+    })
+
+    async function onSubmit(v: z.infer<typeof AchievementSchema>) {
+        const formData = new FormData();
+
+        Object.entries(v).forEach(([key, value]) => {
+            if (key !== 'badge' && value !== undefined) {
+                formData.append(key, value.toString());
+            }
+        });
+
+
+        if (v.badge && v.badge.startsWith('blob:')) {
+            const blob = await fetch(v.badge).then(r => r.blob());
+            formData.append('file', blob, 'badge.png');
+        } else if (v.badge) {
+            formData.append('badge', v.badge);
+        }
+
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${lid}/achievements`, {
+                method: 'POST',
+                body: formData,
+            })
+        );
+
+        if (error || !result || !result.ok) {
+            toast.error("Something went wrong, please try again later");
+            return;
+        }
+        const data = await result.json();
+        setAchievements((prev) => [...prev, data]);
+        form.reset();
+        setOpen(false);
+    }
 
 
     return (
-        <div>
-            <Sheet open={open} onOpenChange={setOpen}>
-                <SheetTrigger asChild>
-                    <Button size={"sm"} variant={"ghost"}
-                        className='flex-1 items-center gap-1 rounded-sm bg-foreground/10 hover:bg-foreground/10' >
-                        Create Achievement
+        <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+                <Button size={"sm"} variant={"ghost"}
+                    className=' items-center gap-1 rounded-sm bg-foreground/10 hover:bg-foreground/10' >
+                    Create Achievement
+                </Button>
+            </SheetTrigger>
+
+            <SheetContent className="sm:max-w-[540px] sm:w-[540px] p-0 border-foreground/10">
+                <SheetHeader className="hidden">
+                    <SheetTitle className='hidden'></SheetTitle>
+                </SheetHeader>
+
+                <AchievementForm form={form} onSubmit={onSubmit} />
+                <SheetFooter className='border-t border-foreground/10 py-3 px-4'>
+                    <SheetClose asChild>
+                        <Button variant={"outline"} size={"sm"}>
+                            Cancel
+                        </Button>
+                    </SheetClose>
+                    <Button variant={"foreground"} size={"sm"} disabled={form.formState.isSubmitting} type='submit'>
+                        {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin' /> : 'Create'}
                     </Button>
-                </SheetTrigger>
-
-                <SheetContent className="sm:max-w-[540px] sm:w-[540px] p-0 border-foreground/10">
-                    <SheetHeader className="hidden">
-                        <SheetTitle className='hidden'></SheetTitle>
-                    </SheetHeader>
-
-                    {achievementId ? (
-                        <TriggerForm lid={lid} onFinish={() => setOpen(false)} triggers={triggers} aid={achievementId} />
-
-                    ) : (
-                        <AchievementForm lid={lid} onFinish={(a) => {
-                            setAchievementId(a.id);
-
-                        }} />
-                    )}
-
-                </SheetContent>
-            </Sheet >
-        </div >
+                </SheetFooter>
+            </SheetContent>
+        </Sheet >
     )
 }

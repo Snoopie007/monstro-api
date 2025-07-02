@@ -1,76 +1,26 @@
 'use client'
-import { SheetClose, SheetSection, SheetFooter, Button } from '@/components/ui';
-
+import { SheetSection } from '@/components/ui';
 import {
     FormField, FormItem, FormLabel, FormControl, FormMessage, Input,
     Textarea, Form
 } from '@/components/forms';
-import { cn, tryCatch } from '@/libs/utils';
+import { cn } from '@/libs/utils';
 import { AchievementIcons } from '.';
-import { Loader2, PlusIcon, XIcon } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { PlusIcon, XIcon } from 'lucide-react';
+import { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
 import { AchievementSchema } from '../schemas';
-import { toast } from 'react-toastify';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Achievement } from '@/types';
-import { useAchievements } from '../providers';
+
 
 interface AchievementFieldsProps {
-    lid: string;
-    onFinish: (achievement: Achievement) => void;
+
+    form: UseFormReturn<z.infer<typeof AchievementSchema>>;
+    onSubmit: (data: z.infer<typeof AchievementSchema>) => void;
 }
 
-export function AchievementForm({ lid, onFinish }: AchievementFieldsProps) {
+export function AchievementForm({ form, onSubmit }: AchievementFieldsProps) {
 
-    const { setAchievements } = useAchievements();
-    const form = useForm<z.infer<typeof AchievementSchema>>({
-        resolver: zodResolver(AchievementSchema),
-        defaultValues: {
-            name: '',
-            description: '',
-            badge: '',
-            awardedPoints: 0,
-            requiredCount: 0,
-
-        },
-        mode: "onChange"
-    })
-
-    const badge = form.watch('badge')
-    async function onSubmit(v: z.infer<typeof AchievementSchema>) {
-        const formData = new FormData();
-
-        Object.entries(v).forEach(([key, value]) => {
-            if (key !== 'badge' && value !== undefined) {
-                formData.append(key, value.toString());
-            }
-        });
-
-
-        if (v.badge && v.badge.startsWith('blob:')) {
-            const blob = await fetch(v.badge).then(r => r.blob());
-            formData.append('file', blob, 'badge.png');
-        } else if (v.badge) {
-            formData.append('badge', v.badge);
-        }
-
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/achievements`, {
-                method: 'POST',
-                body: formData,
-            })
-        );
-
-        if (error || !result || !result.ok) {
-            toast.error("Something went wrong, please try again later");
-            return;
-        }
-        const data = await result.json();
-        setAchievements((prev) => [...prev, data]);
-        form.reset();
-        onFinish(data);
-    }
+    const badge = form.watch('badge');
 
     return (
         <Form {...form}>
@@ -179,16 +129,7 @@ export function AchievementForm({ lid, onFinish }: AchievementFieldsProps) {
                     </fieldset>
 
                 </SheetSection>
-                <SheetFooter className='border-t border-foreground/10 py-3 px-4'>
-                    <SheetClose asChild>
-                        <Button variant={"outline"} size={"sm"}>
-                            Cancel
-                        </Button>
-                    </SheetClose>
-                    <Button variant={"foreground"} size={"sm"} disabled={form.formState.isSubmitting} type='submit'>
-                        {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin' /> : 'Create'}
-                    </Button>
-                </SheetFooter>
+
             </form>
         </Form>
     )

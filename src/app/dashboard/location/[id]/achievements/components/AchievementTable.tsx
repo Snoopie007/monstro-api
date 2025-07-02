@@ -46,9 +46,9 @@ export function AchievementTable({ lid, triggers }: AchievementTableProps) {
                             table.getColumn("name")?.setFilterValue(value);
 
                         }}
-                        className="border  h-8.5 border-foreground/10 rounded-md w-auto"
+                        className="border  h-8 border-foreground/10 rounded-md w-auto"
                     />
-                    <CreateAchievement lid={lid} triggers={triggers} />
+                    <CreateAchievement lid={lid} />
                 </TablePageHeaderSection>
             </TablePageHeader>
             <TablePageContent>
