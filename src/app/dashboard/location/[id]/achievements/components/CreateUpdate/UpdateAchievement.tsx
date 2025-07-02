@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { tryCatch } from '@/libs/utils';
 
 import { toast } from 'react-toastify';
-import { AchievementSchema } from '../schemas';
+import { AchievementSchema } from '../../schemas';
 import { Achievement } from '@/types';
 import { AchievementForm } from './AchievementForm';
 import { useEffect, useState } from 'react';
@@ -98,7 +98,7 @@ export function UpdateAchievement({ achievement }: UpdateAchievementProps) {
 
 					</SheetTitle>
 				</SheetHeader>
-				<AchievementForm form={form} onSubmit={onSubmit} />
+				<AchievementForm form={form} />
 				<SheetFooter className='border-t border-foreground/10 py-3 px-4'>
 					<SheetClose asChild>
 						<Button

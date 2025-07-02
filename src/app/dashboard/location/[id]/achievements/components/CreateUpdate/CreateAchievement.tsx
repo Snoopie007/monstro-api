@@ -8,12 +8,12 @@ import {
     SheetClose,
 } from '@/components/ui';
 
-import { AchievementForm } from '.';
+import { AchievementForm } from '..';
 import { useState } from 'react';
 import { AchievementTrigger } from '@/types';
-import { AchievementSchema } from '../schemas';
+import { AchievementSchema } from '../../schemas';
 import { useForm } from 'react-hook-form';
-import { useAchievements } from '../providers';
+import { useAchievements } from '../../providers';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'react-toastify';
@@ -27,7 +27,7 @@ interface CreateAchievementProps {
 export function CreateAchievement({ lid }: CreateAchievementProps) {
 
     const [open, setOpen] = useState(false);
-    const { setAchievements } = useAchievements();
+    const { setAchievements, setCurrentAchievement } = useAchievements();
 
     const form = useForm<z.infer<typeof AchievementSchema>>({
         resolver: zodResolver(AchievementSchema),
@@ -72,10 +72,10 @@ export function CreateAchievement({ lid }: CreateAchievementProps) {
         }
         const data = await result.json();
         setAchievements((prev) => [...prev, data]);
+        setCurrentAchievement(data);
         form.reset();
         setOpen(false);
     }
-
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
@@ -91,14 +91,16 @@ export function CreateAchievement({ lid }: CreateAchievementProps) {
                     <SheetTitle className='hidden'></SheetTitle>
                 </SheetHeader>
 
-                <AchievementForm form={form} onSubmit={onSubmit} />
+                <AchievementForm form={form} />
                 <SheetFooter className='border-t border-foreground/10 py-3 px-4'>
                     <SheetClose asChild>
                         <Button variant={"outline"} size={"sm"}>
                             Cancel
                         </Button>
                     </SheetClose>
-                    <Button variant={"foreground"} size={"sm"} disabled={form.formState.isSubmitting} type='submit'>
+                    <Button variant={"foreground"} size={"sm"}
+                        disabled={form.formState.isSubmitting}
+                        onClick={form.handleSubmit(onSubmit)}>
                         {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin' /> : 'Create'}
                     </Button>
                 </SheetFooter>

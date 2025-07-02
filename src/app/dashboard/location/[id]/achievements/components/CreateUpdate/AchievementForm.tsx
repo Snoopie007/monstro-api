@@ -5,26 +5,25 @@ import {
     Textarea, Form
 } from '@/components/forms';
 import { cn } from '@/libs/utils';
-import { AchievementIcons } from '.';
+import { AchievementIcons } from '..';
 import { PlusIcon, XIcon } from 'lucide-react';
 import { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
-import { AchievementSchema } from '../schemas';
+import { AchievementSchema } from '../../schemas';
 
 
 interface AchievementFieldsProps {
 
     form: UseFormReturn<z.infer<typeof AchievementSchema>>;
-    onSubmit: (data: z.infer<typeof AchievementSchema>) => void;
 }
 
-export function AchievementForm({ form, onSubmit }: AchievementFieldsProps) {
+export function AchievementForm({ form }: AchievementFieldsProps) {
 
     const badge = form.watch('badge');
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+            <form>
                 <SheetSection className='border-b-0'>
                     <fieldset>
                         <FormField

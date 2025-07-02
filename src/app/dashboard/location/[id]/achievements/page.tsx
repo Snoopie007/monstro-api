@@ -53,9 +53,9 @@ export default async function AchievementsPage(props: { params: Promise<{ id: st
     if (!achievements) return <ErrorComponent error={new Error('Failed to fetch achievements')} />
 
     return (
-        <AchievementProvider achievements={achievements}>
+        <AchievementProvider achievements={achievements} triggers={triggers}>
             <TablePage>
-                <AchievementTable lid={lid} triggers={triggers} />
+                <AchievementTable lid={lid} />
                 <TablePageFooter>
                     <div className='p-2'>
                         Showing {achievements && achievements.length} achievements

@@ -1,8 +1,9 @@
 
-export * from './UpdateAchievement';
+export * from './CreateUpdate/UpdateAchievement';
 export * from './AchievementIcons';
-export * from './CreateAchievement';
-export * from './AchievementForm';
+export * from './CreateUpdate/CreateAchievement';
+export * from './CreateUpdate/AchievementForm';
 export * from './AchievementTable';
 export * from './AchievementColumns';
-export * from './TriggerForm';
+export * from './Triggers';
+export * from './CreateUpdate';

@@ -5,58 +5,26 @@ import {
     FormField, FormItem, FormLabel, FormControl, FormMessage, Input,
     Select, SelectValue, SelectTrigger, SelectContent, SelectItem, Form
 } from '@/components/forms';
-import { Button, SheetClose, SheetFooter, SheetSection } from '@/components/ui';
-import { useForm } from 'react-hook-form';
+import { SheetSection } from '@/components/ui';
+import { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { TriggerSchema } from '../schemas';
-import { toast } from 'react-toastify';
-import { tryCatch } from '@/libs/utils';
+import { TriggerSchema } from '../../schemas';
 import { AchievementTrigger } from '@/types';
-import { Loader2 } from 'lucide-react';
 
 interface TriggerFormProps {
-    lid: string;
+    form: UseFormReturn<z.infer<typeof TriggerSchema>>;
     triggers: AchievementTrigger[];
-    onFinish: () => void;
-    aid: string;
 }
 
-export function TriggerForm({ lid, triggers, onFinish, aid }: TriggerFormProps) {
+export function TriggerForm({ form, triggers }: TriggerFormProps) {
 
-    const form = useForm<z.infer<typeof TriggerSchema>>({
-        resolver: zodResolver(TriggerSchema),
-        defaultValues: {
-            triggerId: '',
-            weight: 0,
-            timePeriod: 0,
-            timePeriodUnit: '',
-            planId: '',
-        },
-        mode: "onChange"
-    })
+
 
     const triggerId = form.watch('triggerId');
 
-    async function onSubmit(v: z.infer<typeof TriggerSchema>) {
-
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/achievements/${aid}/triggers`, {
-                method: 'POST',
-                body: JSON.stringify(v),
-            })
-        );
-
-        if (error || !result || !result.ok) {
-            toast.error("Something went wrong, please try again later");
-            return;
-        }
-        form.reset();
-        onFinish();
-    }
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+            <form>
                 <SheetSection className='border-b-0'>
                     <div className='space-y-1'>
 
@@ -133,16 +101,6 @@ export function TriggerForm({ lid, triggers, onFinish, aid }: TriggerFormProps) 
                         </fieldset>
                     )}
                 </SheetSection>
-                <SheetFooter className='border-t border-foreground/10 py-3 px-4'>
-                    <SheetClose asChild>
-                        <Button variant={"outline"} size={"sm"}>
-                            Cancel
-                        </Button>
-                    </SheetClose>
-                    <Button type='submit' size={"sm"} disabled={form.formState.isSubmitting}>
-                        {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin' /> : 'Create'}
-                    </Button>
-                </SheetFooter>
 
             </form>
         </Form>

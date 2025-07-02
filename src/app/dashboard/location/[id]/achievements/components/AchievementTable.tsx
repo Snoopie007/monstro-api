@@ -6,21 +6,14 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui';
 import { Input } from '@/components/forms';
-import { Skeleton } from '@/components/ui';
-import { CreateAchievement, AchievementColumns } from '.';
+import { CreateAchievement, AchievementColumns, CreateTrigger } from '.';
 import { useReactTable } from '@tanstack/react-table';
 import { getCoreRowModel } from '@tanstack/react-table';
 import { flexRender } from '@tanstack/react-table';
-import { Achievement, AchievementTrigger } from '@/types';
 import { useAchievements } from '../providers';
 
 
-interface AchievementTableProps {
-    lid: string;
-    triggers: AchievementTrigger[];
-}
-
-export function AchievementTable({ lid, triggers }: AchievementTableProps) {
+export function AchievementTable({ lid }: { lid: string }) {
 
     const { achievements } = useAchievements();
 
@@ -35,7 +28,7 @@ export function AchievementTable({ lid, triggers }: AchievementTableProps) {
 
     return (
         <>
-
+            <CreateTrigger />
             <TablePageHeader className="px-4  border-b border-foreground/5">
                 <TablePageHeaderSection>
                     <Input
