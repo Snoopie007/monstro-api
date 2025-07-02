@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 type Params = {
     id: number;
-    iid: number;
+    iid: string;
 }
 
 export async function DELETE(req: NextRequest, props: { params: Promise<Params> }) {
@@ -23,7 +23,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<Params> 
 
         if (integration.service === "stripe") {
             const stripe = new VendorStripePayments()
-            await stripe.removeAccount(integration.integrationId)
+            await stripe.removeAccount(integration.accountId)
         }
 
         await db.delete(integrations).where(eq(integrations.id, params.iid))

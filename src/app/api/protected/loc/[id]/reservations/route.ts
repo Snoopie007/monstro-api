@@ -5,7 +5,7 @@ import {eq} from "drizzle-orm";
 import {NextResponse} from "next/server";
 
 type Params = {
-  id: number;
+  id: string;
 };
 
 export async function GET(req: Request, props: {params: Promise<Params>}) {

@@ -3,7 +3,7 @@ import { locations } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-export async function POST(req: Request, props: { params: Promise<{ id: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     const data = await req.json()
     try {

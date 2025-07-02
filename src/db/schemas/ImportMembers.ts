@@ -1,12 +1,12 @@
 import { boolean, pgTable, timestamp, text, uuid } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { memberPlans } from "./MemberPlans";
 import { members } from "./members";
 import { ImportedMemberStatusEnum } from "./DatabaseEnums";
 
 export const importMembers = pgTable("import_members", {
-    id: uuid("id").primaryKey().notNull(),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
     memberId: text("member_id").references(() => members.id, { onDelete: "set null" }),

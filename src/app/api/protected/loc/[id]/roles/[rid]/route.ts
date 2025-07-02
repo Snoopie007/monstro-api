@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import { auth } from "@/auth";
 import { eq } from 'drizzle-orm';
 import { roleHasPermissions, roles } from '@/db/schemas';
 import { db } from '@/db/db';
 
 type RoleProps = {
-  rid: number,
-  id: number
+  rid: string,
+  id: string
 }
 export async function DELETE(req: Request, props: { params: Promise<RoleProps> }) {
   const params = await props.params;

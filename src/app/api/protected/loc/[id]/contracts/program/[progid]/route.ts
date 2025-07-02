@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { } from '@/db/schemas/programs'
 
-export async function GET(req: Request, props: { params: Promise<{ progid: number, id: string }> }
+export async function GET(req: Request, props: { params: Promise<{ progid: string, id: string }> }
 ) {
   const { progid } = await props.params;
 

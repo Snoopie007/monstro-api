@@ -6,14 +6,14 @@ import { programs, programSessions, staffs, planPrograms, memberPlans } from '@/
 
 export async function GET(
   req: NextRequest,
-  props: { params: Promise<{ pid: number, lid: number }> }
+  props: { params: Promise<{ pid: string, lid: string }> }
 ) {
   try {
     const params = await props.params;
     const authMember = authenticateMember(req);
 
     const memberExists = await db.query.members.findFirst({
-      where: (members, { eq }) => eq(members.id, Number(authMember.member?.id)),
+      where: (members, { eq }) => eq(members.id, authMember.member?.id),
       columns: { id: true }
     });
 
@@ -24,7 +24,7 @@ export async function GET(
     const program = await db.query.programs.findFirst({
       where: (program, { and, eq }) =>
         and(
-          eq(program.locationId, Number(params.lid)),
+          eq(program.locationId, params.lid),
           eq(program.id, params.pid)
         ),
       with: {

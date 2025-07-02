@@ -32,7 +32,7 @@ export function StaffProfile({ staff, onChange }: StaffListProps) {
                     <div className="flex flex-row items-start py-4 gap-5">
                         <div className="flex-initial relative">
                             <Avatar className="w-24 h-24 rounded-full mx-auto">
-                                <AvatarImage src={staff?.image} />
+                                <AvatarImage src={staff?.avatar || undefined} />
                                 <AvatarFallback className="text-4xl uppercase text-muted bg-foreground font-medium">
                                 </AvatarFallback>
                             </Avatar>
@@ -78,5 +78,5 @@ export function StaffProfile({ staff, onChange }: StaffListProps) {
                 </div>
             </DialogContent>
         </Dialog>
-    )
+  );
 }

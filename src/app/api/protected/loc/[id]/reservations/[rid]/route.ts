@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import { NextResponse } from "next/server";
 
 
-export async function GET(req: Request, props: { params: Promise<{ rid: number }> }) {
+export async function GET(req: Request, props: { params: Promise<{ rid: string }> }) {
 
   const { rid } = await props.params;
 

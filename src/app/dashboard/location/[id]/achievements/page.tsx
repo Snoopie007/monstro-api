@@ -26,6 +26,7 @@ async function fetchAchievements(lid: string) {
 }
 
 
+
 async function fetchTriggers() {
     try {
         const triggers = await db.query.achievementTriggers.findMany();

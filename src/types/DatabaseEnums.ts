@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 export type LocationStatus = 'incomplete' | 'active' | 'past_due' | 'canceled' | 'paused' | 'trialing' | 'unpaid' | 'incomplete_expired';
 export type PlanType = 'recurring' | 'one-time';
 export type Interval = 'day' | 'week' | 'month' | 'year';
@@ -13,57 +12,3 @@ export type StaffStatus = 'active' | 'inactive';
 export type ProgramStatus = 'active' | 'inactive';
 export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type TransactionType = 'inbound' | 'outbound';
-=======
-export type LocationStatus =
-  | "incomplete"
-  | "active"
-  | "past_due"
-  | "canceled"
-  | "paused"
-  | "trialing"
-  | "unpaid"
-  | "incomplete_expired";
-export type PlanType = "recurring" | "one-time";
-export type Interval = "day" | "week" | "month" | "year";
-export type PackageStatus = "active" | "incomplete" | "expired" | "completed";
-export type PaymentMethod =
-  | "card"
-  | "cash"
-  | "check"
-  | "zelle"
-  | "venmo"
-  | "paypal"
-  | "apple"
-  | "google";
-export type InvoiceStatus =
-  | "draft"
-  | "paid"
-  | "unpaid"
-  | "uncollectible"
-  | "void";
-export type MemberRelationship =
-  | "parent"
-  | "spouse"
-  | "child"
-  | "sibling"
-  | "other";
-export type ContractType = "contract" | "waiver";
-export type RoleColor =
-  | "red"
-  | "green"
-  | "blue"
-  | "pink"
-  | "cyan"
-  | "lime"
-  | "orange"
-  | "fuchsia"
-  | "sky"
-  | "lemon"
-  | "purple"
-  | "yellow";
-export type TransactionStatus = "paid" | "failed" | "incomplete";
-export type TransactionType = "inbound" | "outbound";
-export type StaffStatus = "active" | "inactive";
-export type ProgramStatus = "active" | "inactive";
-export type ImportStatus = "pending" | "processing" | "completed" | "failed";
->>>>>>> 22125ebf9f92d05da0f1397f845bbaa8d79a1fe6

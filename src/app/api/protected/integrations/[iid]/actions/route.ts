@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server'
 import { VendorGHL } from '@/libs/server/ghl';
 
-export async function GET(req: NextRequest, props: { params: Promise<{ iid: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ iid: string }> }) {
     const params = await props.params;
     const searchParams = req.nextUrl.searchParams;
     const action = searchParams.get("action")
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ iid: numb
         let returnData: { name: string, id: string }[] = [];
         if (action === "getCalendarSlots" || action === "addToCalendar") {
 
-            const calendars = await ghl.getCalendars(integration.integrationId)
+            const calendars = await ghl.getCalendars(integration.accountId || "")
 
             returnData = calendars.map((calendar: { name: string, id: string }) => ({
                 name: calendar.name,
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ iid: numb
         }
         if (action === "addToWorkflow") {
 
-            const workflows = await ghl.getWorkflows(integration.integrationId)
+            const workflows = await ghl.getWorkflows(integration.accountId || "")
             returnData = workflows
                 .filter((workflow: { name: string, id: string, status: string }) => workflow.status === 'published')
                 .map((workflow: { name: string, id: string }) => ({

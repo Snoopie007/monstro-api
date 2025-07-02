@@ -8,10 +8,10 @@ import {
 import {isAfter} from "date-fns";
 
 type BaseData = {
-  memberPlanId: number;
-  locationId: number;
-  memberId: number;
-  programId: number;
+  memberPlanId: string;
+  locationId: string;
+  memberId: string;
+  programId: string;
   startDate: Date | string;
   paymentMethod:
     | "card"
@@ -96,7 +96,7 @@ function calculateInvoice(plans: MemberPlan[], tax: number, discount: number) {
   };
 }
 
-type RestProps = {memberId: number; locationId: number; paymentMethod: string};
+type RestProps = {memberId: string; locationId: string; paymentMethod: string};
 
 function createTransaction(
   plan: MemberPlan,

@@ -9,8 +9,8 @@ import { memberSubscriptions } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 
 type Params = {
-    id: number;
-    sid: number;
+    id: string;
+    sid: string;
 }
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<Params> }
 
         const sub = await db.query.memberSubscriptions.findFirst({
             where: (ms, { eq }) => eq(ms.id, sid),
-        })
+        })  
 
         if (!sub) {
             return NextResponse.json({ success: false, message: 'Subscription not found' }, { status: 404 });
@@ -82,7 +82,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<Params> }
 }
 
 
-export async function DELETE(req: Request, props: { params: Promise<{ id: number, sid: number }> }) {
+    export async function DELETE(req: Request, props: { params: Promise<{ id: string, sid: string }> }) {
     const { id, sid } = await props.params;
     const { cancelOption, customDate, refundAmount, reason } = await req.json();
 

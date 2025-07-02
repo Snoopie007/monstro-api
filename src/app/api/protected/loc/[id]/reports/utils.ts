@@ -51,7 +51,7 @@ function newMembersByMonth(memberLocations: MemberLocation[]) {
 }
 function topSpenders(transactions: Transaction[], mls: MemberLocation[]) {
   // Using Map instead of object for better type safety and performance
-  const memberTotals = new Map<number, number>();
+  const memberTotals = new Map<string, number>();
 
   // Sum up transaction amounts by member
   transactions.forEach((tx) => {
@@ -102,7 +102,7 @@ function recurringRevenueData(transactions: Transaction[]) {
 }
 function mltv(transactions: Transaction[]) {
   // Group transactions by member and month
-  const memberMonthlyTotals = new Map<number, Map<string, number>>();
+  const memberMonthlyTotals = new Map<string, Map<string, number>>();
 
   // Process each transaction
   transactions.forEach((tx) => {

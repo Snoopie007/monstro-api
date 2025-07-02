@@ -3,13 +3,13 @@ import { db } from '@/db/db';
 import { attendances } from '@/db/schemas';
 import { eq } from 'drizzle-orm';
 
-export async function PATCH(req: NextRequest, props: { params: Promise<{ mid: number, id: number, rid: number, aid: number }> }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ mid: string, id: string, rid: string, aid: string }> }) {
 	const params = await props.params;
 
 	try {
 		const body = await req.json();
 		const attendance = await db.query.attendances.findFirst({
-			where: (attendances, { eq }) => eq(attendances.id, Number(params.aid)),
+			where: (attendances, { eq }) => eq(attendances.id, params.aid),
 		});
 
 		if (!attendance) {
@@ -44,7 +44,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ mid: nu
 			macAddress: macAddress || null,
 			lat: lat || null,
 			lng: lng || null,
-		}).where(eq(attendances.id, Number(params.aid)));
+		}).where(eq(attendances.id, params.aid));
 
 
 		return NextResponse.json(updatedAttendance, { status: 200 });

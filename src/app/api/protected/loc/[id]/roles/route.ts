@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import { permission } from "process";
 
 type RoleProps = {
-    id: number
+    id: string
 }
 export async function GET(req: Request, props: { params: Promise<RoleProps> }) {
     const params = await props.params;

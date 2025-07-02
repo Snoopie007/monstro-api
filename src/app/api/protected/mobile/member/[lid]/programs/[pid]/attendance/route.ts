@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { authenticateMember } from '@/libs/utils';
 import { and, eq, inArray } from 'drizzle-orm';
-import { attendances, programSessions, reservations } from '@/db/schemas';
 
 export async function GET(
   req: NextRequest,
-  props: { params: Promise<{ lid: number, pid: number }> }
+  props: { params: Promise<{ lid: string, pid: string }> }
 ) {
   try {
     const params = await props.params;
@@ -36,7 +35,7 @@ export async function GET(
     const reservations = await db.query.reservations.findMany({
       where: (reservation) =>
         and(
-          eq(reservation.memberId, Number(memberId)),
+          eq(reservation.memberId, memberId),
           inArray(reservation.sessionId, sessionIds)
         ),
       columns: { id: true } // Only fetch the IDs we need
@@ -67,7 +66,6 @@ export async function GET(
         lat: true,
         lng: true,
         created: true,
-        updated: true
       }
     });
 

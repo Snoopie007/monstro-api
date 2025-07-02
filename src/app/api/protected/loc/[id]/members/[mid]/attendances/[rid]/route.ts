@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { attendances } from '@/db/schemas';
 
-export async function POST(req: NextRequest, props: { params: Promise<{ mid: number, id: number, rid: number }> }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ mid: string, id: string, rid: string }> }) {
 	const params = await props.params;
 
 	try {

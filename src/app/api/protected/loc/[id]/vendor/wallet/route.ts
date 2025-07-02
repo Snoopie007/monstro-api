@@ -4,7 +4,7 @@ import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
 import { wallets } from '@/db/schemas';
 
-export async function GET(req: NextRequest, props: { params: Promise<{ id: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
 
     try {
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: numbe
     }
 }
 
-export async function POST(req: NextRequest, props: { params: Promise<{ id: number }> }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
     const body = await req.json();
     const { id, ...rest } = body;
     try {

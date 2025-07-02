@@ -1,13 +1,13 @@
-import {db} from "@/db/db";
-import {CalendarEvent, Reservation} from "@/types";
-import {endOfMonth, startOfMonth, addDays} from "date-fns";
-import {NextResponse, NextRequest} from "next/server";
+import { db } from "@/db/db";
+import { CalendarEvent, Reservation } from "@/types";
+import { endOfMonth, startOfMonth, addDays } from "date-fns";
+import { NextResponse, NextRequest } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  props: {params: Promise<{id: number}>}
+  props: { params: Promise<{ id: string }> }
 ) {
-  const {searchParams} = new URL(req.url);
+  const { searchParams } = new URL(req.url);
   const params = await props.params;
   const date = searchParams.get("date");
   const startDate = startOfMonth(new Date(date || new Date()));
@@ -18,7 +18,7 @@ export async function GET(
 
     // First, get all programs for this location
     const locationPrograms = await db.query.programs.findMany({
-      where: (p, {eq}) => eq(p.locationId, params.id),
+      where: (p, { eq }) => eq(p.locationId, params.id),
       columns: {
         id: true,
       },
@@ -28,7 +28,7 @@ export async function GET(
 
     // Then get all sessions for these programs
     const locationSessions = await db.query.programSessions.findMany({
-      where: (s, {inArray}) => inArray(s.programId, programIds),
+      where: (s, { inArray }) => inArray(s.programId, programIds),
       with: {
         program: true,
       },
@@ -36,9 +36,9 @@ export async function GET(
 
     // Get standard reservations
     const reservations = await db.query.reservations.findMany({
-      where: (r, {between, and, eq}) =>
+      where: (r, { between, and, eq }) =>
         and(
-          between(r.startOn, startDate.toISOString(), endDate.toISOString()),
+          between(r.startOn, startDate, endDate),
           eq(r.locationId, params.id)
         ),
       with: {
@@ -53,9 +53,9 @@ export async function GET(
 
     // Get recurring reservations
     const recurrings = await db.query.recurringReservations.findMany({
-      where: (r, {and, eq, gte, or, isNull, lte}) =>
+      where: (r, { and, eq, gte, or, isNull, lte }) =>
         and(
-          lte(r.startDate, startDate.toISOString()),
+          lte(r.startDate, startDate),
           eq(r.locationId, params.id),
           or(isNull(r.canceledOn), gte(r.canceledOn, startDate.toISOString()))
         ),
@@ -142,11 +142,13 @@ export async function GET(
         );
 
         if (!exception) {
-          const {id, intervalThreshold, interval, exceptions, ...rest} =
+          const { id, intervalThreshold, interval, exceptions, ...rest } =
             recurring;
           const vr: Reservation = {
             ...rest,
-            startOn: currentDate.toISOString().split("T")[0],
+            startOn: currentDate,
+            id: recurring.id,
+            endOn: new Date(currentDate.getTime() + (recurring.session?.duration || 0) * 60000),
           };
           addEventToCalendar(events, vr, recurring.id);
         }
@@ -165,12 +167,12 @@ export async function GET(
     // Merge duplicates and filter by date range
     const finalEvents = mergeAndFilterEvents(events, startDate, endDate);
 
-    return NextResponse.json(finalEvents, {status: 200});
+    return NextResponse.json(finalEvents, { status: 200 });
   } catch (err) {
     console.error("Error fetching calendar events:", err);
     return NextResponse.json(
-      {error: "Failed to fetch calendar events"},
-      {status: 500}
+      { error: "Failed to fetch calendar events" },
+      { status: 500 }
     );
   }
 }
@@ -178,7 +180,7 @@ export async function GET(
 function addEventToCalendar(
   events: CalendarEvent[],
   reservation: Reservation,
-  recurringId?: number
+  recurringId?: string
 ) {
   if (
     !reservation.session ||
@@ -278,7 +280,7 @@ function mergeAndFilterEvents(
       }
       existingEvent.data.isRecurring = !!existingEvent.data.recurringId;
     } else {
-      eventMap.set(event.id, {...event});
+      eventMap.set(event.id, { ...event });
     }
   });
 

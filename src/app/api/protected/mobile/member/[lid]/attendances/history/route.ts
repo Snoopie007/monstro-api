@@ -5,8 +5,8 @@ import { and, eq, inArray, or } from 'drizzle-orm';
 import { reservations, attendances } from '@/db/schemas';
 
 type SafeAttendance = {
-  id: number;
-  reservationId: number | null;
+  id: string;
+  reservationId: string | null;
   startTime: Date;
   endTime: Date;
   checkInTime: Date;
@@ -15,7 +15,7 @@ type SafeAttendance = {
   programName: string;
 };
 
-export async function GET(req: NextRequest, props: { params: Promise<{ lid: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ lid: string }> }) {
   const params = await props.params;
   
   try {
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
     
     // Validate member exists and get subscription/package IDs
     const member = await db.query.members.findFirst({
-			where: (members, { eq }) => eq(members.id, Number(memberId)),
+			where: (members, { eq }) => eq(members.id, memberId),
 			with: {
 				subscriptions: true,
 				packages: true

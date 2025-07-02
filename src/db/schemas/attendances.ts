@@ -1,9 +1,9 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { timestamp, pgTable, text, integer, uuid } from "drizzle-orm/pg-core";
 import { recurringReservations, reservations } from "./reservations";
 
 export const attendances = pgTable("check_ins", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").primaryKey().default(sql`uuid_base62("chk_")`),
   reservationId: text("reservation_id").references(() => reservations.id, { onDelete: "cascade" }),
   recurringId: text("recurring_id").references(() => recurringReservations.id, { onDelete: "cascade" }),
   startTime: timestamp("start_time", { withTimezone: true }).notNull(),

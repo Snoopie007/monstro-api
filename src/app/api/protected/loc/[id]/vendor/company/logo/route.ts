@@ -6,7 +6,7 @@ import S3Bucket from '@/libs/server/s3';
 
 const s3 = new S3Bucket();
 
-export async function POST(req: Request, props: { params: Promise<{ id: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
 
     const formData = await req.formData();
@@ -30,7 +30,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number }
     }
 }
 
-export async function DELETE(req: Request, props: { params: Promise<{ id: number }> }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     try {
         const loc = await db.query.locations.findFirst({

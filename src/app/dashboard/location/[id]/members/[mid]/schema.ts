@@ -61,7 +61,7 @@ export const AddFamilyMemberSchema = z.object({
     lastName: z.string(),
     email: z.string(),
     phone: z.string(),
-    familyMemberId: z.number(),
+    familyMemberId: z.string(),
     relationship: z.string(),
     familyPlanId: z.string()
 })

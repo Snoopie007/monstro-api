@@ -4,7 +4,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { authenticateMember } from '@/libs/utils';
 import { reservations, recurringReservations, recurringReservationsExceptions } from '@/db/schemas';
 
-export async function DELETE(req: NextRequest, props: { params: Promise<{ id: number, rid: number, mid: number }> }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string, rid: string, mid: string }> }) {
 
     const date = req.nextUrl.searchParams.get('date');
     
@@ -32,7 +32,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: nu
          const reservationException = await db.query.recurringReservationsExceptions.findFirst({
             where: (e, { eq, and }) => and(
                 eq(e.recurringReservationId, params.rid),
-                eq(e.occurrenceDate, exceptionDate.toISOString())
+                eq(e.occurrenceDate, exceptionDate)
             )
         });
 
@@ -43,8 +43,8 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: nu
         const recurringreservation = await db.query.recurringReservations.findFirst({
             where: (r, { eq, and }) => and(
                 eq(r.id, params.rid),
-                eq(r.memberId, Number(params.mid)),
-                eq(r.locationId, Number(params.id)),
+                eq(r.memberId, params.mid),
+                eq(r.locationId, params.id),
                 isNull(r.canceledOn)
             ),
             with: {
@@ -77,7 +77,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: nu
         }
         await db.insert(recurringReservationsExceptions).values({
             recurringReservationId: params.rid,
-            occurrenceDate: exceptionDate.toISOString(),
+            occurrenceDate: exceptionDate,
         });
 
         // await db.delete(reservations).where(eq(reservations.id, params.rid));

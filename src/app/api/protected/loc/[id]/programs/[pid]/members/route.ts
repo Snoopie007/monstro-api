@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { Member } from '@/types';
 
-export async function GET(req: Request, props: { params: Promise<{ pid: number, id: number }> }) {
+export async function GET(req: Request, props: { params: Promise<{ pid: string, id: string }> }) {
 	const params = await props.params;
 	try {
 		const plans = await db.query.planPrograms.findMany({

@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { integrations } from '@/db/schemas';
 
 
-export async function DELETE(req: Request, props: { params: Promise<{ iid: number, id: string }> }) {
+export async function DELETE(req: Request, props: { params: Promise<{ iid: string, id: string }> }) {
   const params = await props.params;
 
   try {

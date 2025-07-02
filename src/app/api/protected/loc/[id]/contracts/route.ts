@@ -6,7 +6,7 @@ import {contractTemplates} from "@/db/schemas";
 
 export async function GET(
   req: Request,
-  props: {params: Promise<{id: number}>}
+  props: {params: Promise<{id: string}>}
 ) {
   const params = await props.params;
   const {searchParams} = new URL(req.url);
@@ -29,7 +29,7 @@ export async function GET(
 
 export async function POST(
   req: Request,
-  props: {params: Promise<{id: number}>}
+  props: {params: Promise<{id: string}>}
 ) {
   const params = await props.params;
   const data = await req.json();

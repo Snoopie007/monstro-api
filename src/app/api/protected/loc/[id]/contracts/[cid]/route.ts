@@ -4,8 +4,8 @@ import { contractTemplates } from '@/db/schemas/ContractTemplates';
 import { eq } from 'drizzle-orm';
 
 type ContractId = {
-  cid: number;
-  id: number;
+  cid: string;
+  id: string;
 }
 
 export async function GET(req: Request, props: { params: Promise<ContractId> }) {

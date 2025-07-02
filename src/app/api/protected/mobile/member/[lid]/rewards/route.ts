@@ -4,14 +4,14 @@ import { db } from '@/db/db';
 import { authenticateMember } from '@/libs/utils';
 
 
-export async function GET(req: NextRequest, props: { params: Promise<{ lid: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ lid: string }> }) {
   const params = await props.params;
   try {
 
     const authMember = authenticateMember(req);
     const memberId = authMember.member?.id;
     const member = await db.query.members.findFirst({
-      where: (members, { eq }) => eq(members.id, Number(memberId)),
+      where: (members, { eq }) => eq(members.id, memberId),
     });
 
     if (!member) {
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
       where: (rewards, { eq }) => eq(rewards.locationId, params.lid),
       with: {
         claims: {
-          where: (claims, { eq }) => eq(claims.memberId, Number(memberId)),
+            where: (claims, { eq }) => eq(claims.memberId, memberId),
         },
       },
     });
