@@ -5,14 +5,14 @@ import { and, eq } from 'drizzle-orm';
 import { authenticateMember } from '@/libs/utils';
 
 
-export async function GET(req: NextRequest, props: { params: Promise<{ id: number, rid: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string, rid: string }> }) {
 	const params = await props.params;
 	try {
 
 		const authMember = authenticateMember(req);
 		const reservation = await db.query.reservations.findFirst({
 			where: (reservations, { eq }) => and(
-				eq(reservations.memberSubscriptionId, Number(authMember.member?.id || 0))
+				eq(reservations.memberSubscriptionId, authMember.member?.id)
 			),
 			with: {
 				attendance: true

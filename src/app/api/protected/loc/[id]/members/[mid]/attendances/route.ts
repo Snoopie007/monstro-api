@@ -9,7 +9,7 @@ import {attendances} from "@/db/schemas";
  */
 export async function GET(
   req: NextRequest,
-  props: {params: Promise<{mid: number; id: number}>}
+  props: {params: Promise<{mid: string; id: string}>}
 ) {
   const params = await props.params;
 

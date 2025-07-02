@@ -11,7 +11,7 @@ export const integrations = pgTable("integrations", {
     secretKey: text("secret_key"),
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
-    accountId: text("account_id"),
+    accountId: text("account_id").notNull(),
     expires: integer("expires_at"),
     settings: jsonb("settings").$type<Record<string, unknown>>().notNull().default({}),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

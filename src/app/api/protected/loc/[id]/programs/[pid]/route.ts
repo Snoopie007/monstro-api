@@ -6,7 +6,7 @@ import { programs } from '@/db/schemas';
 
 type Params = {
 	id: string;
-	pid: number;
+	pid: string;
 }
 
 export async function GET(req: Request, props: { params: Promise<Params> }) {
@@ -34,7 +34,7 @@ export async function GET(req: Request, props: { params: Promise<Params> }) {
 	}
 }
 
-export async function POST(req: NextRequest, props: { params: Promise<{ id: string, pid: number }> }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string, pid: string }> }) {
 	const params = await props.params;
 	const data = await req.json()
 	try {

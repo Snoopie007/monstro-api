@@ -9,7 +9,7 @@ import { EmailSender } from "@/libs/server/emails";
 
 
 type StaffProps = {
-    id: number
+    id: string
 }
 const emailSender = new EmailSender();
 export async function GET(req: Request, props: { params: Promise<StaffProps> }) {

@@ -9,7 +9,6 @@ export type Vendor = typeof vendors.$inferSelect & {
   vendorLevel?: VendorLevel;
   created: Date;
   updated: Date | null;
-  deleted: Date | null;
 }
 
 

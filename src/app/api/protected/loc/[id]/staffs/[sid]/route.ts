@@ -4,8 +4,8 @@ import { staffs } from '@/db/schemas';
 import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
 type StaffProps = {
-  sid: number
-  id: number
+  sid: string
+  id: string
 }
 
 export async function DELETE(req: Request, props: { params: Promise<StaffProps> }) {

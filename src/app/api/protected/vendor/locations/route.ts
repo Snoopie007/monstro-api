@@ -2,7 +2,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { locations, locationState } from '@/db/schemas';
-import { encodeId } from '@/libs/server/sqids';
 import { formatPhoneNumber } from '@/libs/server/db';
 
 const DEFAULT_LOCATION_STATE = {
@@ -33,9 +32,7 @@ export async function POST(req: Request) {
             return { ...location, status: "incomplete" }
         });
 
-        const encodedId = encodeId(location.id)
-
-        return NextResponse.json({ ...location, id: encodedId }, { status: 200 })
+        return NextResponse.json({ ...location }, { status: 200 })
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })

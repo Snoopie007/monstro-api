@@ -5,14 +5,14 @@ import { authenticateMember } from '@/libs/utils';
 import { achievements } from '@/db/schemas';
 
 
-export async function GET(req: NextRequest, props: { params: Promise<{ lid: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ lid: string }> }) {
   const params = await props.params;
   try {
 
     const authMember = authenticateMember(req);
     const memberId = authMember.member?.id;
     const member = await db.query.members.findFirst({
-      where: (members, { eq }) => eq(members.id, Number(memberId)),
+      where: (members, { eq }) => eq(members.id, memberId),
     });
 
     if (!member && !memberId) {
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
     }
 
     const achievements = await db.query.memberAchievements.findMany({
-      where: (memberAchievements, { eq, and }) => and(eq(memberAchievements.memberId, Number(memberId)), eq(memberAchievements.locationId, params.lid)),
+      where: (memberAchievements, { eq, and }) => and(eq(memberAchievements.memberId, memberId), eq(memberAchievements.locationId, params.lid)),
       with: {
         achievement: {
           with: {

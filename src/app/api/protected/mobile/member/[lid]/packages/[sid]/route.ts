@@ -4,7 +4,7 @@ import { authenticateMember } from "@/libs/utils";
 import { NextResponse, NextRequest } from "next/server";
 import { and } from "drizzle-orm";
 
-export async function GET(req: NextRequest, props: { params: Promise<{ lid: number, sid: number }> }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ lid: string, sid: string }> }) {
 
     const params =await props.params;
     const authMember = authenticateMember(req);
@@ -12,13 +12,13 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
     try {
         const Packages = await db.query.memberPackages.findFirst({
             where: (memberPackages, { eq, and }) => and(
-                eq(memberPackages.memberId, Number(authMember.member?.id)),
+                eq(memberPackages.memberId, authMember.member?.id),
                 eq(memberPackages.locationId, params.lid),
                 eq(memberPackages.id, params.sid)
             ),
             with: {
                 reservations: {
-                    where: (reservations, { eq }) => eq(reservations.memberId, Number(authMember.member?.id)),
+                    where: (reservations, { eq }) => eq(reservations.memberId, authMember.member?.id),
                     with: {
                         session: true,
                         attendance: true
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
                                                         .from(reservations)
                                                         .where(and(
                                                             eq(reservations.sessionId, sessions.id),
-                                                            eq(reservations.memberId, Number(authMember.member?.id))
+                                                            eq(reservations.memberId, authMember.member?.id)
                                                         ))
                                                 ),
                                                 exists(
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: numb
                                                         .from(recurringReservations)
                                                         .where(and(
                                                             eq(recurringReservations.sessionId, sessions.id),
-                                                            eq(recurringReservations.memberId, Number(authMember.member?.id))
+                                                            eq(recurringReservations.memberId, authMember.member?.id)
                                                         ))
                                                 )
                                             )

@@ -6,7 +6,7 @@ import { programSessions, programs as program, programs } from '@/db/schemas';
 import { ProgramSession } from '@/types';
 
 
-export async function GET(req: Request, props: { params: Promise<{ id: number }> }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
 	const params = await props.params;
 	const { searchParams } = new URL(req.url);
 	const pageSize = parseInt(searchParams.get('size') || "20");
@@ -46,7 +46,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: number }>
 }
 
 
-export async function POST(req: Request, props: { params: Promise<{ id: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
 	const params = await props.params;
 	const { sessions, ...data } = await req.json();
 	console.log(sessions, data);

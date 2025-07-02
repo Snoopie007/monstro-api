@@ -5,11 +5,11 @@ import { NextRequest, NextResponse, } from 'next/server';
 import { db } from '@/db/db';
 import { memberLocations } from '@/db/schemas';
 import { eq, and } from 'drizzle-orm';
-import { encodeId } from '@/libs/server/sqids';
 
 
 
-export async function POST(req: NextRequest, props: { params: Promise<{ id: number, mid: number }> }) {
+
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string, mid: string }> }) {
     const params = await props.params;
     try {
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: numb
             data: {
                 ui: {
                     btnText: "Accept Invite",
-                    btnUrl: `https://m.monstro-x.com/invite/${encodeId(params.id)}?email=${member.email}`
+                    btnUrl: `https://m.monstro-x.com/invite/${params.id}?email=${member.email}`
                 },
                 location,
                 monstro: MonstroData,

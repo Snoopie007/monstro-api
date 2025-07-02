@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
-import { auth } from "@/auth";
-import { db } from '@/db/db';
-import { achievements, achievementsActions } from '@/db/schemas';
 import S3Bucket from "@/libs/server/s3";
 
-export async function GET(req: Request,) {
+export async function GET() {
 
   try {
     const s3 = new S3Bucket();

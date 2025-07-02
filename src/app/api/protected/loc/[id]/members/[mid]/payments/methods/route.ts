@@ -1,12 +1,11 @@
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { members } from "@/db/schemas";
-import { encodeId } from "@/libs/server/sqids";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-export async function POST(req: Request, props: { params: Promise<{ id: number, mid: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string, mid: string }> }) {
     const params = await props.params;
 
     const { token, member, address, ...data } = await req.json();
@@ -16,7 +15,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
             where: (integration, { eq, and }) => (and(eq(integration.locationId, params.id), eq(integration.service, "stripe"))),
         })
 
-        if (!integrations || !integrations.integrationId) {
+        if (!integrations || !integrations.accountId) {
             return NextResponse.json({ error: "Stripe integration not found" }, { status: 404 })
         }
         const member = await db.query.members.findFirst({
@@ -28,7 +27,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
         }
 
         let isDefault = data.default;
-        const stripe = new MemberStripePayments(String(integrations.integrationId));
+        const stripe = new MemberStripePayments(integrations.accountId);
         if (!member.stripeCustomerId) {
             const customer = await stripe.createCustomer({
                 firstName: member.firstName,
@@ -37,7 +36,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
                 phone: member.phone,
                 address
             }, undefined, {
-                locationId: encodeId(params.id),
+                locationId: params.id,
                 memberId: params.mid
             });
 
@@ -65,7 +64,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: number, 
 }
 
 
-export async function PUT(req: Request, props: { params: Promise<{ id: number }> }) {
+export async function PUT(req: Request, props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     const session = await auth();
     const data = await req.json();
@@ -103,7 +102,7 @@ export async function PUT(req: Request, props: { params: Promise<{ id: number }>
     }
 }
 
-export async function DELETE(req: Request, props: { params: Promise<{ id: number }> }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     const session = await auth();
     const { searchParams } = new URL(req.url);

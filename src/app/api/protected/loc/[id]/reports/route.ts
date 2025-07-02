@@ -10,7 +10,7 @@ import {
 } from "./utils";
 
 type ReportProps = {
-  params: Promise<{id: number}>;
+  params: Promise<{id: string}>;
 };
 
 export async function GET(req: NextRequest, props: ReportProps) {

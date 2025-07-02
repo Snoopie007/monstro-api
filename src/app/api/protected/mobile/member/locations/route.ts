@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
 		const authMember =  authenticateMember(req);
 		const locations = await db.query.memberLocations.findMany({
 			where: (location, { eq, and }) => and(
-				eq(location.memberId, Number(authMember.member?.id)),
+				eq(location.memberId, authMember.member?.id),
 				eq(location.status, "active")
 			),
 			with: {

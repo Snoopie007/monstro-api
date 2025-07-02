@@ -5,7 +5,7 @@ import { users } from '@/db/schemas';
 import { authenticateMember } from '@/libs/utils';
 import bcrypt from 'bcryptjs';
 
-export async function PUT(req: NextRequest, props: { params: Promise<{ id: number }> }) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
 
 	const data = await req.json()
 	if (data.currentPassword === data.newPassword) {
@@ -14,7 +14,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: numbe
 	try {
 		const authMember = authenticateMember(req);
 		let user = await db.query.users.findFirst({
-			where: (users, { eq }) => eq(users.id, Number(authMember.member.id)),
+			where: (users, { eq }) => eq(users.id, authMember.member.id),
 			columns: {
 				password: true
 			}
@@ -36,7 +36,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: numbe
 
 		await db.update(users).set({
 			password: hashedPassword
-		}).where(eq(users.id, Number(authMember.member.id)))
+		}).where(eq(users.id, authMember.member.id))
 
 		return NextResponse.json("Updated", { status: 200 })
 	} catch (err) {

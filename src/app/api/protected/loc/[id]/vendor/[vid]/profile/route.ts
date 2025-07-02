@@ -13,12 +13,7 @@ export async function PUT(req: Request) {
         }
 
         
-        const vendorId = parseInt(session.user.vendorId, 10);
-        if (isNaN(vendorId)) {
-            return NextResponse.json({ error: "Invalid vendor ID." }, { status: 400 });
-        }
-
-        
+        const vendorId = session.user.vendorId;
         const body = await req.json();
         if (!body.firstName || !body.lastName) {
             return NextResponse.json({ error: "Missing required fields." }, { status: 400 });

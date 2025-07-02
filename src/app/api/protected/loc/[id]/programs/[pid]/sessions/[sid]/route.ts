@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 
 export async function PUT(
   req: Request,
-  props: { params: Promise<{ pid: number; sid: number }> }
+  props: { params: Promise<{ pid: string; sid: string }> }
 ) {
   const params = await props.params;
   const body = await req.json();
@@ -63,7 +63,7 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  props: { params: Promise<{ pid: number; sid: number }> }
+  props: { params: Promise<{ pid: string; sid: string }> }
 ) {
   const params = await props.params;
 

@@ -9,7 +9,7 @@ import { VendorReferrals } from './components/referrals'
 import { VendorProgressOverview } from './components/overview'
 import ReferralBanner from './components/ReferralBanner'
 
-async function fetchVendor(id: number, lid: string): Promise<Vendor> {
+async function fetchVendor(id: string, lid: string): Promise<Vendor> {
 
     try {
         const vendor = await db.query.vendors.findFirst({
@@ -78,7 +78,7 @@ async function BenefitsPage(props: { params: Promise<{ id: string }> }) {
                     <VendorBadges level={vendor.vendorLevel!} />
                 </TabsContent>
                 <TabsContent value="My Rewards">
-                    <VendorRewards claimedRewards={vendor.vendorLevel!.claimedRewards} />
+                    <VendorRewards claimedRewards={vendor.vendorLevel!.claimedRewards || []} />
                 </TabsContent>
 
                 <TabsContent value="My Referrals">

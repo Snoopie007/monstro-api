@@ -5,8 +5,8 @@ import {eq} from "drizzle-orm";
 import {transactions} from "@/db/schemas";
 
 type TransactionProps = {
-  mid: number;
-  id: number;
+  mid: string;
+  id: string;
 };
 
 export async function GET(

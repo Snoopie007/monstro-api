@@ -4,9 +4,9 @@ import { programSessions, reservations } from "@/db/schemas";
 import { NextResponse, NextRequest } from "next/server";
 
 type Params = {
-    id: number,
-    pid: number,
-    lid: number
+    id: string,
+    pid: string,
+    lid: string
 }
 
 export async function GET(req: NextRequest, props: { params: Promise<Params> }) {
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, props: { params: Promise<Params> }) 
 }
 
 
-export async function POST(req: Request, props: { params: Promise<{ pid: number }> }) {
+export async function POST(req: Request, props: { params: Promise<{ pid: string }> }) {
     const params = await props.params;
     const { time, duration, day } = await req.json();
     
