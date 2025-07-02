@@ -1,84 +1,92 @@
-"use client"
+"use client";
+
+import { ColumnDef, Table as TansackTable } from "@tanstack/react-table";
+import { flexRender } from "@/libs/table-utils";
 
 import {
-    ColumnDef,
-    Table as TansackTable,
-    flexRender,
-
-} from "@tanstack/react-table"
-
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table"
-import { Member } from "@/types"
-import { Skeleton } from "@/components/ui/skeleton"
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Member } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function ProgramMemberTable<TData, TValue>({
-    columns,
-    table,
-    isLoading,
-}: { columns: number, table: TansackTable<Member>, isLoading: boolean }) {
-
-    return (
-        <div className="border-t">
-            <Table>
-                <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                            {headerGroup.headers.map((header) => {
-                                return (
-                                    <TableHead key={header.id} className="h-auto py-2">
-                                        {header.isPlaceholder ? null : flexRender(
-                                            header.column.columnDef.header,
-                                            header.getContext()
-                                        )}
-                                    </TableHead>
-                                )
-                            })}
-                        </TableRow>
+  columns,
+  table,
+  isLoading,
+}: {
+  columns: number;
+  table: TansackTable<Member>;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="border-t">
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => {
+                return (
+                  <TableHead key={header.id} className="h-auto py-2">
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            <TableRow>
+              {table.getHeaderGroups()[0].headers.map((header, i) => {
+                return (
+                  <TableCell key={i}>
+                    <Skeleton className="w-full h-4 bg-gray-100" />
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          ) : (
+            <>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="py-2">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
                     ))}
-                </TableHeader>
-                <TableBody>
-                    {isLoading ? (
-                        <TableRow >
-                            {table.getHeaderGroups()[0].headers.map((header, i) => {
-                                return (
-                                    <TableCell key={i}>
-                                        <Skeleton className="w-full h-4 bg-gray-100" />
-                                    </TableCell>
-                                )
-                            })}
-                        </TableRow>
-                    ) : (
-                        <>
-                            {table.getRowModel().rows?.length ? (
-                                table.getRowModel().rows.map((row) => (
-                                    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id} className="py-2" >
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={columns} className="h-6 w-full text-center">
-                                        No results.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </>
-                    )}
-
-                </TableBody>
-            </Table>
-        </div>
-    )
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns}
+                    className="h-6 w-full text-center"
+                  >
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
 }
