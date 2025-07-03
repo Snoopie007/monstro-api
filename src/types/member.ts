@@ -3,7 +3,17 @@ import { FamilyMember } from "./FamilyMember";
 import { Transaction } from "./transaction";
 import { Location } from "./location";
 import { PlanProgram } from "./program";
-import { importMembers, memberInvoices, memberLocations, memberPackages, memberPlans, memberReferrals, members, memberSubscriptions } from "@/db/schemas";
+import {
+  importMembers,
+  memberInvoices,
+  memberLocations,
+  memberPackages,
+  memberPlans,
+  memberPointsHistory,
+  memberReferrals,
+  members,
+  memberSubscriptions,
+} from "@/db/schemas";
 
 export type Member = typeof members.$inferSelect & {
   familyMembers?: FamilyMember[];
@@ -16,7 +26,6 @@ export type Member = typeof members.$inferSelect & {
   referredBy?: MemberReferral;
 };
 
-
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
   child?: MemberSubscription | null;
   invoices?: MemberInvoice[];
@@ -26,7 +35,6 @@ export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
 };
 
 export type MemberPackage = typeof memberPackages.$inferSelect & {
-
   invoice?: MemberInvoice | null;
   plan?: MemberPlan;
   contract?: MemberContract | null;
@@ -41,7 +49,7 @@ export type BillingCycleAnchorConfig = {
   minute?: number;
   month?: number;
   second?: number;
-}
+};
 
 export type MemberPlan = typeof memberPlans.$inferSelect & {
   contract?: Contract | undefined;
@@ -49,7 +57,6 @@ export type MemberPlan = typeof memberPlans.$inferSelect & {
   planPrograms?: PlanProgram[];
   member?: Member;
 };
-
 
 export type MemberInvoice = typeof memberInvoices.$inferSelect & {
   member?: Member;
@@ -61,9 +68,7 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
 export type MemberLocation = typeof memberLocations.$inferSelect & {
   location?: Location;
   member?: Member;
-}
-
-
+};
 
 export type FamilyPlan = {
   planName: string;
@@ -72,16 +77,10 @@ export type FamilyPlan = {
   packageId?: number;
 };
 
-export type ImportMember = typeof importMembers.$inferSelect & {
-
-}
-
-
+export type ImportMember = typeof importMembers.$inferSelect & {};
 
 export type MemberReferral = typeof memberReferrals.$inferSelect & {
   member?: Member;
   referred?: Member;
   location?: Location;
-}
-
-
+};

@@ -11,6 +11,7 @@ import {
 	smallint,
 	unique,
 	uuid,
+	bigint
 } from "drizzle-orm/pg-core";
 import { locations, memberLocations } from "./locations";
 import { users } from "./users";
@@ -55,7 +56,7 @@ export const memberPointsHistory = pgTable("member_points_history", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-	points: integer("points").notNull().default(0),
+	points: bigint("points", { mode: "number" }).notNull().default(0),
 	achievementId: text("achievement_id").references(() => achievements.id, { onDelete: "cascade" }),
 	type: text("type").notNull(),
 	removed: boolean("removed").notNull().default(false),

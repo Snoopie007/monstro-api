@@ -7,10 +7,8 @@ import {
 } from '@/components/ui';
 import { Input } from '@/components/forms';
 import { CreateAchievement, AchievementColumns, CreateTrigger } from '.';
-import { useReactTable } from '@tanstack/react-table';
-import { getCoreRowModel } from '@tanstack/react-table';
-import { flexRender } from '@tanstack/react-table';
 import { useAchievements } from '../providers';
+import { flexRender, getCoreRowModel, useReactTable } from '@/libs/table-utils';
 
 
 export function AchievementTable({ lid }: { lid: string }) {

@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/db/db';
-import { authenticateMember } from '@/libs/utils';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/db/db";
+import { authenticateMember } from "@/libs/utils";
 
 type Props = {
-  lid: string,
-  mid: string
-}
+  lid: string;
+  mid: string;
+};
 
 export async function GET(req: NextRequest, props: { params: Promise<Props> }) {
   const params = await props.params;
@@ -21,7 +21,8 @@ export async function GET(req: NextRequest, props: { params: Promise<Props> }) {
     }
 
     const family = await db.query.familyMembers.findFirst({
-      where: (familyMembers, { eq, and }) => and(eq(familyMembers.relatedMemberId, params.mid)),
+      where: (familyMembers, { eq, and }) =>
+        and(eq(familyMembers.relatedMemberId, params.mid)),
       with: {
         relatedMember: {
           with: {
@@ -30,19 +31,21 @@ export async function GET(req: NextRequest, props: { params: Promise<Props> }) {
               with: {
                 achievement: {
                   with: {
-                    actions: true
-                  }
-                }
-              }
+                    triggedAchievement: {
+                      with: {
+                        trigger: true,
+                      },
+                    },
+                  },
+                },
+              },
             },
             packages: true,
             rewards: true,
             subscriptions: true,
-           
-
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     return NextResponse.json(family, { status: 200 });
