@@ -5,7 +5,7 @@ import {
   Transaction,
   MemberSubscription,
 } from "@/types";
-import {isAfter} from "date-fns";
+import { isAfter } from "date-fns";
 
 type BaseData = {
   memberPlanId: string;
@@ -35,17 +35,92 @@ type SubscriptionData = BaseData & {
   trialDays?: number;
 };
 
+// Create insert types that omit auto-generated fields
+type TransactionInsert = Omit<
+  Transaction,
+  | "id"
+  | "created"
+  | "updated"
+  | "member"
+  | "subscription"
+  | "package"
+  | "metadata"
+  | "invoice"
+> & {
+  metadata?: Record<string, any>;
+  invoiceId?: string | null;
+  subscriptionId?: string | null;
+  packageId?: string | null;
+  refunded?: boolean;
+};
+
+type MemberInvoiceInsert = Omit<
+  MemberInvoice,
+  | "id"
+  | "created"
+  | "updated"
+  | "member"
+  | "location"
+  | "memberPackage"
+  | "memberSubscription"
+> & {
+  metadata?: Record<string, any>;
+  memberPackageId?: string | null;
+  memberSubscriptionId?: string | null;
+  dueDate?: Date;
+  attemptCount?: number;
+  invoicePdf?: string | null;
+  forPeriodStart?: Date | null;
+  forPeriodEnd?: Date | null;
+};
+
+type MemberPackageInsert = Omit<
+  MemberPackage,
+  | "id"
+  | "updated"
+  | "invoice"
+  | "plan"
+  | "contract"
+  | "member"
+  | "parent"
+  | "transactions"
+> & {
+  metadata?: Record<string, unknown>;
+  memberContractId?: string | null;
+  stripePaymentId?: string | null;
+  parentId?: string | null;
+  totalClassAttended?: number;
+};
+
+type MemberSubscriptionInsert = Omit<
+  MemberSubscription,
+  | "id"
+  | "created"
+  | "updated"
+  | "child"
+  | "invoices"
+  | "plan"
+  | "contract"
+  | "member"
+> & {
+  cancelAt?: Date | null;
+  cancelAtPeriodEnd?: boolean;
+  trialEnd?: Date | null;
+  endedAt?: Date | null;
+  metadata?: Record<string, unknown>;
+};
+
 type BaseReturnType = {
-  newTransaction: Transaction;
-  newInvoice: MemberInvoice;
+  newTransaction: TransactionInsert;
+  newInvoice: MemberInvoiceInsert;
 };
 
 type CreatePackageReturn = BaseReturnType & {
-  newPkg: MemberPackage;
+  newPkg: MemberPackageInsert;
 };
 
 type CreateSubscriptionReturn = BaseReturnType & {
-  newSubscription: MemberSubscription;
+  newSubscription: MemberSubscriptionInsert;
 };
 
 function calculateCurrentPeriodEnd(
@@ -75,7 +150,7 @@ function calculateCurrentPeriodEnd(
 }
 
 function calculateInvoice(plans: MemberPlan[], tax: number, discount: number) {
-  const items: {name: string; quantity: number; price: number}[] = [];
+  const items: { name: string; quantity: number; price: number }[] = [];
   let subtotal = 0;
 
   plans.forEach((plan) => {
@@ -96,13 +171,17 @@ function calculateInvoice(plans: MemberPlan[], tax: number, discount: number) {
   };
 }
 
-type RestProps = {memberId: string; locationId: string; paymentMethod: string};
+type RestProps = {
+  memberId: string;
+  locationId: string;
+  paymentMethod: string;
+};
 
 function createTransaction(
   plan: MemberPlan,
   props: RestProps,
   tax: number
-): Transaction {
+): TransactionInsert {
   const today = new Date();
   const description =
     plan.type === "recurring"
@@ -119,7 +198,12 @@ function createTransaction(
     amount: plan.price,
     currency: plan.currency,
     // TODO: ammend type later on
-    items: [{name: plan.name}],
+    items: [{ name: plan.name }],
+    metadata: {},
+    refunded: false,
+    invoiceId: null,
+    subscriptionId: null,
+    packageId: null,
   };
 }
 
@@ -127,7 +211,7 @@ function createInvoice(
   plan: MemberPlan,
   props: RestProps,
   tax: number
-): MemberInvoice {
+): MemberInvoiceInsert {
   const description =
     plan.type === "recurring"
       ? `Subscription to ${plan.name}`
@@ -140,6 +224,14 @@ function createInvoice(
     currency: plan.currency,
     paid: false,
     status: "draft",
+    metadata: {},
+    memberPackageId: null,
+    memberSubscriptionId: null,
+    dueDate: new Date(),
+    attemptCount: 0,
+    invoicePdf: null,
+    forPeriodStart: null,
+    forPeriodEnd: null,
   };
 }
 
@@ -150,8 +242,8 @@ function createPackage(
 ): CreatePackageReturn {
   const today = new Date();
   const startDate = data.startDate ? new Date(data.startDate) : today;
-  const {totalClassLimit, ...rest} = data;
-  const {expireInterval, expireThreshold} = plan;
+  const { totalClassLimit, ...rest } = data;
+  const { expireInterval, expireThreshold } = plan;
 
   let expireDate: Date | null = null;
   if (data.expireDate) {
@@ -164,7 +256,7 @@ function createPackage(
     );
   }
 
-  const newPkg: MemberPackage = {
+  const newPkg: MemberPackageInsert = {
     ...rest,
     locationId: rest.locationId,
     startDate: startDate,
@@ -172,11 +264,16 @@ function createPackage(
     totalClassLimit: totalClassLimit || 0,
     created: today,
     status: "incomplete",
+    metadata: {},
+    memberContractId: null,
+    stripePaymentId: null,
+    parentId: null,
+    totalClassAttended: 0,
   };
 
   const newTransaction = createTransaction(plan, rest, tax);
   const newInvoice = createInvoice(plan, rest, tax);
-  return {newTransaction, newPkg, newInvoice};
+  return { newTransaction, newPkg, newInvoice };
 }
 
 function createSubscription(
@@ -192,9 +289,9 @@ function createSubscription(
     plan.intervalThreshold!
   );
 
-  const {trialDays, endDate, ...rest} = data;
+  const { trialDays, endDate, ...rest } = data;
 
-  let trialEnd: Date | undefined;
+  let trialEnd: Date | null = null;
   if (data.trialDays) {
     if (isAfter(startDate, today)) {
       trialEnd = new Date(
@@ -213,15 +310,21 @@ function createSubscription(
     }
   }
 
-  const newSubscription: MemberSubscription = {
+  const newSubscription: MemberSubscriptionInsert = {
     ...rest,
     memberId: rest.memberId,
     startDate: startDate,
     currentPeriodStart: startDate,
     currentPeriodEnd: periodEnd,
-    cancelAt: data.endDate ? new Date(data.endDate) : undefined,
+    cancelAt: data.endDate ? new Date(data.endDate) : null,
     status: "incomplete",
     trialEnd,
+    cancelAtPeriodEnd: false,
+    endedAt: null,
+    metadata: {},
+    parentId: null,
+    stripeSubscriptionId: null,
+    memberContractId: null,
   };
 
   const newTransaction = createTransaction(plan, rest, tax);
@@ -231,7 +334,7 @@ function createSubscription(
     forPeriodEnd: periodEnd,
   };
 
-  return {newSubscription, newTransaction, newInvoice};
+  return { newSubscription, newTransaction, newInvoice };
 }
 
 export {
