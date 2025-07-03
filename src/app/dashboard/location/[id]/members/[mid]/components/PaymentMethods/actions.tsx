@@ -1,5 +1,4 @@
 
-import { Icon } from '@/components/icons'
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -9,6 +8,7 @@ import {
     DropdownMenuSeparator
 } from '@/components/ui'
 import { tryCatch } from '@/libs/utils';
+import { EllipsisVertical } from 'lucide-react';
 import Stripe from 'stripe';
 
 interface PaymentMethodActionsProps {
@@ -48,7 +48,7 @@ export default function PaymentMethodsActions({ paymentMethod, mid, lid, custome
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant={"ghost"} className='h-auto py-0 px-0 hover:bg-transparent'>
-                    <Icon name="EllipsisVertical" size={16} className="dark:text-white" />
+                    <EllipsisVertical size={16} />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className='w-[180px] border-foreground/20 p-2'>

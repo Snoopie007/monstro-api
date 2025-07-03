@@ -290,6 +290,7 @@ CREATE TABLE IF NOT EXISTS member_contracts (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
   contract_id text REFERENCES contracts (id) ON DELETE CASCADE NOT NULL,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
   signed boolean NOT NULL DEFAULT false,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,

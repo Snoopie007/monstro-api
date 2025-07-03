@@ -10,6 +10,7 @@ import {
 import { useState } from "react";
 import React from "react";
 import { PkgForm } from "./PkgForm";
+import { VisuallyHidden } from "react-aria";
 
 export function CreatePackage({ params }: { params: { id: string, mid: string } }) {
 
@@ -21,12 +22,9 @@ export function CreatePackage({ params }: { params: { id: string, mid: string } 
                 <Button variant={"foreground"} size={"sm"} >+ Package</Button>
             </DialogTrigger>
             <DialogContent className="max-w-[450px] border-foreground/10">
-                <DialogHeader className="space-y-0">
-                    <DialogTitle className='text-sm font-medium flex flex-row items-center gap-1'>
-                        Add Member Package
-                    </DialogTitle>
-                    <DialogDescription></DialogDescription>
-                </DialogHeader>
+                <VisuallyHidden>
+                    <DialogTitle></DialogTitle>
+                </VisuallyHidden>
                 <PkgForm params={params} setOpen={setOpen} />
             </DialogContent>
         </Dialog >

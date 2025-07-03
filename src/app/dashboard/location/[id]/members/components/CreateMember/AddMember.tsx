@@ -13,6 +13,7 @@ import React, { useState } from 'react'
 import { CreateMemberForm } from '.';
 import { Member } from '@/types';
 import { Stripe } from 'stripe';
+import { VisuallyHidden } from 'react-aria';
 
 interface CreateMemberProps {
     lid: string
@@ -41,12 +42,9 @@ export function AddMember({ lid, stripeKey }: CreateMemberProps) {
             </DialogTrigger>
 
             <DialogContent className="max-w-lg border-foreground/10" aria-modal>
-                <DialogHeader className="space-y-0">
-                    <DialogTitle className='text-sm font-medium flex flex-row items-center gap-1'>
-                        Create Account
-                    </DialogTitle>
-                    <DialogDescription className='hidden'></DialogDescription>
-                </DialogHeader>
+                <VisuallyHidden>
+                    <DialogTitle></DialogTitle>
+                </VisuallyHidden>
                 <CreateMemberForm lid={lid} />
             </DialogContent>
         </Dialog>

@@ -20,7 +20,6 @@ import { z } from "zod";
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Icon } from '@/components/icons';
 import { CreateMemberSchema } from '../../schema';
 import PhoneInput from 'react-phone-number-input/input';
 import { CountryCodes } from '@/libs/data';
@@ -36,6 +35,7 @@ import { toast } from 'react-toastify';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BirthdayField } from './DOBField';
+import { Loader2 } from 'lucide-react';
 
 
 
@@ -314,7 +314,7 @@ export function CreateMemberForm({ lid }: { lid: string }) {
                             onClick={form.handleSubmit(onSubmit)}
                             className={cn("children:hidden", (loading && "children:inline-block"))}
                         >
-                            <Icon name="LoaderCircle" className="mr-2  animate-spin" />
+                            <Loader2 className="mr-2  animate-spin size-4" />
                             Create Account
                         </Button>
                     </DialogClose>
@@ -326,8 +326,8 @@ export function CreateMemberForm({ lid }: { lid: string }) {
                         className={cn("children:hidden", (loading && "children:inline-block"))}
                         disabled={loading}
                     >
-                        <Icon name="LoaderCircle" className="mr-2  animate-spin" />
-                        Retry Invite
+                        <Loader2 className="mr-2  animate-spin size-4" />
+                        Retry
                     </Button>
                 )}
             </DialogFooter>

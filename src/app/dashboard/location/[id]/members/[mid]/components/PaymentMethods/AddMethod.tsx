@@ -61,7 +61,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
         mode: "onChange",
     });
 
-      async function onSubmit(v: z.infer<typeof AddCreditCardSchema>) {
+    async function onSubmit(v: z.infer<typeof AddCreditCardSchema>) {
 
         if (!elements || !stripe || !validCard) return;
         setLoading(true);
@@ -111,7 +111,7 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
 
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant={"ghost"} size={"icon"} className="size-8 rounded-sm">
+                <Button variant={"ghost"} size={"icon"} className="size-6 rounded-sm">
                     <PlusIcon className="size-4" />
                 </Button>
             </DialogTrigger>

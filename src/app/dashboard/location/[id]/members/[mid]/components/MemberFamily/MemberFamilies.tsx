@@ -23,14 +23,16 @@ export function MemberFamilies({ params, familyMembers }: MemberFamiliesProps) {
     const { member } = useMemberStatus()
 
     return (
-        <Card className='border-x-0 border-y border-foreground/10'>
+        <Card className='border-foreground/10 border-x-0 border-y'>
 
 
-            <CardHeader className='border-b border-foreground/10 space-y-0  p-0 flex justify-between flex-row items-center ' >
-                <CardTitle className="text-sm  px-4">
-                    Family Members
-                </CardTitle>
-                <AddChildMember parent={member} lid={params.id} />
+            <CardHeader className='border-none px-4 py-2 bg-foreground/5' >
+                <div className='flex flex-row items-center justify-between'>
+                    <CardTitle className="text-sm  ">
+                        Family Members
+                    </CardTitle>
+                    <AddChildMember parent={member} lid={params.id} />
+                </div>
             </CardHeader>
             <CardContent className='p-0' >
                 <ul className="space-y-2 py-2">

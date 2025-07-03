@@ -1,5 +1,4 @@
 
-import { Icon } from '@/components/icons'
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -9,6 +8,7 @@ import {
     DropdownMenuSeparator
 } from '@/components/ui'
 import { Staff } from '@/types'
+import { EllipsisVertical } from 'lucide-react'
 
 
 interface StaffListProps {
@@ -22,7 +22,7 @@ export default function StaffListActions({ staff, onChange, deleteFunction }: St
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant={"ghost"} className='h-auto px-0 hover:bg-transparent'>
-                    <Icon name="EllipsisVertical" size={16} className="dark:text-white" />
+                    <EllipsisVertical size={16} />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className='w-[180px] border-foreground/20 p-2'>

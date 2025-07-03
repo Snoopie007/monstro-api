@@ -54,7 +54,7 @@ export function LocationSideNav({ lid }: { lid: string }) {
                                                         <span>{item.icon}</span>
                                                         <b className='group-data-[state=closed]:opacity-0 font-semibold flex-1 text-xs'>{item.name}</b>
                                                     </div>
-                                                    <ChevronsUpDown />
+                                                    <ChevronsUpDown size={14} />
                                                 </CollapsibleTrigger>
                                                 <CollapsibleContent className='mx-4 border-foreground/20 border-l mt-2'>
                                                     <ul className='px-2 space-y-1'>

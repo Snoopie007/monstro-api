@@ -1,4 +1,4 @@
-import { Icon } from '@/components/icons';
+
 import {
     Button,
     Dialog,
@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/libs/utils'
 import { Staff } from '@/types';
-
+import { Mail, Phone, ChevronDown } from 'lucide-react'
 
 interface StaffListProps {
     staff?: Staff | null
@@ -43,11 +43,11 @@ export function StaffProfile({ staff, onChange }: StaffListProps) {
                             <b className='text-xl font-bold'>{staff?.firstName} {staff?.lastName}</b>
                             <div className='flex-row flex items-center gap-2 text-sm'>
                                 <div className='flex-row flex items-center gap-1'>
-                                    <Icon name='Mail' size={14} />
+                                    <Mail size={14} />
                                     <span>{staff?.email}</span>
                                 </div>
                                 <div className='flex-row flex items-center gap-1'>
-                                    <Icon name='Phone' size={14} />
+                                    <Phone size={14} />
                                     <span>{staff?.phone}</span>
                                 </div>
                             </div>
@@ -55,7 +55,7 @@ export function StaffProfile({ staff, onChange }: StaffListProps) {
                                 {staff?.role && (
                                     <Badge roles={staff?.role.color}>
                                         <span >  {staff?.role.name}</span>
-                                        <Icon name='ChevronDown' size={14} />
+                                        <ChevronDown size={14} />
                                     </Badge>
                                 )}
                                 <div className='text-indigo-400 cursor-pointer'>
@@ -78,5 +78,5 @@ export function StaffProfile({ staff, onChange }: StaffListProps) {
                 </div>
             </DialogContent>
         </Dialog>
-  );
+    );
 }

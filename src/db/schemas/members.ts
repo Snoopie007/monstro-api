@@ -43,7 +43,6 @@ export const memberAchievements = pgTable("member_achievements", {
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	achievementId: text("achievement_id").notNull().references(() => achievements.id, { onDelete: "cascade" }),
-	note: text("note"),
 	status: text("status"),
 	progress: integer("progress").default(0),
 	dateAchieved: timestamp("date_achieved", { withTimezone: true }).notNull().defaultNow(),
@@ -104,7 +103,6 @@ export const memberContracts = pgTable("member_contracts", {
 	signature: text("signature"),
 	variables: jsonb("variables").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
 	signed: boolean("signed").notNull().default(false),
-	pdfUrl: text("pdf_url"),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });

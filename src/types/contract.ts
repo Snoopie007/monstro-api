@@ -8,7 +8,6 @@ export type Contract = typeof contractTemplates.$inferSelect & {
     location?: Location;
 }
 
-
 export type MemberContract = typeof memberContracts.$inferSelect & {
     member?: Member;
     contract?: Contract;
@@ -16,4 +15,5 @@ export type MemberContract = typeof memberContracts.$inferSelect & {
     package?: MemberPackage | null;
     contractTemplate?: Contract;
     location?: Location;
+    pdfUrl?: string;
 }

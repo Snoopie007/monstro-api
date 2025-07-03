@@ -14,8 +14,7 @@ export const attendances = pgTable("check_ins", {
   macAddress: text("mac_address"),
   lat: integer("lat"),
   lng: integer("lng"),
-  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  deleted: timestamp("deleted_at", { withTimezone: true }),
+  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
 });
 
 export const attendancesRelations = relations(attendances, ({ one }) => ({

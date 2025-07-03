@@ -1,4 +1,4 @@
-import { Icon } from '@/components/icons'
+
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -9,6 +9,7 @@ import {
 } from '@/components/ui'
 import { tryCatch } from '@/libs/utils';
 import { Transaction } from '@/types/transaction';
+import { EllipsisVertical } from 'lucide-react';
 
 interface MemberPaymentActionsProps {
     transaction: Transaction,
@@ -33,7 +34,7 @@ export default function MemberPaymentActions({ transaction, mid, lid }: MemberPa
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant={"ghost"} className='h-auto py-0 px-0 hover:bg-transparent'>
-                    <Icon name="EllipsisVertical" size={16} className="dark:text-white" />
+                    <EllipsisVertical size={16} />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className='w-[180px] border-foreground/20 p-2'>

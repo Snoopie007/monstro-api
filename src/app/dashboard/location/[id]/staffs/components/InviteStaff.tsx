@@ -26,8 +26,10 @@ import { InviteStaffSchema } from '../schema'
 import { DialogClose, DialogDescription } from '@radix-ui/react-dialog'
 import { Role } from '@/types';
 import { toast } from 'react-toastify';
+import { VisuallyHidden } from 'react-aria';
+import { Loader2 } from 'lucide-react';
 
-export default function InviteStaff({ roles, locationId }: { roles: Array<Role>, locationId: string }) {
+export default function InviteStaff({ roles, lid }: { roles: Array<Role>, lid: string }) {
     const [open, setOpen] = useState<boolean>(false);
     const form = useForm<z.infer<typeof InviteStaffSchema>>({
         resolver: zodResolver(InviteStaffSchema),
@@ -42,16 +44,21 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
     })
 
     async function onSubmit(v: z.infer<typeof InviteStaffSchema>) {
-
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${locationId}/staffs`, {
-                method: "POST",
-                body: JSON.stringify(v)
-            })
-        )
+        if (form.formState.isSubmitting) return;
 
 
         try {
+            const { result, error } = await tryCatch(
+                fetch(`/api/protected/loc/${lid}/staffs`, {
+                    method: "POST",
+                    body: JSON.stringify(v)
+                })
+            )
+
+            if (error || !result || !result.ok) {
+                toast.error("Something went wrong, please try again later");
+                return;
+            }
 
             toast.success("Staff Added");
             setOpen(false);
@@ -63,23 +70,22 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant={"foreground"} size={"xs"}  >Invite</Button>
+                <Button variant={"create"} size={"sm"}  > + Invite</Button>
             </DialogTrigger>
             <DialogContent className={cn("border-foreground/10 p-0")}>
-                <DialogHeader >
-                    <DialogTitle>Invite Staff</DialogTitle>
-                    <DialogDescription className='text-sm text-foreground/50'>Invite a new staff to your organization</DialogDescription>
-                </DialogHeader>
+                <VisuallyHidden>
+                    <DialogTitle></DialogTitle>
+                </VisuallyHidden>
                 <DialogBody>
                     <Form {...form}>
-                        <form className='space-y-4'>
+                        <form className='space-y-2'>
                             <fieldset className='flex flex-row gap-2'>
                                 <FormField
                                     control={form.control}
                                     name="firstName"
                                     render={({ field }) => (
                                         <FormItem className="flex-1">
-                                            <FormLabel>First Name</FormLabel>
+                                            <FormLabel size={'tiny'}>First Name</FormLabel>
                                             <FormControl>
                                                 <Input type='text' className={cn("")} placeholder="First Name" {...field} />
                                             </FormControl>
@@ -93,7 +99,7 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
                                     name="lastName"
                                     render={({ field }) => (
                                         <FormItem className="flex-1">
-                                            <FormLabel>Last Description</FormLabel>
+                                            <FormLabel size={'tiny'}>Last Name</FormLabel>
                                             <FormControl>
                                                 <Input type='text' className={cn("")} placeholder="Last Name" {...field} />
                                             </FormControl>
@@ -110,7 +116,7 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
                                     name="email"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Email</FormLabel>
+                                            <FormLabel size={'tiny'}>Email</FormLabel>
                                             <FormControl>
                                                 <Input type='email' className={cn("")} placeholder="Email" {...field} />
                                             </FormControl>
@@ -126,7 +132,7 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
                                     name="phone"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Phone</FormLabel>
+                                            <FormLabel size={'tiny'}>Phone</FormLabel>
                                             <FormControl>
                                                 <Input type='text' className={cn("")} placeholder="Phone" {...field} />
                                             </FormControl>
@@ -141,9 +147,9 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
                                     name="role"
                                     render={({ field }) => (
                                         <FormItem className='flex-initial min-w-[30%]'>
-                                            <FormLabel>Role</FormLabel>
+                                            <FormLabel size={'tiny'}>Role</FormLabel>
                                             <Select onValueChange={(value) => field.onChange(value)}>
-                                                <SelectTrigger className="w-full border rounded-sm bg-transparent font-normal border-white">
+                                                <SelectTrigger className="w-full border border-foreground/10 font-normal">
                                                     <SelectValue placeholder="Select a Role" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -162,9 +168,15 @@ export default function InviteStaff({ roles, locationId }: { roles: Array<Role>,
                 </DialogBody>
                 <DialogFooter >
                     <DialogClose asChild>
-                        <Button variant="outline" size={"xs"} className='rounded-sm' onClick={() => setOpen(false)}>Cancel</Button>
+                        <Button variant="outline" size={"sm"} onClick={() => setOpen(false)}>
+                            Cancel
+                        </Button>
                     </DialogClose>
-                    <Button variant="foreground" size={"xs"} className=' rounded-sm' onClick={form.handleSubmit(onSubmit)}>Save</Button>
+                    <Button variant="foreground" size={"sm"} onClick={form.handleSubmit(onSubmit)}
+                        disabled={form.formState.isSubmitting}
+                    >
+                        {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin' /> : "Save"}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
 

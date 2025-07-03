@@ -11,6 +11,7 @@ import {
 import { useState } from "react";
 import React from "react";
 import { SubForm } from "./SubForm";
+import { VisuallyHidden } from "react-aria";
 
 export function CreateSubscription({ params }: { params: { id: string, mid: string } }) {
     const [open, setOpen] = useState<boolean>(false);
@@ -23,12 +24,9 @@ export function CreateSubscription({ params }: { params: { id: string, mid: stri
                 <Button variant={"foreground"} size={"sm"} >+ Subscription</Button>
             </DialogTrigger>
             <DialogContent className="max-w-[500px] border-foreground/10">
-                <DialogHeader className="space-y-0">
-                    <DialogTitle className='text-sm font-medium flex flex-row items-center gap-1'>
-                        Add Member Subscription
-                    </DialogTitle>
-                    <DialogDescription></DialogDescription>
-                </DialogHeader>
+                <VisuallyHidden>
+                    <DialogTitle></DialogTitle>
+                </VisuallyHidden>
                 <SubForm params={params} setOpen={setOpen} />
             </DialogContent>
         </Dialog >

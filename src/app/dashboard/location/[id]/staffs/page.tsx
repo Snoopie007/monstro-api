@@ -16,7 +16,6 @@ import {
   TableBody,
   TableCell,
   TableRow,
-  TablePageHeaderTitle,
 } from "@/components/ui";
 import { useRoles } from "@/hooks/useRoles";
 import InviteStaff from "./components/InviteStaff";
@@ -81,7 +80,6 @@ export default function StaffsPage(props: StaffsPageProps) {
     <>
       <TablePage>
         <TablePageHeader>
-          <TablePageHeaderTitle>Staffs</TablePageHeaderTitle>
           <TablePageHeaderSection>
             <div className="flex flex-row   items-center gap-2 ">
               <Input
@@ -90,11 +88,11 @@ export default function StaffsPage(props: StaffsPageProps) {
                   const value = event.target.value;
                   // table.getColumn("name")?.setFilterValue(value);
                 }}
-                className="border text-xs h-auto py-1 border-foreground/10 rounded-xs"
+                variant="search"
               />
 
               {!isRolesLoading && !isRolesError && (
-                <InviteStaff roles={roles} locationId={params.id} />
+                <InviteStaff roles={roles} lid={params.id} />
               )}
             </div>
           </TablePageHeaderSection>
@@ -116,9 +114,9 @@ export default function StaffsPage(props: StaffsPageProps) {
                         {header.isPlaceholder
                           ? null
                           : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                       </TableHead>
                     );
                   })}

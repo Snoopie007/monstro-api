@@ -18,8 +18,10 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 			offset: (Number(page) - 1) * Number(limit),
 		});
 
+
 		return NextResponse.json(contracts, { status: 200 });
 	} catch (err) {
+		console.error(err);
 		return NextResponse.json({ error: err }, { status: 500 })
 	}
 }

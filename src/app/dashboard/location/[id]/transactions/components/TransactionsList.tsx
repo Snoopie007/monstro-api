@@ -6,7 +6,6 @@ import { Skeleton } from "@/components/ui";
 import {
   TablePage,
   TablePageHeaderSection,
-  TablePageHeaderTitle,
   TablePageHeader,
   TablePageContent,
   TableCell,
@@ -58,7 +57,6 @@ export function TransactionsList({
   return (
     <TablePage>
       <TablePageHeader>
-        <TablePageHeaderTitle>Transactions</TablePageHeaderTitle>
         <TablePageHeaderSection>
           <Input
             placeholder="Find a transaction..."
@@ -67,7 +65,7 @@ export function TransactionsList({
               const value = event.target.value;
               // table.getColumn("name")?.setFilterValue(value);
             }}
-            className="border text-xs h-auto py-1 border-foreground/10 rounded-xs"
+            variant="search"
           />
         </TablePageHeaderSection>
       </TablePageHeader>
@@ -83,14 +81,14 @@ export function TransactionsList({
                   return (
                     <TableHead
                       key={header.id}
-                      className="h-auto  border border-foreground/5  py-1  text-foreground"
+                      className="h-auto   border border-foreground/5  py-1  text-foreground text-xs"
                     >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   );
                 })}

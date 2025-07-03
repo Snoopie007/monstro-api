@@ -16,6 +16,8 @@ import { cn, tryCatch } from '@/libs/utils';
 import { useState, useEffect } from 'react';
 
 import { SearchMember, FamilyMemberForm } from '.'
+import { VisuallyHidden } from 'react-aria';
+import { Plus } from 'lucide-react';
 
 interface AddChildMemberProps {
     parent: Member;
@@ -68,27 +70,24 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
         setFamilyMember(null);
         setOpen(false);
     }
-
+    function handleOpenChange(open: boolean) {
+        if (!open) {
+            reset()
+        }
+        setOpen(open)
+    }
 
     return (
-        <Dialog open={open} onOpenChange={(open) => {
-            if (!open) {
-                reset()
-            }
-            setOpen(open)
-        }}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="outline" className="border-y-0 border-r-0 rounded-none border-foreground/10">
-                    + Family to Plan
+                <Button variant="ghost" size={"icon"} className='size-6'>
+                    <Plus className='size-4' />
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[450px] rounded-sm">
-                <DialogHeader className="space-y-0 gap-0">
-                    <DialogTitle>
-                        Add Family to Plan
-                    </DialogTitle>
-                    <DialogDescription className="hidden"></DialogDescription>
-                </DialogHeader>
+                <VisuallyHidden>
+                    <DialogTitle></DialogTitle>
+                </VisuallyHidden>
 
 
                 {!isLoading && familyPlans.length < 1 && (
