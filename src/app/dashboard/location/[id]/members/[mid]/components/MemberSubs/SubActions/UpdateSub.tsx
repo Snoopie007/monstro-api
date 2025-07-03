@@ -36,27 +36,11 @@ import { toast } from "react-toastify";
 import { useParams } from "next/navigation";
 import { format } from "date-fns";
 import { formatAmountForDisplay } from "@/libs/utils";
-import { MemberPlan } from "@/types";
+import { MemberPlan, MemberSubscription } from "@/types";
 import { useSubscriptions } from "@/hooks";
 import { VisuallyHidden } from "react-aria";
 
-interface Subscription {
-	id: number;
-	status: string;
-	currentPeriodEnd: Date;
-	paymentMethod: string;
-	stripeSubscriptionId?: string | null;
-	plan: {
-		id: number;
-		name: string;
-		description: string;
-		price: number;
-		currency: string;
-		interval: string;
-		allowProration: boolean;
-		stripePriceId?: string;
-	};
-}
+
 
 const UpdateSubscriptionSchema = z.object({
 	planId: z.string().min(1, "Plan is required"),
@@ -68,7 +52,7 @@ const UpdateSubscriptionSchema = z.object({
 type UpdateFormData = z.infer<typeof UpdateSubscriptionSchema>;
 
 interface SubscriptionUpdateDialogProps {
-	subscription: Subscription;
+	subscription: MemberSubscription;
 	onUpdate?: () => void;
 }
 
@@ -81,10 +65,10 @@ export function SubscriptionUpdateDialog({ subscription, onUpdate }: Subscriptio
 	const form = useForm<UpdateFormData>({
 		resolver: zodResolver(UpdateSubscriptionSchema),
 		defaultValues: {
-			planId: subscription.plan.id.toString(),
+			planId: subscription.plan?.id.toString(),
 			cancelAt: subscription.currentPeriodEnd ? format(new Date(subscription.currentPeriodEnd), "yyyy-MM-dd") : "",
 			trialDays: 0,
-			allowProration: subscription.plan.allowProration,
+			allowProration: subscription.plan?.allowProration,
 		},
 	});
 
@@ -98,16 +82,16 @@ export function SubscriptionUpdateDialog({ subscription, onUpdate }: Subscriptio
 
 		const updates: Partial<UpdateFormData> = {};
 
-		if (parseInt(data.planId) !== subscription.plan.id) {
-			updates.planId = data.planId;
-		}
+		// if (parseInt(data.planId) !== subscription.plan?.id) {
+		// 	updates.planId = data.planId;
+		// }
 		if (data.cancelAt !== (subscription.currentPeriodEnd ? format(new Date(subscription.currentPeriodEnd), "yyyy-MM-dd") : "")) {
 			updates.cancelAt = data.cancelAt || undefined;
 		}
 		if (data.trialDays !== undefined && data.trialDays !== 0) {
 			updates.trialDays = data.trialDays;
 		}
-		if (data.allowProration !== subscription.plan.allowProration) {
+		if (data.allowProration !== subscription.plan?.allowProration) {
 			updates.allowProration = data.allowProration;
 		}
 

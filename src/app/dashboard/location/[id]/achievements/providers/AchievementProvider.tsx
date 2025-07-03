@@ -87,5 +87,12 @@ export const useAchievements = (): UseAchievementsHookType => {
         throw new Error('useAchievements must be used within an AchievementProvider')
     }
     const { state: { achievements, triggers, currentAchievement }, setAchievements, setCurrentAchievement } = context
-    return { achievements, setAchievements, currentAchievement, setCurrentAchievement, triggers }
+
+    return {
+        achievements,
+        setAchievements,
+        currentAchievement,
+        setCurrentAchievement,
+        triggers
+    }
 }
