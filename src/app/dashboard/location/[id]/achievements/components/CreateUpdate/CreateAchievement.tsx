@@ -10,7 +10,6 @@ import {
 
 import { AchievementForm } from '..';
 import { useState } from 'react';
-import { AchievementTrigger } from '@/types';
 import { AchievementSchema } from '../../schemas';
 import { useForm } from 'react-hook-form';
 import { useAchievements } from '../../providers';
