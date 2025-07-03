@@ -14,5 +14,5 @@ export const TriggerSchema = z.object({
     weight: z.number().optional().default(1),
     timePeriod: z.number().optional(),
     timePeriodUnit: z.string().optional().default('day'),
-    planId: z.string().optional(),
+    memberPlanId: z.string().optional(),
 });

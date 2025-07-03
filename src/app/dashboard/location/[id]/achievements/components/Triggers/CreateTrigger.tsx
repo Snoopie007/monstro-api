@@ -17,6 +17,7 @@ import { toast } from 'react-toastify';
 import { tryCatch } from '@/libs/utils';
 import { Loader2 } from 'lucide-react';
 import { TriggerForm } from '.';
+import { Achievement } from '@/types';
 
 
 
@@ -32,7 +33,7 @@ export function CreateTrigger() {
             weight: 0,
             timePeriodUnit: '',
             timePeriod: 0,
-            planId: '',
+            memberPlanId: '',
         },
         mode: "onChange"
     })

@@ -13,7 +13,7 @@ import { tryCatch } from '@/libs/utils';
 
 import { toast } from 'react-toastify';
 import { TriggerSchema } from '../../schemas';
-import { Achievement, AchievementTrigger } from '@/types';
+import { Achievement, TriggeredAchievement } from '@/types';
 import { useState } from 'react';
 import { Loader2, Pencil } from 'lucide-react';
 import { TriggerForm } from './TriggerForm';
@@ -21,21 +21,21 @@ import { useAchievements } from '../../providers';
 
 interface UpdateTriggerProps {
     achievement: Achievement;
-    trigger: AchievementTrigger;
+    ta: TriggeredAchievement;
 }
 
-export function UpdateTrigger({ achievement, trigger }: UpdateTriggerProps) {
+export function UpdateTrigger({ achievement, ta }: UpdateTriggerProps) {
 
     const { triggers } = useAchievements();
     const [open, setOpen] = useState(false);
     const form = useForm<z.infer<typeof TriggerSchema>>({
         resolver: zodResolver(TriggerSchema),
         defaultValues: {
-            triggerId: '',
-            weight: 0,
-            timePeriod: 0,
-            timePeriodUnit: '',
-            planId: '',
+            triggerId: ta.triggerId.toString(),
+            weight: ta.weight ?? 0,
+            timePeriod: ta.timePeriod ?? 0,
+            timePeriodUnit: ta.timePeriodUnit ?? '',
+            memberPlanId: ta.memberPlanId ?? '',
         },
         mode: "onChange"
     })
@@ -43,7 +43,7 @@ export function UpdateTrigger({ achievement, trigger }: UpdateTriggerProps) {
 
         const lid = achievement.locationId;
         const aid = achievement.id;
-        const tid = trigger.id;
+        const tid = ta.triggerId;
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/achievements/${aid}/triggers/${tid}`, {
                 method: 'PATCH',

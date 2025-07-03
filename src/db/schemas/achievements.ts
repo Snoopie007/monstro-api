@@ -3,6 +3,7 @@ import { text, timestamp, pgTable, integer, primaryKey, uuid, serial } from "dri
 
 import { locations } from "./locations";
 import { memberAchievements, memberPointsHistory } from "./members";
+import { memberPlans } from "./MemberPlans";
 
 export const achievements = pgTable("achievements", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -28,7 +29,8 @@ export const triggeredAchievements = pgTable("triggered_achievements", {
     triggerId: integer("trigger_id").references(() => achievementTriggers.id, { onDelete: "cascade" }).notNull(),
     weight: integer("weight").notNull(),
     timePeriod: integer("time_period"),
-    timePeriodUnit: text("time_period_unit", { enum: ["day", "week", "month", "year"] }).notNull()
+    timePeriodUnit: text("time_period_unit", { enum: ["day", "week", "month", "year"] }),
+    memberPlanId: text("member_plan_id").references(() => memberPlans.id, { onDelete: "cascade" })
 }, (table) => [primaryKey({ columns: [table.achievementId, table.triggerId] })]);
 
 
