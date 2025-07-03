@@ -43,9 +43,8 @@ export function UpdateTrigger({ achievement, ta }: UpdateTriggerProps) {
 
         const lid = achievement.locationId;
         const aid = achievement.id;
-        const tid = ta.triggerId;
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/achievements/${aid}/triggers/${tid}`, {
+            fetch(`/api/protected/loc/${lid}/achievements/${aid}/triggers`, {
                 method: 'PATCH',
                 body: JSON.stringify(v),
             })
@@ -55,7 +54,7 @@ export function UpdateTrigger({ achievement, ta }: UpdateTriggerProps) {
             toast.error("Something went wrong, please try again later");
             return;
         }
-        form.reset();
+        handleOpenChange(false);
     }
 
     function handleOpenChange(open: boolean) {

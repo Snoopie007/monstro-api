@@ -75,7 +75,8 @@ export function UpdateAchievement({ achievement }: UpdateAchievementProps) {
 		}
 
 		toast.success("Achievement Updated");
-		form.reset();
+
+		handleOpenChange(false);
 	}
 
 	function handleOpenChange(open: boolean) {
