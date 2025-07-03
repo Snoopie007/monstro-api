@@ -17,15 +17,14 @@ import { format } from 'date-fns'
 import { useState } from 'react'
 
 function calculateProgress(start: Date, end: Date) {
-    console.log("start", start)
-    console.log("end", end)
     const now = Date.now()
     const startDate = new Date(start)
     const endDate = new Date(end)
     const total = endDate.getTime() - startDate.getTime()
     const elapsed = now - startDate.getTime()
     const progress = (elapsed / total) * 100
-    return Math.min(Math.max(Number(progress.toFixed(2)), 0), 100)
+
+    return Math.min(Math.max(Number(progress.toFixed(2)), 10), 100) // Set minimum to 10%
 }
 
 export function MemberSubs({ params }: { params: { id: string, mid: string }, }) {
