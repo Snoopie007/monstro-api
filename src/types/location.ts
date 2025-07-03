@@ -1,13 +1,14 @@
 import { locationState, locations } from "@/db/schemas/locations";
 import {
   MemberInvoice,
-  MemberPointsHistory,
   MemberReferral,
   MemberSubscription,
 } from "./member";
+
 import { Program } from "./program";
 import { Transaction } from "./transaction";
 import { Wallet } from "./wallet";
+import { MemberPointsHistory } from "./achievement";
 
 export type Location = typeof locations.$inferSelect & {
   locationState?: LocationState;
