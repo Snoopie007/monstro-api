@@ -23,7 +23,7 @@ export function SubscriptionList({ lid }: { lid: string }) {
 	const columns = SubColumns(lid);
 
 	const table = useReactTable({
-		data: subscriptions,
+		data: subscriptions || [],
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 	});

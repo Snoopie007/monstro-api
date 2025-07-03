@@ -23,7 +23,7 @@ export function PackageList({ lid }: { lid: string }) {
   const columns = SubColumns(lid);
 
   const table = useReactTable({
-    data: packages,
+    data: packages || [],
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
@@ -50,9 +50,9 @@ export function PackageList({ lid }: { lid: string }) {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   );
                 })}
