@@ -78,7 +78,7 @@ export function UpdateTrigger({ achievement, ta }: UpdateTriggerProps) {
 
                     </SheetTitle>
                 </SheetHeader>
-                <TriggerForm form={form} triggers={triggers} />
+                <TriggerForm lid={achievement.locationId} form={form} triggers={triggers} />
                 <SheetFooter className='border-t border-foreground/10 py-3 px-4'>
                     <SheetClose asChild>
                         <Button

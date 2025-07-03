@@ -1,26 +1,53 @@
 'use client'
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     FormField, FormItem, FormLabel, FormControl, FormMessage, Input,
     Select, SelectValue, SelectTrigger, SelectContent, SelectItem, Form
 } from '@/components/forms';
-import { SheetSection } from '@/components/ui';
+import { SheetSection, Skeleton } from '@/components/ui';
 import { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
 import { TriggerSchema } from '../../schemas';
-import { AchievementTrigger } from '@/types';
+import { AchievementTrigger, MemberPlan } from '@/types';
+import { sleep, tryCatch } from '@/libs/utils';
 
 interface TriggerFormProps {
+    lid: string;
     form: UseFormReturn<z.infer<typeof TriggerSchema>>;
     triggers: AchievementTrigger[];
 }
 
-export function TriggerForm({ form, triggers }: TriggerFormProps) {
-
-
-
+export function TriggerForm({ lid, form, triggers }: TriggerFormProps) {
     const triggerId = form.watch('triggerId');
+    const [memberPlans, setMemberPlans] = useState<MemberPlan[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    async function fetchMemberPlans(signal: AbortSignal) {
+        setIsLoading(true);
+        if (memberPlans.length > 0) return;
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${lid}/plans`, {
+                method: 'GET',
+                signal,
+            })
+        );
+        if (error || !result || !result.ok) {
+            return;
+        }
+        const data = await result.json();
+        await sleep(1000);
+        setMemberPlans(data);
+        setIsLoading(false);
+    }
+
+    useEffect(() => {
+        if (triggerId !== '4') return;
+        const control = new AbortController();
+        fetchMemberPlans(control.signal);
+        return () => control.abort();
+    }, [triggerId]);
+
+
 
     return (
         <Form {...form}>
@@ -58,39 +85,39 @@ export function TriggerForm({ form, triggers }: TriggerFormProps) {
                             )}
                         />
                     </fieldset>
-                    {['2', '3'].includes(triggerId) && (
-                        <fieldset>
+                    {triggerId === '1' && (
+                        <fieldset className='grid grid-cols-4 gap-2'>
                             <FormField
                                 control={form.control}
-                                name="weight"
+                                name="timePeriod"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel size={'tiny'}>Weight</FormLabel>
+                                    <FormItem className='col-span-1'>
+                                        <FormLabel size={'tiny'}>Time Period</FormLabel>
                                         <FormControl>
-                                            <Input type='number' placeholder="Weight" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                                            <Input type='number' placeholder="Time Period" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
-                        </fieldset>
-                    )}
-
-                    {['4'].includes(triggerId) && (
-                        <fieldset>
                             <FormField
                                 control={form.control}
-                                name="planId"
+                                name="timePeriodUnit"
                                 render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel size={'tiny'}>Which Plan</FormLabel>
+                                    <FormItem className='col-span-3'>
+                                        <FormLabel size={'tiny'}>Time Period Unit</FormLabel>
                                         <FormControl>
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Select a plan" />
+
+                                                    <SelectValue placeholder="Select a unit" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="1">Plan 1</SelectItem>
+                                                    {['day', 'week', 'month', 'year'].map((unit) => (
+                                                        <SelectItem key={unit} value={unit}>
+                                                            {unit}
+                                                        </SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                         </FormControl>
@@ -100,6 +127,55 @@ export function TriggerForm({ form, triggers }: TriggerFormProps) {
                             />
                         </fieldset>
                     )}
+                    {triggerId === '4' && (
+                        <fieldset>
+                            <FormField
+                                control={form.control}
+                                name="memberPlanId"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel size={'tiny'}>Which Plan</FormLabel>
+                                        <FormControl>
+                                            {!isLoading ? (
+                                                <Select onValueChange={field.onChange} value={field.value?.toString()}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select a plan" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {memberPlans.map((plan) => (
+                                                            <SelectItem key={plan.id} value={plan.id}>
+                                                                {plan.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            ) : (
+                                                <Skeleton className='h-10 w-full' />
+                                            )}
+
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </fieldset>
+                    )}
+                    <fieldset>
+                        <FormField
+                            control={form.control}
+                            name="weight"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel size={'tiny'}>Weight</FormLabel>
+                                    <FormControl>
+                                        <Input type='number' placeholder="Weight" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </fieldset>
+
                 </SheetSection>
 
             </form>

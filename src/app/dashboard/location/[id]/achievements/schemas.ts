@@ -11,7 +11,7 @@ export const AchievementSchema = z.object({
 
 export const TriggerSchema = z.object({
     triggerId: z.string(),
-    weight: z.number().optional().default(1),
+    weight: z.number().min(1).max(1000),
     timePeriod: z.number().optional(),
     timePeriodUnit: z.string().optional().default('day'),
     memberPlanId: z.string().optional(),

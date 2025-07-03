@@ -1,27 +1,23 @@
-import {NextRequest, NextResponse} from "next/server";
-import {db} from "@/db/db";
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/db/db";
 
-export async function GET(
-  req: NextRequest,
-  props: {params: Promise<{id: string}>}
-) {
-  const params = await props.params;
-  try {
-    const subs = await db.query.memberPlans.findMany({
-      where: (memberPlans, {eq, and}) =>
-        and(eq(memberPlans.locationId, params.id)),
-      with: {
-        planPrograms: {
-          with: {
-            program: true,
-          },
-        },
-      },
-    });
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
+	try {
+		const mbs = await db.query.memberPlans.findMany({
+			where: (memberPlans, { eq }) => eq(memberPlans.locationId, id),
+			with: {
+				planPrograms: {
+					with: {
+						program: true,
+					},
+				},
+			},
+		});
 
-    return NextResponse.json(subs, {status: 200});
-  } catch (err) {
-    console.log(err);
-    return NextResponse.json({error: err}, {status: 500});
-  }
+		return NextResponse.json(mbs, { status: 200 });
+	} catch (err) {
+		console.log(err);
+		return NextResponse.json({ error: err }, { status: 500 });
+	}
 }

@@ -17,8 +17,6 @@ import { toast } from 'react-toastify';
 import { tryCatch } from '@/libs/utils';
 import { Loader2 } from 'lucide-react';
 import { TriggerForm } from '.';
-import { Achievement } from '@/types';
-
 
 
 export function CreateTrigger() {
@@ -39,7 +37,7 @@ export function CreateTrigger() {
     })
 
     async function onSubmit(v: z.infer<typeof TriggerSchema>) {
-
+        if (!currentAchievement) return;
         const lid = currentAchievement?.locationId;
         const aid = currentAchievement?.id;
         const { result, error } = await tryCatch(
@@ -66,27 +64,31 @@ export function CreateTrigger() {
     }
 
     return (
-        <Sheet open={!!currentAchievement} onOpenChange={handleOpenChange}>
+        <>
+            {currentAchievement && (
+                <Sheet open={!!currentAchievement} onOpenChange={handleOpenChange}>
 
 
-            <SheetContent className="sm:max-w-[540px] sm:w-[540px] p-0 border-foreground/10">
-                <SheetHeader className="hidden">
-                    <SheetTitle className='hidden'></SheetTitle>
-                </SheetHeader>
+                    <SheetContent className="sm:max-w-[540px] sm:w-[540px] p-0 border-foreground/10">
+                        <SheetHeader className="hidden">
+                            <SheetTitle className='hidden'></SheetTitle>
+                        </SheetHeader>
 
-                <TriggerForm form={form} triggers={triggers} />
-                <SheetFooter className='border-t border-foreground/10 py-3 px-4'>
-                    <SheetClose asChild>
-                        <Button variant={"outline"} size={"sm"}>
-                            Cancel
-                        </Button>
-                    </SheetClose>
-                    <Button type='submit' size={"sm"} disabled={form.formState.isSubmitting}>
-                        {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin' /> : 'Create'}
-                    </Button>
-                </SheetFooter>
+                        <TriggerForm lid={currentAchievement?.locationId} form={form} triggers={triggers} />
+                        <SheetFooter className='border-t border-foreground/10 py-3 px-4'>
+                            <SheetClose asChild>
+                                <Button variant={"outline"} size={"sm"}>
+                                    Cancel
+                                </Button>
+                            </SheetClose>
+                            <Button variant={"foreground"} type='submit' size={"sm"} disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin' /> : 'Create'}
+                            </Button>
+                        </SheetFooter>
 
-            </SheetContent>
-        </Sheet >
+                    </SheetContent>
+                </Sheet >
+            )}
+        </>
     )
 }
