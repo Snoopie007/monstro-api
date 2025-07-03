@@ -35,8 +35,7 @@ export function AddMember({ lid, stripeKey }: CreateMemberProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size={"sm"} variant={"ghost"}
-                    className='flex-1 items-center gap-1 rounded-sm bg-foreground/10 hover:bg-foreground/10' >
+                <Button size={"sm"} variant={"create"}>
                     + Member
                 </Button>
             </DialogTrigger>

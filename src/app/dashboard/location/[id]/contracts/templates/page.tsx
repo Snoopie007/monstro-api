@@ -12,7 +12,7 @@ import {
     TableHeader,
     TableRow,
     TablePage, TablePageContent, TablePageFooter,
-    TablePageHeader, TablePageHeaderTitle, TablePageHeaderSection,
+    TablePageHeader, TablePageHeaderSection,
     Badge, Button
 } from "@/components/ui/";
 import { format } from "date-fns";
@@ -20,6 +20,7 @@ import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Loader2Icon, PencilIcon, Trash2Icon } from "lucide-react";
 import { Contract } from "@/types";
+import { Input } from "@/components/forms/input";
 
 export default function ContractTemplatesPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
@@ -29,10 +30,11 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
     return (
         <TablePage>
             <TablePageHeader>
-                <TablePageHeaderTitle>
-                    Contract Templates
-                </TablePageHeaderTitle>
                 <TablePageHeaderSection>
+                    <Input
+                        placeholder="Find a contract..."
+                        variant="search"
+                    />
                     <CreateContract locationId={params.id} />
                 </TablePageHeaderSection>
             </TablePageHeader>

@@ -20,11 +20,11 @@ import { cn, sleep, tryCatch } from "@/libs/utils";
 
 import SessionComponent from './ProgramSessions';
 import { NewProgramSchema } from '../schemas';
-import { Icon } from '@/components/icons';
 
 import { toast } from 'react-toastify';
 import { usePrograms } from '@/hooks/usePrograms';
 import { mutate as globalMutate } from 'swr';
+import { Loader2 } from 'lucide-react';
 
 
 
@@ -57,7 +57,7 @@ export function AddProgram({ lid }: { lid: string }) {
         if (loading) return; // Prevent multiple submissions
 
         setLoading(true);
-        
+
         try {
             const { result, error } = await tryCatch(
                 fetch(`/api/protected/loc/${lid}/programs`, {
@@ -65,18 +65,18 @@ export function AddProgram({ lid }: { lid: string }) {
                     body: JSON.stringify(v)
                 })
             )
-            
+
             if (error || !result || !result.ok) {
                 toast.error(error?.message || "Something went wrong");
                 return;
             }
-            
+
             toast.success("Program created successfully");
-            
+
             // Refresh the data - force revalidation of ALL cache
             await mutate();
             await globalMutate((key) => typeof key === "string" && key.includes(`/api/protected/loc/${lid}/programs`));
-            
+
             await sleep(1000);
             setOpen(false);
         } catch (error) {
@@ -96,7 +96,7 @@ export function AddProgram({ lid }: { lid: string }) {
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button variant={"foreground"} size={"xs"}>
+                <Button variant={"create"} size={"sm"}>
                     + Program
                 </Button>
             </SheetTrigger>
@@ -210,7 +210,7 @@ export function AddProgram({ lid }: { lid: string }) {
                         disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
                         className={cn("children:hidden  ", (loading && "children:inline-block"))}
                     >
-                        <Icon name="LoaderCircle" className="mr-2  animate-spin" />
+                        <Loader2 className="mr-2  animate-spin" />
                         Save
                     </Button>
                 </SheetFooter>

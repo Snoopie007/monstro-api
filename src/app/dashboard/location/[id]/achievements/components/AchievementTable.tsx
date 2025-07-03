@@ -37,7 +37,7 @@ export function AchievementTable({ lid }: { lid: string }) {
                             table.getColumn("name")?.setFilterValue(value);
 
                         }}
-                        className="border  h-8 border-foreground/10 rounded-md w-auto"
+                        variant="search"
                     />
                     <CreateAchievement lid={lid} />
                 </TablePageHeaderSection>

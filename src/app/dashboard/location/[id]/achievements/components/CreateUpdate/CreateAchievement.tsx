@@ -80,9 +80,8 @@ export function CreateAchievement({ lid }: CreateAchievementProps) {
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button size={"sm"} variant={"ghost"}
-                    className=' items-center gap-1 rounded-sm bg-foreground/10 hover:bg-foreground/10' >
-                    Create Achievement
+                <Button size={"sm"} variant={"create"}>
+                    + Achievement
                 </Button>
             </SheetTrigger>
 

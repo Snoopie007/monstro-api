@@ -9,7 +9,8 @@ const inputVariants = cva(
     variants: {
       variant: {
         default: "bg-background",
-        register: "border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-hidden py-3 h-auto rounded-sm  shadow-unique bg-white"
+        register: "border-indigo-600 border-2 text-black text-sm focus-visible:ring-0 focus-visible:outline-hidden py-3 h-auto rounded-sm  shadow-unique bg-white",
+        search: "border h-8 border-foreground/10 rounded-md w-auto"
       }
     },
     defaultVariants: {

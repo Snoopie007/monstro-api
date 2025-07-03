@@ -1,6 +1,5 @@
 'use client';;
 import { use } from "react";
-import { Icon } from '@/components/icons';
 import { Button } from '@/components/ui';
 import {
     Table,
@@ -16,13 +15,14 @@ import Loading from '@/components/loading';
 import Link from 'next/link';
 import {
     TablePage, TablePageContent, TablePageFooter,
-    TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle
+    TablePageHeader, TablePageHeaderSection
 } from "@/components/ui/TablePage";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { format } from "date-fns";
 import { CloudDownloadIcon } from "lucide-react";
-import { Contract, MemberContract } from "@/types";
+import { MemberContract } from "@/types";
+import { Input } from "@/components/forms/input";
 
 
 export default function MemberContractsPage(props: { params: Promise<{ id: string }> }) {
@@ -39,7 +39,6 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
         }
 
         const data = await result.json();
-        console.log(data);
         const link = document.createElement('a');
         link.href = data.pdfUrl;
         link.download = 'contract.pdf';
@@ -55,14 +54,16 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
         return (
             <TablePage>
                 <TablePageHeader>
-                    <TablePageHeaderTitle>Signed Contracts</TablePageHeaderTitle>
                     <TablePageHeaderSection>
-                        <Link
-                            href={`/dashboard/location/${params.id}/contracts/templates`}
-                            className='bg-foreground text-background  h-auto inline-flex flex-row items-center  px-2 py-1 rounded-xs font-bold text-xs'
-                        >
-                            View Templates
-                        </Link>
+                        <Input
+                            placeholder="Find a contract..."
+                            variant="search"
+                        />
+                        <Button variant={"create"} size={"sm"} asChild>
+                            <Link href={`/dashboard/location/${params.id}/contracts/templates`}>
+                                View Templates
+                            </Link>
+                        </Button>
                     </TablePageHeaderSection>
                 </TablePageHeader>
                 <TablePageContent>

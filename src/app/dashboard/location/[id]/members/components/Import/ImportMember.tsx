@@ -119,7 +119,7 @@ export function ImportMembers({ lid }: { lid: string }) {
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className='flex-1 items-center gap-1 rounded-sm bg-foreground/10 hover:bg-foreground/10' >
+                <Button variant="create" size="sm" >
                     <FileDown className='size-4' /> Import Members
                 </Button>
             </DialogTrigger>

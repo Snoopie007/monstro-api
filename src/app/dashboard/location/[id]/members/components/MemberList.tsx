@@ -23,7 +23,7 @@ import { Separator } from "@/components/ui";
 import {
     TablePage, TablePageContent,
     TablePageFooter,
-    TablePageHeader, TablePageHeaderSection, TablePageHeaderTitle
+    TablePageHeader, TablePageHeaderSection
 } from "@/components/ui/TablePage";
 import { ImportMembers } from ".";
 
@@ -91,7 +91,7 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
 
     return (
         <TablePage>
-            <TablePageHeader className="px-4 bg-foreground/5 border-b border-foreground/5">
+            <TablePageHeader>
 
                 <TablePageHeaderSection>
                     <div className="flex flex-row items-center gap-2">
@@ -103,7 +103,7 @@ export function MemberList({ params, stripeKey }: { params: { id: string }, stri
                                 // table.getColumn("name")?.setFilterValue(value);
                                 handleSearch(value);
                             }}
-                            className="border  h-8.5 border-foreground/10 rounded-md w-auto"
+                            variant="search"
                         />
                         <AddMember lid={params.id} stripeKey={stripeKey} />
                         <ImportMembers lid={params.id} />

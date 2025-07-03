@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { motion } from "framer-motion"
 
 import { SidebarMenuItems } from './MenuItems';
-import { Icon } from '@/components/icons';
 import {
     Collapsible,
     CollapsibleContent,
@@ -12,6 +11,7 @@ import {
 } from "@/components/ui"
 import React from 'react';
 import { useAccountStatus } from '../providers/AccountStatusProvider';
+import { ChevronsUpDown } from 'lucide-react';
 
 
 
@@ -51,10 +51,10 @@ export function LocationSideNav({ lid }: { lid: string }) {
                                                     className={'flex flex-row items-center w-full justify-between hover:bg-foreground/10 inactive:opacity-50 rounded-sm py-2 px-2'}
                                                 >
                                                     <div className={cn(iconContainerClass)}>
-                                                        <span><Icon name={item.icon} size={16} /></span>
+                                                        <span>{item.icon}</span>
                                                         <b className='group-data-[state=closed]:opacity-0 font-semibold flex-1 text-xs'>{item.name}</b>
                                                     </div>
-                                                    <Icon name='ChevronsUpDown' />
+                                                    <ChevronsUpDown />
                                                 </CollapsibleTrigger>
                                                 <CollapsibleContent className='mx-4 border-foreground/20 border-l mt-2'>
                                                     <ul className='px-2 space-y-1'>
@@ -74,11 +74,11 @@ export function LocationSideNav({ lid }: { lid: string }) {
                                     ) : (
                                         <li className='w-full inactive:opacity-50'>
                                             <Link href={`/dashboard/location/${lid}/${item.path}`} className={cn(menuLinkClass, 'inactive:hidden')}>
-                                                <span><Icon name={item.icon} size={16} /></span>
+                                                <span>{item.icon}</span>
                                                 <b className='group-data-[state=closed]:opacity-0 font-semibold flex-1 text-xs'>{item.name}</b>
                                             </Link>
                                             <div className={cn(menuLinkClass, 'inactive:flex cursor-not-allowed hidden')}>
-                                                <span><Icon name={item.icon} size={16} /></span>
+                                                <span>{item.icon}</span>
                                                 <b className='group-data-[state=closed]:opacity-0 font-semibold flex-1 text-xs'>{item.name}</b>
                                             </div>
                                         </li>

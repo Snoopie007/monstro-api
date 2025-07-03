@@ -5,15 +5,6 @@ import React from 'react'
 
 const TablePage = React.forwardRef<HTMLDialogElement, React.HTMLAttributes<HTMLDialogElement>>(
     ({ children, ...props }, ref) => {
-
-        // React.Children.forEach(children, child => {
-        //     if (React.isValidElement(child)) {
-        //         if (child.type !== TablePageHeader) {
-        //             throw new Error('TablePage children must be either TablePageHeader');
-        //         }
-        //     }
-        // });
-
         return (
             <main className="flex flex-col w-full h-full">
                 {children}
@@ -30,7 +21,9 @@ const TablePageHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
 
         return (
             <TableHeaderContext.Provider value={true}>
-                <div ref={ref} className={cn('flex flex-row border-b border-foreground/10 flex-initial justify-start items-center gap-2 ', props.className)} {...props}>
+                <div ref={ref} className={cn(
+                    'px-4 bg-foreground/5 border-b border-foreground/5',
+                    props.className)} {...props}>
                     {children}
                 </div>
             </TableHeaderContext.Provider>
@@ -40,25 +33,25 @@ const TablePageHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
 
 TablePageHeader.displayName = "TablePageHeader";
 
-const TablePageHeaderTitle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-    ({ children, ...props }, ref) => {
-        // Ensure this component is used within TablePageHeader
-        const isWithinHeader = React.useContext(TableHeaderContext);
-        if (!isWithinHeader) {
-            throw new Error('Title must be used within Page Header');
-        }
+// const TablePageHeaderTitle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+//     ({ children, ...props }, ref) => {
+//         // Ensure this component is used within TablePageHeader
+//         const isWithinHeader = React.useContext(TableHeaderContext);
+//         if (!isWithinHeader) {
+//             throw new Error('Title must be used within Page Header');
+//         }
 
-        return (
-            <div className={cn("border-r border-foreground/10 px-2 py-1.5", props.className)}>
-                <h6 className='text-sm font-bold'>
-                    {children}
-                </h6>
-            </div>
-        )
-    }
-)
+//         return (
+//             <div className={cn("border-r border-foreground/10 px-2 py-1.5", props.className)}>
+//                 <h6 className='text-sm font-bold'>
+//                     {children}
+//                 </h6>
+//             </div>
+//         )
+//     }
+// )
 
-TablePageHeaderTitle.displayName = "TablePageHeaderTitle";
+// TablePageHeaderTitle.displayName = "TablePageHeaderTitle";
 
 const TablePageHeaderSection = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
     ({ children, ...props }, ref) => {
@@ -110,7 +103,6 @@ export {
     TablePage,
     TablePageContent,
     TablePageHeader,
-    TablePageHeaderTitle,
     TablePageHeaderSection,
     TablePageFooter
 };

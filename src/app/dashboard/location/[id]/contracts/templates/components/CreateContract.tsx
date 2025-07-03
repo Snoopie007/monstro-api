@@ -1,7 +1,6 @@
 'use client'
 
 import { FormDescription, Input } from "@/components/forms"
-import { Icon } from "@/components/icons"
 
 import {
     Button,
@@ -19,7 +18,7 @@ import {
 } from "@/components/ui"
 import { cn, sleep, tryCatch } from "@/libs/utils"
 import { useRouter } from "next/navigation"
-import { MouseEvent, useState } from "react"
+import { useState } from "react"
 import { toast } from "react-toastify"
 import {
     Form, FormField, FormItem, FormLabel, FormControl, FormMessage,
@@ -34,6 +33,8 @@ import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { NewContractSchema } from "../schema"
 import { useForm } from "react-hook-form"
+import { Loader2 } from "lucide-react"
+import { VisuallyHidden } from "react-aria"
 
 export function CreateContract({ locationId }: { locationId: string }) {
     const [loading, setLoading] = useState(false);
@@ -76,18 +77,15 @@ export function CreateContract({ locationId }: { locationId: string }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant={"foreground"} size={"xs"} >
-
-                    Create
+                <Button variant={"create"} size={"sm"} >
+                    + Contract
                 </Button>
             </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Create Contract</DialogTitle>
-                    <DialogDescription>
-                        Create a new contract for your location.
-                    </DialogDescription>
-                </DialogHeader>
+            <DialogContent className="max-w-lg border-foreground/10">
+                <VisuallyHidden>
+                    <DialogTitle></DialogTitle>
+
+                </VisuallyHidden>
                 <DialogBody>
                     <Form {...form}>
                         <form className="space-y-2">
@@ -118,8 +116,9 @@ export function CreateContract({ locationId }: { locationId: string }) {
                                                         <SelectValue placeholder="Select Contract Type" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="contract">Contract</SelectItem>
-                                                        <SelectItem value="waiver">Waiver</SelectItem>
+                                                        {["contract", "waiver"].map((type) => (
+                                                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
                                             </FormControl>
@@ -137,7 +136,7 @@ export function CreateContract({ locationId }: { locationId: string }) {
                                             <FormControl>
                                                 <Textarea
                                                     placeholder="Contract Description"
-                                                    className="resize-none"
+                                                    className="resize-none h-auto border-foreground/10"
                                                     {...field}
                                                 />
                                             </FormControl>
@@ -182,7 +181,7 @@ export function CreateContract({ locationId }: { locationId: string }) {
                     <DialogClose asChild>
                         <Button variant={"foreground"} size={"sm"} className={cn("children:hidden", { "children:inline-block": loading })}
                             onClick={form.handleSubmit(handleSubmit)}>
-                            <Icon name="LoaderCircle" size={14} className="animate-spin mr-1" />
+                            <Loader2 className="animate-spin mr-1 size-4" />
                             Create
                         </Button>
                     </DialogClose>

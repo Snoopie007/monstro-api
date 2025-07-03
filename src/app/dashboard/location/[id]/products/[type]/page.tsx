@@ -35,7 +35,7 @@ export default async function Products(props: { params: Promise<{ id: string, ty
         <ProductsProvider programs={programs}>
 
             <TablePage>
-                <TablePageHeader className="px-4 bg-foreground/5 border-b border-foreground/5">
+                <TablePageHeader>
 
                     <TablePageHeaderSection>
                         <div className="flex flex-row items-center gap-2">
