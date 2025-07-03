@@ -1,7 +1,7 @@
 'use client'
 export { FontSize } from "./FontSize";
 export { Heading } from './Heading'
-export { Variable, VariableOptions } from './Variables'
+export * from './Variables'
 
 export { Mention } from '@tiptap/extension-mention'
 export { StarterKit } from '@tiptap/starter-kit'

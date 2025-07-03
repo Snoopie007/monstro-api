@@ -20,8 +20,8 @@ import { toast } from "react-toastify";
 
 import { SetStateAction, Dispatch, useEffect, useState } from "react";
 import useSWR from "swr";
-import { Icon } from "@/components/icons";
 import { SessionSchema } from "../../../../schemas";
+import { Loader2 } from "lucide-react";
 
 
 interface UpdateProgramLevelProps {
@@ -95,7 +95,7 @@ export function UpsertLevel({ level, setCurrentLevel, lid }: UpdateProgramLevelP
                         className={cn("  children:hidden ", (loading && "children:inline-block"))}
                         onClick={form.handleSubmit(submitForm)}
                     >
-                        <Icon name="LoaderCircle" size={14} className="mr-2  animate-spin" />
+                        <Loader2 className="size-4 animate-spin mr-2" />
                         Update
                     </Button>
                 </DialogFooter>

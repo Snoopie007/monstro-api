@@ -2,8 +2,9 @@
 import { Reward } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 import { Pencil } from "lucide-react";
+import { UpdateReward } from "./UpdateReward";
 
-export const RewardColumns = (locationId: string, onEdit: (reward: Reward) => void): ColumnDef<Reward, any>[] => [
+export const RewardColumns = (lid: string): ColumnDef<Reward, any>[] => [
     {
         accessorKey: "name",
         header: "Name",
@@ -12,13 +13,11 @@ export const RewardColumns = (locationId: string, onEdit: (reward: Reward) => vo
             const reward = row.original
             return (
 
-                <div className="flex flex-row items-center gap-2 group">
-                    <span className="text-sm">
+                <div className="flex flex-row items-center gap-2 group justify-between w-[150px]">
+                    <span className="text-sm font-medium truncate">
                         {reward.name}
                     </span>
-                    <span>
-                        <Pencil size={12} className="cursor-pointer opacity-30 group-hover:opacity-100" onClick={() => onEdit(reward)} />
-                    </span>
+                    <UpdateReward reward={reward} lid={lid} />
                 </div>
             )
         },
@@ -35,9 +34,5 @@ export const RewardColumns = (locationId: string, onEdit: (reward: Reward) => vo
     {
         accessorKey: "totalClaimed",
         header: "Total Claimed",
-    },
-    // {
-    //   accessorKey: "status",
-    //   header: "Status",
-    // },
-];
+    }
+]

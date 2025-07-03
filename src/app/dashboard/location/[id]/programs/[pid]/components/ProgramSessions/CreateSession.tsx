@@ -16,12 +16,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { useState } from "react";
 import useSWR from "swr";
-import { Icon } from "@/components/icons";
 import { SessionSchema } from "../../../schemas";
 import { DialogDescription } from "@/components/ui/dialog";
 import SessionFields from "./SessionFields";
 import { Form } from "@/components/forms";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 interface CreateSessionProps {
     pid: string;
     lid: string
@@ -101,7 +100,7 @@ export function CreateSession({ pid, lid }: CreateSessionProps) {
                         onClick={form.handleSubmit(submitForm)}
                         disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
                     >
-                        <Icon name="LoaderCircle" size={14} className="mr-2  animate-spin" />
+                        <Loader2 className="size-4 animate-spin mr-2" />
                         Save
                     </Button>
                 </DialogFooter>

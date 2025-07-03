@@ -12,10 +12,10 @@ import { Skeleton } from '@/components/ui'
 
 interface ContractEditorProps {
     contractRef: Contract,
-    locationId: string
+    lid: string
 }
 
-export default function ContractEditor({ contractRef, locationId }: ContractEditorProps) {
+export default function ContractEditor({ contractRef, lid }: ContractEditorProps) {
     const { editor } = useBlockEditor(contractRef.content!)
     const [contract, setContract] = useState<Contract | null>(contractRef)
     const [isOpen, setIsOpen] = useState(false)
@@ -37,7 +37,7 @@ export default function ContractEditor({ contractRef, locationId }: ContractEdit
     return (
         <>
             <Sidebar isOpen={sidebar.isOpen} onClose={sidebar.close} editor={editor} />
-            <TopMenu contract={contract} editor={editor} isSidebarOpen={sidebar.isOpen} toggleSidebar={sidebar.toggle} locationId={locationId} />
+            <TopMenu contract={contract} editor={editor} isSidebarOpen={sidebar.isOpen} toggleSidebar={sidebar.toggle} lid={lid} />
             <div className='flex flex-col h-full overflow-hidden'>
 
                 <ScrollArea className='h-full pt-18  pb-2 flex-1'>

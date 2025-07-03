@@ -19,11 +19,11 @@ export default function EditorToolBar({ editor }: EditorMenuProps) {
     return (
         <div className='flex  flex-row items-center gap-1.5'>
             <MemoButton onClick={commands.onUndo} variant="ghost" className=''>
-                <Undo className='size-4' />
+                <Undo className='size-3.5' />
             </MemoButton>
 
             <MemoButton onClick={commands.onRedo} variant="ghost" className=''>
-                <Redo className='size-4' />
+                <Redo className='size-3.5' />
             </MemoButton>
             <Toolbar.Divider />
             <MemoFontSizePicker onChange={commands.onSetFontSize} value={states.currentSize || ''} />
@@ -31,50 +31,50 @@ export default function EditorToolBar({ editor }: EditorMenuProps) {
                 onClick={commands.onBold}
                 active={states.isBold}
             >
-                <Bold className='size-4' />
+                <Bold className='size-3.5' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onItalic}
                 active={states.isItalic}
             >
-                <Italic className='size-4' />
+                <Italic className='size-3.5' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onUnderline}
                 active={states.isUnderline}
             >
-                <Underline className='size-4' />
+                <Underline className='size-3.5' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onStrike}
                 active={states.isStrike}
             >
-                <Strikethrough className='size-4' />
+                <Strikethrough className='size-3.5' />
             </MemoButton>
             <Toolbar.Divider />
             <MemoButton
                 onClick={commands.onAlignLeft}
                 active={states.isAlignLeft}
             >
-                <AlignLeft className='size-4' />
+                <AlignLeft className='size-3.5' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onAlignCenter}
                 active={states.isAlignCenter}
             >
-                <AlignCenter className='size-4' />
+                <AlignCenter className='size-3.5' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onAlignRight}
                 active={states.isAlignRight}
             >
-                <AlignRight className='size-4' />
+                <AlignRight className='size-3.5' />
             </MemoButton>
             <MemoButton
                 onClick={commands.onAlignJustify}
                 active={states.isAlignJustify}
             >
-                <AlignJustify className='size-4' />
+                <AlignJustify className='size-3.5' />
             </MemoButton>
             <Toolbar.Divider />
             <MemoVariablePicker onChange={(variable) => { commands.onInsertVariable(variable) }} />

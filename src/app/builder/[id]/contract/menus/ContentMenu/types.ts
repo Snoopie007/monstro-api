@@ -1,5 +1,4 @@
 
-import { icons } from 'lucide-react'
 import { Dispatch, SetStateAction } from 'react'
 import { Editor } from '@tiptap/react'
 import { Node } from '@tiptap/pm/model'
@@ -9,7 +8,7 @@ export type Command = {
     label: string
     description: string
     aliases?: string[]
-    iconName: keyof typeof icons
+    icon: React.ReactNode
     action: CommandAction
 }
 

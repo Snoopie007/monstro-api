@@ -1,10 +1,10 @@
 import { Command } from './types'
-
+import { Pilcrow, Heading1, Heading2, Heading3, List, ListOrdered } from 'lucide-react'
 const Commands: Command[] = [
     {
         name: 'paragraph',
         label: 'Paragraph',
-        iconName: 'Pilcrow',
+        icon: <Pilcrow className='size-3.5' />,
         description: 'Plain text',
         aliases: ['p'],
         action: {
@@ -14,7 +14,7 @@ const Commands: Command[] = [
     {
         name: 'heading2',
         label: 'Heading 1',
-        iconName: 'Heading1',
+        icon: <Heading1 className='size-3.5' />,
         description: 'High priority section title',
         aliases: ['h1'],
         action: {
@@ -28,7 +28,7 @@ const Commands: Command[] = [
     {
         name: 'heading3',
         label: 'Heading 2',
-        iconName: 'Heading2',
+        icon: <Heading2 className='size-3.5' />,
         description: 'Medium priority section title',
         aliases: ['h2'],
         action: {
@@ -42,7 +42,7 @@ const Commands: Command[] = [
     {
         name: 'heading',
         label: 'Heading 3',
-        iconName: 'Heading3',
+        icon: <Heading3 className='size-3.5' />,
         description: 'Low priority section title',
         aliases: ['h3'],
         action: {
@@ -56,7 +56,7 @@ const Commands: Command[] = [
     {
         name: 'bulletList',
         label: 'Bullet List',
-        iconName: 'List',
+        icon: <List className='size-3.5' />,
         description: 'Unordered list of items',
         aliases: ['ul'],
         action: {
@@ -72,7 +72,7 @@ const Commands: Command[] = [
     {
         name: 'numberedList',
         label: 'Numbered List',
-        iconName: 'ListOrdered',
+        icon: <ListOrdered className='size-3.5' />,
         description: 'Ordered list of items',
         aliases: ['ol'],
         action: {

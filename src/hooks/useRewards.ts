@@ -3,12 +3,13 @@ import useSWR from "swr";
 import { fetcher } from "./hooks";
 
 function useRewards(id: string) {
-	const { data, error, isLoading } = useSWR({ url: `rewards`, id: id }, fetcher);
+	const { data, error, isLoading, mutate } = useSWR({ url: `rewards`, id: id }, fetcher);
 
 	return {
 		rewards: data,
 		error,
 		isLoading,
+		mutate,
 	};
 }
 

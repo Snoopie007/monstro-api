@@ -8,7 +8,7 @@ interface RewardImagesProps {
     name?: string
     images: string[]
     onFileChange: (files: File[]) => void
-    onRemoveImage: (images: string) => void
+    onRemoveImage?: (images: string) => void
 
 }
 
@@ -48,7 +48,7 @@ export function RewardImages({ name, images, onRemoveImage, onFileChange }: Rewa
     async function handleRemoveImage(url: string) {
         const filteredImages = previews.filter(p => p !== url);
         setPreviews(filteredImages);
-        onRemoveImage(url);
+        onRemoveImage?.(url);
     }
 
     return (

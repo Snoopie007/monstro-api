@@ -16,8 +16,8 @@ import {
 import { Role } from "@/types";
 import useSWR from "swr";
 import { UpsertRole } from "./components";
-import { Icon } from "@/components/icons";
 import RoleListActions from "./components/actions";
+import { SearchIcon, UserIcon, ShieldIcon } from "lucide-react";
 
 export default function RolesPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
@@ -68,7 +68,7 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
                     <div className='relative flex-initial'>
                         <input placeholder='Search Roles' className='rounded-sm border-foreground text-xs bg-transparent  py-1   pl-7 pr-3 border ' />
                         <div>
-                            <Icon name="Search" size={15} className="text-gray-400  absolute left-[10px] top-[50%] -translate-y-[51%]" />
+                            <SearchIcon className="text-gray-400  absolute left-[10px] top-[50%] -translate-y-[51%]" />
                         </div>
                     </div>
                     <div className='flex-initial'>
@@ -96,7 +96,7 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
                                 >
                                     <TableCell className="py-2 " onClick={() => { setCurrentRole(role); }}>
                                         <div className='flex flex-row  gap-1 items-center text-sm'>
-                                            <Icon name="Shield" size={20} className="text-indigo-600" />
+                                            <ShieldIcon className="text-indigo-600" />
                                             <span>{isLoadingRoles ? <Skeleton className='w-20 h-4' /> : role.name}</span>
                                         </div>
                                     </TableCell>
@@ -104,7 +104,7 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
                                     <TableCell className="py-2 ">
                                         <div className='flex flex-row  gap-1 items-center text-sm'>
                                             <span className=''>  {role.staffs}</span>
-                                            <Icon name='User' size={16} />
+                                            <UserIcon className='size-4' />
                                         </div>
                                     </TableCell>
                                     <TableCell className="py-2 " onClick={(e) => e.stopPropagation()}>

@@ -1,4 +1,4 @@
-import { Icon } from '@/components/icons'
+
 import {
     DropdownMenu,
     DropdownMenuTrigger,
@@ -11,7 +11,7 @@ import { ProgramSession } from '@/types'
 import { useState } from 'react'
 import { tryCatch } from '@/libs/utils'
 import { toast } from 'react-toastify'
-import { Loader2 } from 'lucide-react'
+import { EllipsisVerticalIcon, Loader2 } from 'lucide-react'
 import {
     Dialog,
     DialogContent,
@@ -99,7 +99,7 @@ export default function SessionActions({ session, lid }: SessionActionsProps) {
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant={"ghost"} className='h-auto px-0 hover:bg-transparent'>
-                        <Icon name="EllipsisVertical" size={16} className="dark:text-white" />
+                        <EllipsisVerticalIcon className='size-4' />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className='w-[180px] border-foreground/20 p-2'>
@@ -152,12 +152,12 @@ export default function SessionActions({ session, lid }: SessionActionsProps) {
                             onClick={formMethods.handleSubmit(submitForm)}
                             disabled={formLoading || !formMethods.formState.isValid}
                         >
-                            <Icon name="LoaderCircle" size={14} className="mr-2 animate-spin" />
-                            Save Changes
+                            <Loader2 className='size-4 animate-spin mr-2' />
+                            Save
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
-  );
+    );
 }

@@ -1,4 +1,4 @@
-import { Icon } from '@/components/icons';
+
 import {
     Button,
     Sheet,
@@ -22,6 +22,7 @@ import { Permission, Role } from '@/types';
 import { CreateRoleSchema } from '../schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { SearchIcon } from 'lucide-react';
 
 type CheckboxVarients = 'red' | 'green' | 'blue' | 'pink' | 'cyan' | 'lime' | 'orange' | 'fuchsia' | 'sky' | 'lemon' | 'purple' | 'yellow'
 const RoleColors: CheckboxVarients[] = [
@@ -168,7 +169,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                                                 onChange={(e) => permissionFilter(e.target.value)}
                                             />
                                             <div>
-                                                <Icon name="Search" size={15} className="text-gray-400  absolute left-[10px] top-[50%] -translate-y-[51%]" />
+                                                <SearchIcon className="text-gray-400  absolute left-[10px] top-[50%] -translate-y-[51%]" />
                                             </div>
                                         </div>
                                     </div>

@@ -34,7 +34,7 @@ export const FontSizePicker = ({ onChange, value }: FontSizePickerProps) => {
                     <ChevronDown className="size-3.5 ml-1 text-muted-foreground" />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
+            <DropdownMenuContent className='border-foreground/10'>
                 {FontSizes.map(size => (
                     <DropdownMenuItem
                         className={cn({ 'bg-foreground/5 font-medium': size.value === value })}

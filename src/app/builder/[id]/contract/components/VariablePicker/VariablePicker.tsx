@@ -12,11 +12,11 @@ import {
     ScrollArea
 } from "@/components/ui"
 
-import { Icon } from '@/components/icons'
 import { useCallback, useState } from 'react'
 import { Toolbar } from "../ToolBar"
-import { VariableGroups } from "../../../../../../components/extensions/Variables/VariableGroups"
-import { Variable } from "../../../../../../components/extensions/Variables/types"
+import { VariableGroups } from "@/components/extensions"
+import { Variable } from "@/components/extensions/Variables/types"
+import { VariableIcon } from "lucide-react"
 
 
 
@@ -37,7 +37,7 @@ export function VariablePicker({ onChange }: VariablePickerProps) {
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Toolbar.Button>
-                    <Icon name="Variable" />
+                    <VariableIcon className='size-4' />
                 </Toolbar.Button>
             </PopoverTrigger>
             <PopoverContent className="p-0">

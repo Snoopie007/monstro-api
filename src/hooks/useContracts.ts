@@ -22,8 +22,8 @@ function useSignedContracts(id: string) {
 }
 
 
-function useContract(id: string, cId: number) {
-	const { data, error, isLoading } = useSWR({ url: `contracts/${cId}`, id: id }, fetcher,);
+function useContract(id: string, cid: string) {
+	const { data, error, isLoading } = useSWR({ url: `contracts/${cid}`, id: id }, fetcher,);
 
 	return {
 		contract: data,

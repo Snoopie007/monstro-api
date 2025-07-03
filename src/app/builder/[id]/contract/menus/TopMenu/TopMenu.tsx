@@ -16,12 +16,12 @@ interface TopMenuProps {
     isSidebarOpen?: boolean
     toggleSidebar?: () => void
     editor: Editor;
-    locationId: string
+    lid: string
 }
 
 const ButtonStyle = "text-muted-foreground hover:text-foreground hover:bg-foreground/5 rounded-md"
 
-export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, locationId }: TopMenuProps) {
+export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, lid }: TopMenuProps) {
     const [savingDraft, setSavingDraft] = useState<boolean>(false)
     const [loading, setLoading] = useState<boolean>(false)
     const router = useRouter();
@@ -47,7 +47,7 @@ export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, locati
             };
 
             const { result, error } = await tryCatch(
-                fetch(`/api/protected/loc/${locationId}/contracts/${contract.id}`, {
+                fetch(`/api/protected/loc/${lid}/contracts/${contract.id}`, {
                     method: 'PUT',
                     body: JSON.stringify(body)
                 })
@@ -63,7 +63,7 @@ export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, locati
             setLoadingState(false);
 
             if (!isDraft) {
-                router.push(`/dashboard/location/${locationId}/contracts/`);
+                router.push(`/dashboard/location/${lid}/contracts/`);
             }
         } catch (error) {
             console.log('Error:', error);
@@ -93,7 +93,7 @@ export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, locati
                     </Button>
                     <Button variant="ghost" size="icon" className={cn(ButtonStyle, "size-6")} asChild>
                         <Link
-                            href={`/dashboard/location/${locationId}/contracts`}
+                            href={`/dashboard/location/${lid}/contracts`}
 
                         >
                             <ChevronLeft size={18} />

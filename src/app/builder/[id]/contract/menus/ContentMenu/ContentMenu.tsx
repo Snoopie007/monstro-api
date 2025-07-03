@@ -1,4 +1,3 @@
-import { Icon } from '@/components/icons'
 
 import DragHandle from '@tiptap-pro/extension-drag-handle-react'
 import { Editor } from '@tiptap/react'
@@ -15,6 +14,8 @@ import { useEffect, useState } from 'react'
 import { Commands } from "./commands"
 import useContentMenuActions from "./hooks/useContentMenuAuction"
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ClipboardIcon, CopyIcon, GripVerticalIcon, PlusIcon, Trash2, RemoveFormatting } from 'lucide-react'
+
 
 export type ContentMenuProps = {
     editor: Editor
@@ -50,7 +51,7 @@ export function ContentMenu({ editor }: ContentMenuProps) {
                 <DropdownMenu open={createMenuOpen} onOpenChange={setCreateMenuOpen} >
                     <DropdownMenuTrigger asChild>
                         <Toolbar.Button>
-                            <Icon name="Plus" />
+                            <PlusIcon className='size-4' />
                         </Toolbar.Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className='border border-foreground/10 w-[250px]' align='start'>
@@ -62,7 +63,7 @@ export function ContentMenu({ editor }: ContentMenuProps) {
                                 onClick={() => actions.handleAdd(commpand.action)}
                                 className="flex flex-row items-center gap-2 cursor-pointer"
                             >
-                                <Icon name={commpand.iconName} />
+                                {commpand.icon}
                                 <span>{commpand.label}</span>
                             </DropdownMenuItem>
                         ))}
@@ -72,27 +73,27 @@ export function ContentMenu({ editor }: ContentMenuProps) {
                 <Popover open={menuOpen} onOpenChange={setMenuOpen} >
                     <PopoverTrigger asChild>
                         <Toolbar.Button  >
-                            <Icon name="GripVertical" />
+                            <GripVerticalIcon className='size-4' />
                         </Toolbar.Button>
                     </PopoverTrigger>
                     <PopoverContent className='border px-1 py-2 rounded-sm border-foreground/10 w-[250px]' align='start'>
                         <div className='flex flex-col '>
 
                             <Toolbar.Button variant='menu' onClick={actions.resetTextFormatting}>
-                                <Icon name="RemoveFormatting" />
-                                Clear formatting
+                                <RemoveFormatting />
+                                C   lear formatting
                             </Toolbar.Button>
                             <Toolbar.Button variant='menu' onClick={actions.copyNodeToClipboard}>
-                                <Icon name="Clipboard" />
+                                <ClipboardIcon className='size-4' />
                                 Copy to clipboard
                             </Toolbar.Button>
                             <Toolbar.Button variant='menu' onClick={actions.duplicateNode}>
-                                <Icon name="Copy" />
+                                <CopyIcon className='size-4' />
                                 Duplicate
                             </Toolbar.Button>
                             <Toolbar.Divider horizontal />
                             <Toolbar.Button variant='menu' className='bg-red-600 hover:bg-red-500 dark:hover:text-red-500' onClick={actions.deleteNode}>
-                                <Icon name="Trash2" />
+                                <Trash2 />
                                 Delete
                             </Toolbar.Button>
                         </div>
