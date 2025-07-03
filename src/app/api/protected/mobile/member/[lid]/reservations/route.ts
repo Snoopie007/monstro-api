@@ -1,18 +1,18 @@
-import {NextRequest, NextResponse} from "next/server";
-import {db} from "@/db/db";
-import {and, eq, isNull} from "drizzle-orm";
-import {authenticateMember} from "@/libs/utils";
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/db/db";
+import { and, eq, isNull } from "drizzle-orm";
+import { authenticateMember } from "@/libs/utils";
 import {
   recurringReservations,
   recurringReservationsExceptions,
   reservations,
 } from "@/db/schemas";
-import {getSessionState, isSessionPasted} from "@/libs/server/db";
-import {MemberSubscription, Reservation} from "@/types";
-import {addDays} from "date-fns";
+import { getSessionState, isSessionPasted } from "@/libs/server/db";
+import { MemberSubscription, Reservation } from "@/types";
+import { addDays } from "date-fns";
 
 type MemberReservationProps = {
-  params: Promise<{id: string}>;
+  params: Promise<{ id: string }>;
 };
 type Params = {
   lid: string;
@@ -20,9 +20,9 @@ type Params = {
 
 export async function GET(
   request: NextRequest,
-  props: {params: Promise<{lid: string}>}
+  props: { params: Promise<{ lid: string }> }
 ) {
-  const {searchParams} = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const sessionIds = searchParams.get("sessionIds");
   const date = searchParams.get("date");
   console.log("Session IDs:", sessionIds, "Date:", date);
@@ -32,20 +32,19 @@ export async function GET(
   try {
     const authMember = authenticateMember(request);
     if (!authMember || !authMember.member) {
-      return NextResponse.json({error: "Unauthorized"}, {status: 401});
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const locationId = params.lid;
 
-
     if (!date) {
-      return NextResponse.json({error: "Date is required"}, {status: 400});
+      return NextResponse.json({ error: "Date is required" }, { status: 400 });
     }
 
     if (!sessionIds) {
       return NextResponse.json(
-        {error: "Session IDs are required"},
-        {status: 400}
+        { error: "Session IDs are required" },
+        { status: 400 }
       );
     }
 
@@ -58,7 +57,7 @@ export async function GET(
     const endDate = addDays(startDate, 6);
 
     const reservations = await db.query.reservations.findMany({
-      where: (reservations, {and, between, inArray}) =>
+      where: (reservations, { and, between, inArray }) =>
         and(
           inArray(reservations.sessionId, ids),
           between(reservations.startOn, new Date(startDate), new Date(endDate)),
@@ -68,7 +67,7 @@ export async function GET(
 
     // Get member's active subscription
     const subscription = await db.query.memberSubscriptions.findFirst({
-      where: (s, {and, eq}) =>
+      where: (s, { and, eq }) =>
         and(
           eq(s.memberId, authMember.member.id),
           eq(s.locationId, locationId),
@@ -78,14 +77,14 @@ export async function GET(
 
     if (!subscription) {
       return NextResponse.json(
-        {error: "No active subscription found"},
-        {status: 404}
+        { error: "No active subscription found" },
+        { status: 404 }
       );
     }
 
     // Get recurring reservations
     const recurrings = await db.query.recurringReservations.findMany({
-      where: (rr, {and, gte, or, isNull, lte, inArray}) =>
+      where: (rr, { and, gte, or, isNull, lte, inArray }) =>
         and(
           inArray(rr.sessionId, ids),
           lte(rr.startDate, new Date(startDate)),
@@ -120,7 +119,8 @@ export async function GET(
         );
         const existingReservation = reservations.find((r) => {
           return (
-            r.startOn === new Date(currentDateString) && r.sessionId === rr.sessionId
+            r.startOn === new Date(currentDateString) &&
+            r.sessionId === rr.sessionId
           );
         });
 
@@ -129,15 +129,28 @@ export async function GET(
           continue;
         }
 
-        const {id, intervalThreshold, interval, exceptions, session, ...rest} =
-          rr;
+        const {
+          id,
+          intervalThreshold,
+          interval,
+          exceptions,
+          session,
+          ...rest
+        } = rr;
+
+        // Calculate endOn date using session duration
+        const startDateTime = new Date(currentDateString);
+        const endDateTime = new Date(
+          startDateTime.getTime() + (rr.session?.duration || 0) * 60000
+        );
+
         recurringReservations.push({
           ...rest,
           recurringId: rr.id,
           isRecurring: true,
-          startOn: new Date(currentDateString),
+          startOn: startDateTime,
           id: rr.id,
-          endOn: undefined
+          endOn: endDateTime,
         });
         currentDate = addDays(currentDate, (rr.intervalThreshold || 1) * 7);
       }
@@ -145,7 +158,7 @@ export async function GET(
 
     const sortedReservations = [...reservations, ...recurringReservations];
 
-    return NextResponse.json(sortedReservations, {status: 200});
+    return NextResponse.json(sortedReservations, { status: 200 });
   } catch (error) {
     console.error("Error fetching reservations:", error);
     return NextResponse.json(
@@ -153,14 +166,17 @@ export async function GET(
         error: "Internal server error",
         details: error instanceof Error ? error.message : String(error),
       },
-      {status: 500}
+      { status: 500 }
     );
   }
 }
 
-export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
-  const {startDate, sessionId, memberPlanId, ...rest} = await req.json();
-  const {lid} = await props.params;
+export async function POST(
+  req: NextRequest,
+  props: { params: Promise<Params> }
+) {
+  const { startDate, sessionId, memberPlanId, ...rest } = await req.json();
+  const { lid } = await props.params;
   const authMember = authenticateMember(req);
   const mid = authMember.member.id;
 
@@ -170,7 +186,7 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
     // 1. Validate member's active subscription
     const memberSub: MemberSubscription | undefined =
       await db.query.memberSubscriptions.findFirst({
-        where: (s, {eq, and}) =>
+        where: (s, { eq, and }) =>
           and(
             eq(s.id, memberPlanId),
             eq(s.memberId, mid),
@@ -183,7 +199,7 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
       });
 
     const memberPkg = await db.query.memberPackages.findFirst({
-      where: (s, {eq, and}) =>
+      where: (s, { eq, and }) =>
         and(
           eq(s.id, memberPlanId),
           eq(s.memberId, mid),
@@ -197,28 +213,28 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
 
     if (!memberSub && !memberPkg) {
       return NextResponse.json(
-        {error: "No active subscription found"},
-        {status: 404}
+        { error: "No active subscription found" },
+        { status: 404 }
       );
     }
 
     // 2. Check if session exists with additional data
     const session = await db.query.programSessions.findFirst({
-      where: (s, {eq}) => eq(s.id, sessionId),
+      where: (s, { eq }) => eq(s.id, sessionId),
       with: {
         program: true,
         reservations: {
-          where: (r, {eq}) => eq(r.startOn, startDate.split("T")[0]),
+          where: (r, { eq }) => eq(r.startOn, startDate.split("T")[0]),
         },
         recurringReservations: {
-          where: (rr, {lte, isNull, and}) =>
+          where: (rr, { lte, isNull, and }) =>
             and(
               lte(rr.startDate, startDate.split("T")[0]),
               isNull(rr.canceledOn)
             ),
           with: {
             exceptions: {
-              where: (exceptions, {eq}) =>
+              where: (exceptions, { eq }) =>
                 eq(exceptions.occurrenceDate, startDate.split("T")[0]),
             },
           },
@@ -227,11 +243,11 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
     });
 
     if (!session) {
-      return NextResponse.json({error: "Session not found"}, {status: 404});
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
     const exception = await db.query.recurringReservationsExceptions.findFirst({
-      where: (e, {eq}) => eq(e.occurrenceDate, startDate.split("T")[0]),
+      where: (e, { eq }) => eq(e.occurrenceDate, startDate.split("T")[0]),
     });
 
     if (exception) {
@@ -255,7 +271,7 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
           message: `Reservation created successfully for this ${startDate} `,
           reservation,
         },
-        {status: 200}
+        { status: 200 }
       );
     }
 
@@ -263,8 +279,8 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
     const isPasted = isSessionPasted(session, startDate);
     if (isPasted) {
       return NextResponse.json(
-        {error: "Session is in the past"},
-        {status: 400}
+        { error: "Session is in the past" },
+        { status: 400 }
       );
     }
 
@@ -274,18 +290,25 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
       const error = sessionState.isReserved
         ? "Session is already reserved"
         : "Session is full";
-      return NextResponse.json({error}, {status: 400});
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     let reservation: Reservation;
     if (!rest.recurring) {
+      // Calculate endOn based on startDate and session duration
+      const startDateTime = new Date(startDate.split("T")[0]);
+      const endDateTime = new Date(
+        startDateTime.getTime() + (session.duration || 0) * 60000
+      );
+
       const r = await db
         .insert(reservations)
         .values({
           memberId: mid,
           locationId: lid,
           sessionId: sessionId,
-          startOn: new Date(startDate.split("T")[0]),
+          startOn: startDateTime,
+          endOn: endDateTime,
           memberSubscriptionId: memberSub?.id,
           memberPackageId: memberPkg?.id,
         })
@@ -303,21 +326,30 @@ export async function POST(req: NextRequest, props: {params: Promise<Params>}) {
           memberPackageId: memberPkg?.id,
         })
         .returning();
-      const {id, intervalThreshold, interval, ...rest} = rr[0];
+      const { id, intervalThreshold, interval, ...rest } = rr[0];
+
+      // Calculate endOn for the response
+      const startDateTime = new Date(startDate.split("T")[0]);
+      const endDateTime = new Date(
+        startDateTime.getTime() + (session.duration || 0) * 60000
+      );
+
       reservation = {
         ...rest,
-        startOn: new Date(startDate.split("T")[0]),
+        startOn: startDateTime,
+        endOn: endDateTime,
         isRecurring: true,
         recurringId: id,
+        id: id,
       };
     }
 
-    return NextResponse.json(reservation, {status: 200});
+    return NextResponse.json(reservation, { status: 200 });
   } catch (err) {
     console.error(err);
     return NextResponse.json(
-      {error: "Failed to create reservation"},
-      {status: 500}
+      { error: "Failed to create reservation" },
+      { status: 500 }
     );
   }
 }
