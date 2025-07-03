@@ -1,8 +1,9 @@
 import useSWR from "swr";
 import { fetcher } from "./hooks";
+import { MemberPlan } from "@/types/member";
 
 function useSubscriptions(id: string) {
-    const { data, error, isLoading, mutate } = useSWR({ url: `plans/subs`, id: id }, fetcher);
+    const { data, error, isLoading, mutate } = useSWR<MemberPlan[]>({ url: `plans/subs`, id: id }, fetcher);
     return {
         subscriptions: data,
         error,
@@ -13,7 +14,7 @@ function useSubscriptions(id: string) {
 
 
 function usePackages(id: string) {
-    const { data, error, isLoading, mutate } = useSWR({ url: `plans/pkgs`, id: id }, fetcher);
+    const { data, error, isLoading, mutate } = useSWR<MemberPlan[]>({ url: `plans/pkgs`, id: id }, fetcher);
     return {
         packages: data,
         error,

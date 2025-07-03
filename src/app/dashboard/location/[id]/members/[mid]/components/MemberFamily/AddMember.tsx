@@ -84,7 +84,7 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                     <Plus className='size-4' />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[450px] rounded-sm">
+            <DialogContent className="sm:max-w-[450px] rounded-sm border-foreground/10">
                 <VisuallyHidden>
                     <DialogTitle></DialogTitle>
                 </VisuallyHidden>

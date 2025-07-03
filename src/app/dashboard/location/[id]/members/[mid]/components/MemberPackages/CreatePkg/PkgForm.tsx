@@ -29,7 +29,7 @@ import {
 
 import { SetStateAction, Dispatch, useState } from "react";
 import { NewPackageSchema } from "../../../schema";
-import { useForm, UseFormRegisterReturn } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
@@ -37,23 +37,25 @@ import { Loader2, CalendarIcon, ChevronRight } from "lucide-react";
 import { cn, tryCatch } from "@/libs/utils";
 import { useMemberPaymentMethods, useMemberStatus } from "../../../providers/MemberContext";
 import React from "react";
-import { MemberPlan } from "@/types";
+import { MemberPackage, MemberPlan } from "@/types";
 import { Stripe } from "stripe";
 import { toast } from "react-toastify";
-import { useMemberPackages, usePackages } from "@/hooks";
+import { useMemberPackages, } from "@/hooks";
 
 interface PkgFormProps {
-    params: { id: string, mid: string }
-    setOpen: Dispatch<SetStateAction<boolean>>
+    lid: string
+    mid: string
+    pkgs: MemberPlan[]
+    onFinish: (data: MemberPackage) => void
 }
 
-export function PkgForm({ params, setOpen }: PkgFormProps) {
-    const { mutate } = useMemberPackages(params.id, params.mid)
+export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
+
+    const { mutate } = useMemberPackages(lid, mid)
     const { ml } = useMemberStatus()
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods()
     const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
-    const { packages } = usePackages(params.id)
 
     const form = useForm<z.infer<typeof NewPackageSchema>>({
         resolver: zodResolver(NewPackageSchema),
@@ -77,7 +79,7 @@ export function PkgForm({ params, setOpen }: PkgFormProps) {
     async function onSubmit(v: z.infer<typeof NewPackageSchema>) {
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${params.id}/members/${params.mid}/packages`, {
+            fetch(`/api/protected/loc/${lid}/members/${mid}/packages`, {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,
@@ -90,9 +92,10 @@ export function PkgForm({ params, setOpen }: PkgFormProps) {
         if (error || !result?.ok) return;
 
         form.reset()
-        mutate()
+        const data = await result.json()
+        await mutate()
         toast.success("Package created successfully")
-        setOpen(false)
+        onFinish(data)
     }
 
 
@@ -110,15 +113,17 @@ export function PkgForm({ params, setOpen }: PkgFormProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Select a Plan</FormLabel>
-                                        <Select onValueChange={(value) => field.onChange(Number(value))} >
+                                        <Select onValueChange={field.onChange} >
                                             <FormControl>
                                                 <SelectTrigger >
                                                     <SelectValue placeholder="Select a plan" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {packages && packages.map((pkg: MemberPlan, index: number) => (
-                                                    (pkg.id) ? <SelectItem key={index} value={pkg.id?.toString()}>{pkg.name}</SelectItem> : null
+                                                {pkgs && pkgs.map((pkg: MemberPlan, index: number) => (
+                                                    (pkg.id) ? <SelectItem key={index} value={pkg.id?.toString()}>
+                                                        {pkg.name}
+                                                    </SelectItem> : null
                                                 ))}
                                             </SelectContent>
                                         </Select>

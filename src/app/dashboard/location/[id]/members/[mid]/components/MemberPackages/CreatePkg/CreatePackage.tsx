@@ -11,10 +11,24 @@ import { useState } from "react";
 import React from "react";
 import { PkgForm } from "./PkgForm";
 import { VisuallyHidden } from "react-aria";
+import { usePackages } from "@/hooks";
+import { useMemberStatus } from "../../../providers";
+import { MemberPackage } from "@/types";
 
 export function CreatePackage({ params }: { params: { id: string, mid: string } }) {
 
     const [open, setOpen] = useState<boolean>(false);
+    const { packages } = usePackages(params.id)
+    const { updateMember } = useMemberStatus()
+
+    async function handleFinish(data: MemberPackage) {
+        setOpen(false)
+        updateMember((prev) => ({
+            ...prev,
+            packages: [...(prev.packages || []), data]
+        }))
+    }
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
 
@@ -25,7 +39,7 @@ export function CreatePackage({ params }: { params: { id: string, mid: string } 
                 <VisuallyHidden>
                     <DialogTitle></DialogTitle>
                 </VisuallyHidden>
-                <PkgForm params={params} setOpen={setOpen} />
+                <PkgForm lid={params.id} mid={params.mid} pkgs={packages || []} onFinish={handleFinish} />
             </DialogContent>
         </Dialog >
     )

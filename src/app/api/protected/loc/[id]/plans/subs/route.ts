@@ -32,7 +32,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
 
     const { amount, programs, ...data } = await req.json()
 
-    const formatedAmount = amount * 100
+
     try {
 
         const integration = await db.query.integrations.findFirst({
@@ -46,9 +46,9 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
             return NextResponse.json({ error: "Stripe integration not found" }, { status: 400 })
         }
         const stripe = new MemberStripePayments(String(integration.id));
-        
+
         const stripePrice = await stripe.createStripeProduct(
-            { ...data, price: formatedAmount, programId: params.pid },
+            { ...data, price: amount, programId: params.pid },
             { locationId: params.id, planId: data.id, vendorAccountId: integration.accountId }
         )
 
@@ -62,7 +62,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
             const [plan] = await tx.insert(memberPlans).values({
                 ...data,
                 locationId: params.id,
-                price: formatedAmount,
+                price: amount,
                 programId: params.pid,
                 stripePriceId: stripePrice.id || "",
             }).returning({ id: memberPlans.id });

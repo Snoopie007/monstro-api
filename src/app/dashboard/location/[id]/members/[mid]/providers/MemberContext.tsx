@@ -9,21 +9,26 @@ type StateType = {
     paymentMethods: Stripe.PaymentMethod[];
 }
 
-
 const enum REDUCER_ACTION_TYPE {
     MUTATE,
+    UPDATE_MEMBER,
     ADD_PAYMENT_METHODS
 }
 
 type ReducerAction = {
     type: REDUCER_ACTION_TYPE,
-    payload?: Member | Stripe.PaymentMethod,
+    payload?: Member | Stripe.PaymentMethod | ((prev: Member) => Member),
 }
 
 const reducer = (state: StateType, action: ReducerAction): StateType => {
     switch (action.type) {
         case REDUCER_ACTION_TYPE.MUTATE:
             return { ...state, member: action.payload as Member }
+        case REDUCER_ACTION_TYPE.UPDATE_MEMBER:
+            const newMember = typeof action.payload === 'function'
+                ? (action.payload as (prev: Member) => Member)(state.member)
+                : action.payload as Member
+            return { ...state, member: newMember }
         case REDUCER_ACTION_TYPE.ADD_PAYMENT_METHODS:
             return { ...state, paymentMethods: [...state.paymentMethods, action.payload as Stripe.PaymentMethod] }
         default:
@@ -41,6 +46,13 @@ const useMemberContext = (initState: StateType) => {
         })
     }, [])
 
+    const updateMember = useCallback((memberOrFn: Member | ((prev: Member) => Member)) => {
+        dispatch({
+            type: REDUCER_ACTION_TYPE.UPDATE_MEMBER,
+            payload: memberOrFn
+        })
+    }, [])
+
     const addPaymentMethods = useCallback((paymentMethods: Stripe.PaymentMethod) => {
         dispatch({
             type: REDUCER_ACTION_TYPE.ADD_PAYMENT_METHODS,
@@ -48,7 +60,7 @@ const useMemberContext = (initState: StateType) => {
         })
     }, [])
 
-    return { state, mutate, addPaymentMethods }
+    return { state, mutate, updateMember, addPaymentMethods }
 }
 
 type UseMemberContextType = ReturnType<typeof useMemberContext>
@@ -78,7 +90,8 @@ export const MemberProvider = ({
 type UseMemberStatusHookType = {
     member: Member,
     ml: MemberLocation,
-    mutate: (member: Member) => void
+    mutate: (member: Member) => void,
+    updateMember: (memberOrFn: Member | ((prev: Member) => Member)) => void
 }
 
 export const useMemberStatus = (): UseMemberStatusHookType => {
@@ -86,10 +99,9 @@ export const useMemberStatus = (): UseMemberStatusHookType => {
     if (!context) {
         throw new Error('useMemberStatus must be used within a MemberProvider')
     }
-    const { state: { member, ml }, mutate } = context
-    return { member, ml, mutate }
+    const { state: { member, ml }, mutate, updateMember } = context
+    return { member, ml, mutate, updateMember }
 }
-
 
 type UseMemberPaymenHookType = {
     paymentMethods: Stripe.PaymentMethod[],

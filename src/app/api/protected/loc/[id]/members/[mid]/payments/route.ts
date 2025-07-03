@@ -34,7 +34,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
                 lastName: member.lastName,
                 email: member.email,
                 phone: member.phone,
-                address
+                address: address
             }, undefined, {
                 locationId: params.id,
                 memberId: params.mid
@@ -46,7 +46,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
                 .where(eq(members.id, params.mid))
         }
         stripe.setCustomer(member.stripeCustomerId)
-        console.log(token)
+
         const { paymentMethod } = await stripe.setupIntent(token);
         if (isDefault) {
             await stripe.updateCustomer({

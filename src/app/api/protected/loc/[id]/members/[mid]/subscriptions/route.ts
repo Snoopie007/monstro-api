@@ -1,12 +1,10 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberLocations, memberPlans, memberSubscriptions, transactions } from "@/db/schemas";
+import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/db/schemas";
 import { getStripeCustomer, MemberStripePayments } from "@/libs/server/stripe";
 import { calculateCurrentPeriodEnd, createInvoice, createSubscription, createTransaction } from "../../utils";
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { encodeId } from '@/libs/server/sqids'
-import Stripe from "stripe";
-import { MemberPlan, MemberSubscription } from "@/types";
+import { MemberSubscription } from "@/types";
 
 interface SubscriptionUpdates {
     price?: number;
@@ -111,10 +109,10 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
         }
 
 
-        const sid = await db.transaction(async (tx) => {
-            const [{ sid }] = await tx.insert(memberSubscriptions).values({
+        const sub = await db.transaction(async (tx) => {
+            const [sub] = await tx.insert(memberSubscriptions).values({
                 ...newSubscription
-            }).returning({ sid: memberSubscriptions.id })
+            }).returning()
 
 
             if (data.paymentMethod === "cash") {
@@ -122,16 +120,16 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
                 const [{ invoiceId }] = await tx.insert(memberInvoices).values({
                     ...newInvoice,
                     status: "draft",
-                    memberSubscriptionId: sid
+                    memberSubscriptionId: sub.id
                 }).returning({ invoiceId: memberInvoices.id });
                 await tx.insert(transactions).values({
                     ...newTransaction,
                     invoiceId,
-                    subscriptionId: sid,
+                    subscriptionId: sub.id,
                     status: "paid",
                 });
             }
-            return sid
+            return sub
         })
         if (hasIncompletePlan) {
             await db.update(memberLocations).set({
@@ -142,8 +140,10 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
             ))
         }
 
-
-        return NextResponse.json({ sid }, { status: 200 })
+        return NextResponse.json({
+            ...sub,
+            plan: plan,
+        } as MemberSubscription, { status: 200 })
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })

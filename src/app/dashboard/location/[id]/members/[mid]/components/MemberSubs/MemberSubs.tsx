@@ -13,19 +13,19 @@ import { formatAmountForDisplay } from '@/libs/utils'
 import { MemberSubscription } from '@/types'
 import { useMemberStatus } from '../../providers'
 import { SubscriptionStatus, CreateSubscription, SubActions } from '.'
-import { getUnixTime, format } from 'date-fns'
+import { format } from 'date-fns'
 import { useState } from 'react'
 
-
-
-function calculateProgress(start: number, end: number) {
-    const currentDate: Date = new Date();
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const totalDuration: number = endDate.getTime() - startDate.getTime();
-    const elapsedTime: number = currentDate.getTime() - startDate.getTime();
-    const progressPercentage: number = (elapsedTime / totalDuration) * 100;
-    return Math.min(Math.max(parseFloat(progressPercentage.toFixed(2)), 0), 100);
+function calculateProgress(start: Date, end: Date) {
+    console.log("start", start)
+    console.log("end", end)
+    const now = Date.now()
+    const startDate = new Date(start)
+    const endDate = new Date(end)
+    const total = endDate.getTime() - startDate.getTime()
+    const elapsed = now - startDate.getTime()
+    const progress = (elapsed / total) * 100
+    return Math.min(Math.max(Number(progress.toFixed(2)), 0), 100)
 }
 
 export function MemberSubs({ params }: { params: { id: string, mid: string }, }) {
@@ -80,9 +80,7 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
                         <div className='flex flex-row items-center justify-between'>
                             <div className='flex flex-row gap-2 items-center'>
                                 <div className="relative flex items-center justify-center w-5 h-5">
-                                    <CircleProgress progress={calculateProgress(
-                                        getUnixTime(Number(sub.currentPeriodStart) * 1000), getUnixTime(Number(sub.currentPeriodEnd) * 1000)
-                                    )} />
+                                    <CircleProgress progress={calculateProgress(sub.currentPeriodStart, sub.currentPeriodEnd)} />
                                 </div>
                                 <span>{sub.plan?.name}</span>
                             </div>

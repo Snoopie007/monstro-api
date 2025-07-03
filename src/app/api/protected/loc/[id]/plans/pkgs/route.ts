@@ -30,14 +30,14 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
 
     const { amount, programs, ...data } = await req.json()
 
-    const formatedAmount = amount * 100
+
     try {
 
         const plan = await db.transaction(async (tx) => {
             const [plan] = await tx.insert(memberPlans).values({
                 ...data,
                 locationId: params.id,
-                price: formatedAmount,
+                price: amount,
                 programId: params.pid,
             }).returning({ id: memberPlans.id });
 

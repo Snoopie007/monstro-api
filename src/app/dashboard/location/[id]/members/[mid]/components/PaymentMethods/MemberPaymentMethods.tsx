@@ -18,7 +18,7 @@ interface PaymentMethodsProps {
 
 export function PaymentMethods({ params }: PaymentMethodsProps) {
     const { member } = useMemberStatus()
-    const { paymentMethods, addPaymentMethods } = useMemberPaymentMethods()
+    const { paymentMethods } = useMemberPaymentMethods()
 
     return (
         <Card className='border-x-0 border-t border-b-0 border-foreground/10'>

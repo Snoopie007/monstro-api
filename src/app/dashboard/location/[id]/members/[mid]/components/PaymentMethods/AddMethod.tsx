@@ -28,6 +28,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "react-toastify";
 import { useMemberPaymentMethods } from "../../providers/MemberContext";
+import { VisuallyHidden } from "react-aria";
 
 interface AddPaymentMethodProps {
     member: Member;
@@ -73,11 +74,8 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
 
             if (tokenRef.token) {
 
-                const res = await fetch(`/api/protected/loc/${locationId}/members/${member.id}/payments/methods`, {
+                const res = await fetch(`/api/protected/loc/${locationId}/members/${member.id}/payments`, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
                     body: JSON.stringify({
                         token: tokenRef.token.id,
                         ...v,
@@ -93,21 +91,19 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                 if (res.ok) {
                     const data = await res.json()
                     addPaymentMethods(data)
-
                     toast.success("Card added successfully", { theme: "dark" });
-                    setOpen(false);
-                }
-                ;
+                };
             }
         } catch (error) {
             console.log(error)
+            toast.error("Failed to add card", { theme: "dark" });
+        } finally {
+            setOpen(false);
             setLoading(false);
         }
     }
 
     return (
-
-
 
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -116,10 +112,9 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[525px] rounded-sm border-foreground/10">
-                <DialogHeader>
-                    <DialogTitle>Add a Card</DialogTitle>
-                    <DialogDescription></DialogDescription>
-                </DialogHeader>
+                <VisuallyHidden>
+                    <DialogTitle></DialogTitle>
+                </VisuallyHidden>
                 <DialogBody>
                     <Form {...form}>
                         <form className=" space-y-3">
@@ -133,7 +128,11 @@ export default function AddPaymentMethod({ member, locationId }: AddPaymentMetho
                                                 Cardholder Name
                                             </FormLabel>
                                             <FormControl>
-                                                <Input type="text" placeholder="Name on card" className="border-none rounded-sm  px-3 py-2 w-full"   {...field} />
+                                                <Input type="text" placeholder="Name on card"
+                                                    className="border-none rounded-sm  px-3 py-2 w-full"
+                                                    {...field}
+                                                    value={field.value.charAt(0).toUpperCase() + field.value.slice(1)}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

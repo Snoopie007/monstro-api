@@ -18,7 +18,7 @@ export const ChargeItemSchema = z.object({
 
 // Common fields shared between subscription and package schemas
 const SubsAndPackageFields = {
-    memberPlanId: z.number().min(1, "required"),
+    memberPlanId: z.string().min(1, "required"),
     startDate: z.date().min(new Date(), "Activation date must be in the future"),
     paymentMethod: z.enum(["card", "cash", "zelle", "bank payment", "cheque"], { message: "required" }),
     other: z.object({

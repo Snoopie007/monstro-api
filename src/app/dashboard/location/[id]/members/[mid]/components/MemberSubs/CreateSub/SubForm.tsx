@@ -26,23 +26,23 @@ import { Loader2 } from "lucide-react";
 import { cn, sleep, tryCatch } from "@/libs/utils";
 import { useMemberPaymentMethods, useMemberStatus } from "../../../providers";
 import React from "react";
-import { MemberPlan } from "@/types";
+import { MemberPlan, MemberSubscription } from "@/types";
 import { Stripe } from "stripe";
 import { DurationPicker } from ".";
 import { toast } from "react-toastify";
-import { useSubscriptions } from "@/hooks";
 
 type SubFormProps = {
-    params: { id: string, mid: string },
-    setOpen: Dispatch<SetStateAction<boolean>>
+    lid: string
+    subs: MemberPlan[]
+    mid: string
+    onFinish: (data: MemberSubscription) => void
 }
 
-export function SubForm({ params, setOpen }: SubFormProps) {
+export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
 
     const [loading, setLoading] = useState(false);
     const { paymentMethods } = useMemberPaymentMethods()
-    const { ml } = useMemberStatus()
-    const { subscriptions } = useSubscriptions(params.id)
+
     const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
 
 
@@ -68,12 +68,11 @@ export function SubForm({ params, setOpen }: SubFormProps) {
 
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${params.id}/members/${params.mid}/subscriptions`, {
+            fetch(`/api/protected/loc/${lid}/members/${mid}/subscriptions`, {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,
-                    stripePaymentMethod,
-                    hasIncompletePlan: ml.status === "incomplete"
+                    stripePaymentMethod
                 })
             })
         )
@@ -83,8 +82,9 @@ export function SubForm({ params, setOpen }: SubFormProps) {
 
 
         form.reset()
+        const data = await result.json()
         toast.success("Subscription created successfully")
-        setOpen(false)
+        onFinish(data)
     }
 
 
@@ -102,15 +102,15 @@ export function SubForm({ params, setOpen }: SubFormProps) {
                                 name="memberPlanId"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel size="tiny">Plan</FormLabel>
-                                        <Select onValueChange={(value) => field.onChange(Number(value))} >
+                                        <FormLabel size="tiny">Select a plan</FormLabel>
+                                        <Select onValueChange={field.onChange}>
                                             <FormControl>
                                                 <SelectTrigger >
                                                     <SelectValue placeholder="Select a plan" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {subscriptions && subscriptions.map((sub: MemberPlan, index: number) => (
+                                                {subs && subs.map((sub: MemberPlan, index: number) => (
                                                     (sub.id) ?
                                                         <SelectItem key={index} value={sub.id?.toString()}>{sub.name}</SelectItem> : null
                                                 ))}
