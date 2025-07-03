@@ -14,7 +14,7 @@ import {
 import { useMemberAchievements } from '@/hooks/hooks'
 import { format } from 'date-fns'
 export function MemberAchievements({ params }: { params: { id: string, mid: string } }) {
-    const { mas, error, isLoading } = useMemberAchievements(params.id, params.mid)
+    const { mas } = useMemberAchievements(params.id, params.mid)
 
     return (
         <div className='space-y-2'>

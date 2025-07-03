@@ -8,8 +8,7 @@ import {
     SelectContent,
     SelectItem,
     Input,
-    FormMessage,
-    TimePicker
+    FormMessage
 } from '@/components/forms';
 import { Control } from 'react-hook-form';
 import { SessionSchema, DaysOfWeek } from '../../../schemas';
@@ -47,12 +46,11 @@ export default function SessionFields({ control, }: { control: Control<z.infer<t
                 render={({ field }) => (
                     <FormItem className={cn("col-span-1")}>
                         <FormControl>
-                            <TimePicker
-                                label="Time"
-                                value={stringToTime(field.value)}
-                                onChange={(time: TimeValue | null) =>
-                                    field.onChange(time ? time.toString() : "12:00")
-                                }
+                            <Input type="time"
+                                step="1"
+                                value={field.value}
+                                onChange={(e) => field.onChange(e.target.value)}
+                                className="bg-background rounded-md appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none border-foreground/10"
                             />
                         </FormControl>
                     </FormItem>

@@ -7,7 +7,7 @@ interface CalendarLayoutProps {
 
 
 export default async function CalendarLayout(props: CalendarLayoutProps) {
-    const params = await props.params;
+
     const { children } = props;
 
 

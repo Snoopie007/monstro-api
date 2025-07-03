@@ -139,7 +139,7 @@ export function UpdateReward({ reward, lid }: UpdateRewardProps) {
 						disabled={loading || !form.formState.isValid}
 						className={cn("children:hidden", { "children:block": loading })}
 					>
-						<Loader2 size={16} className={"animate-spin mr-2"} />
+						<Loader2 className={"animate-spin mr-2 size-3.5"} />
 						Save
 					</Button>
 				</SheetFooter>

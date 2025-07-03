@@ -13,7 +13,7 @@ import {
 
 import { z } from "zod";
 import { useState } from 'react'
-import { useFieldArray, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem, FormLabel } from '@/components/forms';
 import { cn, sleep, tryCatch } from "@/libs/utils";
@@ -23,8 +23,8 @@ import { NewProgramSchema } from '../schemas';
 
 import { toast } from 'react-toastify';
 import { usePrograms } from '@/hooks/usePrograms';
-import { mutate as globalMutate } from 'swr';
 import { Loader2 } from 'lucide-react';
+import { VisuallyHidden } from 'react-aria';
 
 
 
@@ -53,7 +53,7 @@ export function AddProgram({ lid }: { lid: string }) {
     })
 
 
-    async function submitForm(v: z.infer<typeof NewProgramSchema>) {
+    async function onSubmit(v: z.infer<typeof NewProgramSchema>) {
         if (loading) return; // Prevent multiple submissions
 
         setLoading(true);
@@ -66,31 +66,23 @@ export function AddProgram({ lid }: { lid: string }) {
                 })
             )
 
+            await sleep(1000);
+            setLoading(false);
+
             if (error || !result || !result.ok) {
                 toast.error(error?.message || "Something went wrong");
                 return;
             }
-
             toast.success("Program created successfully");
-
-            // Refresh the data - force revalidation of ALL cache
+            form.reset();
             await mutate();
-            await globalMutate((key) => typeof key === "string" && key.includes(`/api/protected/loc/${lid}/programs`));
-
-            await sleep(1000);
             setOpen(false);
         } catch (error) {
             console.error("Error creating program:", error);
             toast.error("Failed to create program");
-        } finally {
-            setLoading(false);
         }
     };
 
-    const handleSaveClick = () => {
-        if (loading) return; // Prevent clicking when already loading
-        form.handleSubmit(submitForm)();
-    };
 
 
     return (
@@ -100,10 +92,10 @@ export function AddProgram({ lid }: { lid: string }) {
                     + Program
                 </Button>
             </SheetTrigger>
-            <SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0">
-                <SheetHeader className='space-y-0'>
-                    <SheetTitle>Add a New Program</SheetTitle>
-                </SheetHeader>
+            <SheetContent className="border-foreground/10 sm:max-w-[540px] sm:w-[540px] p-0">
+                <VisuallyHidden>
+                    <SheetTitle></SheetTitle>
+                </VisuallyHidden>
                 <ScrollArea className="h-[calc(100vh-95px)] w-full ">
 
                     <Form {...form}>
@@ -125,7 +117,6 @@ export function AddProgram({ lid }: { lid: string }) {
                                         )}
                                     />
 
-
                                 </fieldset>
                                 <fieldset>
                                     <FormField
@@ -137,7 +128,7 @@ export function AddProgram({ lid }: { lid: string }) {
                                                 <FormControl>
                                                     <Textarea
                                                         placeholder="Program Description"
-                                                        className="resize-none"
+                                                        className="resize-none border-foreground/10"
                                                         {...field}
                                                     />
                                                 </FormControl>
@@ -199,18 +190,18 @@ export function AddProgram({ lid }: { lid: string }) {
                         </form>
                     </Form>
                 </ScrollArea>
-                <SheetFooter className='border-t py-2 px-4'>
+                <SheetFooter className='border-t border-foreground/10 py-2 px-4'>
                     <SheetClose asChild>
                         <Button variant={"outline"} size={"sm"}>Cancel</Button>
                     </SheetClose>
                     <Button
                         variant={"foreground"}
                         size={"sm"}
-                        onClick={handleSaveClick}
+                        onClick={form.handleSubmit(onSubmit)}
                         disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
                         className={cn("children:hidden  ", (loading && "children:inline-block"))}
                     >
-                        <Loader2 className="mr-2  animate-spin" />
+                        <Loader2 className="mr-2 size-3.5 animate-spin" />
                         Save
                     </Button>
                 </SheetFooter>

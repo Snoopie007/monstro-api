@@ -4,7 +4,6 @@ export * from "./checkbox";
 export * from "./input";
 export * from "./textarea";
 export * from "./select";
-export * from "./datetime-picker";
 export * from "./form";
 export * from "./TagInput";
 export * from "./label";

@@ -100,7 +100,7 @@ export function CreateSession({ pid, lid }: CreateSessionProps) {
                         onClick={form.handleSubmit(submitForm)}
                         disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
                     >
-                        <Loader2 className="size-4 animate-spin mr-2" />
+                        <Loader2 className="size-3.5 animate-spin mr-2" />
                         Save
                     </Button>
                 </DialogFooter>

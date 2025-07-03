@@ -175,7 +175,7 @@ export default function InviteStaff({ roles, lid }: { roles: Array<Role>, lid: s
                     <Button variant="foreground" size={"sm"} onClick={form.handleSubmit(onSubmit)}
                         disabled={form.formState.isSubmitting}
                     >
-                        {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin' /> : "Save"}
+                        {form.formState.isSubmitting ? <Loader2 className='size-3.5 animate-spin' /> : "Save"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

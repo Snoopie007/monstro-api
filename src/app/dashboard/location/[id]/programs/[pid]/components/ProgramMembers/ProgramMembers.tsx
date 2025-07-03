@@ -22,29 +22,6 @@ export function ProgramMembers({ programId, locationId }: { programId: string, l
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     // const [syncLoading, setSyncLoading] = useState<boolean>(false)
     const columns = ProgramMemberColumns(locationId)
-    // const data = React.useMemo(() => {
-    //     const rows: any = [];
-    //     let count = 0;
-    //     if (members && members.length) {
-    //         members.forEach((level: any) => {
-    //             count += level.reservations.length;
-    //             level.reservations.forEach((reservation: any) => {
-    //                  rows.push({
-    //                     id: reservation.member.id,
-    //                     name: reservation.member.name,
-    //                     email: reservation.member.email,
-    //                     phone: reservation.member.phone,
-    //                     referralCode: reservation.member.referralCode,
-    //                     status: reservation.member.activityStatus,
-    //                     levelName: level.programLevelName,
-    //                 });
-    //             });
-    //         });
-    //         // setReservationCount(count);
-    //     }
-
-    //     return rows;
-    // }, [members]);
 
 
 

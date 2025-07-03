@@ -314,7 +314,7 @@ export function CreateMemberForm({ lid }: { lid: string }) {
                             onClick={form.handleSubmit(onSubmit)}
                             className={cn("children:hidden", (loading && "children:inline-block"))}
                         >
-                            <Loader2 className="mr-2  animate-spin size-4" />
+                            <Loader2 className="mr-2  animate-spin size-3.5" />
                             Create Account
                         </Button>
                     </DialogClose>

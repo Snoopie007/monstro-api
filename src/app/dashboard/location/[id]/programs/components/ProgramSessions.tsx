@@ -9,13 +9,13 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
-    FormControl, FormField, FormItem, FormMessage, TimePicker
+    FormControl, FormField, FormItem, FormMessage
 } from "@/components/forms";
 import { z } from 'zod';
 import { DaysOfWeek, NewProgramSchema } from '../schemas';
 import { Button } from '@/components/ui';
 import { cn, stringToTime } from '@/libs/utils';
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 
 
 interface AddProgramSessionsProps {
@@ -32,17 +32,16 @@ export default function SessionComponent({ control }: AddProgramSessionsProps) {
     });
 
     return (
-        <div className="bg-foreground/5 p-4 rounded-sm">
-            <div className="border-b flex flex-row items-start justify-between border-foreground/5 mb-4 pb-2">
-                <div className="space-y-1">
-                    <div className='font-medium text-sm leading-none'> Add a Session</div>
-                    <div className='text-xs text-foreground/50'>Add a session to the program</div>
-                </div>
+        <div className="bg-foreground/5 p-4 rounded-sm space-y-2">
+            <div className="border-b flex flex-row items-center justify-between border-foreground/5 pb-2 gap-2">
+                <div className='font-medium text-sm leading-none'> Sessions</div>
+
                 <Button type='button'
-                    variant={"foreground"}
+                    variant={"ghost"}
+                    size={"icon"}
                     onClick={() => append({ day: 1, duration: 30, time: "12:00" })}
-                    className=" font-medium text-[12px]  py-1  px-2 rounded-xs h-auto">
-                    + Session
+                    className="size-6 bg-foreground/5 rounded-md">
+                    <Plus className='size-3.5' />
                 </Button>
             </div>
             <div className='space-y-0'>
@@ -65,7 +64,7 @@ export default function SessionComponent({ control }: AddProgramSessionsProps) {
 
                                             <FormControl>
                                                 <Select onValueChange={(v) => field.onChange(parseInt(v) + 1)} value={(field.value - 1).toString()}>
-                                                    <SelectTrigger className={cn({ "border-red-500": fieldState.error })}>
+                                                    <SelectTrigger className={cn({ "border-red-500": fieldState.error }, "rounded-md")}>
                                                         <SelectValue placeholder="Select a day" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -84,13 +83,14 @@ export default function SessionComponent({ control }: AddProgramSessionsProps) {
                                     render={({ field }) => (
                                         <FormItem className={cn("col-span-1")}>
                                             <FormControl>
-                                                <TimePicker
-                                                    label="Time"
-                                                    value={stringToTime(field.value)}
-                                                    onChange={(time) =>
-                                                        field.onChange(time ? time.toString() : "12:00")
-                                                    }
+
+                                                <Input type="time"
+                                                    step="1"
+                                                    value={field.value}
+                                                    onChange={(e) => field.onChange(e.target.value)}
+                                                    className="bg-background rounded-md appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none border-foreground/10"
                                                 />
+
                                             </FormControl>
                                         </FormItem>
                                     )}
@@ -102,7 +102,7 @@ export default function SessionComponent({ control }: AddProgramSessionsProps) {
                                         <FormItem className="col-span-1 ">
 
                                             <FormControl>
-                                                <Input type='number' className={cn("")} placeholder={'Duration'}
+                                                <Input type='number' className={cn("rounded-md")} placeholder={'Duration'}
                                                     value={field.value}
                                                     onChange={(e) => {
                                                         const value = parseInt(e.target.value);

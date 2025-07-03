@@ -181,7 +181,7 @@ export function CreateContract({ locationId }: { locationId: string }) {
                     <DialogClose asChild>
                         <Button variant={"foreground"} size={"sm"} className={cn("children:hidden", { "children:inline-block": loading })}
                             onClick={form.handleSubmit(handleSubmit)}>
-                            <Loader2 className="animate-spin mr-1 size-4" />
+                            <Loader2 className="animate-spin mr-1 size-3.5" />
                             Create
                         </Button>
                     </DialogClose>

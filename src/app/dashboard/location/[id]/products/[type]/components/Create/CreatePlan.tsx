@@ -202,7 +202,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                             variant={"foreground"}
                             disabled={form.formState.isSubmitting || !form.formState.isValid}
                         >
-                            {form.formState.isSubmitting ? <Loader2 className="size-3 animate-spin" /> : "Save"}
+                            {form.formState.isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : "Save"}
                         </Button>
                     </div>
                 </DialogFooter>
