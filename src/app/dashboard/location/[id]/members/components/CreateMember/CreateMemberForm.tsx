@@ -326,7 +326,7 @@ export function CreateMemberForm({ lid }: { lid: string }) {
                         className={cn("children:hidden", (loading && "children:inline-block"))}
                         disabled={loading}
                     >
-                        <Loader2 className="mr-2  animate-spin size-4" />
+                        <Loader2 className="mr-2  animate-spin size-3.5" />
                         Retry
                     </Button>
                 )}

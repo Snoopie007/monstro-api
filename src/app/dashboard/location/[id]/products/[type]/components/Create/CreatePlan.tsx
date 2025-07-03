@@ -25,15 +25,15 @@ import {
 import { useForm } from "react-hook-form";
 import { NewPlanSchema } from "@/libs/FormSchemas";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { DialogClose, DialogDescription, DialogTrigger } from "@radix-ui/react-dialog";
 
 import { toast } from "react-toastify";
 import { PlanSubFields } from "./SubFields";
-import { mutate } from "swr";
 import { Loader2 } from "lucide-react";
 import { PlanPkgFields } from "./PkgFields";
 import AddPrograms from "../AddPrograms";
+import { usePackages, useSubscriptions } from "@/hooks/usePlans";
 
 
 interface CreatePlanProps {
@@ -43,6 +43,8 @@ interface CreatePlanProps {
 
 export function CreatePlan({ lid, type }: CreatePlanProps) {
     const [open, setOpen] = useState(false);
+    const { mutate: mutateSubs } = useSubscriptions(lid);
+    const { mutate: mutatePkgs } = usePackages(lid);
 
 
 
@@ -96,8 +98,12 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 
             toast.success(`${type === "subs" ? "Subscription" : "Package"} created successfully`);
             form.reset();
-            await mutate(`/api/protected/loc/${lid}/plans/${type}`);
-            setOpen(true);
+            if (type === "subs") {
+                await mutateSubs();
+            } else {
+                await mutatePkgs();
+            }
+            setOpen(false);
         } catch (error) {
             console.error("Error creating plan:", error);
             toast.error("Failed to create plan");

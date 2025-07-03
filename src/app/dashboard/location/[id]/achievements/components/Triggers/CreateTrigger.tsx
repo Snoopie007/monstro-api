@@ -82,7 +82,7 @@ export function CreateTrigger() {
                                 </Button>
                             </SheetClose>
                             <Button variant={"foreground"} type='submit' size={"sm"} disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin' /> : 'Create'}
+                                {form.formState.isSubmitting ? <Loader2 className='size-3.5 animate-spin' /> : 'Create'}
                             </Button>
                         </SheetFooter>
 

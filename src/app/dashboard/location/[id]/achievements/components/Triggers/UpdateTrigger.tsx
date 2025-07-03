@@ -93,7 +93,7 @@ export function UpdateTrigger({ achievement, ta }: UpdateTriggerProps) {
                             variant={"foreground"} size={"sm"}
                             disabled={form.formState.isSubmitting}
                         >
-                            {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin' /> : 'Update'}
+                            {form.formState.isSubmitting ? <Loader2 className='size-3.5 animate-spin' /> : 'Update'}
                         </Button>
                     </SheetClose>
                 </SheetFooter>

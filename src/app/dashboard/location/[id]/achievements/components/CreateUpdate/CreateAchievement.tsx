@@ -99,7 +99,7 @@ export function CreateAchievement({ lid }: CreateAchievementProps) {
                     <Button variant={"foreground"} size={"sm"}
                         disabled={form.formState.isSubmitting}
                         onClick={form.handleSubmit(onSubmit)}>
-                        {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin' /> : 'Create'}
+                        {form.formState.isSubmitting ? <Loader2 className='size-3.5 animate-spin' /> : 'Create'}
                     </Button>
                 </SheetFooter>
             </SheetContent>
