@@ -3,7 +3,7 @@ import { FamilyMember } from "./FamilyMember";
 import { Transaction } from "./transaction";
 import { Location } from "./location";
 import { PlanProgram } from "./program";
-import { importMembers, memberInvoices, memberLocations, memberPackages, memberPlans, memberReferrals, members, memberSubscriptions } from "@/db/schemas";
+import { importMembers, memberInvoices, memberLocations, memberPackages, memberPlans, memberPointsHistory, memberReferrals, members, memberSubscriptions } from "@/db/schemas";
 
 export type Member = typeof members.$inferSelect & {
   familyMembers?: FamilyMember[];
@@ -85,3 +85,7 @@ export type MemberReferral = typeof memberReferrals.$inferSelect & {
 }
 
 
+export type MemberPointsHistory = typeof memberPointsHistory.$inferSelect & {
+  member?: Member;
+  location?: Location;
+}
