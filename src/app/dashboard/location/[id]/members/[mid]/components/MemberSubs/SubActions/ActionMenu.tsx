@@ -5,9 +5,10 @@ import {
 } from '@/components/ui';
 import { Pencil, Trash2, X, Ellipsis } from 'lucide-react';
 import { MemberSubscription } from '@/types';
-import { CancelSub } from '.';
+import { CancelSub, UpdateSub } from '.';
 import { useState } from 'react';
 import { cn } from '@/libs/utils';
+import { VisuallyHidden } from 'react-aria';
 
 
 const HoverTransition = 'group-hover:bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300'
@@ -27,13 +28,13 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
         <>
             <Dialog open={action !== undefined} onOpenChange={handleClose}>
                 <DialogContent className="max-w-lg border-foreground/10 sm:rounded-lg overflow-hidden">
-                    <DialogHeader className='pb-0 pt-5'>
+                    <VisuallyHidden className='pb-0 pt-5'>
                         <DialogTitle className='text-sm'>
-                            {action === 'cancel' ? 'Cancel Subscription' : 'Update Subscription'}
+
                         </DialogTitle>
-                        <DialogDescription className='hidden'></DialogDescription>
-                    </DialogHeader>
+                    </VisuallyHidden>
                     <CancelSub sub={sub} show={action === 'cancel'} close={() => handleClose(false)} />
+                    <UpdateSub sub={sub} show={action === 'update'} close={() => handleClose(false)} />
                 </DialogContent>
 
             </Dialog>

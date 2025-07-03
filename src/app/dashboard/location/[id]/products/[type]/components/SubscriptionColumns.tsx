@@ -3,7 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { cn, formatAmountForDisplay } from "@/libs/utils";
 import { MemberPlan, PlanProgram } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
-import Link from "next/link";
 
 export const SubColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => [
     {

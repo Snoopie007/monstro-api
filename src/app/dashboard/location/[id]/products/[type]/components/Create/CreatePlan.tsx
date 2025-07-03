@@ -19,45 +19,39 @@ import {
     FormControl,
     Input,
     Textarea,
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem,
-    FormDescription
+    FormDescription,
+    PriceInput
 } from "@/components/forms";
 import { useForm } from "react-hook-form";
 import { NewPlanSchema } from "@/libs/FormSchemas";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { DialogClose, DialogDescription, DialogTrigger } from "@radix-ui/react-dialog";
 
 import { toast } from "react-toastify";
 import { PlanSubFields } from "./SubFields";
-
-import useSWR from "swr";
+import { mutate } from "swr";
 import { Loader2 } from "lucide-react";
 import { PlanPkgFields } from "./PkgFields";
 import AddPrograms from "../AddPrograms";
-import { mutate as globalMutate } from 'swr';
+
 
 interface CreatePlanProps {
     lid: string
-    type: "recurring" | "one-time"
+    type: 'subs' | 'pkgs'
 }
 
 export function CreatePlan({ lid, type }: CreatePlanProps) {
-     const types = type === "recurring" ? "subs" : "pkgs";
-    const { mutate } = useSWR(`/api/protected/loc/${lid}/plans/${types}`);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [open, setOpen] = useState(false);
-    
+
+
+
     const form = useForm<z.infer<typeof NewPlanSchema>>({
         resolver: zodResolver(NewPlanSchema),
         defaultValues: {
             name: "",
             description: "",
-            type: type,
+            type: type === 'subs' ? 'recurring' : 'one-time',
             family: false,
             familyMemberLimit: 0,
             amount: 0,
@@ -79,79 +73,54 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
         mode: 'onSubmit'
     })
 
-    async function submitForm(v: z.infer<typeof NewPlanSchema>) {
-        if (isSubmitting) return;
-        
-        setIsSubmitting(true);
+    async function onSubmit(v: z.infer<typeof NewPlanSchema>) {
+        if (form.formState.isSubmitting) return;
 
-        const types = type === "recurring" ? "subs" : "pkgs";
 
         try {
-            if (!v.programs || v.programs.length === 0) {
-                toast.error("Please select at least one program");
-                setIsSubmitting(false);
-                return;
-            }
-            
             const { pkg, sub, ...rest } = v;
             const { result, error } = await tryCatch(
-                fetch(`/api/protected/loc/${lid}/plans/${types}`, {
+                fetch(`/api/protected/loc/${lid}/plans/${type}`, {
                     method: 'POST',
                     body: JSON.stringify({
                         ...rest,
-                        ...(type === 'recurring' ? { ...sub } : { ...pkg })
+                        ...(type === 'subs' ? { ...sub } : { ...pkg })
                     })
                 })
             )
-            
+
             if (error || !result || !result.ok) {
                 toast.error(error?.message || "Something went wrong");
-                setIsSubmitting(false);
                 return;
             }
 
-            toast.success(type === "recurring" ? "Subscription created successfully" : "Package created successfully");
-            
-            await globalMutate((key) => typeof key === "string" && key.includes(`/api/protected/loc/${lid}/plans/${types}`));
-            await mutate();
-            
-          
+            toast.success(`${type === "subs" ? "Subscription" : "Package"} created successfully`);
             form.reset();
-            setOpen(false);
+            await mutate(`/api/protected/loc/${lid}/plans/${type}`);
+            setOpen(true);
         } catch (error) {
             console.error("Error creating plan:", error);
             toast.error("Failed to create plan");
-        } finally {
-            setIsSubmitting(false);
         }
     }
 
-    const handleFormSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (isSubmitting) return; 
-        form.handleSubmit(submitForm)(e);
-    };
-
-    const handleSaveClick = () => {
-        if (isSubmitting) return; // Prevent clicking when already submitting
-        form.handleSubmit(submitForm)();
-    };
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant={"foreground"} size={"xs"}>
-                    + {type === "recurring" ? "Subscription" : "Package"}
+                <Button size={"sm"} variant={"ghost"}
+                    className='flex-1 items-center gap-1 rounded-sm bg-foreground/10 hover:bg-foreground/10' >
+                    + {type === "subs" ? "Subscription" : "Package"}
                 </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-lg border-foreground/10">
                 <DialogHeader className="space-y-0">
-                    <DialogTitle>{type === "recurring" ? "Create Subscription" : "Create Package"}</DialogTitle>
+                    <DialogTitle>{type === "subs" ? "Create Subscription" : "Create Package"}</DialogTitle>
                     <DialogDescription></DialogDescription>
                 </DialogHeader>
                 <DialogBody>
                     <Form {...form}>
-                        <form onSubmit={handleFormSubmit} className="space-y-2">
+                        <form className="space-y-2">
                             <fieldset className="grid grid-cols-2 gap-2">
                                 <FormField
                                     control={form.control}
@@ -173,22 +142,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                                         <FormItem className="flex-1">
                                             <FormLabel size={"tiny"}>Price</FormLabel>
                                             <FormControl>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-[50%] -translate-y-[50%] text-sm text-foreground/50">$</span>
-                                                    <Input 
-                                                        {...field} 
-                                                        type="number" 
-                                                        step="0.01" 
-                                                        min="0.00" 
-                                                        className="pl-6" 
-                                                        placeholder="0.00" 
-                                                        value={field.value || ""}
-                                                        onChange={(e) => {
-                                                            const value = e.target.value ? Math.floor(parseFloat(e.target.value) * 100) / 100 : "";
-                                                            field.onChange(value);
-                                                        }}
-                                                    />
-                                                </div>
+                                                <PriceInput value={field.value} onChange={field.onChange} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -203,7 +157,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                                         <FormItem>
                                             <FormLabel size={"tiny"}>Description</FormLabel>
                                             <FormControl>
-                                                <Textarea className={"resize-none min-h-8"} placeholder="Short description" {...field} />
+                                                <Textarea className={"resize-none h-8 border-foreground/10"} placeholder="Short description" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -221,20 +175,17 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                                                 Select at least one program that this plan will include.
                                             </FormDescription>
                                             <FormControl>
-                                                <AddPrograms
-                                                    value={field.value || []}
-                                                    onChange={(selectedPrograms) => {
-                                                        field.onChange(selectedPrograms);
-                                                    }}
-                                                />
+                                                <AddPrograms value={field.value || []} onChange={(selectedPrograms) => {
+                                                    field.onChange(selectedPrograms);
+                                                }} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </fieldset>
-                            {type === "recurring" && <PlanSubFields lid={lid} form={form} />}
-                            {type === "one-time" && <PlanPkgFields lid={lid} form={form} />}
+                            {type === "subs" && <PlanSubFields lid={lid} form={form} />}
+                            {type === "pkgs" && <PlanPkgFields lid={lid} form={form} />}
                         </form>
                     </Form>
                 </DialogBody>
@@ -245,18 +196,13 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
                                 Cancel
                             </Button>
                         </DialogClose>
-                        <Button 
-                            size={"sm"} 
-                            onClick={handleSaveClick} 
+                        <Button
+                            size={"sm"}
+                            onClick={form.handleSubmit(onSubmit)}
                             variant={"foreground"}
-                            disabled={isSubmitting || !form.formState.isValid}
+                            disabled={form.formState.isSubmitting || !form.formState.isValid}
                         >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="size-3 mr-2 animate-spin" />
-                                    Saving...
-                                </>
-                            ) : "Save"}
+                            {form.formState.isSubmitting ? <Loader2 className="size-3 animate-spin" /> : "Save"}
                         </Button>
                     </div>
                 </DialogFooter>

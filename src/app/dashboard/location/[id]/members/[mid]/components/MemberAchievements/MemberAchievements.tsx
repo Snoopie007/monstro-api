@@ -1,6 +1,9 @@
 'use client'
 import { Input } from '@/components/forms'
 import {
+    Avatar,
+    AvatarFallback,
+    AvatarImage,
     Table,
     TableBody,
     TableCell,
@@ -11,7 +14,7 @@ import {
 import { useMemberAchievements } from '@/hooks/hooks'
 import { format } from 'date-fns'
 export function MemberAchievements({ params }: { params: { id: string, mid: string } }) {
-    const { achievements, error, isLoading } = useMemberAchievements(params.id, params.mid)
+    const { mas, error, isLoading } = useMemberAchievements(params.id, params.mid)
 
     return (
         <div className='space-y-2'>
@@ -22,34 +25,42 @@ export function MemberAchievements({ params }: { params: { id: string, mid: stri
                 <Table className=''>
                     <TableHeader>
                         <TableRow>
-                            {['Name', 'Description', 'Points Earned', 'Date', ''].map((header, index) => (
+                            {['Name', 'Description', 'Points Earned', 'Date'].map((header, index) => (
                                 <TableHead key={index} className='text-sm h-auto py-2'>{header}</TableHead>
                             ))}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {achievements && achievements.length > 0 ? (
+                        {mas && mas.length > 0 ? (
                             <>
-                                {achievements.map((achievement: any, i: number) => (
+                                {mas.map((ma, i: number) => (
                                     <TableRow key={i}>
 
                                         <TableCell>
-                                            {achievement.achievement.name}
+                                            <div className='flex flex-row items-center gap-2'>
+                                                <Avatar>
+                                                    <AvatarImage src={ma.achievement?.badge} />
+                                                    <AvatarFallback>
+                                                        {ma.achievement?.name?.charAt(0)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className='text-sm'>
+                                                    {ma.achievement?.name}
+                                                </div>
+                                            </div>
+
                                         </TableCell>
                                         <TableCell>
-                                            {achievement.achievement.description}
+                                            {ma.achievement?.description}
                                         </TableCell>
                                         <TableCell>
-                                            {achievement.achievement.points}
+                                            {ma.achievement?.awardedPoints}
                                         </TableCell>
 
                                         <TableCell>
-                                            {format(achievement.dateAchieved, 'MMM d, yyyy')}
+                                            {format(ma.dateAchieved, 'MMM d, yyyy')}
                                         </TableCell>
 
-                                        <TableCell className='flex flex-row items-center'>
-
-                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </>

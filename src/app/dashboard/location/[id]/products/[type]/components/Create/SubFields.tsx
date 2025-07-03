@@ -1,4 +1,4 @@
-
+'use client'
 import {
     FormControl, FormField, FormMessage, FormItem, FormLabel,
     Select,
@@ -8,7 +8,6 @@ import {
     SelectItem,
     Input,
     FormDescription,
-    SelectContract
 } from '@/components/forms';
 
 import { z } from "zod";
@@ -19,11 +18,14 @@ import {
     CollapsibleContent,
     Collapsible,
     CollapsibleTrigger,
-    ScrollArea,
 } from '@/components/ui';
-import { NewPlanSchema, PresetIntervals, PresetInterval, BillingAnchorConfigSchema } from '@/libs/FormSchemas';
+import {
+    NewPlanSchema, PresetIntervals,
+    PresetInterval, BillingAnchorConfigSchema
+} from '@/libs/FormSchemas';
 import { cn } from '@/libs/utils';
 import { ChevronRight } from 'lucide-react';
+import { SelectContract } from '.';
 
 
 interface SubFieldsProps {
@@ -95,13 +97,10 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
                             name="sub.interval"
                             render={({ field }) => (
                                 <FormItem className="col-span-2">
-
                                     <Select onValueChange={field.onChange} value={field.value}  >
-
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select interval..." />
                                         </SelectTrigger>
-
                                         <SelectContent>
                                             {['day', 'week', 'month', 'year'].map((preset, index) => (
                                                 <SelectItem key={index} value={preset}>
@@ -110,7 +109,6 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
                                             ))}
                                         </SelectContent>
                                     </Select>
-
                                 </FormItem>
                             )}
                         />

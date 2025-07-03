@@ -1,12 +1,11 @@
 
 import {
     TablePage,
-    TablePageHeaderTitle,
     TablePageHeader,
     TablePageHeaderSection
 
 } from "@/components/ui";
-import { CreatePlan, SearchInput, SubscriptionList, PackageList } from "./components";
+import { CreatePlan, SubscriptionList, PackageList } from "./components";
 import { db } from "@/db/db";
 import { ProductsProvider } from "./providers";
 import { Program } from "@/types";
@@ -27,7 +26,7 @@ async function getPrograms(lid: string): Promise<Program[]> {
 }
 
 
-export default async function Products(props: { params: Promise<{ id: string, type: string }> }) {
+export default async function Products(props: { params: Promise<{ id: string, type: 'subs' | 'pkgs' }> }) {
 
     const params = await props.params;
     const programs = await getPrograms(params.id);
@@ -36,14 +35,17 @@ export default async function Products(props: { params: Promise<{ id: string, ty
         <ProductsProvider programs={programs}>
 
             <TablePage>
-                <TablePageHeader>
-                    <TablePageHeaderTitle>{params.type === "subs" ? "Subscriptions" : "Packages"}</TablePageHeaderTitle>
-                    <TablePageHeaderSection>
-                        <SearchInput />
-                        <CreatePlan lid={params.id} type={params.type === "subs" ? "recurring" : "one-time"} />
+                <TablePageHeader className="px-4 bg-foreground/5 border-b border-foreground/5">
 
+                    <TablePageHeaderSection>
+                        <div className="flex flex-row items-center gap-2">
+
+                            <CreatePlan lid={params.id} type={params.type} />
+
+                        </div>
                     </TablePageHeaderSection>
                 </TablePageHeader>
+
                 {params.type === "subs" ? <SubscriptionList lid={params.id} /> : <PackageList lid={params.id} />}
             </TablePage>
         </ProductsProvider>

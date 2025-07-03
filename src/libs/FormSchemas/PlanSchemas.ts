@@ -11,7 +11,7 @@ const NewPlanSchema = z.object({
     familyMemberLimit: z.number().optional(),
     contractId: z.number().optional(),
     intervalClassLimit: z.number().optional(),
-    programs: z.array(z.number()).min(1, { message: "Select at least one program." }),
+    programs: z.array(z.string()).min(1, { message: "Select at least one program." }),
     pkg: z.object({
         expireInterval: z.enum(["day", "week", "month", "year"]).optional(),
         expireThreshold: z.number().optional(),

@@ -1,9 +1,9 @@
+'use client'
 import {
     FormControl, FormField, FormMessage, FormItem, FormLabel,
     Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
     Input,
     FormDescription,
-    SelectContract
 } from '@/components/forms';
 
 import { z } from "zod";
@@ -18,6 +18,7 @@ import {
 import { NewPlanSchema } from '@/libs/FormSchemas';
 import { cn } from '@/libs/utils';
 import { ChevronRight } from 'lucide-react';
+import { SelectContract } from '.';
 
 interface SubFieldsProps {
     form: UseFormReturn<z.infer<typeof NewPlanSchema>>,
@@ -97,16 +98,7 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                                 render={({ field }) => (
                                     <FormItem className="col-span-1">
                                         <FormControl>
-                                            <Input 
-                                                type='number' 
-                                                placeholder="1" 
-                                                {...field}
-                                                value={field.value || ""}
-                                                onChange={(e) => {
-                                                    const value = e.target.value;
-                                                    field.onChange(value ? parseInt(value) : "");
-                                                }}
-                                            />
+                                            <Input type='number' placeholder="1"  {...field} />
                                         </FormControl>
                                     </FormItem>
                                 )}
@@ -118,11 +110,9 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                                     <FormItem className="col-span-2">
 
                                         <Select onValueChange={field.onChange} value={field.value || ""}  >
-
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select interval..." />
                                             </SelectTrigger>
-
                                             <SelectContent>
                                                 {['day', 'week', 'month', 'year'].map((preset, index) => (
                                                     <SelectItem key={index} value={preset}>
@@ -131,7 +121,6 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
                                                 ))}
                                             </SelectContent>
                                         </Select>
-
                                     </FormItem>
                                 )}
                             />
