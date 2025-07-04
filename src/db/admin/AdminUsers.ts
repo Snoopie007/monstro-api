@@ -1,6 +1,5 @@
 import { serial, text, timestamp, pgTable } from "drizzle-orm/pg-core";
-import { AdminUserRoleEnum, supportCases, supportCaseMessages } from ".";
-import { relations } from "drizzle-orm";
+import { AdminUserRoleEnum } from ".";
 
 export const adminUsers = pgTable("admin_users", {
     id: serial("id").primaryKey(),
@@ -14,9 +13,4 @@ export const adminUsers = pgTable("admin_users", {
     updated: timestamp('updated_at', { withTimezone: true }),
 });
 
-
-export const adminUsersRelations = relations(adminUsers, ({ many }) => ({
-    supportCases: many(supportCases),
-    supportCaseMessages: many(supportCaseMessages)
-}));
 
