@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS location_state (
 CREATE TABLE IF NOT EXISTS member_locations (
   location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
   member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  points integer NOT NULL DEFAULT 0,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   status location_status NOT NULL DEFAULT 'incomplete',

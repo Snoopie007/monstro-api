@@ -91,6 +91,7 @@ export const memberLocations = pgTable("member_locations", {
   memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
   locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
   status: LocationStatusEnum("status").notNull().default("incomplete"),
+  points: integer("points").notNull().default(0),
   inviteDate: timestamp("invite_date", { withTimezone: true }),
   inviteAcceptedDate: timestamp("invite_accepted_date", { withTimezone: true }),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

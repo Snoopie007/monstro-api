@@ -84,7 +84,6 @@ export async function POST(req: NextRequest, props: { params: Promise<Props> }) 
                 email: email,
                 phone: phone,
                 referralCode: generateReferralCode(),
-                currentPoints: 0,
                 created: new Date(),
             }).returning();
 
@@ -190,7 +189,6 @@ export async function POST(req: NextRequest, props: { params: Promise<Props> }) 
         }
 
         await db.insert(familyMembers).values({
-            isPayer: false,
             relatedMemberId: payerMemberId,
             memberId: member.id,
             relationship: relationship,

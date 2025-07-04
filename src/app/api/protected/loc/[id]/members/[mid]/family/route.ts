@@ -121,7 +121,6 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
                 email: email,
                 phone: phone,
                 referralCode: generateReferralCode(),
-                currentPoints: 0,
                 created: new Date(),
             }).returning();
 
@@ -232,7 +231,6 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
             emailUrl = `invite/${params.id}/sub/${memberSubscription.id}`;
         }
         await db.insert(familyMembers).values({
-            isPayer: false,
             relatedMemberId: member.id,
             memberId: familyMemberId,
             relationship: relationship,

@@ -10,11 +10,12 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: stri
 
     const authMember = authenticateMember(req);
     const memberId = authMember.member?.id;
-    const member = await db.query.members.findFirst({
-      where: (members, { eq }) => eq(members.id, memberId),
+
+    const ml = await db.query.memberLocations.findFirst({
+      where: (memberLocation, { eq, and }) => and(eq(memberLocation.memberId, memberId), eq(memberLocation.locationId, params.lid)),
     });
 
-    if (!member) {
+    if (!ml) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
@@ -22,24 +23,24 @@ export async function GET(req: NextRequest, props: { params: Promise<{ lid: stri
       where: (rewards, { eq }) => eq(rewards.locationId, params.lid),
       with: {
         claims: {
-            where: (claims, { eq }) => eq(claims.memberId, memberId),
+          where: (claims, { eq }) => eq(claims.memberId, memberId),
         },
       },
     });
-    
+
     const claimableRewards = rewards.map((reward) => {
       const memberClaimCount = reward.claims.length;
-      const hasEnoughPoints = member.currentPoints >= reward.requiredPoints;
+      const hasEnoughPoints = ml.points >= reward.requiredPoints;
       const withinLimit = memberClaimCount < reward.limitPerMember;
       const remainingClaims = reward.limitPerMember - memberClaimCount;
-    
+
       return {
         ...reward,
         claimable: hasEnoughPoints && withinLimit,
         remainingClaims
       };
     });
-  
+
     return NextResponse.json(claimableRewards, { status: 200 });
   } catch (err) {
     console.log(err)

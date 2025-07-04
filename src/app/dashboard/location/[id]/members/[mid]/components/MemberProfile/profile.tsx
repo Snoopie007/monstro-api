@@ -16,7 +16,7 @@ interface MemberProfileProps {
     params: { id: string, mid: string }
 }
 export function MemberProfile({ params }: MemberProfileProps) {
-    const { member } = useMemberStatus()
+    const { member, ml } = useMemberStatus()
     const router = useRouter()
 
 
@@ -77,7 +77,7 @@ export function MemberProfile({ params }: MemberProfileProps) {
                         <div className="flex flex-col">
                             <strong>Points Earned</strong>
                             <span>
-                                {member.currentPoints}
+                                {ml.points}
                             </span>
                         </div>
                         <div className="flex flex-col">
