@@ -3,10 +3,10 @@ import {
     Dialog,
     DialogTrigger,
     DialogContent,
-    DialogHeader,
     DialogFooter,
     DialogTitle,
-    DialogBody
+    DialogBody,
+    DialogClose
 } from '@/components/ui/';
 import {
     Input,
@@ -19,11 +19,10 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/forms/form'
 import { cn, tryCatch } from '@/libs/utils'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import z from 'zod'
 import { InviteStaffSchema } from '../schema'
-import { DialogClose, DialogDescription } from '@radix-ui/react-dialog'
 import { Role } from '@/types';
 import { toast } from 'react-toastify';
 import { VisuallyHidden } from 'react-aria';
@@ -154,7 +153,7 @@ export default function InviteStaff({ roles, lid }: { roles: Array<Role>, lid: s
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {roles.map((role: Role, index: number) => (
-                                                        <SelectItem key={index} value={(role.id as number).toString()}>{role.name}</SelectItem>
+                                                        <SelectItem key={index} value={role.id}>{role.name}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>

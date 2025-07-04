@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/db/db';
-import { achievements, triggeredAchievements } from '@/db/schemas';
+import { triggeredAchievements } from '@/db/schemas';
 import { and, eq } from 'drizzle-orm';
 
 

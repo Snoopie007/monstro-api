@@ -32,7 +32,7 @@ const RoleColors: CheckboxVarients[] = [
 ]
 
 interface UpsertRoleProps {
-    role?: Role | null
+    role?: Partial<Role> | null
     permissions: Array<Permission>,
     setCurrentRole: Function,
     locationId: string
@@ -45,9 +45,9 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
 
         setFilteredPermissions(permissions);
         if (role) {
-            const ids = role.permissions.map((permission: any) => permission.permissionId);
+            const ids = role.permissions?.map((permission: any) => permission.id);
 
-            const permissionNames = permissions.filter((permission: Permission) => ids.includes(Number(permission.id))).map((permission) => permission.name);
+            const permissionNames = permissions.filter((permission: Permission) => ids?.includes(permission.id)).map((permission) => permission.name);
             form.reset({
                 name: role.name,
                 color: role.color || 'blue',

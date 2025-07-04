@@ -4,7 +4,6 @@ import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { integrations } from "@/db/schemas";
 import { Integration } from "@/types";
-import { AdminIntegration } from "@/types/admin";
 
 const QB_BASE_URL = process.env.QUICKBOOKS_ENVIRONMENT === 'production'
 	? 'https://quickbooks.api.intuit.com'
@@ -197,7 +196,7 @@ export async function revokeToken(token: string): Promise<boolean> {
 	return true;
 }
 
-export async function getAccessToken(integration: Integration | AdminIntegration): Promise<string> {
+export async function getAccessToken(integration: Integration): Promise<string> {
 	const currentTime = Date.now();
 	const isExpired = integration.expires ? currentTime > integration.expires : true;
 

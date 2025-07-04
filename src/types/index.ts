@@ -1,6 +1,5 @@
 export * from './role';
 export * from './staff';
-export * from './support';
 export * from './contract'
 export * from './other';
 export * from './achievement';

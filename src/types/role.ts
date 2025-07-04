@@ -10,7 +10,7 @@ export type PermissionGroup = {
 
 export type Role = typeof roles.$inferSelect & {
     permissions: Permission[]
-    staffs: Staff[]
+    staffsCount?: number
 }
 
 export type RoleHasPermission = typeof roleHasPermissions.$inferSelect

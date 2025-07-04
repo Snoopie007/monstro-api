@@ -1,11 +1,9 @@
-import { admindb, db } from "@/db/db";
-import { AdminIntegration } from "@/types/admin";
+import { db } from "@/db/db";
 import QueryString from "qs";
 import { eq } from "drizzle-orm";
 import { addDays } from "date-fns";
 import { Integration } from "@/types";
 import { integrations } from "@/db/schemas";
-import { adminIntegrations } from "@/db/admin/sales";
 
 
 const DefaultHeaders = {
@@ -129,31 +127,7 @@ class AgencyGHL extends BaseGHL {
         return res;
     }
 
-    async getAccessToken(integration: AdminIntegration): Promise<string> {
-        const currentTime = new Date().getTime();
-        const isExpired = integration.expires ? currentTime > integration.expires : true;
 
-        if (!integration.refreshToken) throw new Error("No Refresh Token.");
-
-        if (!isExpired && integration.accessToken) {
-            this.ACCESS_TOKEN = integration.accessToken;
-            return integration.accessToken;
-        }
-
-        const res = await this.getTokenWithRefreshToken(integration.refreshToken, "Company");
-        const { access_token, refresh_token, expires_in, scope } = res;
-
-        await admindb.update(adminIntegrations).set({
-            accessToken: access_token,
-            refreshToken: refresh_token,
-            expires: new Date().getTime() + (expires_in * 1000),
-            scope,
-        }).where(eq(adminIntegrations.service, "ghl"));
-
-        this.ACCESS_TOKEN = access_token;
-
-        return access_token;
-    }
 }
 
 

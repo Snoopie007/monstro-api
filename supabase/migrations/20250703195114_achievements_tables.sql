@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS triggered_achievements (
   achievement_id text REFERENCES achievements (id) ON DELETE CASCADE NOT NULL,
   weight integer NOT NULL,
   time_period integer,
-  time_period_unit interval_type
+  time_period_unit interval_type,
+  member_plan_id text REFERENCES member_plans (id) ON DELETE CASCADE
 );
 
 

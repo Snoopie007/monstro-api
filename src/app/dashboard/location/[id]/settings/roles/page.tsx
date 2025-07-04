@@ -22,7 +22,7 @@ import { SearchIcon, UserIcon, ShieldIcon } from "lucide-react";
 export default function RolesPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { permissions, isLoading: isLoadingPermissions } = usePermissions(params.id);
-    const [currentRole, setCurrentRole] = useState<Role | null>(null);
+    const [currentRole, setCurrentRole] = useState<Partial<Role> | null>(null);
     const { mutate } = useSWR(`/api/protected/loc/${params.id}/roles`);
     const { roles, isLoading: isLoadingRoles, error } = useRoles(params.id);
 
@@ -31,7 +31,7 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
         setCurrentRole({
             name: '',
             color: "red",
-            staffs: 0,
+            staffsCount: 0,
             permissions: []
         })
     }
@@ -103,7 +103,7 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
 
                                     <TableCell className="py-2 ">
                                         <div className='flex flex-row  gap-1 items-center text-sm'>
-                                            <span className=''>  {role.staffs}</span>
+                                            <span className=''>  {role.staffsCount}</span>
                                             <UserIcon className='size-4' />
                                         </div>
                                     </TableCell>
