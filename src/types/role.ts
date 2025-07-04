@@ -1,27 +1,16 @@
-import { RoleColor } from "./DatabaseEnums";
+import { permissions, roleHasPermissions, roles } from "@/db/schemas";
+import { Staff } from "./staff";
 
-export type Permission = {
-    name: string;
-    description: string;
-    id: number
-}
-
+export type Permission = typeof permissions.$inferSelect
 export type PermissionGroup = {
     id?: number;
     name: string;
     permissions: Permission[]
 }
 
-export type Role = {
-    id?: number
-    name: string
-    color: RoleColor | null
-    staffs?: number
-    permissions: Permission[] | string[]
+export type Role = typeof roles.$inferSelect & {
+    permissions: Permission[]
+    staffs: Staff[]
 }
 
-export type RoleHasPermission = {
-    permissionId: number;
-    roleId: number
-}
-
+export type RoleHasPermission = typeof roleHasPermissions.$inferSelect
