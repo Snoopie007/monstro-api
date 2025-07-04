@@ -14,7 +14,7 @@ import { members } from "./members";
 import { attendances } from "./attendances";
 import { memberPackages, memberSubscriptions } from "./MemberPlans";
 import { locations } from "./locations";
-import { PlanInterval } from "./DatabaseEnums";
+import { IntervalType } from "./DatabaseEnums";
 
 export const reservations = pgTable("reservations", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -37,7 +37,7 @@ export const recurringReservations = pgTable("recurring_reservations", {
 	canceledOn: date("canceled_on"),
 	memberSubscriptionId: text("member_subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
 	memberPackageId: text("member_package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
-	interval: PlanInterval("interval").notNull().default("week"),
+	interval: IntervalType("interval").notNull().default("week"),
 	intervalThreshold: integer("interval_threshold").notNull().default(1),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),

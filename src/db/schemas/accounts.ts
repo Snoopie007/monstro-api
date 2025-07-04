@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { text, pgTable, primaryKey, uuid } from "drizzle-orm/pg-core";
+import { text, pgTable, primaryKey } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { vendors } from "./vendors";
 import type { AdapterAccountType } from "next-auth/adapters";
