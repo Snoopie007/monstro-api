@@ -1,14 +1,16 @@
 
 import { supportPlans, vendorBadges, vendorClaimedRewards, vendorLevels, vendorRewards, vendors } from "@/db/schemas";
 import { VendorReferral } from "./VendorReferral";
+import { User } from "./user";
+import { Location } from "./location";
 
 
 
 export type Vendor = typeof vendors.$inferSelect & {
   referrals?: VendorReferral[];
   vendorLevel?: VendorLevel;
-  created: Date;
-  updated: Date | null;
+  user?: User;
+  locations?: Location[];
 }
 
 
