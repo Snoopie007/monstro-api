@@ -51,6 +51,9 @@ export const triggeredAchievements = pgTable(
     timePeriodUnit: text("time_period_unit", {
       enum: ["day", "week", "month", "year"],
     }),
+    memberPlanId: text("member_plan_id")
+      .references(() => memberPlans.id, { onDelete: "cascade" })
+      .notNull(),
   },
   (table) => [primaryKey({ columns: [table.achievementId, table.triggerId] })]
 );
@@ -77,6 +80,10 @@ export const triggeredAchievementsRelations = relations(
     trigger: one(achievementTriggers, {
       fields: [triggeredAchievements.triggerId],
       references: [achievementTriggers.id],
+    }),
+    memberPlan: one(memberPlans, {
+      fields: [triggeredAchievements.memberPlanId],
+      references: [memberPlans.id],
     }),
   })
 );
