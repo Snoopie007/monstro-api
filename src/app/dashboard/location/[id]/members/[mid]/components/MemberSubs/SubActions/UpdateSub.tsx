@@ -18,19 +18,13 @@ import {
 	FormLabel,
 	FormMessage,
 	FormDescription,
-	Input,
-	Textarea,
-	Select,
-	SelectTrigger,
-	SelectValue,
-	SelectContent,
-	SelectItem,
+	Input
 } from "@/components/forms";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Edit2, Loader2 } from "lucide-react";
-import { cn, tryCatch } from "@/libs/utils";
+import { Loader2 } from "lucide-react";
+import { tryCatch } from "@/libs/utils";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import { useParams } from "next/navigation";
@@ -75,8 +69,6 @@ export function UpdateSub({ sub, close, show }: UpdateSubProps) {
 
 		setLoading(true);
 
-
-
 		const { result, error } = await tryCatch(
 			fetch(`/api/protected/loc/${params.id}/members/${params.mid}/subscriptions`, {
 				method: "PATCH",
@@ -103,86 +95,67 @@ export function UpdateSub({ sub, close, show }: UpdateSubProps) {
 			<DialogBody>
 				<Form {...form}>
 					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+						<fieldset>
 
-						<FormField
-							control={form.control}
-							name="trialDays"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Trial Days</FormLabel>
-									<FormControl>
-										<Input
-											type="number"
-											placeholder="0"
-											min="0"
-											className="rounded-sm"
-											{...field}
-											onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-										/>
-									</FormControl>
-									<FormDescription className="text-xs">
-										Enter the number of trial days (0 to remove trial).
-									</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						<FormField
-							control={form.control}
-							name="allowProration"
-							render={({ field }) => (
-								<FormItem className="flex flex-row items-center gap-2 rounded-sm border border-foreground/10 py-2 px-3">
-									<FormControl>
-										<Switch
-											checked={field.value}
-											onCheckedChange={field.onChange}
-										/>
-									</FormControl>
-									<div className="space-y-0.5">
-										<FormLabel className="text-sm">Allow Proration</FormLabel>
-										<FormDescription className="text-xs">
-											Enable proration for plan changes.
-										</FormDescription>
-									</div>
-								</FormItem>
-							)}
-						/>
-
-						{sub.stripeSubscriptionId && (
 							<FormField
 								control={form.control}
-								name="cancelAt"
+								name="trialDays"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>
-											Cancel at Period End (
-											{format(new Date(sub.currentPeriodEnd), "MMM d, yyyy")})
-										</FormLabel>
+										<FormLabel size={'tiny'}>Trial Days</FormLabel>
 										<FormControl>
 											<Input
-												type="date"
+												type="number"
+												placeholder="0"
+												min="0"
 												className="rounded-sm"
 												{...field}
-												onChange={(e) => field.onChange(e.target.value)}
+												onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
 											/>
 										</FormControl>
-										<FormDescription className="text-xs">
-											Leave blank to remove cancellation.
-										</FormDescription>
+
 										<FormMessage />
 									</FormItem>
 								)}
 							/>
-						)}
+						</fieldset>
 
-						<div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-							<p className="text-sm text-blue-800">
-								{sub.stripeSubscriptionId
-									? "Changes will update both your local records and Stripe subscription."
-									: "Changes will update your local records only."}
-							</p>
-						</div>
+
+
+
+
+
+
+
+						<fieldset>
+							<FormField
+								control={form.control}
+								name="allowProration"
+								render={({ field }) => (
+									<FormItem className="flex flex-row bg-background items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
+
+										<FormControl>
+											<Switch
+												className="-mt-1"
+												checked={field.value}
+												onCheckedChange={field.onChange}
+											/>
+										</FormControl>
+										<div className="space-y-0.5">
+											<FormLabel className="text-sm">
+												Proration Changes
+											</FormLabel>
+											<FormDescription className="text-xs">
+												Enable proration for plan changes.
+											</FormDescription>
+										</div>
+									</FormItem>
+								)}
+							/>
+						</fieldset>
+
+
+
 					</form>
 				</Form>
 			</DialogBody>
