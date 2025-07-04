@@ -43,7 +43,7 @@ export default auth(async (req) => {
 			}
 		}
 
-		if (pathname.startsWith("/api/protected/loc")) {
+		if (pathname.startsWith("/api/protected")) {
 			if (!isLoggedin && !(isMobileApp && isMobileAuthenticated)) {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 			}
