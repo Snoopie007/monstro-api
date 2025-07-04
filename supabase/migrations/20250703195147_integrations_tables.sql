@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS integrations (
   refresh_token text,
   expires_at bigint,
   account_id text NOT NULL,
-  settings jsonb DEFAULT '{}'::jsonb,
+  metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone,
   location_id text NOT NULL,

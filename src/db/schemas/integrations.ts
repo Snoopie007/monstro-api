@@ -13,7 +13,7 @@ export const integrations = pgTable("integrations", {
     refreshToken: text("refresh_token"),
     accountId: text("account_id").notNull(),
     expires: integer("expires_at"),
-    settings: jsonb("settings").$type<Record<string, unknown>>().notNull().default({}),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
