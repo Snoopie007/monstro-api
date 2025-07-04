@@ -2,7 +2,7 @@ CREATE TYPE custom_field_type AS ENUM ('text', 'number', 'date', 'boolean', 'sel
 
 
 CREATE TABLE IF NOT EXISTS member_tags (
-    id text serial PRIMARY KEY,
+    id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('tag_'),
     name text NOT NULL,
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     updated_at timestamp with time zone
@@ -16,9 +16,9 @@ CREATE TABLE IF NOT EXISTS member_has_tags (
 );
 
 CREATE TABLE IF NOT EXISTS member_fields (
-   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+    id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
     name text NOT NULL,
-    type CustomFieldType NOT NULL,
+    type custom_field_type NOT NULL,
     location_id text NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     updated_at timestamp with time zone

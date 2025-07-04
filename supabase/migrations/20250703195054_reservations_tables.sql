@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS recurring_reservations (
     canceled_on  timestamp with time zone,
     member_subscription_id text REFERENCES member_subscriptions (id) ON DELETE CASCADE,
     member_package_id text REFERENCES member_packages (id) ON DELETE CASCADE,
-    interval plan_interval NOT NULL DEFAULT 'week',
+    interval interval_type NOT NULL DEFAULT 'week',
     interval_threshold smallint NOT NULL DEFAULT 1,
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     updated_at timestamp with time zone 

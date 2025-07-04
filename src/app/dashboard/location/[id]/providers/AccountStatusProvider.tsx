@@ -32,6 +32,7 @@ export const AccountStatusProvider = ({ children, locationState }: AccountStatus
     const { data: session, update } = useSession();
 
     function updateLocations(newStatus: LocationStatus | undefined) {
+
         if (!newStatus) return;
         update({
             locations: session?.user.locations.map((location: { id: string, status: LocationStatus }) => {
@@ -43,13 +44,9 @@ export const AccountStatusProvider = ({ children, locationState }: AccountStatus
         document.documentElement.setAttribute('data-account-status', newStatus);
     };
 
-    useEffect(() => {
-        updateLocations(locationState.status);
-    }, [locationState]);
 
     useEffect(() => {
         if (!locationState) return;
-
         const channel = supabase.channel('LocationChanges')
             .on('postgres_changes', {
                 event: 'UPDATE',
@@ -60,9 +57,7 @@ export const AccountStatusProvider = ({ children, locationState }: AccountStatus
                 const newStatus = payload.new.status;
                 updateLocations(newStatus);
                 dispatch({ type: 'UPDATE_LOCATION_STATE', payload: payload.new as LocationState });
-            })
-            .subscribe();
-
+            }).subscribe();
         return () => {
             channel.unsubscribe();
         };

@@ -15,6 +15,7 @@ async function getLocationState(lid: string) {
     return locationState;
   } catch (error) {
     console.error(error);
+    return null;
   }
 }
 

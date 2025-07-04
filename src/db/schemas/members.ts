@@ -30,7 +30,6 @@ export const members = pgTable("members", {
 	email: text("email").notNull(),
 	phone: text("phone").notNull(),
 	referralCode: text("referral_code").notNull(),
-	currentPoints: integer("current_points").notNull().default(0),
 	gender: text("gender"),
 	dob: timestamp("dob", { withTimezone: true, mode: "date" }).default(sql`NULL`),
 	avatar: text("avatar"),

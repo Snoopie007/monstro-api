@@ -2,9 +2,6 @@ import { drizzle, PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schemas";
 import * as adminSchema from "./admin";
-import { createClient } from "@supabase/supabase-js";
-import { Database } from "@/types";
-
 
 declare global {
     var _db: PostgresJsDatabase<typeof schema> & {
@@ -36,16 +33,6 @@ const createDb = (() => {
 const db = createDb();
 
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    throw new Error("SUPABASE_URL or SUPABASE_KEY is missing");
-}
-
-
-const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
 if (!process.env.DATABASE_ADMIN_URL) {
     throw new Error("DATABASE_ADMIN_URL is missing");
 }
@@ -57,4 +44,4 @@ const admindb = drizzle(adminClient, { schema: adminSchema, logger: false });
 
 
 
-export { db, supabase, admindb };
+export { db, admindb };

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS programs (
   min_age integer NOT NULL,
   max_age integer NOT NULL,
   status program_status NOT NULL DEFAULT 'active',
-  interval plan_interval NOT NULL DEFAULT 'week',
+  interval interval_type NOT NULL DEFAULT 'week',
   interval_threshold smallint NOT NULL DEFAULT 1,
   cancelation_threshold integer NOT NULL DEFAULT 24,
   allow_waitlist boolean NOT NULL DEFAULT false,

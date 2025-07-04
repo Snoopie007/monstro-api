@@ -11,10 +11,15 @@ interface LocationLayoutProps {
 }
 
 async function getLocationState(lid: string) {
-    const locationState = await db.query.locationState.findFirst({
-        where: (locationState, { eq }) => eq(locationState.locationId, lid)
-    })
-    return locationState
+    try {
+        const locationState = await db.query.locationState.findFirst({
+            where: (locationState, { eq }) => eq(locationState.locationId, lid)
+        })
+        return locationState
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
 }
 
 

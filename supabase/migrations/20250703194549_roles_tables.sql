@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS roles (
   CONSTRAINT roles_name_guard_name_unique UNIQUE (name, guard_name)
 );
 
+ALTER TABLE staffs ADD COLUMN IF NOT EXISTS role_id text REFERENCES roles (id) ON DELETE CASCADE;
+  
 
 CREATE TABLE IF NOT EXISTS permissions (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),

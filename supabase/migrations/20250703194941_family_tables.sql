@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS family_members (
   related_member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
   relationship relationship NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
+  updated_at timestamp with time zone
 );
 
 CREATE INDEX IF NOT EXISTS idx_family_members_member_id ON family_members (member_id);

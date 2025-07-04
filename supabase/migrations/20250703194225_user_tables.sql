@@ -89,8 +89,6 @@ CREATE TABLE IF NOT EXISTS staffs (
   phone text NOT NULL,
   avatar text,
   user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
-  role_id text REFERENCES roles (id) ON DELETE SET NULL,
-  location_id text REFERENCES locations (id) ON DELETE CASCADE,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
