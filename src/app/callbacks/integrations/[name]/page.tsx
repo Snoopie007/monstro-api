@@ -23,7 +23,7 @@ function getStripeSettings(token: Stripe.OAuthToken) {
     accessToken: rest.access_token || null,
     refreshToken: rest.refresh_token || null,
     integrationId: rest.stripe_user_id || "",
-    settings: {
+    metadata: {
       scope: scope,
     },
   };
@@ -82,7 +82,7 @@ async function completeIntegration(
         expires: tokenData.expires_in
           ? Date.now() + tokenData.expires_in * 1000
           : null,
-        settings: {
+        metadata: {
           scope: tokenData.scope || "",
         },
       };
