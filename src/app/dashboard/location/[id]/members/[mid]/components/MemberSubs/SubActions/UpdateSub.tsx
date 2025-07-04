@@ -24,7 +24,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
-import { tryCatch } from "@/libs/utils";
+import { cn, tryCatch } from "@/libs/utils";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import { useParams } from "next/navigation";
@@ -43,12 +43,12 @@ const UpdateSubSchema = z.object({
 
 interface UpdateSubProps {
 	sub: MemberSubscription;
-	close?: () => void;
 	show: boolean;
+	close: () => void;
 }
 
-export function UpdateSub({ sub, close, show }: UpdateSubProps) {
-	const [open, setOpen] = useState(show);
+export function UpdateSub({ sub, show, close }: UpdateSubProps) {
+
 	const [loading, setLoading] = useState(false);
 	const params = useParams();
 
@@ -85,41 +85,38 @@ export function UpdateSub({ sub, close, show }: UpdateSubProps) {
 		}
 
 		toast.success("Subscription updated successfully");
-		setOpen(false);
-		close?.();
+		close();
 	}
 
 	return (
-		<>
+		<div className={cn(show ? 'block' : 'hidden')}>
 
-			<DialogBody>
-				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-						<fieldset>
+			<Form {...form}>
+				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+					<fieldset>
 
-							<FormField
-								control={form.control}
-								name="trialDays"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel size={'tiny'}>Trial Days</FormLabel>
-										<FormControl>
-											<Input
-												type="number"
-												placeholder="0"
-												min="0"
-												className="rounded-sm"
-												{...field}
-												onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-											/>
-										</FormControl>
+						<FormField
+							control={form.control}
+							name="trialDays"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel size={'tiny'}>Trial Days</FormLabel>
+									<FormControl>
+										<Input
+											type="number"
+											placeholder="0"
+											min="0"
+											className="rounded-sm"
+											{...field}
+											onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+										/>
+									</FormControl>
 
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						</fieldset>
-
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</fieldset>
 
 
 
@@ -127,38 +124,38 @@ export function UpdateSub({ sub, close, show }: UpdateSubProps) {
 
 
 
-						<fieldset>
-							<FormField
-								control={form.control}
-								name="allowProration"
-								render={({ field }) => (
-									<FormItem className="flex flex-row bg-background items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
 
-										<FormControl>
-											<Switch
-												className="-mt-1"
-												checked={field.value}
-												onCheckedChange={field.onChange}
-											/>
-										</FormControl>
-										<div className="space-y-0.5">
-											<FormLabel className="text-sm">
-												Proration Changes
-											</FormLabel>
-											<FormDescription className="text-xs">
-												Enable proration for plan changes.
-											</FormDescription>
-										</div>
-									</FormItem>
-								)}
-							/>
-						</fieldset>
+					<fieldset>
+						<FormField
+							control={form.control}
+							name="allowProration"
+							render={({ field }) => (
+								<FormItem className="flex flex-row bg-background items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
+
+									<FormControl>
+										<Switch
+											className="-mt-1"
+											checked={field.value}
+											onCheckedChange={field.onChange}
+										/>
+									</FormControl>
+									<div className="space-y-0.5">
+										<FormLabel className="text-sm">
+											Proration Changes
+										</FormLabel>
+										<FormDescription className="text-xs">
+											Enable proration for plan changes.
+										</FormDescription>
+									</div>
+								</FormItem>
+							)}
+						/>
+					</fieldset>
 
 
 
-					</form>
-				</Form>
-			</DialogBody>
+				</form>
+			</Form>
 			<DialogFooter>
 				<DialogClose asChild>
 					<Button variant="outline" size="sm" disabled={loading}>
@@ -176,6 +173,6 @@ export function UpdateSub({ sub, close, show }: UpdateSubProps) {
 					Save Changes
 				</Button>
 			</DialogFooter>
-		</>
+		</div>
 	);
 }
