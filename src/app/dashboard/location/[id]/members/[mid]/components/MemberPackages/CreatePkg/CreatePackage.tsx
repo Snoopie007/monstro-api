@@ -33,7 +33,7 @@ export function CreatePackage({ params }: { params: { id: string, mid: string } 
         <Dialog open={open} onOpenChange={setOpen}>
 
             <DialogTrigger asChild>
-                <Button variant={"foreground"} size={"sm"} >+ Package</Button>
+                <Button variant={"create"} size={"sm"} >+ Package</Button>
             </DialogTrigger>
             <DialogContent className="max-w-[450px] border-foreground/10">
                 <VisuallyHidden>
