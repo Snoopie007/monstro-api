@@ -1,125 +1,129 @@
-'use client'
+"use client";
 
 import {
-	Sheet, Button, SheetContent, SheetHeader, SheetTitle,
-	SheetFooter, SheetClose,
-	SheetTrigger,
-} from '@/components/ui';
+  Sheet,
+  Button,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+  SheetClose,
+  SheetTrigger,
+} from "@/components/ui";
 
 import { z } from "zod";
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { tryCatch } from '@/libs/utils';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { tryCatch } from "@/libs/utils";
 
-import { toast } from 'react-toastify';
-import { AchievementSchema } from '../../schemas';
-import { Achievement } from '@/types';
-import { AchievementForm } from './AchievementForm';
-import { useEffect, useState } from 'react';
-import { Loader2, Pencil } from 'lucide-react';
-
+import { toast } from "react-toastify";
+import { AchievementSchema } from "../../schemas";
+import { Achievement } from "@/types";
+import { AchievementForm } from "./AchievementForm";
+import { useEffect, useState } from "react";
+import { Loader2, Pencil } from "lucide-react";
 
 interface UpdateAchievementProps {
-
-	achievement: Achievement;
+  achievement: Achievement;
 }
 
-
 export function UpdateAchievement({ achievement }: UpdateAchievementProps) {
+  const [open, setOpen] = useState(false);
 
-	const [open, setOpen] = useState(false);
+  const form = useForm<z.infer<typeof AchievementSchema>>({
+    resolver: zodResolver(AchievementSchema),
+    defaultValues: {
+      name: achievement?.name ?? "",
+      description: achievement?.description ?? "",
+      badge: achievement?.badge ?? "",
+      points: achievement?.points ?? 0,
+      requiredActionCount: achievement?.requiredActionCount ?? 0,
+    },
+    mode: "onChange",
+  });
 
-	const form = useForm<z.infer<typeof AchievementSchema>>({
-		resolver: zodResolver(AchievementSchema),
-		defaultValues: {
-			name: achievement?.name ?? '',
-			description: achievement?.description ?? '',
-			badge: achievement?.badge ?? '',
-			awardedPoints: achievement?.awardedPoints ?? 0,
-			requiredCount: achievement?.requiredCount ?? 0,
-		},
-		mode: "onChange"
-	})
+  useEffect(() => {
+    form.reset(achievement);
+  }, [achievement]);
 
-	useEffect(() => {
-		form.reset(achievement);
-	}, [achievement]);
+  async function onSubmit(v: z.infer<typeof AchievementSchema>) {
+    const formData = new FormData();
+    Object.entries(v).forEach(([key, value]) => {
+      if (key !== "badge" && value !== undefined) {
+        formData.append(key, value.toString());
+      }
+    });
 
+    if (v.badge && v.badge.startsWith("blob:")) {
+      const blob = await fetch(v.badge).then((r) => r.blob());
+      formData.append("file", blob, "badge.png");
+    } else if (v.badge) {
+      formData.append("badge", v.badge);
+    }
 
-	async function onSubmit(v: z.infer<typeof AchievementSchema>) {
-		const formData = new FormData();
-		Object.entries(v).forEach(([key, value]) => {
-			if (key !== 'badge' && value !== undefined) {
-				formData.append(key, value.toString());
-			}
-		});
+    const lid = achievement.locationId;
+    const { result, error } = await tryCatch(
+      fetch(`/api/protected/loc/${lid}/achievements/${achievement.id}`, {
+        method: "PATCH",
+        body: formData,
+      })
+    );
 
-		if (v.badge && v.badge.startsWith('blob:')) {
-			const blob = await fetch(v.badge).then(r => r.blob());
-			formData.append('file', blob, 'badge.png');
-		} else if (v.badge) {
-			formData.append('badge', v.badge);
-		}
+    if (error || !result || !result.ok) {
+      toast.error("Something went wrong, please try again later");
+      return;
+    }
 
-		const lid = achievement.locationId;
-		const { result, error } = await tryCatch(
-			fetch(`/api/protected/loc/${lid}/achievements/${achievement.id}`, {
-				method: 'PATCH',
-				body: formData,
-			})
-		);
+    toast.success("Achievement Updated");
 
-		if (error || !result || !result.ok) {
-			toast.error("Something went wrong, please try again later");
-			return;
-		}
+    handleOpenChange(false);
+  }
 
-		toast.success("Achievement Updated");
+  function handleOpenChange(open: boolean) {
+    if (!open) {
+      form.reset();
+    }
+    setOpen(open);
+  }
 
-		handleOpenChange(false);
-	}
-
-	function handleOpenChange(open: boolean) {
-		if (!open) {
-			form.reset();
-		}
-		setOpen(open);
-	}
-
-	return (
-		<Sheet open={open} onOpenChange={handleOpenChange}>
-			<SheetTrigger asChild>
-				<Button variant={"ghost"} size={"icon"} className='size-5'>
-					<Pencil className='size-3' />
-				</Button>
-			</SheetTrigger>
-			<SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0 border-foreground/10">
-				<SheetHeader className="hidden">
-					<SheetTitle className='hidden'>
-
-					</SheetTitle>
-				</SheetHeader>
-				<AchievementForm form={form} />
-				<SheetFooter className='border-t border-foreground/10 py-3 px-4'>
-					<SheetClose asChild>
-						<Button
-							variant={"outline"} size={"sm"}
-							onClick={() => form.reset()}
-						>
-							Close
-						</Button>
-					</SheetClose>
-					<SheetClose asChild>
-						<Button
-							onClick={form.handleSubmit(onSubmit)}
-							variant={"foreground"} size={"sm"}
-							disabled={form.formState.isSubmitting}
-						>
-							{form.formState.isSubmitting ? <Loader2 className='size-3.5 animate-spin' /> : 'Update'}
-						</Button>
-					</SheetClose>
-				</SheetFooter>
-			</SheetContent>
-		</Sheet >
-	)
+  return (
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetTrigger asChild>
+        <Button variant={"ghost"} size={"icon"} className="size-5">
+          <Pencil className="size-3" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0 border-foreground/10">
+        <SheetHeader className="hidden">
+          <SheetTitle className="hidden"></SheetTitle>
+        </SheetHeader>
+        <AchievementForm form={form} />
+        <SheetFooter className="border-t border-foreground/10 py-3 px-4">
+          <SheetClose asChild>
+            <Button
+              variant={"outline"}
+              size={"sm"}
+              onClick={() => form.reset()}
+            >
+              Close
+            </Button>
+          </SheetClose>
+          <SheetClose asChild>
+            <Button
+              onClick={form.handleSubmit(onSubmit)}
+              variant={"foreground"}
+              size={"sm"}
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                "Update"
+              )}
+            </Button>
+          </SheetClose>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
 }

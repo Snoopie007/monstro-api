@@ -35,7 +35,7 @@ export function SelectContract({ lid, onChange }: SelectContractProps) {
 
   return (
     <Select
-      onValueChange={(e) => onChange(e ? e : undefined)}
+      onValueChange={(e) => onChange(e || undefined)}
       onOpenChange={(open) => open && getContracts()}
     >
       <FormControl>
