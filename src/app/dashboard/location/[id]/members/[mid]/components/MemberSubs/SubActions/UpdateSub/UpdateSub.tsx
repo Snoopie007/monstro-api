@@ -38,7 +38,8 @@ const UpdateSubSchema = z.object({
 	endAt: z.date().optional(),
 	paymentMethodId: z.string().optional(),
 	trialDays: z.number().min(0, "Trial days must be non-negative").optional(),
-	allowProration: z.boolean().optional(),
+	allowProration: z.boolean().default(false),
+	reset: z.boolean().default(false),
 });
 
 
@@ -170,6 +171,32 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 									</FormControl>
 
 									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</fieldset>
+					<fieldset>
+						<FormField
+							control={form.control}
+							name="reset"
+							render={({ field }) => (
+								<FormItem className="flex flex-row bg-background items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
+
+									<FormControl>
+										<Switch
+											className="-mt-1"
+											checked={field.value}
+											onCheckedChange={field.onChange}
+										/>
+									</FormControl>
+									<div className="space-y-0.5">
+										<FormLabel className="text-sm">
+											Reset billing cycle
+										</FormLabel>
+										<FormDescription className="text-xs">
+											Will immediately restart the billing cycle as of today and charge again.
+										</FormDescription>
+									</div>
 								</FormItem>
 							)}
 						/>

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from "react";
-import { Button } from "@/components/ui";
 import { Select, SelectItem, SelectContent, SelectTrigger, SelectValue } from "@/components/forms";
 import { useMemberPaymentMethods } from "../../../../providers";
 
@@ -13,12 +12,11 @@ export function PaymentMethodPicker({ method }: PaymentMethodPickerProps) {
     const [change, setChange] = useState<boolean>(false);
     const { paymentMethods } = useMemberPaymentMethods();
 
-    console.log(method)
     return (
         <div>
             {!change ? (
                 <div className="bg-foreground/5 px-4 py-2 rounded-sm flex flex-row items-center justify-between">
-                    <span className="text-sm">
+                    <span className="text-xs ">
                         {method.card.brand} •••• {method.card.last4}
                     </span>
                     <div className="flex flex-row text-xs text-indigo-500 items-center gap-2 cursor-pointer"
