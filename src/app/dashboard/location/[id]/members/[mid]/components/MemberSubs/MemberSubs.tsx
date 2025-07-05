@@ -27,6 +27,16 @@ function calculateProgress(start: Date, end: Date) {
     return Math.min(Math.max(Number(progress.toFixed(2)), 10), 100) // Set minimum to 10%
 }
 
+const RowHeaders = [
+    'Plan',
+    'Duration',
+    'Amount',
+    'Total Collected',
+    'Payment Type',
+    'Next Invoice',
+    'Status',
+]
+
 export function MemberSubs({ params }: { params: { id: string, mid: string }, }) {
     const { member } = useMemberStatus();
     const [search, setSearch] = useState<string>('');
@@ -41,7 +51,7 @@ export function MemberSubs({ params }: { params: { id: string, mid: string }, })
                 <Table className=''>
                     <TableHeader>
                         <TableRow >
-                            {['Plan', 'Length', 'Amount', 'Total Collected', 'Next Invoice', 'Status', ''].map((header, i) => (
+                            {RowHeaders.map((header, i) => (
 
                                 <TableHead key={i} className='text-sm font-normal h-auto  py-2'>{header}</TableHead>
 
@@ -93,6 +103,10 @@ function SubscriptionRow({ subscriptions }: { subscriptions: MemberSubscription[
                         {formatAmountForDisplay(sub.plan?.price! / 100, 'USD', true)} / {sub.plan?.interval}
                     </TableCell>
                     <TableCell>
+
+                    </TableCell>
+                    <TableCell className='uppercase'>
+                        {sub.paymentMethod}
                     </TableCell>
                     <TableCell>
                         {(sub.status !== 'active' || sub.cancelAt) ? (

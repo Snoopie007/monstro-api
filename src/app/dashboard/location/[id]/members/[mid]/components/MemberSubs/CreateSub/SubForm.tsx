@@ -24,7 +24,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { cn, sleep, tryCatch } from "@/libs/utils";
-import { useMemberPaymentMethods, useMemberStatus } from "../../../providers";
+import { useMemberPaymentMethods } from "../../../providers";
 import React from "react";
 import { MemberPlan, MemberSubscription } from "@/types";
 import { Stripe } from "stripe";

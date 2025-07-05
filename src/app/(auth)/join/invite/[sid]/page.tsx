@@ -7,11 +7,14 @@ import { getTOS } from "@/libs/server/MDXParse";
 
 
 async function getSale(sid: string) {
+
     const decodedSid = decodeId(sid);
+    console.log('decodedSid', decodedSid)
     try {
         const sale = await admindb.query.sales.findFirst({
             where: (sale, { eq }) => eq(sale.id, decodedSid)
-        })
+        });
+
         return sale;
     } catch (error) {
         console.error(error)
@@ -26,6 +29,7 @@ interface InvitePackagePageProps {
 
 export default async function InvitePackagePage(props: InvitePackagePageProps) {
     const { sid } = await props.params;
+
     const sale = await getSale(sid);
     const tos = await getTOS("term-of-use")
 
@@ -33,7 +37,10 @@ export default async function InvitePackagePage(props: InvitePackagePageProps) {
         return <div className="flex flex-col gap-4">
             <div className="w-full max-w-lg mx-auto  border bg-white border-gray-200 rounded-sm p-1 space-y-4  ">
                 <div className="space-y-6  p-4">
-                    <div>Invalid request.</div>
+                    <div className="text-center">
+                        Uh oh, we can't find that the associated account with your invitation link to join Monstro.
+                        Please contact your sales rep.
+                    </div>
                 </div>
             </div>
         </div>;

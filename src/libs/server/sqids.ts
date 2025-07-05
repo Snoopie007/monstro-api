@@ -4,15 +4,15 @@ import Sqids from 'sqids';
 
 
 const referralCodeSqids = new Sqids({
-    alphabet: 'abcdefghijklmnopqrstuvwxyz0123456789',
-    minLength: 5,
+    alphabet: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+    minLength: 12,
 })
 
 const encodeReferralCode = (id: number) => referralCodeSqids.encode([id]);
 
 
 const sqids = new Sqids({
-    alphabet: 'abcdefghijklmnopqrstuvwxyz0123456789',
+    alphabet: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
     minLength: 14,
 })
 
