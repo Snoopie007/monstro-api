@@ -468,6 +468,7 @@ class MemberStripePayments extends BaseStripePayments {
             type: "account" as const,
             account: this._accountId
         }
+
         const options: Stripe.SubscriptionCreateParams = {
             ...rest,
             customer: this._customer,
@@ -481,9 +482,13 @@ class MemberStripePayments extends BaseStripePayments {
             collection_method: "charge_automatically",
             default_payment_method: paymentMethod || undefined,
             application_fee_percent: stripePercentage + (applicationFeePercent || 0),
-            cancel_at: cancelAt ? cancelAt.getTime() / 1000 : undefined,
-            trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
+            cancel_at: cancelAt ? Math.floor(cancelAt.getTime() / 1000) : undefined,
+
         };
+
+        if (trialEnd) {
+            options.trial_end = Math.floor(trialEnd.getTime() / 1000);
+        }
 
         if (isAllowProration) {
             if (plan.billingAnchorConfig) {
@@ -491,9 +496,10 @@ class MemberStripePayments extends BaseStripePayments {
             }
             if (startDate && isAfter(startDate, new Date())) {
                 options.proration_behavior = (allowProration || plan.allowProration) ? "create_prorations" : "none";
-                options.billing_cycle_anchor = startDate.getTime() / 1000;
+                options.billing_cycle_anchor = Math.floor(startDate.getTime() / 1000);
             }
         }
+
 
         return this._stripe.subscriptions.create(options);
     }
@@ -525,7 +531,7 @@ class MemberStripePayments extends BaseStripePayments {
                 invoice_settings: { issuer: accountDestination },
                 billing_cycle_anchor: 'automatic',
                 application_fee_percent: (applicationFeePercent || 0),
-                ...(cancelAt && { end_date: new Date(cancelAt).getTime() / 1000 }),
+                ...(cancelAt && { end_date: Math.floor(cancelAt.getTime() / 1000) }),
                 currency: 'usd',
                 collection_method: 'charge_automatically',
 

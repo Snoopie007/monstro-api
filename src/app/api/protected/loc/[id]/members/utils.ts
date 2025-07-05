@@ -14,14 +14,14 @@ type BaseData = {
   programId: string;
   startDate: Date | string;
   paymentMethod:
-    | "card"
-    | "cash"
-    | "check"
-    | "zelle"
-    | "venmo"
-    | "paypal"
-    | "apple"
-    | "google";
+  | "card"
+  | "cash"
+  | "check"
+  | "zelle"
+  | "venmo"
+  | "paypal"
+  | "apple"
+  | "google";
 };
 
 type PackageData = BaseData & {
@@ -295,32 +295,27 @@ function createSubscription(
   if (data.trialDays) {
     if (isAfter(startDate, today)) {
       trialEnd = new Date(
-        Math.max(
-          startDate.getTime(),
-          startDate.getTime() + data.trialDays * 24 * 60 * 60 * 1000
-        )
+        Math.max(startDate.getTime(), startDate.getTime() + data.trialDays * 24 * 60 * 60 * 1000)
       );
     } else {
       trialEnd = new Date(
-        Math.max(
-          today.getTime(),
-          today.getTime() + data.trialDays * 24 * 60 * 60 * 1000
-        )
+        Math.max(today.getTime(), today.getTime() + data.trialDays * 24 * 60 * 60 * 1000)
       );
     }
   }
 
+  const cancelAt = data.endDate ? new Date(data.endDate) : null;
   const newSubscription: MemberSubscriptionInsert = {
     ...rest,
     memberId: rest.memberId,
     startDate: startDate,
     currentPeriodStart: startDate,
     currentPeriodEnd: periodEnd,
-    cancelAt: data.endDate ? new Date(data.endDate) : null,
+    cancelAt: cancelAt,
     status: "incomplete",
     trialEnd,
     cancelAtPeriodEnd: false,
-    endedAt: null,
+    endedAt: cancelAt || null,
     metadata: {},
     parentId: null,
     stripeSubscriptionId: null,
