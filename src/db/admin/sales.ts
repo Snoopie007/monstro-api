@@ -4,7 +4,7 @@ import { adminUsers } from "./AdminUsers";
 import { relations } from "drizzle-orm";
 
 export const sales = pgTable("sales", {
-    id: serial("id").primaryKey(),
+    id: serial("id").primaryKey().notNull(),
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
     email: text("email").notNull(),

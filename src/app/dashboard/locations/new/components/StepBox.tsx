@@ -22,7 +22,8 @@ interface StepBoxHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const StepBoxHeader: React.FC<StepBoxHeaderProps> = ({ title, description, className, ...props }) => {
     return (
-        <div className={cn("flex flex-col items-start space-y-1 text-foreground cursor-pointer group-data-[active=false]:hidden", className)} {...props}>
+        <div className={cn("flex flex-col items-start space-y-1 text-foreground cursor-pointer group-data-[active=false]:hidden", className)}
+            {...props}>
 
             <div className="font-semibold text-lg leading-none ">{title}</div>
             <p className="text-muted-foreground text-sm ">{description}</p>

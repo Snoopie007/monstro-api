@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { locations, locationState } from '@/db/schemas';
-import { formatPhoneNumber } from '@/libs/server/db';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 const DEFAULT_LOCATION_STATE = {
     planId: null,
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
         const location = await db.transaction(async (tx) => {
             const [location] = await tx.insert(locations).values({
                 ...data,
-                phone: formatPhoneNumber(data.phone),
+                phone: parsePhoneNumberFromString(data.phone)?.number,
                 slug: data.name.toLowerCase().replace(/ /g, '')
             }).returning({ id: locations.id, name: locations.name });
 

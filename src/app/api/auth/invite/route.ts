@@ -2,7 +2,7 @@ import { admindb, db } from "@/db/db";
 
 import { NextRequest, NextResponse } from "next/server";
 import { users, vendors, vendorLevels } from "@/db/schemas";
-import { formatPhoneNumber } from "@/libs/server/db";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { sales } from "@/db/admin";
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
             const [{ vid }] = await tx.insert(vendors).values({
                 ...rest,
-                phone: formatPhoneNumber(sale.phone),
+                phone: parsePhoneNumberFromString(sale.phone)?.number,
                 userId: id,
             }).returning({ vid: vendors.id });
 

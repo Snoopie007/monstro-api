@@ -30,6 +30,7 @@ import { Industries } from "@/libs/data";
 import { useRouter } from "next/navigation";
 import { GoogleMapProvider } from "../providers";
 
+const InputStyle = "bg-background border border-foreground/10 ";
 
 export function AddLocation({ saleId }: { saleId: string | null }) {
 
@@ -167,9 +168,9 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                 <GoogleMapProvider>
                     <AutoComplete onSelect={selectAddress} />
                 </GoogleMapProvider>
-                <div className="text-sm text-black flex items-center gap-1 pl-0.5">
+                <div className="text-sm text-foreground flex items-center gap-1 pl-0.5">
                     Cannot find your business on Google?
-                    <span className="inline-block text-indigo-600 underline cursor-pointer" onClick={() => setEdit(true)}>
+                    <span className="inline-block text-indigo-500 underline cursor-pointer" onClick={() => setEdit(true)}>
                         Manually add one.
 
                     </span>
@@ -177,8 +178,10 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             </div>
 
             {edit && (
-                <div className="bg-white border border-gray-200 shadow-xs text-black p-4 pb-8 space-y-2 rounded-sm">
-                    <p className="text-sm font-medium border-b border-gray-100  pb-2">Double check your information.</p>
+                <div className="bg-foreground/5 border border-foreground/10  text-foreground p-4 pb-8 space-y-2 rounded-md">
+                    <p className="text-sm font-medium border-b border-foreground/10  pb-2">
+                        Double check your information.
+                    </p>
                     <ul className="space-y-2 list-disc list-inside ">
 
                         {form.formState.errors && Object.keys(form.formState.errors).map((key) => (
@@ -198,7 +201,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                         <FormItem>
                                             <FormLabel className="text-[0.65rem]  uppercase font-semibold">Business Name</FormLabel>
                                             <FormControl>
-                                                <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
+                                                <Input type="text" className="bg-background border border-foreground/10" {...field} />
                                             </FormControl>
 
                                             <FormMessage />
@@ -214,11 +217,11 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
 
                                             <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                                 <FormControl>
-                                                    <SelectTrigger className="rounded-sm bg-white border border-gray-200 cursor-pointer" >
+                                                    <SelectTrigger className={InputStyle} >
                                                         <SelectValue placeholder="Select your industry" />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent className="bg-white border border-gray-200 text-black">
+                                                <SelectContent className={InputStyle}>
                                                     {Industries.map((industry, index) => (
                                                         <SelectItem key={index} value={industry} className="cursor-pointer">
                                                             {industry}
@@ -240,7 +243,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                         <FormItem>
                                             <FormLabel className="text-[0.65rem] uppercase font-semibold">Phone</FormLabel>
                                             <FormControl>
-                                                <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
+                                                <Input type="text" className={InputStyle} {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -253,7 +256,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                         <FormItem>
                                             <FormLabel className="text-[0.65rem] uppercase font-semibold">Website</FormLabel>
                                             <FormControl>
-                                                <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
+                                                <Input type="text" className={InputStyle} {...field} />
                                             </FormControl>
 
                                         </FormItem>
@@ -269,7 +272,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                         <FormItem>
                                             <FormLabel className="text-[0.65rem] uppercase font-semibold">Unique Business Handle</FormLabel>
                                             <FormControl>
-                                                <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
+                                                <Input type="text" className={InputStyle} {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -285,7 +288,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                         <FormItem>
                                             <FormLabel className="text-[0.65rem] uppercase font-semibold">Address</FormLabel>
                                             <FormControl>
-                                                <Input type="text" className="bg-white border border-gray-200 rounded-sm"  {...field} />
+                                                <Input type="text" className={InputStyle}  {...field} />
                                             </FormControl>
 
                                         </FormItem>
@@ -302,7 +305,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                             <FormItem>
                                                 <FormLabel className="text-[0.65rem] uppercase font-semibold">City</FormLabel>
                                                 <FormControl>
-                                                    <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
+                                                    <Input type="text" className={InputStyle} {...field} />
                                                 </FormControl>
 
                                                 <FormMessage />
@@ -318,7 +321,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                             <FormItem>
                                                 <FormLabel className="text-[0.65rem] uppercase font-semibold">State</FormLabel>
                                                 <FormControl>
-                                                    <Input type="text" className="bg-white border border-gray-200 rounded-sm" {...field} />
+                                                    <Input type="text" className={InputStyle} {...field} />
                                                 </FormControl>
 
                                                 <FormMessage />
@@ -335,7 +338,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                             <FormItem >
                                                 <FormLabel className="text-[0.65rem] uppercase font-semibold">Postal Code</FormLabel>
                                                 <FormControl>
-                                                    <Input type="text" className="bg-white border border-gray-200 rounded-sm"  {...field} />
+                                                    <Input type="text" className={InputStyle}  {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>

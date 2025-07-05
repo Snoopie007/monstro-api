@@ -2,8 +2,6 @@
 import { NextResponse } from 'next/server';
 import { admindb, db } from '@/db/db';
 import { locations, locationState, wallets } from '@/db/schemas';
-import { encodeId } from '@/libs/server/sqids';
-import { formatPhoneNumber } from '@/libs/server/db';
 import { MonstroPlan } from '@/types/admin';
 import { PackagePaymentPlan } from '@/types/admin';
 import { VendorStripePayments } from '@/libs/server/stripe';
@@ -12,13 +10,13 @@ import { eq } from 'drizzle-orm';
 import { getPaymentPlan } from '../utils';
 import { sales } from '@/db/admin/sales';
 import { Location } from '@/types';
-
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 const stripe = new VendorStripePayments();
 
 
 export async function POST(req: Request) {
     const { saleId, vendorId, ...data } = await req.json();
-    console.log('Data', data)
+    console.log(saleId, vendorId)
     try {
 
         const sale = await admindb.query.sales.findFirst({
@@ -39,8 +37,6 @@ export async function POST(req: Request) {
             }
         });
 
-        console.log('Existing location', location)
-        console.log('Location state', location?.locationState)
 
         const state = location?.locationState;
 
@@ -52,7 +48,7 @@ export async function POST(req: Request) {
             const [loc] = await db.insert(locations).values({
                 ...data,
                 vendorId,
-                phone: formatPhoneNumber(data.phone),
+                phone: parsePhoneNumberFromString(data.phone)?.number,
                 slug: data.slug
             }).returning()
             location = loc;
@@ -133,6 +129,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ ...location, id: location.id, status: "active" }, { status: 200 })
     } catch (err) {
+        console.log(err)
         return NextResponse.json({ error: err instanceof Error ? err.message : "An unknown error occurred" }, { status: 500 })
     }
 }

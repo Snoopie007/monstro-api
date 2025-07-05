@@ -25,11 +25,7 @@ const buildConflictUpdateColumns = <
 
 
 
-function formatPhoneNumber(phoneNumber: string): string {
-	return phoneNumber.startsWith('+')
-		? phoneNumber.replace(/[^0-9+]/g, '')
-		: `+${phoneNumber.replace(/[^0-9]/g, '')}`;
-}
+
 function generateOtp() {
 	return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -145,7 +141,6 @@ function getSessionState(session: ProgramSession, mid: string) {
 
 
 export {
-	formatPhoneNumber,
 	buildConflictUpdateColumns,
 	generateOtp,
 	checkWalletBalance,

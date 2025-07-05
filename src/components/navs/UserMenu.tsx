@@ -38,7 +38,7 @@ export function UserMenu() {
                     </AvatarFallback>
                 </Avatar>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align='end' className="w-60 rounded-sm shadow-sm">
+            <DropdownMenuContent align='end' className="w-60 rounded-sm shadow-sm border-foreground/10">
                 <DropdownMenuItem className={"flex flex-col items-start justify-start text-xs"}>
                     <span className=" font-semibold">{user.name}</span>
                     <span className=" text-muted-foreground">

@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 
 import { NextRequest, NextResponse } from "next/server";
 import { users, vendors, vendorLevels } from "@/db/schemas";
-import { formatPhoneNumber } from "@/libs/server/db";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import bcrypt from "bcryptjs";
 
 
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
             const [{ vid }] = await tx.insert(vendors).values({
                 ...data,
-                phone: formatPhoneNumber(data.phone),
+                phone: parsePhoneNumberFromString(data.phone)?.number,
                 userId: id,
                 accountOwner: true,
             }).returning({ vid: vendors.id });
