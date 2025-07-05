@@ -64,6 +64,8 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 		},
 	});
 
+	const paymentType = form.watch("paymentType");
+
 	async function onSubmit(v: z.infer<typeof UpdateSubSchema>) {
 		if (!sub.id || !params?.id || !params?.mid) {
 			toast.error("Missing required information");
@@ -99,11 +101,11 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 					<fieldset className="space-y-4">
 						<FormLabel size={'tiny'}>Duration</FormLabel>
 						<div className="flex flex-row gap-2 items-center">
-							<span className="text-sm font-medium">
+							<span className="text-xs font-medium">
 								{format(new Date(sub.currentPeriodStart), "MMM d, yyyy")}
 
 							</span>
-							<ArrowRight className="size-3.5 -mt-0.5" />
+							<ArrowRight className="size-3.5 " />
 							<EndDayPicker onChange={() => { }}
 								startDate={sub.currentPeriodStart}
 								endDate={sub.cancelAt}
@@ -118,12 +120,12 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 								<FormItem>
 									<FormLabel size={'tiny'}>Payment Type</FormLabel>
 									<FormControl>
-										<Select {...field}>
+										<Select value={field.value} onValueChange={field.onChange}>
 											<SelectTrigger>
 												<SelectValue placeholder="Select a payment type" />
 											</SelectTrigger>
 											<SelectContent>
-												{['card', 'cash', 'check', 'zelle', 'venmo', 'paypal', 'apple', 'google'].map((type) => (
+												{['card', 'cash'].map((type) => (
 													<SelectItem key={type} value={type}>
 														{type}
 													</SelectItem>
@@ -135,46 +137,48 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 							)}
 						/>
 					</fieldset>
-					{form.watch("paymentType") === "card" && (
-						<fieldset>
-							<FormLabel size={'tiny'}>Payment Method</FormLabel>
+					{paymentType === "card" && (
+						<fieldset className="grid grid-cols-2 gap-2">
+
 							<FormField
 								control={form.control}
 								name="paymentMethodId"
 								render={({ field }) => (
 									<FormItem>
+										<FormLabel size={'tiny'}>Payment Method</FormLabel>
 										<FormControl>
-											<PaymentMethodPicker method={sub.metadata} />
+											<PaymentMethodPicker
+												method={sub.metadata} value={field.value || ""}
+												onChange={field.onChange}
+											/>
 										</FormControl>
 									</FormItem>
 								)}
 							/>
+							<FormField
+								control={form.control}
+								name="trialDays"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel size={'tiny'}>Add Trial Days</FormLabel>
+										<FormControl>
+											<Input
+												type="number"
+												placeholder="0"
+												min="0"
+												className="rounded-sm"
+												{...field}
+												onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+											/>
+										</FormControl>
 
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
 						</fieldset>
 					)}
-					<fieldset>
-						<FormField
-							control={form.control}
-							name="trialDays"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel size={'tiny'}>Add Trial Days</FormLabel>
-									<FormControl>
-										<Input
-											type="number"
-											placeholder="0"
-											min="0"
-											className="rounded-sm"
-											{...field}
-											onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-										/>
-									</FormControl>
 
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-					</fieldset>
 					<fieldset>
 						<FormField
 							control={form.control}

@@ -28,10 +28,10 @@ export function EndDayPicker({ onChange, startDate, endDate }: EndDayPickerProps
         <div>
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger>
-                    <div className="h-10 border border-foreground/10 rounded-sm px-3 py-2 flex flex-row items-center bg-background gap-1">
-                        <CalendarIcon className="-mt-0.5 mr-1 size-4" />
+                    <div className="h-8 border border-foreground/10 rounded-sm px-3 py-2 flex flex-row items-center bg-background gap-1">
+                        <CalendarIcon className="mr-1 size-3.5" />
                         <div className="flex flex-row items-center text-sm gap-3 text-foreground/80">
-                            <span className="px-1 rounded-sm">
+                            <span className="px-1 rounded-sm text-xs">
                                 {end ? format(end, "LLL dd, y") : "Forever"}
                             </span>
                         </div>
