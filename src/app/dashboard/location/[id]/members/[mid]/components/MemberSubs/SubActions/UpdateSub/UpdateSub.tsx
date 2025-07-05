@@ -184,7 +184,7 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 							control={form.control}
 							name="reset"
 							render={({ field }) => (
-								<FormItem className="flex flex-row bg-background items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
+								<FormItem className="flex flex-row bg-foreground/5 items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
 
 									<FormControl>
 										<Switch
@@ -210,7 +210,7 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 							control={form.control}
 							name="allowProration"
 							render={({ field }) => (
-								<FormItem className="flex flex-row bg-background items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
+								<FormItem className="flex flex-row bg-foreground/5 items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
 
 									<FormControl>
 										<Switch
