@@ -597,29 +597,12 @@ class MemberStripePayments extends BaseStripePayments {
         });
     }
 
-    async updateSubscription(
-        subscriptionId: string,
-        updates: {
-            price?: string;
-            cancel_at_period_end?: boolean;
-            proration_behavior?: "always_invoice" | "create_prorations" | "none";
-            metadata?: Record<string, string>;
-        }
-    ): Promise<Stripe.Subscription> {
-        const params: Stripe.SubscriptionUpdateParams = {
-            ...(updates.price && {
-                items: [
-                    {
-                        price: updates.price,
-                    },
-                ],
-            }),
-            cancel_at_period_end: updates.cancel_at_period_end,
-            proration_behavior: updates.proration_behavior,
-            metadata: updates.metadata,
+    async updateSubscription(sid: string, updates: Partial<Stripe.SubscriptionUpdateParams>): Promise<Stripe.Subscription> {
+        const commonPhaseOptions: Stripe.SubscriptionUpdateParams = {
+            ...updates,
         };
 
-        return this._stripe.subscriptions.update(subscriptionId, params);
+        return this._stripe.subscriptions.update(sid, commonPhaseOptions);
     }
 
     async cancelSubscription(

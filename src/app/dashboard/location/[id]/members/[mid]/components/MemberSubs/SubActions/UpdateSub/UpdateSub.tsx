@@ -25,10 +25,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowRight, CalendarIcon, Loader2 } from "lucide-react";
 import { cn, tryCatch } from "@/libs/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useParams } from "next/navigation";
-import { format } from "date-fns";
+import { format, intervalToDuration, sub } from "date-fns";
 import { MemberSubscription } from "@/types";
 import { EndDayPicker, PaymentMethodPicker } from ".";
 
@@ -50,9 +50,11 @@ interface UpdateSubProps {
 }
 
 export function UpdateSub({ sub, show, close }: UpdateSubProps) {
-
+	const [mutableSub, setMutableSub] = useState<MemberSubscription>(sub);
 	const [loading, setLoading] = useState(false);
 	const params = useParams();
+
+
 
 	const form = useForm<z.infer<typeof UpdateSubSchema>>({
 		resolver: zodResolver(UpdateSubSchema),
@@ -63,6 +65,13 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 			allowProration: sub.plan?.allowProration,
 		},
 	});
+
+	useEffect(() => {
+		if (sub.status === "trialing" && sub.trialEnd) {
+			const trialDays = intervalToDuration({ start: new Date(), end: new Date(sub.trialEnd) });
+			form.setValue("trialDays", trialDays.days || 0, { shouldValidate: true });
+		}
+	}, [sub]);
 
 	const paymentType = form.watch("paymentType");
 
@@ -97,7 +106,8 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 		<div className={cn(show ? 'block' : 'hidden')}>
 
 			<Form {...form}>
-				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2 p-4">
+				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4">
+					<SubInfo sub={mutableSub} />
 					<fieldset className="space-y-4">
 						<FormLabel size={'tiny'}>Duration</FormLabel>
 						<div className="flex flex-row gap-2 items-center">
@@ -112,33 +122,9 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 							/>
 						</div>
 					</fieldset>
-					<fieldset>
-						<FormField
-							control={form.control}
-							name="paymentType"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel size={'tiny'}>Payment Type</FormLabel>
-									<FormControl>
-										<Select value={field.value} onValueChange={field.onChange}>
-											<SelectTrigger>
-												<SelectValue placeholder="Select a payment type" />
-											</SelectTrigger>
-											<SelectContent>
-												{['card', 'cash'].map((type) => (
-													<SelectItem key={type} value={type}>
-														{type}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</FormControl>
-								</FormItem>
-							)}
-						/>
-					</fieldset>
+
 					{paymentType === "card" && (
-						<fieldset className="grid grid-cols-2 gap-2">
+						<fieldset className={cn(sub.status === "trialing" && "grid grid-cols-2 gap-2")}>
 
 							<FormField
 								control={form.control}
@@ -155,27 +141,28 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 									</FormItem>
 								)}
 							/>
-							<FormField
-								control={form.control}
-								name="trialDays"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel size={'tiny'}>Add Trial Days</FormLabel>
-										<FormControl>
-											<Input
-												type="number"
-												placeholder="0"
-												min="0"
-												className="rounded-sm"
-												{...field}
-												onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-											/>
-										</FormControl>
+							{sub.status === "trialing" && (
+								<FormField
+									control={form.control}
+									name="trialDays"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel size={'tiny'}>Add Trial Days</FormLabel>
+											<FormControl>
+												<Input
+													type="number"
+													className="rounded-sm"
+													{...field}
+													onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+												/>
+											</FormControl>
 
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							)}
+
 						</fieldset>
 					)}
 
@@ -205,32 +192,34 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 							)}
 						/>
 					</fieldset>
-					<fieldset>
-						<FormField
-							control={form.control}
-							name="allowProration"
-							render={({ field }) => (
-								<FormItem className="flex flex-row bg-foreground/5 items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
+					{paymentType === "card" && (
+						<fieldset>
+							<FormField
+								control={form.control}
+								name="allowProration"
+								render={({ field }) => (
+									<FormItem className="flex flex-row bg-foreground/5 items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
 
-									<FormControl>
-										<Switch
-											className="-mt-1"
-											checked={field.value}
-											onCheckedChange={field.onChange}
-										/>
-									</FormControl>
-									<div className="space-y-0.5">
-										<FormLabel className="text-sm">
-											Proration Changes
-										</FormLabel>
-										<FormDescription className="text-xs">
-											Enable proration for plan changes.
-										</FormDescription>
-									</div>
-								</FormItem>
-							)}
-						/>
-					</fieldset>
+										<FormControl>
+											<Switch
+												className="-mt-1"
+												checked={field.value}
+												onCheckedChange={field.onChange}
+											/>
+										</FormControl>
+										<div className="space-y-0.5">
+											<FormLabel className="text-sm">
+												Proration Changes
+											</FormLabel>
+											<FormDescription className="text-xs">
+												Enable proration for plan changes.
+											</FormDescription>
+										</div>
+									</FormItem>
+								)}
+							/>
+						</fieldset>
+					)}
 				</form>
 			</Form>
 			<DialogFooter className="flex flex-row gap-2 sm:justify-between">
@@ -256,3 +245,31 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 
 
 
+function SubInfo({ sub }: { sub: MemberSubscription }) {
+
+	return (
+		<div className="text-sm p-4 bg-foreground/5 rounded-sm grid grid-cols-2 gap-4">
+			<div className="flex flex-col">
+				<span className="font-medium">Plan:</span>
+				<span className="text-foreground/50 text-xs capitalize">	{sub.plan?.name}</span>
+			</div>
+			<div className="flex flex-col">
+				<span className="font-medium">Duration:</span>
+				<span className="text-foreground/50 text-xs capitalize">
+					{format(new Date(sub.currentPeriodStart), "MMM d, yyyy")} {" - "}
+					{sub.cancelAt ? format(new Date(sub.cancelAt), "MMM d, yyyy") : "Forever"}
+				</span>
+			</div>
+			<div className="flex flex-col">
+				<span className="font-medium">Payment Type:</span>
+				<span className="text-foreground/50 text-xs capitalize">	{sub.paymentMethod}
+					<span className="text-red-500 lowercase"> (Cannot be changed)</span>
+				</span>
+			</div>
+			<div className="flex flex-col ">
+				<span className="font-medium">Next billing date:</span>
+				<span className="text-foreground/50 text-xs"> {format(new Date(sub.currentPeriodEnd), "MMM d, yyyy")}</span>
+			</div>
+		</div>
+	)
+}

@@ -20,7 +20,7 @@ export function PaymentMethodPicker({ method, value, onChange }: PaymentMethodPi
     return (
         <div>
             {!change ? (
-                <div className="bg-foreground/5 px-4 py-2 rounded-sm flex flex-row items-center justify-between">
+                <div className="bg-foreground/5 px-4 py-3  border border-foreground/10 rounded-md flex flex-row items-center justify-between">
                     <span className="text-sm ">
                         {method.card.brand} •••• {method.card.last4}
                     </span>

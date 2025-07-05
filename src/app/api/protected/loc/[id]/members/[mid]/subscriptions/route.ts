@@ -5,6 +5,7 @@ import { calculateCurrentPeriodEnd, createInvoice, createSubscription, createTra
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { MemberSubscription } from "@/types";
+import { addDays, addMonths } from "date-fns";
 
 interface SubscriptionUpdates {
     price?: number;
@@ -152,36 +153,28 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
 
 
 
+
+
 export async function PATCH(req: Request, props: { params: Promise<{ id: string, mid: string }> }) {
     const params = await props.params;
-    const { planId, stripePaymentMethod, trialDays, allowProration, cancelAt, metadata, ...data } = await req.json();
-    console.log("Updating subscription for member:", params.mid, "at location:", params.id, "with data:", data, "and plan:", planId, "allowProration:", allowProration, "cancelAt:", cancelAt, "trialDays:", trialDays, "metadata:", metadata);
+    const updates = await req.json();
 
     try {
 
-        const existingSubscription = await db.query.memberSubscriptions.findFirst({
+        const current = await db.query.memberSubscriptions.findFirst({
             where: (sub, { and, eq }) => and(
                 eq(sub.memberId, params.mid),
                 eq(sub.locationId, params.id),
-
-            )
+            ),
+            with: {
+                plan: true
+            }
         });
 
 
-        if (!existingSubscription || !existingSubscription.stripeSubscriptionId) {
-            return NextResponse.json({ error: "No active subscription found" }, { status: 404 });
+        if (!current) {
+            throw new Error("No active subscription found")
         }
-
-
-        const newPlan = await db.query.memberPlans.findFirst({
-            where: (memberPlan, { eq }) => eq(memberPlan.id, planId)
-        });
-
-
-        if (!newPlan || !newPlan.stripePriceId) {
-            return NextResponse.json({ error: "No valid plan found" }, { status: 404 });
-        }
-
 
         const locationState = await db.query.locationState.findFirst({
             where: (locationState, { eq }) => eq(locationState.locationId, params.id)
@@ -191,82 +184,37 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string,
             return NextResponse.json({ error: "No valid location found" }, { status: 404 });
         }
 
-
-        const tax = Math.floor(newPlan.price * (locationState.taxRate / 10000));
-
-        // Initialize Stripe client
+        const endDate = updates.endAt ? new Date(updates.endAt) : undefined
+        const trialEnd = updates.trialDays ? addDays(current.currentPeriodStart, updates.trialDays) : undefined
         const stripe = await getStripeCustomer(params);
 
-        let stripeSubUpdate = false;
-        const updates: Partial<MemberSubscription> = {};
-        const stripeUpdateParams: Parameters<MemberStripePayments['updateSubscription']>[1] = {
-            proration_behavior: allowProration ? 'create_prorations' : 'none',
-            metadata: {
-                memberId: params.mid.toString(),
-                locationId: params.id.toString(),
-                ...(metadata || {})
-            },
-        };
+        if (updates.paymentMethod === "card") {
 
-        if (existingSubscription.memberPlanId !== planId) {
-            stripeSubUpdate = true;
-            updates.memberPlanId = planId;
-            stripeUpdateParams.price = newPlan.stripePriceId;
-        }
-
-        if (cancelAt !== undefined) {
-            stripeSubUpdate = true;
-            updates.cancelAt = cancelAt ? new Date(cancelAt) : null;
-            stripeUpdateParams.cancel_at_period_end = !!cancelAt;
-        }
-
-        if (trialDays !== undefined) {
-            stripeSubUpdate = true;
-            const trialEnd = trialDays
-                ? new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000)
-                : null;
-            updates.trialEnd = trialEnd;
-        }
-
-        if (stripePaymentMethod) {
-            stripeSubUpdate = true;
-            await stripe.updateCustomer({ default_source: stripePaymentMethod.id });
-        }
-
-        if (stripeSubUpdate) {
-            await stripe.updateSubscription(existingSubscription.stripeSubscriptionId, stripeUpdateParams);
-
-            await db.update(memberSubscriptions)
-                .set(updates)
-                .where(eq(memberSubscriptions.id, existingSubscription.id));
-
-            const newInvoice = {
-                ...createInvoice(newPlan, {
-                    memberId: params.mid, locationId: params.id,
-                    paymentMethod: "card"
-                }, tax),
-                memberSubscriptionId: existingSubscription.id,
-                forPeriodStart: new Date(),
-                forPeriodEnd: calculateCurrentPeriodEnd(new Date(), newPlan.interval!, newPlan.intervalThreshold!)
-            };
-
-            const [{ invoiceId }] = await db.insert(memberInvoices).values(newInvoice)
-                .returning({ invoiceId: memberInvoices.id });
-
-            await db.insert(transactions).values({
-                ...createTransaction(newPlan, {
-                    memberId: params.mid, locationId: params.id,
-                    paymentMethod: "card"
-                }, tax),
-                invoiceId,
-                subscriptionId: existingSubscription.id,
-                metadata: stripePaymentMethod ? {
-                    card: { brand: stripePaymentMethod.card?.brand, last4: stripePaymentMethod.card?.last4 }
-                } : {}
+            await stripe.updateSubscription(current.stripeSubscriptionId!, {
+                billing_cycle_anchor: updates.reset ? 'now' : 'unchanged',
+                default_payment_method: updates.paymentMethodId,
+                ...(endDate && { cancel_at: Math.floor(endDate.getTime() / 1000) }),
+                proration_behavior: updates.allowProration ? "create_prorations" : "none",
+                ...(trialEnd && { trial_end: Math.floor(trialEnd.getTime() / 1000) }),
             });
         }
 
-        return NextResponse.json({ sid: existingSubscription.id }, { status: 200 });
+
+        const today = Date.now()
+        await db.update(memberSubscriptions).set({
+            ...(updates.reset && {
+                currentPeriodStart: today,
+                currentPeriodEnd: addMonths(today, 1),
+            }),
+            cancelAt: endDate,
+            endedAt: endDate,
+            trialEnd: trialEnd,
+            paymentMethod: updates.paymentMethod,
+        }).where(eq(memberSubscriptions.id, current.id));
+
+
+
+        return NextResponse.json({ success: true }, { status: 200 });
     } catch (err) {
         console.error(err);
         return NextResponse.json({ error: "Failed to update subscription" }, { status: 500 });
