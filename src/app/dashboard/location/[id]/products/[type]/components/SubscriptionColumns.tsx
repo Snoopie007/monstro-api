@@ -3,11 +3,21 @@ import { Badge } from "@/components/ui/badge";
 import { cn, formatAmountForDisplay } from "@/libs/utils";
 import { MemberPlan, PlanProgram } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
+import { UpdateSub } from "./Update/UpdateSub";
 
 export const SubColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => [
     {
         accessorKey: "name",
         header: "Name",
+        cell: ({ row }) => {
+            const plan = row.original
+            return (
+                <div className="flex items-center gap-1 justify-between w-[250px]">
+                    <span className="truncate">{plan.name}</span>
+                    <UpdateSub lid={locationId} sub={plan} />
+                </div>
+            )
+        }
     },
     {
         accessorKey: "Programs",
@@ -73,8 +83,5 @@ export const SubColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => 
             )
         }
     }
-    // {
-    //   accessorKey: "status",
-    //   header: "Status",
-    // },
+
 ];

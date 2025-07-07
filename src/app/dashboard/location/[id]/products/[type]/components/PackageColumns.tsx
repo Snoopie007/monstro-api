@@ -3,18 +3,20 @@ import { Badge } from "@/components/ui/badge";
 import { cn, formatAmountForDisplay } from "@/libs/utils";
 import { MemberPlan, PlanProgram } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
-import Link from "next/link";
+
+import { UpdatePkg } from "./Update/UpdatePkg";
 
 export const PkgColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => [
     {
         accessorKey: "name",
         header: "Name",
         cell: ({ row }) => {
-            const program = row.original
+            const pkg = row.original
             return (
-                <Link href={`/dashboard/location/${locationId}/programs/${program.id}`} className="" >
-                    {program.name}
-                </Link>
+                <div className="flex items-center gap-1 justify-between w-[150px]">
+                    <span className="truncate">{pkg.name}</span>
+                    <UpdatePkg lid={locationId} pkg={pkg} />
+                </div>
             )
         },
     },

@@ -1,11 +1,6 @@
 "use client";
 import { Button, DialogFooter, DialogClose, Switch } from "@/components/ui";
-import {
-  Button,
-  DialogFooter,
-  DialogClose,
-  Switch,
-} from "@/components/ui";
+
 import {
   Form,
   FormControl,
