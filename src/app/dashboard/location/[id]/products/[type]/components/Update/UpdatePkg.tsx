@@ -61,7 +61,7 @@ export function UpdatePkg({ lid, pkg }: CreatePlanProps) {
         try {
 
             const { result, error } = await tryCatch(
-                fetch(`/api/protected/loc/${lid}/plans/pkgs/${pkg.id}`, {
+                fetch(`/api/protected/loc/${lid}/plans/updates/${pkg.id}`, {
                     method: "PUT",
                     body: JSON.stringify({
                         ...v

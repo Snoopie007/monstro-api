@@ -15,7 +15,7 @@ import {
 import Loading from "@/components/loading";
 import { flexRender, useReactTable, getCoreRowModel } from "@/libs/table-utils";
 
-import { SubColumns } from "./SubscriptionColumns";
+import { SubColumns } from "./SubColumns";
 
 export function PackageList({ lid }: { lid: string }) {
   const { packages, isLoading, error } = usePackages(lid);

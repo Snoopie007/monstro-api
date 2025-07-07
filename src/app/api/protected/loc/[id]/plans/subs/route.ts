@@ -27,6 +27,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
+
 export async function POST(req: Request, props: { params: Promise<{ id: string, pid: string }> }) {
     const params = await props.params;
 

@@ -3,21 +3,22 @@ import { Badge } from "@/components/ui/badge";
 import { cn, formatAmountForDisplay } from "@/libs/utils";
 import { MemberPlan, PlanProgram } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
-import { UpdateSub } from "./Update/UpdateSub";
 
-export const SubColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => [
+import { UpdatePkg } from "./Update/UpdatePkg";
+
+export const PkgColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => [
     {
         accessorKey: "name",
         header: "Name",
         cell: ({ row }) => {
-            const plan = row.original
+            const pkg = row.original
             return (
-                <div className="flex items-center gap-1 justify-between w-[250px]">
-                    <span className="truncate">{plan.name}</span>
-                    <UpdateSub lid={locationId} sub={plan} />
+                <div className="flex items-center gap-1 justify-between w-[150px]">
+                    <span className="truncate">{pkg.name}</span>
+                    <UpdatePkg lid={locationId} pkg={pkg} />
                 </div>
             )
-        }
+        },
     },
     {
         accessorKey: "Programs",
@@ -30,7 +31,7 @@ export const SubColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => 
                     {programCount > 0 ? (
                         <>
                             {planPrograms?.slice(0, 3).map((planProgram: PlanProgram) => (
-                                <Badge key={planProgram.program?.id} size={"tiny"} variant={"default"} className="rounded-sm">
+                                <Badge key={planProgram.program?.id} size={"tiny"} className="rounded-sm bg-foreground/10">
                                     {planProgram.program?.name}
                                 </Badge>
                             ))}
@@ -52,7 +53,7 @@ export const SubColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => 
         header: "Family",
         cell: ({ row }) => {
             const plan = row.original
-            return <Badge variant={plan.family ? "active" : "inactive"} size="tiny" className="rounded-sm">{plan.family ? "Yes" : "No"}</Badge>
+            return <Badge variant={plan.family ? "active" : "inactive"} size="tiny">{plan.family ? "Yes" : "No"}</Badge>
         }
     },
     {
@@ -72,16 +73,15 @@ export const SubColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => 
         }
     },
     {
-        accessorKey: "interval",
-        header: "Cycle",
+        accessorKey: "totalClassLimit",
+        header: "Total Classes",
         cell: ({ row }) => {
             const plan = row.original
             return (
                 <span className="text-sm">
-                    {plan.interval}
+                    {plan.totalClassLimit}
                 </span>
             )
         }
     }
-
 ];

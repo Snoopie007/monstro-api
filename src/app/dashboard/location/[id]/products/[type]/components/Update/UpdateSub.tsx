@@ -62,7 +62,7 @@ export function UpdateSub({ lid, sub }: CreatePlanProps) {
         try {
 
             const { result, error } = await tryCatch(
-                fetch(`/api/protected/loc/${lid}/plans/subs/${sub.id}`, {
+                fetch(`/api/protected/loc/${lid}/plans/updates/${sub.id}`, {
                     method: "PUT",
                     body: JSON.stringify({
                         ...v
