@@ -44,7 +44,7 @@ export default function StaffsPage(props: StaffsPageProps) {
   const [currentStaff, setCurrentStaff] = useState<Staff | null>(null);
   const { mutate } = useSWR(`/api/protected/${params.id}/staffs`);
 
-  const columns = StaffColumns(params.id);
+  const columns = StaffColumns();
   const table = useReactTable({
     data: staffs,
     columns,
@@ -114,9 +114,9 @@ export default function StaffsPage(props: StaffsPageProps) {
                         {header.isPlaceholder
                           ? null
                           : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
                       </TableHead>
                     );
                   })}

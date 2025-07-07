@@ -26,7 +26,11 @@ export async function GET(
         and(eq(staffsLocations.locationId, params.id)),
       with: {
         staff: true,
-        roles: true,
+        roles: {
+          with: {
+            role: true,
+          },
+        },
       },
     });
     return NextResponse.json(staffs, { status: 200 });
