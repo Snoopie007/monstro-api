@@ -53,7 +53,7 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
     }
     setLoading(true);
     const { result, error } = await tryCatch(
-      fetch(`/api/protected/loc/${params.id}/plans/subs/${sub.id}`, {
+      fetch(`/api/protected/loc/${params.id}/members/${params.mid}/subscriptions/${sub.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formState),

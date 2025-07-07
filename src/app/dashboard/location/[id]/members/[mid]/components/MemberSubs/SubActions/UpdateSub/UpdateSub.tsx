@@ -1,6 +1,5 @@
 "use client";
 import { Button, DialogFooter, DialogClose, Switch } from "@/components/ui";
-
 import {
   Form,
   FormControl,
@@ -78,16 +77,6 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 
   const paymentType = form.watch("paymentType");
 
-  // Debug: Log form state for troubleshooting
-  useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("Form validation state:", {
-        isValid: form.formState.isValid,
-        errors: form.formState.errors,
-        values: form.getValues(),
-      });
-    }
-  }, [form.formState.isValid, form.formState.errors]);
 
   async function onSubmit(v: z.infer<typeof UpdateSubSchema>) {
     if (!sub.id || !params?.id || !params?.mid) {
@@ -98,14 +87,11 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
     setLoading(true);
 
     const { result, error } = await tryCatch(
-      fetch(
-        `/api/protected/loc/${params.id}/members/${params.mid}/subscriptions`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(v),
-        }
-      )
+      fetch(`/api/protected/loc/${params.id}/members/${params.mid}/subscriptions/${sub.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(v),
+      })
     );
 
     setLoading(false);

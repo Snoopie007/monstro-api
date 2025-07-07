@@ -1,20 +1,13 @@
 import { db } from "@/db/db";
 import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/db/schemas";
-import { getStripeCustomer, MemberStripePayments } from "@/libs/server/stripe";
-import { calculateCurrentPeriodEnd, createInvoice, createSubscription, createTransaction } from "../../utils";
+import { getStripeCustomer } from "@/libs/server/stripe";
+import { createSubscription } from "../../utils";
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { MemberSubscription } from "@/types";
 import { addDays, addMonths } from "date-fns";
+import Stripe from "stripe";
 
-interface SubscriptionUpdates {
-    price?: number;
-    name?: string;
-    description?: string;
-    cancelAtPeriodEnd?: boolean;
-
-    metadata?: Record<string, any>;
-}
 
 export async function GET(req: Request, props: { params: Promise<{ id: string, mid: string }> }) {
     const params = await props.params;
@@ -153,71 +146,4 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
 
 
 
-
-
-export async function PATCH(req: Request, props: { params: Promise<{ id: string, mid: string }> }) {
-    const params = await props.params;
-    const updates = await req.json();
-
-    try {
-
-        const current = await db.query.memberSubscriptions.findFirst({
-            where: (sub, { and, eq }) => and(
-                eq(sub.memberId, params.mid),
-                eq(sub.locationId, params.id),
-            ),
-            with: {
-                plan: true
-            }
-        });
-
-
-        if (!current) {
-            throw new Error("No active subscription found")
-        }
-
-        const locationState = await db.query.locationState.findFirst({
-            where: (locationState, { eq }) => eq(locationState.locationId, params.id)
-        });
-
-        if (!locationState) {
-            return NextResponse.json({ error: "No valid location found" }, { status: 404 });
-        }
-
-        const endDate = updates.endAt ? new Date(updates.endAt) : undefined
-        const trialEnd = updates.trialDays ? addDays(current.currentPeriodStart, updates.trialDays) : undefined
-        const stripe = await getStripeCustomer(params);
-
-        if (updates.paymentMethod === "card") {
-
-            await stripe.updateSubscription(current.stripeSubscriptionId!, {
-                billing_cycle_anchor: updates.reset ? 'now' : 'unchanged',
-                default_payment_method: updates.paymentMethodId,
-                ...(endDate && { cancel_at: Math.floor(endDate.getTime() / 1000) }),
-                proration_behavior: updates.allowProration ? "create_prorations" : "none",
-                ...(trialEnd && { trial_end: Math.floor(trialEnd.getTime() / 1000) }),
-            });
-        }
-
-
-        const today = Date.now()
-        await db.update(memberSubscriptions).set({
-            ...(updates.reset && {
-                currentPeriodStart: today,
-                currentPeriodEnd: addMonths(today, 1),
-            }),
-            cancelAt: endDate,
-            endedAt: endDate,
-            trialEnd: trialEnd,
-            paymentMethod: updates.paymentMethod,
-        }).where(eq(memberSubscriptions.id, current.id));
-
-
-
-        return NextResponse.json({ success: true }, { status: 200 });
-    } catch (err) {
-        console.error(err);
-        return NextResponse.json({ error: "Failed to update subscription" }, { status: 500 });
-    }
-}
 
