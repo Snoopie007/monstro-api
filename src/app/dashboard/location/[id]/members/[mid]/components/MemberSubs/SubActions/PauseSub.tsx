@@ -44,11 +44,11 @@ export function PauseSub({ sub, show, close }: PauseSubProps) {
 
 		if (error || !result || !result.ok) {
 			const errorData = await result?.json();
-			toast.error(errorData.error || "Failed to cancel subscription");
+			toast.error(errorData.error || "Failed to pause subscription");
 			return;
 		}
 
-		toast.success("Subscription cancellation processed");
+		toast.success("Subscription paused");
 		close();
 	};
 
@@ -90,7 +90,7 @@ export function PauseSub({ sub, show, close }: PauseSubProps) {
 							<Loader2 className="mr-2 size-4 animate-spin" />
 						</>
 					) : (
-						"Pause"
+						"Confirm"
 					)}
 				</Button>
 			</DialogFooter>

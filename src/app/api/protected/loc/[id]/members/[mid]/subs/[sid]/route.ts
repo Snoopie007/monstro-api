@@ -29,14 +29,9 @@ export async function PUT(req: Request, props: { params: Promise<Params> }) {
             throw new Error("Subscription is canceled")
         }
 
-        if (sub.status === "paused") {
-            throw new Error("Subscription is already paused")
-        }
         const stripe = await getStripeCustomer(params);
 
         if (pause) {
-
-
 
             await stripe.updateSubscription(sub.stripeSubscriptionId!, {
                 pause_collection: {
@@ -61,9 +56,8 @@ export async function PUT(req: Request, props: { params: Promise<Params> }) {
                 status: "active",
                 updated: new Date(),
             }).where(eq(memberSubscriptions.id, sub.id));
-
-
         }
+
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (err) {
         console.error(err);

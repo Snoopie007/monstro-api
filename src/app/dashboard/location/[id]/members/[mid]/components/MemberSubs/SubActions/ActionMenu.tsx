@@ -3,8 +3,6 @@ import {
 	Button,
 	Dialog,
 	DialogContent,
-	DialogDescription,
-	DialogHeader,
 	DialogTitle,
 	DropdownMenu,
 	DropdownMenuContent,
@@ -12,19 +10,18 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui";
-import { Pencil, Trash2, X, Ellipsis, Pause } from "lucide-react";
+import { Pencil, Trash2, X, Ellipsis, Pause, Play } from "lucide-react";
 import { MemberSubscription } from "@/types";
-import { CancelSub, UpdateSub } from ".";
+import { CancelSub, UpdateSub, PauseSub, ResumeSub } from ".";
 import { useState } from "react";
 import { cn } from "@/libs/utils";
 import { VisuallyHidden } from "react-aria";
-import { PauseSub } from "./PauseSub";
 
 const HoverTransition =
 	"group-hover:bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300";
 
 export function SubActions({ sub }: { sub: MemberSubscription }) {
-	const [action, setAction] = useState<"cancel" | "update" | "pause" | undefined>(
+	const [action, setAction] = useState<"cancel" | "update" | "pause" | "resume" | undefined>(
 		undefined
 	);
 
@@ -33,6 +30,7 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
 			setAction(undefined);
 		}
 	}
+
 
 	return (
 		<>
@@ -56,6 +54,11 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
 						show={action === "pause"}
 						close={() => handleClose(false)}
 					/>
+					<ResumeSub
+						sub={sub}
+						show={action === "resume"}
+						close={() => handleClose(false)}
+					/>
 				</DialogContent>
 			</Dialog>
 			<div className="flex flex-row items-center ">
@@ -70,11 +73,12 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
 				<Button
 					variant="ghost"
 					size="icon"
-					className={cn(
-						"size-7 border-x rounded-none border-foreground/5 flex-1",
-						HoverTransition
-					)}
-					onClick={() => setAction("cancel")}
+					className={cn("size-7 border-x rounded-none border-foreground/5 flex-1", HoverTransition)}
+					disabled={!sub}
+					onClick={() => {
+						if (sub.status === "canceled") return
+						setAction("cancel")
+					}}
 				>
 					<X className="size-3.5" />
 				</Button>
@@ -100,11 +104,11 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
 						</DropdownMenuItem>
 						<DropdownMenuItem
 							className="cursor-pointer text-sm flex flex-row items-center justify-between gap-2"
-							onClick={() => setAction("pause")}
-							disabled={!sub}
+							onClick={() => setAction(sub.status === "active" ? "pause" : "resume")}
+							disabled={!sub || !['active', 'paused'].includes(sub.status)}
 						>
-							<span className="text-xs"> Pause</span>
-							<Pause className="size-3" />
+							<span className="text-xs"> {sub.status === "active" ? "Pause" : "Resume"}</span>
+							{sub.status === "active" ? <Pause className="size-3" /> : <Play className="size-3" />}
 						</DropdownMenuItem>
 
 						<DropdownMenuSeparator />
