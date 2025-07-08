@@ -27,7 +27,7 @@ import {
     FormDescription,
 } from '@/components/forms';
 
-import { SetStateAction, Dispatch, useState } from "react";
+import { useState } from "react";
 import { NewPackageSchema } from "../../../schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,7 +35,7 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { Loader2, CalendarIcon, ChevronRight } from "lucide-react";
 import { cn, tryCatch } from "@/libs/utils";
-import { useMemberPaymentMethods, useMemberStatus } from "../../../providers/MemberContext";
+import { useMemberPaymentMethods, useMemberStatus } from "../../../providers";
 import React from "react";
 import { MemberPackage, MemberPlan } from "@/types";
 import { Stripe } from "stripe";
@@ -79,7 +79,7 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
     async function onSubmit(v: z.infer<typeof NewPackageSchema>) {
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/members/${mid}/packages`, {
+            fetch(`/api/protected/loc/${lid}/members/${mid}/pkgs`, {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,

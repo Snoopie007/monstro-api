@@ -43,12 +43,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
     const { stripePaymentMethod, hasIncompletePlan, other, trialDays, ...data } = await req.json();
     try {
 
-        const integration = await db.query.integrations.findFirst({
-            where: (integration, { eq, and }) => and(
-                eq(integration.locationId, params.id),
-                eq(integration.service, "stripe")
-            )
-        })
+
 
         const plan = await db.query.memberPlans.findFirst({
             where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)

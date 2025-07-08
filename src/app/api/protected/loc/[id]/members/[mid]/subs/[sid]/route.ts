@@ -12,6 +12,65 @@ type Params = {
     sid: string;
 }
 
+export async function PUT(req: Request, props: { params: Promise<Params> }) {
+    const params = await props.params;
+    const { resumeDate, pause, resume } = await req.json();
+
+    try {
+        const sub = await db.query.memberSubscriptions.findFirst({
+            where: (sub, { eq }) => eq(sub.id, params.sid),
+        });
+
+        if (!sub) {
+            throw new Error("Subscription not found")
+        }
+
+        if (sub.status === "canceled") {
+            throw new Error("Subscription is canceled")
+        }
+
+        if (sub.status === "paused") {
+            throw new Error("Subscription is already paused")
+        }
+        const stripe = await getStripeCustomer(params);
+
+        if (pause) {
+
+
+
+            await stripe.updateSubscription(sub.stripeSubscriptionId!, {
+                pause_collection: {
+                    behavior: "void",
+                    resumes_at: resumeDate ? Math.floor(new Date(resumeDate).getTime() / 1000) : undefined
+                }
+            });
+            await db.update(memberSubscriptions).set({
+                status: "paused",
+                updated: new Date(),
+            }).where(eq(memberSubscriptions.id, sub.id));
+
+
+        }
+
+        if (resume) {
+            //TODO: Resume subscription
+            await stripe.updateSubscription(sub.stripeSubscriptionId!, {
+                pause_collection: ''
+            });
+            await db.update(memberSubscriptions).set({
+                status: "active",
+                updated: new Date(),
+            }).where(eq(memberSubscriptions.id, sub.id));
+
+
+        }
+        return NextResponse.json({ success: true }, { status: 200 });
+    } catch (err) {
+        console.error(err);
+        return NextResponse.json({ error: "Failed to update subscription" }, { status: 500 });
+    }
+}
+
 export async function PATCH(req: Request, props: { params: Promise<Params> }) {
     const params = await props.params;
     const updates = await req.json();
@@ -35,7 +94,7 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
         });
 
         if (!locationState) {
-            return NextResponse.json({ error: "No valid location found" }, { status: 404 });
+            throw new Error("No valid location found")
         }
 
         const endDate = updates.endAt ? new Date(updates.endAt) : undefined

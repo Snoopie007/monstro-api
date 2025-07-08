@@ -2,10 +2,8 @@ import {
     Button,
     Dialog,
     DialogContent,
-    DialogHeader,
     DialogTitle,
     DialogTrigger,
-    DialogDescription,
 } from "@/components/ui";
 import { useState } from "react";
 import React from "react";

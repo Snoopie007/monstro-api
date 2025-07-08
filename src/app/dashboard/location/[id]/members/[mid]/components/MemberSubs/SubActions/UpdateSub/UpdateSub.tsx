@@ -87,7 +87,7 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 		setLoading(true);
 
 		const { result, error } = await tryCatch(
-			fetch(`/api/protected/loc/${params.id}/members/${params.mid}/subscriptions/${sub.id}`, {
+			fetch(`/api/protected/loc/${params.id}/members/${params.mid}/subs/${sub.id}`, {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(v),

@@ -68,7 +68,7 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
 
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/members/${mid}/subscriptions`, {
+            fetch(`/api/protected/loc/${lid}/members/${mid}/subs`, {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,
