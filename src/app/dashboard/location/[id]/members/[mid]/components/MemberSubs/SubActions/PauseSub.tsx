@@ -54,7 +54,8 @@ export function PauseSub({ sub, show, close }: PauseSubProps) {
 
 	return (
 		<div className={cn(show ? "block" : "hidden")}>
-			<div className="p-4 pt-6 space-y-6">
+			<div className="p-4 pt-6 space-y-4">
+				<div className="text-lg font-semibold">Pause Subscription</div>
 				<p className="text-sm  text-foreground/70  leading-relaxed bg-foreground/5 rounded-md p-2">
 					This will pause the collection of payments for this subscription.
 					But does not cancel or change the subscription end date if there is one.
