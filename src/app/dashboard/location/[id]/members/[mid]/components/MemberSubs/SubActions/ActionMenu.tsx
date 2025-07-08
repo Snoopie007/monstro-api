@@ -20,7 +20,7 @@ import { VisuallyHidden } from "react-aria";
 const HoverTransition =
 	"group-hover:bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300";
 
-export function SubActions({ sub }: { sub: MemberSubscription }) {
+export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch: () => void }) {
 	const [action, setAction] = useState<"cancel" | "update" | "pause" | "resume" | undefined>(
 		undefined
 	);
@@ -29,6 +29,7 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
 		if (!open) {
 			setAction(undefined);
 		}
+		refetch()
 	}
 
 
