@@ -116,7 +116,7 @@ function useWallet(id: string) {
 }
 
 function useMemberPackages(id: string, mid: string) {
-	const { data, error, isLoading, mutate } = useSWR({ url: `members/${mid}/packages`, id: id }, fetcher);
+	const { data, error, isLoading, mutate } = useSWR({ url: `members/${mid}/pkgs`, id: id }, fetcher);
 	return {
 		packages: data,
 		error,
