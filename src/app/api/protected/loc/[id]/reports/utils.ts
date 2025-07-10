@@ -1,5 +1,5 @@
-import {Transaction} from "@/types/transaction";
-import {MemberLocation, Member} from "@/types/member";
+import { Transaction } from "@/types/transaction";
+import { MemberLocation, Member, MemberSubscription } from "@/types/member";
 
 const months = [
   "January",
@@ -16,20 +16,44 @@ const months = [
   "December",
 ];
 
-function recentCancelledMembers(memberLocations: MemberLocation[]) {
-  return memberLocations
-    .filter((ml) => ml.status === "canceled")
-    .sort(
-      (a, b) =>
-        new Date(b.updated || b.created).getTime() -
-        new Date(a.updated || a.created).getTime()
-    )
+function recentCancelledMembers(
+  memberSubscriptions: MemberSubscription[],
+  startDate?: Date,
+  endDate?: Date
+) {
+  return memberSubscriptions
+    .filter((ms) => {
+      // Filter by status
+      const isCancelled = ms.status === "canceled" || ms.endedAt !== null;
+      if (!isCancelled) return false;
+
+      // Filter by date range if provided
+      if (startDate || endDate) {
+        // Use endedAt for cancelled subscriptions, fallback to updated/created
+        const cancelDate = ms.endedAt || ms.updated || ms.created;
+        if (!cancelDate) return false;
+
+        const cancelTimestamp = new Date(cancelDate).getTime();
+
+        if (startDate && cancelTimestamp < startDate.getTime()) return false;
+        if (endDate && cancelTimestamp > endDate.getTime()) return false;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort by endedAt if available, otherwise by updated/created date
+      const aDate = a.endedAt || a.updated || a.created;
+      const bDate = b.endedAt || b.updated || b.created;
+      return new Date(bDate).getTime() - new Date(aDate).getTime();
+    })
     .slice(0, 10)
-    .map((ml) => ({
-      id: ml.memberId,
-      ...ml.member,
-      created: ml.created,
-      status: ml.status,
+    .map((ms) => ({
+      id: ms.memberId,
+      ...ms.member,
+      cancelledDate: ms.endedAt || ms.updated || ms.created,
+      subscriptionId: ms.id,
+      status: ms.status,
     }));
 }
 
@@ -47,7 +71,7 @@ function newMembersByMonth(memberLocations: MemberLocation[]) {
     }
   });
 
-  return months.map((month) => ({month, count: counts[month]}));
+  return months.map((month) => ({ month, count: counts[month] }));
 }
 function topSpenders(transactions: Transaction[], mls: MemberLocation[]) {
   // Using Map instead of object for better type safety and performance
@@ -80,7 +104,7 @@ function revenueData(transactions: Transaction[]) {
     }
   });
 
-  return months.map((month) => ({month, amount: revenueByMonth[month]}));
+  return months.map((month) => ({ month, amount: revenueByMonth[month] }));
 }
 
 function recurringRevenueData(transactions: Transaction[]) {
@@ -136,7 +160,7 @@ function mltv(transactions: Transaction[]) {
           : values[mid];
     }
 
-    return {month, amount: median};
+    return { month, amount: median };
   });
 }
 
