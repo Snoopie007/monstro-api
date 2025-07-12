@@ -1,108 +1,120 @@
 "use client";
-import { cn } from '@/libs/utils';
-import { isSameDay, format, isToday } from 'date-fns';
-import React, { useMemo } from 'react';
-import { CalendarEvent } from '@/types';
-import { ScrollArea } from '@/components/ui';
-import { useSessionCalendar } from '../../providers/SessionCalendarProvider';
-import { CurrentTimeLine } from './CurrentTimeLine';
+import { cn } from "@/libs/utils";
+import { isSameDay, format, isToday } from "date-fns";
+import React, { useMemo } from "react";
+import { CalendarEvent } from "@/types";
+import { ScrollArea } from "@/components/ui";
+import { useSessionCalendar } from "../../providers/SessionCalendarProvider";
+import { CurrentTimeLine } from "./CurrentTimeLine";
 
 interface DayViewProps {
-    events?: CalendarEvent[];
-    currentDate: Date;
+  events?: CalendarEvent[];
+  currentDate: Date;
+  onEventClick?: (event: CalendarEvent) => void;
 }
 
+export function DayView({
+  events = [],
+  currentDate,
+  onEventClick,
+}: DayViewProps) {
+  const { setCurrentEvent } = useSessionCalendar();
+  const hours = Array.from({ length: 24 }, (_, i) => i);
 
-export function DayView({ events = [], currentDate }: DayViewProps) {
-    const { setCurrentEvent } = useSessionCalendar();
-    const hours = Array.from({ length: 24 }, (_, i) => i);
+  // Process events to include positioning data
+  const processedEvents = useMemo(() => {
+    return events
+      .filter((event) => isSameDay(new Date(event.start), currentDate))
+      .map((event) => {
+        const startDate = new Date(event.start);
+        const hour = startDate.getHours();
+        const minute = startDate.getMinutes();
+        const heightInPixels = Math.max(event.duration, 30);
+        const topPosition = hour * 60 + minute;
 
-    // Process events to include positioning data
-    const processedEvents = useMemo(() => {
-        return events
-            .filter(event => isSameDay(new Date(event.start), currentDate))
-            .map(event => {
-                const startDate = new Date(event.start);
-                const hour = startDate.getHours();
-                const minute = startDate.getMinutes();
-                const heightInPixels = Math.max(event.duration, 30);
-                const topPosition = hour * 60 + minute;
+        return {
+          ...event,
+          heightInPixels,
+          topPosition,
+        };
+      })
+      .sort((a, b) => a.topPosition - b.topPosition);
+  }, [events, currentDate]);
 
-                return {
-                    ...event,
-                    heightInPixels,
-                    topPosition
-                };
-            }).sort((a, b) => a.topPosition - b.topPosition);
-    }, [events, currentDate]);
+  const isCurrentDay = isToday(currentDate);
 
-    const isCurrentDay = isToday(currentDate);
+  return (
+    <div className="w-full h-full flex flex-col">
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-[calc(100vh-105px)]">
+          <div className="relative">
+            {isCurrentDay && <CurrentTimeLine />}
 
-    return (
-        <div className="w-full h-full flex flex-col">
-            <div className="flex-1 overflow-hidden">
-                <ScrollArea className='h-[calc(100vh-105px)]'>
-                    <div className="relative">
-                        {isCurrentDay && <CurrentTimeLine />}
+            {hours.map((hour) => (
+              <div
+                key={hour}
+                className="flex border-b border-foreground/10 min-h-[60px] max-h-[60px] relative "
+              >
+                <div className="w-[60px] flex-shrink-0 p-2 text-xs text-foreground/60 border-r border-foreground/10">
+                  {format(new Date().setHours(hour, 0), "h a")}
+                </div>
+                <div className="flex-grow relative h-full"></div>
+              </div>
+            ))}
 
-                        {hours.map((hour) => (
-                            <div key={hour} className="flex border-b border-foreground/10 min-h-[60px] max-h-[60px] relative ">
-                                <div className="w-[60px] flex-shrink-0 p-2 text-xs text-foreground/60 border-r border-foreground/10">
-                                    {format(new Date().setHours(hour, 0), 'h a')}
-                                </div>
-                                <div className="flex-grow relative h-full"></div>
-                            </div>
-                        ))}
-
-                        {/* Overlay events on top of the time grid */}
-                        {processedEvents.map((event) => (
-                            <DayEventItem
-                                key={event.id}
-                                event={event}
-                                onSelect={setCurrentEvent}
-                                position={{
-                                    top: event.topPosition,
-                                    height: event.heightInPixels
-                                }}
-                            />
-                        ))}
-                    </div>
-                </ScrollArea>
-            </div>
-        </div>
-    );
+            {/* Overlay events on top of the time grid */}
+            {processedEvents.map((event) => (
+              <DayEventItem
+                key={event.id}
+                event={event}
+                onSelect={onEventClick || setCurrentEvent}
+                position={{
+                  top: event.topPosition,
+                  height: event.heightInPixels,
+                }}
+              />
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+    </div>
+  );
 }
 
 interface DayEventItemProps {
-    event: CalendarEvent;
-    onSelect: (event: CalendarEvent) => void;
-    position: {
-        top: number;
-        height: number;
-    };
+  event: CalendarEvent;
+  onSelect: (event: CalendarEvent) => void;
+  position: {
+    top: number;
+    height: number;
+  };
 }
 
 function DayEventItem({ event, onSelect, position }: DayEventItemProps) {
-    return (
-        <div
-            className={"absolute"}
-            style={{
-                top: `${position.top}px`,
-                height: `${position.height}px`,
-                left: `60px`,
-            }}
-            onClick={() => onSelect(event)}
-        >
-            <div className={cn(
-                "flex flex-row w-full max-w-[300px] bg-foreground text-background ",
-                "border-l-3 border-indigo-600 p-2 items-center rounded-sm ",
-                "cursor-pointer hover:bg-indigo-500 hover:text-white group transition-colors"
-            )}>
-                <span className='font-medium text-sm '>
-                    {event.title}
-                </span>
-            </div>
-
-        </div>
-    );
+  return (
+    <div
+      className={"absolute"}
+      style={{
+        top: `${position.top}px`,
+        height: `${position.height}px`,
+        left: `60px`,
+      }}
+      onClick={() => onSelect(event)}
+    >
+      <div
+        className={cn(
+          "flex flex-row w-full max-w-[300px] bg-foreground text-background ",
+          "border-l-3 border-indigo-600 p-2 items-center rounded-sm ",
+          "cursor-pointer hover:bg-indigo-500 hover:text-white group transition-colors"
+        )}
+      >
+        <span className="font-medium text-sm ">{event.title}</span>
+        {event.data.members.length > 0 && (
+          <span className="ml-2 text-xs bg-white/20 px-2 py-1 rounded">
+            {event.data.members.length}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
