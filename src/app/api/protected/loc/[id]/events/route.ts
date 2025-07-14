@@ -197,9 +197,8 @@ function addEventToCalendar(
   )
     return;
 
-  const [hours, minutes] = reservation.session.time.split(":");
-  const start = new Date(`${reservation.startOn}T${hours}:${minutes}:00`);
-  const end = new Date(start.getTime() + reservation.session.duration * 60000);
+  const start = new Date(reservation.startOn);
+  const end = new Date(reservation.endOn);
 
   const id = `${start.toISOString()}-${reservation.session.id}`;
 
