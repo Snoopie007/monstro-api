@@ -18,6 +18,7 @@ export function WeekView({
   currentDate,
   onEventClick,
 }: WeekViewProps) {
+  const { setCurrentEvent } = useSessionCalendar();
   const weekDays = useMemo(() => {
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -26,17 +27,133 @@ export function WeekView({
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => i), []);
 
   const processedEvents = useMemo(() => {
-    return events.map((event) => {
+    // First, process all events with basic positioning
+    const basicEvents = events.map((event) => {
       const height = Math.max(event.duration, 30);
       const start = new Date(event.start);
-      // Calculate top position based on 60px per hour
       const top = start.getHours() * 60 + start.getMinutes();
+      const endPosition = top + height;
+
+      // Create a date key for grouping (YYYY-MM-DD format)
+      const dateKey = `${start.getFullYear()}-${String(
+        start.getMonth()
+      ).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+
       return {
         ...event,
         height,
         top,
+        endPosition,
+        dateKey,
       };
     });
+
+    // Type for events with positioning data
+    type BasicEvent = (typeof basicEvents)[0];
+    type EventWithPosition = BasicEvent & {
+      columnIndex: number;
+      totalColumns: number;
+    };
+
+    // Group events by actual calendar date instead of day of week
+    const eventsByDate = new Map<string, BasicEvent[]>();
+
+    // Group events by actual calendar date
+    basicEvents.forEach((event) => {
+      if (!eventsByDate.has(event.dateKey)) {
+        eventsByDate.set(event.dateKey, []);
+      }
+      eventsByDate.get(event.dateKey)!.push(event);
+    });
+
+    // Process each date's events for overlap detection
+    const finalEvents: EventWithPosition[] = [];
+    const processedEventIds = new Set<string>();
+
+    for (const [dateKey, dateEvents] of eventsByDate) {
+      // Sort events by start time
+      const sortedDateEvents = [...dateEvents].sort((a, b) => a.top - b.top);
+
+      if (sortedDateEvents.length === 0) continue;
+
+      const result: EventWithPosition[] = [];
+
+      for (let i = 0; i < sortedDateEvents.length; i++) {
+        const currentEvent = sortedDateEvents[i];
+
+        // Skip if we've already processed this event (shouldn't happen, but safety check)
+        if (processedEventIds.has(currentEvent.id)) {
+          console.warn(
+            `Duplicate event detected: ${currentEvent.id} on date ${dateKey}`
+          );
+          continue;
+        }
+
+        // Find all events that overlap with the current event on the same date
+        const overlappingEvents = sortedDateEvents.filter((otherEvent, j) => {
+          if (i === j) return false;
+          // Check if events overlap
+          return (
+            currentEvent.top < otherEvent.endPosition &&
+            currentEvent.endPosition > otherEvent.top
+          );
+        });
+
+        // Find the first available column
+        const usedColumns = new Set<number>();
+
+        // Check which columns are already used by overlapping events that we've already processed
+        overlappingEvents.forEach((overlappingEvent) => {
+          const processedEvent = result.find(
+            (e) => e.id === overlappingEvent.id
+          );
+          if (processedEvent) {
+            usedColumns.add(processedEvent.columnIndex);
+          }
+        });
+
+        // Find the first available column starting from 0
+        let columnIndex = 0;
+        while (usedColumns.has(columnIndex)) {
+          columnIndex++;
+        }
+
+        result.push({
+          ...currentEvent,
+          columnIndex,
+          totalColumns: 1, // Will be updated below
+        });
+
+        // Mark this event as processed
+        processedEventIds.add(currentEvent.id);
+      }
+
+      // Update totalColumns for all events in each overlap group to be consistent
+      const finalDateEvents = result.map((event) => {
+        const overlappingEvents = result.filter((otherEvent) => {
+          if (event.id === otherEvent.id) return false;
+          return (
+            event.top < otherEvent.endPosition &&
+            event.endPosition > otherEvent.top
+          );
+        });
+
+        // Find the maximum column index in this overlap group
+        const maxColumnIndex = Math.max(
+          event.columnIndex,
+          ...overlappingEvents.map((e) => e.columnIndex)
+        );
+
+        return {
+          ...event,
+          totalColumns: maxColumnIndex + 1,
+        };
+      });
+
+      finalEvents.push(...finalDateEvents);
+    }
+
+    return finalEvents;
   }, [events]);
 
   const isTodayVisible = useMemo(
@@ -67,19 +184,83 @@ export function WeekView({
 
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-[calc(100vh-160px)]">
-          <div className="grid grid-cols-8 relative">
-            {isTodayVisible && isToday(currentDate) && <CurrentTimeLine />}
-            {hours.map((hour, hourIndex) => (
-              <MemoizedHourRow
-                key={hour}
-                hour={hour}
-                hourIndex={hourIndex}
-                weekDays={weekDays}
-                totalHours={hours.length}
-                processedEvents={processedEvents}
-                onEventClick={onEventClick}
-              />
-            ))}
+          <div className="relative">
+            {/* Hour grid */}
+            <div className="grid grid-cols-8">
+              {hours.map((hour, hourIndex) => (
+                <MemoizedHourRow
+                  key={hour}
+                  hour={hour}
+                  hourIndex={hourIndex}
+                  weekDays={weekDays}
+                  totalHours={hours.length}
+                  onEventClick={onEventClick}
+                />
+              ))}
+            </div>
+
+            {/* Events overlay */}
+            <div className="absolute inset-0 grid grid-cols-8 pointer-events-none">
+              {/* Time column - no events */}
+              <div className="pointer-events-none" />
+
+              {/* Day columns with events */}
+              {weekDays.map((day, di) => {
+                const dayEvents = processedEvents.filter((event) => {
+                  const eventDate = new Date(event.start);
+                  return (
+                    eventDate.getFullYear() === day.getFullYear() &&
+                    eventDate.getMonth() === day.getMonth() &&
+                    eventDate.getDate() === day.getDate()
+                  );
+                });
+
+                return (
+                  <div key={di} className="relative pointer-events-none h-full">
+                    {dayEvents.map((event) => {
+                      // Calculate positioning for overlapping events
+                      const availableWidth = 100; // Use percentage for responsive width
+                      const eventWidth = availableWidth / event.totalColumns;
+                      const leftOffset = event.columnIndex * eventWidth;
+
+                      return (
+                        <div
+                          key={event.id}
+                          className="absolute pointer-events-auto"
+                          style={{
+                            top: `${event.top}px`,
+                            height: `${event.height}px`,
+                            left: `${leftOffset}%`,
+                            width: `${eventWidth - 1}%`, // Subtract 1% for spacing between events
+                            zIndex: 10,
+                          }}
+                          onClick={() =>
+                            onEventClick
+                              ? onEventClick(event)
+                              : setCurrentEvent(event)
+                          }
+                        >
+                          <div
+                            className={cn(
+                              "border-0 border-l-4 border-indigo-500 text-xs rounded-xs cursor-pointer h-full",
+                              "text-foreground py-0.5 px-1",
+                              "bg-background hover:bg-foreground/10 transition-colors shadow-sm"
+                            )}
+                          >
+                            <div className="font-medium truncate text-foreground">
+                              {event.title}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Current time line */}
+            {isTodayVisible && <CurrentTimeLine />}
           </div>
         </ScrollArea>
       </div>
@@ -94,7 +275,6 @@ interface HourRowProps {
   hourIndex: number;
   weekDays: Date[];
   totalHours: number;
-  processedEvents: ProcessedEvent[];
   onEventClick?: (event: CalendarEvent) => void;
 }
 
@@ -104,10 +284,8 @@ function HourRow({
   hourIndex,
   weekDays,
   totalHours,
-  processedEvents,
   onEventClick,
 }: HourRowProps) {
-  const { setCurrentEvent } = useSessionCalendar();
   const hourLabel = useMemo(
     () => format(new Date().setHours(hour, 0), "h a"),
     [hour]
@@ -125,17 +303,6 @@ function HourRow({
       </div>
 
       {weekDays.map((day, di) => {
-        // Pre-filter events for this day and hour
-        const dayEvents = useMemo(
-          () =>
-            processedEvents.filter((event) => {
-              const eventDay = new Date(event.start).getDay();
-              const eventHour = new Date(event.start).getHours();
-              return day.getDay() === eventDay && eventHour === hour;
-            }),
-          [processedEvents, day, hour]
-        );
-
         const isTodayCell = isToday(day);
 
         return (
@@ -147,21 +314,7 @@ function HourRow({
               { "border-b border-foreground/10": hourIndex < totalHours - 1 },
               { "bg-foreground/10": isTodayCell }
             )}
-          >
-            {dayEvents.map((event) => {
-              return (
-                <WeekEvenItem
-                  key={event.id}
-                  event={event}
-                  onSelect={onEventClick || setCurrentEvent}
-                  position={{
-                    top: event.top,
-                    height: event.height,
-                  }}
-                />
-              );
-            })}
-          </div>
+          />
         );
       })}
     </React.Fragment>
@@ -176,56 +329,6 @@ const MemoizedHourRow = memo(HourRow, (prevProps, nextProps) => {
     prevProps.hourIndex === nextProps.hourIndex &&
     prevProps.totalHours === nextProps.totalHours &&
     prevProps.weekDays === nextProps.weekDays &&
-    prevProps.processedEvents === nextProps.processedEvents &&
     prevProps.onEventClick === nextProps.onEventClick
   );
 });
-
-interface WeekEvenItemProps {
-  event: CalendarEvent;
-  onSelect?: (event: CalendarEvent) => void;
-  position: {
-    top: number;
-    height: number;
-  };
-}
-
-function WeekEvenItem({ event, onSelect, position }: WeekEvenItemProps) {
-  // Pre-format event times
-  const eventTimeLabel = useMemo(
-    () =>
-      `${format(new Date(event.start), "h:mm a")} - ${format(
-        new Date(event.end),
-        "h:mm a"
-      )}`,
-    [event.start, event.end]
-  );
-  return (
-    <div
-      className="absolute"
-      style={{
-        top: `${position.top}px`,
-        height: `${position.height}px`,
-        zIndex: 10,
-      }}
-      onClick={() => onSelect && onSelect(event)}
-    >
-      <div
-        className={cn(
-          "border-l-3 border-indigo-500 min-w-[100px] text-xs rounded-sm cursor-pointer",
-          "bg-foreground text-background p-2",
-          "hover:bg-foreground/80 transition-colors"
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <span className="font-medium">{event.title}</span>
-          {event.data.members.length > 0 && (
-            <span className="ml-1 text-xs bg-white/20 px-1 py-0.5 rounded">
-              {event.data.members.length}
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}

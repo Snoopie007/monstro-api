@@ -197,8 +197,8 @@ function EventItem({ event, onSelect }: EventItemProps) {
   return (
     <div
       className={cn(
-        "text-xs bg-foreground text-background border-l-3 flex flex-row items-center gap-2",
-        "border-indigo-500 rounded-sm py-1.5 px-2 truncate cursor-pointer"
+        "text-xs text-foreground hover:bg-foreground/10 border-0 hover:border-l-2 flex flex-row items-center gap-2",
+        "border-indigo-500 rounded-xs py-0.5 px-0.5 truncate cursor-pointer transition-all duration-75"
       )}
       onClick={() => onSelect && onSelect(event)}
     >
@@ -207,13 +207,13 @@ function EventItem({ event, onSelect }: EventItemProps) {
           members.slice(0, 2).map((m, i) => (
             <Avatar key={m.memberId} className="size-4">
               <AvatarImage src={`${m.avatar ? m.avatar : ""}`} alt={m.name} />
-              <AvatarFallback className="text-[0.6rem]  bg-background/50 text-primary-foreground  font-semibold">
+              <AvatarFallback className="text-[0.6rem]  bg-foreground/20 text-primary-foreground  font-semibold">
                 {`${m.name.charAt(0)}`}
               </AvatarFallback>
             </Avatar>
           ))}
       </div>
-      <div className="truncate overflow-hidden text-ellipsis font-medium">
+      <div className="truncate overflow-hidden text-ellipsis text-xs font-medium">
         {event.title}
       </div>
     </div>

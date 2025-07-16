@@ -5,11 +5,11 @@ import { useSessionCalendar } from "./providers/SessionCalendarProvider";
 import { Calendar } from "@/components/ui/calendar";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { ReservationModal } from "./components/ReservationModal";
+import { CalendarFilters } from "./components/CalendarFilters";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 
 import { CalendarEvent, CalendarView } from "@/types";
 import { tryCatch } from "@/libs/utils";
-// import { DayList } from "./components";
 
 export default function CalendarPage(props: {
   params: Promise<{ id: string }>;
@@ -30,6 +30,7 @@ export default function CalendarPage(props: {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null
   );
+  const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
 
   // Calculate date range for the current view
   const startDate = startOfMonth(currentDate);
@@ -117,7 +118,11 @@ export default function CalendarPage(props: {
             className="p-0 w-[250px]"
           />
         </div>
-        {/* <DayList lid={id} events={events} /> */}
+        <CalendarFilters
+          locationId={id}
+          selectedPlanIds={selectedPlanIds}
+          onFilterChange={setSelectedPlanIds}
+        />
       </div>
 
       <ReservationModal
