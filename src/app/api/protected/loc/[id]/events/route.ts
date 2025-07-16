@@ -9,9 +9,15 @@ export async function GET(
 ) {
   const { searchParams } = new URL(req.url);
   const params = await props.params;
-  const date = searchParams.get("date");
-  const startDate = startOfMonth(new Date(date || new Date()));
-  const endDate = endOfMonth(startDate);
+  const startDateParam = searchParams.get("startDate");
+  const endDateParam = searchParams.get("endDate");
+
+  // If startDate and endDate are provided, use them directly
+  // Otherwise, fallback to month boundaries for backward compatibility
+  const startDate = startDateParam
+    ? new Date(startDateParam)
+    : startOfMonth(new Date(searchParams.get("date") || new Date()));
+  const endDate = endDateParam ? new Date(endDateParam) : endOfMonth(startDate);
 
   try {
     let events: CalendarEvent[] = [];
@@ -148,7 +154,9 @@ export async function GET(
             ...rest,
             startOn: currentDate,
             id: recurring.id,
-            endOn: new Date(currentDate.getTime() + (recurring.session?.duration || 0) * 60000),
+            endOn: new Date(
+              currentDate.getTime() + (recurring.session?.duration || 0) * 60000
+            ),
           };
           addEventToCalendar(events, vr, recurring.id);
         }
@@ -189,9 +197,8 @@ function addEventToCalendar(
   )
     return;
 
-  const [hours, minutes] = reservation.session.time.split(":");
-  const start = new Date(`${reservation.startOn}T${hours}:${minutes}:00`);
-  const end = new Date(start.getTime() + reservation.session.duration * 60000);
+  const start = new Date(reservation.startOn);
+  const end = new Date(reservation.endOn);
 
   const id = `${start.toISOString()}-${reservation.session.id}`;
 
