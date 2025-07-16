@@ -11,6 +11,7 @@ export async function GET(
   const params = await props.params;
   const startDateParam = searchParams.get("startDate");
   const endDateParam = searchParams.get("endDate");
+  const planIdsParam = searchParams.get("planIds");
 
   // If startDate and endDate are provided, use them directly
   // Otherwise, fallback to month boundaries for backward compatibility
@@ -18,6 +19,9 @@ export async function GET(
     ? new Date(startDateParam)
     : startOfMonth(new Date(searchParams.get("date") || new Date()));
   const endDate = endDateParam ? new Date(endDateParam) : endOfMonth(startDate);
+
+  // Parse plan IDs for filtering (optional)
+  const planIds = planIdsParam ? planIdsParam.split(",") : null;
 
   try {
     let events: CalendarEvent[] = [];
@@ -36,7 +40,11 @@ export async function GET(
     const locationSessions = await db.query.programSessions.findMany({
       where: (s, { inArray }) => inArray(s.programId, programIds),
       with: {
-        program: true,
+        program: {
+          with: {
+            planPrograms: true,
+          },
+        },
       },
     });
 
@@ -54,6 +62,7 @@ export async function GET(
             program: true,
           },
         },
+        memberPackage: true,
       },
     });
 
@@ -67,6 +76,7 @@ export async function GET(
         ),
       with: {
         member: true,
+        memberPackage: true,
         session: {
           with: {
             program: true,
@@ -117,6 +127,9 @@ export async function GET(
             duration: session.duration,
             data: {
               sessionId: session.id,
+              memberPlanId: session.program.planPrograms.map(
+                (plan) => plan.planId
+              ),
               programId: session.program.id,
               members: [],
               isRecurring: false,
@@ -127,7 +140,6 @@ export async function GET(
         currentDate = addDays(currentDate, 7);
       }
     });
-
     // Process recurring reservations
     recurrings.forEach((recurring) => {
       if (!recurring.session || !recurring.member) return;
@@ -171,9 +183,19 @@ export async function GET(
     reservations.forEach((reservation) => {
       addEventToCalendar(events, reservation);
     });
-
     // Merge duplicates and filter by date range
-    const finalEvents = mergeAndFilterEvents(events, startDate, endDate);
+    let finalEvents = mergeAndFilterEvents(events, startDate, endDate);
+    // Apply plan filtering if planIds are provided
+    if (planIds && planIds.length > 0) {
+      finalEvents = finalEvents.filter((event) => {
+        // If the event has a memberPlanId, check if it's in the filter
+        if (event.data?.memberPlanId) {
+          return event.data.memberPlanId.some((planId) =>
+            planIds.includes(planId)
+          );
+        }
+      });
+    }
 
     return NextResponse.json(finalEvents, { status: 200 });
   } catch (err) {
@@ -201,7 +223,6 @@ function addEventToCalendar(
   const end = new Date(reservation.endOn);
 
   const id = `${start.toISOString()}-${reservation.session.id}`;
-
   const member = {
     memberId: reservation.member.id,
     name: `${reservation.member.firstName} ${reservation.member.lastName}`,
@@ -223,10 +244,11 @@ function addEventToCalendar(
       event.data.reservationId = reservation.id || undefined;
       event.data.recurringId = recurringId;
       event.data.isRecurring = !!recurringId;
-      event.data.memberPlanId =
-        reservation.memberPackageId ||
-        reservation.memberSubscriptionId ||
-        undefined;
+      event.data.memberPlanId = [
+        reservation.memberPackage?.memberPlanId ||
+          reservation.memberPackage?.id ||
+          "",
+      ];
     }
   } else {
     // Create new event
@@ -238,10 +260,11 @@ function addEventToCalendar(
       duration: reservation.session.duration,
       data: {
         sessionId: reservation.session.id,
-        memberPlanId:
-          reservation.memberPackageId ||
-          reservation.memberSubscriptionId ||
-          undefined,
+        memberPlanId: [
+          reservation.memberPackage?.memberPlanId ||
+            reservation.memberPackageId ||
+            "",
+        ],
         programId: reservation.session.program.id,
         reservationId: reservation.id || undefined,
         recurringId,

@@ -41,6 +41,7 @@ export default function CalendarPage(props: {
     id,
     startDate: format(startDate, "yyyy-MM-dd"),
     endDate: format(endDate, "yyyy-MM-dd"),
+    planIds: selectedPlanIds.length > 0 ? selectedPlanIds : undefined,
   });
 
   // Handle reservation click
