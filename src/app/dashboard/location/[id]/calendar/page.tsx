@@ -1,5 +1,5 @@
 "use client";
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import { BigCalendar } from "./components/BigCalendar";
 import { useSessionCalendar } from "./providers/SessionCalendarProvider";
 import { Calendar } from "@/components/ui/calendar";
@@ -10,20 +10,13 @@ import { startOfMonth, endOfMonth, format } from "date-fns";
 
 import { CalendarEvent, CalendarView } from "@/types";
 import { tryCatch } from "@/libs/utils";
+import LoaderOverlay from "@/components/ui/loader-overlay";
 
 export default function CalendarPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(props.params);
-  console.log(id);
-  const {
-    currentDate,
-    setCurrentDate,
-    currentMonth,
-    setCurrentMonth,
-    setCurrentEvent,
-    currentEvent,
-  } = useSessionCalendar();
+  const { currentDate, setCurrentDate } = useSessionCalendar();
 
   const [view, setView] = useState<CalendarView>("month");
   const [modalOpen, setModalOpen] = useState(false);
@@ -97,6 +90,7 @@ export default function CalendarPage(props: {
 
   return (
     <div className="flex flex-row h-full bg-foreground/5">
+      <LoaderOverlay isLoading={isLoading} />
       <div className="flex-1 h-full">
         <BigCalendar
           events={events || []}
