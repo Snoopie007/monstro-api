@@ -1,7 +1,7 @@
-import {NextRequest, NextResponse} from "next/server";
-import {db} from "@/db/db";
-import {and, eq, isNull} from "drizzle-orm";
-import {authenticateMember} from "@/libs/utils";
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/db/db";
+import { and, eq, isNull } from "drizzle-orm";
+import { authenticateMember } from "@/libs/utils";
 import {
   reservations,
   recurringReservations,
@@ -10,17 +10,17 @@ import {
 
 export async function DELETE(
   req: NextRequest,
-  props: {params: Promise<{lid: string; rid: string; mid: string}>}
+  props: { params: Promise<{ id: string; mid: string; rid: string }> }
 ) {
   const params = await props.params;
 
   try {
     const reservation = await db.query.reservations.findFirst({
-      where: (r, {eq, and}) =>
+      where: (r, { eq, and }) =>
         and(
           eq(r.id, params.rid),
           eq(r.memberId, params.mid),
-          eq(r.locationId, params.lid)
+          eq(r.locationId, params.id)
         ),
       with: {
         session: {
@@ -34,8 +34,8 @@ export async function DELETE(
 
     if (!reservation) {
       return NextResponse.json(
-        {error: "Reservation not found or not authorized"},
-        {status: 404}
+        { error: "Reservation not found or not authorized" },
+        { status: 404 }
       );
     }
 
@@ -44,8 +44,8 @@ export async function DELETE(
 
     if (reservationDate < currentDate) {
       return NextResponse.json(
-        {error: "Cannot cancel past reservations"},
-        {status: 400}
+        { error: "Cannot cancel past reservations" },
+        { status: 400 }
       );
     }
 
@@ -61,10 +61,13 @@ export async function DELETE(
       {
         message: "Reservation cancelled successfully",
       },
-      {status: 200}
+      { status: 200 }
     );
   } catch (err) {
     console.error(err);
-    return NextResponse.json({error: "Internal server error"}, {status: 500});
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -66,8 +66,12 @@ interface ReservationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lid?: string;
-  onRemoveReservation?: (event: CalendarEvent, memberId: string) => void;
+  onRemoveReservation?: (
+    event: CalendarEvent,
+    memberId: string
+  ) => Promise<void>;
   onRefreshEvents?: () => void;
+  onMemberUpdate?: () => void; // New prop for member-specific updates
 }
 
 export function ReservationModal({
@@ -77,6 +81,7 @@ export function ReservationModal({
   lid,
   onRemoveReservation,
   onRefreshEvents,
+  onMemberUpdate,
 }: ReservationModalProps) {
   const [isManaging, setIsManaging] = useState(false);
 
@@ -89,6 +94,9 @@ export function ReservationModal({
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [addingMembers, setAddingMembers] = useState(false);
+
+  // New state for tracking member list updates
+  const [memberListVersion, setMemberListVersion] = useState(0);
 
   const canManage = lid && (onRemoveReservation || onRefreshEvents);
   const rid = event?.data.reservationId || event?.data.recurringId || "";
@@ -108,6 +116,41 @@ export function ReservationModal({
   const existingMemberIds = useMemo(
     () => event?.data.members?.map((m) => String(m.memberId)) || [],
     [event?.data.members]
+  );
+
+  // Centralized refresh function
+  const refreshMemberList = useCallback(() => {
+    // Increment version to trigger re-renders if needed
+    setMemberListVersion((prev) => prev + 1);
+
+    // Call all available refresh callbacks
+    if (onMemberUpdate) {
+      onMemberUpdate();
+    }
+    if (onRefreshEvents) {
+      onRefreshEvents();
+    }
+  }, [onMemberUpdate, onRefreshEvents]);
+
+  // Enhanced remove member handler
+  const handleRemoveMember = useCallback(
+    async (memberId: string) => {
+      if (!onRemoveReservation || !event) return;
+
+      try {
+        // Call the removal function
+        await onRemoveReservation(event, memberId);
+
+        // Refresh the member list on success
+        refreshMemberList();
+
+        toast.success("Member removed successfully");
+      } catch (error) {
+        toast.error("Failed to remove member");
+        console.error("Remove member error:", error);
+      }
+    },
+    [onRemoveReservation, event, refreshMemberList]
   );
 
   // Debounced search function
@@ -265,10 +308,8 @@ export function ReservationModal({
       setSearchResults([]);
       setSelectedMembers([]);
 
-      // Refresh events
-      if (onRefreshEvents) {
-        onRefreshEvents();
-      }
+      // Use centralized refresh function
+      refreshMemberList();
     } catch (err) {
       console.error("Add members error:", err);
       toast.error("Failed to add members to session");
@@ -276,6 +317,11 @@ export function ReservationModal({
       setAddingMembers(false);
     }
   };
+
+  // Callback for CheckinButton updates
+  const handleCheckinUpdate = useCallback(() => {
+    refreshMemberList();
+  }, [refreshMemberList]);
 
   // Reset add member dialog when closed
   const handleCloseAddMember = () => {
@@ -359,7 +405,7 @@ export function ReservationModal({
                   <div className="space-y-2">
                     {event.data.members.map((member) => (
                       <div
-                        key={member.memberId}
+                        key={`${member.memberId}-${memberListVersion}`}
                         className={`flex items-center gap-3 p-3 rounded-lg ${
                           isManaging ? "bg-muted/50" : "bg-muted/50"
                         }`}
@@ -386,17 +432,14 @@ export function ReservationModal({
                               event={event}
                               lid={lid}
                               rid={rid}
+                              onUpdate={handleCheckinUpdate}
                             />
                             <Button
                               variant="destructive"
                               size="sm"
                               className="text-xs h-6 px-2"
                               onClick={() =>
-                                onRemoveReservation &&
-                                onRemoveReservation(
-                                  event,
-                                  String(member.memberId)
-                                )
+                                handleRemoveMember(String(member.memberId))
                               }
                             >
                               Remove
@@ -471,12 +514,12 @@ export function ReservationModal({
                   >
                     Done
                   </Button>
-                  {onRefreshEvents && (
+                  {(onRefreshEvents || onMemberUpdate) && (
                     <Button
                       variant="default"
                       size="sm"
                       onClick={() => {
-                        onRefreshEvents();
+                        refreshMemberList();
                         setIsManaging(false);
                       }}
                     >
