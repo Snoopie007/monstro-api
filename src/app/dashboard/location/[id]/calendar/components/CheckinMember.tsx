@@ -4,6 +4,13 @@
 import { useState } from "react";
 import { CalendarEvent } from "@/types";
 import { tryCatch } from "@/libs/utils";
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui";
+import { Check, Loader2 } from "lucide-react";
 
 interface CheckinButtonProps {
   memberId: string;
@@ -76,16 +83,29 @@ export function CheckinButton({
   if (!isWithinTimeWindow()) return null;
 
   return (
-    <button
-      className={`px-2 py-1 rounded text-xs ${
-        isCheckedIn
-          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-          : "bg-green-500 hover:bg-green-600 text-white"
-      }`}
-      onClick={handleCheckIn}
-      disabled={isLoading || isCheckedIn}
-    >
-      {isLoading ? "Processing..." : "Check In"}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="xs"
+          className={`p-1 rounded text-xs border-foreground/10 ${
+            isCheckedIn
+              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+              : "bg-primary hover:bg-green-800 text-white"
+          }`}
+          onClick={handleCheckIn}
+          disabled={isLoading || isCheckedIn}
+        >
+          {isLoading ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Check className="h-3 w-3" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Check In</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }

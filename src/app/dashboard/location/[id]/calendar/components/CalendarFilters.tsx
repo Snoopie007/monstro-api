@@ -97,7 +97,7 @@ export function CalendarFilters({
             onCheckedChange={handleSelectAll}
             className={`${
               someSelected ? "data-[state=checked]:bg-orange-500" : ""
-            } [&>span]:flex [&>span]:items-center [&>span]:justify-center [&>span>svg]:static [&>span>svg]:transform-none`}
+            }`}
           />
         </div>
         <label
@@ -128,8 +128,7 @@ export function CalendarFilters({
                 onCheckedChange={(checked) =>
                   handlePlanToggle(plan.id, checked as boolean)
                 }
-                variant="default"
-                className="[&>span]:flex [&>span]:items-center [&>span]:justify-center [&>span>svg]:static [&>span>svg]:transform-none"
+                className="data-[state=checked]:bg-foreground/50"
               />
             </div>
             <label

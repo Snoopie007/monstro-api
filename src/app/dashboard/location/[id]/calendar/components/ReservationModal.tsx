@@ -29,6 +29,12 @@ import { ScrollArea } from "@/components/ui/ScrollArea";
 import { CheckinButton } from "./CheckinMember";
 import { cn, tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/ToolTip";
 
 // Simple debounce implementation
 function debounce<T extends (...args: any[]) => any>(
@@ -83,8 +89,6 @@ export function ReservationModal({
   onRefreshEvents,
   onMemberUpdate,
 }: ReservationModalProps) {
-  const [isManaging, setIsManaging] = useState(false);
-
   // Add member dialog state
   const [showAddMember, setShowAddMember] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,6 +101,15 @@ export function ReservationModal({
 
   // New state for tracking member list updates
   const [memberListVersion, setMemberListVersion] = useState(0);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Add local state for members
+  const [localMembers, setLocalMembers] = useState(event?.data.members || []);
+
+  // Sync local members when prop changes
+  useEffect(() => {
+    setLocalMembers(event?.data.members || []);
+  }, [event?.data.members]);
 
   const canManage = lid && (onRemoveReservation || onRefreshEvents);
   const rid = event?.data.reservationId || event?.data.recurringId || "";
@@ -108,7 +121,6 @@ export function ReservationModal({
     hasOnRemoveReservation: !!onRemoveReservation,
     hasOnRefreshEvents: !!onRefreshEvents,
     canManage,
-    isManaging,
     membersLength: event?.data.members.length || 0,
   });
 
@@ -137,6 +149,13 @@ export function ReservationModal({
     async (memberId: string) => {
       if (!onRemoveReservation || !event) return;
 
+      // Optimistic update
+      const previousMembers = [...localMembers];
+      setLocalMembers(
+        localMembers.filter((m) => String(m.memberId) !== memberId)
+      );
+      setIsUpdating(true);
+
       try {
         // Call the removal function
         await onRemoveReservation(event, memberId);
@@ -146,11 +165,16 @@ export function ReservationModal({
 
         toast.success("Member removed successfully");
       } catch (error) {
+        // Revert on error
+        setLocalMembers(previousMembers);
+
         toast.error("Failed to remove member");
         console.error("Remove member error:", error);
+      } finally {
+        setIsUpdating(false);
       }
     },
-    [onRemoveReservation, event, refreshMemberList]
+    [onRemoveReservation, event, refreshMemberList, localMembers]
   );
 
   // Debounced search function
@@ -277,6 +301,30 @@ export function ReservationModal({
     }
 
     setAddingMembers(true);
+    setIsUpdating(true);
+
+    // Optimistic update
+    const newMembers = selectedMembers
+      .map((id) => {
+        const m = searchResults.find((s) => s.id === id);
+        if (!m) return null;
+        return {
+          memberId: m.id,
+          name: `${m.firstName} ${m.lastName}`,
+          avatar: m.avatar,
+        };
+      })
+      .filter((m): m is NonNullable<typeof m> => m !== null);
+
+    const previousMembers = [...localMembers];
+    setLocalMembers([...localMembers, ...newMembers]);
+
+    // Close the add dialog immediately for better UX
+    setShowAddMember(false);
+    setSearchQuery("");
+    setSearchResults([]);
+    setSelectedMembers([]);
+
     try {
       const { result, error } = await tryCatch(
         fetch(`/api/protected/loc/${lid}/reservations`, {
@@ -294,27 +342,24 @@ export function ReservationModal({
 
       if (error || !result || !result.ok) {
         const errorData = await result?.json().catch(() => ({}));
-        toast.error(errorData.error || "Failed to add members to session");
-        return;
+        throw new Error(errorData.error || "Failed to add members to session");
       }
 
       toast.success(
         `Successfully added ${selectedMembers.length} member(s) to session`
       );
 
-      // Reset state
-      setShowAddMember(false);
-      setSearchQuery("");
-      setSearchResults([]);
-      setSelectedMembers([]);
-
-      // Use centralized refresh function
+      // Refresh parent
       refreshMemberList();
     } catch (err) {
       console.error("Add members error:", err);
       toast.error("Failed to add members to session");
+
+      // Revert optimistic update
+      setLocalMembers(previousMembers);
     } finally {
       setAddingMembers(false);
+      setIsUpdating(false);
     }
   };
 
@@ -373,8 +418,8 @@ export function ReservationModal({
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="h-4 w-4" />
                 <span>
-                  {event.data.members.length} member
-                  {event.data.members.length !== 1 ? "s" : ""}
+                  {localMembers.length} member
+                  {localMembers.length !== 1 ? "s" : ""}
                 </span>
               </div>
 
@@ -386,29 +431,48 @@ export function ReservationModal({
             </div>
 
             {/* Members List */}
-            {event.data.members.length > 0 ? (
+            {isUpdating ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium text-sm">Members</h4>
-                  {canManage && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsManaging(!isManaging)}
-                      className="text-xs"
-                    >
-                      {isManaging ? "View Only" : "Manage"}
-                    </Button>
-                  )}
                 </div>
                 <ScrollArea className="max-h-60">
                   <div className="space-y-2">
-                    {event.data.members.map((member) => (
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div
+                        key={`skeleton-${i}`}
+                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
+                      >
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-[150px]" />
+                          <Skeleton className="h-3 w-[100px]" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setShowAddMember(true)}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add Member
+                </Button>
+              </div>
+            ) : localMembers.length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-sm">Members</h4>
+                </div>
+                <ScrollArea className="max-h-60">
+                  <div className="space-y-2">
+                    {localMembers.map((member) => (
                       <div
                         key={`${member.memberId}-${memberListVersion}`}
-                        className={`flex items-center gap-3 p-3 rounded-lg ${
-                          isManaging ? "bg-muted/50" : "bg-muted/50"
-                        }`}
+                        className={`flex items-center gap-3 p-3 rounded-lg bg-muted/50`}
                       >
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={member.avatar || undefined} />
@@ -425,8 +489,8 @@ export function ReservationModal({
                             {member.memberId}
                           </p>
                         </div>
-                        {isManaging && lid && (
-                          <div className="flex items-center gap-2">
+                        {lid && (
+                          <div className="flex items-center gap-1">
                             <CheckinButton
                               memberId={String(member.memberId)}
                               event={event}
@@ -434,16 +498,25 @@ export function ReservationModal({
                               rid={rid}
                               onUpdate={handleCheckinUpdate}
                             />
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="text-xs h-6 px-2"
-                              onClick={() =>
-                                handleRemoveMember(String(member.memberId))
-                              }
-                            >
-                              Remove
-                            </Button>
+                            {new Date(event!.start) > new Date() && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="xs"
+                                    className="text-xs p-1 hover:bg-destructive/40"
+                                    onClick={() =>
+                                      handleRemoveMember(
+                                        String(member.memberId)
+                                      )
+                                    }
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Remove member</TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                         )}
                       </div>
@@ -451,31 +524,19 @@ export function ReservationModal({
                   </div>
                 </ScrollArea>
 
-                {isManaging && (
-                  <Button
-                    variant="ghost"
-                    className="w-full"
-                    onClick={() => setShowAddMember(true)}
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Member
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setShowAddMember(true)}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add Member
+                </Button>
               </div>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium text-sm">Members</h4>
-                  {canManage && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsManaging(!isManaging)}
-                      className="text-xs"
-                    >
-                      {isManaging ? "View Only" : "Manage"}
-                    </Button>
-                  )}
                 </div>
                 <div className="p-4 text-center bg-muted/50 rounded-lg">
                   <Users className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
@@ -484,9 +545,8 @@ export function ReservationModal({
                   </p>
                   {canManage && (
                     <Button
-                      variant="outline"
                       size="sm"
-                      className="mt-2"
+                      className="mt-2 bg-foreground/10 hover:bg-foreground/20"
                       onClick={() => setShowAddMember(true)}
                     >
                       <UserPlus className="h-4 w-4 mr-2" />
@@ -499,37 +559,23 @@ export function ReservationModal({
           </div>
 
           {/* Footer with actions when managing */}
-          {isManaging && (
-            <DialogFooter className="px-6 py-4 bg-muted/20">
-              <div className="flex items-center justify-between w-full">
-                <p className="text-xs text-muted-foreground">
-                  Managing {event.data.members.length} member
-                  {event.data.members.length !== 1 ? "s" : ""}
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsManaging(false)}
-                  >
-                    Done
-                  </Button>
-                  {(onRefreshEvents || onMemberUpdate) && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => {
-                        refreshMemberList();
-                        setIsManaging(false);
-                      }}
-                    >
-                      Refresh
-                    </Button>
-                  )}
-                </div>
+          <DialogFooter className="px-6 py-4 bg-muted/20">
+            <div className="flex items-center justify-between w-full">
+              <p className="text-xs text-muted-foreground">
+                Managing {localMembers.length} member
+                {localMembers.length !== 1 ? "s" : ""}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="bg-foreground/10 hover:bg-foreground/20"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Close
+                </Button>
               </div>
-            </DialogFooter>
-          )}
+            </div>
+          </DialogFooter>
         </DialogSlide>
 
         {/* Add Member Dialog Slide */}
@@ -677,8 +723,9 @@ export function ReservationModal({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="default"
               size="sm"
+              className="bg-primary/70 hover:bg-primary/80"
               onClick={handleCloseAddMember}
               disabled={addingMembers}
             >
@@ -690,9 +737,12 @@ export function ReservationModal({
               size="sm"
               onClick={handleAddMembers}
               disabled={selectedMembers.length === 0 || addingMembers}
-              className={cn("children:hidden", {
-                "children:inline-flex": addingMembers,
-              })}
+              className={cn(
+                "border-foreground/10 bg-foreground/10 hover:bg-foreground/20 children:hidden",
+                {
+                  "children:inline-flex": addingMembers,
+                }
+              )}
             >
               <Loader2 className="mr-2 h-4 w-4 hidden animate-spin" />
               Add{" "}
