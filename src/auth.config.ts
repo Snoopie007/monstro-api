@@ -49,6 +49,7 @@ export default {
 				type: { label: "Type", type: "text" },
 			},
 			authorize: async (credentials) => {
+
 				if (!credentials?.email || !credentials?.password) {
 					return null;
 				}

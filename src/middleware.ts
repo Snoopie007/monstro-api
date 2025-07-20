@@ -28,7 +28,8 @@ export default auth(async (req) => {
 		const locations = req.auth?.user?.locations || []
 
 		/* Check for mobile app requests */
-		const isMobileApp = req.headers.get("X-Mobile-App") === "true" && pathname.includes("mobile")
+		const isMobileApp = req.headers.get("X-Mobile-App") === "true" && pathname.startsWith("/api/protected/mobile")
+
 		/* Verify mobile app token */
 		let isMobileAuthenticated = false
 		if (isMobileApp) {
@@ -44,16 +45,16 @@ export default auth(async (req) => {
 		}
 
 		if (pathname.startsWith("/api/protected")) {
-			if (!isLoggedin && !(isMobileApp && isMobileAuthenticated)) {
+			if (!isLoggedin && !isMobileAuthenticated) {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 			}
-
 		}
 
 		/* Handle authentication redirects */
 		if (!isLoggedin) {
 
 			if (pathname.startsWith("/api/auth") || publicPaths.some((path) => pathname.startsWith(path))) {
+
 				return NextResponse.next()
 			}
 
