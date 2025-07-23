@@ -32,7 +32,7 @@ export function UserMenu() {
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Avatar className="ml-2 h-7 w-7">
-                    <AvatarImage src={`${user.image ? user.image : ""}`} alt={user.name} />
+                    <AvatarImage src={`${user.image ? user.image : null}`} alt={user.name} />
                     <AvatarFallback className="text-xs  bg-foreground/50 text-primary-foreground  font-bold">
                         {`${user.name.charAt(0)}${user.name.charAt(user.name.indexOf(' ') + 1)}`}
                     </AvatarFallback>

@@ -23,7 +23,7 @@ export function MemberProfile({ params }: MemberProfileProps) {
   return (
     <Card className="border-none">
       <CardContent className="px-0">
-        <div className="flex justify-start flex-row items-center px-4 py-2 gap-2">
+        <div className="flex justify-between flex-row items-center px-4 py-2 gap-2">
           <Button
             variant="ghost"
             size="icon"

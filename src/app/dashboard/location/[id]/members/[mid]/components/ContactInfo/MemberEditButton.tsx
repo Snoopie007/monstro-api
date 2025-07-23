@@ -21,12 +21,12 @@ export function MemberEditButton({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant="secondary"
-            size="xs"
+            variant="ghost"
+            size="icon"
+            className="bg-foreground/5 size-6 hover:bg-foreground/10"
             onClick={() => setIsEditOpen(true)}
           >
-            <Edit size={12} className="mr-1" />
-            <span className="text-xs font-medium">Edit</span>
+            <Edit className="size-3" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>
