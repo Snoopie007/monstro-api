@@ -6,7 +6,11 @@ import { X } from "lucide-react";
 
 import { cn } from "@/libs/utils";
 
-const Dialog = DialogPrimitive.Root;
+function Dialog({
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+}
 
 const DialogTrigger = DialogPrimitive.Trigger;
 
