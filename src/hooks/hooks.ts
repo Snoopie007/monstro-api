@@ -19,10 +19,18 @@ function useMembers(
   id: string,
   query: string = "",
   page: number = 1,
-  size: number = 15
+  size: number = 15,
+  tags: string[] = [],
+  tagOperator: "AND" | "OR" = "OR"
 ) {
+  const tagsParam = tags.length > 0 ? `&tags=${tags.join(",")}` : "";
+  const tagOperatorParam = tags.length > 0 ? `&tagOperator=${tagOperator}` : "";
+
   const { data, error, isLoading } = useSWR(
-    { url: `members?query=${query}&page=${page}&size=${size}`, id: id },
+    {
+      url: `members?query=${query}&page=${page}&size=${size}${tagsParam}${tagOperatorParam}`,
+      id: id,
+    },
     fetcher
   );
 

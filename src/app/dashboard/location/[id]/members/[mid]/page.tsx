@@ -104,7 +104,6 @@ export default async function MemberProfilePage(props: {
   const params = await props.params;
 
   const res = await fetchStripeKeys(params.id, params.mid);
-  console.log("res", res);
 
   let paymentMethods: Stripe.PaymentMethod[] = [];
 

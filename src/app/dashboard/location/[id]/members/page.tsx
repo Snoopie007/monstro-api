@@ -1,7 +1,6 @@
 
 import { MemberList } from "./components/MemberList";
 
-import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { and } from "drizzle-orm";
 
@@ -23,7 +22,6 @@ async function fetchStripeKeys(id: string): Promise<string | null> {
 
 export default async function Members(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
-    const session = await auth()
     const stripeKey = await fetchStripeKeys(params.id)
 
     return (

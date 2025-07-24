@@ -238,6 +238,37 @@ export const familyMembers = pgTable("family_members", {
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
+export const memberTags = pgTable("member_tags", {
+  id: text("id")
+    .primaryKey()
+    .notNull()
+    .default(sql`uuid_base62('tag_')`),
+  name: text("name").notNull(),
+  locationId: text("location_id")
+    .notNull()
+    .references(() => locations.id, { onDelete: "cascade" }),
+  created: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updated: timestamp("updated_at", { withTimezone: true }),
+});
+
+export const memberHasTags = pgTable(
+  "member_has_tags",
+  {
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    tagId: text("tag_id")
+      .notNull()
+      .references(() => memberTags.id, { onDelete: "cascade" }),
+    created: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.memberId, t.tagId] })]
+);
+
 export const membersRelations = relations(members, ({ many, one }) => ({
   memberLocations: many(memberLocations),
   achievements: many(memberAchievements),
@@ -262,6 +293,7 @@ export const membersRelations = relations(members, ({ many, one }) => ({
     fields: [members.id],
     references: [memberReferrals.referredMemberId],
   }),
+  memberTags: many(memberHasTags),
 }));
 
 export const familyMemberRelations = relations(
@@ -385,3 +417,22 @@ export const memberReferralsRelations = relations(
     }),
   })
 );
+
+export const memberTagsRelations = relations(memberTags, ({ many, one }) => ({
+  location: one(locations, {
+    fields: [memberTags.locationId],
+    references: [locations.id],
+  }),
+  members: many(memberHasTags),
+}));
+
+export const memberHasTagsRelations = relations(memberHasTags, ({ one }) => ({
+  member: one(members, {
+    fields: [memberHasTags.memberId],
+    references: [members.id],
+  }),
+  tag: one(memberTags, {
+    fields: [memberHasTags.tagId],
+    references: [memberTags.id],
+  }),
+}));
