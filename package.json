@@ -73,7 +73,7 @@
     "install": "^0.13.0",
     "jose": "^6.0.8",
     "langchain": "^0.3.6",
-    "libphonenumber-js": "^1.12.9",
+    "libphonenumber-js": "^1.12.10",
     "lucide-react": "^0.462.0",
     "nanoid": "^5.0.9",
     "next": "^15.3.5",

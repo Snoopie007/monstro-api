@@ -56,16 +56,14 @@ CREATE TABLE IF NOT EXISTS rewards (
 
 CREATE TABLE IF NOT EXISTS reward_claims (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
-  reward_id text NOT NULL,
-  member_id text NOT NULL,
+  reward_id text NOT NULL REFERENCES rewards (id) ON DELETE CASCADE,
+  member_id text NOT NULL REFERENCES members (id) ON DELETE CASCADE,
+  location_id text NOT NULL REFERENCES locations (id) ON DELETE CASCADE,
   previous_points integer,
   date_claimed timestamp with time zone,
   status smallint NOT NULL DEFAULT 0,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
-  CONSTRAINT reward_claims_member_id_foreign FOREIGN KEY (member_id) REFERENCES members (id),
-  CONSTRAINT reward_claims_reward_id_foreign FOREIGN KEY (reward_id) REFERENCES rewards (id)
+  updated_at timestamp with time zone
 );
 
 CREATE TABLE IF NOT EXISTS member_points_history (
