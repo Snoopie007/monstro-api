@@ -72,9 +72,7 @@ export const memberAchievements = pgTable(
 );
 
 export const memberPointsHistory = pgTable("member_points_history", {
-  id: uuid("id")
-    .primaryKey()
-    .notNull()
+  id: uuid("id").primaryKey().notNull()
     .default(sql`uuid_base62()`),
   locationId: text("location_id")
     .notNull()
@@ -98,14 +96,9 @@ export const memberPointsHistory = pgTable("member_points_history", {
 
 export const memberReferrals = pgTable("member_referrals", {
   memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-  referredMemberId: text("referred_member_id").notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  locationId: text("location_id")
-    .notNull()
-    .references(() => locations.id, { onDelete: "cascade" }),
-  created: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  referredMemberId: text("referred_member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 },
   (t) => [
