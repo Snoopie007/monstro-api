@@ -1,9 +1,9 @@
-import { locationState, locations } from "@/db/schemas/locations";
 import {
-  MemberInvoice,
-  MemberReferral,
-  MemberSubscription,
-} from "./member";
+  locationState,
+  locations,
+  memberLocations,
+} from "@/db/schemas/locations";
+import { MemberInvoice, MemberReferral, MemberSubscription } from "./member";
 
 import { Program } from "./program";
 import { Transaction } from "./transaction";
@@ -21,4 +21,4 @@ export type Location = typeof locations.$inferSelect & {
   wallet?: Wallet;
 };
 
-export type LocationState = typeof locationState.$inferSelect
+export type LocationState = typeof locationState.$inferSelect;
