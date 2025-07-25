@@ -23,7 +23,10 @@ import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
 
 export const locations = pgTable("locations", {
-  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+  id: uuid("id")
+    .primaryKey()
+    .notNull()
+    .default(sql`uuid_base62()`),
   name: text("name").notNull().unique(),
   legalName: text("legal_name"),
   email: text("email"),
@@ -40,42 +43,67 @@ export const locations = pgTable("locations", {
   slug: text("slug").unique().notNull(),
   metadata: jsonb("metadata"),
   about: text("about"),
-  vendorId: text("vendor_id").notNull().references(() => vendors.id, { onDelete: "cascade" }),
-  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  vendorId: text("vendor_id")
+    .notNull()
+    .references(() => vendors.id, { onDelete: "cascade" }),
+  created: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const locationState = pgTable("location_state", {
-  locationId: text("location_id").primaryKey().references(() => locations.id, { onDelete: "cascade" }),
+  locationId: text("location_id")
+    .primaryKey()
+    .references(() => locations.id, { onDelete: "cascade" }),
   planId: integer("plan_id"),
   pkgId: integer("pkg_id"),
   paymentPlanId: integer("payment_plan_id"),
-  waiverId: text("waiver_id").references(() => locations.id, { onDelete: "set null" }),
+  waiverId: text("waiver_id").references(() => locations.id, {
+    onDelete: "set null",
+  }),
   agreeToTerms: boolean("agree_to_terms").notNull().default(false),
-  lastRenewalDate: timestamp("last_renewal_date", { withTimezone: true }).defaultNow(),
+  lastRenewalDate: timestamp("last_renewal_date", {
+    withTimezone: true,
+  }).defaultNow(),
   startDate: timestamp("start_date", { withTimezone: true }),
-  settings: jsonb("settings").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
+  settings: jsonb("settings")
+    .$type<Record<string, any>>()
+    .notNull()
+    .default(sql`'{}'::jsonb`),
   usagePercent: integer("usage_percent").notNull().default(0),
   taxRate: integer("tax_rate").notNull().default(0),
   status: LocationStatusEnum("status").notNull().default("incomplete"),
-  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  created: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const wallets = pgTable("wallets", {
-  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
-  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+  id: uuid("id")
+    .primaryKey()
+    .notNull()
+    .default(sql`uuid_base62()`),
+  locationId: text("location_id")
+    .notNull()
+    .references(() => locations.id, { onDelete: "cascade" }),
   balance: integer("balance").notNull().default(0),
   credits: integer("credits").notNull().default(0),
   rechargeAmount: integer("recharge_amount").notNull().default(2500),
   rechargeThreshold: integer("recharge_threshold").notNull().default(1000),
   lastCharged: timestamp("last_charged", { withTimezone: true }),
-  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  created: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const walletUsages = pgTable("wallet_usages", {
-  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+  id: uuid("id")
+    .primaryKey()
+    .notNull()
+    .default(sql`uuid_base62()`),
   walletId: text("wallet_id")
     .notNull()
     .references(() => wallets.id, { onDelete: "cascade" }),
@@ -84,22 +112,42 @@ export const walletUsages = pgTable("wallet_usages", {
   balance: integer("balance").notNull().default(0),
   isCredit: boolean("is_credit").notNull().default(false),
   activityDate: timestamp("activity_date").notNull(),
-  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  created: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
-export const memberLocations = pgTable("member_locations", {
-  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-  status: LocationStatusEnum("status").notNull().default("incomplete"),
-  points: integer("points").notNull().default(0),
-  inviteDate: timestamp("invite_date", { withTimezone: true }),
-  inviteAcceptedDate: timestamp("invite_accepted_date", { withTimezone: true }),
-  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updated: timestamp("updated_at", { withTimezone: false }),
-  waiverId: text("waiver_id").references(() => locations.id, {
-    onDelete: "set null",
-  }),
-},
+export const memberLocations = pgTable(
+  "member_locations",
+  {
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    locationId: text("location_id")
+      .notNull()
+      .references(() => locations.id, { onDelete: "cascade" }),
+    status: LocationStatusEnum("status").notNull().default("incomplete"),
+    points: integer("points").notNull().default(0),
+    inviteDate: timestamp("invite_date", { withTimezone: true }),
+    inviteAcceptedDate: timestamp("invite_accepted_date", {
+      withTimezone: true,
+    }),
+    created: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: false }),
+    waiverId: text("waiver_id").references(() => locations.id, {
+      onDelete: "set null",
+    }),
+
+    // MEMBER INFO UPDATE START: Added member personal information fields
+    firstName: text("first_name"),
+    lastName: text("last_name"),
+    email: text("email"),
+    phone: text("phone"),
+    avatar: text("avatar"),
+    // MEMBER INFO UPDATE END
+  },
   (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]
 );
 

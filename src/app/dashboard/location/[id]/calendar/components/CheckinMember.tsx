@@ -1,18 +1,32 @@
 // components/CheckinButton.tsx
 "use client";
 
-import { useState } from 'react';
-import { CalendarEvent } from '@/types';
-import { tryCatch } from '@/libs/utils';
+import { useState } from "react";
+import { CalendarEvent } from "@/types";
+import { tryCatch } from "@/libs/utils";
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui";
+import { Check, Loader2 } from "lucide-react";
 
 interface CheckinButtonProps {
   memberId: string;
   event: CalendarEvent;
   lid: string;
   rid: string;
+  onUpdate?: () => void; // New callback prop for successful updates
 }
 
-export function CheckinButton({ memberId, event, lid, rid }: CheckinButtonProps) {
+export function CheckinButton({
+  memberId,
+  event,
+  lid,
+  rid,
+  onUpdate,
+}: CheckinButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
 
@@ -25,24 +39,31 @@ export function CheckinButton({ memberId, event, lid, rid }: CheckinButtonProps)
         endTime: event.end,
         checkInTime: new Date().toISOString(),
         sessionId: event.data.sessionId,
-        reservationId: event.data.reservationId
+        reservationId: event.data.reservationId,
       };
 
-      const { result, error } = await tryCatch(fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      }));
+      const { result, error } = await tryCatch(
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        })
+      );
 
       if (error || !result?.ok) {
-        throw error || new Error('Failed to check in');
+        throw error || new Error("Failed to check in");
       }
 
       setIsCheckedIn(true);
+
+      // Call the update callback after successful check-in
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (error) {
-      console.error('Error checking in:', error);
+      console.error("Error checking in:", error);
     } finally {
       setIsLoading(false);
     }
@@ -53,23 +74,38 @@ export function CheckinButton({ memberId, event, lid, rid }: CheckinButtonProps)
     const start = new Date(event.start);
     const end = new Date(event.end);
     const buffer = 15 * 60 * 1000; // 15 minute buffer
-    return now >= new Date(start.getTime() - buffer) && 
-           now <= new Date(end.getTime() + buffer);
+    return (
+      now >= new Date(start.getTime() - buffer) &&
+      now <= new Date(end.getTime() + buffer)
+    );
   };
 
   if (!isWithinTimeWindow()) return null;
 
   return (
-    <button
-      className={`px-2 py-1 rounded text-xs ${
-        isCheckedIn 
-          ? "bg-gray-200 text-gray-500 cursor-not-allowed" 
-          : "bg-green-500 hover:bg-green-600 text-white"
-      }`}
-      onClick={handleCheckIn}
-      disabled={isLoading || isCheckedIn}
-    >
-      {isLoading ? "Processing..." : "Check In"}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="xs"
+          className={`p-1 rounded text-xs border-foreground/10 ${
+            isCheckedIn
+              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+              : "bg-primary hover:bg-green-800 text-white"
+          }`}
+          onClick={handleCheckIn}
+          disabled={isLoading || isCheckedIn}
+        >
+          {isLoading ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Check className="h-3 w-3" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Check In</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }

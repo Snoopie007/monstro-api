@@ -5,11 +5,11 @@ import {
   reservations,
 } from "@/db/schemas";
 import { ProgramSession } from "@/types/program";
-import { Member } from "./member";
+import { Member, MemberPackage } from "./member";
 
 export type Attendance = typeof attendances.$inferSelect & {
-  recurring?: RecurringReservation
-  reservation?: Reservation
+  recurring?: RecurringReservation;
+  reservation?: Reservation;
 };
 
 export type ExtendedAttendance = Attendance & {
@@ -21,6 +21,7 @@ export type Reservation = typeof reservations.$inferSelect & {
   recurringId?: string;
   session?: ProgramSession;
   member?: Member;
+  memberPackage?: MemberPackage | null;
   exceptions?: RecurringReservationException[];
 };
 
@@ -53,7 +54,7 @@ export type CalendarEventData = {
   sessionId: string;
   members: CalendarEventMember[];
   isRecurring: boolean;
-  memberPlanId?: string;
+  memberPlanId?: string[] | null;
 };
 
 export type CalendarEventMember = {

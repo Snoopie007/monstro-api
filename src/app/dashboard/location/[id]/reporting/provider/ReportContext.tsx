@@ -1,69 +1,140 @@
-'use client'
-import { createContext, useReducer, ReactElement, useCallback, useContext } from "react"
+"use client";
+import {
+  createContext,
+  useReducer,
+  ReactElement,
+  useCallback,
+  useContext,
+  useMemo,
+} from "react";
+import { ReportFilters } from "@/types/reports";
+import { DateRange } from "react-day-picker";
 
-type StateType = {
-    filters: Record<string, any>;
+interface ReportState {
+  filters: ReportFilters;
 }
 
 const enum REDUCER_ACTION_TYPE {
-    SET_FILTERS
+  SET_FILTERS,
+  UPDATE_DATE_RANGE,
+  RESET_FILTERS,
 }
 
-type ReducerAction = {
-    type: REDUCER_ACTION_TYPE,
-    payload?: Record<string, any>
-}
-
-const reducer = (state: StateType, action: ReducerAction): StateType => {
-    switch (action.type) {
-        case REDUCER_ACTION_TYPE.SET_FILTERS:
-            return { ...state, filters: action.payload as Record<string, any> }
-        default:
-            throw new Error()
+type ReducerAction =
+  | { type: REDUCER_ACTION_TYPE.SET_FILTERS; payload: ReportFilters }
+  | {
+      type: REDUCER_ACTION_TYPE.UPDATE_DATE_RANGE;
+      payload: DateRange | undefined;
     }
+  | { type: REDUCER_ACTION_TYPE.RESET_FILTERS };
+
+const reducer = (state: ReportState, action: ReducerAction): ReportState => {
+  switch (action.type) {
+    case REDUCER_ACTION_TYPE.SET_FILTERS:
+      return {
+        ...state,
+        filters: { ...state.filters, ...action.payload },
+      };
+    case REDUCER_ACTION_TYPE.UPDATE_DATE_RANGE:
+      return {
+        ...state,
+        filters: {
+          ...state.filters,
+          dateRange: action.payload,
+          startDate: action.payload?.from,
+          endDate: action.payload?.to,
+        },
+      };
+    case REDUCER_ACTION_TYPE.RESET_FILTERS:
+      return {
+        ...state,
+        filters: {},
+      };
+    default:
+      throw new Error("Unknown action type");
+  }
+};
+
+const useReportContext = (initState: ReportState) => {
+  const [state, dispatch] = useReducer(reducer, initState);
+
+  const setFilters = useCallback((filters: ReportFilters) => {
+    dispatch({
+      type: REDUCER_ACTION_TYPE.SET_FILTERS,
+      payload: filters,
+    });
+  }, []);
+
+  const updateDateRange = useCallback((dateRange: DateRange | undefined) => {
+    dispatch({
+      type: REDUCER_ACTION_TYPE.UPDATE_DATE_RANGE,
+      payload: dateRange,
+    });
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    dispatch({
+      type: REDUCER_ACTION_TYPE.RESET_FILTERS,
+    });
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({
+      state,
+      setFilters,
+      updateDateRange,
+      resetFilters,
+    }),
+    [state, setFilters, updateDateRange, resetFilters]
+  );
+
+  return contextValue;
+};
+
+type UseReportContextType = ReturnType<typeof useReportContext>;
+
+export const ReportContext = createContext<UseReportContextType | null>(null);
+
+interface ReportProviderProps {
+  children: ReactElement | ReactElement[];
 }
 
-const useReportContext = (initState: StateType) => {
-    const [state, dispatch] = useReducer(reducer, initState)
+export const ReportProvider = ({
+  children,
+}: ReportProviderProps): ReactElement => {
+  const contextValue = useReportContext({ filters: {} });
 
-    const setFilters = useCallback((filters: Record<string, any>) => {
-        dispatch({
-            type: REDUCER_ACTION_TYPE.SET_FILTERS,
-            payload: filters
-        })
-    }, [])
+  return (
+    <ReportContext.Provider value={contextValue}>
+      {children}
+    </ReportContext.Provider>
+  );
+};
 
-    return { state, setFilters }
-}
-
-type UseReportContextType = ReturnType<typeof useReportContext>
-
-export const ReportContext = createContext<UseReportContextType | null>(null)
-
-
-export const ReportProvider = ({ children }: { children: ReactElement }): ReactElement => {
-    return (
-        <ReportContext.Provider value={useReportContext({ filters: {} })} >
-            {children}
-        </ReportContext.Provider>
-    );
-}
-
-
-
-
-type UseReportFiltersHookType = {
-    filters: Record<string, any>,
-    setFilters: (filters: Record<string, any>) => void
+interface UseReportFiltersHookType {
+  filters: ReportFilters;
+  setFilters: (filters: ReportFilters) => void;
+  updateDateRange: (dateRange: DateRange | undefined) => void;
+  resetFilters: () => void;
 }
 
 export const useReportFilters = (): UseReportFiltersHookType => {
-    const context = useContext(ReportContext)
-    if (!context) {
-        throw new Error('useReportFilters must be used within a ReportProvider')
-    }
-    const { state: { filters }, setFilters } = context
-    return { filters, setFilters }
-}
+  const context = useContext(ReportContext);
+  if (!context) {
+    throw new Error("useReportFilters must be used within a ReportProvider");
+  }
 
+  const {
+    state: { filters },
+    setFilters,
+    updateDateRange,
+    resetFilters,
+  } = context;
 
+  return {
+    filters,
+    setFilters,
+    updateDateRange,
+    resetFilters,
+  };
+};

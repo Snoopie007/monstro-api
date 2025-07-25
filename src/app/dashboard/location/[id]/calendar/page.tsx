@@ -1,79 +1,133 @@
 "use client";
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import { BigCalendar } from "./components/BigCalendar";
 import { useSessionCalendar } from "./providers/SessionCalendarProvider";
-import { Calendar } from "@/components/ui/calendar"
+import { Calendar } from "@/components/ui/calendar";
+import { useCalendarEvents } from "@/hooks/useCalendarEvents";
+import { ReservationModal } from "./components/ReservationModal";
+import { CalendarFilters } from "./components/CalendarFilters";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 
-
-import { CalendarEvent } from "@/types";
+import { CalendarEvent, CalendarView } from "@/types";
 import { tryCatch } from "@/libs/utils";
-import { DayList } from "./components";
+import LoaderOverlay from "@/components/ui/loader-overlay";
 
-export default function CalendarPage(props: { params: Promise<{ id: string }> }) {
-	const { id } = use(props.params);
+export default function CalendarPage(props: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(props.params);
+  const { currentDate, setCurrentDate } = useSessionCalendar();
 
-	const { currentDate, setCurrentDate, currentMonth, setCurrentMonth, isLoading, setIsLoading } = useSessionCalendar()
-	const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [view, setView] = useState<CalendarView>("month");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
+    null
+  );
+  const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
 
-	useEffect(() => {
-		const newMonth = currentDate.getMonth();
-		if (currentMonth === null || currentMonth !== newMonth) {
-			setCurrentMonth(newMonth);
-			fetchEvents();
-		}
-	}, [currentDate]);
-	
+  // Calculate date range for the current view
+  const startDate = startOfMonth(currentDate);
+  const endDate = endOfMonth(currentDate);
 
+  // Use the new hook with startDate and endDate
+  const { events, isLoading, mutate } = useCalendarEvents({
+    id,
+    startDate: format(startDate, "yyyy-MM-dd"),
+    endDate: format(endDate, "yyyy-MM-dd"),
+    planIds: selectedPlanIds.length > 0 ? selectedPlanIds : undefined,
+  });
 
-async function fetchEvents() {
-		setIsLoading(true)
-		const { result, error } = await tryCatch(
-			fetch(`/api/protected/loc/${id}/events?date=${currentDate.toISOString().split("T")[0]}`)
-		)
+  // Handle reservation click
+  const handleReservationClick = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setModalOpen(true);
+  };
 
-		if (error || !result || !result.ok) {
-			setIsLoading(false)
-			return
-		}
-		const data = await result.json()
-		console.log("Fetched events:", data)
-		setEvents(data)
-		setIsLoading(false)
-	}
+  // Handle calendar date selection
+  const handleDateSelect = (date: Date) => {
+    setCurrentDate(date);
+    setView("day"); // Switch to day view when date is selected
+  };
 
+  // Handle removing a reservation
+  const handleRemoveReservation = async (
+    event: CalendarEvent,
+    memberId: string
+  ) => {
+    try {
+      const isRecurring = event.data.isRecurring;
+      let url: string;
 
-	return (
-		<div className="flex flex-row h-full bg-foreground/5">
+      if (isRecurring) {
+        if (!event.data.recurringId) {
+          throw new Error("Missing recurringId for recurring reservation");
+        }
+        url = `/api/protected/loc/${id}/members/${memberId}/reservations/${
+          event.data.recurringId
+        }/recurring?date=${format(event.start, "yyyy-MM-dd")}`;
+      } else {
+        if (!event.data.reservationId) {
+          throw new Error("Missing reservationId for regular reservation");
+        }
+        url = `/api/protected/loc/${id}/members/${memberId}/reservations/${event.data.reservationId}`;
+      }
 
-			<div className="flex-1 h-full">
-				<BigCalendar events={events} />
-			</div>
-			<div className="flex-initial w-[300px] flex flex-col pl-0 pr-2 pt-2 pb-1 space-y-2">
+      const { result, error } = await tryCatch(
+        fetch(url, { method: "DELETE" })
+      );
 
-				<div className="rounded-lg border border-foreground/10 bg-background flex py-4 flex-row justify-center  items-center ">
-					<Calendar
-						mode="single"
-						fromDate={new Date()}
-						selected={new Date()}
-						onSelect={(date) => {
-							if (date) {
-								setCurrentDate(date)
-							}
-						}}
-						className="p-0 w-[250px]"
-					/>
-				</div>
-				<DayList lid={id} events={events} />
+      if (error || !result || !result.ok) {
+        throw error || new Error("Failed to remove reservation");
+      }
 
-			</div>
-			{/* {isSidebarOpen && selectedSession && (
-				<Sidebar
-					session={{ ...selectedSession, locationId }}
-					reservations={reservations}
-					onClose={handleSidebarClose}
-				/>
-			)} */}
-		</div>
-	);
-};
+      // Refresh events after successful removal
+      mutate();
+    } catch (error) {
+      console.error("Error removing reservation:", error);
+      // You might want to add toast notification here
+    }
+  };
 
+  return (
+    <div className="flex flex-row h-full bg-foreground/5">
+      <LoaderOverlay isLoading={isLoading} />
+      <div className="flex-1 h-full">
+        <BigCalendar
+          events={events || []}
+          view={view}
+          onViewChange={setView}
+          onEventClick={handleReservationClick}
+        />
+      </div>
+      <div className="flex-initial w-[300px] flex flex-col pl-0 pr-2 pt-2 pb-1 space-y-2">
+        <div className="rounded-lg border border-foreground/10 bg-background flex py-4 flex-row justify-center  items-center ">
+          <Calendar
+            mode="single"
+            fromDate={new Date()}
+            selected={currentDate}
+            onSelect={(date) => {
+              if (date) {
+                handleDateSelect(date);
+              }
+            }}
+            className="p-0 w-[250px]"
+          />
+        </div>
+        <CalendarFilters
+          locationId={id}
+          selectedPlanIds={selectedPlanIds}
+          onFilterChange={setSelectedPlanIds}
+        />
+      </div>
+
+      <ReservationModal
+        event={selectedEvent}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        lid={id}
+        onRemoveReservation={handleRemoveReservation}
+        onRefreshEvents={() => mutate()}
+      />
+    </div>
+  );
+}

@@ -12,19 +12,14 @@ import { SubForm } from "./SubForm";
 import { VisuallyHidden } from "react-aria";
 import { useSubscriptions } from "@/hooks";
 import { MemberSubscription } from "@/types";
-import { useMemberStatus } from "../../../providers";
 
-export function CreateSubscription({ params }: { params: { id: string, mid: string } }) {
+export function CreateSubscription({ params, refetch }: { params: { id: string, mid: string }, refetch: () => void }) {
     const [open, setOpen] = useState<boolean>(false);
     const { subscriptions } = useSubscriptions(params.id)
-    const { updateMember } = useMemberStatus()
 
     async function handleFinish(data: MemberSubscription) {
         setOpen(false)
-        updateMember((prev) => ({
-            ...prev,
-            subscriptions: [...(prev.subscriptions || []), data]
-        }))
+        refetch()
     }
 
     return (
