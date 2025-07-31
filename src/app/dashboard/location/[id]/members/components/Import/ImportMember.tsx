@@ -104,7 +104,6 @@ export function ImportMembers({ lid }: { lid: string }) {
 
         if (error || !result || !result.ok) {
             const data = await result?.json();
-
             setIsLoading(false);
             toast.error(data?.message || "Something went wrong, please try again later");
             return;

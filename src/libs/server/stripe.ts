@@ -737,6 +737,202 @@ class MemberStripePayments extends BaseStripePayments {
       reason: "requested_by_customer",
     });
   }
+
+  // Enhanced invoice creation methods for one-off invoices
+  async createInvoiceItem(
+    customerId: string,
+    itemData: {
+      amount: number;
+      currency: string;
+      description: string;
+      metadata?: Record<string, any>;
+    }
+  ): Promise<Stripe.InvoiceItem> {
+    if (!this._accountId) {
+      throw new Error("Account ID not set");
+    }
+
+    return await this._stripe.invoiceItems.create({
+      customer: customerId,
+      amount: itemData.amount,
+      currency: itemData.currency,
+      description: itemData.description,
+      metadata: itemData.metadata || {},
+    });
+  }
+
+  async createDraftInvoice(
+    customerId: string,
+    options: {
+      collection_method: "charge_automatically" | "send_invoice";
+      description?: string;
+      due_date?: number;
+      metadata?: Record<string, any>;
+      auto_advance?: boolean;
+      pending_invoice_items_behavior?: "include" | "exclude";
+    }
+  ): Promise<Stripe.Invoice> {
+    if (!this._accountId) {
+      throw new Error("Account ID not set");
+    }
+
+    const accountDestination = {
+      type: "account" as const,
+      account: this._accountId,
+    };
+
+    return await this._stripe.invoices.create({
+      customer: customerId,
+      collection_method: options.collection_method,
+      description: options.description,
+      due_date: options.due_date,
+      metadata: options.metadata || {},
+      auto_advance: options.auto_advance || false,
+      on_behalf_of: this._accountId,
+      issuer: accountDestination,
+      transfer_data: {
+        destination: this._accountId,
+      },
+      pending_invoice_items_behavior:
+        options.pending_invoice_items_behavior || "include",
+    });
+  }
+
+  async previewInvoice(
+    customerId: string,
+    invoiceItems?: any[]
+  ): Promise<Stripe.Invoice> {
+    if (!this._accountId) {
+      throw new Error("Account ID not set");
+    }
+
+    const params: any = {};
+
+    // If invoice items are provided, create an isolated preview with only those items
+    if (invoiceItems && invoiceItems.length > 0) {
+      params.invoice_items = invoiceItems;
+      // Don't include customer to avoid pulling in subscriptions and pending items
+    } else {
+      // Fallback to customer-based preview if no specific items
+      params.customer = customerId;
+    }
+
+    return await this._stripe.invoices.createPreview(params);
+  }
+
+  async finalizeInvoice(invoiceId: string): Promise<Stripe.Invoice> {
+    return await this._stripe.invoices.finalizeInvoice(invoiceId);
+  }
+
+  async sendInvoice(invoiceId: string): Promise<Stripe.Invoice> {
+    return await this._stripe.invoices.sendInvoice(invoiceId);
+  }
+
+  async deleteInvoiceItem(
+    invoiceItemId: string
+  ): Promise<Stripe.DeletedInvoiceItem> {
+    return await this._stripe.invoiceItems.del(invoiceItemId);
+  }
+
+  // Create recurring invoice using subscription schedules with custom items
+  async createRecurringInvoiceSchedule(
+    customerId: string,
+    items: Array<{
+      price_data: {
+        currency: string;
+        product_data: {
+          name: string;
+          description?: string;
+        };
+        unit_amount: number;
+        recurring: {
+          interval: "month" | "year" | "week" | "day";
+          interval_count?: number;
+        };
+      };
+      quantity: number;
+    }>,
+    startDate: Date,
+    endDate?: Date
+  ): Promise<Stripe.SubscriptionSchedule> {
+    if (!this._customer) {
+      throw new Error("Customer not set");
+    }
+    if (!this._accountId) {
+      throw new Error("Account ID not set");
+    }
+
+    const accountDestination = {
+      type: "account" as const,
+      account: this._accountId,
+    };
+
+    // Create prices for each item first, then use them in the schedule
+    const scheduleItems: Array<{ price: string; quantity: number }> = [];
+    for (const item of items) {
+      // Create product for this item
+      const productData: any = {
+        name: item.price_data.product_data.name,
+      };
+
+      // Only include description if it's not empty
+      if (
+        item.price_data.product_data.description &&
+        item.price_data.product_data.description.trim() !== ""
+      ) {
+        productData.description = item.price_data.product_data.description;
+      }
+
+      const product = await this._stripe.products.create(productData);
+
+      // Create the price
+      const price = await this._stripe.prices.create({
+        currency: item.price_data.currency,
+        product: product.id,
+        unit_amount: item.price_data.unit_amount,
+        recurring: {
+          interval: item.price_data.recurring.interval,
+          interval_count: item.price_data.recurring.interval_count || 1,
+        },
+      });
+
+      scheduleItems.push({
+        price: price.id,
+        quantity: item.quantity,
+      });
+    }
+
+    const options: Stripe.SubscriptionScheduleCreateParams = {
+      customer: customerId,
+      start_date: Math.floor(startDate.getTime() / 1000),
+      end_behavior: "cancel",
+      phases: [
+        {
+          items: scheduleItems,
+          transfer_data: {
+            destination: this._accountId,
+          },
+          invoice_settings: { issuer: accountDestination },
+          billing_cycle_anchor: "automatic",
+          collection_method: "charge_automatically",
+          ...(endDate && { end_date: Math.floor(endDate.getTime() / 1000) }),
+        },
+      ],
+    };
+
+    return await this._stripe.subscriptionSchedules.create(options);
+  }
+
+  // Release a subscription schedule to activate it
+  async releaseSubscriptionSchedule(
+    scheduleId: string
+  ): Promise<Stripe.SubscriptionSchedule> {
+    if (!this._accountId) {
+      throw new Error("Account ID not set");
+    }
+
+    return await this._stripe.subscriptionSchedules.release(scheduleId);
+  }
 }
 
 async function getStripeCustomer(params: { id: string; mid: string }) {
