@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Dialog,
@@ -9,7 +11,8 @@ import {
   DialogBody,
   MultiDialogContent,
 } from "@/components/ui/dialog";
-import { CalendarEvent } from "@/types";
+import { CalendarEvent as OldCalendarEvent } from "@/types";
+import { CalendarEvent } from "@/components/event-calendar/types";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,28 +70,37 @@ interface MemberWithValidation extends Member {
   accessDetails?: string;
 }
 
-interface ReservationModalProps {
-  event: CalendarEvent | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+// Extend CalendarEvent to include original data
+interface ExtendedCalendarEvent extends CalendarEvent {
+  __originalData?: OldCalendarEvent["data"];
+}
+
+interface EnhancedEventDialogProps {
+  event: ExtendedCalendarEvent | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (event: CalendarEvent) => void;
+  onDelete: (eventId: string) => void;
   lid?: string;
   onRemoveReservation?: (
-    event: CalendarEvent,
+    event: OldCalendarEvent,
     memberId: string
   ) => Promise<void>;
   onRefreshEvents?: () => void;
-  onMemberUpdate?: () => void; // New prop for member-specific updates
+  onMemberUpdate?: () => void;
 }
 
-export function ReservationModal({
+export function EnhancedEventDialog({
   event,
-  open,
-  onOpenChange,
+  isOpen,
+  onClose,
+  onSave,
+  onDelete,
   lid,
   onRemoveReservation,
   onRefreshEvents,
   onMemberUpdate,
-}: ReservationModalProps) {
+}: EnhancedEventDialogProps) {
   // Add member dialog state
   const [showAddMember, setShowAddMember] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -103,39 +115,30 @@ export function ReservationModal({
   const [memberListVersion, setMemberListVersion] = useState(0);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Add local state for members
-  const [localMembers, setLocalMembers] = useState(event?.data.members || []);
+  // Add local state for members from original data
+  const [localMembers, setLocalMembers] = useState(
+    event?.__originalData?.members || []
+  );
 
   // Sync local members when prop changes
   useEffect(() => {
-    setLocalMembers(event?.data.members || []);
-  }, [event?.data.members]);
+    setLocalMembers(event?.__originalData?.members || []);
+  }, [event?.__originalData?.members]);
 
   const canManage = lid && (onRemoveReservation || onRefreshEvents);
-  const rid = event?.data.reservationId || event?.data.recurringId || "";
-  const sessionId = event?.data.sessionId;
-
-  // Debug logging
-  console.log("ReservationModal Debug:", {
-    lid,
-    hasOnRemoveReservation: !!onRemoveReservation,
-    hasOnRefreshEvents: !!onRefreshEvents,
-    canManage,
-    membersLength: event?.data.members.length || 0,
-  });
+  const originalData = event?.__originalData;
+  const rid = originalData?.reservationId || originalData?.recurringId || "";
+  const sessionId = originalData?.sessionId;
 
   // Get existing member IDs to filter from search results
   const existingMemberIds = useMemo(
-    () => event?.data.members?.map((m) => String(m.memberId)) || [],
-    [event?.data.members]
+    () => originalData?.members?.map((m) => String(m.memberId)) || [],
+    [originalData?.members]
   );
 
   // Centralized refresh function
   const refreshMemberList = useCallback(() => {
-    // Increment version to trigger re-renders if needed
     setMemberListVersion((prev) => prev + 1);
-
-    // Call all available refresh callbacks
     if (onMemberUpdate) {
       onMemberUpdate();
     }
@@ -147,7 +150,17 @@ export function ReservationModal({
   // Enhanced remove member handler
   const handleRemoveMember = useCallback(
     async (memberId: string) => {
-      if (!onRemoveReservation || !event) return;
+      if (!onRemoveReservation || !event || !originalData) return;
+
+      // Create a mock old event for the removal function
+      const mockOldEvent: OldCalendarEvent = {
+        id: event.id,
+        title: event.title,
+        start: event.start,
+        end: event.end,
+        duration: 0, // This should be calculated properly
+        data: originalData,
+      };
 
       // Optimistic update
       const previousMembers = [...localMembers];
@@ -157,24 +170,18 @@ export function ReservationModal({
       setIsUpdating(true);
 
       try {
-        // Call the removal function
-        await onRemoveReservation(event, memberId);
-
-        // Refresh the member list on success
+        await onRemoveReservation(mockOldEvent, memberId);
         refreshMemberList();
-
         toast.success("Member removed successfully");
       } catch (error) {
-        // Revert on error
         setLocalMembers(previousMembers);
-
         toast.error("Failed to remove member");
         console.error("Remove member error:", error);
       } finally {
         setIsUpdating(false);
       }
     },
-    [onRemoveReservation, event, refreshMemberList, localMembers]
+    [onRemoveReservation, event, originalData, refreshMemberList, localMembers]
   );
 
   // Debounced search function
@@ -247,7 +254,6 @@ export function ReservationModal({
     }
 
     try {
-      // Check if member has valid subscription or package for this session
       const { result, error } = await tryCatch(
         fetch(
           `/api/protected/loc/${lid}/members/${memberId}/validate-session?sessionId=${sessionId}`
@@ -348,14 +354,10 @@ export function ReservationModal({
       toast.success(
         `Successfully added ${selectedMembers.length} member(s) to session`
       );
-
-      // Refresh parent
       refreshMemberList();
     } catch (err) {
       console.error("Add members error:", err);
       toast.error("Failed to add members to session");
-
-      // Revert optimistic update
       setLocalMembers(previousMembers);
     } finally {
       setAddingMembers(false);
@@ -386,11 +388,44 @@ export function ReservationModal({
   // Early return after all hooks are called
   if (!event) return null;
 
-  // Type assertion to help TypeScript understand event is not null
-  const safeEvent = event as NonNullable<typeof event>;
+  // If this event doesn't have original data, show a simple message
+  if (!originalData) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Event Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 p-4">
+            <p>
+              This is a calendar event. Member management is not available for
+              this type of event.
+            </p>
+            <p>
+              <strong>Title:</strong> {event.title}
+            </p>
+            <p>
+              <strong>Description:</strong> {event.description}
+            </p>
+            <p>
+              <strong>Date:</strong>{" "}
+              {format(new Date(event.start), "EEEE, MMMM d, yyyy")}
+            </p>
+            <p>
+              <strong>Time:</strong> {format(new Date(event.start), "h:mm a")} -{" "}
+              {format(new Date(event.end), "h:mm a")}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button onClick={onClose}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <MultiDialogContent>
         <DialogSlide
           show={!showAddMember}
@@ -423,7 +458,7 @@ export function ReservationModal({
                 </span>
               </div>
 
-              {event.data.isRecurring && (
+              {originalData.isRecurring && (
                 <Badge variant="secondary" className="w-fit">
                   Recurring Reservation
                 </Badge>
@@ -493,12 +528,19 @@ export function ReservationModal({
                           <div className="flex items-center gap-1">
                             <CheckinButton
                               memberId={String(member.memberId)}
-                              event={event}
+                              event={{
+                                id: event.id,
+                                title: event.title,
+                                start: event.start,
+                                end: event.end,
+                                duration: 0,
+                                data: originalData,
+                              }}
                               lid={lid}
                               rid={rid}
                               onUpdate={handleCheckinUpdate}
                             />
-                            {new Date(event!.start) > new Date() && (
+                            {new Date(event.start) > new Date() && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
@@ -569,7 +611,7 @@ export function ReservationModal({
                 <Button
                   size="sm"
                   className="bg-foreground/10 hover:bg-foreground/20"
-                  onClick={() => onOpenChange(false)}
+                  onClick={onClose}
                 >
                   Close
                 </Button>
