@@ -79,3 +79,5 @@ CREATE TABLE IF NOT EXISTS member_points_history (
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     updated_at timestamp with time zone
 );
+
+
