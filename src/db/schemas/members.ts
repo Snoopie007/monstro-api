@@ -163,10 +163,7 @@ export const memberContracts = pgTable("member_contracts", {
     .notNull()
     .references(() => locations.id, { onDelete: "cascade" }),
   signature: text("signature"),
-  variables: jsonb("variables")
-    .$type<Record<string, any>>()
-    .default(sql`'{}'::jsonb`),
-  signed: boolean("signed").notNull().default(false),
+  pdfFilename: text("pdf_filename"),
   created: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
