@@ -8,7 +8,6 @@ export const rewards = pgTable("rewards", {
     name: text("name").notNull(),
     description: text("description").notNull(),
     locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-    icon: text("icon"),
     requiredPoints: integer("required_points").notNull(),
     limitPerMember: integer("limit_per_member").notNull(),
     totalLimit: text("limit_total").notNull().default("unlimited"),

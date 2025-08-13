@@ -80,6 +80,9 @@ CREATE TABLE IF NOT EXISTS member_packages (
   is_participant boolean NOT NULL DEFAULT true
 );
 
+ALTER TABLE member_packages ADD CONSTRAINT unique_child_package UNIQUE (member_id, parent_id);
+ALTER TABLE member_subscriptions ADD CONSTRAINT unique_child_subscription UNIQUE (member_id, parent_id);
+
 CREATE INDEX IF NOT EXISTS idx_member_packages_member_id ON member_packages (member_id);
 CREATE INDEX IF NOT EXISTS idx_member_packages_location_id ON member_packages (location_id);
 CREATE INDEX IF NOT EXISTS idx_member_packages_status ON member_packages (status);

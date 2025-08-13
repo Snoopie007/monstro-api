@@ -2,13 +2,11 @@ import { relations, sql } from "drizzle-orm";
 import {
   integer,
   primaryKey,
-  serial,
   text,
   timestamp,
   pgTable,
   boolean,
   jsonb,
-  smallint,
   unique,
   uuid,
   bigint,
@@ -23,184 +21,98 @@ import { memberSubscriptions } from "./MemberPlans";
 import { InvoiceStatusEnum, MemberRelationshipEnum } from "./DatabaseEnums";
 
 export const members = pgTable("members", {
-  id: uuid("id")
-    .primaryKey()
-    .notNull()
-    .default(sql`uuid_base62()`),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   firstName: text("first_name").notNull(),
   lastName: text("last_name"),
   email: text("email").notNull(),
   phone: text("phone").notNull(),
   referralCode: text("referral_code").notNull(),
   gender: text("gender"),
-  dob: timestamp("dob", { withTimezone: true, mode: "date" }).default(
-    sql`NULL`
-  ),
+  dob: timestamp("dob", { withTimezone: true, mode: "date" }).default(sql`NULL`),
   avatar: text("avatar"),
   stripeCustomerId: text("stripe_customer_id"),
-  created: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const memberAchievements = pgTable(
   "member_achievements",
   {
-    memberId: text("member_id")
-      .notNull()
-      .references(() => members.id, { onDelete: "cascade" }),
-    locationId: text("location_id")
-      .notNull()
-      .references(() => locations.id, { onDelete: "cascade" }),
-    achievementId: text("achievement_id")
-      .notNull()
-      .references(() => achievements.id, { onDelete: "cascade" }),
-
+    memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    achievementId: text("achievement_id").notNull().references(() => achievements.id, { onDelete: "cascade" }),
     progress: integer("progress").default(0),
-    dateAchieved: timestamp("date_achieved", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    created: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    dateAchieved: timestamp("date_achieved", { withTimezone: true }).notNull().defaultNow(),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.memberId, t.achievementId] })]
 );
 
 export const memberPointsHistory = pgTable("member_points_history", {
-  id: uuid("id")
-    .primaryKey()
-    .notNull()
-    .default(sql`uuid_base62()`),
-  locationId: text("location_id")
-    .notNull()
-    .references(() => locations.id, { onDelete: "cascade" }),
-  memberId: text("member_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
   points: bigint("points", { mode: "number" }).notNull().default(0),
-  achievementId: text("achievement_id").references(() => achievements.id, {
-    onDelete: "cascade",
-  }),
+  achievementId: text("achievement_id").references(() => achievements.id, { onDelete: "cascade" }),
   type: text("type").notNull(),
   removed: boolean("removed").notNull().default(false),
   removedReason: text("removed_reason"),
   removedOn: timestamp("removed_on", { withTimezone: true }),
-  created: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const memberReferrals = pgTable(
   "member_referrals",
   {
-    memberId: text("member_id")
-      .notNull()
-      .references(() => members.id, { onDelete: "cascade" }),
-    referredMemberId: text("referred_member_id")
-      .notNull()
-      .references(() => members.id, { onDelete: "cascade" }),
-    locationId: text("location_id")
-      .notNull()
-      .references(() => locations.id, { onDelete: "cascade" }),
-    created: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    referredMemberId: text("referred_member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
   },
   (t) => [
     primaryKey({ columns: [t.memberId, t.referredMemberId, t.locationId] }),
-    unique("unique_referred_member_location").on(
-      t.referredMemberId,
-      t.locationId,
-      t.memberId
-    ),
+    unique("unique_referred_member_location").on(t.referredMemberId, t.locationId, t.memberId),
   ]
 );
 
 export const memberRewards = pgTable(
   "reward_claims",
   {
-    id: uuid("id")
-      .primaryKey()
-      .notNull()
-      .default(sql`uuid_base62()`),
-    memberId: text("member_id")
-      .notNull()
-      .references(() => members.id, { onDelete: "cascade" }),
-    rewardId: text("reward_id")
-      .notNull()
-      .references(() => rewards.id, { onDelete: "cascade" }),
+    id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+    memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    rewardId: text("reward_id").notNull().references(() => rewards.id, { onDelete: "cascade" }),
     previousPoints: integer("previous_points"),
-    dateClaimed: timestamp("date_claimed", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    status: smallint("status"),
-    created: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    dateClaimed: timestamp("date_claimed", { withTimezone: true }).notNull().defaultNow(),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.id] })]
 );
 
 export const memberContracts = pgTable("member_contracts", {
-  id: uuid("id")
-    .primaryKey()
-    .notNull()
-    .default(sql`uuid_base62()`),
-  memberId: text("member_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  templateId: text("contract_id")
-    .notNull()
-    .references(() => contractTemplates.id, { onDelete: "cascade" }),
-  locationId: text("location_id")
-    .notNull()
-    .references(() => locations.id, { onDelete: "cascade" }),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  templateId: text("contract_id").notNull().references(() => contractTemplates.id, { onDelete: "cascade" }),
+  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
   signature: text("signature"),
-  variables: jsonb("variables")
-    .$type<Record<string, any>>()
-    .default(sql`'{}'::jsonb`),
+  variables: jsonb("variables").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
   signed: boolean("signed").notNull().default(false),
-  created: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const memberInvoices = pgTable("member_invoices", {
-  id: uuid("id")
-    .primaryKey()
-    .notNull()
-    .default(sql`uuid_base62()`),
-  metadata: jsonb("metadata")
-    .$type<Record<string, any>>()
-    .default(sql`'{}'::jsonb`),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
   currency: text("currency"),
-  memberId: text("member_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  locationId: text("location_id")
-    .notNull()
-    .references(() => locations.id, { onDelete: "cascade" }),
-  memberPackageId: text("member_package_id").references(
-    () => memberPackages.id,
-    { onDelete: "cascade" }
-  ),
-  memberSubscriptionId: text("member_subscription_id").references(
-    () => memberSubscriptions.id,
-    { onDelete: "cascade" }
-  ),
+  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+  memberPackageId: text("member_package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
+  memberSubscriptionId: text("member_subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
   description: text("description"),
-  items: jsonb("items")
-    .$type<Record<string, any>>()
-    .array()
-    .default(sql`'{}'::jsonb[]`),
+  items: jsonb("items").$type<Record<string, any>>().array().default(sql`'{}'::jsonb[]`),
   paid: boolean("paid").notNull().default(false),
   tax: integer("tax").notNull().default(0),
   total: integer("total").notNull().default(0),
@@ -212,59 +124,33 @@ export const memberInvoices = pgTable("member_invoices", {
   attemptCount: integer("attempt_count").notNull().default(0),
   invoicePdf: text("invoice_pdf"),
   status: InvoiceStatusEnum("status").notNull().default("draft"),
-  created: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const familyMembers = pgTable("family_members", {
-  id: uuid("id")
-    .primaryKey()
-    .notNull()
-    .default(sql`uuid_base62()`),
-  memberId: text("member_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  relatedMemberId: text("related_member_id")
-    .notNull()
-    .references(() => members.id, { onDelete: "cascade" }),
-  relationship: MemberRelationshipEnum("relationship")
-    .notNull()
-    .default("other"),
-  created: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
+  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  relatedMemberId: text("related_member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  relationship: MemberRelationshipEnum("relationship").notNull().default("other"),
+  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const memberTags = pgTable("member_tags", {
-  id: text("id")
-    .primaryKey()
-    .notNull()
-    .default(sql`uuid_base62('tag_')`),
+  id: text("id").primaryKey().notNull().default(sql`uuid_base62('tag_')`),
   name: text("name").notNull(),
-  locationId: text("location_id")
-    .notNull()
-    .references(() => locations.id, { onDelete: "cascade" }),
-  created: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const memberHasTags = pgTable(
   "member_has_tags",
   {
-    memberId: text("member_id")
-      .notNull()
-      .references(() => members.id, { onDelete: "cascade" }),
-    tagId: text("tag_id")
-      .notNull()
-      .references(() => memberTags.id, { onDelete: "cascade" }),
-    created: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
+    memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    tagId: text("tag_id").notNull().references(() => memberTags.id, { onDelete: "cascade" }),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.memberId, t.tagId] })]
 );
@@ -296,79 +182,67 @@ export const membersRelations = relations(members, ({ many, one }) => ({
   memberTags: many(memberHasTags),
 }));
 
-export const familyMemberRelations = relations(
-  familyMembers,
-  ({ one, many }) => ({
-    member: one(members, {
-      relationName: "memberFamilyMembers",
-      fields: [familyMembers.memberId],
-      references: [members.id],
-    }),
-    relatedMember: one(members, {
-      relationName: "relatedMemberFamily",
-      fields: [familyMembers.relatedMemberId],
-      references: [members.id],
-    }),
-  })
-);
+export const familyMemberRelations = relations(familyMembers, ({ one, many }) => ({
+  member: one(members, {
+    relationName: "memberFamilyMembers",
+    fields: [familyMembers.memberId],
+    references: [members.id],
+  }),
+  relatedMember: one(members, {
+    relationName: "relatedMemberFamily",
+    fields: [familyMembers.relatedMemberId],
+    references: [members.id],
+  }),
+}));
 
-export const memberAchievementsRelations = relations(
-  memberAchievements,
-  ({ one }) => ({
-    member: one(members, {
-      fields: [memberAchievements.memberId],
-      references: [members.id],
-    }),
-    achievement: one(achievements, {
-      fields: [memberAchievements.achievementId],
-      references: [achievements.id],
-    }),
-  })
-);
+export const memberAchievementsRelations = relations(memberAchievements, ({ one }) => ({
+  member: one(members, {
+    fields: [memberAchievements.memberId],
+    references: [members.id],
+  }),
+  achievement: one(achievements, {
+    fields: [memberAchievements.achievementId],
+    references: [achievements.id],
+  }),
+}));
 
-export const memberPointsHistoryRelations = relations(
-  memberPointsHistory,
-  ({ one }) => ({
-    member: one(members, {
-      fields: [memberPointsHistory.memberId],
-      references: [members.id],
-    }),
-    location: one(locations, {
-      fields: [memberPointsHistory.locationId],
-      references: [locations.id],
-    }),
-    achievement: one(achievements, {
-      fields: [memberPointsHistory.achievementId],
-      references: [achievements.id],
-    }),
-  })
-);
+export const memberPointsHistoryRelations = relations(memberPointsHistory, ({ one }) => ({
+  member: one(members, {
+    fields: [memberPointsHistory.memberId],
+    references: [members.id],
+  }),
+  location: one(locations, {
+    fields: [memberPointsHistory.locationId],
+    references: [locations.id],
+  }),
+  achievement: one(achievements, {
+    fields: [memberPointsHistory.achievementId],
+    references: [achievements.id],
+  }),
+}));
 
-export const memberContractsRelations = relations(
-  memberContracts,
-  ({ many, one }) => ({
-    member: one(members, {
-      fields: [memberContracts.memberId],
-      references: [members.id],
-    }),
-    contractTemplate: one(contractTemplates, {
-      fields: [memberContracts.templateId],
-      references: [contractTemplates.id],
-    }),
-    location: one(locations, {
-      fields: [memberContracts.locationId],
-      references: [locations.id],
-    }),
-    memberSubscription: one(memberSubscriptions, {
-      fields: [memberContracts.id],
-      references: [memberSubscriptions.memberContractId],
-    }),
-    memberPackage: one(memberPackages, {
-      fields: [memberContracts.id],
-      references: [memberPackages.memberContractId],
-    }),
-  })
-);
+export const memberContractsRelations = relations(memberContracts, ({ many, one }) => ({
+  member: one(members, {
+    fields: [memberContracts.memberId],
+    references: [members.id],
+  }),
+  contractTemplate: one(contractTemplates, {
+    fields: [memberContracts.templateId],
+    references: [contractTemplates.id],
+  }),
+  location: one(locations, {
+    fields: [memberContracts.locationId],
+    references: [locations.id],
+  }),
+  memberSubscription: one(memberSubscriptions, {
+    fields: [memberContracts.id],
+    references: [memberSubscriptions.memberContractId],
+  }),
+  memberPackage: one(memberPackages, {
+    fields: [memberContracts.id],
+    references: [memberPackages.memberContractId],
+  }),
+}));
 
 export const memberInvoicesRelations = relations(memberInvoices, ({ one }) => ({
   member: one(members, {
@@ -400,23 +274,20 @@ export const memberRewardRelations = relations(memberRewards, ({ one }) => ({
   }),
 }));
 
-export const memberReferralsRelations = relations(
-  memberReferrals,
-  ({ one }) => ({
-    member: one(members, {
-      fields: [memberReferrals.memberId],
-      references: [members.id],
-    }),
-    referredMember: one(members, {
-      fields: [memberReferrals.referredMemberId],
-      references: [members.id],
-    }),
-    location: one(locations, {
-      fields: [memberReferrals.locationId],
-      references: [locations.id],
-    }),
-  })
-);
+export const memberReferralsRelations = relations(memberReferrals, ({ one }) => ({
+  member: one(members, {
+    fields: [memberReferrals.memberId],
+    references: [members.id],
+  }),
+  referredMember: one(members, {
+    fields: [memberReferrals.referredMemberId],
+    references: [members.id],
+  }),
+  location: one(locations, {
+    fields: [memberReferrals.locationId],
+    references: [locations.id],
+  }),
+}));
 
 export const memberTagsRelations = relations(memberTags, ({ many, one }) => ({
   location: one(locations, {
