@@ -204,6 +204,10 @@ abstract class BaseStripePayments {
   }
 
   async removeAccount(accountId: string) {
+    // Validate accountId to prevent empty string causing invalid API calls
+    if (!accountId || accountId.trim() === "") {
+      throw new Error("Invalid account ID: cannot be empty");
+    }
     return await this._stripe.accounts.del(accountId);
   }
 
