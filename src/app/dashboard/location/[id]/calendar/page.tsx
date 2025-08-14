@@ -1,4 +1,4 @@
-import CalendarPageClient from "./page-client";
+import CalendarPageClient from "./ClientComponent";
 
 export default function CalendarPage(props: {
   params: Promise<{ id: string }>;
