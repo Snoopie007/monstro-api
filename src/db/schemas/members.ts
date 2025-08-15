@@ -279,6 +279,12 @@ export const memberFields = pgTable("member_fields", {
   locationId: text("location_id")
     .notNull()
     .references(() => locations.id, { onDelete: "cascade" }),
+  required: boolean("required").notNull().default(false),
+  placeholder: text("placeholder"),
+  helpText: text("help_text"),
+  options: jsonb("options")
+    .$type<Array<{ value: string; label: string }>>()
+    .default(sql`'[]'::jsonb`),
   created: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

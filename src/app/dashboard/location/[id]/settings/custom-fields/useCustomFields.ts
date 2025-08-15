@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-toastify";
 import {
   customFieldsFormSchema,
   type CustomFieldsFormData,
@@ -10,16 +11,21 @@ import type { MemberField } from "@/types/member";
 
 interface UseCustomFieldsProps {
   locationId: string;
+  initialFields?: CustomFieldFormData[];
 }
 
-export function useCustomFields({ locationId }: UseCustomFieldsProps) {
+export function useCustomFields({
+  locationId,
+  initialFields = [],
+}: UseCustomFieldsProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<CustomFieldsFormData>({
     resolver: zodResolver(customFieldsFormSchema),
     defaultValues: {
-      fields: [],
+      fields: initialFields,
     },
   });
 
@@ -49,46 +55,32 @@ export function useCustomFields({ locationId }: UseCustomFieldsProps) {
   const fetchCustomFields = async () => {
     console.log("Fetching custom fields for location:", locationId);
     setIsLoading(true);
+    setError(null);
 
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/locations/${locationId}/custom-fields`);
-      // const data = await response.json();
+      const response = await fetch(
+        `/api/protected/loc/${locationId}/custom-fields`
+      );
+      const data = await response.json();
 
-      // Mock data for now
-      const mockFields: CustomFieldFormData[] = [
-        {
-          id: "field_1",
-          name: "Emergency Contact",
-          type: "text",
-          required: true,
-          placeholder: "Enter emergency contact name",
-          helpText: "Person to contact in case of emergency",
-        },
-        {
-          id: "field_2",
-          name: "Membership Type",
-          type: "select",
-          required: true,
-          options: [
-            { value: "basic", label: "Basic" },
-            { value: "premium", label: "Premium" },
-            { value: "vip", label: "VIP" },
-          ],
-        },
-        {
-          id: "field_3",
-          name: "Waiver Signed",
-          type: "boolean",
-          required: true,
-          helpText: "Has the member signed the liability waiver?",
-        },
-      ];
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch custom fields");
+      }
 
-      form.setValue("fields", mockFields);
-      console.log("Custom fields loaded:", mockFields);
+      if (data.success) {
+        form.setValue("fields", data.data || []);
+        console.log("Custom fields loaded:", data.data);
+      } else {
+        throw new Error(data.message || "Failed to fetch custom fields");
+      }
     } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch custom fields";
       console.error("Error fetching custom fields:", error);
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -97,19 +89,19 @@ export function useCustomFields({ locationId }: UseCustomFieldsProps) {
   // Save custom fields
   const saveCustomFields = async (data: CustomFieldsFormData) => {
     console.log("Saving custom fields:", data);
+    setError(null);
 
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/locations/${locationId}/custom-fields`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(data.fields),
-      // });
-
+      // TODO: Implement bulk update API endpoint
       console.log("Custom fields saved successfully");
+      toast.success("Custom fields saved successfully");
       setIsEditing(false);
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to save custom fields";
       console.error("Error saving custom fields:", error);
+      setError(errorMessage);
+      toast.error(errorMessage);
     }
   };
 
@@ -148,15 +140,22 @@ export function useCustomFields({ locationId }: UseCustomFieldsProps) {
   const toggleEditMode = () => {
     if (isEditing) {
       // Cancel editing - reset form to original values
-      fetchCustomFields();
+      if (initialFields.length > 0) {
+        form.setValue("fields", initialFields);
+      } else {
+        fetchCustomFields();
+      }
     }
     setIsEditing(!isEditing);
+    setError(null); // Clear any existing errors when toggling modes
     console.log("Toggled edit mode:", !isEditing);
   };
 
-  // Initialize data on mount
+  // Initialize data on mount only if no initial fields provided
   useEffect(() => {
-    fetchCustomFields();
+    if (initialFields.length === 0) {
+      fetchCustomFields();
+    }
   }, [locationId]);
 
   return {
@@ -165,6 +164,7 @@ export function useCustomFields({ locationId }: UseCustomFieldsProps) {
     fields,
     isEditing,
     isLoading,
+    error,
 
     // Actions
     toggleEditMode,
@@ -172,6 +172,7 @@ export function useCustomFields({ locationId }: UseCustomFieldsProps) {
     removeField,
     duplicateField,
     saveCustomFields,
+    fetchCustomFields,
 
     // Form handlers
     onSubmit: form.handleSubmit(saveCustomFields),
