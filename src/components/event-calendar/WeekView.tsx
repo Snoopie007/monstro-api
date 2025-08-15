@@ -219,7 +219,7 @@ export function WeekView({
 
   return (
     <div data-slot="week-view" className="flex h-full flex-col">
-      <div className="bg-background/80 border-border/10 sticky top-0 z-30 grid grid-cols-8 border-b backdrop-blur-md">
+      <div className="bg-background/80 border-foreground/10 dark:border-border/10 sticky top-0 z-30 grid grid-cols-8 border-b backdrop-blur-md">
         <div className="text-muted-foreground/70 py-2 text-center text-sm">
           <span className="max-[479px]:sr-only">{format(new Date(), "O")}</span>
         </div>
@@ -238,9 +238,9 @@ export function WeekView({
       </div>
 
       {showAllDaySection && (
-        <div className="border-border/10 bg-muted/50 border-b">
+        <div className="border-foreground/10 dark:border-border/10 bg-muted/50 border-b">
           <div className="grid grid-cols-8">
-            <div className="border-border/10 relative border-r">
+            <div className="border-foreground/10 dark:border-border/10 relative border-r">
               <span className="text-muted-foreground/70 absolute bottom-0 left-0 h-6 w-16 max-w-full pe-2 text-right text-[10px] sm:pe-4 sm:text-xs">
                 All day
               </span>
@@ -259,7 +259,7 @@ export function WeekView({
               return (
                 <div
                   key={day.toString()}
-                  className="border-border/10 relative border-r p-1 last:border-r-0"
+                  className="border-foreground/10 dark:border-border/10 relative border-r p-1 last:border-r-0"
                   data-today={isToday(day) || undefined}
                 >
                   {dayAllDayEvents.map((event) => {
@@ -305,11 +305,11 @@ export function WeekView({
       )}
 
       <div className="grid flex-1 grid-cols-8 overflow-auto">
-        <div className="border-border/10 grid auto-cols-fr border-r">
+        <div className="border-foreground/10 dark:border-border/10 grid auto-cols-fr border-r">
           {hours.map((hour, index) => (
             <div
               key={hour.toString()}
-              className="border-border/10 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
+              className="border-foreground/10 dark:border-border/10 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
             >
               {index > 0 && (
                 <span className="bg-background text-muted-foreground/70 absolute -top-3 left-0 flex h-6 w-16 max-w-full items-center justify-end pe-2 text-[10px] sm:pe-4 sm:text-xs">
@@ -323,7 +323,7 @@ export function WeekView({
         {days.map((day, dayIndex) => (
           <div
             key={day.toString()}
-            className="border-border/10 relative grid auto-cols-fr border-r last:border-r-0"
+            className="border-foreground/10 dark:border-border/10 bg-muted/50 relative grid auto-cols-fr border-r last:border-r-0"
             data-today={isToday(day) || undefined}
           >
             {/* Positioned events */}
@@ -371,7 +371,7 @@ export function WeekView({
               return (
                 <div
                   key={hour.toString()}
-                  className="border-border/10 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
+                  className="border-foreground/10 dark:border-border/10 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
                 >
                   {/* Quarter-hour intervals */}
                   {[0, 1, 2, 3].map((quarter) => {

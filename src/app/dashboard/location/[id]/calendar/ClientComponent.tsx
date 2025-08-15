@@ -13,7 +13,7 @@ import {
   addMonths,
   format,
 } from "date-fns";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 
 import { useSessionCalendar } from "./providers/SessionCalendarProvider";
 import { Calendar } from "@/components/ui/calendar";

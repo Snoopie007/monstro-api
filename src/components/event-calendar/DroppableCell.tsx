@@ -47,7 +47,7 @@ export function DroppableCell({
       onClick={onClick}
       className={cn(
         "group relative data-dragging:bg-accent flex h-full flex-col overflow-hidden px-0.5 py-1 sm:px-1 cursor-pointer",
-        "hover:bg-foreground/10 transition-colors duration-200 ease-out",
+        "bg-transparent dark:bg-inherit dark:hover:bg-foreground/10 hover:bg-primary/10 transition-colors duration-200 ease-out",
         className
       )}
       title={formattedTime ? `${formattedTime}` : undefined}

@@ -19,7 +19,7 @@ import {
   ChevronRightIcon,
   PlusIcon,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 
 import {
   addHoursToDate,
@@ -246,20 +246,24 @@ export function EventCalendar({
     if (event.id) {
       onEventUpdate?.(event);
       // Show toast notification when an event is updated
-      toast(`Event "${event.title}" updated`, {
-        description: format(new Date(event.start), "MMM d, yyyy"),
-        position: "bottom-left",
-      });
+      toast.success(
+        `Event "${event.title}" updated on ${format(
+          new Date(event.start),
+          "MMM d, yyyy"
+        )}`
+      );
     } else {
       onEventAdd?.({
         ...event,
         id: Math.random().toString(36).substring(2, 11),
       });
       // Show toast notification when an event is added
-      toast(`Event "${event.title}" added`, {
-        description: format(new Date(event.start), "MMM d, yyyy"),
-        position: "bottom-left",
-      });
+      toast.success(
+        `Event "${event.title}" added on ${format(
+          new Date(event.start),
+          "MMM d, yyyy"
+        )}`
+      );
     }
     setIsEventDialogOpen(false);
     setSelectedEvent(null);
@@ -273,10 +277,12 @@ export function EventCalendar({
 
     // Show toast notification when an event is deleted
     if (deletedEvent) {
-      toast(`Event "${deletedEvent.title}" deleted`, {
-        description: format(new Date(deletedEvent.start), "MMM d, yyyy"),
-        position: "bottom-left",
-      });
+      toast.success(
+        `Event "${deletedEvent.title}" deleted from ${format(
+          new Date(deletedEvent.start),
+          "MMM d, yyyy"
+        )}`
+      );
     }
   };
 
@@ -284,10 +290,12 @@ export function EventCalendar({
     onEventUpdate?.(updatedEvent);
 
     // Show toast notification when an event is updated via drag and drop
-    toast(`Event "${updatedEvent.title}" moved`, {
-      description: format(new Date(updatedEvent.start), "MMM d, yyyy"),
-      position: "bottom-left",
-    });
+    toast.success(
+      `Event "${updatedEvent.title}" moved to ${format(
+        new Date(updatedEvent.start),
+        "MMM d, yyyy"
+      )}`
+    );
   };
 
   const viewTitle = useMemo(() => {
@@ -403,7 +411,7 @@ export function EventCalendar({
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="min-w-32 border-foreground/10"
+                className="min-w-32 border-border/20"
               >
                 <DropdownMenuItem onClick={() => handleViewChange("month")}>
                   Month <DropdownMenuShortcut>M</DropdownMenuShortcut>
@@ -421,6 +429,7 @@ export function EventCalendar({
             </DropdownMenu>
             <Button
               size="sm"
+              className="dark:bg-foreground/10 dark:hover:bg-foreground/20"
               onClick={() => {
                 setSelectedEvent(null); // Ensure we're creating a new event
                 setClickedDateTime(undefined); // Clear any previous clicked time

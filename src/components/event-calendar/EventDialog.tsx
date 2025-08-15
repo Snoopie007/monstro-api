@@ -160,7 +160,7 @@ export function EventDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[540px] w-[540px] max-h-[90vh] overflow-y-auto border-foreground/10">
+      <DialogContent className="sm:max-w-[540px] w-[540px] max-h-[90vh] overflow-y-auto border-border/20">
         <DialogHeader>
           <DialogTitle>
             {program && "id" in program ? "Edit Program" : "Create Program"}
@@ -204,7 +204,7 @@ export function EventDialog({
                     <FormControl>
                       <Textarea
                         placeholder="Program Description"
-                        className="resize-none border-foreground/10"
+                        className="resize-none border-border/20"
                         {...field}
                       />
                     </FormControl>
@@ -279,7 +279,7 @@ export function EventDialog({
           </form>
         </Form>
 
-        <DialogFooter className="flex-row sm:justify-between border-t border-foreground/10 py-2 px-4">
+        <DialogFooter className="flex-row sm:justify-between border-t border-border/20 py-2 px-4">
           {program && "id" in program && (
             <Button
               variant="outline"

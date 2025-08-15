@@ -429,7 +429,7 @@ export function EnhancedEventDialog({
       <MultiDialogContent>
         <DialogSlide
           show={!showAddMember}
-          className="border-foreground/5 sm:max-w-md"
+          className="border-gray-200 dark:border-foreground/5 sm:max-w-md"
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -441,7 +441,7 @@ export function EnhancedEventDialog({
           <div className="space-y-6 px-4 pb-4">
             {/* Event Info */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>
                   {format(new Date(event.start), "EEEE, MMMM d, yyyy")} •{" "}
@@ -450,7 +450,7 @@ export function EnhancedEventDialog({
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-muted-foreground">
                 <Users className="h-4 w-4" />
                 <span>
                   {localMembers.length} member
@@ -476,7 +476,7 @@ export function EnhancedEventDialog({
                     {Array.from({ length: 3 }).map((_, i) => (
                       <div
                         key={`skeleton-${i}`}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
+                        className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-muted/50"
                       >
                         <Skeleton className="h-8 w-8 rounded-full" />
                         <div className="flex-1 space-y-2">
@@ -507,7 +507,7 @@ export function EnhancedEventDialog({
                     {localMembers.map((member) => (
                       <div
                         key={`${member.memberId}-${memberListVersion}`}
-                        className={`flex items-center gap-3 p-3 rounded-lg bg-muted/50`}
+                        className={`flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-muted/50`}
                       >
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={member.avatar || undefined} />
@@ -520,7 +520,7 @@ export function EnhancedEventDialog({
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">{member.name}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-gray-500 dark:text-muted-foreground">
                             {member.memberId}
                           </p>
                         </div>
@@ -580,15 +580,15 @@ export function EnhancedEventDialog({
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium text-sm">Members</h4>
                 </div>
-                <div className="p-4 text-center bg-muted/50 rounded-lg">
-                  <Users className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="p-4 text-center bg-gray-50 dark:bg-muted/50 rounded-lg">
+                  <Users className="h-8 w-8 mx-auto text-gray-500 dark:text-muted-foreground mb-2" />
+                  <p className="text-sm text-gray-600 dark:text-muted-foreground">
                     No members in this reservation
                   </p>
                   {canManage && (
                     <Button
                       size="sm"
-                      className="mt-2 bg-foreground/10 hover:bg-foreground/20"
+                      className="mt-2 dark:bg-foreground/10 dark:hover:bg-foreground/20"
                       onClick={() => setShowAddMember(true)}
                     >
                       <UserPlus className="h-4 w-4 mr-2" />
@@ -601,16 +601,16 @@ export function EnhancedEventDialog({
           </div>
 
           {/* Footer with actions when managing */}
-          <DialogFooter className="px-6 py-4 bg-muted/20">
+          <DialogFooter className="px-6 py-4 bg-gray-50 dark:bg-muted/20">
             <div className="flex items-center justify-between w-full">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-500 dark:text-muted-foreground">
                 Managing {localMembers.length} member
                 {localMembers.length !== 1 ? "s" : ""}
               </p>
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  className="bg-foreground/10 hover:bg-foreground/20"
+                  className="dark:bg-foreground/10 dark:hover:bg-foreground/20"
                   onClick={onClose}
                 >
                   Close
@@ -623,7 +623,7 @@ export function EnhancedEventDialog({
         {/* Add Member Dialog Slide */}
         <DialogSlide
           show={showAddMember}
-          className="border-foreground/5 sm:rounded-lg"
+          className="border-gray-200 dark:border-foreground/5 sm:rounded-lg"
         >
           <DialogHeader className="space-y-0">
             <DialogTitle className="text-sm font-bold">
@@ -635,7 +635,7 @@ export function EnhancedEventDialog({
             <div className="space-y-4">
               {/* Search Input */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-muted-foreground" />
                 <Input
                   type="text"
                   placeholder="Search members by name or email..."
@@ -644,14 +644,14 @@ export function EnhancedEventDialog({
                   className="pl-10"
                 />
                 {searchLoading && (
-                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-500 dark:text-muted-foreground" />
                 )}
               </div>
 
               {/* Search Results */}
               {searchQuery && (
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-500 dark:text-muted-foreground">
                     {searchLoading
                       ? "Searching..."
                       : `Found ${searchResults.length} member(s)`}
@@ -692,7 +692,7 @@ export function EnhancedEventDialog({
                             <p className="text-sm font-medium">
                               {member.firstName} {member.lastName}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-gray-500 dark:text-muted-foreground">
                               {member.email}
                             </p>
                             {!member.hasValidAccess && (
@@ -714,8 +714,8 @@ export function EnhancedEventDialog({
                         !searchLoading &&
                         searchQuery && (
                           <div className="text-center py-4">
-                            <Users className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground">
+                            <Users className="h-8 w-8 mx-auto text-gray-500 dark:text-muted-foreground mb-2" />
+                            <p className="text-sm text-gray-600 dark:text-muted-foreground">
                               No members found
                             </p>
                           </div>
@@ -780,7 +780,7 @@ export function EnhancedEventDialog({
               onClick={handleAddMembers}
               disabled={selectedMembers.length === 0 || addingMembers}
               className={cn(
-                "border-foreground/10 bg-foreground/10 hover:bg-foreground/20 children:hidden",
+                "border-gray-300 bg-gray-200 hover:bg-gray-300 dark:border-foreground/10 dark:bg-foreground/10 dark:hover:bg-foreground/20 children:hidden",
                 {
                   "children:inline-flex": addingMembers,
                 }
