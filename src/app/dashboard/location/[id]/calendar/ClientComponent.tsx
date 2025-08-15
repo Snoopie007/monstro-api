@@ -237,7 +237,6 @@ export default function CalendarPageClient({
             onEventUpdate={handleEventUpdate}
             onEventDelete={handleEventDelete}
             onEventClick={handleEventSelect}
-            className="h-full"
             lid={id}
           />
         </div>

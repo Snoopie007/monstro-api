@@ -340,7 +340,10 @@ export function EventCalendar({
 
   return (
     <div
-      className="flex flex-col rounded-lg has-data-[slot=month-view]:flex-1 max-h-full overflow-y-scroll"
+      className={cn(
+        "flex flex-col rounded-lg max-h-full overflow-y-scroll",
+        view === "month" ? "h-full" : ""
+      )}
       style={
         {
           "--event-height": `${EventHeight}px`,
@@ -441,7 +444,12 @@ export function EventCalendar({
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col bg-foreground/5 overflow-auto rounded-lg">
+        <div
+          className={cn(
+            "flex flex-1 flex-col bg-foreground/5 rounded-lg overflow-auto",
+            view === "month" ? "h-full min-h-0" : ""
+          )}
+        >
           {view === "month" && (
             <MonthView
               currentDate={currentDate}
