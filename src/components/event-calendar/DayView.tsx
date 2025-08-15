@@ -224,7 +224,7 @@ export function DayView({
         </div>
       )}
 
-      <div className="border-border/70 grid flex-1 grid-cols-[3rem_1fr] overflow-hidden border-t sm:grid-cols-[4rem_1fr]">
+      <div className="grid flex-1 grid-cols-[3rem_1fr] overflow-auto sm:grid-cols-[4rem_1fr]">
         <div>
           {hours.map((hour, index) => (
             <div
@@ -273,8 +273,8 @@ export function DayView({
               style={{ top: `${currentTimePosition}%` }}
             >
               <div className="relative flex items-center">
-                <div className="bg-primary absolute -left-1 h-2 w-2 rounded-full"></div>
-                <div className="bg-primary h-[2px] w-full"></div>
+                <div className="bg-primary dark:bg-border absolute -left-1 h-2 w-2 rounded-full"></div>
+                <div className="bg-primary dark:bg-border h-[2px] w-full"></div>
               </div>
             </div>
           )}
@@ -285,7 +285,7 @@ export function DayView({
             return (
               <div
                 key={hour.toString()}
-                className="border-border/70 relative h-[var(--week-cells-height)] border-b last:border-b-0"
+                className="border-border/10 relative h-[var(--week-cells-height)] border-b last:border-b-0"
               >
                 {/* Quarter-hour intervals */}
                 {[0, 1, 2, 3].map((quarter) => {

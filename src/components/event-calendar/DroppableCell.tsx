@@ -1,6 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { Plus } from "lucide-react";
 
 import { useCalendarDnd } from "@/components/event-calendar";
 import { cn } from "@/components/event-calendar/utils";
@@ -45,12 +46,18 @@ export function DroppableCell({
       ref={setNodeRef}
       onClick={onClick}
       className={cn(
-        "data-dragging:bg-accent flex h-full flex-col overflow-hidden px-0.5 py-1 sm:px-1",
+        "group relative data-dragging:bg-accent flex h-full flex-col overflow-hidden px-0.5 py-1 sm:px-1 cursor-pointer",
+        "hover:bg-foreground/10 transition-colors duration-200 ease-out",
         className
       )}
       title={formattedTime ? `${formattedTime}` : undefined}
       data-dragging={isOver && activeEvent ? true : undefined}
     >
+      {/* Plus icon - only visible on hover */}
+      <Plus
+        size={12}
+        className="absolute top-1 right-1 opacity-0 group-hover:opacity-40 transition-opacity duration-200 ease-out text-muted-foreground pointer-events-none"
+      />
       {children}
     </div>
   );
