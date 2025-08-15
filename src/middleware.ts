@@ -27,33 +27,17 @@ export default auth(async (req) => {
 		const isLoggedin = !!req.auth
 		const locations = req.auth?.user?.locations || []
 
-		/* Check for mobile app requests */
-		const isMobileApp = req.headers.get("X-Mobile-App") === "true" && pathname.includes("mobile")
-		/* Verify mobile app token */
-		let isMobileAuthenticated = false
-		if (isMobileApp) {
-			const token = req.headers.get("Authorization")?.split(" ")[1]
-			if (token) {
-				isMobileAuthenticated = await verifyToken(token)
-				if (isMobileAuthenticated) {
-					return NextResponse.next()
-				} else {
-					return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
-				}
-			}
-		}
-
 		if (pathname.startsWith("/api/protected")) {
-			if (!isLoggedin && !(isMobileApp && isMobileAuthenticated)) {
+			if (!isLoggedin) {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 			}
-
 		}
 
 		/* Handle authentication redirects */
 		if (!isLoggedin) {
 
 			if (pathname.startsWith("/api/auth") || publicPaths.some((path) => pathname.startsWith(path))) {
+
 				return NextResponse.next()
 			}
 
@@ -63,7 +47,7 @@ export default auth(async (req) => {
 		}
 
 		/* Handle home page and dashboard redirects (only for web, not for mobile) */
-		if (isLoggedin && !isMobileApp) {
+		if (isLoggedin) {
 
 			if (pathname.startsWith("/api/") || pathname.startsWith("/callbacks")) {
 				return NextResponse.next()

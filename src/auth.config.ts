@@ -143,6 +143,6 @@ export default {
           throw new CustomLoginError("Invalid password or email.");
         }
       },
-    }),	
+    }),
   ],
 } satisfies NextAuthConfig;
