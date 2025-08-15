@@ -22,7 +22,7 @@ function getStripeSettings(token: Stripe.OAuthToken) {
     secretKey: rest.access_token || null,
     accessToken: rest.access_token || null,
     refreshToken: rest.refresh_token || null,
-    integrationId: rest.stripe_user_id || "",
+    accountId: rest.stripe_user_id || "",
     metadata: {
       scope: scope,
     },
@@ -89,6 +89,15 @@ async function completeIntegration(
     }
 
     if (!newIntegration) return false;
+
+    // Validate that Stripe integrations have a valid accountId
+    if (
+      name === "stripe" &&
+      (!newIntegration.accountId || newIntegration.accountId.trim() === "")
+    ) {
+      console.error("Stripe integration missing valid accountId");
+      return false;
+    }
 
     await db
       .insert(integrations)

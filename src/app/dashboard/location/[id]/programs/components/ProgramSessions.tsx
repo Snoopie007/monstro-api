@@ -1,4 +1,5 @@
 
+import React, { useMemo, useCallback } from 'react';
 import { Control, useFieldArray } from 'react-hook-form';
 import {
 
@@ -24,12 +25,33 @@ interface AddProgramSessionsProps {
 
 
 
+// Memoize static data outside component to prevent recreation
+const HEADER_LABELS = ['Day', 'Time', 'Duration(mins)'] as const;
+const DEFAULT_SESSION = { day: 1, duration: 30, time: "12:00" } as const;
+
 export default function SessionComponent({ control }: AddProgramSessionsProps) {
 
     const { fields, remove, append } = useFieldArray({
         control,
         name: `sessions`
     });
+
+    // Memoize the append handler to prevent recreation
+    const handleAppendSession = useCallback(() => {
+        append(DEFAULT_SESSION);
+    }, [append]);
+
+    // Memoize the remove handler to prevent recreation
+    const handleRemoveSession = useCallback((index: number) => {
+        remove(index);
+    }, [remove]);
+
+    // Memoize days of week options
+    const daysOfWeekOptions = useMemo(() => 
+        DaysOfWeek.map((day, i) => (
+            <SelectItem key={i} value={i.toString()}>{day}</SelectItem>
+        )), []
+    );
 
     return (
         <div className="bg-foreground/5 p-4 rounded-sm space-y-2">
@@ -39,14 +61,14 @@ export default function SessionComponent({ control }: AddProgramSessionsProps) {
                 <Button type='button'
                     variant={"ghost"}
                     size={"icon"}
-                    onClick={() => append({ day: 1, duration: 30, time: "12:00" })}
+                    onClick={handleAppendSession}
                     className="size-6 bg-foreground/5 rounded-md">
                     <Plus className='size-3.5' />
                 </Button>
             </div>
             <div className='space-y-0'>
                 <div className='grid grid-cols-4 gap-2 '>
-                    {['Day', 'Time', 'Duration(mins)'].map((item) => (
+                    {HEADER_LABELS.map((item) => (
                         <div key={item} className={cn('font-medium grid-cols-1 text-[0.625rem] uppercase')}>
                             {item}
                         </div>
@@ -68,9 +90,7 @@ export default function SessionComponent({ control }: AddProgramSessionsProps) {
                                                         <SelectValue placeholder="Select a day" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {DaysOfWeek.map((day, i) => (
-                                                            <SelectItem key={i} value={i.toString()}>{day}</SelectItem>
-                                                        ))}
+                                                        {daysOfWeekOptions}
                                                     </SelectContent>
                                                 </Select>
                                             </FormControl>
@@ -100,9 +120,11 @@ export default function SessionComponent({ control }: AddProgramSessionsProps) {
                                     name={`sessions.${k}.duration`}
                                     render={({ field }) => (
                                         <FormItem className="col-span-1 ">
-
                                             <FormControl>
-                                                <Input type='number' className={cn("rounded-md")} placeholder={'Duration'}
+                                                <Input 
+                                                    type='number' 
+                                                    className={cn("rounded-md")} 
+                                                    placeholder={'Duration'}
                                                     value={field.value}
                                                     onChange={(e) => {
                                                         const value = parseInt(e.target.value);
@@ -116,7 +138,7 @@ export default function SessionComponent({ control }: AddProgramSessionsProps) {
                                         </FormItem>
                                     )}
                                 />
-                                {k > 0 ? <div onClick={() => remove(k)} className='cursor-pointer pt-3'>
+                                {k > 0 ? <div onClick={() => handleRemoveSession(k)} className='cursor-pointer pt-3'>
                                     <X className='w-4 h-4 stroke-red-500' />
                                 </div> : null}
                             </div>

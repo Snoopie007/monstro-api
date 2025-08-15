@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Dialog,
@@ -9,7 +11,8 @@ import {
   DialogBody,
   MultiDialogContent,
 } from "@/components/ui/dialog";
-import { CalendarEvent } from "@/types";
+import { CalendarEvent as OldCalendarEvent } from "@/types";
+import { CalendarEvent } from "@/components/event-calendar/types";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,28 +70,37 @@ interface MemberWithValidation extends Member {
   accessDetails?: string;
 }
 
-interface ReservationModalProps {
-  event: CalendarEvent | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+// Extend CalendarEvent to include original data
+interface ExtendedCalendarEvent extends CalendarEvent {
+  __originalData?: OldCalendarEvent["data"];
+}
+
+interface EnhancedEventDialogProps {
+  event: ExtendedCalendarEvent | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (event: CalendarEvent) => void;
+  onDelete: (eventId: string) => void;
   lid?: string;
   onRemoveReservation?: (
-    event: CalendarEvent,
+    event: OldCalendarEvent,
     memberId: string
   ) => Promise<void>;
   onRefreshEvents?: () => void;
-  onMemberUpdate?: () => void; // New prop for member-specific updates
+  onMemberUpdate?: () => void;
 }
 
-export function ReservationModal({
+export function EnhancedEventDialog({
   event,
-  open,
-  onOpenChange,
+  isOpen,
+  onClose,
+  onSave,
+  onDelete,
   lid,
   onRemoveReservation,
   onRefreshEvents,
   onMemberUpdate,
-}: ReservationModalProps) {
+}: EnhancedEventDialogProps) {
   // Add member dialog state
   const [showAddMember, setShowAddMember] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -103,39 +115,30 @@ export function ReservationModal({
   const [memberListVersion, setMemberListVersion] = useState(0);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Add local state for members
-  const [localMembers, setLocalMembers] = useState(event?.data.members || []);
+  // Add local state for members from original data
+  const [localMembers, setLocalMembers] = useState(
+    event?.__originalData?.members || []
+  );
 
   // Sync local members when prop changes
   useEffect(() => {
-    setLocalMembers(event?.data.members || []);
-  }, [event?.data.members]);
+    setLocalMembers(event?.__originalData?.members || []);
+  }, [event?.__originalData?.members]);
 
   const canManage = lid && (onRemoveReservation || onRefreshEvents);
-  const rid = event?.data.reservationId || event?.data.recurringId || "";
-  const sessionId = event?.data.sessionId;
-
-  // Debug logging
-  console.log("ReservationModal Debug:", {
-    lid,
-    hasOnRemoveReservation: !!onRemoveReservation,
-    hasOnRefreshEvents: !!onRefreshEvents,
-    canManage,
-    membersLength: event?.data.members.length || 0,
-  });
+  const originalData = event?.__originalData;
+  const rid = originalData?.reservationId || originalData?.recurringId || "";
+  const sessionId = originalData?.sessionId;
 
   // Get existing member IDs to filter from search results
   const existingMemberIds = useMemo(
-    () => event?.data.members?.map((m) => String(m.memberId)) || [],
-    [event?.data.members]
+    () => originalData?.members?.map((m) => String(m.memberId)) || [],
+    [originalData?.members]
   );
 
   // Centralized refresh function
   const refreshMemberList = useCallback(() => {
-    // Increment version to trigger re-renders if needed
     setMemberListVersion((prev) => prev + 1);
-
-    // Call all available refresh callbacks
     if (onMemberUpdate) {
       onMemberUpdate();
     }
@@ -147,7 +150,17 @@ export function ReservationModal({
   // Enhanced remove member handler
   const handleRemoveMember = useCallback(
     async (memberId: string) => {
-      if (!onRemoveReservation || !event) return;
+      if (!onRemoveReservation || !event || !originalData) return;
+
+      // Create a mock old event for the removal function
+      const mockOldEvent: OldCalendarEvent = {
+        id: event.id,
+        title: event.title,
+        start: event.start,
+        end: event.end,
+        duration: 0, // This should be calculated properly
+        data: originalData,
+      };
 
       // Optimistic update
       const previousMembers = [...localMembers];
@@ -157,24 +170,18 @@ export function ReservationModal({
       setIsUpdating(true);
 
       try {
-        // Call the removal function
-        await onRemoveReservation(event, memberId);
-
-        // Refresh the member list on success
+        await onRemoveReservation(mockOldEvent, memberId);
         refreshMemberList();
-
         toast.success("Member removed successfully");
       } catch (error) {
-        // Revert on error
         setLocalMembers(previousMembers);
-
         toast.error("Failed to remove member");
         console.error("Remove member error:", error);
       } finally {
         setIsUpdating(false);
       }
     },
-    [onRemoveReservation, event, refreshMemberList, localMembers]
+    [onRemoveReservation, event, originalData, refreshMemberList, localMembers]
   );
 
   // Debounced search function
@@ -247,7 +254,6 @@ export function ReservationModal({
     }
 
     try {
-      // Check if member has valid subscription or package for this session
       const { result, error } = await tryCatch(
         fetch(
           `/api/protected/loc/${lid}/members/${memberId}/validate-session?sessionId=${sessionId}`
@@ -348,14 +354,10 @@ export function ReservationModal({
       toast.success(
         `Successfully added ${selectedMembers.length} member(s) to session`
       );
-
-      // Refresh parent
       refreshMemberList();
     } catch (err) {
       console.error("Add members error:", err);
       toast.error("Failed to add members to session");
-
-      // Revert optimistic update
       setLocalMembers(previousMembers);
     } finally {
       setAddingMembers(false);
@@ -386,15 +388,48 @@ export function ReservationModal({
   // Early return after all hooks are called
   if (!event) return null;
 
-  // Type assertion to help TypeScript understand event is not null
-  const safeEvent = event as NonNullable<typeof event>;
+  // If this event doesn't have original data, show a simple message
+  if (!originalData) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Event Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 p-4">
+            <p>
+              This is a calendar event. Member management is not available for
+              this type of event.
+            </p>
+            <p>
+              <strong>Title:</strong> {event.title}
+            </p>
+            <p>
+              <strong>Description:</strong> {event.description}
+            </p>
+            <p>
+              <strong>Date:</strong>{" "}
+              {format(new Date(event.start), "EEEE, MMMM d, yyyy")}
+            </p>
+            <p>
+              <strong>Time:</strong> {format(new Date(event.start), "h:mm a")} -{" "}
+              {format(new Date(event.end), "h:mm a")}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button onClick={onClose}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <MultiDialogContent>
         <DialogSlide
           show={!showAddMember}
-          className="border-foreground/5 sm:max-w-md"
+          className="border-gray-200 dark:border-foreground/5 sm:max-w-md"
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -406,7 +441,7 @@ export function ReservationModal({
           <div className="space-y-6 px-4 pb-4">
             {/* Event Info */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>
                   {format(new Date(event.start), "EEEE, MMMM d, yyyy")} •{" "}
@@ -415,7 +450,7 @@ export function ReservationModal({
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-muted-foreground">
                 <Users className="h-4 w-4" />
                 <span>
                   {localMembers.length} member
@@ -423,7 +458,7 @@ export function ReservationModal({
                 </span>
               </div>
 
-              {event.data.isRecurring && (
+              {originalData.isRecurring && (
                 <Badge variant="secondary" className="w-fit">
                   Recurring Reservation
                 </Badge>
@@ -441,7 +476,7 @@ export function ReservationModal({
                     {Array.from({ length: 3 }).map((_, i) => (
                       <div
                         key={`skeleton-${i}`}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
+                        className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-muted/50"
                       >
                         <Skeleton className="h-8 w-8 rounded-full" />
                         <div className="flex-1 space-y-2">
@@ -472,7 +507,7 @@ export function ReservationModal({
                     {localMembers.map((member) => (
                       <div
                         key={`${member.memberId}-${memberListVersion}`}
-                        className={`flex items-center gap-3 p-3 rounded-lg bg-muted/50`}
+                        className={`flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-muted/50`}
                       >
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={member.avatar || undefined} />
@@ -485,7 +520,7 @@ export function ReservationModal({
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">{member.name}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-gray-500 dark:text-muted-foreground">
                             {member.memberId}
                           </p>
                         </div>
@@ -493,12 +528,19 @@ export function ReservationModal({
                           <div className="flex items-center gap-1">
                             <CheckinButton
                               memberId={String(member.memberId)}
-                              event={event}
+                              event={{
+                                id: event.id,
+                                title: event.title,
+                                start: event.start,
+                                end: event.end,
+                                duration: 0,
+                                data: originalData,
+                              }}
                               lid={lid}
                               rid={rid}
                               onUpdate={handleCheckinUpdate}
                             />
-                            {new Date(event!.start) > new Date() && (
+                            {new Date(event.start) > new Date() && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
@@ -538,15 +580,15 @@ export function ReservationModal({
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium text-sm">Members</h4>
                 </div>
-                <div className="p-4 text-center bg-muted/50 rounded-lg">
-                  <Users className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="p-4 text-center bg-gray-50 dark:bg-muted/50 rounded-lg">
+                  <Users className="h-8 w-8 mx-auto text-gray-500 dark:text-muted-foreground mb-2" />
+                  <p className="text-sm text-gray-600 dark:text-muted-foreground">
                     No members in this reservation
                   </p>
                   {canManage && (
                     <Button
                       size="sm"
-                      className="mt-2 bg-foreground/10 hover:bg-foreground/20"
+                      className="mt-2 dark:bg-foreground/10 dark:hover:bg-foreground/20"
                       onClick={() => setShowAddMember(true)}
                     >
                       <UserPlus className="h-4 w-4 mr-2" />
@@ -559,17 +601,17 @@ export function ReservationModal({
           </div>
 
           {/* Footer with actions when managing */}
-          <DialogFooter className="px-6 py-4 bg-muted/20">
+          <DialogFooter className="px-6 py-4 bg-gray-50 dark:bg-muted/20">
             <div className="flex items-center justify-between w-full">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-500 dark:text-muted-foreground">
                 Managing {localMembers.length} member
                 {localMembers.length !== 1 ? "s" : ""}
               </p>
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  className="bg-foreground/10 hover:bg-foreground/20"
-                  onClick={() => onOpenChange(false)}
+                  className="dark:bg-foreground/10 dark:hover:bg-foreground/20"
+                  onClick={onClose}
                 >
                   Close
                 </Button>
@@ -581,7 +623,7 @@ export function ReservationModal({
         {/* Add Member Dialog Slide */}
         <DialogSlide
           show={showAddMember}
-          className="border-foreground/5 sm:rounded-lg"
+          className="border-gray-200 dark:border-foreground/5 sm:rounded-lg"
         >
           <DialogHeader className="space-y-0">
             <DialogTitle className="text-sm font-bold">
@@ -593,7 +635,7 @@ export function ReservationModal({
             <div className="space-y-4">
               {/* Search Input */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-muted-foreground" />
                 <Input
                   type="text"
                   placeholder="Search members by name or email..."
@@ -602,14 +644,14 @@ export function ReservationModal({
                   className="pl-10"
                 />
                 {searchLoading && (
-                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-500 dark:text-muted-foreground" />
                 )}
               </div>
 
               {/* Search Results */}
               {searchQuery && (
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-gray-500 dark:text-muted-foreground">
                     {searchLoading
                       ? "Searching..."
                       : `Found ${searchResults.length} member(s)`}
@@ -650,7 +692,7 @@ export function ReservationModal({
                             <p className="text-sm font-medium">
                               {member.firstName} {member.lastName}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-gray-500 dark:text-muted-foreground">
                               {member.email}
                             </p>
                             {!member.hasValidAccess && (
@@ -672,8 +714,8 @@ export function ReservationModal({
                         !searchLoading &&
                         searchQuery && (
                           <div className="text-center py-4">
-                            <Users className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground">
+                            <Users className="h-8 w-8 mx-auto text-gray-500 dark:text-muted-foreground mb-2" />
+                            <p className="text-sm text-gray-600 dark:text-muted-foreground">
                               No members found
                             </p>
                           </div>
@@ -738,7 +780,7 @@ export function ReservationModal({
               onClick={handleAddMembers}
               disabled={selectedMembers.length === 0 || addingMembers}
               className={cn(
-                "border-foreground/10 bg-foreground/10 hover:bg-foreground/20 children:hidden",
+                "border-gray-300 bg-gray-200 hover:bg-gray-300 dark:border-foreground/10 dark:bg-foreground/10 dark:hover:bg-foreground/20 children:hidden",
                 {
                   "children:inline-flex": addingMembers,
                 }

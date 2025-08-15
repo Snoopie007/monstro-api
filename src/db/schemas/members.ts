@@ -2,16 +2,15 @@ import { relations, sql } from "drizzle-orm";
 import {
   integer,
   primaryKey,
-  serial,
   text,
   timestamp,
   pgTable,
   boolean,
   jsonb,
-  smallint,
   unique,
   uuid,
   bigint,
+  smallint,
 } from "drizzle-orm/pg-core";
 import { locations, memberLocations } from "./locations";
 import { users } from "./users";
@@ -20,7 +19,11 @@ import { rewards } from "./rewards";
 import { contractTemplates } from "./ContractTemplates";
 import { memberPackages } from "./MemberPlans";
 import { memberSubscriptions } from "./MemberPlans";
-import { InvoiceStatusEnum, MemberRelationshipEnum } from "./DatabaseEnums";
+import {
+  InvoiceStatusEnum,
+  MemberRelationshipEnum,
+  CustomFieldTypeEnum,
+} from "./DatabaseEnums";
 
 export const members = pgTable("members", {
   id: uuid("id")
@@ -59,7 +62,6 @@ export const memberAchievements = pgTable(
     achievementId: text("achievement_id")
       .notNull()
       .references(() => achievements.id, { onDelete: "cascade" }),
-
     progress: integer("progress").default(0),
     dateAchieved: timestamp("date_achieved", { withTimezone: true })
       .notNull()
@@ -245,6 +247,49 @@ export const memberHasTags = pgTable(
   (t) => [primaryKey({ columns: [t.memberId, t.tagId] })]
 );
 
+export const memberFields = pgTable("member_fields", {
+  id: text("id")
+    .primaryKey()
+    .notNull()
+    .default(sql`uuid_base62()`),
+  name: text("name").notNull(),
+  type: CustomFieldTypeEnum("type").notNull(),
+  locationId: text("location_id")
+    .notNull()
+    .references(() => locations.id, { onDelete: "cascade" }),
+  required: boolean("required").notNull().default(false),
+  placeholder: text("placeholder"),
+  helpText: text("help_text"),
+  options: jsonb("options")
+    .$type<Array<{ value: string; label: string }>>()
+    .default(sql`'[]'::jsonb`),
+  created: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updated: timestamp("updated_at", { withTimezone: true }),
+});
+
+export const memberCustomFields = pgTable(
+  "member_custom_fields",
+  {
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    customFieldId: text("custom_field_id")
+      .notNull()
+      .references(() => memberFields.id, { onDelete: "cascade" }),
+    value: text("value").notNull(),
+    created: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.memberId, t.customFieldId] }),
+    unique("mcf_member_field_unique").on(t.memberId, t.customFieldId),
+  ]
+);
+
 export const membersRelations = relations(members, ({ many, one }) => ({
   memberLocations: many(memberLocations),
   achievements: many(memberAchievements),
@@ -270,6 +315,7 @@ export const membersRelations = relations(members, ({ many, one }) => ({
     references: [memberReferrals.referredMemberId],
   }),
   memberTags: many(memberHasTags),
+  customFields: many(memberCustomFields),
 }));
 
 export const familyMemberRelations = relations(
@@ -412,3 +458,28 @@ export const memberHasTagsRelations = relations(memberHasTags, ({ one }) => ({
     references: [memberTags.id],
   }),
 }));
+
+export const memberFieldsRelations = relations(
+  memberFields,
+  ({ many, one }) => ({
+    location: one(locations, {
+      fields: [memberFields.locationId],
+      references: [locations.id],
+    }),
+    customFields: many(memberCustomFields),
+  })
+);
+
+export const memberCustomFieldsRelations = relations(
+  memberCustomFields,
+  ({ one }) => ({
+    member: one(members, {
+      fields: [memberCustomFields.memberId],
+      references: [members.id],
+    }),
+    field: one(memberFields, {
+      fields: [memberCustomFields.customFieldId],
+      references: [memberFields.id],
+    }),
+  })
+);

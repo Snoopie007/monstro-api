@@ -13,6 +13,8 @@ import {
   memberReferrals,
   members,
   memberSubscriptions,
+  memberFields,
+  memberCustomFields,
 } from "@/db/schemas";
 
 export type Member = typeof members.$inferSelect & {
@@ -83,4 +85,38 @@ export type MemberReferral = typeof memberReferrals.$inferSelect & {
   member?: Member;
   referred?: Member;
   location?: Location;
+};
+
+export type CustomFieldType =
+  | "text"
+  | "number"
+  | "date"
+  | "boolean"
+  | "select"
+  | "multi-select";
+
+export type MemberField = typeof memberFields.$inferSelect & {
+  location?: Location;
+  customFields?: MemberCustomField[];
+};
+
+export type MemberCustomField = typeof memberCustomFields.$inferSelect & {
+  member?: Member;
+  field?: MemberField;
+};
+
+export type MemberWithCustomFields = Member & {
+  customFields?: MemberCustomField[];
+};
+
+export type CustomFieldOption = {
+  value: string;
+  label: string;
+};
+
+export type CustomFieldDefinition = MemberField & {
+  options?: CustomFieldOption[];
+  required?: boolean;
+  placeholder?: string;
+  helpText?: string;
 };

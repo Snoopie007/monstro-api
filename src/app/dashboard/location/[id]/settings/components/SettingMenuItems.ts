@@ -1,18 +1,17 @@
-
-
 type SettingMenuItem = {
-    name: string;
-    path: string;
-    roles: string[];
-}
+  name: string;
+  path: string;
+  roles: string[];
+};
 
 export const SettingMenuItems: SettingMenuItem[] = [
-    { path: "company", name: "Business Info", roles: ['vendor', 'admin'] },
-    { path: "tax", name: "Tax", roles: ['vendor', 'admin'] },
-    { path: 'roles', name: "Roles", roles: ['vendor'] },
-    { path: "billing", name: "Billing", roles: ['vendor'] },
-    { path: "invoices", name: "Invoices", roles: ['vendor'] },
-    { path: "benefits", name: "Benefits", roles: ['vendor'] },
-    { path: "integrations", name: "Integrations", roles: ['vendor', 'admin'] },
-    { path: "settings", name: "Settings", roles: ['vendor', 'admin'] }
+  { path: "company", name: "Business Info", roles: ["vendor", "admin"] },
+  { path: "custom-fields", name: "Custom Fields", roles: ["vendor", "admin"] },
+  { path: "tax", name: "Tax", roles: ["vendor", "admin"] },
+  { path: "roles", name: "Roles", roles: ["vendor"] },
+  { path: "billing", name: "Billing", roles: ["vendor"] },
+  { path: "invoices", name: "Invoices", roles: ["vendor"] },
+  { path: "benefits", name: "Benefits", roles: ["vendor"] },
+  { path: "integrations", name: "Integrations", roles: ["vendor", "admin"] },
+  { path: "settings", name: "Settings", roles: ["vendor", "admin"] },
 ];
