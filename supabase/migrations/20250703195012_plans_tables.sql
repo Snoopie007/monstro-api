@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS member_subscriptions (
   ended_at timestamp with time zone,
   payment_method payment_method NOT NULL DEFAULT 'cash',
   metadata jsonb NOT NULL DEFAULT '{}',
-  member_contract_id text REFERENCES member_contracts (id) ON DELETE CASCADE,
+  member_contract_id text REFERENCES member_contracts (id) ON DELETE SET NULL,
   is_participant boolean NOT NULL DEFAULT true
 );
 
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS member_packages (
   total_class_limit integer NOT NULL DEFAULT 0,
   expire_date timestamp with time zone,
   location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
-  member_contract_id text REFERENCES member_contracts (id) ON DELETE CASCADE,
+  member_contract_id text REFERENCES member_contracts (id) ON DELETE SET NULL,
   is_participant boolean NOT NULL DEFAULT true
 );
 

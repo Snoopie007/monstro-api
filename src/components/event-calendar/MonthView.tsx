@@ -93,9 +93,11 @@ export function MonthView({
     setIsMounted(true);
   }, []);
 
+  const numberOfWeeks = weeks.length;
+
   return (
     <div data-slot="month-view" className="contents">
-      <div className="border-border/70 grid grid-cols-7 border-b">
+      <div className="border-border/10 grid grid-cols-7 border-b">
         {weekdays.map((day) => (
           <div
             key={day}
@@ -105,7 +107,12 @@ export function MonthView({
           </div>
         ))}
       </div>
-      <div className="grid flex-1 auto-rows-fr">
+      <div
+        className="grid flex-1 h-full"
+        style={{
+          gridTemplateRows: `repeat(${numberOfWeeks}, 1fr)`,
+        }}
+      >
         {weeks.map((week, weekIndex) => (
           <div
             key={`week-${weekIndex}`}
@@ -135,7 +142,7 @@ export function MonthView({
               return (
                 <div
                   key={day.toString()}
-                  className="group border-border/70 data-outside-cell:bg-muted/25 data-outside-cell:text-muted-foreground/70 border-r border-b last:border-r-0"
+                  className="group border-foreground/10 dark:border-border/10 data-outside-cell:bg-muted/25 data-outside-cell:text-muted-foreground/70 border-r border-b last:border-r-0 flex flex-col h-full"
                   data-today={isToday(day) || undefined}
                   data-outside-cell={!isCurrentMonth || undefined}
                 >
@@ -147,13 +154,14 @@ export function MonthView({
                       startTime.setHours(DefaultStartHour, 0, 0);
                       onEventCreate(startTime);
                     }}
+                    className="flex flex-col h-full"
                   >
                     <div className="group-data-today:bg-primary group-data-today:text-primary-foreground mt-1 inline-flex size-6 items-center justify-center rounded-full text-sm">
                       {format(day, "d")}
                     </div>
                     <div
                       ref={isReferenceCell ? contentRef : null}
-                      className="min-h-[calc((var(--event-height)+var(--event-gap))*2)] sm:min-h-[calc((var(--event-height)+var(--event-gap))*3)] lg:min-h-[calc((var(--event-height)+var(--event-gap))*4)]"
+                      className="flex-1 flex flex-col min-h-[calc((var(--event-height)+var(--event-gap))*2)] sm:min-h-[calc((var(--event-height)+var(--event-gap))*3)] lg:min-h-[calc((var(--event-height)+var(--event-gap))*4)]"
                     >
                       {sortEvents(allDayEvents).map(
                         (event: CalendarEvent, index: number) => {

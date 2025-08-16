@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS reservations (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('rsv_'),
-  session_id text REFERENCES sessions (id) ON DELETE CASCADE NOT NULL,
+  session_id text REFERENCES program_sessions (id) ON DELETE CASCADE NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   start_on timestamp with time zone NOT NULL,
   end_on timestamp with time zone NOT NULL,

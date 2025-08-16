@@ -22,7 +22,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Edit3, Save, X, Copy, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Edit3,
+  Save,
+  X,
+  Copy,
+  Trash2,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 import { useCustomFields } from "./useCustomFields";
 import { customFieldTypeOptions } from "./schemas";
 import {
@@ -35,8 +44,15 @@ import {
   FormMessage,
 } from "@/components/forms/form";
 import { Pill, PillIndicator } from "@/components/ui/kibo-ui/pill";
+import type { CustomFieldFormData } from "./schemas";
 
-export default function CustomFieldsPageClient() {
+interface CustomFieldsPageClientProps {
+  initialFields: CustomFieldFormData[];
+}
+
+export default function CustomFieldsPageClient({
+  initialFields,
+}: CustomFieldsPageClientProps) {
   const params = useParams();
   const locationId = params.id as string;
 
@@ -45,12 +61,14 @@ export default function CustomFieldsPageClient() {
     fields,
     isEditing,
     isLoading,
+    error,
     toggleEditMode,
     addField,
     removeField,
     duplicateField,
+    fetchCustomFields,
     onSubmit,
-  } = useCustomFields({ locationId });
+  } = useCustomFields({ locationId, initialFields });
 
   if (isLoading) {
     return (
@@ -68,6 +86,43 @@ export default function CustomFieldsPageClient() {
             Loading custom fields...
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !isEditing) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">Custom Fields</h1>
+            <p className="text-sm text-muted-foreground">
+              Create and manage custom fields for your members
+            </p>
+          </div>
+        </div>
+        <Card className="border-destructive/20">
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-destructive mb-2">
+                Error Loading Custom Fields
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                {error}
+              </p>
+              <Button
+                onClick={fetchCustomFields}
+                variant="outline"
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
