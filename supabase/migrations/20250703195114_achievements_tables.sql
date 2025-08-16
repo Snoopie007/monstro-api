@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS rewards (
   name text NOT NULL,
   description text NOT NULL,
   location_id text NOT NULL,
-  icon text,
   required_points integer NOT NULL,
   limit_per_member integer NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -61,7 +60,6 @@ CREATE TABLE IF NOT EXISTS reward_claims (
   location_id text NOT NULL REFERENCES locations (id) ON DELETE CASCADE,
   previous_points integer,
   date_claimed timestamp with time zone,
-  status smallint NOT NULL DEFAULT 0,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );

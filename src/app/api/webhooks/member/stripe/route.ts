@@ -1,12 +1,41 @@
-import {NextRequest, NextResponse} from "next/server";
-import {headers} from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
+import { headers } from "next/headers";
 import Stripe from "stripe";
-import {db} from "@/db/db";
-import {memberInvoices, memberSubscriptions, transactions} from "@/db/schemas";
-import {eq} from "drizzle-orm";
-import {waitUntil} from "@vercel/functions";
-import {MemberStripePayments} from "@/libs/server/stripe";
-import {tryCatch} from "@/libs/utils";
+import { db } from "@/db/db";
+import {
+  memberInvoices,
+  memberSubscriptions,
+  transactions,
+} from "@/db/schemas";
+import { eq, sql } from "drizzle-orm";
+import { waitUntil } from "@vercel/functions";
+import { MemberStripePayments } from "@/libs/server/stripe";
+import { tryCatch } from "@/libs/utils";
+import type { ExtractTablesWithRelations } from "drizzle-orm";
+import type { PgTransaction } from "drizzle-orm/pg-core";
+import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
+
+/**
+ * Stripe Webhook Handler for Member Billing Events
+ *
+ * This webhook handles various Stripe events related to member billing:
+ *
+ * 1. Traditional Subscription Events:
+ *    - invoice.payment_succeeded: For subscription-based recurring billing
+ *    - invoice.payment_failed: When subscription payments fail
+ *    - customer.subscription.* events: For subscription lifecycle management
+ *
+ * 2. Recurring Invoice Events (via Subscription Schedules):
+ *    - invoice.payment_succeeded: For schedule-based recurring invoices
+ *    - invoice.payment_failed: When scheduled invoice payments fail
+ *    - invoice.finalized: When invoices are ready for payment
+ *    - invoice.updated: For status changes and updates
+ *
+ * Key Differences:
+ * - Subscription invoices: Have invoice.subscription field and create new local invoices
+ * - Recurring invoices: Use subscription schedules and update existing local invoices
+ * - Recurring invoices are identified by stripeScheduleId in metadata
+ */
 
 export const config = {
   api: {
@@ -21,8 +50,9 @@ const allowedEvents: Stripe.Event.Type[] = [
   "customer.subscription.resumed",
   "invoice.payment_failed",
   "invoice.payment_action_required",
-  "invoice.payment_failed",
   "invoice.payment_succeeded",
+  "invoice.finalized",
+  "invoice.updated",
   "payment_intent.canceled",
   "payment_intent.succeeded",
   // "charge.succeeded"
@@ -30,11 +60,23 @@ const allowedEvents: Stripe.Event.Type[] = [
 
 const isProduction = process.env.NODE_ENV === "production";
 const stripe = new MemberStripePayments();
+
+// Type extension for Stripe Invoice to include runtime properties
+type ExtendedStripeInvoice = Stripe.Invoice & {
+  subscription?: string | Stripe.Subscription;
+  subscription_details?: {
+    metadata?: Record<string, string>;
+  };
+  total_tax_amounts?: Array<{ amount: number }>;
+  charge?: string;
+};
+
 export async function POST(req: NextRequest) {
   const signature = (await headers()).get("Stripe-Signature");
 
   if (!signature) {
-    return NextResponse.json({message: "Invalid signature", status: 400});
+    console.error("[STRIPE WEBHOOK] Missing Stripe signature");
+    return NextResponse.json({ message: "Invalid signature", status: 400 });
   }
 
   async function doEventProcessing(): Promise<void> {
@@ -46,61 +88,134 @@ export async function POST(req: NextRequest) {
     }
 
     let event: Stripe.Event;
-    if (isProduction) {
-      const rawText = await req.text();
-      event = await stripe.constructEvent(
-        Buffer.from(rawText),
-        signature,
-        process.env.STRIPE_WEBHOOK_SECRET
+    try {
+      if (isProduction) {
+        const rawText = await req.text();
+        event = await stripe.constructEvent(
+          Buffer.from(rawText),
+          signature,
+          process.env.STRIPE_WEBHOOK_SECRET
+        );
+      } else {
+        event = await req.json();
+      }
+
+      console.log(
+        `[STRIPE WEBHOOK] Processing event: ${event.type} (${event.id})`
       );
-    } else {
-      event = await req.json();
+      waitUntil(processEvent(event));
+    } catch (err) {
+      console.error("[STRIPE WEBHOOK] Failed to construct event:", err);
+      throw err;
     }
-    waitUntil(processEvent(event));
   }
 
-  const {error} = await tryCatch(doEventProcessing());
+  const { error } = await tryCatch(doEventProcessing());
 
   if (error) {
-    console.error("[STRIPE HOOK] Error processing event", error);
+    console.error("[STRIPE WEBHOOK] Error processing event:", error);
+    return NextResponse.json({
+      message: "Webhook processing failed",
+      status: 500,
+    });
   }
 
-  return NextResponse.json({message: "Stripe webhook received", status: 200});
+  return NextResponse.json({ message: "Stripe webhook received", status: 200 });
 }
 
 async function processEvent(event: Stripe.Event) {
-  if (!allowedEvents.includes(event.type)) return;
+  if (!allowedEvents.includes(event.type)) {
+    console.log(
+      `[STRIPE WEBHOOK] Ignoring unallowed event type: ${event.type}`
+    );
+    return;
+  }
 
-  switch (event.type) {
-    case "customer.subscription.deleted":
-    case "customer.subscription.paused":
-    case "customer.subscription.resumed":
-      await updateSubscriptionStatus(event);
-      break;
-    case "invoice.payment_failed":
-      await handleInvoicePaymentFailed(event);
-      break;
+  try {
+    console.log(`[STRIPE WEBHOOK] Handling event: ${event.type} (${event.id})`);
 
-    case "invoice.payment_succeeded":
-      await handleSubscriptionPaid(event);
-      break;
-    default:
-      console.warn(`Unhandled event type: ${event.type}`);
+    switch (event.type) {
+      case "customer.subscription.deleted":
+      case "customer.subscription.paused":
+      case "customer.subscription.resumed":
+      case "customer.subscription.updated":
+        await updateSubscriptionStatus(event);
+        break;
+      case "invoice.payment_failed":
+        await handleInvoicePaymentFailed(event);
+        break;
+      case "invoice.payment_succeeded":
+        await handleInvoicePaymentSucceeded(event);
+        break;
+      case "invoice.finalized":
+        await handleInvoiceFinalized(event);
+        break;
+      case "invoice.updated":
+        await handleInvoiceUpdated(event);
+        break;
+      default:
+        console.warn(`[STRIPE WEBHOOK] Unhandled event type: ${event.type}`);
+    }
+
+    console.log(
+      `[STRIPE WEBHOOK] Successfully processed event: ${event.type} (${event.id})`
+    );
+  } catch (error) {
+    console.error(
+      `[STRIPE WEBHOOK] Error processing event ${event.type} (${event.id}):`,
+      error
+    );
+    // Re-throw to trigger retry in Stripe's webhook system
+    throw error;
   }
 }
 
-async function handleSubscriptionPaid(event: Stripe.Event) {
-  const invoice = event.data.object as Stripe.Invoice;
-  const subscriptionDetails = invoice.parent?.subscription_details;
-  let subscriptionId: string | undefined;
+async function handleInvoicePaymentSucceeded(event: Stripe.Event) {
+  const invoice = event.data.object as ExtendedStripeInvoice;
 
-  if (typeof subscriptionDetails?.subscription === "string") {
-    subscriptionId = subscriptionDetails.subscription;
+  console.log(
+    `[STRIPE WEBHOOK] Processing invoice payment success: ${invoice.id}, amount: ${invoice.amount_paid}`
+  );
+
+  // Determine if this is a subscription invoice or a recurring schedule invoice
+  if (invoice.subscription) {
+    console.log(
+      `[STRIPE WEBHOOK] Identified as subscription invoice: ${invoice.id} -> subscription: ${invoice.subscription}`
+    );
+    // Handle traditional subscription invoices
+    await handleSubscriptionInvoicePayment(invoice);
+  } else if (
+    invoice.subscription_details?.metadata?.schedule ||
+    invoice.lines?.data?.[0]?.subscription
+  ) {
+    console.log(
+      `[STRIPE WEBHOOK] Identified as recurring schedule invoice: ${invoice.id}`
+    );
+    // Handle recurring schedule invoices (created via subscription schedules)
+    await handleRecurringInvoicePayment(invoice);
+  } else if (invoice.metadata?.type === "one-off-admin-created") {
+    console.log(
+      `[STRIPE WEBHOOK] Identified as one-off admin-created invoice: ${invoice.id}`
+    );
+    // Handle one-off admin-created invoices
+    await handleOneOffInvoicePayment(invoice);
   } else {
-    subscriptionId = subscriptionDetails?.subscription?.id;
+    console.warn(
+      `[STRIPE WEBHOOK] Invoice payment succeeded but could not determine type: ${invoice.id}`
+    );
+    console.warn(
+      `[STRIPE WEBHOOK] Invoice details - subscription: ${
+        invoice.subscription
+      }, subscription_details: ${JSON.stringify(invoice.subscription_details)}, metadata: ${JSON.stringify(invoice.metadata)}`
+    );
   }
+}
 
-  if (!subscriptionId) return;
+async function handleSubscriptionInvoicePayment(
+  invoice: ExtendedStripeInvoice
+) {
+  const subscriptionId = invoice.subscription as string;
+
   try {
     const subscription = await db.query.memberSubscriptions.findFirst({
       where: eq(memberSubscriptions.stripeSubscriptionId, subscriptionId),
@@ -110,15 +225,14 @@ async function handleSubscriptionPaid(event: Stripe.Event) {
       },
     });
 
-    if (!subscription) return;
-
-    const metadata = subscriptionDetails?.metadata;
-    let tax = 0;
-    if (invoice.total_taxes && invoice.total_taxes.length > 0) {
-      tax = invoice.total_taxes
-        .map((tax) => tax.amount)
-        .reduce((acc, curr) => acc + curr, 0);
+    if (!subscription) {
+      console.warn(
+        `No local subscription found for Stripe subscription: ${subscriptionId}`
+      );
+      return;
     }
+
+    const tax = calculateTaxFromInvoice(invoice);
 
     await db.transaction(async (tx) => {
       const commonFields = {
@@ -129,7 +243,7 @@ async function handleSubscriptionPaid(event: Stripe.Event) {
         tax,
       };
 
-      const [{invoiceId}] = await tx
+      const [{ invoiceId }] = await tx
         .insert(memberInvoices)
         .values({
           ...commonFields,
@@ -146,33 +260,262 @@ async function handleSubscriptionPaid(event: Stripe.Event) {
               price: invoice.amount_paid,
             },
           ],
-          forPeriodStart: new Date(invoice.period_start),
-          forPeriodEnd: new Date(invoice.period_end),
-          dueDate: new Date(invoice.created),
+          forPeriodStart: new Date(invoice.period_start! * 1000),
+          forPeriodEnd: new Date(invoice.period_end! * 1000),
+          dueDate: new Date(invoice.created * 1000),
           invoicePdf: invoice.invoice_pdf,
           metadata: {
             stripeInvoiceId: invoice.id,
             invoiceUrl: invoice.hosted_invoice_url,
-            issuer: invoice.issuer,
+            issuer: (invoice as any).issuer,
+            type: "subscription",
           },
         })
-        .returning({invoiceId: memberInvoices.id});
+        .returning({ invoiceId: memberInvoices.id });
 
-      await tx.insert(transactions).values({
-        ...commonFields,
-        subscriptionId: subscription.id,
-        invoiceId,
-        chargeDate: new Date(invoice.created),
-        status: "paid",
-        type: "inbound",
-        paymentMethod: "card",
-        amount: invoice.amount_paid,
-        description: subscription.plan?.name,
-      });
+      await createInvoiceTransaction(
+        tx,
+        {
+          ...commonFields,
+          subscriptionId: subscription.id,
+          invoiceId,
+          amount: invoice.amount_paid,
+          description: subscription.plan?.name,
+        },
+        invoice
+      );
     });
   } catch (error) {
-    console.error("Error updating subscription", error);
+    console.error("Error handling subscription invoice payment:", error);
   }
+}
+
+async function handleRecurringInvoicePayment(invoice: ExtendedStripeInvoice) {
+  try {
+    // Try to find the schedule ID from different possible locations
+    let scheduleId: string | undefined;
+
+    // Check subscription_details metadata
+    if (invoice.subscription_details?.metadata?.schedule) {
+      scheduleId = invoice.subscription_details.metadata.schedule;
+      console.log(
+        `[STRIPE WEBHOOK] Found schedule ID in subscription_details.metadata: ${scheduleId}`
+      );
+    }
+
+    // Check if there's a subscription item that points to a schedule
+    if (!scheduleId && invoice.lines?.data?.[0]?.subscription) {
+      const subId = invoice.lines.data[0].subscription;
+      // For schedule-generated subscriptions, we'll need to find the original schedule
+      // This is a fallback - ideally the schedule ID should be in metadata
+      console.warn(
+        `[STRIPE WEBHOOK] Found subscription ${subId} but no schedule ID in metadata for invoice ${invoice.id}`
+      );
+    }
+
+    if (!scheduleId) {
+      console.error(
+        `[STRIPE WEBHOOK] No schedule ID found for recurring invoice: ${invoice.id}`
+      );
+      return;
+    }
+
+    console.log(
+      `[STRIPE WEBHOOK] Looking for local invoice with schedule ID: ${scheduleId}`
+    );
+
+    // Find the invoice by stripeScheduleId in metadata
+    const existingInvoice = await db.query.memberInvoices.findFirst({
+      where: sql`metadata->>'stripeScheduleId' = ${scheduleId}`,
+    });
+
+    if (!existingInvoice) {
+      console.error(
+        `[STRIPE WEBHOOK] No local invoice found for schedule: ${scheduleId}`
+      );
+      return;
+    }
+
+    console.log(
+      `[STRIPE WEBHOOK] Found local invoice: ${existingInvoice.id} for schedule: ${scheduleId}`
+    );
+
+    const tax = calculateTaxFromInvoice(invoice);
+
+    await db.transaction(async (tx) => {
+      // Update existing invoice status
+      await tx
+        .update(memberInvoices)
+        .set({
+          status: "paid",
+          paid: true,
+          total: invoice.amount_paid,
+          subtotal: invoice.amount_paid - tax,
+          tax: tax,
+          invoicePdf: invoice.invoice_pdf,
+          updated: new Date(),
+          metadata: sql`${memberInvoices.metadata} || ${JSON.stringify({
+            stripeInvoiceId: invoice.id,
+            invoiceUrl: invoice.hosted_invoice_url,
+            paidAt: invoice.status_transitions?.paid_at
+              ? new Date(invoice.status_transitions.paid_at * 1000)
+              : new Date(),
+            type: "recurring_schedule",
+          })}`,
+        })
+        .where(eq(memberInvoices.id, existingInvoice.id));
+
+      // Create transaction record
+      await createInvoiceTransaction(
+        tx,
+        {
+          memberId: existingInvoice.memberId,
+          locationId: existingInvoice.locationId,
+          invoiceId: existingInvoice.id,
+          amount: invoice.amount_paid,
+          description: `Payment for ${existingInvoice.description}`,
+          currency: invoice.currency,
+          tax: tax,
+        },
+        invoice
+      );
+    });
+
+    console.log(
+      `[STRIPE WEBHOOK] Successfully updated recurring invoice ${existingInvoice.id} to paid status`
+    );
+  } catch (error) {
+    console.error(
+      `[STRIPE WEBHOOK] Error handling recurring invoice payment for ${invoice.id}:`,
+      error
+    );
+    throw error;
+  }
+}
+
+async function handleOneOffInvoicePayment(invoice: ExtendedStripeInvoice) {
+  try {
+    console.log(
+      `[STRIPE WEBHOOK] Processing one-off invoice payment: ${invoice.id}`
+    );
+
+    // Find the local invoice record using the Stripe invoice ID
+    const existingInvoice = await db.query.memberInvoices.findFirst({
+      where: sql`metadata->>'stripeInvoiceId' = ${invoice.id}`,
+    });
+
+    if (!existingInvoice) {
+      console.error(
+        `[STRIPE WEBHOOK] No local invoice found for Stripe invoice: ${invoice.id}`
+      );
+      return;
+    }
+
+    console.log(
+      `[STRIPE WEBHOOK] Found local invoice ${existingInvoice.id} for Stripe invoice: ${invoice.id}`
+    );
+
+    const tax = calculateTaxFromInvoice(invoice);
+
+    await db.transaction(async (tx) => {
+      // Update existing invoice status
+      await tx
+        .update(memberInvoices)
+        .set({
+          status: "paid",
+          paid: true,
+          total: invoice.amount_paid,
+          subtotal: invoice.amount_paid - tax,
+          tax: tax,
+          invoicePdf: invoice.invoice_pdf,
+          updated: new Date(),
+          metadata: sql`${memberInvoices.metadata} || ${JSON.stringify({
+            stripeInvoiceId: invoice.id,
+            invoiceUrl: invoice.hosted_invoice_url,
+            paidAt: invoice.status_transitions?.paid_at
+              ? new Date(invoice.status_transitions.paid_at * 1000)
+              : new Date(),
+            type: "one-off-admin-created",
+          })}`,
+        })
+        .where(eq(memberInvoices.id, existingInvoice.id));
+
+      // Create transaction record
+      await createInvoiceTransaction(
+        tx,
+        {
+          memberId: existingInvoice.memberId,
+          locationId: existingInvoice.locationId,
+          invoiceId: existingInvoice.id,
+          amount: invoice.amount_paid,
+          description: `Payment for ${existingInvoice.description}`,
+          currency: invoice.currency,
+          tax: tax,
+        },
+        invoice
+      );
+    });
+
+    console.log(
+      `[STRIPE WEBHOOK] Successfully updated one-off invoice ${existingInvoice.id} to paid status`
+    );
+  } catch (error) {
+    console.error(
+      `[STRIPE WEBHOOK] Error handling one-off invoice payment for ${invoice.id}:`,
+      error
+    );
+    throw error;
+  }
+}
+
+// Helper function to calculate tax from Stripe invoice
+function calculateTaxFromInvoice(invoice: ExtendedStripeInvoice): number {
+  if (!invoice.total_tax_amounts?.length) return 0;
+  return invoice.total_tax_amounts.reduce(
+    (total, tax) => total + tax.amount,
+    0
+  );
+}
+
+// Helper function to create transaction record for paid invoice
+async function createInvoiceTransaction(
+  tx: PgTransaction<
+    PostgresJsQueryResultHKT,
+    typeof import("@/db/schemas"),
+    ExtractTablesWithRelations<typeof import("@/db/schemas")>
+  >,
+  transactionData: {
+    memberId: string;
+    locationId: string;
+    invoiceId: string;
+    amount: number;
+    description: string;
+    currency: string;
+    tax: number;
+    subscriptionId?: string;
+  },
+  stripeInvoice: ExtendedStripeInvoice
+) {
+  await tx.insert(transactions).values({
+    memberId: transactionData.memberId,
+    locationId: transactionData.locationId,
+    invoiceId: transactionData.invoiceId,
+    subscriptionId: transactionData.subscriptionId || null,
+    description: transactionData.description,
+    type: "inbound",
+    paymentMethod: "card", // Could be enhanced to detect actual method
+    amount: transactionData.amount,
+    status: "paid",
+    chargeDate: stripeInvoice.status_transitions?.paid_at
+      ? new Date(stripeInvoice.status_transitions.paid_at * 1000)
+      : new Date(stripeInvoice.created * 1000),
+    currency: transactionData.currency,
+    taxAmount: transactionData.tax,
+    metadata: {
+      stripeInvoiceId: stripeInvoice.id,
+      stripeChargeId: stripeInvoice.charge,
+    },
+  });
 }
 
 async function updateSubscriptionStatus(event: Stripe.Event) {
@@ -187,22 +530,133 @@ async function updateSubscriptionStatus(event: Stripe.Event) {
 }
 
 async function handleInvoicePaymentFailed(event: Stripe.Event) {
-  const invoice = event.data.object as Stripe.Invoice;
+  const invoice = event.data.object as ExtendedStripeInvoice;
 
-  const subscription = invoice.parent?.subscription_details
-    ?.subscription as string;
-  if (subscription) {
-    try {
-      await db
-        .update(memberSubscriptions)
-        .set({
-          status: "past_due",
-        })
-        .where(eq(memberSubscriptions.stripeSubscriptionId, subscription));
-    } catch (error) {
-      console.error("Error updating subscription", error);
-    }
+  // Determine if this is a subscription invoice or a recurring schedule invoice
+  if (invoice.subscription) {
+    // Handle traditional subscription invoice failures
+    await handleSubscriptionInvoiceFailure(invoice);
+  } else if (
+    invoice.subscription_details?.metadata?.schedule ||
+    invoice.lines?.data?.[0]?.subscription
+  ) {
+    // Handle recurring schedule invoice failures
+    await handleRecurringInvoiceFailure(invoice);
+  } else {
+    console.warn(
+      `Invoice payment failed but could not determine type: ${invoice.id}`
+    );
   }
+}
+
+async function handleSubscriptionInvoiceFailure(
+  invoice: ExtendedStripeInvoice
+) {
+  const subscriptionId = invoice.subscription as string;
+
+  try {
+    await db
+      .update(memberSubscriptions)
+      .set({
+        status: "past_due",
+        updated: new Date(),
+      })
+      .where(eq(memberSubscriptions.stripeSubscriptionId, subscriptionId));
+
+    console.log(
+      `Updated subscription ${subscriptionId} to past_due status due to invoice payment failure: ${invoice.id}`
+    );
+  } catch (error) {
+    console.error(
+      "Error updating subscription status after payment failure:",
+      error
+    );
+  }
+}
+
+async function handleRecurringInvoiceFailure(invoice: ExtendedStripeInvoice) {
+  try {
+    // Try to find the schedule ID from different possible locations
+    let scheduleId: string | undefined;
+
+    // Check subscription_details metadata
+    if (invoice.subscription_details?.metadata?.schedule) {
+      scheduleId = invoice.subscription_details.metadata.schedule;
+    }
+
+    // Check if there's a subscription item that points to a schedule
+    if (!scheduleId && invoice.lines?.data?.[0]?.subscription) {
+      const subId = invoice.lines.data[0].subscription;
+      console.warn(
+        `Found subscription ${subId} but no schedule ID in metadata for failed invoice ${invoice.id}`
+      );
+    }
+
+    if (!scheduleId) {
+      console.warn(
+        `No schedule ID found for failed recurring invoice: ${invoice.id}`
+      );
+      return;
+    }
+
+    // Find and update the invoice by stripeScheduleId in metadata
+    const result = await db
+      .update(memberInvoices)
+      .set({
+        status: "unpaid",
+        attemptCount: sql`${memberInvoices.attemptCount} + 1`,
+        updated: new Date(),
+        metadata: sql`${memberInvoices.metadata} || ${JSON.stringify({
+          lastFailedAt: new Date(),
+          stripeInvoiceId: invoice.id,
+          failureReason:
+            (invoice as any).last_finalization_error?.message ||
+            "Payment failed",
+          attemptHistory: {
+            [Date.now()]: {
+              reason:
+                (invoice as any).last_finalization_error?.message ||
+                "Payment failed",
+              amount: invoice.amount_due,
+            },
+          },
+        })}`,
+      })
+      .where(sql`metadata->>'stripeScheduleId' = ${scheduleId}`)
+      .returning({ id: memberInvoices.id });
+
+    if (result.length > 0) {
+      console.log(
+        `Updated recurring invoice for schedule ${scheduleId} to unpaid status due to payment failure: ${invoice.id}`
+      );
+    } else {
+      console.warn(
+        `No local invoice found for failed recurring invoice schedule: ${scheduleId}`
+      );
+    }
+  } catch (error) {
+    console.error("Error handling recurring invoice payment failure:", error);
+  }
+}
+
+async function handleInvoiceFinalized(event: Stripe.Event) {
+  const invoice = event.data.object as ExtendedStripeInvoice;
+
+  // For now, we'll just log this event as finalization doesn't necessarily mean payment
+  console.log(`Invoice finalized: ${invoice.id}, status: ${invoice.status}`);
+
+  // We could potentially update draft invoices to a 'finalized' status here
+  // if we want to track that state separately
+}
+
+async function handleInvoiceUpdated(event: Stripe.Event) {
+  const invoice = event.data.object as ExtendedStripeInvoice;
+
+  // Handle invoice status updates that aren't covered by payment events
+  console.log(`Invoice updated: ${invoice.id}, status: ${invoice.status}`);
+
+  // We could update invoice metadata or status based on the invoice state
+  // For example, if an invoice is voided or becomes uncollectible
 }
 
 // async function handlePaymentIntentSucceeded(event: Stripe.Event) {

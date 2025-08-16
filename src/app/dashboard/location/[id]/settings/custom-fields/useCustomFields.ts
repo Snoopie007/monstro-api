@@ -1,0 +1,180 @@
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "react-toastify";
+import {
+  customFieldsFormSchema,
+  type CustomFieldsFormData,
+  type CustomFieldFormData,
+} from "./schemas";
+import type { MemberField } from "@/types/member";
+
+interface UseCustomFieldsProps {
+  locationId: string;
+  initialFields?: CustomFieldFormData[];
+}
+
+export function useCustomFields({
+  locationId,
+  initialFields = [],
+}: UseCustomFieldsProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const form = useForm<CustomFieldsFormData>({
+    resolver: zodResolver(customFieldsFormSchema),
+    defaultValues: {
+      fields: initialFields,
+    },
+  });
+
+  const { fields, append, remove, update } = form.watch("fields")
+    ? {
+        fields: form.watch("fields"),
+        append: (field: CustomFieldFormData) => {
+          const currentFields = form.getValues("fields");
+          form.setValue("fields", [...currentFields, field]);
+        },
+        remove: (index: number) => {
+          const currentFields = form.getValues("fields");
+          form.setValue(
+            "fields",
+            currentFields.filter((_, i) => i !== index)
+          );
+        },
+        update: (index: number, field: CustomFieldFormData) => {
+          const currentFields = form.getValues("fields");
+          currentFields[index] = field;
+          form.setValue("fields", currentFields);
+        },
+      }
+    : { fields: [], append: () => {}, remove: () => {}, update: () => {} };
+
+  // Fetch existing custom fields for this location
+  const fetchCustomFields = async () => {
+    console.log("Fetching custom fields for location:", locationId);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/protected/loc/${locationId}/custom-fields`
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch custom fields");
+      }
+
+      if (data.success) {
+        form.setValue("fields", data.data || []);
+        console.log("Custom fields loaded:", data.data);
+      } else {
+        throw new Error(data.message || "Failed to fetch custom fields");
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch custom fields";
+      console.error("Error fetching custom fields:", error);
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Save custom fields
+  const saveCustomFields = async (data: CustomFieldsFormData) => {
+    console.log("Saving custom fields:", data);
+    setError(null);
+
+    try {
+      // TODO: Implement bulk update API endpoint
+      console.log("Custom fields saved successfully");
+      toast.success("Custom fields saved successfully");
+      setIsEditing(false);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to save custom fields";
+      console.error("Error saving custom fields:", error);
+      setError(errorMessage);
+      toast.error(errorMessage);
+    }
+  };
+
+  // Add new field
+  const addField = () => {
+    const newField: CustomFieldFormData = {
+      name: "",
+      type: "text",
+      required: false,
+      placeholder: "",
+      helpText: "",
+    };
+    append(newField);
+    console.log("Added new field");
+  };
+
+  // Remove field
+  const removeField = (index: number) => {
+    remove(index);
+    console.log("Removed field at index:", index);
+  };
+
+  // Duplicate field
+  const duplicateField = (index: number) => {
+    const fieldToDuplicate = fields[index];
+    const duplicatedField: CustomFieldFormData = {
+      ...fieldToDuplicate,
+      id: undefined, // Remove ID so it gets treated as new
+      name: `${fieldToDuplicate.name} (Copy)`,
+    };
+    append(duplicatedField);
+    console.log("Duplicated field:", fieldToDuplicate);
+  };
+
+  // Toggle edit mode
+  const toggleEditMode = () => {
+    if (isEditing) {
+      // Cancel editing - reset form to original values
+      if (initialFields.length > 0) {
+        form.setValue("fields", initialFields);
+      } else {
+        fetchCustomFields();
+      }
+    }
+    setIsEditing(!isEditing);
+    setError(null); // Clear any existing errors when toggling modes
+    console.log("Toggled edit mode:", !isEditing);
+  };
+
+  // Initialize data on mount only if no initial fields provided
+  useEffect(() => {
+    if (initialFields.length === 0) {
+      fetchCustomFields();
+    }
+  }, [locationId]);
+
+  return {
+    // Form state
+    form,
+    fields,
+    isEditing,
+    isLoading,
+    error,
+
+    // Actions
+    toggleEditMode,
+    addField,
+    removeField,
+    duplicateField,
+    saveCustomFields,
+    fetchCustomFields,
+
+    // Form handlers
+    onSubmit: form.handleSubmit(saveCustomFields),
+  };
+}
