@@ -45,6 +45,9 @@ export async function DELETE(req: Request, props: { params: Promise<{ id: string
                 logoUrl: null,
             }).where(eq(locations.id, params.id))
         }
+        await db.update(locations).set({
+            logoUrl: null,
+        }).where(eq(locations.id, params.id))
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (err) {
         console.log(err)
