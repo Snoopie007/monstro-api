@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { } from '@/db/schemas/programs'
 
-export async function GET(req: Request, props: { params: Promise<{ progid: string, id: string }> }
-) {
+type Params = {
+  progid: string;
+  id: string;
+}
+
+export async function GET(req: Request, props: { params: Promise<Params> }) {
   const { progid } = await props.params;
+
 
   if (!progid) {
     return NextResponse.json({ error: 'Program ID is required' }, { status: 400 });
@@ -14,7 +18,6 @@ export async function GET(req: Request, props: { params: Promise<{ progid: strin
     where: (program, { eq }) => eq(program.id, progid),
   });
 
-  console.log(program);
 
   if (!program) {
     return NextResponse.json({ error: 'Program not found' }, { status: 404 });

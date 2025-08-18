@@ -18,25 +18,24 @@ export async function GET(
     }
 
     try {
-        const [contract] = await db
-            .select()
-            .from(memberContracts)
-            .where(
-                and(
-                    eq(memberContracts.id, params.sid),
-                    eq(memberContracts.memberId, params.mid)
-                )
-            )
-            .limit(1);
+        const mb = await db.query.memberContracts.findFirst({
+            where: and(
+                eq(memberContracts.id, params.sid),
+                eq(memberContracts.memberId, params.mid)
+            ),
+            with: {
+                location: true,
+            }
+        });
 
-        if (!contract) {
+        if (!mb) {
             return NextResponse.json(
                 { error: "Contract not found" },
                 { status: 404 }
             );
         }
 
-        // 2. Prepare contract data for template
+        const { location, ...contract } = mb;
         const contractData = {
             ...contract,
             variables: {
@@ -46,15 +45,7 @@ export async function GET(
                     email: session.user.email,
                     phone: session.user.phone,
                 },
-                location: contract.variables?.location || {
-                    name: "Unknown Location",
-                    address: "",
-                    city: "",
-                    state: "",
-                    postalCode: "",
-                    country: "",
-                    phone: "",
-                },
+                location: location,
             },
         };
 
@@ -62,13 +53,11 @@ export async function GET(
         const htmlContent = generateContractHtml({
             contract: contractData,
             memberName: session.user.name,
-            date: contract.signed
-                ? new Date().toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                })
-                : "Unsigned",
+            date: new Date(mb.created).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+            }),
             contractId: contract.id,
         });
 
