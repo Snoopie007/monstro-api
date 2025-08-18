@@ -37,8 +37,8 @@ export function DroppableCell({
   const formattedTime =
     time !== undefined
       ? `${Math.floor(time)}:${Math.round((time - Math.floor(time)) * 60)
-          .toString()
-          .padStart(2, "0")}`
+        .toString()
+        .padStart(2, "0")}`
       : null;
 
   return (
@@ -46,18 +46,17 @@ export function DroppableCell({
       ref={setNodeRef}
       onClick={onClick}
       className={cn(
-        "group relative data-dragging:bg-accent flex h-full flex-col overflow-hidden px-0.5 py-1 sm:px-1 cursor-pointer",
-        "bg-transparent dark:bg-inherit dark:hover:bg-foreground/10 hover:bg-primary/10 transition-colors duration-200 ease-out",
+        "group relative rounded-[4px] data-dragging:bg-accent flex h-full flex-col overflow-hidden sm:px-1 cursor-pointer",
+        "bg-transparent dark:bg-inherit dark:hover:bg-foreground/10 hover:bg-foreground/10 transition-colors duration-200 ease-out",
         className
       )}
       title={formattedTime ? `${formattedTime}` : undefined}
       data-dragging={isOver && activeEvent ? true : undefined}
     >
-      {/* Plus icon - only visible on hover */}
-      <Plus
-        size={12}
-        className="absolute top-1 right-1 opacity-0 group-hover:opacity-40 transition-opacity duration-200 ease-out text-muted-foreground pointer-events-none"
-      />
+
+      <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out h-full w-full flex items-center justify-center text-muted-foreground">
+        +
+      </span>
       {children}
     </div>
   );
