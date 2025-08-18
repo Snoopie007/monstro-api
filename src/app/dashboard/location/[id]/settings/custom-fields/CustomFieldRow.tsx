@@ -50,7 +50,7 @@ export function CustomFieldRow({
 
   return (
     <Card className="border-foreground/10">
-      <CardContent className="p-6">
+      <CardContent className="p-3">
         {isEditing ? (
           // Edit Mode Layout
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -111,7 +111,7 @@ export function CustomFieldRow({
           <div className="space-y-1">
             <div className="flex gap-2">
               {/* Field Name */}
-              <div className="flex-1 font-medium">
+              <div className="flex-1 font-medium text-sm">
                 {field.name || "Untitled Field"}
               </div>
 

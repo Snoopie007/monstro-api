@@ -8,6 +8,8 @@ import {
   users,
   memberTags,
   memberHasTags,
+  memberCustomFields,
+  memberFields,
 } from "@/db/schemas";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 
@@ -123,10 +125,37 @@ export async function GET(
         }, {} as Record<string, any[]>);
       }
 
-      // Add tags to each member
-      const membersWithTags = membersResult.map((member) => ({
+      // Get custom fields for each member
+      let memberCustomFieldsMap: Record<string, any[]> = {};
+
+      if (memberIds.length > 0) {
+        const memberCustomFieldsResult = await db
+          .select({
+            memberId: memberCustomFields.memberId,
+            fieldId: memberCustomFields.customFieldId,
+            value: memberCustomFields.value,
+          })
+          .from(memberCustomFields)
+          .where(inArray(memberCustomFields.memberId, memberIds));
+
+        // Group custom fields by member ID
+        memberCustomFieldsMap = memberCustomFieldsResult.reduce((acc, row) => {
+          if (!acc[row.memberId]) {
+            acc[row.memberId] = [];
+          }
+          acc[row.memberId].push({
+            fieldId: row.fieldId,
+            value: row.value,
+          });
+          return acc;
+        }, {} as Record<string, any[]>);
+      }
+
+      // Add tags and custom fields to each member
+      const membersWithTagsAndCustomFields = membersResult.map((member) => ({
         ...member,
         tags: memberTagsMap[member.id] || [],
+        customFields: memberCustomFieldsMap[member.id] || [],
       }));
 
       // Fetch the total count (with the same conditions)
@@ -142,7 +171,7 @@ export async function GET(
       return NextResponse.json(
         {
           count: totalCount,
-          members: membersWithTags,
+          members: membersWithTagsAndCustomFields,
         },
         { status: 200 }
       );
