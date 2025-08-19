@@ -9,7 +9,8 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { CustomFieldDefinition } from "@/components/custom-fields";
 import { MemberColumns } from "./MemberColumns";
 import { Input } from "@/components/forms";
 import { MemberTable } from "./MemberTable";
@@ -45,6 +46,10 @@ export function MemberList({
   const [selectedTags, setSelectedTags] = useState<string[]>([]); // Tag filtering state
   const [tagOperator, setTagOperator] = useState<"AND" | "OR">("OR"); // Tag filter logic
 
+  // Custom fields state
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  const [customFieldsLoading, setCustomFieldsLoading] = useState(true);
+
   // Fetch data with pagination and tag filtering
   const { data, error, isLoading } = useMembers(
     params.id,
@@ -55,7 +60,32 @@ export function MemberList({
     tagOperator
   ); // Send `page + 1` because the backend may use 1-based indexing.
 
-  const columns = useMemo(() => MemberColumns(params.id), [params.id]);
+  // Fetch custom fields
+  useEffect(() => {
+    const fetchCustomFields = async () => {
+      try {
+        const response = await fetch(
+          `/api/protected/loc/${params.id}/custom-fields`
+        );
+        const data = await response.json();
+
+        if (data.success) {
+          setCustomFields(data.data || []);
+        }
+      } catch (error) {
+        console.error("Error fetching custom fields:", error);
+      } finally {
+        setCustomFieldsLoading(false);
+      }
+    };
+
+    fetchCustomFields();
+  }, [params.id]);
+
+  const columns = useMemo(
+    () => MemberColumns(params.id, customFields),
+    [params.id, customFields]
+  );
 
   const totalPages = useMemo(() => {
     if (data?.count && pageSize > 0) {

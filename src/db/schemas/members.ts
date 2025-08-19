@@ -74,7 +74,9 @@ export const memberAchievements = pgTable(
 );
 
 export const memberPointsHistory = pgTable("member_points_history", {
-  id: uuid("id").primaryKey().notNull()
+  id: uuid("id")
+    .primaryKey()
+    .notNull()
     .default(sql`uuid_base62()`),
   locationId: text("location_id")
     .notNull()
@@ -96,13 +98,23 @@ export const memberPointsHistory = pgTable("member_points_history", {
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
-export const memberReferrals = pgTable("member_referrals", {
-  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-  referredMemberId: text("referred_member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updated: timestamp("updated_at", { withTimezone: true }),
-},
+export const memberReferrals = pgTable(
+  "member_referrals",
+  {
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    referredMemberId: text("referred_member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    locationId: text("location_id")
+      .notNull()
+      .references(() => locations.id, { onDelete: "cascade" }),
+    created: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
+  },
   (t) => [
     primaryKey({ columns: [t.memberId, t.referredMemberId, t.locationId] }),
     unique("unique_referred_member_location").on(
@@ -113,18 +125,34 @@ export const memberReferrals = pgTable("member_referrals", {
   ]
 );
 
-
-export const memberRewards = pgTable("reward_claims", {
-  id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
-  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-  rewardId: text("reward_id").notNull().references(() => rewards.id, { onDelete: "cascade" }),
-  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-  previousPoints: integer("previous_points"),
-  dateClaimed: timestamp("date_claimed", { withTimezone: true }).notNull().defaultNow(),
-  status: smallint("status"),
-  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updated: timestamp("updated_at", { withTimezone: true }),
-}, (t) => [primaryKey({ columns: [t.id] })]);
+export const memberRewards = pgTable(
+  "reward_claims",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .notNull()
+      .default(sql`uuid_base62()`),
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    rewardId: text("reward_id")
+      .notNull()
+      .references(() => rewards.id, { onDelete: "cascade" }),
+    locationId: text("location_id")
+      .notNull()
+      .references(() => locations.id, { onDelete: "cascade" }),
+    previousPoints: integer("previous_points"),
+    dateClaimed: timestamp("date_claimed", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    status: smallint("status"),
+    created: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.id] })]
+);
 
 export const memberContracts = pgTable("member_contracts", {
   id: uuid("id")
@@ -141,10 +169,7 @@ export const memberContracts = pgTable("member_contracts", {
     .notNull()
     .references(() => locations.id, { onDelete: "cascade" }),
   signature: text("signature"),
-  variables: jsonb("variables")
-    .$type<Record<string, any>>()
-    .default(sql`'{}'::jsonb`),
-  signed: boolean("signed").notNull().default(false),
+  pdfFilename: text("pdf_filename"),
   created: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -257,7 +282,6 @@ export const memberFields = pgTable("member_fields", {
   locationId: text("location_id")
     .notNull()
     .references(() => locations.id, { onDelete: "cascade" }),
-  required: boolean("required").notNull().default(false),
   placeholder: text("placeholder"),
   helpText: text("help_text"),
   options: jsonb("options")

@@ -13,6 +13,7 @@ import { useMemberStatus } from "../../providers/MemberContext";
 import { useRouter } from "next/navigation";
 import { MemberEditButton } from "../ContactInfo";
 import { MemberTagsInline } from "./MemberTagsInline";
+import { CustomFieldsSection } from "@/components/custom-fields";
 
 interface MemberProfileProps {
   params: { id: string; mid: string };

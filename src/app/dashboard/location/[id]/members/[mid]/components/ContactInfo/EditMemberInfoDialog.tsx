@@ -25,6 +25,7 @@ import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
 import { useMemberStatus } from "../../providers";
+import { CustomFieldsSection } from "@/components/custom-fields";
 
 const MemberInfoSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -104,7 +105,7 @@ export function EditMemberInfoDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg rounded-sm border-foreground/10">
+      <DialogContent className="max-w-2xl rounded-sm border-foreground/10 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Member Information</DialogTitle>
         </DialogHeader>
@@ -188,6 +189,17 @@ export function EditMemberInfoDialog({
               />
             </form>
           </Form>
+
+          {/* Custom Fields Section */}
+          <div className="mt-6 pt-6 border-t border-foreground/10">
+            <CustomFieldsSection
+              memberId={params.mid}
+              locationId={params.id}
+              editable={true}
+              variant="section"
+              showEmptyFields={true}
+            />
+          </div>
         </DialogBody>
 
         <DialogFooter>

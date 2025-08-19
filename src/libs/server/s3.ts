@@ -1,94 +1,128 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+} from "@aws-sdk/client-s3";
 import { tryCatch } from "../utils";
 
 type Result = {
-    key: string;
-    url: string;
+  key: string;
+  url: string;
 };
 
 export default class S3Bucket {
-    private s3Client: S3Client;
-    private REGION = process.env.AWS_REGION || 'us-east-1';
+  private s3Client: S3Client;
+  private REGION = process.env.AWS_REGION || "us-east-1";
+  private BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || "monstro-bucket";
 
-    constructor() {
-        this.s3Client = new S3Client({
-            region: this.REGION,
-            credentials: {
-                accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-            }
-        });
-    }
+  constructor() {
+    this.s3Client = new S3Client({
+      region: this.REGION,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+      },
+    });
+  }
 
-    /**
-     * Uploads a file to AWS S3 bucket
-     * @param file - The file object to upload
-     * @param fileDirectory - The directory path in S3 where the file should be stored
-     * @returns Object containing the upload result and the public URL of the uploaded file
-     * @throws Error if upload fails
-     */
-    async uploadFile(file: File, fileDirectory: string) {
-        /** Convert the File object to a Buffer that S3 can handle */
-        const fileBody = await file.arrayBuffer();
-        const buffer = Buffer.from(fileBody);
+  /**
+   * Uploads a file to AWS S3 bucket
+   * @param file - The file object to upload
+   * @param fileDirectory - The directory path in S3 where the file should be stored
+   * @returns Object containing the upload result and the public URL of the uploaded file
+   * @throws Error if upload fails
+   */
+  async uploadFile(file: File, fileDirectory: string) {
+    /** Convert the File object to a Buffer that S3 can handle */
+    const fileBody = await file.arrayBuffer();
+    const buffer = Buffer.from(fileBody);
 
-        /** Prepare the parameters for S3 upload */
-        const uploadParams = {
-            Bucket: 'monstro-bucket',
-            Key: `${fileDirectory}/${file.name}`, /** Full path including filename in S3 */
-            Body: buffer,
-            ContentType: file.type, /** Sets proper MIME type for serving the file */
-        };
+    /** Prepare the parameters for S3 upload */
+    const uploadParams = {
+      Bucket: this.BUCKET_NAME,
+      Key: `${fileDirectory}/${file.name}` /** Full path including filename in S3 */,
+      Body: buffer,
+      ContentType: file.type /** Sets proper MIME type for serving the file */,
+    };
 
-        /** Create a managed upload for better control */
-        const command = new PutObjectCommand(uploadParams);
+    /** Create a managed upload for better control */
+    const command = new PutObjectCommand(uploadParams);
 
-        /** Attempt to upload the file to S3 */
-        const { result, error } = await tryCatch(this.s3Client.send(command));
+    /** Attempt to upload the file to S3 */
+    const { error } = await tryCatch(this.s3Client.send(command));
 
-        if (error) throw error;
+    if (error) throw error;
 
-        /** Return the upload result along with the public URL of the file */
-        return {
-            url: `https://${uploadParams.Bucket}.s3.${this.REGION}.amazonaws.com/${uploadParams.Key}`,
-        };
-    }
+    /** Return the upload result along with the public URL of the file */
+    return {
+      url: `https://${uploadParams.Bucket}.s3.${this.REGION}.amazonaws.com/${uploadParams.Key}`,
+    };
+  }
 
-    async removeFile(fileDirectory: string, name: string) {
-        const command = new DeleteObjectCommand({ Bucket: 'monstro-bucket', Key: `${fileDirectory}/${name}` })
-        const { result, error } = await tryCatch(this.s3Client.send(command))
-        if (error) throw error;
-        return result;
-    }
+  async removeFile(fileDirectory: string, name: string) {
+    const command = new DeleteObjectCommand({
+      Bucket: this.BUCKET_NAME,
+      Key: `${fileDirectory}/${name}`,
+    });
+    const { error } = await tryCatch(this.s3Client.send(command));
+    if (error) throw error;
+    return true;
+  }
 
+  /**
+   * Lists all files in a specific directory of the S3 bucket
+   * @param directory - The directory path in S3 (e.g., 'badges')
+   * @returns Array of public URLs for the files
+   */
 
+  async listImages(directory: string): Promise<Result[]> {
+    const command = new ListObjectsV2Command({
+      Bucket: this.BUCKET_NAME,
+      Prefix: directory + "/", // Ensure it ends with a slash
+    });
 
-     /**
-     * Lists all files in a specific directory of the S3 bucket
-     * @param directory - The directory path in S3 (e.g., 'badges')
-     * @returns Array of public URLs for the files
-     */
+    const { result, error } = await tryCatch(this.s3Client.send(command));
 
-    async listImages(directory: string): Promise<Result[]> {
-        const command = new ListObjectsV2Command({
-            Bucket: 'monstro-bucket',
-            Prefix: directory + '/', // Ensure it ends with a slash
-        });
+    if (error) throw error;
 
-        const { result, error } = await tryCatch(this.s3Client.send(command));
+    if (!result?.Contents) return [];
 
-        if (error) throw error;
+    // Filter out the directory itself and map to public URLs
+    return result.Contents.filter((item) => item.Key !== directory + "/") // Exclude the directory itself
+      .map((item) => ({
+        key: item.Key || "",
+        url: `https://${this.BUCKET_NAME}.s3.${this.REGION}.amazonaws.com/${item.Key}`,
+      }));
+  }
 
-        if (!result?.Contents) return [];
+  /**
+   * Uploads raw data/buffer to AWS S3 bucket
+   * @param data - The buffer or data to upload
+   * @param key - The full S3 key/path for the file
+   * @param contentType - The MIME type of the content
+   * @returns Object containing the upload result and the public URL of the uploaded file
+   * @throws Error if upload fails
+   */
+  async uploadBuffer(
+    data: Buffer | Uint8Array,
+    key: string,
+    contentType?: string
+  ) {
+    const uploadParams = {
+      Bucket: this.BUCKET_NAME,
+      Key: key,
+      Body: data,
+      ContentType: contentType || "application/octet-stream",
+    };
 
-        // Filter out the directory itself and map to public URLs
-        return result.Contents
-            .filter(item => item.Key !== directory + '/') // Exclude the directory itself
-            .map(item => ({
-                key: item.Key || '',
-                url: `https://${command.input.Bucket}.s3.${this.REGION}.amazonaws.com/${item.Key}`
-            }));
-    }
+    const command = new PutObjectCommand(uploadParams);
+    const { error } = await tryCatch(this.s3Client.send(command));
 
+    if (error) throw error;
 
+    return {
+      url: `https://${this.BUCKET_NAME}.s3.${this.REGION}.amazonaws.com/${key}`,
+    };
+  }
 }

@@ -1,8 +1,5 @@
-import { auth } from "@/auth";
 import { db } from "@/db/db";
-import { eq } from "drizzle-orm";
-import { memberFields } from "@/db/schemas";
-import CustomFieldsPageClient from "./page-client";
+import CustomFieldsPageClient from "./ClientComponent";
 import type { CustomFieldFormData } from "./schemas";
 
 async function getCustomFields(
@@ -18,7 +15,6 @@ async function getCustomFields(
       id: field.id,
       name: field.name,
       type: field.type,
-      required: field.required,
       placeholder: field.placeholder || "",
       helpText: field.helpText || "",
       options: field.options || [],

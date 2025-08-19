@@ -19,6 +19,7 @@ export function useCustomFields({
   initialFields = [],
 }: UseCustomFieldsProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,11 +91,29 @@ export function useCustomFields({
   const saveCustomFields = async (data: CustomFieldsFormData) => {
     console.log("Saving custom fields:", data);
     setError(null);
-
+    setIsSaving(true);
     try {
-      // TODO: Implement bulk update API endpoint
-      console.log("Custom fields saved successfully");
-      toast.success("Custom fields saved successfully");
+      const response = await fetch(
+        `/api/protected/loc/${locationId}/custom-fields`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            fields: data.fields,
+          }),
+        }
+      );
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.message || "Failed to save custom fields");
+      }
+
+      if (responseData.success) {
+        toast.success("Custom fields saved successfully");
+      } else {
+        throw new Error(responseData.message || "Failed to save custom fields");
+      }
+
       setIsEditing(false);
     } catch (error) {
       const errorMessage =
@@ -102,6 +121,8 @@ export function useCustomFields({
       console.error("Error saving custom fields:", error);
       setError(errorMessage);
       toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -110,9 +131,9 @@ export function useCustomFields({
     const newField: CustomFieldFormData = {
       name: "",
       type: "text",
-      required: false,
       placeholder: "",
       helpText: "",
+      options: [],
     };
     append(newField);
     console.log("Added new field");
@@ -163,6 +184,7 @@ export function useCustomFields({
     form,
     fields,
     isEditing,
+    isSaving,
     isLoading,
     error,
 

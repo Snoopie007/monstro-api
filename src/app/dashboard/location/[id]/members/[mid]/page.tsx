@@ -19,6 +19,7 @@ import Stripe from "stripe";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { MemberPackages } from "./components/MemberPackages/MemberPackages";
 import { MemberInvoices } from "./components/MemberInvoices/MemberInvoices";
+import { CustomFieldsSection } from "@/components/custom-fields";
 
 type PromiseReturnType = {
   member: Member | undefined;
@@ -123,6 +124,14 @@ export default async function MemberProfilePage(props: {
         <div className="grid grid-cols-12 flex-1">
           <div className="col-span-4  border-r border-foreground/10   ">
             <MemberProfile params={params} />
+            {/* Custom Fields Section */}
+            <CustomFieldsSection
+              memberId={params.mid}
+              locationId={params.id}
+              editable={true}
+              variant="card"
+              showEmptyFields={false}
+            />
             <PaymentMethods params={params} />
             <MemberFamilies
               params={params}

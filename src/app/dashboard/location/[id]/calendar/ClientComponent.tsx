@@ -1,14 +1,9 @@
 "use client";
 
-import { use, useState, useMemo, useEffect } from "react";
+import { use, useState, useMemo } from "react";
 import {
   startOfMonth,
   endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  startOfDay,
-  endOfDay,
-  addDays,
   subMonths,
   addMonths,
   format,
@@ -22,7 +17,6 @@ import { CalendarFilters } from "./components/CalendarFilters";
 import { CalendarEvent as OldCalendarEvent } from "@/types";
 import { tryCatch } from "@/libs/utils";
 import { EnhancedEventDialog } from "./components/EnhancedEventDialog";
-import Loading from "@/components/loading";
 
 // Import new event calendar components
 import {

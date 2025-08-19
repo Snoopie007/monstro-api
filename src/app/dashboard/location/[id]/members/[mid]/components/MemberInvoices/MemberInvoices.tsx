@@ -37,14 +37,13 @@ export function MemberInvoices({
 
   return (
     <div className="space-y-0">
-      <div className="w-full flex flex-row items-center justify-between px-4 py-2 bg-foreground/5 gap-2">
+      <div className="w-full flex flex-row items-center justify-start px-4 py-2 bg-foreground/5 gap-2">
         <Input
           placeholder="Search invoices..."
           className="w-auto bg-background border-foreground/10 h-9"
         />
-        <Button onClick={handleCreateInvoice} size="sm" className="h-9">
-          <PlusIcon className="w-4 h-4 mr-2" />
-          Create Invoice
+        <Button onClick={handleCreateInvoice} variant={"create"} size={"sm"}>
+          + Create Invoice
         </Button>
       </div>
       <div className="border-y border-foreground/10">

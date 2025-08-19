@@ -288,23 +288,14 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">
-              Create Invoice for {memberName}
-            </h1>
-            <p className="text-gray-600 text-sm">
-              Create a {watchedType} invoice that will be sent via Stripe
-            </p>
-          </div>
+          <span className="text-md">Back</span>
         </div>
       </div>
 
       <Card className="border-foreground/10 bg-foreground/10 rounded-md">
         <CardHeader>
-          <CardTitle>Invoice Creation</CardTitle>
-
           {/* Step Indicator */}
-          <div className="flex items-center justify-center space-x-2 overflow-x-auto pb-2">
+          <div className="flex items-center justify-start space-x-2 overflow-x-auto pb-2">
             {stepConfig.map((stepItem, index) => (
               <div
                 key={stepItem.key}
@@ -313,7 +304,7 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
                 <div
                   className={`flex items-center ${
                     step === stepItem.key
-                      ? "text-blue-600"
+                      ? "text-indigo-500"
                       : currentStepIndex > index
                       ? "text-green-600"
                       : "text-gray-400"
@@ -322,7 +313,7 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                       step === stepItem.key
-                        ? "bg-blue-600 text-white"
+                        ? "bg-indigo-500 text-white"
                         : currentStepIndex > index
                         ? "bg-green-600 text-white"
                         : "bg-gray-200"
