@@ -37,8 +37,8 @@ export function DroppableCell({
   const formattedTime =
     time !== undefined
       ? `${Math.floor(time)}:${Math.round((time - Math.floor(time)) * 60)
-        .toString()
-        .padStart(2, "0")}`
+          .toString()
+          .padStart(2, "0")}`
       : null;
 
   return (
@@ -53,7 +53,6 @@ export function DroppableCell({
       title={formattedTime ? `${formattedTime}` : undefined}
       data-dragging={isOver && activeEvent ? true : undefined}
     >
-
       <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out h-full w-full flex items-center justify-center text-muted-foreground">
         +
       </span>

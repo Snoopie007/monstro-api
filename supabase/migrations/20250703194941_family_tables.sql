@@ -8,5 +8,7 @@ CREATE TABLE IF NOT EXISTS family_members (
   updated_at timestamp with time zone
 );
 
+ALTER TABLE family_members ADD CONSTRAINT family_members_parent_unique UNIQUE (member_id, related_member_id);
+
 CREATE INDEX IF NOT EXISTS idx_family_members_member_id ON family_members (member_id);
 CREATE INDEX IF NOT EXISTS idx_family_members_related_member_id ON family_members (related_member_id);

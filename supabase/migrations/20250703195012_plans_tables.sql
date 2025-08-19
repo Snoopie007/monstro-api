@@ -52,8 +52,11 @@ CREATE TABLE IF NOT EXISTS member_subscriptions (
   payment_method payment_method NOT NULL DEFAULT 'cash',
   metadata jsonb NOT NULL DEFAULT '{}',
   member_contract_id text REFERENCES member_contracts (id) ON DELETE SET NULL,
-  is_participant boolean NOT NULL DEFAULT true
+  is_participant boolean NOT NULL DEFAULT true,
+ 
 );
+
+ALTER TABLE member_subscriptions ADD CONSTRAINT member_subs_parent_unique UNIQUE (parent_id, member_id);
 
 CREATE INDEX IF NOT EXISTS idx_member_subscriptions_member_id ON member_subscriptions (member_id);
 CREATE INDEX IF NOT EXISTS idx_member_subscriptions_location_id ON member_subscriptions (location_id);
@@ -80,8 +83,7 @@ CREATE TABLE IF NOT EXISTS member_packages (
   is_participant boolean NOT NULL DEFAULT true
 );
 
-ALTER TABLE member_packages ADD CONSTRAINT unique_child_package UNIQUE (member_id, parent_id);
-ALTER TABLE member_subscriptions ADD CONSTRAINT unique_child_subscription UNIQUE (member_id, parent_id);
+ALTER TABLE member_packages ADD CONSTRAINT member_packages_parent_unique UNIQUE (parent_id, member_id);
 
 CREATE INDEX IF NOT EXISTS idx_member_packages_member_id ON member_packages (member_id);
 CREATE INDEX IF NOT EXISTS idx_member_packages_location_id ON member_packages (location_id);

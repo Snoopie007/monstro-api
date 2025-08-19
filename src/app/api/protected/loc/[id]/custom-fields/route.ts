@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db/db";
-import { memberFields } from "@/db/schemas";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
+import { memberFields, locations } from "@/db/schemas";
 
 export async function GET(
   req: Request,

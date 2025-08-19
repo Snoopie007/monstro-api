@@ -39,10 +39,11 @@ function convertToNewCalendarEvent(
   return {
     id: oldEvent.id,
     title: oldEvent.title,
-    description: `Session: ${oldEvent.data.sessionId}${oldEvent.data.members.length > 0
-      ? ` | ${oldEvent.data.members.length} member(s)`
-      : ""
-      }`,
+    description: `Session: ${oldEvent.data.sessionId}${
+      oldEvent.data.members.length > 0
+        ? ` | ${oldEvent.data.members.length} member(s)`
+        : ""
+    }`,
     start: oldEvent.start,
     end: oldEvent.end,
     allDay: false,
@@ -160,8 +161,9 @@ export default function CalendarPageClient({
         if (!event.data.recurringId) {
           throw new Error("Missing recurringId for recurring reservation");
         }
-        url = `/api/protected/loc/${id}/members/${memberId}/reservations/${event.data.recurringId
-          }/recurring?date=${format(event.start, "yyyy-MM-dd")}`;
+        url = `/api/protected/loc/${id}/members/${memberId}/reservations/${
+          event.data.recurringId
+        }/recurring?date=${format(event.start, "yyyy-MM-dd")}`;
       } else {
         if (!event.data.reservationId) {
           throw new Error("Missing reservationId for regular reservation");
