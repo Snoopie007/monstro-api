@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { memberFields, memberCustomFields, members } from "@/db/schemas";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export async function GET(
   req: Request,
@@ -170,7 +170,10 @@ export async function POST(
 
     // Perform upsert operations in a transaction
     const result = await db.transaction(async (tx) => {
-      const operations = {
+      const operations: {
+        created: (typeof memberCustomFields.$inferSelect)[];
+        updated: (typeof memberCustomFields.$inferSelect)[];
+      } = {
         created: [],
         updated: [],
       };
