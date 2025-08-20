@@ -54,7 +54,6 @@ export function useCustomFields({
 
   // Fetch existing custom fields for this location
   const fetchCustomFields = async () => {
-    console.log("Fetching custom fields for location:", locationId);
     setIsLoading(true);
     setError(null);
 
@@ -70,7 +69,6 @@ export function useCustomFields({
 
       if (data.success) {
         form.setValue("fields", data.data || []);
-        console.log("Custom fields loaded:", data.data);
       } else {
         throw new Error(data.message || "Failed to fetch custom fields");
       }
@@ -89,7 +87,6 @@ export function useCustomFields({
 
   // Save custom fields
   const saveCustomFields = async (data: CustomFieldsFormData) => {
-    console.log("Saving custom fields:", data);
     setError(null);
     setIsSaving(true);
     try {
@@ -136,13 +133,11 @@ export function useCustomFields({
       options: [],
     };
     append(newField);
-    console.log("Added new field");
   };
 
   // Remove field
   const removeField = (index: number) => {
     remove(index);
-    console.log("Removed field at index:", index);
   };
 
   // Duplicate field
@@ -154,7 +149,6 @@ export function useCustomFields({
       name: `${fieldToDuplicate.name} (Copy)`,
     };
     append(duplicatedField);
-    console.log("Duplicated field:", fieldToDuplicate);
   };
 
   // Toggle edit mode
@@ -169,7 +163,6 @@ export function useCustomFields({
     }
     setIsEditing(!isEditing);
     setError(null); // Clear any existing errors when toggling modes
-    console.log("Toggled edit mode:", !isEditing);
   };
 
   // Initialize data on mount only if no initial fields provided

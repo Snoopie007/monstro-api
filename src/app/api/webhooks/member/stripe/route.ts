@@ -100,9 +100,6 @@ export async function POST(req: NextRequest) {
         event = await req.json();
       }
 
-      console.log(
-        `[STRIPE WEBHOOK] Processing event: ${event.type} (${event.id})`
-      );
       waitUntil(processEvent(event));
     } catch (err) {
       console.error("[STRIPE WEBHOOK] Failed to construct event:", err);
@@ -125,15 +122,10 @@ export async function POST(req: NextRequest) {
 
 async function processEvent(event: Stripe.Event) {
   if (!allowedEvents.includes(event.type)) {
-    console.log(
-      `[STRIPE WEBHOOK] Ignoring unallowed event type: ${event.type}`
-    );
     return;
   }
 
   try {
-    console.log(`[STRIPE WEBHOOK] Handling event: ${event.type} (${event.id})`);
-
     switch (event.type) {
       case "customer.subscription.deleted":
       case "customer.subscription.paused":
@@ -156,10 +148,6 @@ async function processEvent(event: Stripe.Event) {
       default:
         console.warn(`[STRIPE WEBHOOK] Unhandled event type: ${event.type}`);
     }
-
-    console.log(
-      `[STRIPE WEBHOOK] Successfully processed event: ${event.type} (${event.id})`
-    );
   } catch (error) {
     console.error(
       `[STRIPE WEBHOOK] Error processing event ${event.type} (${event.id}):`,
@@ -173,30 +161,17 @@ async function processEvent(event: Stripe.Event) {
 async function handleInvoicePaymentSucceeded(event: Stripe.Event) {
   const invoice = event.data.object as ExtendedStripeInvoice;
 
-  console.log(
-    `[STRIPE WEBHOOK] Processing invoice payment success: ${invoice.id}, amount: ${invoice.amount_paid}`
-  );
-
   // Determine if this is a subscription invoice or a recurring schedule invoice
   if (invoice.subscription) {
-    console.log(
-      `[STRIPE WEBHOOK] Identified as subscription invoice: ${invoice.id} -> subscription: ${invoice.subscription}`
-    );
     // Handle traditional subscription invoices
     await handleSubscriptionInvoicePayment(invoice);
   } else if (
     invoice.subscription_details?.metadata?.schedule ||
     invoice.lines?.data?.[0]?.subscription
   ) {
-    console.log(
-      `[STRIPE WEBHOOK] Identified as recurring schedule invoice: ${invoice.id}`
-    );
     // Handle recurring schedule invoices (created via subscription schedules)
     await handleRecurringInvoicePayment(invoice);
   } else if (invoice.metadata?.type === "one-off-admin-created") {
-    console.log(
-      `[STRIPE WEBHOOK] Identified as one-off admin-created invoice: ${invoice.id}`
-    );
     // Handle one-off admin-created invoices
     await handleOneOffInvoicePayment(invoice);
   } else {
@@ -206,7 +181,9 @@ async function handleInvoicePaymentSucceeded(event: Stripe.Event) {
     console.warn(
       `[STRIPE WEBHOOK] Invoice details - subscription: ${
         invoice.subscription
-      }, subscription_details: ${JSON.stringify(invoice.subscription_details)}, metadata: ${JSON.stringify(invoice.metadata)}`
+      }, subscription_details: ${JSON.stringify(
+        invoice.subscription_details
+      )}, metadata: ${JSON.stringify(invoice.metadata)}`
     );
   }
 }
@@ -298,9 +275,6 @@ async function handleRecurringInvoicePayment(invoice: ExtendedStripeInvoice) {
     // Check subscription_details metadata
     if (invoice.subscription_details?.metadata?.schedule) {
       scheduleId = invoice.subscription_details.metadata.schedule;
-      console.log(
-        `[STRIPE WEBHOOK] Found schedule ID in subscription_details.metadata: ${scheduleId}`
-      );
     }
 
     // Check if there's a subscription item that points to a schedule
@@ -320,10 +294,6 @@ async function handleRecurringInvoicePayment(invoice: ExtendedStripeInvoice) {
       return;
     }
 
-    console.log(
-      `[STRIPE WEBHOOK] Looking for local invoice with schedule ID: ${scheduleId}`
-    );
-
     // Find the invoice by stripeScheduleId in metadata
     const existingInvoice = await db.query.memberInvoices.findFirst({
       where: sql`metadata->>'stripeScheduleId' = ${scheduleId}`,
@@ -335,10 +305,6 @@ async function handleRecurringInvoicePayment(invoice: ExtendedStripeInvoice) {
       );
       return;
     }
-
-    console.log(
-      `[STRIPE WEBHOOK] Found local invoice: ${existingInvoice.id} for schedule: ${scheduleId}`
-    );
 
     const tax = calculateTaxFromInvoice(invoice);
 
@@ -380,10 +346,6 @@ async function handleRecurringInvoicePayment(invoice: ExtendedStripeInvoice) {
         invoice
       );
     });
-
-    console.log(
-      `[STRIPE WEBHOOK] Successfully updated recurring invoice ${existingInvoice.id} to paid status`
-    );
   } catch (error) {
     console.error(
       `[STRIPE WEBHOOK] Error handling recurring invoice payment for ${invoice.id}:`,
@@ -395,10 +357,6 @@ async function handleRecurringInvoicePayment(invoice: ExtendedStripeInvoice) {
 
 async function handleOneOffInvoicePayment(invoice: ExtendedStripeInvoice) {
   try {
-    console.log(
-      `[STRIPE WEBHOOK] Processing one-off invoice payment: ${invoice.id}`
-    );
-
     // Find the local invoice record using the Stripe invoice ID
     const existingInvoice = await db.query.memberInvoices.findFirst({
       where: sql`metadata->>'stripeInvoiceId' = ${invoice.id}`,
@@ -410,10 +368,6 @@ async function handleOneOffInvoicePayment(invoice: ExtendedStripeInvoice) {
       );
       return;
     }
-
-    console.log(
-      `[STRIPE WEBHOOK] Found local invoice ${existingInvoice.id} for Stripe invoice: ${invoice.id}`
-    );
 
     const tax = calculateTaxFromInvoice(invoice);
 
@@ -455,10 +409,6 @@ async function handleOneOffInvoicePayment(invoice: ExtendedStripeInvoice) {
         invoice
       );
     });
-
-    console.log(
-      `[STRIPE WEBHOOK] Successfully updated one-off invoice ${existingInvoice.id} to paid status`
-    );
   } catch (error) {
     console.error(
       `[STRIPE WEBHOOK] Error handling one-off invoice payment for ${invoice.id}:`,
@@ -562,10 +512,6 @@ async function handleSubscriptionInvoiceFailure(
         updated: new Date(),
       })
       .where(eq(memberSubscriptions.stripeSubscriptionId, subscriptionId));
-
-    console.log(
-      `Updated subscription ${subscriptionId} to past_due status due to invoice payment failure: ${invoice.id}`
-    );
   } catch (error) {
     console.error(
       "Error updating subscription status after payment failure:",
@@ -626,9 +572,6 @@ async function handleRecurringInvoiceFailure(invoice: ExtendedStripeInvoice) {
       .returning({ id: memberInvoices.id });
 
     if (result.length > 0) {
-      console.log(
-        `Updated recurring invoice for schedule ${scheduleId} to unpaid status due to payment failure: ${invoice.id}`
-      );
     } else {
       console.warn(
         `No local invoice found for failed recurring invoice schedule: ${scheduleId}`
@@ -643,7 +586,6 @@ async function handleInvoiceFinalized(event: Stripe.Event) {
   const invoice = event.data.object as ExtendedStripeInvoice;
 
   // For now, we'll just log this event as finalization doesn't necessarily mean payment
-  console.log(`Invoice finalized: ${invoice.id}, status: ${invoice.status}`);
 
   // We could potentially update draft invoices to a 'finalized' status here
   // if we want to track that state separately
@@ -653,7 +595,6 @@ async function handleInvoiceUpdated(event: Stripe.Event) {
   const invoice = event.data.object as ExtendedStripeInvoice;
 
   // Handle invoice status updates that aren't covered by payment events
-  console.log(`Invoice updated: ${invoice.id}, status: ${invoice.status}`);
 
   // We could update invoice metadata or status based on the invoice state
   // For example, if an invoice is voided or becomes uncollectible
