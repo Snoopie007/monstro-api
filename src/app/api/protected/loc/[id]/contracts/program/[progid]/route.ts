@@ -18,7 +18,6 @@ export async function GET(req: Request, props: { params: Promise<Params> }) {
     where: (program, { eq }) => eq(program.id, progid),
   });
 
-
   if (!program) {
     return NextResponse.json({ error: 'Program not found' }, { status: 404 });
   }
