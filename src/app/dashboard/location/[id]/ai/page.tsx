@@ -1,32 +1,13 @@
-import { db } from "@/db/db";
-
-
-async function fetchLocation(lid: string) {
-
-    try {
-        const location = await db.query.locations.findFirst({
-            where: (loc, { eq }) => eq(loc.id, lid),
-
-        })
-        return location;
-    } catch (error) {
-        console.error(error);
-        return null;
-
-    }
-}
+import React from "react";
+import AgentsDashboard from "@/app/dashboard/location/[id]/ai/AgentsDashboard";
 
 export default async function AIBotsPage(props: { params: Promise<{ id: string }> }) {
-    const params = await props.params;
-    const location = await fetchLocation(params.id);
-    if (!location) {
-        return <div className='flex flex-row  h-[calc(100vh-58px)]'>
-            <div className='text-red-500'>Invalid location</div>
-        </div>
-    }
+    const { id } = await props.params;
+    // NOTE: This is a mock UI only. In the server version, we'd fetch and validate the location
+    // with a server component. For now, render the client dashboard.
     return (
-        <div className='flex flex-row  h-[calc(100vh-50px)]'>
-            Coming soon
+        <div className='flex flex-row h-[calc(100vh-50px)] w-full bg-background text-foreground'>
+            <AgentsDashboard locationId={id} />
         </div>
     )
 }

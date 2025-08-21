@@ -1,4 +1,4 @@
-import { Users, Medal, Bot, AtSign, CalendarClock, Receipt, SquareChartGantt, Settings, BookText } from "lucide-react";
+import { Users, Medal, Bot, AtSign, CalendarClock, Receipt, SquareChartGantt, Settings, BookText, MessageSquare } from "lucide-react";
 
 type SidebarMenuItem = {
     name: string;
@@ -17,6 +17,11 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
         name: "Members",
         path: "members",
         icon: <Users size={16} />
+    },
+    {
+        name: "Chat",
+        path: "chat",
+        icon: <MessageSquare size={16} />
     },
     {
         name: "Programs & Plans",
