@@ -70,7 +70,6 @@ export async function POST(
 				{ status: 404 }
 			);
 		}
-
 		return NextResponse.json({ success: true, ...data }, { status: 200 });
 	} catch (err) {
 		console.log(err);
