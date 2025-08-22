@@ -44,6 +44,7 @@ export const members = pgTable("members", {
   ),
   avatar: text("avatar"),
   stripeCustomerId: text("stripe_customer_id"),
+  firstTime: boolean("first_time").notNull().default(true),
   created: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

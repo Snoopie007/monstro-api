@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS members (
   first_name text,
   last_name text,
   gender text,
+  first_time boolean NOT NULL DEFAULT true,
   dob timestamp with time zone
 );
 

@@ -21,6 +21,7 @@ import { transactions } from "./transactions";
 import { vendors } from "./vendors";
 import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
+import { MemberLocationProfile } from "@/types/member";
 
 export const locations = pgTable("locations", {
   id: uuid("id")
@@ -140,13 +141,8 @@ export const memberLocations = pgTable(
       onDelete: "set null",
     }),
 
-    // MEMBER INFO UPDATE START: Added member personal information fields
-    firstName: text("first_name"),
-    lastName: text("last_name"),
-    email: text("email"),
-    phone: text("phone"),
-    avatar: text("avatar"),
-    // MEMBER INFO UPDATE END
+    profile: jsonb("profile").$type<MemberLocationProfile>(),
+
   },
   (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]
 );

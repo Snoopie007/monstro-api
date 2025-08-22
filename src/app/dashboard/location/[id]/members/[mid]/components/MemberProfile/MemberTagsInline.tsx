@@ -13,19 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Tags,
-  TagsContent,
-  TagsEmpty,
-  TagsGroup,
-  TagsInput,
-  TagsItem,
-  TagsList,
-  TagsTrigger,
-  TagsValue,
-} from "@/components/ui/kibo-ui/tags";
-import { CheckIcon, PlusIcon, Loader2 } from "lucide-react";
-import { MemberTag } from "@/types";
+import { PlusIcon, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import {
   Tooltip,
