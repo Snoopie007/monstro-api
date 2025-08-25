@@ -63,7 +63,7 @@ export function AIChatBox({ location }: AIChatBoxProps) {
   };
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full flex flex-col border-foreground/10">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between mb-4">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -95,7 +95,7 @@ export function AIChatBox({ location }: AIChatBoxProps) {
                 setSelectedBot(bot || null);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="dark:border-foreground/40">
                 <SelectValue placeholder="Choose a bot to test">
                   {selectedBot && (
                     <div className="flex items-center gap-2">
@@ -184,7 +184,7 @@ export function AIChatBox({ location }: AIChatBoxProps) {
             </div>
 
             {/* Chat Input */}
-            <div className="border-t bg-background px-6 py-4">
+            <div className="border-t dark:border-foreground/10 bg-background px-6 py-4">
               <ChatInput />
             </div>
           </>

@@ -110,7 +110,7 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
   }
 
   return (
-    <Card className="flex-1 h-full">
+    <Card className="flex-1 h-full border-foreground/10">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">
@@ -169,6 +169,7 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
                   <Label htmlFor="bot-name">Bot Name</Label>
                   <Input
                     id="bot-name"
+                    className="dark:border-foreground/40"
                     value={editData.name || ""}
                     onChange={(e) => handleFieldChange("name", e.target.value)}
                     placeholder="Enter bot name"
@@ -179,6 +180,7 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
                   <Label htmlFor="initial-message">Initial Message</Label>
                   <Textarea
                     id="initial-message"
+                    className="dark:border-foreground/40"
                     value={editData.initialMessage || ""}
                     onChange={(e) =>
                       handleFieldChange("initialMessage", e.target.value)
@@ -192,6 +194,7 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
                   <Label htmlFor="bot-prompt">System Prompt</Label>
                   <Textarea
                     id="bot-prompt"
+                    className="dark:border-foreground/40"
                     value={editData.prompt || ""}
                     onChange={(e) =>
                       handleFieldChange("prompt", e.target.value)
@@ -210,7 +213,7 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
                         handleFieldChange("model", value)
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="dark:border-foreground/40">
                         <SelectValue placeholder="Select AI model" />
                       </SelectTrigger>
                       <SelectContent>
@@ -229,7 +232,7 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
                         handleFieldChange("status", value)
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="dark:border-foreground/40">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -375,7 +378,7 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
                   docs.map((doc) => (
                     <div
                       key={doc.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+                      className="flex items-center justify-between p-3 border dark:border-foreground/10 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
                         <FileText size={20} className="text-muted-foreground" />

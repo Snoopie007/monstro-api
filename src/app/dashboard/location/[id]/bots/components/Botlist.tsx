@@ -148,7 +148,7 @@ export function Botlist({ lid, templates }: BotlistProps) {
   };
 
   return (
-    <Card className="w-80 h-full">
+    <Card className="w-80 h-full border-foreground/10">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">Bots</CardTitle>
@@ -249,8 +249,8 @@ export function Botlist({ lid, templates }: BotlistProps) {
               key={bot.id}
               className={`p-3 rounded-lg border cursor-pointer transition-colors ${
                 selectedBot?.id === bot.id
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:bg-muted/50"
+                  ? "border-foreground/50 bg-primary/5"
+                  : "border-foreground/10 hover:bg-muted/50"
               }`}
               onClick={() => setSelectedBot(bot)}
             >

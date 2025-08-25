@@ -48,7 +48,7 @@ export function ContactSelect() {
           setSelectedContact(contact || null);
         }}
       >
-        <SelectTrigger>
+        <SelectTrigger className="dark:border-foreground/40">
           <SelectValue placeholder="Choose a contact to test as">
             {selectedContact && (
               <div className="flex items-center gap-2">

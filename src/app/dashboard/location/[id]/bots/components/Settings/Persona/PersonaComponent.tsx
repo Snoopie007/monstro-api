@@ -89,7 +89,7 @@ export function PersonaComponent({
 
   if (!selectedBot) {
     return (
-      <div className="space-y-3 border-b border-border pb-4">
+      <div className="space-y-3 border-b border-foreground/40 pb-4">
         <Label className="text-sm text-muted-foreground">
           Select a bot to manage personas
         </Label>
@@ -98,14 +98,18 @@ export function PersonaComponent({
   }
 
   return (
-    <div className="space-y-3 border-b border-border pb-4">
+    <div className="space-y-3 border-b border-foreground/40 pb-4">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">AI Persona</Label>
 
         {!currentPersona && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                className="dark:border-foreground/40"
+              >
                 <Plus className="w-4 h-4 mr-1" />
                 Add Persona
               </Button>
@@ -165,7 +169,7 @@ export function PersonaComponent({
           </Button>
         </div>
       ) : (
-        <div className="text-center py-4 border-2 border-dashed border-border rounded-lg">
+        <div className="text-center py-4 border-2 border-dashed border-foreground/10 rounded-lg">
           <p className="text-sm text-muted-foreground">
             No persona attached. Add one to give your bot personality.
           </p>
