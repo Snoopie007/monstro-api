@@ -31,12 +31,7 @@ COPY --from=prerelease /usr/src/app/dist dist
 COPY --from=prerelease /usr/src/app/node_modules node_modules
 COPY --from=prerelease /usr/src/app/package.json .
 
-# Create a non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 bun
-
-# Change ownership of the app directory to the bun user
-RUN chown -R bun:nodejs /usr/src/app
+# The bun user already exists in the official image, so we can use it directly
 USER bun
 
 # Expose the port

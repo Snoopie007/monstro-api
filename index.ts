@@ -33,6 +33,21 @@ app.use(cors(CORS_CONFIG))
             return { status: 'error', message: 'Health check failed' };
         }
     })
+    // Dedicated health check endpoint
+    .get('/healthcheck', () => {
+        try {
+            return {
+                status: 'ok',
+                timestamp: new Date().toISOString(),
+                uptime: process.uptime(),
+                environment: process.env.BUN_ENV || 'development',
+                service: 'monstro-api'
+            };
+        } catch (error) {
+            console.error('Health check error:', error);
+            return { status: 'error', message: 'Health check failed' };
+        }
+    })
     .group('/api', (app) =>
         app.use(AuthRoutes).use(ProtectedRoutes)
     )

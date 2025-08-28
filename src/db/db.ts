@@ -31,10 +31,6 @@ if (!process.env.DATABASE_URL) {
 const client = postgres(process.env.DATABASE_URL, { prepare: false, max: 2 });
 const db = drizzle(client, { schema: schema });
 
-// const db = createDb();
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    throw new Error("SUPABASE_URL or SUPABASE_KEY is missing");
-}
 
 
 if (!process.env.DATABASE_ADMIN_URL) {
