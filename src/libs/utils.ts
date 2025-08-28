@@ -1,5 +1,5 @@
-import type { RecurringReservation, Reservation } from "@/types";
-import { addDays, isSameDay } from "date-fns";
+import type { ProgramSession, RecurringReservation, Reservation } from "@/types";
+import { addDays, isBefore, isSameDay } from "date-fns";
 
 
 async function tryCatch<T, E = Error>(
@@ -251,11 +251,47 @@ function interEmailsAndText(
 function generateOtp() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
+
+function isSessionPasted(session: ProgramSession, selectedDay: Date) {
+    const today = new Date();
+    const sessionTime = getSessionTime(session);
+    const isPasted = isBefore(selectedDay, today) ? sessionTime.getTime() < today.getTime() : false;
+    return isPasted;
+}
+
+function getSessionTime(session: ProgramSession) {
+    const [hours, minutes] = session.time.split(':').map(Number);
+    const sessionTime = new Date();
+    sessionTime.setHours(hours!, minutes!, 0, 0);
+    return sessionTime;
+}
+
+function getSessionState(session: ProgramSession, mid: string) {
+    const reservations = session.reservations?.length ?? 0;
+    let recurringReservations = 0;
+    if (session.recurringReservations && session.recurringReservations.length > 0) {
+        recurringReservations = session.recurringReservations.filter(rr => rr.exceptions?.length === 0).length;
+    }
+    const availability = (session.program?.capacity ?? 0) - (reservations + recurringReservations);
+
+    const hasRecurringReservations = session.recurringReservations?.some(r => r.memberId === mid) ?? false;
+    const hasReservations = session.reservations?.some(r => r.memberId === mid) ?? false;
+
+    const isReserved = hasRecurringReservations || hasReservations;
+
+    const isFull = availability <= 0;
+
+    return { isReserved, isFull };
+}
+
 export {
     interEmailsAndText,
     generateReferralCode,
     generateVRs,
     interpolate,
     generateOtp,
-    tryCatch
+    tryCatch,
+    isSessionPasted,
+    getSessionTime,
+    getSessionState
 };

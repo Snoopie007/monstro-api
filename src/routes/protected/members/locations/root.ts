@@ -15,7 +15,7 @@ type Props = {
     status: any
 }
 
-export const membersLocationsRoutes = new Elysia({ prefix: '/locations' })
+export const membersLocations = new Elysia({ prefix: '/locations' })
     .get('/', async ({ memberId, params, status }: Props) => {
 
         try {
