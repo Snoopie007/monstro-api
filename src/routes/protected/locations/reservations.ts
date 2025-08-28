@@ -1,9 +1,10 @@
-import type { MemberPackage, MemberSubscription } from "@/types/member";
+
 import type { Elysia } from "elysia";
 import { db } from "@/db/db";
-import type { RecurringReservation, Reservation } from "@/types";
-import { recurringReservations, reservations } from "@/db/schemas";
-import { isSessionPasted, getSessionTime, getSessionState } from "@/libs/utils";
+import type { RecurringReservation, Reservation, MemberPackage, MemberSubscription } from "@/types";
+import { recurringReservations, recurringReservationsExceptions, reservations } from "@/db/schemas";
+import { isSessionPasted, getSessionState } from "@/libs/utils";
+import { eq } from "drizzle-orm";
 
 type ReservationBody = {
     type: "pkg" | "sub";
@@ -158,6 +159,51 @@ export async function locationReservations(app: Elysia) {
         } catch (err) {
             console.error(err);
             return status(500, { error: err });
+        }
+    }).delete('/reservations/:rid', async ({ params, status }) => {
+        const { rid } = params as { rid: string }
+
+
+        try {
+
+            let sid: string | null = null;
+            if (rid.startsWith("rsv_")) {
+
+                const reservation = await db.query.reservations.findFirst({
+                    where: (reservations, { eq }) => eq(reservations.id, rid)
+                })
+
+                if (!reservation) {
+                    return status(404, { error: "Reservation not found" })
+                }
+                await db.delete(reservations).where(eq(reservations.id, reservation.id))
+                sid = reservation.sessionId;
+            } else {
+
+                const rr = await db.query.recurringReservations.findFirst({
+                    where: (recurringReservations, { eq }) => eq(recurringReservations.id, rid)
+                })
+
+                if (!rr) {
+                    return status(404, { error: "Recurring reservation not found" })
+                }
+
+                const date = rid.split("_")[1];
+
+
+                await db.insert(recurringReservationsExceptions).values({
+                    recurringReservationId: rr.id,
+                    occurrenceDate: new Date(date!)
+                })
+                sid = rr.sessionId;
+
+            }
+
+
+            return status(200, { sid })
+        } catch (error) {
+            console.error(error)
+            return status(500, { error: "Internal server error" })
         }
     })
 }   
