@@ -1,0 +1,217 @@
+import { Elysia } from "elysia";
+import { db } from "@/db/db";
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { generateMobileToken } from "@/libs/auth";
+import { users, members, accounts } from "@/db/schemas";
+import { generateReferralCode } from "@/libs/utils";
+
+const GOOGLE_JWKS = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
+
+
+type GoogleLoginBody = {
+    idToken: string;
+}
+
+type GoogleNewAccountBody = {
+    token: string;
+    accessToken: string;
+    email: string;
+    name: string;
+    picture: string;
+    phone?: string;
+}
+
+export async function mobileGoogleLogin(app: Elysia) {
+    return app.post('/google', async ({ body, set }) => {
+        const { idToken } = JSON.parse(body as string) as GoogleLoginBody;
+
+        if (!idToken) {
+            set.status = 400;
+            return { message: "Id token is required" };
+        }
+
+        try {
+            const decodedToken = await jwtVerify(idToken, GOOGLE_JWKS, {
+                issuer: "https://accounts.google.com",
+                audience: process.env.GOOGLE_CLIENT_ID,
+            });
+
+            const { payload } = decodedToken;
+            const account = await db.query.accounts.findFirst({
+                where: (account, { eq, and }) => and(
+                    eq(account.providerAccountId, `${payload.sub}`),
+                    eq(account.provider, "google")
+                )
+            });
+
+            if (!account) {
+                set.status = 404;
+                return { message: "No Account" };
+            }
+
+            const user = await db.query.users.findFirst({
+                where: (user, { eq }) => eq(user.id, account.userId!),
+                with: {
+                    member: true
+                },
+            });
+
+            if (!user) {
+                set.status = 404;
+                return { message: "No Account" };
+            }
+
+            const { password, member, ...rest } = user;
+            const data = {
+                ...rest,
+                phone: member?.phone,
+                image: member?.avatar,
+                stripeCustomerId: member?.stripeCustomerId,
+                memberId: member?.id,
+                role: "member",
+            };
+
+            const { accessToken, refreshToken, expires } = await generateMobileToken({
+                memberId: member.id,
+                userId: user.id,
+                email: user.email,
+            });
+
+            set.status = 200;
+            return { token: accessToken, refreshToken, user: data, expires };
+        } catch (error) {
+            console.error(error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            set.status = 500;
+            return { message: errorMessage };
+        }
+    })
+        .post('/google/new', async ({ body, set }) => {
+            const { token, accessToken, email, name, picture, phone } = JSON.parse(body as string) as GoogleNewAccountBody;
+
+            if (!token) {
+                set.status = 400;
+                return { message: "Id token is required" };
+            }
+
+            try {
+                const decodedToken = await jwtVerify(token, GOOGLE_JWKS, {
+                    issuer: "https://accounts.google.com",
+                    audience: process.env.GOOGLE_CLIENT_ID,
+                });
+
+                const { payload } = decodedToken;
+
+                let user = await db.query.users.findFirst({
+                    where: (user, { eq }) => eq(user.email, payload.email as string),
+                    with: {
+                        member: true
+                    },
+                });
+
+                if (!user) {
+                    const result = await db.transaction(async (tx) => {
+                        const [newUser] = await tx.insert(users).values({
+                            email,
+                            name,
+                            image: picture,
+                        }).returning();
+
+                        if (!newUser) {
+                            throw new Error("Failed to create user");
+                        }
+
+                        const [newMember] = await tx.insert(members).values({
+                            userId: newUser.id,
+                            firstName: name.split(" ")[0] || "Unknown",
+                            lastName: name.split(" ")[1] || "",
+                            email: email,
+                            phone: phone || "",
+                            avatar: picture || null,
+                            referralCode: generateReferralCode(),
+                        }).returning();
+
+                        if (!newMember) {
+                            throw new Error("Failed to create member");
+                        }
+
+                        return {
+                            id: newUser.id,
+                            name: newUser.name,
+                            email: newUser.email,
+                            emailVerified: newUser.emailVerified,
+                            image: newUser.image,
+                            password: newUser.password,
+                            created: newUser.created,
+                            updated: newUser.updated,
+                            member: newMember
+                        };
+                    });
+
+                    user = result;
+                }
+
+                if (!user) {
+                    set.status = 500;
+                    return { message: "Failed to create or find user" };
+                }
+
+                // Check if account already exists to avoid duplicate key errors
+                const existingAccount = await db.query.accounts.findFirst({
+                    where: (account, { eq, and }) => and(
+                        eq(account.providerAccountId, payload.sub as string),
+                        eq(account.provider, "google")
+                    )
+                });
+
+                if (!existingAccount) {
+                    await db.insert(accounts).values({
+                        provider: "google",
+                        type: "oidc",
+                        providerAccountId: payload.sub as string,
+                        userId: user.id,
+                        access_token: accessToken,
+                        expires_at: payload.exp,
+                        token_type: "bearer",
+                        scope: "openid",
+                        id_token: token
+                    });
+                }
+
+                const { password, member, ...rest } = user;
+
+                if (!member) {
+                    set.status = 500;
+                    return { message: "Member record not found" };
+                }
+
+                const data = {
+                    ...rest,
+                    phone: member.phone,
+                    image: member.avatar,
+                    stripeCustomerId: member.stripeCustomerId,
+                    memberId: member.id,
+                    role: "member",
+                };
+
+                const tokens = await generateMobileToken({
+                    memberId: member.id,
+                    userId: user.id,
+                    email: user.email,
+                });
+
+                set.status = 200;
+                return {
+                    token: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
+                    user: data,
+                    expires: tokens.expires
+                };
+            } catch (error) {
+                console.error(error);
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                set.status = 500;
+                return { message: errorMessage };
+            }
+        });
+}
