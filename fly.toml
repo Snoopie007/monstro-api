@@ -2,12 +2,12 @@
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 
-app = "MonstroServer"
+app = "monstro-api"
 # Primary region where the app will be deployed (sjc = San Jose, West Coast)
 primary_region = "sjc"
 
-[build]
-  dockerfile = "Dockerfile"
+# [build]
+#   dockerfile = "Dockerfile"
 
 [env]
   PORT = "3000"
