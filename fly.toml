@@ -6,8 +6,8 @@ app = "monstro-api"
 # Primary region where the app will be deployed (sjc = San Jose, West Coast)
 primary_region = "sjc"
 
-# [build]
-#   dockerfile = "Dockerfile"
+[build]
+  dockerfile = "Dockerfile"
 
 [env]
   PORT = "3000"
@@ -21,12 +21,14 @@ primary_region = "sjc"
   processes = ["app"]
 
 [[http_service.checks]]
-  grace_period = "10s"
+  grace_period = "60s"
   interval = "30s"
   method = "GET"
-  timeout = "5s"
+  timeout = "20s"
   path = "/"
+  protocol = "http"
+  tls_skip_verify = false
 
 [processes]
-  app = "bun run start"
+  app = "bun run dist/index.js"
 

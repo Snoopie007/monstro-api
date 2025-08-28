@@ -11,7 +11,6 @@ const CORS_CONFIG = {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key']
 }
 
-
 const app = new Elysia()
 
 app.use(cors(CORS_CONFIG))
@@ -19,6 +18,20 @@ app.use(cors(CORS_CONFIG))
 
     .onRequest(({ request }) => {
         console.log(`🔍 ${request.method} ${request.url}`);
+    })
+    // Health check endpoint for Fly.io - more robust
+    .get('/', () => {
+        try {
+            return {
+                status: 'ok',
+                timestamp: new Date().toISOString(),
+                uptime: process.uptime(),
+                environment: process.env.BUN_ENV || 'development'
+            };
+        } catch (error) {
+            console.error('Health check error:', error);
+            return { status: 'error', message: 'Health check failed' };
+        }
     })
     .group('/api', (app) =>
         app.use(AuthRoutes).use(ProtectedRoutes)
