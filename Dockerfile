@@ -1,5 +1,24 @@
 # Use the official Bun image
 FROM oven/bun:1 as base
+
+# Install Chrome dependencies and Chrome itself
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg \
+    && sh -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# Prevent Puppeteer from downloading Chrome during npm install
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
+# Set the path to the installed Chrome
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome    
+
 WORKDIR /usr/src/app
 
 # Install dependencies into temp directory
@@ -21,6 +40,7 @@ COPY . .
 
 # Build the application
 RUN bun run build
+
 
 # Start fresh from base image for the final image
 FROM base AS release
