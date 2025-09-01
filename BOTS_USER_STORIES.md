@@ -129,11 +129,11 @@ This document outlines user stories for migrating bot functionality from monstro
 **So that** I can keep my bot list organized  
 
 **Acceptance Criteria:**
-- [ ] I can click a delete button on any bot
-- [ ] I see a confirmation dialog warning about permanent deletion
-- [ ] I can confirm deletion and bot is removed from list
-- [ ] I can cancel deletion and return to bot list
-- [ ] Deleted bots cannot be recovered (permanent action)
+- [x] I can click a delete button on any bot
+- [x] I see a confirmation dialog warning about permanent deletion
+- [x] I can confirm deletion and bot is removed from list
+- [x] I can cancel deletion and return to bot list
+- [x] Deleted bots cannot be recovered (permanent action)
 
 **Technical Requirements:**
 - Cascade deletion removes all related data (conversations, progress, etc.)
@@ -144,65 +144,116 @@ This document outlines user stories for migrating bot functionality from monstro
 
 ## 💬 **Epic 2: Bot Chat Testing**
 
-### **User Story 2.1: Test Bot Conversations** ⭐ P0
+### **User Story 2.1: Test Bot with Queue Processing (Dummy Member Chat)** ⭐ P0
 **As a** location owner  
-**I want to** chat with my bot in real-time  
-**So that** I can test its responses before making it live  
+**I want to** test my bot exactly as members will experience it  
+**So that** I can verify node flows work correctly before going live  
 
 **Acceptance Criteria:**
 - [ ] I can see a chat interface when a bot is selected
-- [ ] I can type messages and send them to the bot
-- [ ] Bot responds with streaming text (appears gradually)
-- [ ] I can see conversation history (my messages and bot responses)
-- [ ] I can send multiple messages in sequence
-- [ ] Chat works with all supported AI models
-- [ ] I see the bot's initial message when starting a new conversation
+- [ ] I can type messages and they are processed through the queue system
+- [ ] Bot follows visual node flows I designed in the builder
+- [ ] Test chat behaves identically to member app chat
+- [ ] I can see node transitions and tool executions during testing
+- [ ] Queue processing handles complex conversation flows
+- [ ] Session state tracks current node position throughout conversation
+- [ ] Admin test uses same processing engine as member chats
 
 **Technical Requirements:**
-- Chat API streams responses for real-time feel
-- Session management maintains conversation context
-- Proper error handling for failed bot responses
-- Messages stored temporarily for session duration
+- Chat messages queued through BullMQ for node flow processing
+- `process-admin-chat` job uses same engine as `process-member-chat`
+- Node flow execution engine processes visual builder logic
+- Session management tracks conversation state and current node
+- Tool calls execute within node flow context
 
-### **User Story 2.2: Reset Chat Session** ⭐ P0
+### **User Story 2.2: Reset Node Flow Session** ⭐ P0
 **As a** location owner  
-**I want to** clear the chat and start fresh  
-**So that** I can test different conversation flows  
+**I want to** reset the chat to test different node flow paths  
+**So that** I can verify all branches of my conversation flow work  
 
 **Acceptance Criteria:**
-- [ ] I can click a "Reset Chat" button in the chat interface
-- [ ] Chat history is cleared immediately
-- [ ] Bot's initial message appears again
-- [ ] New session ID is generated for testing
-- [ ] Previous conversation context is completely cleared
+- [ ] I can click a "Reset Flow" button in the chat interface
+- [ ] Node flow session resets to the starting node
+- [ ] Previous conversation state and collected data is cleared
+- [ ] Bot returns to initial message and starting node behavior
+- [ ] New test session starts fresh through the queue processing
+- [ ] I can test different conversation paths from the beginning
 
 **Technical Requirements:**
-- Session reset clears Redis session data
-- New session ID generated for isolation
-- Chat UI resets to initial state
+- Session reset clears Redis session data and node state
+- Queue processing reinitializes with starting node
+- New session ID generated for flow isolation
+- Chat UI resets to initial state with starting node context
 
-### **User Story 2.3: Select Test Contact** ⭐ P0
+### **User Story 2.3: Test with Dummy Member Context** ⭐ P0
 **As a** location owner  
-**I want to** test my bot as different contacts  
-**So that** I can see how it responds to members vs guests  
+**I want to** test my bot with realistic member context  
+**So that** I can verify personalization and node flows work with member data  
 
 **Acceptance Criteria:**
-- [ ] I can select from existing members and guest contacts
-- [ ] I can see contact name and type (member/guest) in selector
-- [ ] Bot responses adapt based on selected contact's data
-- [ ] I can switch contacts and see context change
-- [ ] Default "test user" is available if no contacts exist
+- [ ] I can select a test contact with dummy member information
+- [ ] Bot processes conversations through queue with member context
+- [ ] Node flows execute with personalized member data
+- [ ] Bot responses are personalized based on test member profile
+- [ ] Queue processing includes member context in session state
+- [ ] Test behavior matches exactly what members will experience
 
 **Technical Requirements:**
-- Contact selector API returns both members and guests
-- Bot context updates when contact changes
-- Proper handling of member vs guest data differences
+- Test contact provides realistic member data for queue processing
+- Bot context includes member information during node flow execution
+- Queue session state includes test member profile
+- Node processing personalizes responses based on test context
 
 ---
 
-## 🎛️ **Epic 3: Scenario Management**
+## 🎯 **Epic 3: Visual Node Builder & Queue Processing**
 
-### **User Story 3.1: Create Bot Scenarios** ⭐ P0
+### **User Story 3.1: Visual Node Builder Interface** ⭐ P0
+**As a** location owner  
+**I want to** design conversation flows using a visual node builder  
+**So that** I can create sophisticated chat experiences without coding  
+
+**Acceptance Criteria:**
+- [ ] I can access the visual builder from "Flow Builder" tab in bot configuration
+- [ ] I can see a ReactFlow canvas with drag-and-drop functionality
+- [ ] I can add different node types (Standard, Condition, Extraction, Booking, Delay)
+- [ ] I can connect nodes with directional arrows to create conversation flows
+- [ ] I can configure each node with goals, instructions, and tools
+- [ ] I can set branching conditions based on user responses
+- [ ] I can save the flow and see it execute in chat testing
+- [ ] Flow validation prevents broken or invalid configurations
+
+**Technical Requirements:**
+- ReactFlow integration for visual flow design
+- Node configuration panels for each node type
+- Flow validation and error checking
+- Integration with queue processing system for execution
+
+### **User Story 3.2: Node Flow Execution Engine** ⭐ P0
+**As a** location owner  
+**I want to** see my visual flows execute correctly during conversations  
+**So that** the bot follows the logic I designed  
+
+**Acceptance Criteria:**
+- [ ] Bot starts at the designated start node when conversation begins
+- [ ] Queue processing system executes node goals and instructions correctly
+- [ ] Tool calls within nodes trigger appropriate actions
+- [ ] Branching logic navigates to correct next nodes based on conditions
+- [ ] Condition nodes evaluate user responses and route accordingly
+- [ ] Extraction nodes collect and store user information in session state
+- [ ] Flow state is maintained throughout the conversation via queue processing
+- [ ] Node execution works identically for admin test and member chats
+
+**Technical Requirements:**
+- BullMQ queue processes chat jobs through node flow engine
+- Node processor executes visual flow logic correctly
+- Session state tracking for current node position and collected data
+- Tool integration for node functions and branching logic
+- Consistent execution for both `process-admin-chat` and `process-member-chat` jobs
+
+## 🎛️ **Epic 4: Scenario Management**
+
+### **User Story 4.1: Create Bot Scenarios** ⭐ P1
 **As a** location owner  
 **I want to** create scenarios that trigger specific bot behaviors  
 **So that** my bot can handle different customer situations  
@@ -220,7 +271,7 @@ This document outlines user stories for migrating bot functionality from monstro
 - Form validation ensures required fields are filled
 - Scenarios linked to specific bots correctly
 
-### **User Story 3.2: Test Scenario Triggers** ⭐ P0
+### **User Story 4.2: Test Scenario Triggers** ⭐ P1
 **As a** location owner  
 **I want to** verify my scenarios trigger correctly  
 **So that** I know my bot will handle situations properly  
@@ -237,7 +288,7 @@ This document outlines user stories for migrating bot functionality from monstro
 - Trigger matching works with variations of phrases
 - Proper fallback when no scenarios match
 
-### **User Story 3.3: Manage Scenarios** ⭐ P0
+### **User Story 4.3: Manage Scenarios** ⭐ P1
 **As a** location owner  
 **I want to** edit and delete existing scenarios  
 **So that** I can improve my bot's behavior over time  
@@ -256,9 +307,9 @@ This document outlines user stories for migrating bot functionality from monstro
 
 ---
 
-## 📚 **Epic 4: Knowledge Base**
+## 📚 **Epic 5: Knowledge Base**
 
-### **User Story 4.1: Upload Documents** ⭐ P0
+### **User Story 5.1: Upload Documents** ⭐ P0
 **As a** location owner  
 **I want to** upload PDF documents to my bot's knowledge base  
 **So that** my bot can answer questions using my business information  
@@ -277,7 +328,7 @@ This document outlines user stories for migrating bot functionality from monstro
 - Proper error handling for corrupted or invalid files
 - File storage with unique identifiers
 
-### **User Story 4.2: Test Knowledge Queries** ⭐ P0
+### **User Story 5.2: Test Knowledge Queries** ⭐ P0
 **As a** location owner  
 **I want to** ask questions about uploaded documents in chat  
 **So that** I can verify my bot has access to the information  
@@ -295,7 +346,7 @@ This document outlines user stories for migrating bot functionality from monstro
 - Semantic search retrieves relevant document chunks
 - Knowledge integration in chat API
 
-### **User Story 4.3: Manage Documents** ⭐ P0
+### **User Story 5.3: Manage Documents** ⭐ P0
 **As a** location owner  
 **I want to** remove documents from my knowledge base  
 **So that** I can keep information current and accurate  
@@ -314,9 +365,11 @@ This document outlines user stories for migrating bot functionality from monstro
 
 ---
 
-## 👥 **Epic 5: Contact Integration**
+## 👥 **Epic 6: Member Integration (P0 Focus)**
 
-### **User Story 5.1: Handle Member Conversations** ⭐ P0
+*Note: Focusing on member chat integration only. External guest contacts removed for P0.*
+
+### **User Story 6.1: Handle Member Conversations** ⭐ P0
 **As a** member of a location  
 **I want to** chat with the location's bot  
 **So that** I can get information and assistance related to my membership  
@@ -334,47 +387,31 @@ This document outlines user stories for migrating bot functionality from monstro
 - Conversation tracking linked to member records
 - Proper data privacy and access controls
 
-### **User Story 5.2: Handle Guest Conversations** ⭐ P0
-**As a** potential customer (guest)  
-**I want to** chat with a location's bot  
-**So that** I can learn about services without creating an account  
+### **User Story 6.2: Member Chat Processing with Queue System** ⭐ P0
+**As a** member  
+**I want to** chat with bots using the same queue processing as admin testing  
+**So that** I get consistent and reliable bot responses  
 
 **Acceptance Criteria:**
-- [ ] I can start chatting without logging in or creating account
-- [ ] Bot provides helpful information about the business
-- [ ] My conversation is saved temporarily for the session
-- [ ] I can provide contact information if I want follow-up
-- [ ] Guest experience is smooth and doesn't require authentication
+- [ ] My chat messages are processed through the same queue system as admin testing
+- [ ] Bot executes visual node flows designed by location owners
+- [ ] Conversation follows the same logic and flow paths as admin testing
+- [ ] Node transitions and tool executions work identically to admin test
+- [ ] Session state and collected data is maintained through queue processing
+- [ ] Response quality and behavior matches admin test experience
 
 **Technical Requirements:**
-- Guest contact creation for non-authenticated users
-- Temporary conversation storage
-- Option to convert guest to member later
-- Privacy controls for guest data
-
-### **User Story 5.3: Promote Guest to Member** 📈 P1
-**As a** system administrator  
-**I want to** convert guest contacts to members when they sign up  
-**So that** conversation history is preserved and integrated  
-
-**Acceptance Criteria:**
-- [ ] When guest becomes member, conversation history transfers
-- [ ] Guest contact data merges with new member account
-- [ ] No duplicate conversations or data inconsistencies
-- [ ] Member can see their pre-signup conversation history
-- [ ] Process works automatically during member registration
-
-**Technical Requirements:**
-- Data migration utilities for guest-to-member conversion
-- Conversation history preservation
-- Cleanup of guest records after conversion
-- Database transaction integrity
+- Member chat uses `process-member-chat` queue job
+- Same node flow execution engine as admin testing
+- Consistent session management and state tracking
+- Identical tool execution and branching logic
+- Queue processing handles member authentication context
 
 ---
 
-## ⚙️ **Epic 6: System Management**
+## ⚙️ **Epic 7: System Management**
 
-### **User Story 6.1: Bot Status Management** ⭐ P0
+### **User Story 7.1: Bot Status Management** ⭐ P0
 **As a** location owner  
 **I want to** activate and pause my bots  
 **So that** I can control when customers can interact with them  
@@ -391,7 +428,7 @@ This document outlines user stories for migrating bot functionality from monstro
 - Status validation in chat endpoints
 - Proper messaging for inactive bots
 
-### **User Story 6.2: Error Handling** ⭐ P0
+### **User Story 7.2: Error Handling** ⭐ P0
 **As a** user (location owner or customer)  
 **I want to** receive helpful error messages when something goes wrong  
 **So that** I understand what happened and can take appropriate action  
@@ -409,7 +446,25 @@ This document outlines user stories for migrating bot functionality from monstro
 - Proper logging for debugging
 - Graceful degradation when services fail
 
-### **User Story 6.3: Performance Optimization** 📈 P1
+### **User Story 7.3: Queue Performance Optimization** 📈 P1
+**As a** user  
+**I want to** fast response times from queue-processed bot conversations  
+**So that** conversations feel natural and engaging even with complex node flows  
+
+**Acceptance Criteria:**
+- [ ] Queue processing completes node flow execution within 2 seconds
+- [ ] Complex visual flows with multiple nodes don't cause delays
+- [ ] Concurrent queue jobs don't interfere with each other
+- [ ] Tool executions within nodes are processed efficiently
+- [ ] Session state updates don't create bottlenecks
+- [ ] Member and admin test chats have similar response times
+
+**Technical Requirements:**
+- Optimized BullMQ queue configuration for performance
+- Efficient node flow execution algorithms
+- Redis session management optimization
+- Concurrent processing without job interference
+- Performance monitoring for queue processing times
 **As a** user  
 **I want to** fast response times from bots  
 **So that** conversations feel natural and engaging  
@@ -429,7 +484,7 @@ This document outlines user stories for migrating bot functionality from monstro
 
 ---
 
-## 📱 **Epic 7: Member App Chat Integration and Ticket Management**
+## 📱 **Epic 8: Member App Integration & Queue Processing**
 
 ### **User Story 7.1: Access Bot Chat** ⭐ P0
 **As a** member  
@@ -569,58 +624,63 @@ This document outlines user stories for migrating bot functionality from monstro
 
 ## 🎫 **Epic 8: Ticket Management System**
 
-### **User Story 8.1: Automatic Ticket Creation** ⭐ P0
+### **User Story 8.1: Queue-Based Automatic Ticket Creation** ⭐ P0
 **As a** member chatting with a bot
-**I want to** have a ticket automatically created for my conversation
+**I want to** have a ticket automatically created through queue processing
 **So that** my issues can be tracked and managed systematically
 
 **Acceptance Criteria:**
-- [ ] When I start a new chat session, a ticket is automatically created
+- [ ] When I start a new chat session, queue processing creates a ticket automatically
 - [ ] The ticket is linked to my conversation and member account
 - [ ] I can see the ticket ID or reference in the conversation
 - [ ] Tickets are created with "open" status by default
 - [ ] Ticket metadata includes conversation context and member information
+- [ ] Ticket creation works through both admin test and member chat queues
 
 **Technical Requirements:**
-- Ticket creation integrated into chat session initialization
-- Automatic linking to conversation and member/guest contact
+- Ticket creation integrated into queue processing job initialization
+- Automatic linking to conversation and member/guest contact through queue system
 - Ticket status tracking with proper database relationships
+- Queue processing handles ticket creation for both `process-admin-chat` and `process-member-chat` jobs
 
-### **User Story 8.2: Natural Issue Resolution Checking** ⭐ P0
+### **User Story 8.2: Queue-Based Issue Resolution Checking** ⭐ P0
 **As a** member returning to chat
-**I want to** be asked naturally about my issue resolution
+**I want to** be asked naturally about my issue resolution through queue processing
 **So that** the bot can update ticket status appropriately
 
 **Acceptance Criteria:**
-- [ ] When I return to chat after some time, the bot asks about my issue
-- [ ] Questions are phrased naturally in conversation flow
-- [ ] Bot can understand my responses about issue status
-- [ ] Bot can call tools to update ticket status based on my responses
+- [ ] When I return to chat after some time, queue processing includes ticket checking
+- [ ] Questions are phrased naturally in node flow conversation logic
+- [ ] Bot can understand my responses about issue status through queue processing
+- [ ] Bot can call tools to update ticket status during queue job execution
 - [ ] Conversation continues smoothly regardless of ticket updates
+- [ ] Issue resolution checking works identically in admin test and member chats
 
 **Technical Requirements:**
-- Session recovery includes ticket status checking
-- AI prompts include ticket context and resolution checking logic
-- Tool integration for ticket status updates
-- Natural language processing for resolution responses
+- Queue processing includes ticket status checking during session recovery
+- AI prompts include ticket context and resolution checking logic through queue system
+- Tool integration for ticket status updates within queue processing
+- Natural language processing for resolution responses through node flow execution
 
-### **User Story 8.3: Ticket Status Updates via Tools** ⭐ P0
-**As a** bot during conversation
-**I want to** be able to update ticket status through API calls
+### **User Story 8.3: Queue-Based Ticket Status Updates via Tools** ⭐ P0
+**As a** bot during queue-processed conversation
+**I want to** be able to update ticket status through queue processing
 **So that** I can mark issues as resolved when appropriate
 
 **Acceptance Criteria:**
-- [ ] Bot can call ticket update tools during conversation
-- [ ] Ticket status changes are reflected in the database
+- [ ] Bot can call ticket update tools during queue processing
+- [ ] Ticket status changes are reflected in the database after queue job completion
 - [ ] Status updates include timestamps and metadata
 - [ ] Bot can confirm status changes to the member
-- [ ] Multiple status updates are handled correctly
+- [ ] Multiple status updates are handled correctly through queue processing
+- [ ] Tool calls work identically in admin test and member chat queues
 
 **Technical Requirements:**
-- Tool definitions for ticket status updates
-- API endpoints for secure ticket status changes
-- Proper authentication and authorization for ticket updates
-- Database transaction handling for status changes
+- Tool definitions for ticket status updates within queue processing context
+- API endpoints for secure ticket status changes during queue job execution
+- Proper authentication and authorization for ticket updates through queue system
+- Database transaction handling for status changes after queue processing
+- Queue processing maintains ticket context throughout conversation flow
 
 ### **User Story 8.4: Ticket History and Tracking** 📈 P1
 **As a** location owner
@@ -643,6 +703,8 @@ This document outlines user stories for migrating bot functionality from monstro
 ---
 
 ## 🔧 **Epic 9: Advanced Features (P1/P2)**
+
+*Note: Advanced features will integrate with queue processing system for consistency.*
 
 ### **User Story 8.1: Bot Templates** 📈 P1
 **As a** location owner  
@@ -668,29 +730,7 @@ This document outlines user stories for migrating bot functionality from monstro
 - [ ] Failed workflows don't break bot conversations
 - [ ] Workflow results can influence bot responses
 
-### **User Story 3.4: Visual Flow Builder** ⭐ P0  
-**As a** location owner  
-**I want to** create complex bot flows with visual node editor  
-**So that** I can design sophisticated conversation experiences  
-
-**Acceptance Criteria:**
-- [ ] I can access visual bot builder interface from the "Flow Builder" tab
-- [ ] I can create and connect different node types (Standard, Condition, Extraction, Booking, Delay)
-- [ ] I can drag and drop nodes to create conversation flows
-- [ ] I can configure each node's behavior, goals, and connections
-- [ ] I can see visual connections between nodes
-- [ ] Bot follows the designed flow during conversations
-- [ ] I can test flows and see execution path in chat testing
-- [ ] Invalid nodes are highlighted and prevent bot activation
-- [ ] I can save and load node flows for each bot
-
-**Technical Requirements:**
-- ReactFlow integration for visual node editor
-- Node types: Standard, Condition, Extraction, Booking, Delay
-- Node configuration forms for each type
-- Visual edge connections between nodes
-- Flow validation and error highlighting
-- Integration with chat testing system
+*Note: This user story was moved to Epic 3 as it's P0 core functionality.*
 
 ### **User Story 8.4: Booking Integration** 📅 P2
 **As a** customer  
@@ -766,10 +806,11 @@ This document outlines user stories for migrating bot functionality from monstro
 - User Stories 6.1-6.2 (System Management)
 
 ### **Phase 2: Core Features (Week 3-4)**
-- User Stories 3.1-3.3 (Scenario Management)
-- User Stories 4.1-4.3 (Knowledge Base)
-- User Stories 5.1-5.2 (Contact Integration)
-- User Stories 8.1-8.3 (Ticket Management System)
+- User Stories 3.1-3.2 (Visual Node Builder & Queue Processing)
+- User Stories 4.1-4.3 (Scenario Management) 
+- User Stories 5.1-5.3 (Knowledge Base)
+- User Stories 6.1-6.2 (Member Integration)
+- User Stories 8.1-8.3 (Queue-Based Ticket Management)
 
 ### **Phase 3: Member App Integration (Week 5)**
 - User Stories 7.1-7.3 (Member Chat Access & Personalization)

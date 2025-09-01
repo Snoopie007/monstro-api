@@ -1,8 +1,10 @@
 // =====================================================================
-// Mock Data for Bot System Testing
+// DEPRECATED: Mock Data for Bot System Testing
 // =====================================================================
-// This file contains mock data for testing the bot functionality
-// during the migration from monstro-bots to monstro-15
+// ⚠️  THIS FILE IS NO LONGER USED ⚠️
+// Mock data has been removed from the chat components.
+// This file is kept for reference but should not be imported.
+// TODO: Remove this file once we're confident it's not needed
 
 import type {
   Bot,

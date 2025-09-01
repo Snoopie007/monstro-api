@@ -81,13 +81,16 @@ export function BotsPageClient({
     return null;
   };
 
-  const handleBotDelete = async (deletedBotId: string) => {
+  const handleBotDelete = async (deletedBotId: string): Promise<void> => {
     const success = await deleteBot(deletedBotId);
     if (success) {
       if (selectedBot?.id === deletedBotId) {
         const remainingBots = bots.filter((bot) => bot.id !== deletedBotId);
         setSelectedBot(remainingBots.length > 0 ? remainingBots[0] : null);
       }
+    } else {
+      // If deletion failed, throw an error so the calling component can handle it
+      throw new Error("Failed to delete bot");
     }
   };
 
@@ -126,7 +129,7 @@ export function BotsPageClient({
       {/* Right Panel: Bot Testing Chat */}
       <div className="flex-3/6">
         <AIChatProvider>
-          <AIChatBox location={location} />
+          <AIChatBox location={location} bots={bots} />
         </AIChatProvider>
       </div>
     </div>

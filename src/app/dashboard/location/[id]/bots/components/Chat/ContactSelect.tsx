@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useChatContext } from "./AIChatProvider";
-import { MOCK_UNIFIED_CONTACTS } from "@/mocks/bots";
+import { UnifiedContact } from "@/types/bots";
 import {
   Select,
   SelectContent,
@@ -13,7 +13,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { User, Users } from "lucide-react";
 
-export function ContactSelect() {
+interface ContactSelectProps {
+  contacts?: UnifiedContact[]; // Optional contacts prop for future implementation
+}
+
+export function ContactSelect({ contacts = [] }: ContactSelectProps) {
   const { selectedContact, setSelectedContact } = useChatContext();
 
   const getContactIcon = (type: string) => {
@@ -44,7 +48,7 @@ export function ContactSelect() {
       <Select
         value={selectedContact?.id || ""}
         onValueChange={(value) => {
-          const contact = MOCK_UNIFIED_CONTACTS.find((c) => c.id === value);
+          const contact = contacts.find((c) => c.id === value);
           setSelectedContact(contact || null);
         }}
       >
@@ -69,70 +73,71 @@ export function ContactSelect() {
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {MOCK_UNIFIED_CONTACTS.length === 0 ? (
+          {contacts.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground">
               <User size={24} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No contacts available</p>
+              <p className="text-sm">No contacts available for testing</p>
+              <p className="text-xs mt-1">
+                Contact functionality will be implemented soon
+              </p>
             </div>
           ) : (
             <>
               {/* Group members */}
-              {MOCK_UNIFIED_CONTACTS.filter((c) => c.type === "member").length >
-                0 && (
+              {contacts.filter((c) => c.type === "member").length > 0 && (
                 <>
                   <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50">
                     Members
                   </div>
-                  {MOCK_UNIFIED_CONTACTS.filter(
-                    (contact) => contact.type === "member"
-                  ).map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      <div className="flex items-center gap-2">
-                        {getContactIcon(contact.type)}
-                        <span>
-                          {contact.firstName} {contact.lastName}
-                        </span>
-                        <Badge
-                          variant="secondary"
-                          className={`text-xs ${getContactBadgeColor(
-                            contact.type
-                          )}`}
-                        >
-                          {contact.type}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {contacts
+                    .filter((contact) => contact.type === "member")
+                    .map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        <div className="flex items-center gap-2">
+                          {getContactIcon(contact.type)}
+                          <span>
+                            {contact.firstName} {contact.lastName}
+                          </span>
+                          <Badge
+                            variant="secondary"
+                            className={`text-xs ${getContactBadgeColor(
+                              contact.type
+                            )}`}
+                          >
+                            {contact.type}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
                 </>
               )}
 
               {/* Group guests */}
-              {MOCK_UNIFIED_CONTACTS.filter((c) => c.type === "guest").length >
-                0 && (
+              {contacts.filter((c) => c.type === "guest").length > 0 && (
                 <>
                   <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50">
                     Guests
                   </div>
-                  {MOCK_UNIFIED_CONTACTS.filter(
-                    (contact) => contact.type === "guest"
-                  ).map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      <div className="flex items-center gap-2">
-                        {getContactIcon(contact.type)}
-                        <span>
-                          {contact.firstName} {contact.lastName}
-                        </span>
-                        <Badge
-                          variant="secondary"
-                          className={`text-xs ${getContactBadgeColor(
-                            contact.type
-                          )}`}
-                        >
-                          {contact.type}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {contacts
+                    .filter((contact) => contact.type === "guest")
+                    .map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        <div className="flex items-center gap-2">
+                          {getContactIcon(contact.type)}
+                          <span>
+                            {contact.firstName} {contact.lastName}
+                          </span>
+                          <Badge
+                            variant="secondary"
+                            className={`text-xs ${getContactBadgeColor(
+                              contact.type
+                            )}`}
+                          >
+                            {contact.type}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
                 </>
               )}
             </>

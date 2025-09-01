@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { Message, UnifiedContact, Bot } from "@/types/bots";
-import { MOCK_UNIFIED_CONTACTS, generateMockChatResponse } from "@/mocks/bots";
 
 interface ChatState {
   messages: Message[];
@@ -42,7 +41,7 @@ interface AIChatProviderProps {
 export function AIChatProvider({ children }: AIChatProviderProps) {
   const [state, setState] = useState<ChatState>({
     messages: [],
-    selectedContact: MOCK_UNIFIED_CONTACTS[0], // Default to first contact
+    selectedContact: null, // No default contact for now
     selectedBot: null,
     isLoading: false,
     sessionId: null,
@@ -117,7 +116,7 @@ export function AIChatProvider({ children }: AIChatProviderProps) {
     setLoading(true);
 
     try {
-      // TODO: Replace with actual streaming API call
+      // TODO: Implement actual streaming API call when ready
       // const response = await fetch(`/api/protected/loc/${locationId}/bots/${state.selectedBot.id}/chat`, {
       //     method: 'POST',
       //     headers: { 'Content-Type': 'application/json' },
@@ -128,11 +127,11 @@ export function AIChatProvider({ children }: AIChatProviderProps) {
       //     })
       // });
 
-      // Using mock response for now
-      const botResponse = await generateMockChatResponse(
-        content,
-        state.selectedBot.id
-      );
+      // Temporary placeholder response for testing UI
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+
+      const botResponse =
+        "Thank you for your message! The chat API will be implemented soon.";
 
       // Add bot response
       addMessage({
@@ -142,6 +141,7 @@ export function AIChatProvider({ children }: AIChatProviderProps) {
         metadata: {
           botId: state.selectedBot.id,
           sessionId: state.sessionId,
+          placeholder: true, // Mark as placeholder response
         },
       });
     } catch (error) {

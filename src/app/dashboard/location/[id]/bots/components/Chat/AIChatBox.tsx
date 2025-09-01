@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useChatContext } from "./AIChatProvider";
-import { MOCK_BOTS } from "@/mocks/bots";
+import { Bot } from "@/types/bots";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,9 +20,10 @@ import { ContactSelect } from "./ContactSelect";
 
 interface AIChatBoxProps {
   location: any; // TODO: Replace with proper Location type
+  bots: Bot[]; // Real bots data passed from parent
 }
 
-export function AIChatBox({ location }: AIChatBoxProps) {
+export function AIChatBox({ location, bots }: AIChatBoxProps) {
   const {
     selectedBot,
     setSelectedBot,
@@ -32,9 +33,9 @@ export function AIChatBox({ location }: AIChatBoxProps) {
     isLoading,
   } = useChatContext();
 
-  // Load available bots for this location
-  const availableBots = MOCK_BOTS.filter(
-    (bot) => bot.locationId === location.id || bot.locationId === "loc-1"
+  // Use the bots passed from parent (already filtered for this location)
+  const availableBots = bots.filter(
+    (bot) => bot.status === "Active" || bot.status === "Draft"
   );
 
   // Auto-select first active bot if none selected

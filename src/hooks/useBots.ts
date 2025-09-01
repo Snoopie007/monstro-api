@@ -172,14 +172,18 @@ export function useBots(locationId: string): UseBotsReturn {
         }
 
         setBots((prev) => prev.filter((bot) => bot.id !== botId));
-        toast.success("Bot deleted successfully!");
+        toast.success("Bot deleted successfully!", {
+          toastId: `delete-success-${botId}`,
+        });
 
         return true;
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to delete bot";
         setError(errorMessage);
-        toast.error(errorMessage);
+        toast.error(errorMessage, {
+          toastId: `delete-error-${botId}`,
+        });
         return false;
       } finally {
         setLoading(false);

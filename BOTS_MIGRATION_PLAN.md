@@ -395,29 +395,45 @@ export * from "./tickets";
 ```json
 {
   "dependencies": {
-    // AI/LangChain Dependencies
+    // LangChain Core Dependencies (P0)
+    "@langchain/core": "^0.3.21",
     "@langchain/anthropic": "^0.3.21",
+    "@langchain/openai": "^4.3.9",
     "@langchain/google-genai": "^0.2.10",
-    "@xenova/transformers": "^2.13.4",
-    "@huggingface/inference": "^2.8.0",
-    "@mendable/firecrawl-js": "^1.25.5",
+    "@langchain/community": "^0.3.21",
+    "@langchain/textsplitters": "^0.3.21",
     
-    // Bot Processing
+    // AI Processing & Streaming (P0)
+    "ai": "^4.3.9",
+    "openai": "^4.67.1",
+    "@anthropic-ai/sdk": "^0.30.1",
+    
+    // Node Flow Processing Queue (P0)
     "bullmq": "^5.53.3",
     "ioredis": "^5.4.1",
-    "@upstash/qstash": "^2.7.12",
+    
+    // Session Management (P0)
+    "@upstash/redis": "^1.34.4",
+    
+    // Visual Node Builder (P0)
+    "@xyflow/react": "^12.0.4",
+    "@xyflow/node-resizer": "^3.0.4",
+    
+    // Document Processing (P0)
     "pdf-parse": "^1.1.1",
     "csv-parse": "^5.6.0",
+    "@mendable/firecrawl-js": "^1.25.5",
     
-    // Visual Node Builder
-    "@xyflow/react": "^12.0.4",
+    // Embeddings & Vector DB (P0)
+    "@xenova/transformers": "^2.13.4",
+    "@huggingface/inference": "^2.8.0",
     
     // UI Components (if missing)
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-slider": "^1.3.5",
+    "@radix-ui/react-toast": "^1.2.1",
     
     // Upgrade existing
-    "ai": "^4.3.9",
     "drizzle-orm": "^0.40.1"
   }
 }
@@ -426,22 +442,26 @@ export * from "./tickets";
 ### **2.2 Environment Variables**
 Add to `.env.local`:
 ```env
-# AI Models
+# AI Models (P0)
 OPENAI_API_KEY=your_openai_key
 ANTHROPIC_API_KEY=your_anthropic_key
 GOOGLE_AI_API_KEY=your_google_key
 
-# Redis for bot sessions
+# Session Management (P0)
 UPSTASH_REDIS_REST_URL=your_redis_url
 UPSTASH_REDIS_REST_TOKEN=your_redis_token
 
-# Queue processing
-QSTASH_URL=your_qstash_url
-QSTASH_TOKEN=your_qstash_token
+# Node Flow Processing (P0)
+REDIS_URL=your_redis_url_for_queues
+REDIS_TOKEN=your_redis_token_for_queues
 
-# Vector DB
+# Vector DB & Embeddings (P0)
 PINECONE_API_KEY=your_pinecone_key
 PINECONE_ENVIRONMENT=your_pinecone_env
+HUGGINGFACE_API_KEY=your_hf_key
+
+# Security
+MONSTRO_API_KEY=your_internal_api_key
 ```
 
 ### **2.3 Database Extensions**
@@ -476,16 +496,66 @@ export async function DELETE() { /* Delete bot */ }
 
 #### `/src/app/api/protected/loc/[id]/bots/[bid]/chat/route.ts`
 ```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { LangChainAdapter } from 'ai';
+import { ChatOpenAI } from "@langchain/openai";
+import { ChatAnthropic } from "@langchain/anthropic";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { UpstashRedisChatMessageHistory } from "@langchain/community/stores/message/upstash_redis";
+import { ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
+import { BaseMessage, trimMessages } from '@langchain/core/messages';
+import { db } from '@/db/db';
+import { getRedisClient, getQueueClient } from '@/libs/server/redis';
+import { formattedPrompt, getModel, Tools, FunctionDefaults } from '@/libs/server/ai';
+
+type SessionContext = {
+    id: string;
+    botId: string;
+    currentNode: string;
+    routineNode: string | null;
+    stopped: string | null;
+    metadata: {
+        location: any;
+        contact: any;
+        isTestSession: boolean;
+    };
+};
+
+const TTL = 60 * 60 * 2; // 2 hours
+const redis = getRedisClient();
+const queue = getQueueClient();
+
 export async function POST(req: NextRequest, props: { params: Promise<{ id: string, bid: string }> }) {
-    // Complete chat functionality with:
-    // - LangChain integration
-    // - Redis session management
-    // - Streaming responses
-    // - Scenario evaluation
-    // - Hybrid member/guest contact handling
-    // - Automatic ticket creation on new sessions
-    // - Tools for ticket status updates
-    // - Natural conversation flow for issue resolution checking
+    const { id, bid } = await props.params;
+    const { messages, sessionId, testContact } = await req.json();
+
+    if (!messages?.length || !sessionId) {
+        return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    }
+
+    try {
+        // Queue the chat processing job for node flow execution
+        await queue.add('process-admin-chat', {
+            locationId: id,
+            botId: bid,
+            messages,
+            sessionId,
+            testContact,
+            isAdminTest: true
+        }, {
+            removeOnComplete: 10,
+            removeOnFail: 5
+        });
+
+        return NextResponse.json({ 
+            message: "Chat processing queued",
+            sessionId 
+        }, { status: 200 });
+
+    } catch (error) {
+        console.error("Chat API error:", error);
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
 }
 ```
 
@@ -505,7 +575,60 @@ export async function GET() { /* List documents */ }
 export async function POST() { /* Upload & process document */ }
 ```
 
-### **3.4 Ticket Management APIs**
+### **3.4 Node Flow Queue Processing APIs**
+
+#### `/src/app/api/protected/loc/[id]/bots/[bid]/queue/route.ts`
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { getQueueClient } from '@/libs/server/redis';
+
+// Queue chat processing for node flow execution
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string, bid: string }> }) {
+    const { id, bid } = await props.params;
+    const { messages, sessionId, testContact, memberId, conversationId } = await req.json();
+    
+    try {
+        const queue = getQueueClient();
+        
+        if (memberId) {
+            // Member chat processing
+            await queue.add('process-member-chat', {
+                locationId: id,
+                botId: bid,
+                messages,
+                memberId,
+                conversationId
+            }, {
+                removeOnComplete: 10,
+                removeOnFail: 5
+            });
+        } else {
+            // Admin test chat processing
+            await queue.add('process-admin-chat', {
+                locationId: id,
+                botId: bid,
+                messages,
+                sessionId,
+                testContact
+            }, {
+                removeOnComplete: 10,
+                removeOnFail: 5
+            });
+        }
+        
+        return NextResponse.json({ 
+            message: "Chat processing queued",
+            sessionId: sessionId || `member-${memberId}-${bid}`
+        }, { status: 200 });
+        
+    } catch (error) {
+        console.error("Queue processing error:", error);
+        return NextResponse.json({ error: "Processing failed" }, { status: 500 });
+    }
+}
+```
+
+### **3.5 Ticket Management APIs**
 Create ticket management endpoints for tracking and updating issue status:
 
 #### `/src/app/api/protected/loc/[id]/tickets/route.ts`
@@ -533,7 +656,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
 }
 ```
 
-### **3.5 Contact Management APIs (Hybrid)**
+### **3.6 Contact Management APIs (Hybrid)"
 
 #### `/src/app/api/protected/loc/[id]/contacts/route.ts`
 ```typescript
@@ -771,17 +894,390 @@ export async function promoteGuestToMember(guestId: string, newMemberId: string)
 }
 ```
 
-### **5.3 Redis Configuration**
+### **5.3 Redis & Queue Configuration**
 
 #### `/src/libs/server/redis.ts`
 ```typescript
 import { Redis } from "@upstash/redis";
+import { Queue, Worker } from "bullmq";
+import IORedis from "ioredis";
 
+// Upstash Redis for sessions
 export function getRedisClient() {
     return new Redis({
         url: process.env.UPSTASH_REDIS_REST_URL!,
         token: process.env.UPSTASH_REDIS_REST_TOKEN!,
     });
+}
+
+// IORedis for BullMQ queues (node flow processing)
+export function getIORedisClient() {
+    return new IORedis({
+        host: process.env.REDIS_HOST!,
+        port: parseInt(process.env.REDIS_PORT!),
+        password: process.env.REDIS_PASSWORD!,
+        maxRetriesPerRequest: 3,
+    });
+}
+
+// Queue for node flow processing
+export function getQueueClient() {
+    const connection = getIORedisClient();
+    return new Queue('bot-processing', { connection });
+}
+
+// Worker for processing node flows
+export function createNodeFlowWorker() {
+    const connection = getIORedisClient();
+    
+    return new Worker('bot-processing', async (job) => {
+        const { data } = job;
+        
+        switch (job.name) {
+            case 'process-admin-chat':
+                return await processAdminChat(data);
+            case 'process-member-chat':
+                return await processMemberChat(data);
+            default:
+                throw new Error(`Unknown job type: ${job.name}`);
+        }
+    }, { connection });
+}
+
+// Import processing functions
+import { processAdminChat, processMemberChat } from './ai/node-processor';
+```
+
+### **5.4 Node Flow Processing Engine**
+
+#### `/src/libs/server/ai/node-processor.ts`
+```typescript
+import { db } from '@/db/db';
+import { getModel } from './models';
+import { UpstashRedisChatMessageHistory } from "@langchain/community/stores/message/upstash_redis";
+import { ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
+import { BaseMessage, trimMessages } from '@langchain/core/messages';
+import { getRedisClient } from '../redis';
+import { Tools, FunctionDefaults, formattedPrompt } from './tools';
+
+type SessionContext = {
+    id: string;
+    botId: string;
+    currentNode: string;
+    routineNode: string | null;
+    stopped: string | null;
+    metadata: {
+        location: any;
+        contact: any;
+        isTestSession?: boolean;
+        memberId?: string;
+    };
+};
+
+// Process admin test chat (dummy member chat behavior)
+export async function processAdminChat(data: any) {
+    const { locationId, botId, messages, sessionId, testContact } = data;
+    
+    try {
+        // Fetch location and bot
+        const [location, bot] = await Promise.all([
+            db.query.locations.findFirst({
+                where: (locations, { eq }) => eq(locations.id, locationId)
+            }),
+            db.query.bots.findFirst({
+                where: (bots, { eq, and }) => and(
+                    eq(bots.id, botId),
+                    eq(bots.locationId, locationId)
+                ),
+                with: {
+                    persona: { with: { aiPersona: true } },
+                    knowledge: { with: { document: true } }
+                }
+            })
+        ]);
+
+        if (!location || !bot) {
+            throw new Error("Location or bot not found");
+        }
+
+        // Get or create session
+        const redis = getRedisClient();
+        let session = await redis.json.get(`test-session:${botId}:${sessionId}`) as SessionContext | null;
+
+        if (!session) {
+            session = {
+                id: sessionId,
+                botId,
+                currentNode: bot.objectives?.[0]?.id || 'start',
+                routineNode: null,
+                stopped: null,
+                metadata: {
+                    location,
+                    contact: testContact || { id: 'test', firstName: 'Test', lastName: 'User', type: 'test' },
+                    isTestSession: true
+                }
+            };
+        }
+
+        // Initialize chat history
+        const history = new UpstashRedisChatMessageHistory({
+            sessionId: `test-chat:${botId}:${sessionId}`,
+            client: redis,
+            sessionTTL: 60 * 60 * 2,
+        });
+
+        // Add user message
+        const userMessage = messages[messages.length - 1];
+        await history.addUserMessage(userMessage.content);
+
+        // Process through node flow
+        const model = getModel(bot.model);
+        const response = await processNodeFlow(session, bot, model, history);
+
+        // Save session
+        await saveSession(session, redis);
+
+        return {
+            success: true,
+            response,
+            sessionId,
+            currentNode: session.currentNode
+        };
+
+    } catch (error) {
+        console.error("Admin chat processing error:", error);
+        throw error;
+    }
+}
+
+// Process member chat (same behavior as admin test)
+export async function processMemberChat(data: any) {
+    const { locationId, botId, messages, memberId, conversationId } = data;
+    
+    try {
+        // Fetch member, location and bot
+        const [memberLocation, bot] = await Promise.all([
+            db.query.memberLocations.findFirst({
+                where: (ml, { eq, and }) => and(
+                    eq(ml.locationId, locationId),
+                    eq(ml.memberId, memberId)
+                ),
+                with: { member: true, location: true }
+            }),
+            db.query.bots.findFirst({
+                where: (bots, { eq, and }) => and(
+                    eq(bots.id, botId),
+                    eq(bots.locationId, locationId)
+                ),
+                with: {
+                    persona: { with: { aiPersona: true } },
+                    knowledge: { with: { document: true } }
+                }
+            })
+        ]);
+
+        if (!memberLocation || !bot) {
+            throw new Error("Member, location, or bot not found");
+        }
+
+        // Get or create session
+        const redis = getRedisClient();
+        const sessionId = `member-${memberId}-${botId}`;
+        let session = await redis.json.get(`session:${sessionId}`) as SessionContext | null;
+
+        if (!session) {
+            session = {
+                id: sessionId,
+                botId,
+                currentNode: bot.objectives?.[0]?.id || 'start',
+                routineNode: null,
+                stopped: null,
+                metadata: {
+                    location: memberLocation.location,
+                    contact: {
+                        id: memberLocation.member.id,
+                        firstName: memberLocation.member.firstName,
+                        lastName: memberLocation.member.lastName,
+                        email: memberLocation.member.email,
+                        phone: memberLocation.member.phone,
+                        type: 'member'
+                    },
+                    memberId,
+                    isTestSession: false
+                }
+            };
+        }
+
+        // Initialize chat history with conversation ID
+        const history = new UpstashRedisChatMessageHistory({
+            sessionId: `member-chat:${conversationId}`,
+            client: redis,
+            sessionTTL: 60 * 60 * 24 * 30, // 30 days for members
+        });
+
+        // Add user message
+        const userMessage = messages[messages.length - 1];
+        await history.addUserMessage(userMessage.content);
+
+        // Process through node flow (same as admin)
+        const model = getModel(bot.model);
+        const response = await processNodeFlow(session, bot, model, history);
+
+        // Save session
+        await saveSession(session, redis);
+
+        // Save messages to database for persistence
+        await Promise.all([
+            // Save user message
+            db.insert(messages).values({
+                conversationId,
+                content: userMessage.content,
+                role: 'user',
+                channel: 'WebChat'
+            }),
+            // Save AI response
+            db.insert(messages).values({
+                conversationId,
+                content: response,
+                role: 'ai',
+                channel: 'WebChat',
+                metadata: {
+                    nodeId: session.currentNode,
+                    model: bot.model
+                }
+            })
+        ]);
+
+        return {
+            success: true,
+            response,
+            sessionId,
+            currentNode: session.currentNode
+        };
+
+    } catch (error) {
+        console.error("Member chat processing error:", error);
+        throw error;
+    }
+}
+
+// Core node flow processing (used by both admin and member chats)
+async function processNodeFlow(
+    session: SessionContext,
+    bot: any,
+    model: any,
+    history: UpstashRedisChatMessageHistory
+): Promise<string> {
+    
+    const currentNode = bot.objectives?.find((obj: any) => obj.id === session.currentNode);
+    
+    if (!currentNode) {
+        throw new Error(`Current node not found: ${session.currentNode}`);
+    }
+
+    const { data } = currentNode;
+    const tools: any[] = [];
+
+    // Build tools from node functions
+    data.functions?.forEach((func: any) => {
+        const defaults = FunctionDefaults[func.name as keyof typeof FunctionDefaults];
+        tools.push({
+            type: "function",
+            function: {
+                name: func.name,
+                description: defaults?.description || func.description || data.goal,
+                parameters: {
+                    type: "object",
+                    properties: defaults?.properties || func.properties || {},
+                    required: defaults?.required || func.required || [],
+                    strict: func.strict || true
+                }
+            }
+        });
+    });
+
+    // Get conversation history
+    const messages = await history.getMessages();
+    const trimmed = await trimMessages(messages, {
+        maxTokens: 1000,
+        strategy: "last",
+        tokenCounter: model,
+    });
+
+    // Build prompt with session context
+    const basePrompt = buildBasePrompt(bot, session.metadata);
+    const responsePrompt = await formattedPrompt(basePrompt, data);
+
+    const prompt = ChatPromptTemplate.fromMessages([
+        SystemMessagePromptTemplate.fromTemplate(responsePrompt),
+        new MessagesPlaceholder("history"),
+    ]);
+
+    const modelWithTools = model.bindTools(tools);
+    const chain = prompt.pipe(modelWithTools);
+
+    // Generate response
+    const response = await chain.invoke({ history: trimmed });
+    const responses: BaseMessage[] = [response];
+
+    // Process tool calls (node navigation)
+    if (response.tool_calls?.length) {
+        for (const toolCall of response.tool_calls) {
+            const tool = Tools[toolCall.name as keyof typeof Tools];
+            if (tool) {
+                const { next: nextNode, message } = await tool(toolCall, currentNode);
+                if (nextNode) {
+                    session.currentNode = nextNode;
+                }
+                responses.push(message);
+            }
+        }
+    }
+
+    // Save messages to history
+    await history.addMessages(responses);
+
+    return response.content as string;
+}
+
+async function saveSession(session: SessionContext, redis: any) {
+    const sessionKey = session.metadata.isTestSession 
+        ? `test-session:${session.botId}:${session.id}`
+        : `session:${session.id}`;
+    
+    const ttl = session.metadata.isTestSession ? 60 * 60 * 2 : 60 * 60 * 24;
+    
+    await Promise.all([
+        redis.json.set(sessionKey, '$', session),
+        redis.expire(sessionKey, ttl)
+    ]);
+}
+
+function buildBasePrompt(bot: any, metadata: any): string {
+    const persona = bot.persona?.aiPersona;
+    
+    return `You are ${bot.name}, an AI assistant for ${metadata.location.name}.
+
+${bot.prompt}
+
+${persona ? `
+Persona Details:
+- Name: ${persona.name}
+- Response Style: ${persona.responseDetails}
+- Personality Traits: ${persona.personality.join(', ')}
+` : ''}
+
+Contact Context:
+- Name: ${metadata.contact.firstName} ${metadata.contact.lastName}
+- Type: ${metadata.contact.type}
+- ${metadata.isTestSession ? 'Test Session: true' : 'Member Session: true'}
+
+Instructions:
+- Be helpful and professional
+- Use the persona's response style if available
+- Follow the conversation flow defined by the nodes
+- Use available tools when appropriate
+- Navigate between nodes based on user responses and tool outcomes`;
 }
 ```
 
@@ -1864,15 +2360,21 @@ Both apps share the same database but access it through their respective authent
 - [ ] Create database migration scripts
 - [ ] Run migrations on development database
 - [ ] Update package.json dependencies
-- [ ] Set up environment variables
+- [ ] Set up environment variables (Redis for queues, AI keys)
 - [ ] Test database connections
+
+### **Queue System Setup**
+- [ ] Set up Redis/IORedis for BullMQ queues
+- [ ] Implement node flow processing worker
+- [ ] Test queue job processing
+- [ ] Set up queue monitoring
 
 ### **Backend APIs**
 - [ ] Create core bot API routes
-- [ ] Implement chat endpoint with hybrid contacts
+- [ ] Implement queue-based chat processing
 - [ ] Create scenario management APIs
 - [ ] Create knowledge base APIs
-- [ ] Test all endpoints with Postman/similar
+- [ ] Test all endpoints with node flow execution
 
 ### **Server Utilities & Types**
 - [ ] Copy and adapt AI server libraries

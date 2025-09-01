@@ -36,7 +36,8 @@ const formatDate = (dateString: string | Date | null | undefined): string => {
   if (!dateString) return "Never";
 
   try {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    const date =
+      typeof dateString === "string" ? new Date(dateString) : dateString;
 
     // Check if the date is valid
     if (isNaN(date.getTime())) {
@@ -71,7 +72,6 @@ export function ScenarioComp({ scenario }: ScenarioCompProps) {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // TODO: Refresh scenarios list or use global state management
-      console.log("Scenario deleted:", scenario.id);
 
       setDeleteDialogOpen(false);
     } catch (error) {
@@ -83,7 +83,6 @@ export function ScenarioComp({ scenario }: ScenarioCompProps) {
 
   const handleEdit = () => {
     // TODO: Open edit dialog or navigate to edit page
-    console.log("Edit scenario:", scenario.id);
   };
 
   return (

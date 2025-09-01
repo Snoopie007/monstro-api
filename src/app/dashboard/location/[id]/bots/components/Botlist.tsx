@@ -74,7 +74,7 @@ interface BotlistProps {
   selectedBot: Bot | null;
   onBotSelect: (bot: Bot) => void;
   onBotCreate: (botData: Partial<Bot>) => Promise<Bot | null>;
-  onBotDelete: (deletedBotId: string) => void;
+  onBotDelete: (deletedBotId: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -110,16 +110,15 @@ export function Botlist({
     setCreatingBot(true);
 
     try {
-      // Prepare bot data
-      const template = templates.find((t) => t.id === newBotData.template);
+      // Prepare bot data (template functionality is disabled)
       const botData = {
         name: newBotData.name,
-        prompt: template?.prompt || "You are a helpful AI assistant.",
+        prompt: "You are a helpful AI assistant.",
         temperature: 0,
-        initialMessage: template?.initialMessage || null,
+        initialMessage: "Hello! How can I help you today?",
         model: newBotData.model,
-        objectives: template?.objectives || [],
-        invalidNodes: template?.invalidNodes || [],
+        objectives: [],
+        invalidNodes: [],
         status: "Draft" as const,
       };
 
@@ -143,6 +142,8 @@ export function Botlist({
         setNewBotData({ name: "", template: "", model: "gpt" });
         setValidationErrors({});
       }
+    } catch (error) {
+      console.error("Error during bot creation:", error);
     } finally {
       setCreatingBot(false);
     }
@@ -152,30 +153,18 @@ export function Botlist({
     if (!botToDelete) return;
 
     try {
-      const response = await fetch(
-        `/api/protected/loc/${lid}/bots/${botToDelete.id}`,
-        {
-          method: "DELETE",
-        }
-      );
+      // Use the parent's delete function instead of making direct API call
+      // This prevents double API calls and double toast notifications
+      await onBotDelete(botToDelete.id);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to delete bot");
-      }
-
-      onBotDelete(botToDelete.id);
       setDeleteDialogOpen(false);
       setBotToDelete(null);
-
-      toast.success("Bot deleted successfully!");
     } catch (error) {
       console.error("Failed to delete bot:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to delete bot"
+        error instanceof Error ? error.message : "Failed to delete bot",
+        { toastId: `delete-error-${botToDelete.id}` }
       );
-    } finally {
-      // Loading state is managed by the parent component
     }
   };
 
@@ -237,6 +226,7 @@ export function Botlist({
                     </p>
                   )}
                 </div>
+                {/* Template field temporarily hidden
                 <div>
                   <Label htmlFor="bot-template">Template (Optional)</Label>
                   <Select
@@ -256,9 +246,11 @@ export function Botlist({
                     </SelectContent>
                   </Select>
                 </div>
+                */}
                 <div>
                   <Label htmlFor="bot-model">AI Model</Label>
                   <Select
+                    value={newBotData.model}
                     onValueChange={(value) =>
                       setNewBotData((prev) => ({
                         ...prev,
