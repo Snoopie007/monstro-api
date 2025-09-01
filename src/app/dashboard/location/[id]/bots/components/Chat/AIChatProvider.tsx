@@ -116,34 +116,35 @@ export function AIChatProvider({ children }: AIChatProviderProps) {
     setLoading(true);
 
     try {
-      // TODO: Implement actual streaming API call when ready
-      // const response = await fetch(`/api/protected/loc/${locationId}/bots/${state.selectedBot.id}/chat`, {
-      //     method: 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify({
-      //         messages: [...state.messages, { role: 'user', content }],
-      //         sessionId: state.sessionId,
-      //         contactId: state.selectedContact?.id
-      //     })
-      // });
+      // Send message to queue-based admin chat endpoint
+      const response = await fetch(
+        `/api/protected/loc/${window.location.pathname.split("/")[3]}/bots/${
+          state.selectedBot.id
+        }/admin-chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: content.trim(),
+            sessionId: state.sessionId,
+            contactId: state.selectedContact?.id,
+            contactType: state.selectedContact?.type,
+          }),
+        }
+      );
 
-      // Temporary placeholder response for testing UI
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
 
-      const botResponse =
-        "Thank you for your message! The chat API will be implemented soon.";
+      const data = await response.json();
 
-      // Add bot response
-      addMessage({
-        content: botResponse,
-        role: "ai",
-        channel: "WebChat",
-        metadata: {
-          botId: state.selectedBot.id,
-          sessionId: state.sessionId,
-          placeholder: true, // Mark as placeholder response
-        },
-      });
+      // Poll for job completion
+      if (data.jobId) {
+        await pollForJobCompletion(data.jobId);
+      } else {
+        throw new Error("No job ID returned");
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
       // Add error message
@@ -160,6 +161,68 @@ export function AIChatProvider({ children }: AIChatProviderProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Poll for job completion and add bot response
+  const pollForJobCompletion = async (jobId: string) => {
+    const maxAttempts = 30; // 30 seconds max
+    let attempts = 0;
+
+    const poll = async (): Promise<void> => {
+      attempts++;
+
+      try {
+        const response = await fetch(
+          `/api/protected/loc/${window.location.pathname.split("/")[3]}/bots/${
+            state.selectedBot!.id
+          }/admin-chat?jobId=${jobId}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Job status check failed: ${response.status}`);
+        }
+
+        const jobData = await response.json();
+
+        if (jobData.status === "completed" && jobData.result) {
+          // Job completed successfully
+          addMessage({
+            content: jobData.result.content,
+            role: "ai",
+            channel: "WebChat",
+            metadata: {
+              botId: state.selectedBot!.id,
+              sessionId: state.sessionId,
+              jobId: jobId,
+              processed: true,
+            },
+          });
+          return;
+        } else if (jobData.status === "failed") {
+          // Job failed
+          throw new Error(jobData.failedReason || "Job processing failed");
+        } else if (attempts >= maxAttempts) {
+          // Timeout
+          throw new Error("Job processing timeout");
+        } else {
+          // Still processing, continue polling
+          setTimeout(poll, 1000);
+        }
+      } catch (error) {
+        console.error("Job polling error:", error);
+        addMessage({
+          content: "Processing failed. Please try again.",
+          role: "ai",
+          channel: "WebChat",
+          metadata: {
+            botId: state.selectedBot!.id,
+            error: true,
+          },
+        });
+      }
+    };
+
+    await poll();
   };
 
   const resetChat = () => {
