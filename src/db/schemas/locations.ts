@@ -9,14 +9,22 @@ import {
   integer,
   uuid,
 } from "drizzle-orm/pg-core";
-import { memberAchievements, memberInvoices, memberPointsHistory, memberReferrals, memberRewards, members } from "./members";
+import {
+  memberAchievements,
+  memberContracts,
+  memberInvoices,
+  memberPointsHistory,
+  memberReferrals,
+  memberRewards,
+  members,
+} from "./members";
 import { integrations } from "./integrations";
 import { programs } from "./programs";
 import { transactions } from "./transactions";
 import { vendors } from "./vendors";
 import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
-import { LocationSettings } from "@/types";
+import type { LocationSettings } from "@/types";
 
 export const locations = pgTable("locations", {
   id: uuid("id")
@@ -112,17 +120,31 @@ export const walletUsages = pgTable("wallet_usages", {
     .notNull()
     .defaultNow(),
 });
-export const memberLocations = pgTable("member_locations", {
-  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-  locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-  status: LocationStatusEnum("status").notNull().default("incomplete"),
-  inviteDate: timestamp("invite_date", { withTimezone: true }),
-  points: integer("points").notNull().default(0),
-  inviteAcceptedDate: timestamp("invite_accepted_date", { withTimezone: true }),
-  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updated: timestamp("updated_at", { withTimezone: false }),
-  waiverId: text("waiver_id").references(() => locations.id, { onDelete: "set null" }),
-}, (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]);
+export const memberLocations = pgTable(
+  "member_locations",
+  {
+    memberId: text("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    locationId: text("location_id")
+      .notNull()
+      .references(() => locations.id, { onDelete: "cascade" }),
+    status: LocationStatusEnum("status").notNull().default("incomplete"),
+    inviteDate: timestamp("invite_date", { withTimezone: true }),
+    points: integer("points").notNull().default(0),
+    inviteAcceptedDate: timestamp("invite_accepted_date", {
+      withTimezone: true,
+    }),
+    created: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: false }),
+    waiverId: text("waiver_id").references(() => memberContracts.id, {
+      onDelete: "set null",
+    }),
+  },
+  (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]
+);
 
 export const locationsRelations = relations(locations, ({ many, one }) => ({
   memberLocations: many(memberLocations),
@@ -152,21 +174,24 @@ export const locationStateRelations = relations(locationState, ({ one }) => ({
   }),
 }));
 
-export const memberLocationsRelations = relations(memberLocations, ({ one, many }) => ({
-  member: one(members, {
-    fields: [memberLocations.memberId],
-    references: [members.id],
-  }),
-  location: one(locations, {
-    fields: [memberLocations.locationId],
-    references: [locations.id],
-  }),
-  transactions: many(transactions),
-  achievements: many(memberAchievements),
-  rewards: many(memberRewards),
-  referrals: many(memberReferrals),
-  pointsHistory: many(memberPointsHistory),
-}));
+export const memberLocationsRelations = relations(
+  memberLocations,
+  ({ one, many }) => ({
+    member: one(members, {
+      fields: [memberLocations.memberId],
+      references: [members.id],
+    }),
+    location: one(locations, {
+      fields: [memberLocations.locationId],
+      references: [locations.id],
+    }),
+    transactions: many(transactions),
+    achievements: many(memberAchievements),
+    rewards: many(memberRewards),
+    referrals: many(memberReferrals),
+    pointsHistory: many(memberPointsHistory),
+  })
+);
 
 export const walletRelations = relations(wallets, ({ one, many }) => ({
   location: one(locations, {
