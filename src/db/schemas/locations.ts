@@ -147,6 +147,8 @@ export const memberLocations = pgTable(
     phone: text("phone"),
     avatar: text("avatar"),
     // MEMBER INFO UPDATE END
+    botMetadata: jsonb("bot_metadata").default(sql`'{}'::jsonb`),
+    lastBotInteraction: timestamp("last_bot_interaction", { withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]
 );

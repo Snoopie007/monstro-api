@@ -52,8 +52,7 @@ CREATE TABLE IF NOT EXISTS member_subscriptions (
   payment_method payment_method NOT NULL DEFAULT 'cash',
   metadata jsonb NOT NULL DEFAULT '{}',
   member_contract_id text REFERENCES member_contracts (id) ON DELETE SET NULL,
-  is_participant boolean NOT NULL DEFAULT true,
- 
+  is_participant boolean NOT NULL DEFAULT true
 );
 
 ALTER TABLE member_subscriptions ADD CONSTRAINT member_subs_parent_unique UNIQUE (parent_id, member_id);

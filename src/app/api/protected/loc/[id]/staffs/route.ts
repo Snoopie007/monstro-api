@@ -60,7 +60,7 @@ export async function POST(
   });
 
   let userId: string;
-  let staffName = `${data.firstName} ${data.lastName}`.trim(); // Combine firstName and lastName
+  const staffName = `${data.firstName} ${data.lastName}`.trim(); // Combine firstName and lastName
 
   if (existingUser) {
     userId = existingUser.id;

@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Bot, BotTemplate } from "@/types/bots";
-import { MOCK_BOTS, createMockBot, deleteMockBot } from "@/mocks/bots";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Bot as BotIcon } from "lucide-react";
+import { Plus, Trash2, Bot as BotIcon, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,16 +32,62 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "react-toastify";
+import { z } from "zod";
+
+// Helper function to safely format dates
+const formatDate = (dateString: string | Date | null | undefined): string => {
+  if (!dateString) return "Never";
+
+  try {
+    const date =
+      typeof dateString === "string" ? new Date(dateString) : dateString;
+
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return "Never";
+    }
+
+    return date.toLocaleDateString();
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "Never";
+  }
+};
+
+// Zod validation schema for bot creation
+const createBotSchema = z.object({
+  name: z.string().min(1, "Bot name is required"),
+  prompt: z.string().min(1, "Prompt is required"),
+  temperature: z.number().min(0).max(100).default(0),
+  initialMessage: z.string().optional(),
+  model: z.enum(["anthropic", "gpt", "gemini"]).default("gpt"),
+  objectives: z.array(z.any()).default([]),
+  invalidNodes: z.array(z.string()).default([]),
+  status: z.enum(["Draft", "Active", "Pause", "Archived"]).default("Draft"),
+});
 
 interface BotlistProps {
   lid: string;
   templates: BotTemplate[];
+  bots: Bot[];
+  selectedBot: Bot | null;
+  onBotSelect: (bot: Bot) => void;
+  onBotCreate: (botData: Partial<Bot>) => Promise<Bot | null>;
+  onBotDelete: (deletedBotId: string) => void;
+  loading: boolean;
 }
 
-export function Botlist({ lid, templates }: BotlistProps) {
-  const [bots, setBots] = useState<Bot[]>([]);
-  const [selectedBot, setSelectedBot] = useState<Bot | null>(null);
-  const [loading, setLoading] = useState(false);
+export function Botlist({
+  lid,
+  templates,
+  bots,
+  selectedBot,
+  onBotSelect,
+  onBotCreate,
+  onBotDelete,
+  loading,
+}: BotlistProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [botToDelete, setBotToDelete] = useState<Bot | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -51,84 +96,86 @@ export function Botlist({ lid, templates }: BotlistProps) {
     template: "",
     model: "gpt" as const,
   });
-
-  // Load bots for this location
-  useEffect(() => {
-    // TODO: Replace with actual API call
-    // const loadBots = async () => {
-    //     const response = await fetch(`/api/protected/loc/${lid}/bots`);
-    //     const data = await response.json();
-    //     setBots(data.bots);
-    // };
-    // loadBots();
-
-    // Using mock data for now
-    const locationBots = MOCK_BOTS.filter(
-      (bot) => bot.locationId === lid || bot.locationId === "loc-1"
-    );
-    setBots(locationBots);
-    if (locationBots.length > 0) {
-      setSelectedBot(locationBots[0]);
-    }
-  }, [lid]);
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
+  const [creatingBot, setCreatingBot] = useState(false);
 
   const handleCreateBot = async () => {
-    if (!newBotData.name) return;
+    // Prevent double submission
+    if (creatingBot) return;
 
-    setLoading(true);
+    // Clear previous validation errors
+    setValidationErrors({});
+    setCreatingBot(true);
+
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/protected/loc/${lid}/bots`, {
-      //     method: 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify(newBotData)
-      // });
-      // const newBot = await response.json();
-
-      // Using mock function for now
+      // Prepare bot data
       const template = templates.find((t) => t.id === newBotData.template);
-      const newBot = await createMockBot(lid, {
+      const botData = {
         name: newBotData.name,
-        prompt: template?.prompt || "",
-        model: newBotData.model,
+        prompt: template?.prompt || "You are a helpful AI assistant.",
+        temperature: 0,
         initialMessage: template?.initialMessage || null,
+        model: newBotData.model,
         objectives: template?.objectives || [],
-      });
+        invalidNodes: template?.invalidNodes || [],
+        status: "Draft" as const,
+      };
 
-      setBots((prev) => [...prev, newBot]);
-      setSelectedBot(newBot);
-      setCreateDialogOpen(false);
-      setNewBotData({ name: "", template: "", model: "gpt" });
-    } catch (error) {
-      console.error("Failed to create bot:", error);
+      // Validate the data
+      const validationResult = createBotSchema.safeParse(botData);
+      if (!validationResult.success) {
+        const errors: Record<string, string> = {};
+        validationResult.error.issues.forEach((issue) => {
+          errors[issue.path[0] as string] = issue.message;
+        });
+        setValidationErrors(errors);
+        return;
+      }
+
+      // Use the callback provided by parent component instead of direct API call
+      // The parent component will handle the API call through useBots hook
+      const newBot = await onBotCreate(botData as any);
+
+      if (newBot) {
+        setCreateDialogOpen(false);
+        setNewBotData({ name: "", template: "", model: "gpt" });
+        setValidationErrors({});
+      }
     } finally {
-      setLoading(false);
+      setCreatingBot(false);
     }
   };
 
   const handleDeleteBot = async () => {
     if (!botToDelete) return;
 
-    setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // await fetch(`/api/protected/loc/${lid}/bots/${botToDelete.id}`, {
-      //     method: 'DELETE'
-      // });
+      const response = await fetch(
+        `/api/protected/loc/${lid}/bots/${botToDelete.id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-      // Using mock function for now
-      await deleteMockBot(botToDelete.id);
-
-      setBots((prev) => prev.filter((bot) => bot.id !== botToDelete.id));
-      if (selectedBot?.id === botToDelete.id) {
-        setSelectedBot(bots.length > 1 ? bots[0] : null);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete bot");
       }
+
+      onBotDelete(botToDelete.id);
       setDeleteDialogOpen(false);
       setBotToDelete(null);
+
+      toast.success("Bot deleted successfully!");
     } catch (error) {
       console.error("Failed to delete bot:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete bot"
+      );
     } finally {
-      setLoading(false);
+      // Loading state is managed by the parent component
     }
   };
 
@@ -165,18 +212,30 @@ export function Botlist({ lid, templates }: BotlistProps) {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="bot-name">Bot Name</Label>
+                  <Label htmlFor="bot-name">Bot Name *</Label>
                   <Input
                     id="bot-name"
                     value={newBotData.name}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setNewBotData((prev) => ({
                         ...prev,
                         name: e.target.value,
-                      }))
-                    }
+                      }));
+                      // Clear validation error when user starts typing
+                      if (validationErrors.name) {
+                        setValidationErrors((prev) => ({ ...prev, name: "" }));
+                      }
+                    }}
                     placeholder="Enter bot name"
+                    className={
+                      validationErrors.name ? "border-destructive" : ""
+                    }
                   />
+                  {validationErrors.name && (
+                    <p className="text-sm text-destructive mt-1">
+                      {validationErrors.name}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="bot-template">Template (Optional)</Label>
@@ -220,15 +279,32 @@ export function Botlist({ lid, templates }: BotlistProps) {
                 <div className="flex gap-2 justify-end">
                   <Button
                     variant="outline"
-                    onClick={() => setCreateDialogOpen(false)}
+                    onClick={() => {
+                      setCreateDialogOpen(false);
+                      setValidationErrors({});
+                      setNewBotData({ name: "", template: "", model: "gpt" });
+                    }}
+                    disabled={creatingBot || loading}
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleCreateBot}
-                    disabled={!newBotData.name || loading}
+                    disabled={
+                      !newBotData.name ||
+                      creatingBot ||
+                      loading ||
+                      Object.keys(validationErrors).length > 0
+                    }
                   >
-                    {loading ? "Creating..." : "Create Bot"}
+                    {creatingBot ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Bot"
+                    )}
                   </Button>
                 </div>
               </div>
@@ -237,7 +313,12 @@ export function Botlist({ lid, templates }: BotlistProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-2 overflow-y-auto">
-        {bots.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-muted-foreground">Loading bots...</span>
+          </div>
+        ) : bots.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <BotIcon size={48} className="mx-auto mb-4 opacity-50" />
             <p>No bots created yet</p>
@@ -252,7 +333,7 @@ export function Botlist({ lid, templates }: BotlistProps) {
                   ? "border-foreground/50 bg-primary/5"
                   : "border-foreground/10 hover:bg-muted/50"
               }`}
-              onClick={() => setSelectedBot(bot)}
+              onClick={() => onBotSelect(bot)}
             >
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium text-sm truncate">
@@ -283,7 +364,7 @@ export function Botlist({ lid, templates }: BotlistProps) {
               </div>
               <div className="text-xs text-muted-foreground">
                 <p>Model: {bot.model}</p>
-                <p>Updated: {bot.updatedAt?.toLocaleDateString() || "Never"}</p>
+                <p>Updated: {formatDate(bot.updatedAt)}</p>
               </div>
             </div>
           ))
@@ -302,12 +383,20 @@ export function Botlist({ lid, templates }: BotlistProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteBot}
+              disabled={loading}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete Bot
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Bot"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

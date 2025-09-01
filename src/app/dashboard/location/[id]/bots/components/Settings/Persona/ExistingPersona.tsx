@@ -43,16 +43,7 @@ export function ExistingPersona({
 
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // await fetch(`/api/protected/bots/${botId}/persona`, {
-      //   method: "PUT",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ personaId: selectedPersona.id })
-      // });
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
+      // Note: Actual API call is handled by parent component via onPersonaSelected
       onPersonaSelected(selectedPersona);
       toast.success(`Attached persona: ${selectedPersona.name}`);
       onClose();

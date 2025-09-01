@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "react-toastify";
 import { Loader2, Plus, X } from "lucide-react";
 
 import {
@@ -34,6 +33,7 @@ import {
   AIPersonalities,
   AIPersonaImages,
 } from "./PersonaSchema";
+import { usePersonas } from "@/hooks/usePersonas";
 import { AIPersona } from "@/types/bots";
 
 interface NewPersonaProps {
@@ -49,7 +49,7 @@ export function NewPersona({
   onPersonaCreated,
   locationId,
 }: NewPersonaProps) {
-  const [loading, setLoading] = useState(false);
+  const { createPersona, loading } = usePersonas(locationId);
 
   const form = useForm<AIPersonaFormData>({
     resolver: zodResolver(AIPersonaSchema),
@@ -74,39 +74,12 @@ export function NewPersona({
   };
 
   const onSubmit = async (data: AIPersonaFormData) => {
-    setLoading(true);
+    const newPersona = await createPersona(data);
 
-    try {
-      // TODO: Replace with actual API call
-      // await fetch(`/api/protected/personas`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ ...data, locationId })
-      // });
-
-      // Mock persona creation for now
-      const newPersona: AIPersona = {
-        id: `persona-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        locationId,
-        name: data.name,
-        image: data.image,
-        responseDetails: data.responseDetails,
-        personality: data.personality,
-        createdAt: new Date(),
-        updatedAt: null,
-      };
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+    if (newPersona) {
       onPersonaCreated(newPersona);
-      toast.success("Persona created successfully!");
       form.reset();
       onClose();
-    } catch (error) {
-      toast.error("Failed to create persona");
-    } finally {
-      setLoading(false);
     }
   };
 

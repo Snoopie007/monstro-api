@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 	const date = searchParams.get("date")
 
 	try {
-		let sessions: ProgramSession[] = [];
+		const sessions: ProgramSession[] = [];
 		const programs = await db.query.programs.findMany({
 			where: (p, { eq, and }) => and(eq(p.locationId, params.id), eq(p.status, 'active')),
 			with: {

@@ -64,7 +64,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
         // Apply tax to the plan price
         const tax = Math.floor(plan.price * (locationState.taxRate / 10000))
 
-        let { newSubscription, newInvoice, newTransaction } = createSubscription({
+        const { newSubscription, newInvoice, newTransaction } = createSubscription({
             ...data,
             memberId: params.mid,
             locationId: params.id,

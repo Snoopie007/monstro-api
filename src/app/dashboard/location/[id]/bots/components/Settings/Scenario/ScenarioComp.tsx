@@ -31,6 +31,25 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+// Helper function to safely format dates
+const formatDate = (dateString: string | Date | null | undefined): string => {
+  if (!dateString) return "Never";
+
+  try {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return "Never";
+    }
+
+    return date.toLocaleDateString();
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "Never";
+  }
+};
+
 interface ScenarioCompProps {
   scenario: BotScenario;
 }
@@ -202,12 +221,12 @@ export function ScenarioComp({ scenario }: ScenarioCompProps) {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <span className="font-medium">Created:</span>{" "}
-                    {scenario.createdAt.toLocaleDateString()}
+                    {formatDate(scenario.createdAt)}
                   </div>
                   {scenario.updatedAt && (
                     <div>
                       <span className="font-medium">Updated:</span>{" "}
-                      {scenario.updatedAt.toLocaleDateString()}
+                      {formatDate(scenario.updatedAt)}
                     </div>
                   )}
                 </div>

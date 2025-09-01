@@ -29,7 +29,7 @@ type FilePreviewType = {
 export function ImportMembers({ lid }: { lid: string }) {
     const [isLoading, setIsLoading] = useState(false);
     const [file, setFile] = useState<File | undefined>(undefined);
-    const [planId, setPlanId] = useState<Number | null>(null);
+    const [planId, setPlanId] = useState<number | null>(null);
     const [preview, setPreview] = useState<FilePreviewType | null>(null);
     const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({});
     const [errors, setErrors] = useState<string[]>([]);

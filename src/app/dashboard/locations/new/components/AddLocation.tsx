@@ -60,7 +60,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
     function selectAddress(place: google.maps.places.Place | undefined) {
         if (!place) return;
 
-        let address: Record<string, string> = {};
+        const address: Record<string, string> = {};
 
         const addressMapping: Record<string, { field: string, useShort?: boolean }> = {
             'locality': { field: 'city' },

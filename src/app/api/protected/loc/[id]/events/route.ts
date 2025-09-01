@@ -24,7 +24,7 @@ export async function GET(
   const planIds = planIdsParam ? planIdsParam.split(",") : null;
 
   try {
-    let events: CalendarEvent[] = [];
+    const events: CalendarEvent[] = [];
 
     // First, get all programs for this location
     const locationPrograms = await db.query.programs.findMany({

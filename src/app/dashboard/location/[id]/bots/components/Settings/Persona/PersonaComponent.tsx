@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import { Plus, Trash2, Loader2, User } from "lucide-react";
+import { Plus, Trash2, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ interface PersonaComponentProps {
   personas: AIPersona[];
   selectedBot: ExtendedBot | null;
   onBotUpdate: (bot: ExtendedBot) => void;
+  onPersonaCreated?: (persona: AIPersona) => void;
   locationId: string;
 }
 
@@ -29,19 +30,28 @@ export function PersonaComponent({
   personas,
   selectedBot,
   onBotUpdate,
+  onPersonaCreated,
   locationId,
 }: PersonaComponentProps) {
   const [availablePersonas, setAvailablePersonas] =
     useState<AIPersona[]>(personas);
   const [showNewPersona, setShowNewPersona] = useState(false);
   const [showExistingPersona, setShowExistingPersona] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [currentPersona, setCurrentPersona] = useState<AIPersona | null>(
+    selectedBot?.persona?.[0] || null
+  );
 
-  const currentPersona = selectedBot?.persona?.[0]; // Assuming first persona in array
+  // Only sync on initial mount or when selectedBot changes (not on persona array changes)
+  useEffect(() => {
+    const newCurrentPersona = selectedBot?.persona?.[0] || null;
+    setCurrentPersona(newCurrentPersona);
+  }, [selectedBot?.id]); // Only trigger when the bot itself changes, not persona array
 
   const handlePersonaCreated = (newPersona: AIPersona) => {
     setAvailablePersonas((prev) => [...prev, newPersona]);
-    // Auto-attach the newly created persona to the current bot
+    // Update local currentPersona state immediately
+    setCurrentPersona(newPersona);
+    // Just update the local state, don't trigger API call
     if (selectedBot) {
       const updatedBot = {
         ...selectedBot,
@@ -49,9 +59,16 @@ export function PersonaComponent({
       };
       onBotUpdate(updatedBot);
     }
+    // Notify parent component to refresh personas list
+    if (onPersonaCreated) {
+      onPersonaCreated(newPersona);
+    }
   };
 
   const handlePersonaSelected = (persona: AIPersona) => {
+    // Update local currentPersona state immediately
+    setCurrentPersona(persona);
+    // Just update the local state, don't trigger API call
     if (selectedBot) {
       const updatedBot = {
         ...selectedBot,
@@ -64,27 +81,15 @@ export function PersonaComponent({
   const handlePersonaRemove = async () => {
     if (!selectedBot || !currentPersona) return;
 
-    setLoading(true);
-    try {
-      // TODO: Replace with actual API call
-      // await fetch(`/api/protected/bots/${selectedBot.id}/persona`, {
-      //   method: "DELETE"
-      // });
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const updatedBot = {
-        ...selectedBot,
-        persona: [],
-      };
-      onBotUpdate(updatedBot);
-      toast.success("Persona removed from bot");
-    } catch (error) {
-      toast.error("Failed to remove persona");
-    } finally {
-      setLoading(false);
-    }
+    // Update local currentPersona state immediately
+    setCurrentPersona(null);
+    // Just update the local state, don't trigger API call
+    const updatedBot = {
+      ...selectedBot,
+      persona: [],
+    };
+    onBotUpdate(updatedBot);
+    toast.success("Persona removed from bot");
   };
 
   if (!selectedBot) {
@@ -159,13 +164,8 @@ export function PersonaComponent({
             variant="ghost"
             size="sm"
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            disabled={loading}
           >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Trash2 className="w-4 h-4" />
-            )}
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       ) : (

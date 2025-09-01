@@ -83,7 +83,7 @@ async function checkWalletBalance(location: Location) {
 
 async function chargeWallet(location: Location, amount: number, description: string) {
 	let isCredit = false;
-	let wallet = location.wallet;
+	const wallet = location.wallet;
 	if (!wallet) { throw new Error("Wallet not found") }
 
 

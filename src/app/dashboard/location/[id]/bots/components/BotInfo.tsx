@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import { Bot, ExtendedBot, AIPersona, Document } from "@/types/bots";
-import { updateMockBot, MOCK_BOT_SCENARIOS } from "@/mocks/bots";
+import { useState, useEffect } from "react";
+import { ExtendedBot, AIPersona, Document } from "@/types/bots";
+import { toast } from "react-toastify";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,74 +29,120 @@ interface BotInfoProps {
   lid: string;
   personas: AIPersona[];
   docs: Document[];
+  selectedBot: ExtendedBot | null;
+  onBotUpdate?: (updatedBot: ExtendedBot) => void;
+  onPersonaCreated?: (persona: AIPersona) => void;
 }
 
-export function BotInfo({ lid, personas, docs }: BotInfoProps) {
-  const [selectedBot, setSelectedBot] = useState<ExtendedBot | null>(null);
+export function BotInfo({
+  lid,
+  personas,
+  docs,
+  selectedBot,
+  onBotUpdate,
+  onPersonaCreated,
+}: BotInfoProps) {
   const [editData, setEditData] = useState<Partial<ExtendedBot>>({});
   const [loading, setLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  // Local state to immediately reflect persona changes in UI
+  const [localSelectedBot, setLocalSelectedBot] = useState<ExtendedBot | null>(
+    selectedBot
+  );
 
-  // TODO: This should come from a global state or context
-  // For now, we'll use a mock selected bot
-  React.useEffect(() => {
-    // Mock selected bot - in real app this would come from Botlist selection
-    const mockBot: Bot = {
-      id: "bot-1",
-      locationId: lid,
-      name: "Front Desk Helper",
-      initialMessage:
-        "Hi! I'm here to help with any questions about our facility, hours, or services. What would you like to know?",
-      prompt:
-        "You are a helpful front desk assistant for a fitness center. Answer questions about facilities, hours, membership, and general information. Be professional but friendly.",
-      objectives: [],
-      temperature: 50,
-      model: "gpt",
-      invalidNodes: [],
-      status: "Active",
-      createdAt: new Date("2024-01-20"),
-      updatedAt: new Date("2024-01-25"),
-    };
-    setSelectedBot(mockBot);
-    setEditData(mockBot);
-  }, [lid]);
+  // Sync local selected bot with prop changes
+  useEffect(() => {
+    setLocalSelectedBot(selectedBot);
+  }, [selectedBot]);
 
-  const handleFieldChange = (field: keyof Bot, value: any) => {
+  // Update edit data when selected bot prop changes (not local changes)
+  useEffect(() => {
+    if (selectedBot) {
+      setEditData({
+        name: selectedBot.name,
+        prompt: selectedBot.prompt,
+        temperature: selectedBot.temperature,
+        initialMessage: selectedBot.initialMessage,
+        model: selectedBot.model,
+        status: selectedBot.status,
+        persona: selectedBot.persona || [],
+      });
+      setHasChanges(false);
+    } else {
+      setEditData({});
+      setHasChanges(false);
+    }
+  }, [selectedBot]);
+
+  const handleFieldChange = (field: keyof ExtendedBot, value: any) => {
     setEditData((prev) => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
 
   const handleSave = async () => {
-    if (!selectedBot || !hasChanges) return;
+    if (!localSelectedBot || !hasChanges || loading) return;
 
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/protected/loc/${lid}/bots/${selectedBot.id}`, {
-      //     method: 'PUT',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify(editData)
-      // });
-      // const updatedBot = await response.json();
+      // Include persona data in the update
+      const updatePayload = {
+        ...editData,
+        persona: editData.persona || [],
+      };
 
-      // Using mock function for now
-      const updatedBot = await updateMockBot(selectedBot.id, editData);
+      const response = await fetch(
+        `/api/protected/loc/${lid}/bots/${localSelectedBot.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatePayload),
+        }
+      );
 
-      setSelectedBot(updatedBot);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update bot");
+      }
+
+      const data = await response.json();
+      const updatedBot = {
+        ...data.bot,
+        persona: data.bot.personas || [], // Map API response: personas -> persona
+      };
+
+      // Update local state with the response from server
       setEditData(updatedBot);
       setHasChanges(false);
+
+      // Update local state first
+      setLocalSelectedBot({
+        ...localSelectedBot,
+        ...updatedBot,
+      });
+
+      // Update the parent component's bot state with persona data
+      if (onBotUpdate) {
+        onBotUpdate({
+          ...localSelectedBot,
+          ...updatedBot,
+        });
+      }
+
+      toast.success("Bot updated successfully!");
     } catch (error) {
       console.error("Failed to update bot:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update bot"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const scenarios = MOCK_BOT_SCENARIOS.filter(
-    (s) => s.botId === selectedBot?.id
-  );
+  // TODO: Fetch scenarios from API
+  const scenarios: any[] = []; // Placeholder for scenarios
 
-  if (!selectedBot) {
+  if (!localSelectedBot) {
     return (
       <Card className="flex-1 h-full">
         <CardContent className="flex items-center justify-center h-full">
@@ -127,7 +173,7 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          Configure {selectedBot.name || "Unnamed Bot"}
+          Configure {localSelectedBot.name || "Unnamed Bot"}
         </p>
       </CardHeader>
 
@@ -158,11 +204,24 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
                 {/* AI Persona Section */}
                 <PersonaComponent
                   personas={personas}
-                  selectedBot={selectedBot}
+                  selectedBot={localSelectedBot}
                   onBotUpdate={(updatedBot) => {
-                    setSelectedBot(updatedBot);
-                    setEditData(updatedBot);
+                    // Update local state immediately for UI responsiveness
+                    setLocalSelectedBot(updatedBot);
+
+                    // Update editData to sync persona changes
+                    setEditData((prev) => ({
+                      ...prev,
+                      persona: updatedBot.persona,
+                    }));
+                    setHasChanges(true);
+
+                    // Also update the parent's selectedBot state
+                    if (onBotUpdate) {
+                      onBotUpdate(updatedBot);
+                    }
                   }}
+                  onPersonaCreated={onPersonaCreated}
                   locationId={lid}
                 />
                 <div>
@@ -281,20 +340,20 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
                     complex bot behaviors.
                   </p>
 
-                  {selectedBot ? (
+                  {localSelectedBot ? (
                     <div className="space-y-3 max-w-sm mx-auto">
                       <div className="flex items-center justify-between p-3 border rounded-lg text-left">
                         <div>
                           <div className="font-medium text-sm">
-                            {selectedBot.name || "Untitled Bot"}
+                            {localSelectedBot.name || "Untitled Bot"}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {selectedBot.objectives?.length || 0} nodes
+                            {localSelectedBot.objectives?.length || 0} nodes
                             configured
                           </div>
                         </div>
                         <Link
-                          href={`/dashboard/location/${lid}/bots/builder/${selectedBot.id}`}
+                          href={`/dashboard/location/${lid}/bots/builder/${localSelectedBot.id}`}
                         >
                           <Button size="sm">
                             <Workflow size={14} className="mr-1" />
@@ -303,13 +362,14 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
                         </Link>
                       </div>
 
-                      {selectedBot.invalidNodes &&
-                        selectedBot.invalidNodes.length > 0 && (
+                      {localSelectedBot.invalidNodes &&
+                        localSelectedBot.invalidNodes.length > 0 && (
                           <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                             <div className="text-xs text-red-800">
                               <strong>⚠️ Flow Issues:</strong>{" "}
-                              {selectedBot.invalidNodes.length} invalid nodes
-                              detected. Open the builder to fix these issues.
+                              {localSelectedBot.invalidNodes.length} invalid
+                              nodes detected. Open the builder to fix these
+                              issues.
                             </div>
                           </div>
                         )}
@@ -331,7 +391,7 @@ export function BotInfo({ lid, personas, docs }: BotInfoProps) {
                     Define triggers that activate specific bot behaviors
                   </p>
                 </div>
-                <NewScenario botId={selectedBot.id} />
+                <NewScenario botId={localSelectedBot.id} />
               </div>
 
               <div className="space-y-3">

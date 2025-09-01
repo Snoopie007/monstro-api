@@ -69,7 +69,7 @@ export async function POST(
 		const tax = Math.floor(plan.price * (locationState.taxRate / 10000));
 		const amount = plan.price + tax;
 
-		let { newTransaction, newPkg, newInvoice } = createPackage(
+		const { newTransaction, newPkg, newInvoice } = createPackage(
 			{
 				...data,
 				memberId: params.mid,

@@ -17,3 +17,4 @@ export * from "./wallet";
 export * from "./DatabaseEnums";
 export * from "./integrations";
 export * from "./tag";
+export * from "./bots";

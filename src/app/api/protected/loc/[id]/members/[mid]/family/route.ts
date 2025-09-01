@@ -259,7 +259,7 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
       }
     }
     // if(member) {
-    let memberLocation = await db.query.memberLocations.findFirst({
+    const memberLocation = await db.query.memberLocations.findFirst({
       where: (memberLocation, { eq }) =>
         and(
           eq(memberLocation.memberId, member.id),
