@@ -6,26 +6,9 @@ import type { Contract } from "@/types/contract";
 import { and, eq } from "drizzle-orm";
 import { Elysia } from "elysia"
 import type { MemberPlan } from "@/types";
-import { generatePDFBuffer } from "@/libs/puppeteer";
+import { generatePDFBufferReactPDF } from "@/libs/react-pdf-generator";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const HTMLTemplate = (template: Contract, variables: Record<string, any>) => {
-    if (!template.content) return "";
-    return `
-	<html>
-		<head>
-			<meta charset="UTF-8">
-			<title>${template.title}</title>
-			<style>
-				body { font-family: sans-serif; }
-			</style>
-		</head>
-		<body>
-			${interpolate(template.content, variables)}
-		</body>
-	</html>
-`;
-};
+// HTMLTemplate function removed - now using react-pdf directly
 
 const s3 = new S3Bucket();
 
@@ -138,9 +121,7 @@ export const mlDocsRoutes = new Elysia({ prefix: '/:lid/docs' })
 
 
 
-            const pdfBuffer = await generatePDFBuffer(
-                HTMLTemplate(template, variables)
-            );
+            const pdfBuffer = await generatePDFBufferReactPDF(template, variables);
             const filename = `${template.title
                 .toLowerCase()
                 .replace(/ /g, "-")}-${new Date().getTime()}.pdf`;

@@ -1,62 +1,30 @@
-import * as puppeteer from "puppeteer";
-import * as chrome from "@sparticuz/chromium";
-let browserPromise: Promise<puppeteer.Browser> | null = null;
+import { generatePDFBufferReactPDF } from './react-pdf-generator';
+import type { Contract } from '@/types/contract';
+import * as cheerio from 'cheerio';
 
-async function getBrowser() {
-  if (!browserPromise) {
-    const isProduction = process.env.NODE_ENV === "production";
-
-    let chromiumArgs: string[] = [];
-    let chromiumExecutablePath: string | undefined;
-
-    if (isProduction) {
-      // Only import chromium in production
-      const chromium = await chrome;
-      chromiumArgs = chromium.default.args;
-      chromiumExecutablePath = await chromium.default.executablePath();
-    } else {
-      chromiumArgs = [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--no-first-run",
-        "--no-zygote",
-        "--single-process",
-        "--disable-gpu",
-      ];
-      chromiumExecutablePath =
-        process.env.CHROME_EXECUTABLE_PATH ||
-        process.env.PUPPETEER_EXECUTABLE_PATH ||
-        undefined;
-    }
-
-    browserPromise = puppeteer.launch({
-      headless: true,
-      args: chromiumArgs,
-      defaultViewport: isProduction ? { width: 1280, height: 720 } : undefined,
-      executablePath: chromiumExecutablePath,
-      timeout: 60000,
-    });
-  }
-  return browserPromise;
-}
-
+// Legacy interface to maintain compatibility with existing code
+// This function now converts HTML to a contract-like structure and uses react-pdf
 export async function generatePDFBuffer(html: string): Promise<Uint8Array> {
-  const browser = await getBrowser();
-  const page = await browser.newPage();
-  try {
-    await page.setUserAgent("some user agent string");
-    await page.setContent(html, { waitUntil: "networkidle0", timeout: 30000 });
-
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "20mm", right: "20mm", bottom: "20mm", left: "20mm" },
-    });
-
-    return pdfBuffer;
-  } finally {
-    await page.close();
-  }
+  // Parse the HTML to extract title and content
+  const $ = cheerio.load(html);
+  const title = $('title').text() || 'Document';
+  const bodyContent = $('body').html() || '';
+  
+  // Create a contract-like structure from the HTML
+  const mockContract: Contract = {
+    id: 'temp',
+    locationId: 'temp',
+    content: bodyContent,
+    title: title,
+    description: 'Generated document',
+    created: new Date(),
+    updated: null,
+    isDraft: false,
+    editable: false,
+    requireSignature: false,
+    type: 'contract' as any,
+  };
+  
+  // Since the HTML might already have interpolated variables, we pass empty variables
+  return generatePDFBufferReactPDF(mockContract, {});
 }
