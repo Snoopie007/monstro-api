@@ -1,7 +1,7 @@
 import {
   Users,
   Medal,
-  Bot,
+  MessageSquare,
   AtSign,
   CalendarClock,
   Receipt,
@@ -71,8 +71,8 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
   },
   {
     name: "Support",
-    path: "bots",
-    icon: <Bot size={16} />,
+    path: "support",
+    icon: <MessageSquare size={16} />,
   },
 
   {
