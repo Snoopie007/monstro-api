@@ -1,5 +1,6 @@
 import { Worker, Job } from "bullmq";
 import { getBullMQConnection } from "../queue";
+import { processAdminChat, AdminChatData } from "../ai/node-processor";
 
 // Define the job data structure for admin chat processing
 export interface AdminChatJobData {
@@ -11,26 +12,22 @@ export interface AdminChatJobData {
   timestamp: Date;
 }
 
-// Basic processing function - will be enhanced in Phase 2
+// Node flow processing function using the real engine
 async function processAdminChatMessage(job: Job<AdminChatJobData>) {
   const { locationId, botId, sessionId, message, contactId } = job.data;
 
   try {
-    // TODO: Phase 2 - Implement actual node flow processing
-    // For now, return a placeholder response
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate processing
-
-    const response = {
-      content: `Echo: ${message} (Processed by bot ${botId})`,
-      role: "ai" as const,
-      metadata: {
-        botId,
-        sessionId,
-        timestamp: new Date(),
-        processed: true,
-      },
+    // Use the real node flow processing engine
+    const adminChatData: AdminChatData = {
+      locationId,
+      botId,
+      sessionId,
+      message,
+      contactId,
+      isTestSession: true,
     };
 
+    const response = await processAdminChat(adminChatData);
     return response;
   } catch (error) {
     console.error(

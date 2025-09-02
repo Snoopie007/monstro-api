@@ -9,6 +9,18 @@ interface ChatState {
   selectedBot: Bot | null;
   isLoading: boolean;
   sessionId: string | null;
+  currentNode: string | null;
+  nodeTransitions: Array<{
+    from: string;
+    to: string;
+    reason?: string;
+    timestamp: Date;
+  }>;
+  toolCalls: Array<{
+    function: string;
+    result: any;
+    timestamp: Date;
+  }>;
 }
 
 interface ChatActions {
@@ -45,6 +57,9 @@ export function AIChatProvider({ children }: AIChatProviderProps) {
     selectedBot: null,
     isLoading: false,
     sessionId: null,
+    currentNode: null,
+    nodeTransitions: [],
+    toolCalls: [],
   });
 
   const addMessage = (
@@ -117,6 +132,7 @@ export function AIChatProvider({ children }: AIChatProviderProps) {
 
     try {
       // Send message to queue-based admin chat endpoint
+
       const response = await fetch(
         `/api/protected/loc/${window.location.pathname.split("/")[3]}/bots/${
           state.selectedBot.id
@@ -186,14 +202,48 @@ export function AIChatProvider({ children }: AIChatProviderProps) {
 
         if (jobData.status === "completed" && jobData.result) {
           // Job completed successfully
+          const result = jobData.result;
+
+          // Update node flow state if available
+          if (result.metadata?.currentNode) {
+            setState((prev) => ({
+              ...prev,
+              currentNode: result.metadata.currentNode,
+            }));
+          }
+
+          // Add node transition if available
+          if (result.metadata?.nodeTransition) {
+            setState((prev) => ({
+              ...prev,
+              nodeTransitions: [
+                ...prev.nodeTransitions,
+                {
+                  ...result.metadata.nodeTransition,
+                  timestamp: new Date(),
+                },
+              ],
+            }));
+          }
+
+          // Add tool calls if available
+          if (result.metadata?.toolCalls) {
+            setState((prev) => ({
+              ...prev,
+              toolCalls: [...prev.toolCalls, ...result.metadata.toolCalls],
+            }));
+          }
+
+          // Add the bot message (transition already added to state above)
           addMessage({
-            content: jobData.result.content,
+            content: result.content,
             role: "ai",
             channel: "WebChat",
             metadata: {
               botId: state.selectedBot!.id,
               sessionId: state.sessionId,
               jobId: jobId,
+              currentNode: result.metadata?.currentNode,
               processed: true,
             },
           });
@@ -225,6 +275,24 @@ export function AIChatProvider({ children }: AIChatProviderProps) {
     await poll();
   };
 
+  // Reset session on server side
+  const resetServerSession = async (botId: string, sessionId: string) => {
+    try {
+      await fetch(
+        `/api/protected/loc/${
+          window.location.pathname.split("/")[3]
+        }/bots/${botId}/admin-chat/reset`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        }
+      );
+    } catch (error) {
+      console.error("Failed to reset server session:", error);
+    }
+  };
+
   const resetChat = () => {
     setState((prev) => ({
       ...prev,
@@ -232,7 +300,15 @@ export function AIChatProvider({ children }: AIChatProviderProps) {
       sessionId: prev.selectedBot
         ? `session-${prev.selectedBot.id}-${Date.now()}`
         : null,
+      currentNode: null,
+      nodeTransitions: [],
+      toolCalls: [],
     }));
+
+    // Also reset the session in Redis by calling the reset API
+    if (state.selectedBot && state.sessionId) {
+      resetServerSession(state.selectedBot.id, state.sessionId);
+    }
 
     // Re-add initial message if bot is selected
     if (state.selectedBot && state.selectedBot.initialMessage) {

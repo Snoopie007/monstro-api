@@ -17,6 +17,7 @@ import { RotateCcw, MessageSquare, Bot as BotIcon } from "lucide-react";
 import { ChatMessages } from "./ChatMessages";
 import { ChatInput } from "./ChatInput";
 import { ContactSelect } from "./ContactSelect";
+import { NodeFlowTracker } from "./NodeFlowTracker";
 
 interface AIChatBoxProps {
   location: any; // TODO: Replace with proper Location type
@@ -31,6 +32,10 @@ export function AIChatBox({ location, bots }: AIChatBoxProps) {
     messages,
     resetChat,
     isLoading,
+    currentNode,
+    nodeTransitions,
+    toolCalls,
+    sessionId,
   } = useChatContext();
 
   // Use the bots passed from parent (already filtered for this location)
@@ -179,6 +184,18 @@ export function AIChatBox({ location, bots }: AIChatBoxProps) {
           </div>
         ) : (
           <>
+            {/* Node Flow Tracker */}
+            <div className="px-6 py-2">
+              <NodeFlowTracker
+                currentNode={currentNode || undefined}
+                nodeTransitions={nodeTransitions}
+                toolCalls={toolCalls}
+                sessionId={sessionId || undefined}
+                onResetFlow={resetChat}
+                isVisible={selectedBot !== null}
+              />
+            </div>
+
             {/* Chat Messages */}
             <div className="flex-1 overflow-hidden px-6">
               <ChatMessages messages={messages} isLoading={isLoading} />
