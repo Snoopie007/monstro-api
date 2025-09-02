@@ -58,7 +58,7 @@ export const planRoutes = new Elysia({ prefix: "/plan" })
           <title>Plan Not Found</title>
           <meta charset="utf-8">
           <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            body { font-family: Arial, sans-serif; text-align: center; padding: 40px 20px; }
             .error { color: #dc3545; font-size: 24px; }
           </style>
         </head>
