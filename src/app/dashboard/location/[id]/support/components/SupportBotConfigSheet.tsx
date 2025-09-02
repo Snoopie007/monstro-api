@@ -36,7 +36,7 @@ import {
   Plus,
   MessageSquare,
 } from "lucide-react";
-import { SupportBot } from "@/types/support";
+import { SupportBot } from "@/types";
 import { TriggersSection } from "./TriggersSection";
 import { PersonaSection } from "./PersonaSection";
 import { DocumentsSection } from "./DocumentsSection";

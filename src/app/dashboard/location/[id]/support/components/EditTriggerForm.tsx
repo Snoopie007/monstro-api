@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { X, Plus } from "lucide-react";
-import { SupportTrigger } from "@/types/support";
+import { SupportTrigger } from "@/types";
 
 interface EditTriggerFormProps {
   trigger: SupportTrigger;

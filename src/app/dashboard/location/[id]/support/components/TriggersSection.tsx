@@ -21,7 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { SupportBot, SupportTrigger } from "@/types/support";
+import { SupportBot, SupportTrigger } from "@/types";
 import { NewTriggerForm } from "./NewTriggerForm";
 import { EditTriggerForm } from "./EditTriggerForm";
 

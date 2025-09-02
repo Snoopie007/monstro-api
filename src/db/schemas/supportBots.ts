@@ -8,7 +8,12 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm/sql";
 import { locations } from "./locations";
-import { botStatusEnum, botModelEnum } from "./SupportBotEnums";
+import {
+  botStatusEnum,
+  botModelEnum,
+  BotModel,
+  BotStatus,
+} from "./SupportBotEnums";
 
 // Single support bot per location
 export const supportBots = pgTable(
@@ -28,8 +33,8 @@ export const supportBots = pgTable(
     initialMessage: text("initial_message")
       .notNull()
       .default("Hi! I'm here to help you. What can I assist you with today?"),
-    model: botModelEnum("model").notNull().default("gpt"),
-    status: botStatusEnum("status").notNull().default("Draft"),
+    model: botModelEnum("model").notNull().default(BotModel.GPT),
+    status: botStatusEnum("status").notNull().default(BotStatus.Draft),
     availableTools: jsonb("available_tools")
       .array()
       .notNull()

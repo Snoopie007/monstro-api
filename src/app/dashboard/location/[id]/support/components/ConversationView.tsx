@@ -15,7 +15,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { SupportBot, SupportConversation } from "@/types/support";
+import { SupportBot, SupportConversation } from "@/types";
 
 interface ConversationViewProps {
   locationId: string;

@@ -1,6 +1,4 @@
 import { SupportPageClient } from "./SupportPageClient";
-import { Location } from "@/types/location";
-import { SupportBot, SupportConversation } from "@/types";
 // import { getSupportPageData } from "@/libs/server/support";
 
 export default async function SupportPage(props: {
@@ -12,31 +10,10 @@ export default async function SupportPage(props: {
     // TODO: Implement getSupportPageData function
     // const { location, supportBot, conversations } = await getSupportPageData(params.id);
 
-    // Temporary placeholder data with proper types
-    const location: Location = {
-      id: params.id,
-      name: "Location",
-      address: null,
-      metadata: {},
-      about: null,
-      email: null,
-      legalName: null,
-      industry: null,
-      city: null,
-      state: null,
-      postalCode: null,
-      website: null,
-      country: null,
-      phone: null,
-      timezone: null,
-      logoUrl: null,
-      slug: "location-slug",
-      created: new Date(),
-      updated: null,
-      vendorId: "",
-    };
-    const supportBot: SupportBot | null = null;
-    const conversations: SupportConversation[] = [];
+    // Temporary placeholder data
+    const location = { id: params.id, name: "Location" };
+    const supportBot = null;
+    const conversations = [];
 
     return (
       <SupportPageClient

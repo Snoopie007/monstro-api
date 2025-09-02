@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus } from "lucide-react";
-import { SupportTrigger } from "@/types/support";
+import { SupportTrigger } from "@/types/supportBot";
 
 interface NewTriggerFormProps {
   onSubmit: (triggerData: Partial<SupportTrigger>) => void;

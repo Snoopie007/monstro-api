@@ -6,7 +6,7 @@ import { AdminTestChat } from "./components/AdminTestChat";
 import { ConversationView } from "./components/ConversationView";
 import { SupportBotConfigSheet } from "./components/SupportBotConfigSheet";
 import { Location } from "@/types/location";
-import { SupportBot, SupportConversation } from "@/types/support";
+import { SupportBot, SupportConversation } from "@/types";
 
 interface SupportPageClientProps {
   locationId: string;
@@ -41,23 +41,32 @@ export function SupportPageClient({
     });
   const [configSheetOpen, setConfigSheetOpen] = useState(false);
 
-  // Auto-create support bot if it doesn't exist
+  // Load support bot (with auto-creation if needed)
   useEffect(() => {
-    const createSupportBotIfNeeded = async () => {
+    const loadSupportBot = async () => {
       if (!supportBot) {
         try {
-          // TODO: Implement auto-creation of support bot
-          // const newSupportBot = await createSupportBot(locationId);
-          // setSupportBot(newSupportBot);
-          console.log("TODO: Auto-create support bot for location", locationId);
+          const response = await fetch(
+            `/api/protected/loc/${locationId}/support`
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            setSupportBot(data.supportBot);
+          } else {
+            console.error(
+              "Failed to load/create support bot:",
+              response.statusText
+            );
+          }
         } catch (error) {
-          console.error("Failed to create support bot:", error);
+          console.error("Failed to load/create support bot:", error);
         }
       }
     };
 
-    createSupportBotIfNeeded();
-  }, [locationId, supportBot]);
+    loadSupportBot();
+  }, [locationId]);
 
   const handleConversationSelect = (conversation: SelectedConversation) => {
     setSelectedConversation(conversation);
@@ -65,12 +74,27 @@ export function SupportPageClient({
 
   const handleBotConfigUpdate = async (updatedBot: Partial<SupportBot>) => {
     try {
-      // TODO: Implement support bot update API call
-      // const updated = await updateSupportBot(locationId, updatedBot);
-      // setSupportBot(updated);
-      console.log("TODO: Update support bot:", updatedBot);
+      const response = await fetch(`/api/protected/loc/${locationId}/support`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedBot),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSupportBot(data.supportBot);
+
+        // Show success message
+        alert(data.message || "Support bot updated successfully");
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update support bot");
+      }
     } catch (error) {
       console.error("Failed to update support bot:", error);
+      alert("Failed to update support bot. Please try again.");
     }
   };
 

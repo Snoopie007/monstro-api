@@ -5,6 +5,7 @@ export { ConversationView } from "./ConversationView";
 export { SupportBotConfigSheet } from "./SupportBotConfigSheet";
 export { TriggersSection } from "./TriggersSection";
 export { PersonaSection } from "./PersonaSection";
+export { PersonaDialog } from "./PersonaDialog";
 export { DocumentsSection } from "./DocumentsSection";
 export { NewTriggerForm } from "./NewTriggerForm";
 export { EditTriggerForm } from "./EditTriggerForm";

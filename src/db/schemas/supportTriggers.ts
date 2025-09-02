@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm/sql";
 import { supportBots } from "./supportBots";
-import { triggerTypeEnum } from "./SupportBotEnums";
+import { triggerTypeEnum, TriggerType } from "./SupportBotEnums";
 
 // Support bot triggers (previously scenarios)
 export const supportTriggers = pgTable("support_triggers", {
@@ -12,7 +12,9 @@ export const supportTriggers = pgTable("support_triggers", {
     .notNull()
     .references(() => supportBots.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  triggerType: triggerTypeEnum("trigger_type").notNull().default("keyword"),
+  triggerType: triggerTypeEnum("trigger_type")
+    .notNull()
+    .default(TriggerType.Keyword),
   triggerPhrases: text("trigger_phrases")
     .array()
     .notNull()

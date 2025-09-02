@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { FileText, Upload, Trash2, Download, ExternalLink } from "lucide-react";
-import { SupportBot } from "@/types/support";
+import { SupportBot } from "@/types";
 
 interface DocumentsSectionProps {
   locationId: string;
