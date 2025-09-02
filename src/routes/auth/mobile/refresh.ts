@@ -6,7 +6,7 @@ import { jwtVerify } from "jose";
 export async function mobileRefreshToken(app: Elysia) {
     return app.post('/refresh', async ({ body, status }) => {
         const { token } = body as { token: string };
-        console.log(token);
+
         if (!token) {
             return status(400, { message: "Refresh token is required" });
         }
@@ -21,7 +21,7 @@ export async function mobileRefreshToken(app: Elysia) {
                 userId: userId,
                 email: email,
             });
-
+            console.log(accessToken);
             return status(200, { token: accessToken, refreshToken, expires });
         } catch (error) {
             console.error(error);

@@ -25,19 +25,19 @@ declare global {
 //     };
 // })();
 
-if (!process.env.DATABASE_URL) {
+if (!Bun.env.DATABASE_URL) {
     throw new Error('DATABASE_URL environment variable is required');
 }
-const client = postgres(process.env.DATABASE_URL, { prepare: false, max: 2 });
+const client = postgres(Bun.env.DATABASE_URL, { prepare: false, max: 2 });
 const db = drizzle(client, { schema: schema });
 
 
 
-if (!process.env.DATABASE_ADMIN_URL) {
+if (!Bun.env.DATABASE_ADMIN_URL) {
     throw new Error("DATABASE_ADMIN_URL is missing");
 }
 
-const adminConnectionString = process.env.DATABASE_ADMIN_URL;
+const adminConnectionString = Bun.env.DATABASE_ADMIN_URL;
 
 const adminClient = postgres(adminConnectionString, { max: 1 });
 const admindb = drizzle(adminClient, { schema: adminSchema, logger: false });

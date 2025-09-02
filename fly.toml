@@ -12,6 +12,11 @@ primary_region = "sjc"
 [env]
   PORT = "3000"
   BUN_ENV = "production"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
   
 [http_service]
   internal_port = 3000
@@ -40,4 +45,3 @@ primary_region = "sjc"
 
 [processes]
   api = "bun dist/index.js"
-
