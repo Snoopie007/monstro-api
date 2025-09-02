@@ -330,24 +330,28 @@ export * from "./guestContacts";
 ```json
 {
   "dependencies": {
-    // AI Core Dependencies (P0)
-    "@langchain/core": "^0.3.21",
-    "@langchain/anthropic": "^0.3.21",
-    "@langchain/openai": "^4.3.9",
-    "@langchain/google-genai": "^0.2.10",
+    // Remove complex dependencies we don't need
+    // ❌ "bullmq": "^5.53.3",         // Remove queue processing
+    // ❌ "ioredis": "^5.4.1",         // Remove complex Redis
+    // ❌ "@xyflow/react": "^12.8.4",  // Remove visual node builder
+    // ❌ "ai": "^4.3.9",              // Remove (using LangChain instead)
     
-    // AI Processing & Streaming (P0)
-    "ai": "^4.3.9",
+    // AI Processing with LangChain (already installed)
+    "@langchain/core": "^0.3.21",       // ✅ Core LangChain functionality
+    "@langchain/anthropic": "^0.3.21",  // ✅ Claude support
+    "@langchain/openai": "^4.3.9",      // ✅ OpenAI/GPT support
+    "@langchain/google-genai": "^0.2.10", // ✅ Gemini support
+    "langchain": "^0.3.6",              // ✅ Main LangChain package
     
-    // Session Management (P0)
-    "@upstash/redis": "^1.34.4",
+    // Session Management (simplified)
+    "@upstash/redis": "^1.34.4",        // ✅ Simple Redis sessions
     
-    // Document Processing (P0)
-    "pdf-parse": "^1.1.1",
-    "@mendable/firecrawl-js": "^1.25.5",
+    // Document Processing
+    "pdf-parse": "^1.1.1",              // ✅ PDF knowledge base
+    "@mendable/firecrawl-js": "^1.25.5", // ✅ Web scraping
     
-    // Embeddings & Vector DB (P0)
-    "@xenova/transformers": "^2.13.4",
+    // Embeddings & Vector DB
+    "@xenova/transformers": "^2.13.4",   // ✅ Local embeddings
     
     // UI Components (if missing)
     "@radix-ui/react-accordion": "^1.2.0",
@@ -356,6 +360,13 @@ export * from "./guestContacts";
   }
 }
 ```
+
+**Key Changes:**
+- ❌ **Remove `ai` package** - Using LangChain for direct AI processing
+- ❌ **Remove `bullmq`** - No complex queue processing needed
+- ❌ **Remove `ioredis`** - No complex Redis operations needed  
+- ❌ **Remove `@xyflow/react`** - No visual node builder
+- ✅ **Keep existing LangChain setup** - Already handles streaming, tools, and multiple AI providers
 
 ### **2.2 Environment Variables**
 Add to `.env.local`:
@@ -409,36 +420,18 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
 
 ---
 
-**Note**: This migration plan has been simplified to focus on a single support bot per location with fixed tool calls and user-defined triggers instead of complex visual workflow builders. The remaining sections of this document contain legacy content from the previous complex approach and should be updated to reflect the simplified scope.
-import { ChatOpenAI } from "@langchain/openai";
-import { ChatAnthropic } from "@langchain/anthropic";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { UpstashRedisChatMessageHistory } from "@langchain/community/stores/message/upstash_redis";
-import { ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
-import { BaseMessage, trimMessages } from '@langchain/core/messages';
+#### `/src/app/api/protected/loc/[id]/support/chat/route.ts`
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { HumanMessage, AIMessage } from "@langchain/core/messages";
+import { getModel } from '@/libs/server/ai/models';
 import { db } from '@/db/db';
-import { getRedisClient, getQueueClient } from '@/libs/server/redis';
-import { formattedPrompt, getModel, Tools, FunctionDefaults } from '@/libs/server/ai';
+import { getRedisClient } from '@/libs/server/redis';
+import { buildSupportPrompt, buildSupportTools } from '@/libs/server/ai/support';
 
-type SessionContext = {
-    id: string;
-    botId: string;
-    currentNode: string;
-    routineNode: string | null;
-    stopped: string | null;
-    metadata: {
-        location: any;
-        contact: any;
-        isTestSession: boolean;
-    };
-};
-
-const TTL = 60 * 60 * 2; // 2 hours
-const redis = getRedisClient();
-const queue = getQueueClient();
-
-export async function POST(req: NextRequest, props: { params: Promise<{ id: string, bid: string }> }) {
-    const { id, bid } = await props.params;
+// Simple direct AI processing for support bot chat using LangChain
+export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+    const { id } = await props.params;
     const { messages, sessionId, testContact } = await req.json();
 
     if (!messages?.length || !sessionId) {
@@ -446,98 +439,91 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     }
 
     try {
-        // Queue the chat processing job for node flow execution
-        await queue.add('process-admin-chat', {
-            locationId: id,
-            botId: bid,
-            messages,
-            sessionId,
-            testContact,
-            isAdminTest: true
-        }, {
-            removeOnComplete: 10,
-            removeOnFail: 5
+        // Get support bot configuration
+        const supportBot = await db.query.supportBots.findFirst({
+            where: (bots, { eq }) => eq(bots.locationId, id),
+            with: {
+                persona: true,
+                documents: true,
+                triggers: { where: (triggers, { eq }) => eq(triggers.isActive, true) }
+            }
         });
 
-        return NextResponse.json({ 
-            message: "Chat processing queued",
-            sessionId 
-        }, { status: 200 });
+        if (!supportBot) {
+            return NextResponse.json({ error: "Support bot not found" }, { status: 404 });
+        }
+
+        // Direct AI processing with LangChain streaming
+        const model = getModel(supportBot.model);
+        const systemPrompt = buildSupportPrompt(supportBot, testContact);
+        
+        // Convert messages to LangChain format
+        const chatMessages = [
+            new HumanMessage(systemPrompt),
+            ...messages.map((msg: any) => 
+                msg.role === 'user' ? new HumanMessage(msg.content) : new AIMessage(msg.content)
+            )
+        ];
+
+        // Bind tools to model if available
+        const tools = buildSupportTools(supportBot.availableTools);
+        const modelWithTools = tools.length > 0 ? model.bindTools(tools) : model;
+
+        // Stream response using LangChain
+        const stream = await modelWithTools.stream(chatMessages, {
+            temperature: supportBot.temperature / 100,
+        });
+
+        // Create streaming response
+        const encoder = new TextEncoder();
+        const readableStream = new ReadableStream({
+            async start(controller) {
+                try {
+                    for await (const chunk of stream) {
+                        const content = chunk.content;
+                        if (content) {
+                            const data = JSON.stringify({ content });
+                            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                        }
+                    }
+                    controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                    controller.close();
+                } catch (error) {
+                    console.error("Streaming error:", error);
+                    controller.error(error);
+                }
+            }
+        });
+
+        return new Response(readableStream, {
+            headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+            },
+        });
 
     } catch (error) {
-        console.error("Chat API error:", error);
+        console.error("Support chat error:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
 ```
 
-### **3.2 Scenario Management APIs**
+### **3.2 Trigger Management APIs**
 
-#### `/src/app/api/protected/bots/[bid]/scenario/route.ts`
+#### `/src/app/api/protected/loc/[id]/support/triggers/route.ts`
 ```typescript
-export async function POST() { /* Create scenario */ }
-export async function DELETE() { /* Delete scenario */ }
+export async function GET() { /* List support triggers */ }
+export async function POST() { /* Create support trigger */ }
 ```
 
 ### **3.3 Knowledge Base APIs**
 
-#### `/src/app/api/protected/loc/[id]/documents/route.ts`
+#### `/src/app/api/protected/loc/[id]/support/documents/route.ts`
 ```typescript
-export async function GET() { /* List documents */ }
+export async function GET() { /* List support documents */ }
 export async function POST() { /* Upload & process document */ }
-```
-
-### **3.4 Node Flow Queue Processing APIs**
-
-#### `/src/app/api/protected/loc/[id]/bots/[bid]/queue/route.ts`
-```typescript
-import { NextRequest, NextResponse } from "next/server";
-import { getQueueClient } from '@/libs/server/redis';
-
-// Queue chat processing for node flow execution
-export async function POST(req: NextRequest, props: { params: Promise<{ id: string, bid: string }> }) {
-    const { id, bid } = await props.params;
-    const { messages, sessionId, testContact, memberId, conversationId } = await req.json();
-    
-    try {
-        const queue = getQueueClient();
-        
-        if (memberId) {
-            // Member chat processing
-            await queue.add('process-member-chat', {
-                locationId: id,
-                botId: bid,
-                messages,
-                memberId,
-                conversationId
-            }, {
-                removeOnComplete: 10,
-                removeOnFail: 5
-            });
-        } else {
-            // Admin test chat processing
-            await queue.add('process-admin-chat', {
-                locationId: id,
-                botId: bid,
-                messages,
-                sessionId,
-                testContact
-            }, {
-                removeOnComplete: 10,
-                removeOnFail: 5
-            });
-        }
-        
-        return NextResponse.json({ 
-            message: "Chat processing queued",
-            sessionId: sessionId || `member-${memberId}-${bid}`
-        }, { status: 200 });
-        
-    } catch (error) {
-        console.error("Queue processing error:", error);
-        return NextResponse.json({ error: "Processing failed" }, { status: 500 });
-    }
-}
 ```
 
 ### **3.5 Ticket Management APIs**
@@ -602,99 +588,84 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 ### **4.1 Replace AI Directory Structure**
 
 **Remove**: `/src/app/dashboard/location/[id]/ai/`
-**Create**: `/src/app/dashboard/location/[id]/bots/`
+**Create**: `/src/app/dashboard/location/[id]/bots/` (but rename navigation to "Support")
 
 ```
 /src/app/dashboard/location/[id]/bots/
 ├── layout.tsx
-├── page.tsx                    # Main bots dashboard
-├── builder/
-│   └── [bid]/
-│       ├── page.tsx           # Visual node builder interface
-│       ├── BotBuilder.tsx     # Main ReactFlow canvas
-│       ├── components/
-│       │   ├── NodeSelector/  # Add new nodes
-│       │   ├── NodeSettings/  # Configure nodes
-│       │   ├── NodeForms/     # Node type forms
-│       │   ├── CustomNodes/   # Node components
-│       │   ├── CustomEdges/   # Edge components
-│       │   └── Menu/          # Builder toolbar
-│       ├── providers/
-│       │   └── BotBuilderProvider.tsx # Builder state
-│       └── utils/
-│           └── nodeUtils.ts   # Helper functions
-├── knowledges/
-│   └── page.tsx               # Knowledge base management
-├── providers/
-│   └── BotProvider.tsx        # Bot context & state
+├── page.tsx                    # Main support bot dashboard
 ├── components/
-│   ├── Botlist.tsx           # Bot selection panel
-│   ├── BotInfo.tsx           # Bot configuration panel (with Flow Builder tab)
+│   ├── SupportBotConfig.tsx   # Bot configuration panel
 │   ├── Chat/
-│   │   ├── AIChatBox.tsx     # Main chat testing interface
-│   │   ├── AIChatProvider.tsx # Chat state management
-│   │   ├── ChatInput.tsx     # Message input
-│   │   ├── ChatMessages.tsx  # Message display
-│   │   └── ContactSelect.tsx # Test contact selection
-│   ├── Settings/
-│   │   └── Scenario/
-│   │       ├── NewScenario.tsx    # Create scenario dialog
-│   │       └── ScenarioComp.tsx   # Scenario management
-│   └── schemas.ts            # Form validation schemas
+│   │   ├── SupportChatBox.tsx # Main chat testing interface
+│   │   ├── ChatProvider.tsx   # Simple chat state management
+│   │   ├── ChatInput.tsx      # Message input
+│   │   └── ChatMessages.tsx   # Message display
+│   ├── Triggers/
+│   │   ├── TriggerList.tsx    # List support triggers
+│   │   ├── NewTrigger.tsx     # Create trigger dialog
+│   │   └── TriggerForm.tsx    # Trigger configuration
+│   ├── Documents/
+│   │   ├── DocumentList.tsx   # Knowledge base documents
+│   │   └── DocumentUpload.tsx # Document upload component
+│   ├── Tickets/
+│   │   ├── TicketList.tsx     # Support ticket list
+│   │   └── TicketDetails.tsx  # Ticket detail view
+│   └── schemas.ts             # Form validation schemas
 └── hooks/
-    └── useBots.ts           # Bot data fetching
+    └── useSupportBot.ts       # Support bot data fetching
 ```
 
-### **4.2 Main Bots Page**
+### **4.2 Main Support Page**
 
 #### `/src/app/dashboard/location/[id]/bots/page.tsx`
 ```typescript
 import { db } from "@/db/db";
-import { Botlist, AIChatBox, BotInfo, AIChatProvider } from "./components";
+import { SupportBotConfig, SupportChatBox, ChatProvider } from "./components";
 
-export default async function BotsPage(props: { params: Promise<{ id: string }> }) {
+export default async function SupportPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     
-    // Fetch location
-    const location = await db.query.locations.findFirst({
-        where: (locations, { eq }) => eq(locations.id, params.id),
+    // Get or create support bot for location
+    let supportBot = await db.query.supportBots.findFirst({
+        where: (bots, { eq }) => eq(bots.locationId, params.id),
+        with: {
+            persona: true,
+            triggers: true,
+            documents: true
+        }
     });
-    
-    // Fetch bot-related data
-    const [templates, personas, docs] = await Promise.all([
-        db.query.botTemplates.findMany(),
-        db.query.aiPersona.findMany({
-            where: (persona, { eq }) => eq(persona.locationId, params.id)
-        }),
-        db.query.documents.findMany({
-            where: (doc, { eq }) => eq(doc.locationId, params.id)
-        })
-    ]);
+
+    // Auto-create support bot if doesn't exist
+    if (!supportBot) {
+        const [newBot] = await db.insert(supportBots).values({
+            locationId: params.id,
+            name: 'Support Bot',
+            prompt: 'You are a helpful customer support assistant.',
+            initialMessage: 'Hi! I\'m here to help you. What can I assist you with today?',
+            model: 'gpt',
+            status: 'Draft'
+        }).returning();
+        
+        supportBot = { ...newBot, persona: null, triggers: [], documents: [] };
+    }
 
     return (
         <div className='flex flex-row h-[calc(100vh-58px)] p-2 gap-2'>
-            {/* Left Panel: Bot Management */}
-            <div className="flex flex-row gap-2 flex-3/6">
-                <Botlist lid={params.id} templates={templates} />
-                <BotInfo lid={params.id} personas={personas} docs={docs} />
+            {/* Left Panel: Support Bot Configuration */}
+            <div className="flex-1">
+                <SupportBotConfig supportBot={supportBot} locationId={params.id} />
             </div>
             
-            {/* Right Panel: Bot Testing Chat */}
-            <div className="flex-3/6">
-                <AIChatProvider>
-                    <AIChatBox location={location} />
-                </AIChatProvider>
+            {/* Right Panel: Support Bot Testing Chat */}
+            <div className="flex-1">
+                <ChatProvider>
+                    <SupportChatBox supportBot={supportBot} />
+                </ChatProvider>
             </div>
         </div>
     )
 }
-```
-
-### **4.3 Update Navigation**
-Update dashboard navigation to replace AI link:
-```typescript
-// Change from: /dashboard/location/[id]/ai
-// To: /dashboard/location/[id]/bots
 ```
 
 ---
@@ -706,45 +677,54 @@ Update dashboard navigation to replace AI link:
 #### `/src/libs/server/ai/index.ts`
 ```typescript
 export * from "./models";
-export * from "./prompts";
 export * from "./tools";
-export * from "./costs";
-export * from "./streaming";
+export * from "./prompts";
 ```
 
 #### `/src/libs/server/ai/models.ts`
 ```typescript
-import { ChatOpenAI } from "@langchain/openai";
-import { ChatAnthropic } from "@langchain/anthropic";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { ChatOpenAI } from '@langchain/openai';
+import { ChatAnthropic } from '@langchain/anthropic';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 
-export function getModel(model: "anthropic" | "gpt" | "gemini", onUsage?: (output: any) => void) {
+export function getModel(model: "anthropic" | "gpt" | "gemini") {
     switch (model) {
         case "anthropic":
             return new ChatAnthropic({
                 modelName: "claude-3-sonnet-20240229",
-                callbacks: onUsage ? [{ handleLLMEnd: onUsage }] : undefined,
+                apiKey: process.env.ANTHROPIC_API_KEY,
+                streaming: true,
             });
         case "gpt":
             return new ChatOpenAI({
                 modelName: "gpt-4",
-                callbacks: onUsage ? [{ handleLLMEnd: onUsage }] : undefined,
+                apiKey: process.env.OPENAI_API_KEY,
+                streaming: true,
             });
         case "gemini":
             return new ChatGoogleGenerativeAI({
                 modelName: "gemini-pro",
-                callbacks: onUsage ? [{ handleLLMEnd: onUsage }] : undefined,
+                apiKey: process.env.GOOGLE_AI_API_KEY,
+                streaming: true,
             });
+        default:
+            return new ChatOpenAI({
+                modelName: "gpt-4",
+                apiKey: process.env.OPENAI_API_KEY,
+                streaming: true,
+            }); 
     }
 }
 ```
 
-### **5.2 Contact Helper Functions**
+### **5.2 Support Bot Helper Functions**
 
-#### `/src/libs/server/contacts.ts`
+#### `/src/libs/server/support.ts`
 ```typescript
-// Unified contact access for bot interactions
-export async function getContactInfo(conversation: Conversation) {
+import { db } from '@/db/db';
+
+// Get unified contact info for support conversations
+export async function getContactInfo(conversation: SupportConversation) {
     if (conversation.memberId) {
         // Get member info with location relationship
         const memberLocation = await db.query.memberLocations.findFirst({
@@ -762,7 +742,7 @@ export async function getContactInfo(conversation: Conversation) {
             email: memberLocation.member.email,
             phone: memberLocation.member.phone,
             type: 'member' as const,
-            botMetadata: memberLocation.botMetadata || {}
+            supportMetadata: memberLocation.supportBotMetadata || {}
         };
     } else {
         // Get guest contact info
@@ -777,419 +757,463 @@ export async function getContactInfo(conversation: Conversation) {
             email: guest.email,
             phone: guest.phone,
             type: 'guest' as const,
-            botMetadata: guest.botMetadata || {}
+            supportMetadata: guest.supportMetadata || {}
         };
     }
 }
 
-// Helper to promote guest to member
-export async function promoteGuestToMember(guestId: string, newMemberId: string) {
-    await db.transaction(async (tx) => {
-        // Update conversations
-        await tx.update(conversations)
-            .set({ memberId: newMemberId, guestContactId: null })
-            .where(eq(conversations.guestContactId, guestId));
-            
-        // Update bot progress
-        await tx.update(botProgress)
-            .set({ memberId: newMemberId, guestContactId: null })
-            .where(eq(botProgress.guestContactId, guestId));
-            
-        // Update bot logs
-        await tx.update(botLogs)
-            .set({ memberId: newMemberId, guestContactId: null })
-            .where(eq(botLogs.guestContactId, guestId));
-            
-        // Delete guest record
-        await tx.delete(guestContacts).where(eq(guestContacts.id, guestId));
-    });
+// Build system prompt for support bot
+export function buildSupportPrompt(supportBot: SupportBot, contact: any): string {
+    const persona = supportBot.persona;
+    
+    return `${supportBot.prompt}
+
+${persona ? `
+Persona Details:
+- Name: ${persona.name}
+- Response Style: ${persona.responseStyle}
+- Personality Traits: ${persona.personalityTraits.join(', ')}
+` : ''}
+
+Contact Context:
+- Name: ${contact.firstName} ${contact.lastName}
+- Type: ${contact.type}
+
+Available Tools:
+${supportBot.availableTools.map(tool => `- ${tool.name}: ${tool.description}`).join('\n')}
+
+Instructions:
+- Be helpful and professional
+- Use the persona's response style if available
+- Use available tools when appropriate to help the customer
+- Create support tickets for issues that need tracking
+- Offer to escalate to human agent when needed`;
+}
+
+// Process trigger matching
+export function evaluateTriggers(message: string, triggers: SupportTrigger[]): SupportTrigger | null {
+    const messageLower = message.toLowerCase();
+    
+    for (const trigger of triggers) {
+        if (!trigger.isActive) continue;
+        
+        for (const phrase of trigger.triggerPhrases) {
+            if (messageLower.includes(phrase.toLowerCase())) {
+                return trigger;
+            }
+        }
+    }
+    
+    return null;
 }
 ```
 
-### **5.3 Redis & Queue Configuration**
+### **5.3 Simple Redis Configuration**
 
 #### `/src/libs/server/redis.ts`
 ```typescript
 import { Redis } from "@upstash/redis";
-import { Queue, Worker } from "bullmq";
-import IORedis from "ioredis";
 
-// Upstash Redis for sessions
+// Simple Redis for session management
 export function getRedisClient() {
     return new Redis({
         url: process.env.UPSTASH_REDIS_REST_URL!,
         token: process.env.UPSTASH_REDIS_REST_TOKEN!,
     });
 }
-
-// IORedis for BullMQ queues (node flow processing)
-export function getIORedisClient() {
-    return new IORedis({
-        host: process.env.REDIS_HOST!,
-        port: parseInt(process.env.REDIS_PORT!),
-        password: process.env.REDIS_PASSWORD!,
-        maxRetriesPerRequest: 3,
-    });
-}
-
-// Queue for node flow processing
-export function getQueueClient() {
-    const connection = getIORedisClient();
-    return new Queue('bot-processing', { connection });
-}
-
-// Worker for processing node flows
-export function createNodeFlowWorker() {
-    const connection = getIORedisClient();
-    
-    return new Worker('bot-processing', async (job) => {
-        const { data } = job;
-        
-        switch (job.name) {
-            case 'process-admin-chat':
-                return await processAdminChat(data);
-            case 'process-member-chat':
-                return await processMemberChat(data);
-            default:
-                throw new Error(`Unknown job type: ${job.name}`);
-        }
-    }, { connection });
-}
-
-// Import processing functions
-import { processAdminChat, processMemberChat } from './ai/node-processor';
 ```
 
-### **5.4 Node Flow Processing Engine**
+### **5.4 Support Bot Tools**
 
-#### `/src/libs/server/ai/node-processor.ts`
+#### `/src/libs/server/ai/tools.ts`
 ```typescript
+import { tool } from '@langchain/core/tools';
+import { z } from 'zod';
 import { db } from '@/db/db';
-import { getModel } from './models';
-import { UpstashRedisChatMessageHistory } from "@langchain/community/stores/message/upstash_redis";
-import { ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
-import { BaseMessage, trimMessages } from '@langchain/core/messages';
-import { getRedisClient } from '../redis';
-import { Tools, FunctionDefaults, formattedPrompt } from './tools';
+import { supportTickets, supportConversations } from '@/db/schemas/support';
+import { eq, and } from 'drizzle-orm';
 
-type SessionContext = {
-    id: string;
-    botId: string;
-    currentNode: string;
-    routineNode: string | null;
-    stopped: string | null;
-    metadata: {
-        location: any;
-        contact: any;
-        isTestSession?: boolean;
-        memberId?: string;
+// Get member subscription/package status
+export const getMemberStatus = tool(
+    async ({ memberId }, context) => {
+        const locationId = context?.locationId;
+        
+        // Get member's active subscriptions and packages
+        const memberStatus = await db.query.memberLocations.findFirst({
+            where: (ml, { eq, and }) => and(
+                eq(ml.memberId, memberId),
+                eq(ml.locationId, locationId)
+            ),
+            with: {
+                member: {
+                    with: {
+                        memberSubscriptions: {
+                            where: (ms, { eq }) => eq(ms.status, 'active'),
+                            with: {
+                                subscription: true,
+                                plan: true
+                            }
+                        },
+                        memberPackages: {
+                            where: (mp, { gt }) => gt(mp.remainingCredits, 0),
+                            with: {
+                                package: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!memberStatus) {
+            return "I couldn't find your membership information. Please contact support for assistance.";
+        }
+
+        const subscriptions = memberStatus.member.memberSubscriptions;
+        const packages = memberStatus.member.memberPackages;
+
+        let response = "Here's your current membership status:\n\n";
+        
+        if (subscriptions.length > 0) {
+            response += "**Active Subscriptions:**\n";
+            subscriptions.forEach(sub => {
+                response += `• ${sub.subscription.name} (${sub.plan.name}) - Status: ${sub.status}\n`;
+                response += `  Next billing: ${sub.nextBillingDate || 'N/A'}\n`;
+            });
+        }
+
+        if (packages.length > 0) {
+            response += "\n**Available Packages:**\n";
+            packages.forEach(pkg => {
+                response += `• ${pkg.package.name} - ${pkg.remainingCredits} credits remaining\n`;
+                response += `  Expires: ${pkg.expiresAt || 'No expiration'}\n`;
+            });
+        }
+
+        if (subscriptions.length === 0 && packages.length === 0) {
+            response += "You don't currently have any active subscriptions or packages.";
+        }
+
+        return response;
+    },
+    {
+        name: "get_member_status",
+        description: 'Get member subscription and package status information',
+        schema: z.object({
+            memberId: z.string().describe('The member ID to look up'),
+        }),
+    }
+);
+
+// Get member billing information
+export const getMemberBilling = tool(
+    async ({ memberId }, context) => {
+        const locationId = context?.locationId;
+        
+        // Get member's billing info and recent transactions
+        const billingInfo = await db.query.memberLocations.findFirst({
+            where: (ml, { eq, and }) => and(
+                eq(ml.memberId, memberId),
+                eq(ml.locationId, locationId)
+            ),
+            with: {
+                member: {
+                    with: {
+                        paymentMethods: {
+                            where: (pm, { eq }) => eq(pm.isDefault, true)
+                        },
+                        transactions: {
+                            orderBy: (t, { desc }) => desc(t.createdAt),
+                            limit: 5,
+                            with: {
+                                invoice: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!billingInfo) {
+            return "I couldn't find your billing information. Please contact support for assistance.";
+        }
+
+        const member = billingInfo.member;
+        let response = "Here's your billing information:\n\n";
+
+        // Payment method info
+        if (member.paymentMethods.length > 0) {
+            const defaultMethod = member.paymentMethods[0];
+            response += `**Default Payment Method:**\n`;
+            response += `• ${defaultMethod.type} ending in ${defaultMethod.last4}\n`;
+            response += `• Expires: ${defaultMethod.expiryMonth}/${defaultMethod.expiryYear}\n\n`;
+        }
+
+        // Recent transactions
+        if (member.transactions.length > 0) {
+            response += "**Recent Transactions:**\n";
+            member.transactions.forEach(txn => {
+                response += `• ${txn.createdAt.toLocaleDateString()} - $${txn.amount} (${txn.status})\n`;
+                if (txn.invoice) {
+                    response += `  Invoice: ${txn.invoice.number}\n`;
+                }
+            });
+        }
+
+        return response;
+    },
+    {
+        name: "get_member_billing",
+        description: 'Get member billing and payment information',
+        schema: z.object({
+            memberId: z.string().describe('The member ID to look up'),
+        }),
+    }
+);
+
+// Get member's bookable sessions/classes
+export const getMemberBookableSessions = tool(
+    async ({ memberId }, context) => {
+        const locationId = context?.locationId;
+        
+        // Get member's available classes based on subscriptions and packages
+        const memberAccess = await db.query.memberLocations.findFirst({
+            where: (ml, { eq, and }) => and(
+                eq(ml.memberId, memberId),
+                eq(ml.locationId, locationId)
+            ),
+            with: {
+                member: {
+                    with: {
+                        memberSubscriptions: {
+                            where: (ms, { eq }) => eq(ms.status, 'active'),
+                            with: {
+                                subscription: {
+                                    with: {
+                                        subscriptionClasses: {
+                                            with: {
+                                                class: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        memberPackages: {
+                            where: (mp, { gt }) => gt(mp.remainingCredits, 0),
+                            with: {
+                                package: {
+                                    with: {
+                                        packageClasses: {
+                                            with: {
+                                                class: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!memberAccess) {
+            return "I couldn't find your membership information. Please contact support for assistance.";
+        }
+
+        const member = memberAccess.member;
+        let availableClasses = new Set();
+        let response = "Here are the classes you can book:\n\n";
+
+        // Classes from active subscriptions
+        member.memberSubscriptions.forEach(sub => {
+            sub.subscription.subscriptionClasses.forEach(sc => {
+                availableClasses.add(JSON.stringify({
+                    name: sc.class.name,
+                    description: sc.class.description,
+                    duration: sc.class.duration,
+                    source: 'subscription'
+                }));
+            });
+        });
+
+        // Classes from packages with credits
+        member.memberPackages.forEach(pkg => {
+            pkg.package.packageClasses.forEach(pc => {
+                availableClasses.add(JSON.stringify({
+                    name: pc.class.name,
+                    description: pc.class.description,
+                    duration: pc.class.duration,
+                    source: 'package',
+                    creditsRequired: pc.creditsRequired || 1
+                }));
+            });
+        });
+
+        if (availableClasses.size === 0) {
+            return "You don't currently have access to any bookable classes. Consider purchasing a subscription or package to access our classes.";
+        }
+
+        const classesArray = Array.from(availableClasses).map(c => JSON.parse(c));
+        
+        // Group by source
+        const subscriptionClasses = classesArray.filter(c => c.source === 'subscription');
+        const packageClasses = classesArray.filter(c => c.source === 'package');
+
+        if (subscriptionClasses.length > 0) {
+            response += "**Included in your subscription:**\n";
+            subscriptionClasses.forEach(cls => {
+                response += `• ${cls.name} (${cls.duration} min)\n`;
+                if (cls.description) response += `  ${cls.description}\n`;
+            });
+        }
+
+        if (packageClasses.length > 0) {
+            response += "\n**Available with your packages:**\n";
+            packageClasses.forEach(cls => {
+                response += `• ${cls.name} (${cls.duration} min) - ${cls.creditsRequired} credit(s)\n`;
+                if (cls.description) response += `  ${cls.description}\n`;
+            });
+        }
+
+        response += "\nTo book a session, please use our booking system or ask me to help you find available times!";
+
+        return response;
+    },
+    {
+        name: "get_member_bookable_sessions",
+        description: 'Get classes and sessions the member can book based on their subscriptions and packages',
+        schema: z.object({
+            memberId: z.string().describe('The member ID to look up'),
+        }),
+    }
+);
+
+// Knowledge base search tool (for general questions)
+export const searchKnowledge = tool(
+    async ({ query }, context) => {
+        const supportBotId = context?.supportBotId;
+        
+        // Simple text search in document chunks
+        const chunks = await db.query.supportDocumentChunks.findMany({
+            where: (chunks, { ilike, and, eq }) => and(
+                ilike(chunks.content, `%${query}%`),
+                eq(chunks.document.supportBotId, supportBotId)
+            ),
+            limit: 3
+        });
+        
+        if (chunks.length === 0) {
+            return "I couldn't find specific information about that in our knowledge base. Let me help you with your membership details or connect you with a human agent.";
+        }
+        
+        return `Based on our knowledge base: ${chunks.map(c => c.content).join('\n\n')}`;
+    },
+    {
+        name: "search_knowledge",
+        description: 'Search the knowledge base for general facility and policy information',
+        schema: z.object({
+            query: z.string().describe('Search query for the knowledge base'),
+        }),
+    }
+);
+
+// Escalate to human tool
+export const escalateToHuman = tool(
+    async ({ reason, urgency }, context) => {
+        const conversationId = context?.conversationId;
+        
+        // Mark conversation for human takeover
+        await db.update(supportConversations)
+            .set({ 
+                isVendorActive: false,
+                metadata: { escalationReason: reason, urgency, escalatedAt: new Date() }
+            })
+            .where(eq(supportConversations.id, conversationId));
+        
+        return `I've escalated your request to our support team. A human agent will be with you shortly to help with: ${reason}`;
+    },
+    {
+        name: "escalate_to_human", 
+        description: 'Escalate the conversation to a human agent when the bot cannot help',
+        schema: z.object({
+            reason: z.string().describe('Reason for escalation'),
+            urgency: z.enum(['low', 'medium', 'high']).describe('Urgency level'),
+        }),
+    }
+);
+
+// Create support ticket tool
+export const createSupportTicket = tool(
+    async ({ title, description, priority }, context) => {
+        const conversationId = context?.conversationId;
+        
+        const ticket = await db.insert(supportTickets).values({
+            conversationId,
+            title,
+            description,
+            priority,
+            status: 'open'
+        }).returning();
+        
+        return `Support ticket #${ticket[0].id} created successfully. I'll track this issue for you.`;
+    },
+    {
+        name: "create_support_ticket",
+        description: 'Create a support ticket for tracking customer issues',
+        schema: z.object({
+            title: z.string().describe('Brief title for the support ticket'),
+            description: z.string().describe('Detailed description of the issue'),
+            priority: z.number().min(1).max(3).describe('Priority level: 1=high, 2=medium, 3=low'),
+        }),
+    }
+);
+
+// Update ticket status tool
+export const updateTicketStatus = tool(
+    async ({ ticketId, status, notes }) => {
+        await db.update(supportTickets)
+            .set({ 
+                status, 
+                updatedAt: new Date(),
+                metadata: { statusChangeNotes: notes }
+            })
+            .where(eq(supportTickets.id, ticketId));
+        
+        return `Ticket #${ticketId} status updated to ${status}`;
+    },
+    {
+        name: "update_ticket_status",
+        description: 'Update the status of a support ticket',
+        schema: z.object({
+            ticketId: z.string().describe('The ID of the ticket to update'),
+            status: z.enum(['open', 'in_progress', 'resolved', 'closed']).describe('New status for the ticket'),
+            notes: z.string().optional().describe('Additional notes about the status change'),
+        }),
+    }
+);
+
+// Build support tools array
+export function buildSupportTools(availableTools: any[]) {
+    const toolMap = {
+        // Member-focused tools
+        'member_status': getMemberStatus,
+        'member_billing': getMemberBilling,
+        'member_bookable_sessions': getMemberBookableSessions,
+        
+        // Ticket management tools
+        'create_ticket': createSupportTicket,
+        'update_ticket': updateTicketStatus,
+        
+        // General support tools
+        'search_knowledge': searchKnowledge,
+        'escalate_human': escalateToHuman,
     };
-};
-
-// Process admin test chat (dummy member chat behavior)
-export async function processAdminChat(data: any) {
-    const { locationId, botId, messages, sessionId, testContact } = data;
     
-    try {
-        // Fetch location and bot
-        const [location, bot] = await Promise.all([
-            db.query.locations.findFirst({
-                where: (locations, { eq }) => eq(locations.id, locationId)
-            }),
-            db.query.bots.findFirst({
-                where: (bots, { eq, and }) => and(
-                    eq(bots.id, botId),
-                    eq(bots.locationId, locationId)
-                ),
-                with: {
-                    persona: { with: { aiPersona: true } },
-                    knowledge: { with: { document: true } }
-                }
-            })
-        ]);
-
-        if (!location || !bot) {
-            throw new Error("Location or bot not found");
-        }
-
-        // Get or create session
-        const redis = getRedisClient();
-        let session = await redis.json.get(`test-session:${botId}:${sessionId}`) as SessionContext | null;
-
-        if (!session) {
-            session = {
-                id: sessionId,
-                botId,
-                currentNode: bot.objectives?.[0]?.id || 'start',
-                routineNode: null,
-                stopped: null,
-                metadata: {
-                    location,
-                    contact: testContact || { id: 'test', firstName: 'Test', lastName: 'User', type: 'test' },
-                    isTestSession: true
-                }
-            };
-        }
-
-        // Initialize chat history
-        const history = new UpstashRedisChatMessageHistory({
-            sessionId: `test-chat:${botId}:${sessionId}`,
-            client: redis,
-            sessionTTL: 60 * 60 * 2,
-        });
-
-        // Add user message
-        const userMessage = messages[messages.length - 1];
-        await history.addUserMessage(userMessage.content);
-
-        // Process through node flow
-        const model = getModel(bot.model);
-        const response = await processNodeFlow(session, bot, model, history);
-
-        // Save session
-        await saveSession(session, redis);
-
-        return {
-            success: true,
-            response,
-            sessionId,
-            currentNode: session.currentNode
-        };
-
-    } catch (error) {
-        console.error("Admin chat processing error:", error);
-        throw error;
-    }
-}
-
-// Process member chat (same behavior as admin test)
-export async function processMemberChat(data: any) {
-    const { locationId, botId, messages, memberId, conversationId } = data;
-    
-    try {
-        // Fetch member, location and bot
-        const [memberLocation, bot] = await Promise.all([
-            db.query.memberLocations.findFirst({
-                where: (ml, { eq, and }) => and(
-                    eq(ml.locationId, locationId),
-                    eq(ml.memberId, memberId)
-                ),
-                with: { member: true, location: true }
-            }),
-            db.query.bots.findFirst({
-                where: (bots, { eq, and }) => and(
-                    eq(bots.id, botId),
-                    eq(bots.locationId, locationId)
-                ),
-                with: {
-                    persona: { with: { aiPersona: true } },
-                    knowledge: { with: { document: true } }
-                }
-            })
-        ]);
-
-        if (!memberLocation || !bot) {
-            throw new Error("Member, location, or bot not found");
-        }
-
-        // Get or create session
-        const redis = getRedisClient();
-        const sessionId = `member-${memberId}-${botId}`;
-        let session = await redis.json.get(`session:${sessionId}`) as SessionContext | null;
-
-        if (!session) {
-            session = {
-                id: sessionId,
-                botId,
-                currentNode: bot.objectives?.[0]?.id || 'start',
-                routineNode: null,
-                stopped: null,
-                metadata: {
-                    location: memberLocation.location,
-                    contact: {
-                        id: memberLocation.member.id,
-                        firstName: memberLocation.member.firstName,
-                        lastName: memberLocation.member.lastName,
-                        email: memberLocation.member.email,
-                        phone: memberLocation.member.phone,
-                        type: 'member'
-                    },
-                    memberId,
-                    isTestSession: false
-                }
-            };
-        }
-
-        // Initialize chat history with conversation ID
-        const history = new UpstashRedisChatMessageHistory({
-            sessionId: `member-chat:${conversationId}`,
-            client: redis,
-            sessionTTL: 60 * 60 * 24 * 30, // 30 days for members
-        });
-
-        // Add user message
-        const userMessage = messages[messages.length - 1];
-        await history.addUserMessage(userMessage.content);
-
-        // Process through node flow (same as admin)
-        const model = getModel(bot.model);
-        const response = await processNodeFlow(session, bot, model, history);
-
-        // Save session
-        await saveSession(session, redis);
-
-        // Save messages to database for persistence
-        await Promise.all([
-            // Save user message
-            db.insert(messages).values({
-                conversationId,
-                content: userMessage.content,
-                role: 'user',
-                channel: 'WebChat'
-            }),
-            // Save AI response
-            db.insert(messages).values({
-                conversationId,
-                content: response,
-                role: 'ai',
-                channel: 'WebChat',
-                metadata: {
-                    nodeId: session.currentNode,
-                    model: bot.model
-                }
-            })
-        ]);
-
-        return {
-            success: true,
-            response,
-            sessionId,
-            currentNode: session.currentNode
-        };
-
-    } catch (error) {
-        console.error("Member chat processing error:", error);
-        throw error;
-    }
-}
-
-// Core node flow processing (used by both admin and member chats)
-async function processNodeFlow(
-    session: SessionContext,
-    bot: any,
-    model: any,
-    history: UpstashRedisChatMessageHistory
-): Promise<string> {
-    
-    const currentNode = bot.objectives?.find((obj: any) => obj.id === session.currentNode);
-    
-    if (!currentNode) {
-        throw new Error(`Current node not found: ${session.currentNode}`);
-    }
-
-    const { data } = currentNode;
-    const tools: any[] = [];
-
-    // Build tools from node functions
-    data.functions?.forEach((func: any) => {
-        const defaults = FunctionDefaults[func.name as keyof typeof FunctionDefaults];
-        tools.push({
-            type: "function",
-            function: {
-                name: func.name,
-                description: defaults?.description || func.description || data.goal,
-                parameters: {
-                    type: "object",
-                    properties: defaults?.properties || func.properties || {},
-                    required: defaults?.required || func.required || [],
-                    strict: func.strict || true
-                }
-            }
-        });
-    });
-
-    // Get conversation history
-    const messages = await history.getMessages();
-    const trimmed = await trimMessages(messages, {
-        maxTokens: 1000,
-        strategy: "last",
-        tokenCounter: model,
-    });
-
-    // Build prompt with session context
-    const basePrompt = buildBasePrompt(bot, session.metadata);
-    const responsePrompt = await formattedPrompt(basePrompt, data);
-
-    const prompt = ChatPromptTemplate.fromMessages([
-        SystemMessagePromptTemplate.fromTemplate(responsePrompt),
-        new MessagesPlaceholder("history"),
-    ]);
-
-    const modelWithTools = model.bindTools(tools);
-    const chain = prompt.pipe(modelWithTools);
-
-    // Generate response
-    const response = await chain.invoke({ history: trimmed });
-    const responses: BaseMessage[] = [response];
-
-    // Process tool calls (node navigation)
-    if (response.tool_calls?.length) {
-        for (const toolCall of response.tool_calls) {
-            const tool = Tools[toolCall.name as keyof typeof Tools];
-            if (tool) {
-                const { next: nextNode, message } = await tool(toolCall, currentNode);
-                if (nextNode) {
-                    session.currentNode = nextNode;
-                }
-                responses.push(message);
-            }
-        }
-    }
-
-    // Save messages to history
-    await history.addMessages(responses);
-
-    return response.content as string;
-}
-
-async function saveSession(session: SessionContext, redis: any) {
-    const sessionKey = session.metadata.isTestSession 
-        ? `test-session:${session.botId}:${session.id}`
-        : `session:${session.id}`;
-    
-    const ttl = session.metadata.isTestSession ? 60 * 60 * 2 : 60 * 60 * 24;
-    
-    await Promise.all([
-        redis.json.set(sessionKey, '$', session),
-        redis.expire(sessionKey, ttl)
-    ]);
-}
-
-function buildBasePrompt(bot: any, metadata: any): string {
-    const persona = bot.persona?.aiPersona;
-    
-    return `You are ${bot.name}, an AI assistant for ${metadata.location.name}.
-
-${bot.prompt}
-
-${persona ? `
-Persona Details:
-- Name: ${persona.name}
-- Response Style: ${persona.responseDetails}
-- Personality Traits: ${persona.personality.join(', ')}
-` : ''}
-
-Contact Context:
-- Name: ${metadata.contact.firstName} ${metadata.contact.lastName}
-- Type: ${metadata.contact.type}
-- ${metadata.isTestSession ? 'Test Session: true' : 'Member Session: true'}
-
-Instructions:
-- Be helpful and professional
-- Use the persona's response style if available
-- Follow the conversation flow defined by the nodes
-- Use available tools when appropriate
-- Navigate between nodes based on user responses and tool outcomes`;
+    return availableTools
+        .filter(t => toolMap[t.name as keyof typeof toolMap])
+        .map(t => toolMap[t.name as keyof typeof toolMap]);
 }
 ```
 
@@ -1197,1335 +1221,236 @@ Instructions:
 
 ## 🔤 **Phase 6: Types Migration**
 
-### **6.1 Bot Types and Enums**
+### **6.1 Support Bot Types**
 
-#### `/src/types/bots.ts` and `/src/types/tickets.ts`
+#### `/src/types/supportBot.ts`
 ```typescript
-export type Bot = {
+export type SupportBot = {
     id: string
     locationId: string
-    name: string | null
-    initialMessage: string | null
+    name: string
     prompt: string
-    objectives: Node<NodeDataType>[] | null
+    initialMessage: string
     temperature: number
     model: "anthropic" | "gpt" | "gemini"
-    invalidNodes: string[]
-    status: "Draft" | "Active" | "Pause" | "Archived"
+    status: "Draft" | "Active" | "Paused"
+    availableTools: SupportTool[]
     created: Date
     updated: Date | null
 }
 
-export type ExtendedBot = Bot & {
-    knowledge?: Document,
-    botKnowledge?: BotKnowledge
-    botPersona?: BotPersona
-    persona?: AIPersona
-    scenarios?: BotScenario[]
+export type SupportTool = {
+    name: string
+    description: string
+    parameters?: Record<string, any>
 }
 
-export type BotScenario = {
+export type SupportTrigger = {
     id: string
+    supportBotId: string
     name: string
-    botId: string
-    workflowId: string | null
-    routineId: string | null
-    trigger: string
+    triggerType: "keyword" | "intent" | "condition"
+    triggerPhrases: string[]
+    toolCall: Record<string, any>
     examples: string[]
     requirements: string[]
-    yield: boolean
+    isActive: boolean
     created: Date
     updated: Date | null
 }
 
-export type NodeDataType = {
-    label: string
-    goal: string
-    paths: Paths
-    instructions?: string
-    functions?: AIFunction[]
-    config?: NodeConfigs
+export type SupportBotPersona = {
+    id: string
+    supportBotId: string
+    name: string
+    image?: string
+    responseStyle: string
+    personalityTraits: string[]
+    created: Date
+    updated: Date | null
 }
 
-// ... all other bot-related types
-
-#### `/src/types/tickets.ts`
+#### `/src/types/supportTickets.ts`
 ```typescript
-export type TicketStatus = 'open' | 'resolved';
+export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 
-export type Ticket = {
+export type SupportTicket = {
     id: string;
     conversationId: string;
+    title: string;
+    description?: string;
     status: TicketStatus;
+    priority: number; // 1=high, 2=medium, 3=low
+    assignedTo?: string;
     created: Date;
     updated: Date | null;
     metadata?: Record<string, any>;
 };
-
-export type TicketUpdate = {
-    status: TicketStatus;
-    metadata?: Record<string, any>;
-};
-```
 ```
 
-### **6.2 Contact Types (Hybrid)**
+### **6.2 Support Conversation Types**
 
-#### `/src/types/contacts.ts`
+#### `/src/types/supportConversations.ts`
 ```typescript
-export type UnifiedContact = {
+export type SupportConversation = {
     id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    type: 'member' | 'guest';
-    botMetadata?: Record<string, any>;
-    created: Date;
-}
-
-export type GuestContact = {
-    id: string;
-    locationId: string;
-    email: string;
-    firstName: string | null;
-    lastName: string | null;
-    phone: string | null;
-    botMetadata: Record<string, any>;
-    created: Date;
-}
-
-export type MemberContact = {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    botMetadata: Record<string, any>;
-    memberLocationId: string;
-}
-```
-
-### **6.3 Document Types**
-
-#### `/src/types/documents.ts`
-```typescript
-export type DocumentType = 'file' | 'website';
-
-export type Document = {
-    id: string;
-    name: string;
-    filePath: string | null;
-    url: string | null;
-    type: DocumentType;
-    locationId: string;
-    size: number | null;
-    created: Date;
-}
-
-export type DocumentMetadata = {
-    id: string;
-    documentId: string;
+    supportBotId: string;
+    memberId?: string;
+    guestContactId?: string;
+    vendorId?: string;
+    takenOverAt?: Date;
+    isVendorActive: boolean;
     metadata: Record<string, any>;
     created: Date;
+    updated: Date | null;
 }
 
-export type DocumentChunk = {
+export type SupportMessage = {
     id: string;
-    documentId: string;
+    conversationId: string;
     content: string;
-    embedding?: string;
+    role: 'user' | 'ai' | 'vendor' | 'system';
+    channel: 'WebChat' | 'Email' | 'System';
+    metadata: Record<string, any>;
+    created: Date;
 }
 ```
 
 ---
 
-## 📱 **Phase 7: Member App Integration**
-
-### **7.1 Member App Chat Interface**
-
-The member app (monstro-member) needs a chat interface where members can interact with location bots.
-
-#### **Chat Page Structure**
-```
-/monstro-member/src/app/[lid]/chat/
-├── page.tsx                 # Main chat interface
-├── components/
-│   ├── ChatContainer.tsx    # Chat wrapper with bot selection
-│   ├── ChatMessages.tsx     # Message display
-│   ├── ChatInput.tsx        # Message input
-│   ├── BotSelector.tsx      # Select active location bots
-│   └── ChatProvider.tsx     # Chat state management
-└── hooks/
-    └── useChat.ts          # Chat functionality hook
-```
-
-#### **Main Chat Page**
-```typescript
-// /monstro-member/src/app/[lid]/chat/page.tsx
-import { ChatContainer, ChatProvider } from './components';
-import { createClient } from '@/libs/supabase/server';
-import { redirect } from 'next/navigation';
-
-export default async function ChatPage(props: { params: Promise<{ lid: string }> }) {
-    const { lid } = await props.params;
-    const supabase = await createClient();
-    
-    // Get authenticated user with JWT validation
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
-    if (error || !user) {
-        redirect('/login');
-    }
-    
-    // Fetch member data using authenticated Supabase client
-    const { data: memberData } = await supabase
-        .from('member_locations')
-        .select(`
-            member_id,
-            members!inner(*)
-        `)
-        .eq('location_id', lid)
-        .eq('members.user_id', user.id)
-        .single();
-    
-    if (!memberData) {
-        redirect('/login');
-    }
-    
-    // Fetch active bots for location using Supabase RLS
-    const { data: activeBots } = await supabase
-        .from('bots')
-        .select(`
-            id,
-            name,
-            initial_message,
-            bot_personas!left(
-                ai_persona!inner(
-                    id,
-                    name,
-                    image,
-                    response_details,
-                    personality
-                )
-            )
-        `)
-        .eq('location_id', lid)
-        .eq('status', 'Active');
-    
-    return (
-        <div className="flex flex-col h-screen">
-            <ChatProvider>
-                <ChatContainer 
-                    locationId={lid} 
-                    memberId={memberData.member_id}
-                    availableBots={activeBots || []}
-                />
-            </ChatProvider>
-        </div>
-    );
-}
-```
-
-### **7.2 Member Chat API Endpoints**
-
-#### **Member Chat Route**
-```typescript
-// /monstro-member/src/app/api/chat/[lid]/route.ts
-import { createClient } from '@/libs/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
-import { getModel } from '@/libs/server/ai/models';
-import { getRedisClient } from '@/libs/server/redis';
-import { streamChat } from '@/libs/server/ai/streaming';
-import { updateTicketStatus } from '@/libs/server/ai/tools';
-
-export async function POST(req: NextRequest, props: { params: Promise<{ lid: string }> }) {
-    const { lid } = await props.params;
-    const { messages, botId } = await req.json();
-    const supabase = await createClient();
-    
-    // Validate JWT and get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    // Get member information using Supabase RLS
-    const { data: memberData, error: memberError } = await supabase
-        .from('member_locations')
-        .select(`
-            member_id,
-            members!inner(
-                id,
-                first_name,
-                last_name,
-                email,
-                phone
-            )
-        `)
-        .eq('location_id', lid)
-        .eq('members.user_id', user.id)
-        .single();
-    
-    if (memberError || !memberData) {
-        return NextResponse.json({ error: 'Member not found' }, { status: 404 });
-    }
-    
-    // Get bot configuration using Supabase RLS
-    const { data: bot, error: botError } = await supabase
-        .from('bots')
-        .select(`
-            id,
-            name,
-            prompt,
-            model,
-            temperature,
-            initial_message,
-            objectives,
-            bot_scenarios!left(*),
-            bot_knowledge!left(
-                documents!inner(*)
-            )
-        `)
-        .eq('id', botId)
-        .eq('location_id', lid)
-        .eq('status', 'Active')
-        .single();
-    
-    if (botError || !bot) {
-        return NextResponse.json({ error: 'Bot not found or inactive' }, { status: 404 });
-    }
-    
-    // Initialize Redis session with smart recovery
-    const redis = getRedisClient();
-    const sessionId = `member-${memberData.members.id}-${botId}`;
-    const TTL = 60 * 60 * 2; // 2 hours
-    
-    // Get or create conversation in database
-    const { data: conversation } = await supabase
-        .from('conversations')
-        .select('id, metadata')
-        .eq('location_id', lid)
-        .eq('member_id', memberData.members.id)
-        .single();
-
-    let conversationId = conversation?.id;
-    let isNewConversation = false;
-
-    if (!conversationId) {
-        const { data: newConversation } = await supabase
-            .from('conversations')
-            .insert({
-                location_id: lid,
-                member_id: memberData.members.id,
-                metadata: { bot_id: botId, created_at: new Date().toISOString() }
-            })
-            .select('id')
-            .single();
-
-        conversationId = newConversation?.id;
-        isNewConversation = true;
-    }
-
-    // Create ticket for new conversations
-    if (isNewConversation && conversationId) {
-        await supabase
-            .from('tickets')
-            .insert({
-                conversation_id: conversationId,
-                status: 'open',
-                metadata: {
-                    bot_id: botId,
-                    member_id: memberData.members.id,
-                    created_via: 'member_chat'
-                }
-            });
-    }
-    
-    // Get or create Redis session with smart recovery
-    let session = await redis.json.get(`session:${sessionId}`) as ChatSession | null;
-    
-    if (!session) {
-        // Smart recovery: recreate session from conversation history
-        session = await createOrRecoverSession({
-            sessionId,
-            botId,
-            conversationId,
-            memberContext,
-            bot,
-            supabase
-        });
-        
-        await redis.json.set(`session:${sessionId}`, '$', session);
-        await redis.expire(`session:${sessionId}`, TTL);
-    } else {
-        // Extend TTL on activity
-        await redis.expire(`session:${sessionId}`, TTL);
-    }
-    
-    // Save user message
-    await supabase
-        .from('messages')
-        .insert({
-            conversation_id: conversationId,
-            content: messages[messages.length - 1].content,
-            role: 'user',
-            channel: 'WebChat'
-        });
-    
-    // Process bot response
-    const model = getModel(bot.model);
-    const memberContext = {
-        id: memberData.members.id,
-        firstName: memberData.members.first_name,
-        lastName: memberData.members.last_name,
-        email: memberData.members.email,
-        phone: memberData.members.phone,
-        type: 'member'
-    };
-
-    // Generate streaming response with session state and ticket tools
-    return streamChat({
-        bot,
-        messages,
-        session,
-        memberContext,
-        conversationId,
-        ticketId: ticket?.id,
-        supabase,
-        redis,
-        tools: [updateTicketStatus]
-    });
-}
-```
-
-#### **Available Bots API**
-```typescript
-// /monstro-member/src/app/api/bots/[lid]/route.ts
-import { createClient } from '@/libs/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
-
-export async function GET(req: NextRequest, props: { params: Promise<{ lid: string }> }) {
-    const { lid } = await props.params;
-    const supabase = await createClient();
-    
-    // Validate JWT and get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    
-    // Verify member has access to this location using Supabase RLS
-    const { data: memberAccess, error: accessError } = await supabase
-        .from('member_locations')
-        .select('member_id')
-        .eq('location_id', lid)
-        .eq('members.user_id', user.id)
-        .single();
-    
-    if (accessError || !memberAccess) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-    
-    // Fetch active bots for this location using Supabase RLS
-    const { data: bots, error: botsError } = await supabase
-        .from('bots')
-        .select(`
-            id,
-            name,
-            initial_message,
-            bot_personas!left(
-                ai_persona!inner(
-                    id,
-                    name,
-                    image,
-                    response_details,
-                    personality
-                )
-            )
-        `)
-        .eq('location_id', lid)
-        .eq('status', 'Active');
-    
-    if (botsError) {
-        return NextResponse.json({ error: 'Failed to fetch bots' }, { status: 500 });
-    }
-    
-    return NextResponse.json(bots || []);
-}
-```
-
-### **7.3 Member App Dependencies**
-
-The member app needs its own bot processing libraries:
-
-#### **Update monstro-member package.json**
-```json
-{
-  "dependencies": {
-    // Existing member app dependencies...
-    
-    // AI/LangChain Dependencies for member chat
-    "@langchain/anthropic": "^0.3.21",
-    "@langchain/openai": "^4.3.9",
-    "@langchain/google-genai": "^0.2.10",
-    "ai": "^4.3.9",
-    
-    // Redis for member chat sessions
-    "@upstash/redis": "^1.34.4",
-    
-    // Existing Supabase (already present)
-    "@supabase/supabase-js": "^2.x.x"
-  }
-}
-```
-
-#### **Member App Environment Variables**
-```env
-# /monstro-member/.env.local
-
-# AI Models (for member chat)
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
-GOOGLE_AI_API_KEY=your_google_key
-
-# Redis for member chat sessions
-UPSTASH_REDIS_REST_URL=your_redis_url
-UPSTASH_REDIS_REST_TOKEN=your_redis_token
-
-# Supabase configuration (already exists)
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-key
-```
-
-### **7.4 Member App Server Utilities**
-
-#### **AI Models for Member App**
-```typescript
-// /monstro-member/src/libs/server/ai/models.ts
-import { ChatOpenAI } from "@langchain/openai";
-import { ChatAnthropic } from "@langchain/anthropic";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-
-export function getModel(model: "anthropic" | "gpt" | "gemini") {
-    switch (model) {
-        case "anthropic":
-            return new ChatAnthropic({
-                modelName: "claude-3-sonnet-20240229",
-                apiKey: process.env.ANTHROPIC_API_KEY
-            });
-        case "gpt":
-            return new ChatOpenAI({
-                modelName: "gpt-4",
-                apiKey: process.env.OPENAI_API_KEY
-            });
-        case "gemini":
-            return new ChatGoogleGenerativeAI({
-                modelName: "gemini-pro",
-                apiKey: process.env.GOOGLE_AI_API_KEY
-            });
-    }
-}
-```
-
-#### **Redis Configuration for Member App**
-```typescript
-// /monstro-member/src/libs/server/redis.ts
-import { Redis } from "@upstash/redis";
-
-export function getRedisClient() {
-    return new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL!,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
-}
-```
-
-#### **Session Types**
-```typescript
-// /monstro-member/src/types/chat.ts
-export type ChatSession = {
-    id: string;
-    botId: string;
-    conversationId: string;
-    currentObjective: string | null;
-    routineId: string | null;
-    routineObjective: string | null;
-    lastActivity: string;
-    conversationState: 'new' | 'ongoing' | 'booking' | 'information_gathering';
-    collectedData: Record<string, any>;
-    metadata: {
-        memberContext: any;
-        bot: any;
-    };
-};
-
-export type ConversationContext = {
-    sessionId: string;
-    botId: string;
-    conversationId: string;
-    memberContext: any;
-    bot: any;
-    supabase: any;
-};
-
-export type TicketStatus = 'open' | 'resolved';
-
-export type Ticket = {
-    id: string;
-    conversationId: string;
-    status: TicketStatus;
-    created: Date;
-    updated: Date | null;
-    metadata?: Record<string, any>;
-};
-```
-
-#### **Smart Session Recovery**
-```typescript
-// /monstro-member/src/libs/server/ai/session.ts
-import { ChatSession, ConversationContext } from '@/types/chat';
-
-export async function createOrRecoverSession({
-    sessionId,
-    botId,
-    conversationId,
-    memberContext,
-    bot,
-    supabase
-}: ConversationContext): Promise<ChatSession> {
-    
-    // Get recent conversation history for context analysis
-    const { data: recentMessages } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: false })
-        .limit(20);
-    
-    if (!recentMessages || recentMessages.length === 0) {
-        // New conversation - create fresh session
-        return createFreshSession(sessionId, botId, conversationId, memberContext, bot);
-    }
-    
-    // Smart recovery based on conversation analysis
-    const conversationState = analyzeConversationState(recentMessages, bot);
-    const collectedData = extractCollectedData(recentMessages);
-    const currentObjective = determineCurrentObjective(recentMessages, bot);
-    
-    return {
-        id: sessionId,
-        botId,
-        conversationId,
-        currentObjective,
-        routineId: null,
-        routineObjective: null,
-        lastActivity: new Date().toISOString(),
-        conversationState,
-        collectedData,
-        metadata: { memberContext, bot }
-    };
-}
-
-function createFreshSession(
-    sessionId: string, 
-    botId: string, 
-    conversationId: string, 
-    memberContext: any, 
-    bot: any
-): ChatSession {
-    return {
-        id: sessionId,
-        botId,
-        conversationId,
-        currentObjective: bot.objectives?.[0]?.id || null,
-        routineId: null,
-        routineObjective: null,
-        lastActivity: new Date().toISOString(),
-        conversationState: 'new',
-        collectedData: {},
-        metadata: { memberContext, bot }
-    };
-}
-
-function analyzeConversationState(messages: any[], bot: any): ChatSession['conversationState'] {
-    const lastBotMessage = messages.find(m => m.role === 'ai')?.content?.toLowerCase() || '';
-    
-    // Analyze recent conversation to determine state
-    if (lastBotMessage.includes('appointment') || lastBotMessage.includes('booking')) {
-        return 'booking';
-    }
-    
-    if (lastBotMessage.includes('tell me more') || lastBotMessage.includes('information')) {
-        return 'information_gathering';
-    }
-    
-    if (messages.length > 4) {
-        return 'ongoing';
-    }
-    
-    return 'new';
-}
-
-function extractCollectedData(messages: any[]): Record<string, any> {
-    const collectedData: Record<string, any> = {};
-    
-    // Extract structured data from conversation
-    // This would be more sophisticated in real implementation
-    messages.forEach(msg => {
-        if (msg.role === 'user') {
-            // Extract email, phone, name patterns
-            const emailMatch = msg.content.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
-            if (emailMatch) collectedData.email = emailMatch[0];
-            
-            const phoneMatch = msg.content.match(/\b\d{3}-\d{3}-\d{4}\b/);
-            if (phoneMatch) collectedData.phone = phoneMatch[0];
-        }
-    });
-    
-    return collectedData;
-}
-
-function determineCurrentObjective(messages: any[], bot: any): string | null {
-    if (!bot.objectives || bot.objectives.length === 0) {
-        return null;
-    }
-    
-    const lastBotMessage = messages.find(m => m.role === 'ai')?.content?.toLowerCase() || '';
-    
-    // Match bot message patterns to objectives
-    for (const objective of bot.objectives) {
-        if (objective.trigger && lastBotMessage.includes(objective.trigger.toLowerCase())) {
-            return objective.id;
-        }
-    }
-    
-    // Default to first objective
-    return bot.objectives[0]?.id || null;
-}
-```
-
-#### **Ticket Management Tools**
-```typescript
-// /monstro-member/src/libs/server/ai/tools.ts
-import { tool } from "@langchain/core/tools";
-
-export const updateTicketStatus = tool(async ({ ticketId, status, reason }) => {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
-        .from('tickets')
-        .update({
-            status,
-            updated_at: new Date().toISOString(),
-            metadata: {
-                updated_reason: reason,
-                updated_by: 'bot'
-            }
-        })
-        .eq('id', ticketId)
-        .select()
-        .single();
-
-    if (error) {
-        return `Failed to update ticket: ${error.message}`;
-    }
-
-    return `Ticket ${ticketId} status updated to ${status}`;
-}, {
-    name: "update_ticket_status",
-    description: "Update the status of a support ticket",
-    schema: {
-        type: "object",
-        properties: {
-            ticketId: { type: "string", description: "The ticket ID to update" },
-            status: { type: "string", enum: ["open", "resolved"], description: "New status for the ticket" },
-            reason: { type: "string", description: "Reason for the status change" }
-        },
-        required: ["ticketId", "status"]
-    }
-});
-```
-
-#### **Chat Streaming with Session Management**
-```typescript
-// /monstro-member/src/libs/server/ai/streaming.ts
-import { HumanMessage, AIMessage } from "@langchain/core/messages";
-import { ChatSession } from '@/types/chat';
-
-export async function streamChat({
-    bot,
-    messages,
-    session,
-    memberContext,
-    conversationId,
-    ticketId,
-    supabase,
-    redis,
-    tools = []
-}: {
-    bot: any;
-    messages: any[];
-    session: ChatSession;
-    memberContext: any;
-    conversationId: string;
-    ticketId?: string;
-    supabase: any;
-    redis: any;
-    tools?: any[];
-}) {
-    const model = getModel(bot.model);
-    
-    // Build conversation context with session state
-    const chatMessages = messages.map(msg => 
-        msg.role === 'user' 
-            ? new HumanMessage(msg.content)
-            : new AIMessage(msg.content)
-    );
-    
-    // Get ticket information for context
-    const { data: ticket } = await supabase
-        .from('tickets')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .single();
-
-    // Enhanced system prompt with session and ticket context
-    const systemPrompt = `You are ${bot.name || 'a helpful assistant'}.
-
-${bot.prompt}
-
-Member Context:
-- Name: ${memberContext.firstName} ${memberContext.lastName}
-- Email: ${memberContext.email}
-- Member ID: ${memberContext.id}
-
-Session Context:
-- Conversation State: ${session.conversationState}
-- Current Objective: ${session.currentObjective || 'general_assistance'}
-- Collected Data: ${JSON.stringify(session.collectedData)}
-
-Ticket Context:
-- Ticket Status: ${ticket?.status || 'none'}
-- Ticket ID: ${ticket?.id || 'none'}
-- Last Updated: ${ticket?.updated_at || 'never'}
-
-${session.conversationState === 'booking' ? 'Focus on helping complete the booking process.' : ''}
-${session.conversationState === 'information_gathering' ? 'Continue gathering relevant information.' : ''}
-
-${ticket?.status === 'open' && !isNewConversation ? 'Check if the member\'s issue has been resolved and offer to update ticket status if appropriate.' : ''}
-
-Be helpful and personalize responses appropriately. Use the session and ticket context to provide continuity. You can update ticket status by calling the appropriate tool when the member indicates their issue is resolved.`;
-    
-    // Stream response with session updates
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-        async start(controller) {
-            try {
-                const modelWithTools = model.bindTools(tools);
-                const response = await modelWithTools.stream([
-                    new HumanMessage(systemPrompt),
-                    ...chatMessages
-                ]);
-                
-                let fullResponse = '';
-                
-                for await (const chunk of response) {
-                    const content = chunk.content;
-                    fullResponse += content;
-                    
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
-                }
-                
-                // Update session with new response context
-                session.lastActivity = new Date().toISOString();
-                session.conversationState = analyzeNewResponseState(fullResponse, session.conversationState);
-                
-                // Extract any new data from the conversation
-                const userMessage = messages[messages.length - 1]?.content || '';
-                const newData = extractDataFromMessage(userMessage);
-                session.collectedData = { ...session.collectedData, ...newData };
-                
-                // Save updated session to Redis
-                await redis.json.set(`session:${session.id}`, '$', session);
-                await redis.expire(`session:${session.id}`, 60 * 60 * 2); // Reset TTL
-                
-                // Save bot response to database (permanent storage)
-                await supabase
-                    .from('messages')
-                    .insert({
-                        conversation_id: conversationId,
-                        content: fullResponse,
-                        role: 'ai',
-                        channel: 'WebChat',
-                        metadata: {
-                            session_state: session.conversationState,
-                            collected_data: session.collectedData
-                        }
-                    });
-                
-                controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-                controller.close();
-            } catch (error) {
-                console.error('Streaming error:', error);
-                controller.error(error);
-            }
-        }
-    });
-    
-    function analyzeNewResponseState(botResponse: string, currentState: string): ChatSession['conversationState'] {
-        const response = botResponse.toLowerCase();
-        
-        if (response.includes('book') || response.includes('appointment') || response.includes('schedule')) {
-            return 'booking';
-        }
-        
-        if (response.includes('tell me more') || response.includes('need more information')) {
-            return 'information_gathering';
-        }
-        
-        return currentState === 'new' ? 'ongoing' : currentState;
-    }
-    
-    function extractDataFromMessage(message: string): Record<string, any> {
-        const data: Record<string, any> = {};
-        
-        // Extract structured information
-        const emailMatch = message.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
-        if (emailMatch) data.email = emailMatch[0];
-        
-        const phoneMatch = message.match(/\b\d{3}-?\d{3}-?\d{4}\b/);
-        if (phoneMatch) data.phone = phoneMatch[0];
-        
-        // Extract time preferences
-        const timeMatch = message.match(/\b\d{1,2}:\d{2}\s?(AM|PM|am|pm)?\b/);
-        if (timeMatch) data.preferredTime = timeMatch[0];
-        
-        return data;
-    }
-    
-    return new Response(stream, {
-        headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive'
-        }
-    });
-}
-```
-
-### **7.5 Member Chat Components**
-
-#### **Chat Container**
-```typescript
-// /monstro-member/src/app/[lid]/chat/components/ChatContainer.tsx
-'use client'
-import { useState } from 'react';
-import { ChatMessages, ChatInput, BotSelector } from './';
-import { useChatContext } from './ChatProvider';
-
-interface ChatContainerProps {
-    locationId: string;
-    memberId: string;
-    availableBots: Bot[];
-}
-
-export function ChatContainer({ locationId, memberId, availableBots }: ChatContainerProps) {
-    const { selectedBot, setSelectedBot, messages } = useChatContext();
-    
-    return (
-        <div className="flex flex-col h-full max-w-2xl mx-auto">
-            <BotSelector 
-                bots={availableBots} 
-                selectedBot={selectedBot}
-                onBotSelect={setSelectedBot}
-            />
-            
-            <ChatMessages messages={messages} />
-            
-            {selectedBot && (
-                <ChatInput 
-                    locationId={locationId}
-                    botId={selectedBot.id}
-                />
-            )}
-        </div>
-    );
-}
-```
-
-#### **Simple Chat Input**
-```typescript
-// /monstro-member/src/app/[lid]/chat/components/ChatInput.tsx
-'use client'
-import { useState } from 'react';
-import { useChatContext } from './ChatProvider';
-
-interface ChatInputProps {
-    locationId: string;
-    botId: string;
-}
-
-export function ChatInput({ locationId, botId }: ChatInputProps) {
-    const [input, setInput] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const { addMessage } = useChatContext();
-    
-    async function sendMessage(e: React.FormEvent) {
-        e.preventDefault();
-        if (!input.trim() || isLoading) return;
-        
-        const userMessage = { role: 'user', content: input };
-        addMessage(userMessage);
-        setInput('');
-        setIsLoading(true);
-        
-        try {
-            const response = await fetch(`/api/chat/${locationId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [...messages, userMessage],
-                    botId
-                })
-            });
-            
-            // Handle streaming response
-            const reader = response.body?.getReader();
-            if (reader) {
-                const botMessage = { role: 'assistant', content: '' };
-                addMessage(botMessage);
-                
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    
-                    const chunk = new TextDecoder().decode(value);
-                    // Update bot message content
-                    updateLastMessage(chunk);
-                }
-            }
-        } catch (error) {
-            console.error('Chat error:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }
-    
-    return (
-        <form onSubmit={sendMessage} className="p-4 border-t">
-            <div className="flex gap-2">
-                <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Type your message..."
-                    className="flex-1 p-2 border rounded"
-                    disabled={isLoading}
-                />
-                <button 
-                    type="submit" 
-                    disabled={isLoading || !input.trim()}
-                    className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
-                >
-                    Send
-                </button>
-            </div>
-        </form>
-    );
-}
-```
-
-### **7.6 Architecture Summary**
-
-This hybrid architecture ensures optimal performance with proper concern separation:
-
-#### **Monstro-15 (Admin Portal)**
-- **Purpose**: Bot management and admin testing
-- **Chat Endpoint**: `/api/protected/loc/[id]/bots/[bid]/chat` - For admin testing only
-- **Database Access**: Direct Drizzle ORM queries
-- **Session Management**: Full Redis with complex flow state
-- **User Context**: Admin/staff users
-
-#### **Monstro-Member (Member App)**  
-- **Purpose**: Member chat interactions
-- **Chat Endpoint**: `/api/chat/[lid]` - For member interactions
-- **Database Access**: Supabase client with RLS
-- **Session Management**: Hybrid approach (Redis + Smart Recovery)
-- **User Context**: Authenticated members
-
-#### **Hybrid Storage Strategy**
-- **Redis Sessions**: Active conversation state, collected data, objectives (2-hour TTL)
-- **Database Storage**: Permanent conversation history, messages, member data
-- **Smart Recovery**: Recreates sessions from database when expired
-- **Session Continuity**: Seamless conversation flow even after long breaks
-
-Both apps share the same database but access it through their respective authentication patterns, with the member app using intelligent session management for superior user experience.
+## 📊 **Implementation Summary**
+
+This migration plan has been **significantly simplified** from the original complex multi-bot workflow system to focus on:
+
+### ✅ **What's Included:**
+1. **Single support bot per location** (auto-created)
+2. **Simple Q&A with direct AI processing** (no complex queues)
+3. **User-defined triggers** for hard tool call execution
+4. **Fixed set of tools**: ticket management, knowledge search, escalation
+5. **Vendor takeover functionality** for human intervention
+6. **Basic ticket management** with automatic creation
+7. **Knowledge base integration** with document upload
+8. **Member app integration** for customer support
+
+### ❌ **What's Removed:**
+1. ~~Multiple bot creation/deletion~~
+2. ~~Visual node workflow builder~~
+3. ~~Complex BullMQ queue processing~~
+4. ~~Node flow execution engines~~
+5. ~~Complex session state tracking~~
+6. ~~ReactFlow canvas components~~
+7. ~~Multi-step workflow orchestration~~
+
+### 🎯 **Benefits of Simplified Approach:**
+- **Faster implementation** (6 weeks vs 12+ weeks)
+- **Lower complexity** and maintenance burden
+- **Immediate value** through Q&A support
+- **Human escalation** when bot can't help
+- **Ticket tracking** for issue management
+- **Knowledge base** for consistent answers
+
+This approach delivers **80% of the value with 20% of the complexity**, allowing you to ship quickly and iterate based on user feedback.
 
 ---
 
 ## 🚦 **Migration Execution Timeline**
 
-### **Database & Dependencies**
-- [ ] Create database migration scripts
+### **Phase 1: Database Setup (Week 1)**
+- [ ] Create support bot database schema (simplified tables)
 - [ ] Run migrations on development database
-- [ ] Update package.json dependencies
-- [ ] Set up environment variables (Redis for queues, AI keys)
+- [ ] Update dependencies (remove complex queue/node dependencies)
+- [ ] Set up simplified environment variables
 - [ ] Test database connections
 
-### **Queue System Setup**
-- [ ] Set up Redis/IORedis for BullMQ queues
-- [ ] Implement node flow processing worker
-- [ ] Test queue job processing
-- [ ] Set up queue monitoring
+### **Phase 2: Backend APIs (Week 2)**
+- [ ] Create support bot configuration API routes
+- [ ] Implement simple chat processing with direct AI calls
+- [ ] Create trigger management APIs
+- [ ] Create knowledge base upload APIs
+- [ ] Create ticket management APIs
+- [ ] Test all endpoints
 
-### **Backend APIs**
-- [ ] Create core bot API routes
-- [ ] Implement queue-based chat processing
-- [ ] Create scenario management APIs
-- [ ] Create knowledge base APIs
-- [ ] Test all endpoints with node flow execution
+### **Phase 3: Frontend Components (Week 3)**
+- [ ] Create simplified support bot dashboard
+- [ ] Build chat testing interface (no complex flows)
+- [ ] Create trigger management UI
+- [ ] Create knowledge base management UI
+- [ ] Create ticket viewing interface
+- [ ] Test component integration
 
-### **Server Utilities & Types**
-- [ ] Copy and adapt AI server libraries
-- [ ] Create contact helper functions
-- [ ] Set up Redis configuration
-- [ ] Create all TypeScript types
-- [ ] Test utility functions
+### **Phase 4: Member App Integration (Week 4)**
+- [ ] Add simple chat interface to member app
+- [ ] Implement direct AI processing for members
+- [ ] Add vendor takeover functionality
+- [ ] Test member-to-support-bot flow
+- [ ] Test vendor intervention capabilities
 
-### **Frontend Migration**
-- [ ] Remove old AI directory
-- [ ] Create new bots directory structure
-- [ ] Copy and adapt all React components
-- [ ] Update navigation links
-- [ ] Test component rendering
+### **Phase 5: Testing & Polish (Week 5)**
+- [ ] End-to-end testing of simplified support flow
+- [ ] Performance testing and optimization
+- [ ] Error handling and edge case testing
+- [ ] User acceptance testing
+- [ ] Bug fixes and polish
 
-### **Member App Integration (Hybrid Approach)**
-- [ ] Add AI dependencies to monstro-member package.json (LangChain + Redis)
-- [ ] Set up member app environment variables (AI keys, Redis URL/Token)
-- [ ] Create AI server utilities for member app (models, streaming, redis)
-- [ ] Implement session types and smart recovery functions
-- [ ] Implement member chat API routes with Redis session management
-- [ ] Create chat interface in member app with session continuity
-- [ ] Create bot selector component
-- [ ] Test session creation and recovery after expiration
-- [ ] Test member-to-bot communication with conversation state
-- [ ] Test real-time streaming with session updates
-- [ ] Verify proper data isolation between admin and member contexts
-- [ ] Test automatic ticket creation for member chat sessions
-- [ ] Test natural issue resolution checking in member conversations
-- [ ] Test bot tool calls for ticket status updates in member app
-- [ ] Test hybrid storage (Redis sessions + Database persistence)
-
-### **Integration & Testing**
-- [ ] Test complete bot creation flow (admin portal)
-- [ ] Test scenario management (admin portal)
-- [ ] Test admin chat functionality with both member/guest contacts
-- [ ] Test knowledge base management
-- [ ] Test member-to-guest promotion flow
-- [ ] Test member app chat functionality independently
-- [ ] Test ticket creation and status updates in member chat
-- [ ] Test automatic ticket creation on new sessions
-- [ ] Test natural conversation flow for issue resolution checking
-- [ ] Test bot tool calls for ticket status updates
-- [ ] Test ticket status persistence across sessions
-- [ ] Verify both apps work independently with shared database
-- [ ] Test data consistency between admin and member contexts
-
-### **Production Deployment**
-- [ ] Run production database migrations
-- [ ] Deploy updated application (monstro-15)
-- [ ] Deploy member app updates (monstro-member)
-- [ ] Monitor for issues
-- [ ] Update documentation
+### **Phase 6: Launch (Week 6)**
+- [ ] Production database migrations
+- [ ] Deploy simplified support bot system
+- [ ] Monitor for issues and performance
+- [ ] Documentation and training
+- [ ] Gather user feedback for iterations
 
 ---
 
-## 🔍 **Critical Testing Checklist**
+## 🎯 **Success Criteria**
 
-### **Database Integration**
-- [ ] Members can chat with bots (memberLocations integration)
-- [ ] Guests can chat with bots (guestContacts table)
-- [ ] Guest-to-member promotion works correctly
-- [ ] Bot metadata is properly stored and retrieved
-- [ ] All foreign key constraints work correctly
-- [ ] Database migrations run without errors
+### **MVP Launch Requirements**
+- [ ] Location owners can configure one support bot per location
+- [ ] Support bot can answer questions using knowledge base
+- [ ] Trigger system works for defined scenarios
+- [ ] Members can chat with support bot from member app
+- [ ] Vendors can take over conversations when needed
+- [ ] Tickets are automatically created and managed
+- [ ] System is stable with <5% error rate
 
-### **Bot Functionality**
-- [ ] Bot creation and configuration works
-- [ ] Scenario triggers work correctly with test messages
-- [ ] Knowledge base queries return relevant information
-- [ ] Chat testing interface responds properly
-- [ ] Different AI models (GPT, Claude, Gemini) respond correctly
-- [ ] Node flow execution follows designed paths
-- [ ] Bot templates can be applied to new bots
-
-### **Contact Handling**
-- [ ] Contact selection in chat testing works
-- [ ] Member vs guest conversation tracking is accurate
-- [ ] Bot progress tracking works for both member and guest types
-- [ ] Conversation history is preserved correctly
-- [ ] Unified contact API returns both members and guests
-- [ ] Guest promotion to member preserves conversation history
-
-### **API Endpoints**
-- [ ] All CRUD operations for bots function properly
-- [ ] Scenario management (create/update/delete) works
-- [ ] Document upload and processing completes successfully
-- [ ] Chat streaming responses work without dropping connections
-- [ ] Hybrid contact endpoints return correct data
-- [ ] Error handling works for invalid requests
-- [ ] Authentication and authorization work correctly
-
-### **Frontend Components**
-- [ ] Bot list displays and updates correctly
-- [ ] Bot configuration panel saves changes
-- [ ] Chat testing interface sends and receives messages
-- [ ] Navigation links work and highlight correctly
-- [ ] All forms validate input properly
-- [ ] Loading states display appropriately
-- [ ] Error messages are user-friendly
-
-### **Integration Points**
-- [ ] Redis sessions are created and maintained
-- [ ] LangChain integration works with all AI providers
-- [ ] Vector embeddings are generated for documents
-- [ ] Workflow execution triggers correctly
-- [ ] Tool calls (booking, extraction, etc.) function properly
-- [ ] File uploads complete and are processed
-- [ ] Real-time streaming maintains connection stability
-
-### **Performance & Scalability**
-- [ ] Database queries perform efficiently
-- [ ] Chat responses stream without significant delay
-- [ ] File processing doesn't block the UI
-- [ ] Memory usage remains stable during extended sessions
-- [ ] Concurrent bot conversations don't interfere
-- [ ] Large knowledge bases don't slow down responses
-
-### **Security & Data Privacy**
-- [ ] User data is properly isolated by location
-- [ ] Bot conversations are not accessible across locations
-- [ ] File uploads are validated and sanitized
-- [ ] API endpoints require proper authentication
-- [ ] Guest contact data is handled securely
-- [ ] Member data integration maintains existing privacy controls
-
-### **Member App Integration**
-- [ ] Members can access chat interface from member app
-- [ ] Only active bots are available for member selection
-- [ ] Supabase authentication works for member chat access
-- [ ] Chat messages stream in real-time to member app
-- [ ] Member context is properly passed to bot conversations
-- [ ] Conversation history is preserved for members in database
-- [ ] Bot responses are personalized for member data
-- [ ] AI processing works independently in member app
-- [ ] Error handling works gracefully in member app
-- [ ] Mobile responsiveness works for member chat
-- [ ] Bot selector shows available bots correctly
-- [ ] Member app can handle multiple concurrent conversations
-- [ ] Supabase RLS policies protect member data access
-- [ ] Member app AI models function correctly
-- [ ] Member chat is completely independent from admin chat testing
-- [ ] Both apps can operate independently with same database
-
-### **Ticket System**
-- [ ] Tickets are automatically created for new chat sessions
-- [ ] Ticket creation works for both member and guest conversations
-- [ ] Ticket status is properly tracked and updated
-- [ ] Bot can access ticket information during conversations
-- [ ] Ticket status updates work through API tool calls
-- [ ] Natural conversation flow includes issue resolution checking
-- [ ] Ticket metadata includes relevant conversation context
-- [ ] Ticket relationships are properly maintained with conversations
-- [ ] Ticket status changes are logged with timestamps
-- [ ] Ticket system works independently in member app
-
-### **Redis Session Management**
-- [ ] Redis sessions are created correctly for new conversations
-- [ ] Session TTL is set and managed properly (2 hours)
-- [ ] Session data includes conversation state and collected data
-- [ ] Sessions extend TTL on user activity
-- [ ] Smart recovery recreates sessions from conversation history
-- [ ] Conversation state analysis works correctly (new/ongoing/booking/information_gathering)
-- [ ] Data extraction from messages functions properly (email, phone, time)
-- [ ] Current objective determination works based on bot configuration
-- [ ] Session updates are saved to Redis after each interaction
-- [ ] Expired sessions trigger smart recovery instead of fresh start
-- [ ] Multiple concurrent sessions don't interfere with each other
-- [ ] Session data is properly cleaned up after TTL expiration
-- [ ] Session recovery handles edge cases (corrupted data, missing messages)
-- [ ] Bot prompt includes session context for conversation continuity
-- [ ] Session state transitions work correctly throughout conversation flow
+### **Performance Targets**
+- [ ] <2 second response time for bot replies
+- [ ] 90% uptime for support chat functionality
+- [ ] Support bot resolves 70% of simple queries without escalation
+- [ ] Member satisfaction score >70% for bot interactions
 
 ---
 
-## 📈 **Success Metrics**
+## 📝 **Key Decisions Made**
 
-✅ **Zero data loss** during migration  
-✅ **Feature parity** with monstro-bots functionality  
-✅ **Improved user experience** with member integration  
-✅ **Clean upgrade path** for guest contacts to members
-✅ **Scalable architecture** for future bot features
-✅ **Maintainable codebase** with proper separation of concerns
-✅ **Automatic ticket creation** for issue tracking
-✅ **Natural conversation flow** for issue resolution checking
-✅ **Tool-based ticket status updates** during conversations  
-✅ **Comprehensive testing** covering all use cases  
+1. **Simplified Architecture**: Removed complex queue processing and visual node builders
+2. **Single Bot Per Location**: No multiple bot creation/management complexity  
+3. **Direct AI Processing**: Simple streaming responses using existing LangChain setup
+4. **Complete Support Tool Set**: Fixed set of practical member support and ticket management tools:
+   - **Member Status**: Get subscription/package status and details
+   - **Member Billing**: View payment methods and transaction history
+   - **Bookable Sessions**: See available classes based on memberships
+   - **Ticket Creation**: Create support tickets for issue tracking
+   - **Ticket Management**: Update ticket status and add notes
+   - **Knowledge Search**: General facility and policy information
+   - **Human Escalation**: Vendor takeover for complex issues
+5. **Vendor Takeover**: Human intervention capability built-in
+6. **Practical Use Cases**: Focus on real member support needs, not complex workflows
 
----
+## 🎯 **Support Bot Value Proposition**
 
-## 📚 **Additional Notes**
+**For Members:**
+- ✅ **Instant membership info** - "What's my subscription status?"
+- ✅ **Quick billing queries** - "When is my next payment?"
+- ✅ **Class availability** - "What classes can I book with my package?"
+- ✅ **Issue tracking** - Automatic ticket creation and status updates
+- ✅ **24/7 availability** - Get answers and support anytime without waiting for staff
+- ✅ **Consistent information** - Always up-to-date member data
 
-### **Node System Architecture**
-The bot system uses a visual node-based flow where each node represents a step in the conversation:
+**For Location Owners:**
+- ✅ **Reduced support workload** - Bot handles routine membership questions and ticket creation
+- ✅ **Issue tracking** - All support conversations automatically become tickets
+- ✅ **Happy members** - Instant answers and proper issue management improve satisfaction
+- ✅ **Easy setup** - Simple configuration, no complex workflows
+- ✅ **Smart escalation** - Human agents handle only complex issues with full ticket context
 
-- **Standard Nodes**: Basic conversational responses
-- **Extraction Nodes**: Extract specific information from user messages
-- **Condition Nodes**: Create branching logic based on conditions  
-- **Delay Nodes**: Add timed delays between responses
-- **Booking Nodes**: Handle appointment scheduling flows
-
-Each node contains:
-- **Label**: Display name
-- **Goal**: What the AI should accomplish
-- **Instructions**: Specific guidance
-- **Functions**: Tools/actions the AI can use
-- **Paths**: Where to go next (branching logic)
-
-### **Hybrid Contact Benefits**
-- **No data duplication** between members and contacts
-- **Leverages existing member data** for authenticated users  
-- **Handles non-member interactions** with lightweight guest table
-- **Clean upgrade path** when guests become members
-- **Single source of truth** for member information
-- **Maintains all business relationships** (billing, memberships, etc.)
-
-### **Migration Risk Mitigation**
-- **Incremental deployment** with feature flags
-- **Rollback plan** if issues are discovered
-- **Data backup** before running migrations
-- **Staging environment** testing before production
-- **Monitoring and alerting** for post-migration issues
-
-### **Ticket System Architecture**
-The ticket system provides automatic issue tracking for bot conversations:
-
-- **Automatic Creation**: Every new chat session creates a ticket with "open" status
-- **Status Tracking**: Tickets can be "open" or "resolved" with proper metadata
-- **Natural Integration**: Bot can naturally ask about issue resolution in conversation
-- **Tool-Based Updates**: Bot can call API tools to update ticket status when appropriate
-- **Session Continuity**: Ticket context is maintained across session recovery
-- **Member/Guest Support**: Works for both authenticated members and guest contacts
-
-### **Ticket Conversation Flow**
-1. **New Session**: Ticket automatically created with "open" status
-2. **Ongoing Conversation**: Bot provides assistance and tracks progress
-3. **Resolution Checking**: Bot naturally asks if issue is resolved
-4. **Status Updates**: Bot calls tools to update ticket status based on member responses
-5. **Session Recovery**: Ticket context restored when member returns
-6. **Closure**: Ticket marked as resolved when appropriate
-
-This comprehensive plan ensures a smooth migration while leveraging your existing Members system and providing a clear path for both authenticated and guest bot interactions.
+This approach prioritizes **shipping quickly** with **core member value** while maintaining the ability to **iterate and expand** based on user feedback.

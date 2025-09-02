@@ -100,14 +100,19 @@ This document outlines user stories for the simplified support bot functionality
 ### **User Story 2.1: Test Support Bot Chat** ⭐ P0
 **As a** location owner  
 **I want to** test my support bot exactly as members will experience it  
-**So that** I can verify responses and tool calls work correctly before going live  
+**So that** I can verify responses and member-specific tool calls work correctly before going live  
 
 **Acceptance Criteria:**
 - [ ] I can see a chat interface in the support bot dashboard
 - [ ] I can type messages and receive immediate AI responses
 - [ ] Bot uses the configured prompt, model, and persona
-- [ ] Bot can access knowledge base documents for answers
-- [ ] Fixed tool calls work correctly (ticket management, basic queries)
+- [ ] Bot can access knowledge base documents for general facility info
+- [ ] Support tool calls work correctly:
+  - [ ] Get member subscription/package status
+  - [ ] Get member billing information
+  - [ ] Get member's bookable sessions/classes
+  - [ ] Create support tickets for issue tracking
+  - [ ] Update ticket status when issues are resolved
 - [ ] Trigger-based tool calls execute when trigger phrases are used
 - [ ] Test chat behaves identically to member app chat
 - [ ] Session state tracks conversation context
@@ -115,7 +120,7 @@ This document outlines user stories for the simplified support bot functionality
 **Technical Requirements:**
 - Direct AI processing without complex queue system
 - Same AI models and processing engine as member chats
-- Tool calls execute with proper context
+- Member data tool calls execute with proper database queries
 - Session management tracks conversation state
 - Knowledge base integration for document queries
 
@@ -164,23 +169,29 @@ This document outlines user stories for the simplified support bot functionality
 ### **User Story 3.1: Create Support Triggers** ⭐ P0
 **As a** location owner  
 **I want to** create triggers that cause specific tool calls  
-**So that** my support bot can handle specific customer situations automatically  
+**So that** my support bot can handle specific member questions automatically  
 
 **Acceptance Criteria:**
 - [ ] I can access triggers management in support bot dashboard
 - [ ] I can click "Add Trigger" and see creation form
 - [ ] I can enter trigger name and trigger phrases (keywords/intents)
-- [ ] I can select which tool call should execute when triggered
+- [ ] I can select which support tool call should execute when triggered:
+  - [ ] Get Member Status (for "membership status", "subscription info", etc.)
+  - [ ] Get Member Billing (for "billing info", "payment history", etc.)  
+  - [ ] Get Bookable Sessions (for "available classes", "what can I book", etc.)
+  - [ ] Create Support Ticket (for "I need help", "report issue", etc.)
+  - [ ] Update Ticket Status (for "issue resolved", "problem fixed", etc.)
+  - [ ] Search Knowledge Base (for general facility questions)
+  - [ ] Escalate to Human (for complex issues)
 - [ ] I can add multiple example phrases that should activate this trigger
-- [ ] I can add requirements that must be met before trigger activates
 - [ ] I can save trigger and see it in my support bot's trigger list
 - [ ] Triggers are immediately available for testing
 
 **Technical Requirements:**
-- Trigger creation API stores trigger phrases and tool calls
+- Trigger creation API stores trigger phrases and member-focused tool calls
 - Form validation ensures required fields are filled
 - Triggers linked to specific support bot correctly
-- Tool call definitions available for selection
+- Member tool call definitions available for selection
 
 ### **User Story 3.2: Test Trigger Execution** ⭐ P0
 **As a** location owner  
@@ -325,21 +336,74 @@ This document outlines user stories for the simplified support bot functionality
 ### **User Story 6.1: Member Support Chat** ⭐ P0
 **As a** member of a location  
 **I want to** chat with the location's support bot  
-**So that** I can get information and assistance related to my membership  
+**So that** I can get instant information about my membership, billing, and available classes  
 
 **Acceptance Criteria:**
 - [ ] I can access support chat from member app
 - [ ] Support bot recognizes me as a member and personalizes responses
-- [ ] Bot can access my member information for contextualized help
+- [ ] Bot can answer questions about my membership status and subscriptions
+- [ ] Bot can provide my billing information and payment history
+- [ ] Bot can tell me which classes/sessions I can book
 - [ ] My conversation history is saved and associated with my member account
-- [ ] Bot can reference my membership status, points, or other relevant data
 - [ ] Privacy controls protect my member data appropriately
 
 **Technical Requirements:**
 - Member app integration with support bot
-- Member data accessible during bot conversations
+- Member data accessible during bot conversations with specific tool calls
 - Conversation tracking linked to member records
 - Proper data privacy and access controls
+
+### **User Story 6.2: Check Membership Status** ⭐ P0
+**As a** member  
+**I want to** ask the support bot about my membership status  
+**So that** I can understand my current subscriptions and packages  
+
+**Acceptance Criteria:**
+- [ ] I can ask "What's my membership status?" or similar questions
+- [ ] Bot shows my active subscriptions with plan details and billing dates
+- [ ] Bot shows my available packages with remaining credits and expiration
+- [ ] Bot explains what each subscription or package includes
+- [ ] Bot handles cases where I have no active memberships gracefully
+
+**Technical Requirements:**
+- getMemberStatus tool call integration
+- Database queries for member subscriptions and packages
+- Clear formatting of membership information
+
+### **User Story 6.3: Check Billing Information** ⭐ P0
+**As a** member  
+**I want to** ask the support bot about my billing and payment information  
+**So that** I can understand my payment methods and transaction history  
+
+**Acceptance Criteria:**
+- [ ] I can ask "What's my billing info?" or "Show my payment history"
+- [ ] Bot shows my default payment method (masked for security)
+- [ ] Bot shows recent transactions with dates and amounts
+- [ ] Bot handles cases with no payment methods gracefully
+- [ ] Sensitive information is properly protected
+
+**Technical Requirements:**
+- getMemberBilling tool call integration
+- Database queries for payment methods and transactions
+- Proper security and data masking for sensitive information
+
+### **User Story 6.4: Check Available Classes** ⭐ P0
+**As a** member  
+**I want to** ask the support bot what classes I can book  
+**So that** I can understand what's available based on my memberships  
+
+**Acceptance Criteria:**
+- [ ] I can ask "What classes can I book?" or "What's available to me?"
+- [ ] Bot shows classes included in my subscriptions
+- [ ] Bot shows classes available with my packages and credit requirements
+- [ ] Bot groups classes by subscription vs package access
+- [ ] Bot handles cases where I have no class access gracefully
+- [ ] Bot can suggest purchasing options if I have limited access
+
+**Technical Requirements:**
+- getMemberBookableSessions tool call integration
+- Database queries for subscription/package class relationships
+- Clear grouping and presentation of available classes
 
 ---
 
