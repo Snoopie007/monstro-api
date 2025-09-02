@@ -17,4 +17,9 @@ export * from "./wallet";
 export * from "./DatabaseEnums";
 export * from "./integrations";
 export * from "./tag";
-export * from "./bots";
+
+// SUPPORT BOT TYPES
+export * from "./supportBot";
+export * from "./supportConversations";
+export * from "./supportTickets";
+export * from "./support";

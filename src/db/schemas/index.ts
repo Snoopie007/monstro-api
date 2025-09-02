@@ -18,9 +18,13 @@ export * from "./transactions";
 export * from "./accounts";
 export * from "./ImportMembers";
 
-export * from "./BotEnums";
-export * from "./bots";
-export * from "./documents";
-export * from "./conversations";
-export * from "./workflows";
-export * from "./guestContacts";
+// SUPPORT BOT SCHEMAS
+export * from "./SupportBotEnums";
+export * from "./supportBots";
+export * from "./supportTriggers";
+export * from "./supportBotPersonas";
+export * from "./supportDocuments";
+export * from "./supportConversations";
+export * from "./supportMessages";
+export * from "./supportTickets";
+export * from "./supportLogs";
