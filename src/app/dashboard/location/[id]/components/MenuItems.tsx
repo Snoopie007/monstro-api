@@ -70,7 +70,7 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
     ],
   },
   {
-    name: "Bots",
+    name: "Support",
     path: "bots",
     icon: <Bot size={16} />,
   },

@@ -1,57 +1,57 @@
-# 🤖 Bot Migration Plan: Monstro-Bots → Monstro-15
+# 🤖 Support Bot Migration Plan: Simplified Single Bot Approach
 
 ## 📋 **Migration Overview**
 
-**Goal**: Migrate complete bot functionality from `monstro-bots` into `monstro-15`, replacing the current AI page, while integrating bot interactions with the existing Members system instead of creating a separate Contacts table.
+**Goal**: Create a simplified support chatbot system for `monstro-15` that provides Q&A assistance to members with vendor takeover capability, replacing the complex multi-bot workflow system.
 
-**Target**: Replace `/src/app/dashboard/location/[id]/ai/` in monstro-15 with full bots functionality from monstro-bots.
+**Target**: Replace `/src/app/dashboard/location/[id]/ai/` in monstro-15 with a single support bot per location that can handle basic support queries and ticket management.
 
-**Key Decision**: Use hybrid approach with Members + lightweight Guest Contacts instead of separate Contacts table.
+**Key Changes**: 
+- Single bot per location (no multiple bot creation/deletion)
+- No visual node workflow builder
+- Simple Q&A chatbot with fixed tool calls  
+- User-defined "Triggers" (previously "Scenarios") for hard tool call triggers
+- Bot-inferred tool calls still available
+- Vendor takeover functionality for human intervention
+- Integrated ticket management system
 
 ---
 
 ## 🗄️ **Phase 1: Database Schema Migration**
 
-### **1.1 Create Bot Enums**
-Create `/src/db/schemas/BotEnums.ts`:
+### **1.1 Create Support Bot Enums**
+Create `/src/db/schemas/SupportBotEnums.ts`:
 ```sql
--- New enums for bot functionality
-CREATE TYPE bot_status AS ENUM ('Draft', 'Active', 'Pause', 'Archived');
-CREATE TYPE channel AS ENUM ('SMS', 'AI', 'Facebook', 'Google', 'WhatsApp', 'WebChat', 'Email', 'Contact', 'System');
-CREATE TYPE message_role AS ENUM ('user', 'ai', 'contact', 'system', 'tool', 'tool_response');
+-- Simplified enums for support bot functionality
+CREATE TYPE bot_status AS ENUM ('Draft', 'Active', 'Paused');
+CREATE TYPE channel AS ENUM ('WebChat', 'Email', 'System');
+CREATE TYPE message_role AS ENUM ('user', 'ai', 'vendor', 'system', 'tool', 'tool_response');
 CREATE TYPE bot_model AS ENUM ('anthropic', 'gpt', 'gemini');
-CREATE TYPE workflow_status AS ENUM ('Draft', 'Active', 'Pause', 'Archived');
-CREATE TYPE workflow_queue_status AS ENUM ('Processing', 'Completed', 'Failed', 'Cancelled');
 CREATE TYPE document_type AS ENUM ('file', 'website');
-CREATE TYPE ticket_status AS ENUM ('open', 'resolved');
+CREATE TYPE ticket_status AS ENUM ('open', 'in_progress', 'resolved', 'closed');
+CREATE TYPE trigger_type AS ENUM ('keyword', 'intent', 'condition');
 
-### **1.2 Create Bot Enums in TypeScript**
-Create `/src/db/schemas/BotEnums.ts` with TypeScript enums:
+### **1.2 Create TypeScript Enums**
+Create `/src/db/schemas/SupportBotEnums.ts` with TypeScript enums:
 ```typescript
 import { pgEnum } from "drizzle-orm/pg-core";
+
 export enum BotStatus {
     Draft = 'Draft',
     Active = 'Active',
-    Pause = 'Pause',
-    Archived = 'Archived'
+    Paused = 'Paused'
 }
 
 export enum Channel {
-    SMS = 'SMS',
-    AI = 'AI',
-    Facebook = 'Facebook',
-    Google = 'Google',
-    WhatsApp = 'WhatsApp',
     WebChat = 'WebChat',
     Email = 'Email',
-    Contact = 'Contact',
     System = 'System'
 }
 
 export enum MessageRole {
     User = 'user',
     AI = 'ai',
-    Contact = 'contact',
+    Vendor = 'vendor',
     System = 'system',
     Tool = 'tool',
     ToolResponse = 'tool_response'
@@ -63,20 +63,6 @@ export enum BotModel {
     Gemini = 'gemini'
 }
 
-export enum WorkflowStatus {
-    Draft = 'Draft',
-    Active = 'Active',
-    Pause = 'Pause',
-    Archived = 'Archived'
-}
-
-export enum WorkflowQueueStatus {
-    Processing = 'Processing',
-    Completed = 'Completed',
-    Failed = 'Failed',
-    Cancelled = 'Cancelled'
-}
-
 export enum DocumentType {
     File = 'file',
     Website = 'website'
@@ -84,26 +70,41 @@ export enum DocumentType {
 
 export enum TicketStatus {
     Open = 'open',
-    Resolved = 'resolved'
+    InProgress = 'in_progress',
+    Resolved = 'resolved',
+    Closed = 'closed'
+}
+
+export enum TriggerType {
+    Keyword = 'keyword',
+    Intent = 'intent',
+    Condition = 'condition'
 }
 
 export const ticketStatusEnum = pgEnum("ticket_status", [
     TicketStatus.Open,
+    TicketStatus.InProgress,
     TicketStatus.Resolved,
+    TicketStatus.Closed,
+]);
+
+export const triggerTypeEnum = pgEnum("trigger_type", [
+    TriggerType.Keyword,
+    TriggerType.Intent,
+    TriggerType.Condition,
 ]);
 ```
+
+### **1.3 Extend Existing Members System**
+```sql
+-- Add support bot specific fields to existing memberLocations table
+ALTER TABLE member_locations ADD COLUMN support_bot_metadata JSONB DEFAULT '{}';
+ALTER TABLE member_locations ADD COLUMN last_support_interaction TIMESTAMPTZ;
 ```
 
-### **1.2 Extend Existing Members System**
+### **1.4 Create Guest Contacts Table (For Non-Members)**
 ```sql
--- Add bot-specific fields to existing memberLocations table
-ALTER TABLE member_locations ADD COLUMN bot_metadata JSONB DEFAULT '{}';
-ALTER TABLE member_locations ADD COLUMN last_bot_interaction TIMESTAMPTZ;
-```
-
-### **1.3 Create Guest Contacts Table (For Non-Members)**
-```sql
--- Lightweight table for non-authenticated bot interactions
+-- Lightweight table for non-authenticated support interactions
 CREATE TABLE guest_contacts (
     id TEXT PRIMARY KEY DEFAULT uuid_base62(),
     location_id TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
@@ -111,264 +112,196 @@ CREATE TABLE guest_contacts (
     first_name TEXT,
     last_name TEXT,
     phone TEXT,
-    bot_metadata JSONB DEFAULT '{}',
+    support_metadata JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(location_id, email)
 );
 ```
 
-### **1.4 Create Core Bot Tables**
+### **1.5 Create Support Bot Tables**
 ```sql
--- Main bots table
-CREATE TABLE bots (
+-- Single support bot per location
+CREATE TABLE support_bots (
     id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    name TEXT,
-    prompt TEXT NOT NULL DEFAULT '',
     location_id TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+    name TEXT NOT NULL DEFAULT 'Support Bot',
+    prompt TEXT NOT NULL DEFAULT 'You are a helpful customer support assistant.',
     temperature INTEGER NOT NULL DEFAULT 0,
-    initial_message TEXT,
+    initial_message TEXT NOT NULL DEFAULT 'Hi! I'm here to help you. What can I assist you with today?',
     model bot_model NOT NULL DEFAULT 'gpt',
-    objectives JSONB[] NOT NULL DEFAULT '{}',
-    invalid_nodes TEXT[] NOT NULL DEFAULT '{}',
     status bot_status NOT NULL DEFAULT 'Draft',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ
-);
-
--- AI personas
-CREATE TABLE ai_persona (
-    id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    location_id TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    image TEXT,
-    response_details TEXT NOT NULL DEFAULT '',
-    personality TEXT[] NOT NULL DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ
-);
-
--- Bot-persona relationships
-CREATE TABLE bot_personas (
-    bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
-    persona_id TEXT NOT NULL REFERENCES ai_persona(id) ON DELETE CASCADE,
-    UNIQUE(bot_id, persona_id)
-);
-
--- Bot scenarios (triggers and workflows)
-CREATE TABLE bot_scenarios (
-    id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    name TEXT NOT NULL,
-    bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
-    workflow_id TEXT REFERENCES workflows(id) ON DELETE SET NULL,
-    routine_id TEXT REFERENCES bots(id) ON DELETE SET NULL,
-    trigger TEXT NOT NULL,
-    examples TEXT[] NOT NULL DEFAULT '{}',
-    requirements TEXT[] NOT NULL DEFAULT '{}',
-    yield BOOLEAN NOT NULL DEFAULT FALSE,
+    available_tools JSONB[] NOT NULL DEFAULT '{}', -- Fixed set of tool definitions
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ,
-    UNIQUE(bot_id, routine_id)
+    UNIQUE(location_id) -- Only one support bot per location
 );
 
--- Bot templates
-CREATE TABLE bot_templates (
+-- Support bot triggers (previously scenarios)
+CREATE TABLE support_triggers (
     id TEXT PRIMARY KEY DEFAULT uuid_base62(),
+    support_bot_id TEXT NOT NULL REFERENCES support_bots(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
-    description TEXT,
-    prompt TEXT NOT NULL DEFAULT '',
-    response_details TEXT NOT NULL DEFAULT '',
-    model TEXT NOT NULL,
-    initial_message TEXT,
-    invalid_nodes TEXT[] NOT NULL DEFAULT '{}',
-    objectives JSONB[] NOT NULL DEFAULT '{}',
+    trigger_type trigger_type NOT NULL DEFAULT 'keyword',
+    trigger_phrases TEXT[] NOT NULL DEFAULT '{}',
+    tool_call JSONB NOT NULL, -- Specific tool call to execute
+    examples TEXT[] NOT NULL DEFAULT '{}',
+    requirements TEXT[] NOT NULL DEFAULT '{}',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ
+);
+
+-- AI persona for support bot (optional)
+CREATE TABLE support_bot_personas (
+    id TEXT PRIMARY KEY DEFAULT uuid_base62(),
+    support_bot_id TEXT NOT NULL REFERENCES support_bots(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    image TEXT,
+    response_style TEXT NOT NULL DEFAULT '',
+    personality_traits TEXT[] NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ,
+    UNIQUE(support_bot_id) -- One persona per support bot
 );
 ```
 
-### **1.5 Create Knowledge Base Tables**
+### **1.6 Create Knowledge Base Tables**
 ```sql
--- Documents for knowledge base
-CREATE TABLE documents (
+-- Documents for support bot knowledge base
+CREATE TABLE support_documents (
     id TEXT PRIMARY KEY DEFAULT uuid_base62(),
+    support_bot_id TEXT NOT NULL REFERENCES support_bots(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     file_path TEXT,
     url TEXT,
     type document_type NOT NULL,
-    location_id TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
     size INTEGER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Document processing metadata
-CREATE TABLE document_metadata (
-    id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    document_id TEXT REFERENCES documents(id) ON DELETE CASCADE,
-    metadata JSONB NOT NULL DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(document_id)
-);
-
 -- Document chunks for RAG
-CREATE TABLE document_chunks (
+CREATE TABLE support_document_chunks (
     id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    document_id TEXT REFERENCES documents(id) ON DELETE CASCADE,
+    document_id TEXT REFERENCES support_documents(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     embedding VECTOR(384)
 );
-
--- Bot-knowledge relationships
-CREATE TABLE bot_knowledge (
-    bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
-    document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-    UNIQUE(bot_id, document_id)
-);
 ```
 
-### **1.6 Create Conversation Tables (Hybrid Member/Guest Support)**
+### **1.7 Create Conversation Tables (Hybrid Member/Guest Support)**
 ```sql
--- Conversations supporting both members and guests
-CREATE TABLE conversations (
+-- Support conversations supporting both members and guests
+CREATE TABLE support_conversations (
     id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    location_id TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+    support_bot_id TEXT NOT NULL REFERENCES support_bots(id) ON DELETE CASCADE,
     
     -- Either member_id OR guest_contact_id (not both)
     member_id TEXT REFERENCES members(id) ON DELETE CASCADE,
     guest_contact_id TEXT REFERENCES guest_contacts(id) ON DELETE CASCADE,
     
+    -- Vendor takeover functionality
+    vendor_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    taken_over_at TIMESTAMPTZ,
+    is_vendor_active BOOLEAN DEFAULT FALSE,
+    
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ,
     
-    CONSTRAINT conversation_contact_check CHECK (
+    CONSTRAINT support_conversation_contact_check CHECK (
         (member_id IS NOT NULL AND guest_contact_id IS NULL) OR
         (member_id IS NULL AND guest_contact_id IS NOT NULL)
     )
 );
 
--- Messages in conversations
-CREATE TABLE messages (
+-- Messages in support conversations
+CREATE TABLE support_messages (
     id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    conversation_id TEXT NOT NULL REFERENCES support_conversations(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     role message_role NOT NULL,
-    channel channel NOT NULL,
+    channel channel NOT NULL DEFAULT 'WebChat',
     metadata JSONB NOT NULL DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Bot progress tracking (hybrid member/guest)
-CREATE TABLE bot_progress (
+-- Support tickets for issue tracking
+CREATE TABLE support_tickets (
     id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
-    
-    -- Either member_id OR guest_contact_id
-    member_id TEXT REFERENCES members(id) ON DELETE CASCADE,
-    guest_contact_id TEXT REFERENCES guest_contacts(id) ON DELETE CASCADE,
-    
-    completed BOOLEAN DEFAULT FALSE,
-    current_node TEXT NOT NULL,
-    stopped TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
-    CONSTRAINT bot_progress_contact_check CHECK (
-        (member_id IS NOT NULL AND guest_contact_id IS NULL) OR
-        (member_id IS NULL AND guest_contact_id IS NOT NULL)
-    )
-);
-
--- Tickets for tracking issues
-CREATE TABLE tickets (
-    id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    conversation_id TEXT NOT NULL REFERENCES support_conversations(id) ON DELETE CASCADE,
+    title TEXT NOT NULL DEFAULT 'Support Request',
+    description TEXT,
     status ticket_status NOT NULL DEFAULT 'open',
+    priority INTEGER DEFAULT 3, -- 1=high, 2=medium, 3=low
+    assigned_to TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ,
     metadata JSONB DEFAULT '{}'
 );
 
--- Bot interaction logs
-CREATE TABLE bot_logs (
+-- Support interaction logs
+CREATE TABLE support_logs (
     id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    bot_id TEXT NOT NULL REFERENCES bots(id) ON DELETE CASCADE,
-    member_id TEXT REFERENCES members(id) ON DELETE CASCADE,
-    guest_contact_id TEXT REFERENCES guest_contacts(id) ON DELETE CASCADE,
+    support_bot_id TEXT NOT NULL REFERENCES support_bots(id) ON DELETE CASCADE,
+    conversation_id TEXT REFERENCES support_conversations(id) ON DELETE CASCADE,
+    action TEXT NOT NULL, -- 'chat', 'tool_call', 'vendor_takeover', etc.
     metadata JSONB NOT NULL DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
 
-### **1.7 Create Workflow Tables**
-```sql
--- Workflows for bot scenarios
-CREATE TABLE workflows (
-    id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    location_id TEXT NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    status workflow_status NOT NULL DEFAULT 'Draft',
-    nodes JSONB[] NOT NULL DEFAULT ARRAY[]::jsonb[],
-    invalid_nodes TEXT[] NOT NULL DEFAULT ARRAY[]::text[],
-    metadata JSONB NOT NULL DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ
-);
+### **1.8 Create Schema Files**
+Create schema TypeScript files for the new tables:
 
--- Workflow triggers
-CREATE TABLE workflow_triggers (
-    id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    workflow_id TEXT NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
-    type TEXT NOT NULL,
-    data JSONB NOT NULL DEFAULT '{}'
-);
-
--- Workflow execution queue
-CREATE TABLE workflow_queues (
-    id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    workflow_id TEXT NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
-    member_id TEXT REFERENCES members(id) ON DELETE CASCADE,
-    guest_contact_id TEXT REFERENCES guest_contacts(id) ON DELETE CASCADE,
-    current_node TEXT NOT NULL DEFAULT 'start',
-    stopped TEXT,
-    status workflow_queue_status NOT NULL DEFAULT 'Processing',
-    metadata JSONB NOT NULL DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ
-);
-
--- Workflow execution logs
-CREATE TABLE workflow_logs (
-    id TEXT PRIMARY KEY DEFAULT uuid_base62(),
-    workflow_id TEXT NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
-    queue_id TEXT NOT NULL REFERENCES workflow_queues(id) ON DELETE CASCADE,
-    metadata JSONB NOT NULL DEFAULT '{}',
-    error_message TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ
-);
-```
-
-### **1.7 Create Ticket Schema**
-Create `/src/db/schemas/tickets.ts`:
+#### `/src/db/schemas/supportTickets.ts`
 ```typescript
-import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
-import { conversations } from "./conversations";
-import { ticketStatusEnum } from "./BotEnums";
+import { pgTable, text, timestamp, jsonb, integer, boolean } from "drizzle-orm/pg-core";
+import { supportConversations } from "./supportConversations";
+import { users } from "./users";
+import { ticketStatusEnum } from "./SupportBotEnums";
 
-export const tickets = pgTable("tickets", {
+export const supportTickets = pgTable("support_tickets", {
     id: text("id").primaryKey().default("uuid_base62()"),
-    conversationId: text("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+    conversationId: text("conversation_id").notNull().references(() => supportConversations.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default("Support Request"),
+    description: text("description"),
     status: ticketStatusEnum("status").notNull().default("open"),
+    priority: integer("priority").default(3),
+    assignedTo: text("assigned_to").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }),
     metadata: jsonb("metadata").default("{}"),
 });
 
-export type Ticket = typeof tickets.$inferSelect;
-export type NewTicket = typeof tickets.$inferInsert;
+export type SupportTicket = typeof supportTickets.$inferSelect;
+export type NewSupportTicket = typeof supportTickets.$inferInsert;
 ```
 
-### **1.8 Update Schema Index**
+#### `/src/db/schemas/supportTriggers.ts`
+```typescript
+import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { supportBots } from "./supportBots";
+import { triggerTypeEnum } from "./SupportBotEnums";
+
+export const supportTriggers = pgTable("support_triggers", {
+    id: text("id").primaryKey().default("uuid_base62()"),
+    supportBotId: text("support_bot_id").notNull().references(() => supportBots.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    triggerType: triggerTypeEnum("trigger_type").notNull().default("keyword"),
+    triggerPhrases: text("trigger_phrases").array().notNull().default("{}"),
+    toolCall: jsonb("tool_call").notNull(),
+    examples: text("examples").array().notNull().default("{}"),
+    requirements: text("requirements").array().notNull().default("{}"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+});
+
+export type SupportTrigger = typeof supportTriggers.$inferSelect;
+export type NewSupportTrigger = typeof supportTriggers.$inferInsert;
+```
+
+### **1.9 Update Schema Index**
 Update `/src/db/schemas/index.ts`:
 ```typescript
 // Existing exports
@@ -377,14 +310,16 @@ export * from "./locations";
 export * from "./members";
 // ... all existing exports
 
-// NEW BOT SCHEMAS
-export * from "./BotEnums";
-export * from "./bots";
-export * from "./documents";
-export * from "./conversations";
-export * from "./workflows";
+// NEW SUPPORT BOT SCHEMAS
+export * from "./SupportBotEnums";
+export * from "./supportBots";
+export * from "./supportDocuments";
+export * from "./supportConversations";
+export * from "./supportMessages";
+export * from "./supportTickets";
+export * from "./supportTriggers";
+export * from "./supportLogs";
 export * from "./guestContacts";
-export * from "./tickets";
 ```
 
 ---
@@ -395,46 +330,29 @@ export * from "./tickets";
 ```json
 {
   "dependencies": {
-    // LangChain Core Dependencies (P0)
+    // AI Core Dependencies (P0)
     "@langchain/core": "^0.3.21",
     "@langchain/anthropic": "^0.3.21",
     "@langchain/openai": "^4.3.9",
     "@langchain/google-genai": "^0.2.10",
-    "@langchain/community": "^0.3.21",
-    "@langchain/textsplitters": "^0.3.21",
     
     // AI Processing & Streaming (P0)
     "ai": "^4.3.9",
-    "openai": "^4.67.1",
-    "@anthropic-ai/sdk": "^0.30.1",
-    
-    // Node Flow Processing Queue (P0)
-    "bullmq": "^5.53.3",
-    "ioredis": "^5.4.1",
     
     // Session Management (P0)
     "@upstash/redis": "^1.34.4",
     
-    // Visual Node Builder (P0)
-    "@xyflow/react": "^12.0.4",
-    "@xyflow/node-resizer": "^3.0.4",
-    
     // Document Processing (P0)
     "pdf-parse": "^1.1.1",
-    "csv-parse": "^5.6.0",
     "@mendable/firecrawl-js": "^1.25.5",
     
     // Embeddings & Vector DB (P0)
     "@xenova/transformers": "^2.13.4",
-    "@huggingface/inference": "^2.8.0",
     
     // UI Components (if missing)
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-slider": "^1.3.5",
-    "@radix-ui/react-toast": "^1.2.1",
-    
-    // Upgrade existing
-    "drizzle-orm": "^0.40.1"
+    "@radix-ui/react-toast": "^1.2.1"
   }
 }
 ```
@@ -451,13 +369,7 @@ GOOGLE_AI_API_KEY=your_google_key
 UPSTASH_REDIS_REST_URL=your_redis_url
 UPSTASH_REDIS_REST_TOKEN=your_redis_token
 
-# Node Flow Processing (P0)
-REDIS_URL=your_redis_url_for_queues
-REDIS_TOKEN=your_redis_token_for_queues
-
 # Vector DB & Embeddings (P0)
-PINECONE_API_KEY=your_pinecone_key
-PINECONE_ENVIRONMENT=your_pinecone_env
 HUGGINGFACE_API_KEY=your_hf_key
 
 # Security
@@ -474,30 +386,30 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 ## 🔧 **Phase 3: Backend API Migration**
 
-### **3.1 Create Core Bot API Routes**
+### **3.1 Create Support Bot API Routes**
 
-#### `/src/app/api/protected/loc/[id]/bots/route.ts`
+#### `/src/app/api/protected/loc/[id]/support/route.ts`
 ```typescript
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
-    // Fetch all bots for location with relations
+    // Get the single support bot for this location
+    // Auto-create if doesn't exist
 }
 
-export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
-    // Create new bot for location
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+    // Update support bot configuration
 }
 ```
 
-#### `/src/app/api/protected/loc/[id]/bots/[bid]/route.ts`
+#### `/src/app/api/protected/loc/[id]/support/status/route.ts`
 ```typescript
-export async function GET() { /* Get specific bot */ }
-export async function PUT() { /* Update bot */ }
-export async function DELETE() { /* Delete bot */ }
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+    // Update support bot status (Draft/Active/Paused)
+}
 ```
 
-#### `/src/app/api/protected/loc/[id]/bots/[bid]/chat/route.ts`
-```typescript
-import { NextRequest, NextResponse } from "next/server";
-import { LangChainAdapter } from 'ai';
+---
+
+**Note**: This migration plan has been simplified to focus on a single support bot per location with fixed tool calls and user-defined triggers instead of complex visual workflow builders. The remaining sections of this document contain legacy content from the previous complex approach and should be updated to reflect the simplified scope.
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
