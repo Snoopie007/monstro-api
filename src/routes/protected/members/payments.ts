@@ -21,6 +21,8 @@ export function memberPayments(app: Elysia) {
 
             const isTestMember = member.email === 'mtest@yahoo.com';
 
+
+            console.log("Stripe Secret Key", process.env.STRIPE_TEST_SECRET_KEY);
             const stripe = new VendorStripePayments(isTestMember ? process.env.STRIPE_TEST_SECRET_KEY : undefined);
 
 

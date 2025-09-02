@@ -54,7 +54,7 @@ export const memberRoutes = new Elysia({ prefix: "/member" }).group(
                             <title>Waiver Not Found</title>
                             <meta charset="utf-8">
                             <style>
-                                body { font-family: Arial, sans-serif; text-align: center; padding: 40px 20px; }
+                                body { font-family: Arial, sans-serif; text-align: center; padding: 25px 0px; }
                                 .error { color: #dc3545; font-size: 24px; }
                             </style>
                         </head>
@@ -91,7 +91,7 @@ export const memberRoutes = new Elysia({ prefix: "/member" }).group(
                                 line-height: 1.6;
                                 color: #374151;
                                 margin: 0;
-                                padding: 40px 20px;
+                                padding: 25px 0px;
                             }
                             .header {
                                 border-bottom: 1px solid #e5e7eb;
