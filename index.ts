@@ -49,6 +49,10 @@ app
       return { status: "error", message: "Health check failed" };
     }
   })
+  .get("/favicon.ico", ({ set }) => {
+    set.status = 204;
+    return "";
+  })
   .group("/api", (app) => app.use(AuthRoutes).use(ProtectedRoutes))
   .use(PublicRoutes)
   .onError(({ code, error, set }) => {

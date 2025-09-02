@@ -44,9 +44,9 @@ async function getMemberPlan(pid: string) {
 	}
 }
 
-export const planRoutes = new Elysia({ prefix: "/plan" }).get(
-	"/:pid/doc",
-	async ({ params: { pid }, set }) => {
+export const planRoutes = new Elysia({ prefix: "/plan" })
+
+	.get("/:pid/doc", async ({ params: { pid }, set }) => {
 		const memberPlan = await getMemberPlan(pid);
 
 		if (!memberPlan) {
@@ -57,7 +57,6 @@ export const planRoutes = new Elysia({ prefix: "/plan" }).get(
         <head>
           <title>Plan Not Found</title>
           <meta charset="utf-8">
-          <link rel="icon" href="data:,">
           <style>
             body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
             .error { color: #dc3545; font-size: 24px; }
@@ -91,7 +90,6 @@ export const planRoutes = new Elysia({ prefix: "/plan" }).get(
         <title>${plan?.contract?.title || "Document"}</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="icon" href="data:,">
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -152,5 +150,4 @@ export const planRoutes = new Elysia({ prefix: "/plan" }).get(
 		};
 
 		return html;
-	}
-);
+	});
