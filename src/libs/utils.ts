@@ -52,9 +52,8 @@ function generateVRs({ reservations, rrs, startDate, endDate }: GenerateVRsParam
 
         while (currentDate <= endDate) {
             const currentDateString = currentDate.toISOString().split("T")[0];
-            const exception = rr.exceptions?.find(
-                (e) => e.occurrenceDate.toISOString() === currentDateString
-            );
+            const exception = rr.exceptions?.find((e) => e.occurrenceDate.toISOString() === currentDateString);
+            console.log(exception);
             const existingReservation = reservations.find((r) => {
                 return (
                     r.startOn.toISOString().split("T")[0] === currentDateString &&

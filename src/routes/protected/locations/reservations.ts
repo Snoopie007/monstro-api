@@ -128,7 +128,7 @@ export async function locationReservations(app: Elysia) {
                     memberId,
                     locationId: lid,
                     sessionId: sessionId,
-                    startDate: new Date(date),
+                    startDate: new Date(),
                     ...(type === "pkg") ? {
                         memberPackageId: memberPlan.id,
                     } : {
@@ -163,7 +163,6 @@ export async function locationReservations(app: Elysia) {
     }).delete('/reservations/:rid', async ({ params, status }) => {
         const { rid } = params as { rid: string }
 
-
         try {
 
             let sid: string | null = null;
@@ -180,15 +179,16 @@ export async function locationReservations(app: Elysia) {
                 sid = reservation.sessionId;
             } else {
 
+
+                const [rrid, date] = rid.split("+");
+                console.log(rrid, date);
                 const rr = await db.query.recurringReservations.findFirst({
-                    where: (recurringReservations, { eq }) => eq(recurringReservations.id, rid)
+                    where: (recurringReservations, { eq }) => eq(recurringReservations.id, rrid!)
                 })
 
                 if (!rr) {
                     return status(404, { error: "Recurring reservation not found" })
                 }
-
-                const date = rid.split("_")[1];
 
 
                 await db.insert(recurringReservationsExceptions).values({

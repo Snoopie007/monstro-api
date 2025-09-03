@@ -14,7 +14,7 @@ type Props = {
 export function mlReservationsRoutes(app: Elysia) {
     return app.get('/reservations', async ({ memberId, params, query, status }: Props & { query: { limit: string } }) => {
         const { mid, lid } = params;
-        console.log(query);
+
         const limit = parseInt(query.limit || "5");
 
 
@@ -113,7 +113,6 @@ export function mlReservationsRoutes(app: Elysia) {
                     }
                 }
             });
-
 
             const vrs = generateVRs({ reservations: [], rrs: rr, startDate, endDate });
             const filteredVrs = vrs.filter(vr => isAfter(vr.startOn, startDate));
