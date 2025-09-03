@@ -13,7 +13,6 @@ const emailSender = new EmailSender();
 
 export const memberPlansSub = new Elysia({ prefix: '/plans' })
     .get('/:pid/sub', async ({ status, params, body }) => {
-        const { pid } = params as { pid: string };
         const { familyMemberId } = body as { familyMemberId: string };
         try {
             const sub = await db.query.memberSubscriptions.findFirst({

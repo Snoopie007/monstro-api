@@ -5,6 +5,7 @@ import { mlPlansRoutes } from './plans';
 import { mlAchievementsRoutes } from './achievements';
 import { mlDocsRoutes } from './docs';
 import { mlReferralsRoutes } from './referrals';
+import { mlRewardsRoutes } from './rewards';
 
 type Props = {
     memberId: string
@@ -32,41 +33,44 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             return { error: 'Internal server error' }
         }
     })
-    .get('/:lid', async ({ memberId, params, status }: Props) => {
-        const { lid, mid } = params;
+    .group('/:lid', (app) => {
+        return app.get('/', async ({ memberId, params, status }: Props) => {
+            const { lid, mid } = params;
 
-        try {
-            const ml = await db.query.memberLocations.findFirst({
-                where: (l, { eq, and }) => and(eq(l.locationId, lid), eq(l.memberId, mid)),
-                with: {
-                    pointsHistory: true,
-                    location: true,
-                    member: {
-                        with: {
-                            user: true,
-                            packages: {
-                                with: {
-                                    plan: true,
-                                }
-                            },
-                            subscriptions: {
-                                with: {
-                                    plan: true,
+            try {
+                const ml = await db.query.memberLocations.findFirst({
+                    where: (l, { eq, and }) => and(eq(l.locationId, lid), eq(l.memberId, mid)),
+                    with: {
+                        pointsHistory: true,
+                        location: true,
+                        member: {
+                            with: {
+                                user: true,
+                                packages: {
+                                    with: {
+                                        plan: true,
+                                    }
+                                },
+                                subscriptions: {
+                                    with: {
+                                        plan: true,
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
 
-            return status(200, ml);
-        } catch (error) {
-            status(500, { error: 'Internal server error' });
-            return { error: 'Internal server error' }
-        }
+                return status(200, ml);
+            } catch (error) {
+                status(500, { error: 'Internal server error' });
+                return { error: 'Internal server error' }
+            }
+        })
+            .use(mlReservationsRoutes)
+            .use(mlPlansRoutes)
+            .use(mlAchievementsRoutes)
+            .use(mlDocsRoutes)
+            .use(mlRewardsRoutes)
+            .use(mlReferralsRoutes)
     })
-    .use(mlReservationsRoutes)
-    .use(mlPlansRoutes)
-    .use(mlAchievementsRoutes)
-    .use(mlDocsRoutes)
-    .use(mlReferralsRoutes)

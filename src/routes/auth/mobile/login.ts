@@ -66,7 +66,6 @@ export async function mobileLogin(app: Elysia) {
                 email: user.email,
             });
 
-            console.log(refreshToken)
             return status(200, { token: accessToken, refreshToken, expires, user: data })
         } catch (error) {
             console.error("Error in mobile login:", error);

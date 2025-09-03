@@ -10,8 +10,9 @@ type Props = {
     },
     status: any
 }
-export const mlReferralsRoutes = new Elysia({ prefix: '/:lid/referrals' })
-    .get('/', async ({ memberId, params, status }: Props) => {
+
+export function mlReferralsRoutes(app: Elysia) {
+    return app.get('/referrals', async ({ params, status }: Props) => {
         const { mid, lid } = params;
         try {
 
@@ -40,3 +41,4 @@ export const mlReferralsRoutes = new Elysia({ prefix: '/:lid/referrals' })
             return status(500, { error: "Failed to fetch achievements" });
         }
     })
+}

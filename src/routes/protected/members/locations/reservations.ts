@@ -10,8 +10,9 @@ type Props = {
     },
     status: any
 }
-export const mlReservationsRoutes = new Elysia({ prefix: '/:lid/reservations' })
-    .get('/', async ({ memberId, params, query, status }: Props & { query: { limit: string } }) => {
+
+export function mlReservationsRoutes(app: Elysia) {
+    return app.get('/reservations', async ({ memberId, params, query, status }: Props & { query: { limit: string } }) => {
         const { mid, lid } = params;
         console.log(query);
         const limit = parseInt(query.limit || "5");
@@ -67,8 +68,7 @@ export const mlReservationsRoutes = new Elysia({ prefix: '/:lid/reservations' })
             console.error(error);
             return status(500, { error: "Internal server error" });
         }
-    })
-    .get('/next', async ({ memberId, params, status }: Props) => {
+    }).get('/reservations/next', async ({ memberId, params, status }: Props) => {
         const { mid, lid } = params;
 
         const startDate = new Date();
@@ -137,3 +137,4 @@ export const mlReservationsRoutes = new Elysia({ prefix: '/:lid/reservations' })
             return status(500, { error: "Internal server error" });
         }
     })
+}

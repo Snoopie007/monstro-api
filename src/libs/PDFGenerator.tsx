@@ -8,7 +8,7 @@ import {
   pdf,
 } from "@react-pdf/renderer";
 import type { Contract } from "@/types/contract";
-import { parseHTMLContent } from "./html-to-react-pdf-parser";
+import { parseHTMLContent } from "./PDFParser";
 
 interface PDFTemplateProps {
   template: Contract;
@@ -125,8 +125,7 @@ export async function generatePDFBuffer(
   } catch (error) {
     console.error("Error generating PDF buffer:", error);
     throw new Error(
-      `PDF generation failed: ${
-        error instanceof Error ? error.message : "Unknown error"
+      `PDF generation failed: ${error instanceof Error ? error.message : "Unknown error"
       }`
     );
   }

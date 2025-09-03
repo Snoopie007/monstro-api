@@ -10,8 +10,9 @@ type Props = {
     },
     status: any
 }
-export const mlAchievementsRoutes = new Elysia({ prefix: '/:lid/achievements' })
-    .get('/', async ({ memberId, params, status }: Props) => {
+
+export function mlAchievementsRoutes(app: Elysia) {
+    return app.get('/achievements', async ({ memberId, params, status }: Props) => {
         const { mid, lid } = params;
         try {
 
@@ -32,3 +33,5 @@ export const mlAchievementsRoutes = new Elysia({ prefix: '/:lid/achievements' })
             return status(500, { error: "Failed to fetch achievements" });
         }
     })
+}
+

@@ -12,8 +12,9 @@ type Props = {
     },
     status: any
 }
-export const mlPlansRoutes = new Elysia({ prefix: '/:lid/plans' })
-    .get('/', async ({ memberId, params, status }: Props) => {
+
+export function mlPlansRoutes(app: Elysia) {
+    return app.get('/plans', async ({ memberId, params, status }: Props) => {
         const { mid, lid } = params;
         try {
             const pkgs = await db.select({
@@ -51,3 +52,5 @@ export const mlPlansRoutes = new Elysia({ prefix: '/:lid/plans' })
             return status(500, { error: "Internal Server Error" });
         }
     })
+
+}
