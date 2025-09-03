@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus } from "lucide-react";
+import { toast } from "react-toastify";
 import { SupportTrigger } from "@/types/supportBot";
 
 interface NewTriggerFormProps {
@@ -140,17 +141,17 @@ export function NewTriggerForm({ onSubmit, onCancel }: NewTriggerFormProps) {
     e.preventDefault();
 
     if (!formData.name?.trim()) {
-      alert("Please enter a trigger name");
+      toast.error("Please enter a trigger name");
       return;
     }
 
     if (!formData.triggerPhrases?.length) {
-      alert("Please add at least one trigger phrase");
+      toast.error("Please add at least one trigger phrase");
       return;
     }
 
     if (!formData.toolCall?.name) {
-      alert("Please select a tool to execute");
+      toast.error("Please select a tool to execute");
       return;
     }
 

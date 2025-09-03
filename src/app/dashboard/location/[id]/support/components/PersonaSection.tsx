@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User, Plus, Edit2, Trash2 } from "lucide-react";
+import { toast } from "react-toastify";
 import { SupportBot, SupportBotPersona } from "@/types";
 import { PersonaDialog } from "./PersonaDialog";
 
@@ -79,14 +80,14 @@ export function PersonaSection({
 
       if (response.ok) {
         setPersona(null);
-        alert("Persona deleted successfully");
+        toast.success("Persona deleted successfully");
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to delete persona");
+        toast.error(error.error || "Failed to delete persona");
       }
     } catch (error) {
       console.error("Failed to delete persona:", error);
-      alert("Failed to delete persona");
+      toast.error("Failed to delete persona");
     }
   };
 
@@ -111,7 +112,7 @@ export function PersonaSection({
       if (response.ok) {
         const data = await response.json();
         setPersona(data.persona);
-        alert(data.message);
+        toast.success(data.message);
       } else {
         const error = await response.json();
         throw new Error(error.error || "Failed to save persona");

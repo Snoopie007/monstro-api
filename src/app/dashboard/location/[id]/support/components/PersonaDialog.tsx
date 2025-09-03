@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus } from "lucide-react";
+import { toast } from "react-toastify";
 import { SupportBotPersona } from "@/types/supportBot";
 
 interface PersonaDialogProps {
@@ -69,7 +70,7 @@ export function PersonaDialog({
     e.preventDefault();
 
     if (!formData.name.trim() || !formData.responseStyle.trim()) {
-      alert("Please fill in all required fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -90,7 +91,7 @@ export function PersonaDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to save persona:", error);
-      alert("Failed to save persona. Please try again.");
+      toast.error("Failed to save persona. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -98,7 +99,7 @@ export function PersonaDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] py-4">
         <DialogHeader>
           <DialogTitle>
             {isEditing
@@ -111,7 +112,7 @@ export function PersonaDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-4">
           <div className="space-y-2">
             <Label htmlFor="persona-name">
               Persona Name <span className="text-red-500">*</span>

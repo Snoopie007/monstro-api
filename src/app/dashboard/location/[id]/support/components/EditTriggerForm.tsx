@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { X, Plus } from "lucide-react";
+import { toast } from "react-toastify";
 import { SupportTrigger } from "@/types";
 
 interface EditTriggerFormProps {
@@ -149,17 +150,17 @@ export function EditTriggerForm({
     e.preventDefault();
 
     if (!formData.name?.trim()) {
-      alert("Please enter a trigger name");
+      toast.error("Please enter a trigger name");
       return;
     }
 
     if (!formData.triggerPhrases?.length) {
-      alert("Please add at least one trigger phrase");
+      toast.error("Please add at least one trigger phrase");
       return;
     }
 
     if (!formData.toolCall?.name) {
-      alert("Please select a tool to execute");
+      toast.error("Please select a tool to execute");
       return;
     }
 
@@ -171,7 +172,7 @@ export function EditTriggerForm({
   );
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 p-4">
       {/* Basic Information */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">

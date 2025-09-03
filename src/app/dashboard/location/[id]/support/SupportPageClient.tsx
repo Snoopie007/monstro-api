@@ -5,6 +5,7 @@ import { SupportInbox } from "./components/SupportInbox";
 import { AdminTestChat } from "./components/AdminTestChat";
 import { ConversationView } from "./components/ConversationView";
 import { SupportBotConfigSheet } from "./components/SupportBotConfigSheet";
+import { toast } from "react-toastify";
 import { Location } from "@/types/location";
 import { SupportBot, SupportConversation } from "@/types";
 
@@ -87,14 +88,15 @@ export function SupportPageClient({
         setSupportBot(data.supportBot);
 
         // Show success message
-        alert(data.message || "Support bot updated successfully");
+
+        toast.success(data.message || "Support bot updated successfully");
       } else {
         const error = await response.json();
         throw new Error(error.error || "Failed to update support bot");
       }
     } catch (error) {
       console.error("Failed to update support bot:", error);
-      alert("Failed to update support bot. Please try again.");
+      toast.error("Failed to update support bot. Please try again.");
     }
   };
 

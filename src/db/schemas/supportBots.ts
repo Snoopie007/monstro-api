@@ -14,6 +14,7 @@ import {
   BotModel,
   BotStatus,
 } from "./SupportBotEnums";
+import { getDefaultSupportTools } from "@/libs/supportBotDefaults";
 
 // Single support bot per location
 export const supportBots = pgTable(
@@ -28,17 +29,21 @@ export const supportBots = pgTable(
     name: text("name").notNull().default("Support Bot"),
     prompt: text("prompt")
       .notNull()
-      .default("You are a helpful customer support assistant."),
+      .default(
+        "You are a helpful customer support assistant. You have access to member information tools to help with subscriptions, billing, and bookable sessions. You can also create support tickets and escalate to human agents when needed."
+      ),
     temperature: integer("temperature").notNull().default(0),
     initialMessage: text("initial_message")
       .notNull()
-      .default("Hi! I'm here to help you. What can I assist you with today?"),
+      .default(
+        "Hi! I'm here to help you. I can assist with your membership status, billing questions, available classes, and any other support needs. What can I help you with today?"
+      ),
     model: botModelEnum("model").notNull().default(BotModel.GPT),
     status: botStatusEnum("status").notNull().default(BotStatus.Draft),
     availableTools: jsonb("available_tools")
       .array()
       .notNull()
-      .default(sql`ARRAY[]::jsonb[]`), // Fixed set of tool definitions
+      .$default(() => getDefaultSupportTools()), // Default support tools
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

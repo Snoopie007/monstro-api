@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "react-toastify";
 import { SupportBot, SupportTrigger } from "@/types";
 import { NewTriggerForm } from "./NewTriggerForm";
 import { EditTriggerForm } from "./EditTriggerForm";
@@ -49,78 +50,22 @@ export function TriggersSection({
 
       setLoading(true);
       try {
-        // TODO: Implement triggers loading API
-        // const triggers = await getSupportTriggers(supportBot.id);
-        // setTriggers(triggers);
+        // Load triggers from API
+        const response = await fetch(
+          `/api/protected/loc/${locationId}/support/triggers`
+        );
 
-        console.log("TODO: Load triggers for support bot", supportBot.id);
-
-        // Placeholder triggers for demo
-        const placeholderTriggers: SupportTrigger[] = [
-          {
-            id: "1",
-            supportBotId: supportBot.id,
-            name: "Membership Status",
-            triggerType: "keyword",
-            triggerPhrases: [
-              "membership status",
-              "subscription info",
-              "my membership",
-            ],
-            toolCall: {
-              name: "get_member_status",
-              parameters: {},
-            },
-            examples: ["What's my membership status?", "Check my subscription"],
-            requirements: ["Member must be authenticated"],
-            isActive: true,
-            createdAt: new Date(),
-            updatedAt: null,
-          },
-          {
-            id: "2",
-            supportBotId: supportBot.id,
-            name: "Billing Information",
-            triggerType: "keyword",
-            triggerPhrases: ["billing", "payment", "invoice", "billing info"],
-            toolCall: {
-              name: "get_member_billing",
-              parameters: {},
-            },
-            examples: ["Show my billing info", "When is my next payment?"],
-            requirements: ["Member must be authenticated"],
-            isActive: true,
-            createdAt: new Date(),
-            updatedAt: null,
-          },
-          {
-            id: "3",
-            supportBotId: supportBot.id,
-            name: "Available Classes",
-            triggerType: "intent",
-            triggerPhrases: [
-              "available classes",
-              "what can I book",
-              "bookable sessions",
-            ],
-            toolCall: {
-              name: "get_member_bookable_sessions",
-              parameters: {},
-            },
-            examples: [
-              "What classes can I book?",
-              "Show me available sessions",
-            ],
-            requirements: ["Member must be authenticated"],
-            isActive: false,
-            createdAt: new Date(),
-            updatedAt: null,
-          },
-        ];
-
-        setTriggers(placeholderTriggers);
+        if (response.ok) {
+          const data = await response.json();
+          setTriggers(data.triggers || []);
+        } else {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to load triggers");
+        }
       } catch (error) {
         console.error("Failed to load triggers:", error);
+        toast.error("Failed to load triggers. Please try again.");
+        setTriggers([]); // Set empty array on error
       } finally {
         setLoading(false);
       }
@@ -133,31 +78,30 @@ export function TriggersSection({
     if (!supportBot) return;
 
     try {
-      // TODO: Implement trigger creation API
-      // const newTrigger = await createSupportTrigger(supportBot.id, triggerData);
-      // setTriggers(prev => [...prev, newTrigger]);
+      // Create trigger via API
+      const response = await fetch(
+        `/api/protected/loc/${locationId}/support/triggers`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(triggerData),
+        }
+      );
 
-      console.log("TODO: Create trigger:", triggerData);
-
-      // Placeholder - add to local state
-      const newTrigger: SupportTrigger = {
-        id: Date.now().toString(),
-        supportBotId: supportBot.id,
-        name: triggerData.name || "New Trigger",
-        triggerType: triggerData.triggerType || "keyword",
-        triggerPhrases: triggerData.triggerPhrases || [],
-        toolCall: triggerData.toolCall || { name: "", parameters: {} },
-        examples: triggerData.examples || [],
-        requirements: triggerData.requirements || [],
-        isActive: triggerData.isActive ?? true,
-        createdAt: new Date(),
-        updatedAt: null,
-      };
-
-      setTriggers((prev) => [...prev, newTrigger]);
-      setCreateDialogOpen(false);
+      if (response.ok) {
+        const data = await response.json();
+        setTriggers((prev) => [...prev, data.trigger]);
+        setCreateDialogOpen(false);
+        toast.success(data.message || "Trigger created successfully");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to create trigger");
+      }
     } catch (error) {
       console.error("Failed to create trigger:", error);
+      toast.error("Failed to create trigger. Please try again.");
     }
   };
 
@@ -166,55 +110,95 @@ export function TriggersSection({
     triggerData: Partial<SupportTrigger>
   ) => {
     try {
-      // TODO: Implement trigger update API
-      // const updatedTrigger = await updateSupportTrigger(triggerId, triggerData);
-
-      console.log("TODO: Update trigger:", triggerId, triggerData);
-
-      // Placeholder - update local state
-      setTriggers((prev) =>
-        prev.map((trigger) =>
-          trigger.id === triggerId
-            ? { ...trigger, ...triggerData, updatedAt: new Date() }
-            : trigger
-        )
+      // Update trigger via API
+      const response = await fetch(
+        `/api/protected/loc/${locationId}/support/triggers/${triggerId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(triggerData),
+        }
       );
-      setEditDialogOpen(false);
-      setEditingTrigger(null);
+
+      if (response.ok) {
+        const data = await response.json();
+        setTriggers((prev) =>
+          prev.map((trigger) =>
+            trigger.id === triggerId ? data.trigger : trigger
+          )
+        );
+        setEditDialogOpen(false);
+        setEditingTrigger(null);
+        toast.success(data.message || "Trigger updated successfully");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update trigger");
+      }
     } catch (error) {
       console.error("Failed to update trigger:", error);
+      toast.error("Failed to update trigger. Please try again.");
     }
   };
 
   const handleDeleteTrigger = async (triggerId: string) => {
     try {
-      // TODO: Implement trigger deletion API
-      // await deleteSupportTrigger(triggerId);
+      // Delete trigger via API
+      const response = await fetch(
+        `/api/protected/loc/${locationId}/support/triggers/${triggerId}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-      console.log("TODO: Delete trigger:", triggerId);
-
-      setTriggers((prev) => prev.filter((trigger) => trigger.id !== triggerId));
+      if (response.ok) {
+        const data = await response.json();
+        setTriggers((prev) =>
+          prev.filter((trigger) => trigger.id !== triggerId)
+        );
+        toast.success(data.message || "Trigger deleted successfully");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to delete trigger");
+      }
     } catch (error) {
       console.error("Failed to delete trigger:", error);
+      toast.error("Failed to delete trigger. Please try again.");
     }
   };
 
   const handleToggleTrigger = async (triggerId: string, isActive: boolean) => {
     try {
-      // TODO: Implement trigger toggle API
-      // await toggleSupportTrigger(triggerId, isActive);
-
-      console.log("TODO: Toggle trigger:", triggerId, isActive);
-
-      setTriggers((prev) =>
-        prev.map((trigger) =>
-          trigger.id === triggerId
-            ? { ...trigger, isActive, updatedAt: new Date() }
-            : trigger
-        )
+      // Toggle trigger via API
+      const response = await fetch(
+        `/api/protected/loc/${locationId}/support/triggers/${triggerId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ isActive }),
+        }
       );
+
+      if (response.ok) {
+        const data = await response.json();
+        setTriggers((prev) =>
+          prev.map((trigger) =>
+            trigger.id === triggerId ? data.trigger : trigger
+          )
+        );
+        toast.success(
+          `Trigger ${isActive ? "enabled" : "disabled"} successfully`
+        );
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to toggle trigger");
+      }
     } catch (error) {
       console.error("Failed to toggle trigger:", error);
+      toast.error("Failed to toggle trigger. Please try again.");
     }
   };
 
@@ -276,7 +260,7 @@ export function TriggersSection({
                 Add Trigger
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl p-4">
               <DialogHeader>
                 <DialogTitle>Create New Trigger</DialogTitle>
               </DialogHeader>

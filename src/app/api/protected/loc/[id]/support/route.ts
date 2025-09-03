@@ -4,6 +4,7 @@ import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { supportBots, supportBotPersonas } from "@/db/schemas";
 import { BotModel, BotStatus } from "@/db/schemas/SupportBotEnums";
+import { getDefaultSupportTools } from "@/libs/supportBotDefaults";
 
 export async function GET(
   req: NextRequest,
@@ -30,13 +31,14 @@ export async function GET(
         .values({
           locationId: params.id,
           name: "Support Bot",
-          prompt: "You are a helpful customer support assistant.",
+          prompt:
+            "You are a helpful customer support assistant. You have access to member information tools to help with subscriptions, billing, and bookable sessions. You can also create support tickets and escalate to human agents when needed.",
           initialMessage:
-            "Hi! I'm here to help you. What can I assist you with today?",
+            "Hi! I'm here to help you. I can assist with your membership status, billing questions, available classes, and any other support needs. What can I help you with today?",
           temperature: 0,
           model: BotModel.GPT,
           status: BotStatus.Draft,
-          availableTools: [],
+          availableTools: getDefaultSupportTools(),
         })
         .returning();
 
