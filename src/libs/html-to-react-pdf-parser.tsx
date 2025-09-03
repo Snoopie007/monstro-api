@@ -1,13 +1,16 @@
-import React from 'react';
-import { Text, View } from '@react-pdf/renderer';
-import * as cheerio from 'cheerio';
+import React from "react";
+import { Text, View } from "@react-pdf/renderer";
+import * as cheerio from "cheerio";
 
 interface ReactPDFStyles {
   [key: string]: any;
 }
 
 // Interpolate variables in HTML content
-function interpolateVariables(template: string, variables: Record<string, any>): string {
+function interpolateVariables(
+  template: string,
+  variables: Record<string, any>
+): string {
   if (!template) return "";
 
   // Handle span elements with data-value attributes (from your existing system)
@@ -29,10 +32,9 @@ function interpolateVariables(template: string, variables: Record<string, any>):
   processed = processed.replace(
     /\{\{([^}]+)\}\}/g,
     (match: string, path: string): string => {
-      const value = path.split('.').reduce(
-        (obj: any, key: string) => obj?.[key],
-        variables
-      );
+      const value = path
+        .split(".")
+        .reduce((obj: any, key: string) => obj?.[key], variables);
       return value !== undefined ? String(value) : match;
     }
   );
@@ -41,70 +43,73 @@ function interpolateVariables(template: string, variables: Record<string, any>):
 }
 
 function cleanText(text: string): string {
-  return text.trim().replace(/\s+/g, ' ');
+  return text.trim().replace(/\s+/g, " ");
 }
 
 function convertElementToReactPDF(
-  $: cheerio.CheerioAPI, 
-  element: cheerio.Element, 
+  $: cheerio.Root,
+  element: cheerio.Element,
   key: number,
   styles: ReactPDFStyles
 ): React.JSX.Element | null {
   const tagName = (element as any).tagName?.toLowerCase();
   const textContent = cleanText($(element).text());
-  
-  if (!textContent && !['div', 'section', 'article'].includes(tagName || '')) {
+
+  if (!textContent && !["div", "section", "article"].includes(tagName || "")) {
     return null;
   }
 
   switch (tagName) {
-    case 'p':
+    case "p":
       return (
         <Text key={key} style={styles.paragraph}>
           {textContent}
         </Text>
       );
-    
-    case 'h1':
+
+    case "h1":
       return (
         <Text key={key} style={styles.heading1}>
           {textContent}
         </Text>
       );
-    
-    case 'h2':
+
+    case "h2":
       return (
         <Text key={key} style={styles.heading2}>
           {textContent}
         </Text>
       );
-    
-    case 'h3':
+
+    case "h3":
       return (
         <Text key={key} style={styles.heading3}>
           {textContent}
         </Text>
       );
-    
-    case 'ul':
-    case 'ol':
+
+    case "ul":
+    case "ol":
       const listItems: React.JSX.Element[] = [];
-      $(element).children('li').each((index: number, listItem: any) => {
-        const itemText = cleanText($(listItem).text());
-        if (itemText) {
-          listItems.push(
-            <View key={`${key}-item-${index}`} style={{ flexDirection: 'row', marginBottom: 4 }}>
-              <Text style={styles.bulletPoint}>
-                {tagName === 'ul' ? '•' : `${index + 1}.`}
-              </Text>
-              <Text style={styles.listItem}>
-                {itemText}
-              </Text>
-            </View>
-          );
-        }
-      });
-      
+      $(element)
+        .children("li")
+        .each((index: number, listItem: any) => {
+          const itemText = cleanText($(listItem).text());
+          if (itemText) {
+            listItems.push(
+              <View
+                key={`${key}-item-${index}`}
+                style={{ flexDirection: "row", marginBottom: 4 }}
+              >
+                <Text style={styles.bulletPoint}>
+                  {tagName === "ul" ? "•" : `${index + 1}.`}
+                </Text>
+                <Text style={styles.listItem}>{itemText}</Text>
+              </View>
+            );
+          }
+        });
+
       if (listItems.length > 0) {
         return (
           <View key={key} style={styles.listContainer}>
@@ -113,19 +118,26 @@ function convertElementToReactPDF(
         );
       }
       return null;
-    
-    case 'div':
-    case 'section':
-    case 'article':
+
+    case "div":
+    case "section":
+    case "article":
       // For container elements, process children
       const children: React.JSX.Element[] = [];
-      $(element).children().each((index: number, child: any) => {
-        const childElement = convertElementToReactPDF($, child, `${key}-child-${index}` as any, styles);
-        if (childElement) {
-          children.push(childElement);
-        }
-      });
-      
+      $(element)
+        .children()
+        .each((index: number, child: any) => {
+          const childElement = convertElementToReactPDF(
+            $,
+            child,
+            `${key}-child-${index}` as any,
+            styles
+          );
+          if (childElement) {
+            children.push(childElement);
+          }
+        });
+
       if (children.length > 0) {
         return (
           <View key={key} style={{ marginBottom: 8 }}>
@@ -133,7 +145,7 @@ function convertElementToReactPDF(
           </View>
         );
       }
-      
+
       // If no children but has direct text content
       if (textContent) {
         return (
@@ -143,30 +155,30 @@ function convertElementToReactPDF(
         );
       }
       return null;
-    
-    case 'br':
+
+    case "br":
       return (
         <Text key={key} style={styles.paragraph}>
-          {'\n'}
+          {"\n"}
         </Text>
       );
-    
-    case 'strong':
-    case 'b':
+
+    case "strong":
+    case "b":
       return (
-        <Text key={key} style={[styles.paragraph, { fontWeight: 'bold' }]}>
+        <Text key={key} style={[styles.paragraph, { fontWeight: "bold" }]}>
           {textContent}
         </Text>
       );
-    
-    case 'em':
-    case 'i':
+
+    case "em":
+    case "i":
       return (
-        <Text key={key} style={[styles.paragraph, { fontStyle: 'italic' }]}>
+        <Text key={key} style={[styles.paragraph, { fontStyle: "italic" }]}>
           {textContent}
         </Text>
       );
-    
+
     default:
       // For unhandled elements, just render as text if they have content
       if (textContent) {
@@ -181,28 +193,35 @@ function convertElementToReactPDF(
 }
 
 export function parseHTMLContent(
-  htmlContent: string, 
+  htmlContent: string,
   variables: Record<string, any>,
   styles: ReactPDFStyles
 ): React.JSX.Element[] {
   // First interpolate variables
   const interpolatedHTML = interpolateVariables(htmlContent, variables);
-  
+
   // Parse HTML structure
-  const $ = cheerio.load(`<div>${interpolatedHTML}</div>`);
+  const cheerioApi = cheerio.load(`<div>${interpolatedHTML}</div>`);
   const elements: React.JSX.Element[] = [];
-  
+
   // Process each top-level element in the content
-  $('body > div').children().each((index: number, element: any) => {
-    const reactPdfElement = convertElementToReactPDF($, element, index, styles);
-    if (reactPdfElement) {
-      elements.push(reactPdfElement);
-    }
-  });
-  
+  cheerioApi("body > div")
+    .children()
+    .each((index: number, element: cheerio.Element) => {
+      const reactPdfElement = convertElementToReactPDF(
+        cheerioApi,
+        element,
+        index,
+        styles
+      );
+      if (reactPdfElement) {
+        elements.push(reactPdfElement);
+      }
+    });
+
   // If no elements were found, try to process the entire content as text
   if (elements.length === 0 && interpolatedHTML.trim()) {
-    const textContent = $('body').text().trim();
+    const textContent = cheerioApi("body").text().trim();
     if (textContent) {
       elements.push(
         <Text key="fallback" style={styles.paragraph}>
@@ -211,6 +230,6 @@ export function parseHTMLContent(
       );
     }
   }
-  
+
   return elements;
 }
