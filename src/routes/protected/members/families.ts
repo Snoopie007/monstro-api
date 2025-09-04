@@ -26,44 +26,40 @@ export async function memberFamilies(app: Elysia) {
         const { mid } = params as { mid: string };
         const { relationship, ...rest } = body as any;
 
-        // Handle phone number validation if provided
-        if (
-            rest.phone &&
-            typeof rest.phone === "string" &&
-            rest.phone.trim() !== ""
-        ) {
-            const phoneNumber = parsePhoneNumberFromString(rest.phone, "US");
-            // Check if it's a valid phone number OR if it's a test number pattern
-            const isTestNumber = /^\+1[0-9]{10}$/.test(rest.phone); // Basic format check for US numbers
 
-            if (phoneNumber?.isValid() || (isTestNumber && phoneNumber?.isPossible())) {
-                // Use the formatted number if valid, otherwise use the original for test numbers
-                rest.phoneNumber = phoneNumber?.isValid()
-                    ? phoneNumber.formatNational()
-                    : rest.phone;
-            } else {
-                throw new Error(JSON.stringify({
-                    error: "Invalid phone number",
-                    details: {
-                        input: rest.phone,
-                        parsed: phoneNumber
-                            ? {
-                                isValid: phoneNumber.isValid(),
-                                isPossible: phoneNumber.isPossible(),
-                                country: phoneNumber.country,
-                            }
-                            : "could not parse",
-                    },
-                }));
-            }
-            // Remove the original phone field since we're using phoneNumber
-            delete rest.phone;
-        } else {
-            // Set phoneNumber to empty string if no phone provided
-            rest.phoneNumber = "";
-        }
+
 
         try {
+
+            // Handle phone number validation if provided
+            if (rest.phone && typeof rest.phone === "string" && rest.phone.trim() !== "") {
+
+                const phoneNumber = parsePhoneNumberFromString(rest.phone, "US");
+
+                if (!phoneNumber) {
+                    throw new Error(JSON.stringify({
+                        error: "Invalid phone number",
+                        details: {
+                            input: rest.phone,
+                        },
+                    }));
+                }
+
+                console.log(phoneNumber?.isValid(), phoneNumber?.isPossible());
+                if (phoneNumber?.isValid() || phoneNumber?.isPossible()) {
+                    // Use the formatted number if valid, otherwise use the original for test numbers
+                    rest.phoneNumber = phoneNumber?.isValid()
+                        ? phoneNumber.formatNational()
+                        : rest.phone;
+                } else {
+                    throw new Error("Invalid phone number");
+                }
+                // Remove the original phone field since we're using phoneNumber
+                delete rest.phone;
+            } else {
+                // Set phoneNumber to empty string if no phone provided
+                rest.phoneNumber = "";
+            }
             const existingMember = await db.query.members.findFirst({
                 where: (members, { eq }) => eq(members.email, rest.email),
                 with: {
@@ -73,6 +69,7 @@ export async function memberFamilies(app: Elysia) {
                     },
                 },
             });
+
 
             let fm: FamilyMember | undefined;
 
@@ -136,34 +133,32 @@ export async function memberFamilies(app: Elysia) {
                         return await tx.rollback();
                     }
 
-                    const [familyMember] = await tx
-                        .insert(familyMembers)
-                        .values({
-                            memberId: member.id,
-                            relatedMemberId: mid,
-                            relationship,
-                        })
-                        .returning();
+                    console.log(member.id, mid, relationship);
+                    const [familyMember] = await tx.insert(familyMembers).values({
+                        memberId: member.id,
+                        relatedMemberId: mid,
+                        relationship,
+                    }).returning();
+
+
                     if (!familyMember?.id) {
                         return await tx.rollback();
                     }
                     let inverseRelationship = relationship;
+
                     if (relationship === "parent") {
                         inverseRelationship = "child";
                     } else if (relationship === "child") {
                         inverseRelationship = "parent";
                     }
 
-                    await tx
-                        .insert(familyMembers)
-                        .values({
-                            memberId: mid,
-                            relatedMemberId: member.id,
-                            relationship: inverseRelationship,
-                        })
-                        .onConflictDoNothing({
-                            target: [familyMembers.memberId, familyMembers.relatedMemberId],
-                        });
+                    await tx.insert(familyMembers).values({
+                        memberId: mid,
+                        relatedMemberId: member.id,
+                        relationship: inverseRelationship,
+                    }).onConflictDoNothing({
+                        target: [familyMembers.memberId, familyMembers.relatedMemberId],
+                    });
 
                     return {
                         ...familyMember,
@@ -175,7 +170,8 @@ export async function memberFamilies(app: Elysia) {
             return status(200, fm);
         } catch (error) {
             console.error(error);
-            return status(500, { error: "Failed to create family member" });
+            const msg = error instanceof Error ? error.message : "Failed to create family member";
+            return status(500, { error: msg });
         }
     });
 }

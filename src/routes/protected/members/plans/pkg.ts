@@ -11,8 +11,8 @@ import { MonstroData } from "@/libs/data";
 const emailSender = new EmailSender();
 
 
-export const memberPlansPkg = new Elysia({ prefix: '/plans' })
-    .get('/:pid/pkg', async ({ status, params, body }) => {
+export function memberPlansPkgRoutes(app: Elysia) {
+    return app.get('/pkg', async ({ status, params, body }) => {
         const { pid } = params as { pid: string };
         const { familyMemberId } = body as { familyMemberId: string };
         try {
@@ -143,7 +143,7 @@ export const memberPlansPkg = new Elysia({ prefix: '/plans' })
             console.error(error);
             return status(500, { error: "An error occurred" });
         }
-    }).patch('/:pid/pkg', async ({ status, params, body }) => {
+    }).patch('/pkg', async ({ status, params, body }) => {
         const { pid } = params as { pid: string };
         const data = body as Record<string, any>;
 
@@ -173,3 +173,6 @@ export const memberPlansPkg = new Elysia({ prefix: '/plans' })
             return status(500, { error: "An error occurred" });
         }
     })
+}
+
+
