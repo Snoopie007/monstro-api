@@ -181,10 +181,12 @@ export async function locationReservations(app: Elysia) {
 
 
                 const [rrid, date] = rid.split("+");
-                console.log(rrid, date);
+
                 const rr = await db.query.recurringReservations.findFirst({
-                    where: (recurringReservations, { eq }) => eq(recurringReservations.id, rrid!)
+                    where: (rr, { eq }) => eq(rr.id, rrid!)
                 })
+
+
 
                 if (!rr) {
                     return status(404, { error: "Recurring reservation not found" })

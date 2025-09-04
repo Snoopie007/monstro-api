@@ -52,8 +52,12 @@ function generateVRs({ reservations, rrs, startDate, endDate }: GenerateVRsParam
 
         while (currentDate <= endDate) {
             const currentDateString = currentDate.toISOString().split("T")[0];
-            const exception = rr.exceptions?.find((e) => e.occurrenceDate.toISOString() === currentDateString);
-            console.log(exception);
+
+
+            const exception = rr.exceptions?.find((e) => {
+                return e.occurrenceDate.toISOString().split("T")[0] === currentDateString;
+            });
+
             const existingReservation = reservations.find((r) => {
                 return (
                     r.startOn.toISOString().split("T")[0] === currentDateString &&
@@ -77,7 +81,7 @@ function generateVRs({ reservations, rrs, startDate, endDate }: GenerateVRsParam
 
             const { id, startDate, session, exceptions, attendances, ...rest } = rr;
             virtualReservations.push({
-                id: `${id}-${currentDateString}`,
+                id: `${id}+${currentDateString}`,
                 ...rest,
                 startOn: startOn,
                 endOn: endOn,
