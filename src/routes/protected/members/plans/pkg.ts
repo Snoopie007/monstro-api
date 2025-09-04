@@ -12,14 +12,14 @@ const emailSender = new EmailSender();
 
 
 export function memberPlansPkgRoutes(app: Elysia) {
-    return app.get('/pkg', async ({ status, params, body }) => {
+    return app.post('/pkg', async ({ status, params, body }) => {
         const { pid } = params as { pid: string };
         const { familyMemberId } = body as { familyMemberId: string };
         try {
             const pkg = await db.query.memberPackages.findFirst({
                 where: (memberPackages, { eq, and }) =>
                     and(
-                        eq(memberPackages.id, params.pid),
+                        eq(memberPackages.id, pid),
                         eq(memberPackages.status, "active")
                     ),
                 with: {
@@ -45,7 +45,7 @@ export function memberPlansPkgRoutes(app: Elysia) {
                 .select({ count: sql<number>`count(*)` })
                 .from(memberPackages)
                 .where(and(
-                    eq(memberPackages.parentId, params.pid),
+                    eq(memberPackages.parentId, pid),
                     eq(memberPackages.status, "active")
                 ));
 
@@ -94,7 +94,7 @@ export function memberPlansPkgRoutes(app: Elysia) {
                 memberPlanId: pkg.memberPlanId,
                 locationId: locationId,
                 memberId: familyMemberId,
-                parentId: params.pid,
+                parentId: pid,
             };
 
             const [familyPackage] = await db
@@ -111,7 +111,7 @@ export function memberPlansPkgRoutes(app: Elysia) {
                         status: "active",
                     },
                 })
-                .returning({ id: memberPackages.id });
+                .returning();
 
 
             if (!familyPackage) {
@@ -138,7 +138,10 @@ export function memberPlansPkgRoutes(app: Elysia) {
                 },
             });
 
-            return status(200, { success: true });
+            return status(200, {
+                ...familyPackage,
+                member: memberLocation.member,
+            });
         } catch (error) {
             console.error(error);
             return status(500, { error: "An error occurred" });
@@ -149,7 +152,7 @@ export function memberPlansPkgRoutes(app: Elysia) {
 
         if (data.status === "active") {
             const pkg = await db.query.memberPackages.findFirst({
-                where: (mp, { eq }) => eq(mp.id, params.pid),
+                where: (mp, { eq }) => eq(mp.id, pid),
                 with: {
                     childs: true,
                     plan: true,

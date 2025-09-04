@@ -11,13 +11,15 @@ import { MonstroData } from "@/libs/data";
 const emailSender = new EmailSender();
 
 export function memberPlansSubRoutes(app: Elysia) {
-    return app.get('/sub', async ({ status, params, body }) => {
+    return app.post('/sub', async ({ status, params, body }) => {
+        const { pid } = params as { pid: string };
+        console.log(pid);
         const { familyMemberId } = body as { familyMemberId: string };
         try {
             const sub = await db.query.memberSubscriptions.findFirst({
                 where: (memberSubscriptions, { eq, and }) =>
                     and(
-                        eq(memberSubscriptions.id, params.pid),
+                        eq(memberSubscriptions.id, pid),
                         eq(memberSubscriptions.status, "active")
                     ),
                 with: {
@@ -42,7 +44,7 @@ export function memberPlansSubRoutes(app: Elysia) {
                 .select({ count: sql<number>`count(*)` })
                 .from(memberSubscriptions)
                 .where(and(
-                    eq(memberSubscriptions.parentId, params.pid),
+                    eq(memberSubscriptions.parentId, pid),
                     eq(memberSubscriptions.status, "active")
                 ));
 
@@ -94,7 +96,7 @@ export function memberPlansSubRoutes(app: Elysia) {
                 memberPlanId: sub?.memberPlanId,
                 locationId: locationId,
                 memberId: memberLocation.memberId,
-                parentId: params.pid,
+                parentId: pid,
             };
 
             const [familySubscription] = await db
@@ -113,7 +115,7 @@ export function memberPlansSubRoutes(app: Elysia) {
                         status: "active",
                     },
                 })
-                .returning({ id: memberSubscriptions.id });
+                .returning();
 
             if (!familySubscription) {
                 return status(500, { error: "Failed to create family subscription" });
@@ -139,7 +141,10 @@ export function memberPlansSubRoutes(app: Elysia) {
                 },
             });
 
-            return status(200, { success: true });
+            return status(200, {
+                ...familySubscription,
+                member: memberLocation.member,
+            });
         } catch (error) {
             console.error(error);
             return status(500, { error: "An error occurred" });
