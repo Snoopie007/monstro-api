@@ -257,7 +257,7 @@ export async function POST(
             const messagesWithTools: LangChainMessage[] = [
               ...chatMessages,
               {
-                role: "assistant"
+                role: "assistant",
                 content: fullResponse,
                 tool_calls: toolCalls.map(tc => ({
                   id: tc.id,
