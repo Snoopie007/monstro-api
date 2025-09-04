@@ -12,8 +12,16 @@ import {
   User,
   Loader2,
   MessageSquare,
+  UserCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SupportBot } from "@/types";
 
 interface AdminTestChatProps {
@@ -30,6 +38,13 @@ interface TestMessage {
   metadata?: Record<string, any>;
 }
 
+interface TestMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 export function AdminTestChat({
   locationId,
   supportBot,
@@ -39,6 +54,9 @@ export function AdminTestChat({
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => `test-session-${Date.now()}`);
+  const [testMembers, setTestMembers] = useState<TestMember[]>([]);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [loadingMembers, setLoadingMembers] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -49,20 +67,59 @@ export function AdminTestChat({
     scrollToBottom();
   }, [messages]);
 
+  // Load test members for member context testing
+  useEffect(() => {
+    const loadTestMembers = async () => {
+      if (!locationId) return;
+
+      setLoadingMembers(true);
+      try {
+        const response = await fetch(
+          `/api/protected/loc/${locationId}/members?limit=10`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const members = data.members?.slice(0, 10) || [];
+          setTestMembers(
+            members.map((m: any) => ({
+              id: m.id,
+              firstName: m.firstName || "Test",
+              lastName: m.lastName || "Member",
+              email: m.email || "test@example.com",
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load test members:", error);
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
+
+    loadTestMembers();
+  }, [locationId]);
+
   // Initialize with bot's initial message
   useEffect(() => {
     if (supportBot && messages.length === 0) {
+      const memberContext = selectedMemberId
+        ? testMembers.find((m) => m.id === selectedMemberId)
+        : null;
+
+      const greeting = memberContext
+        ? `Hi ${memberContext.firstName}! I'm here to help you. What can I assist you with today?`
+        : supportBot.initialMessage ||
+          "Hi! I'm here to help you. What can I assist you with today?";
+
       const initialMessage: TestMessage = {
         id: "initial",
-        content:
-          supportBot.initialMessage ||
-          "Hi! I'm here to help you. What can I assist you with today?",
+        content: greeting,
         role: "ai",
         timestamp: new Date(),
       };
       setMessages([initialMessage]);
     }
-  }, [supportBot, messages.length]);
+  }, [supportBot, messages.length, selectedMemberId, testMembers]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading || !supportBot) return;
@@ -79,30 +136,84 @@ export function AdminTestChat({
     setIsLoading(true);
 
     try {
-      // TODO: Implement chat API call to support bot
-      // const response = await sendTestMessage(locationId, supportBot.id, {
-      //   message: userMessage.content,
-      //   sessionId,
-      //   messages: [...messages, userMessage]
-      // });
+      // Call the actual support bot chat API
+      const response = await fetch(
+        `/api/protected/loc/${locationId}/support/chat`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages: [...messages, userMessage],
+            sessionId,
+            testMemberId: selectedMemberId, // Include selected member for context
+          }),
+        }
+      );
 
-      // Simulated response for now
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error("No response body reader available");
+      }
+
+      let aiContent = "";
       const aiMessage: TestMessage = {
         id: (Date.now() + 1).toString(),
-        content: `I received your message: "${userMessage.content}". This is a test response from the support bot. I would normally process this using the configured AI model and available tools.`,
+        content: "",
         role: "ai",
         timestamp: new Date(),
       };
 
+      // Add the AI message to the list so we can update it as we stream
       setMessages((prev) => [...prev, aiMessage]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = new TextDecoder().decode(value);
+        const lines = chunk.split("\n");
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6);
+            if (data === "[DONE]") {
+              setIsLoading(false);
+              return;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.content) {
+                aiContent += parsed.content;
+
+                // Update the AI message content in real-time
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === aiMessage.id
+                      ? { ...msg, content: aiContent }
+                      : msg
+                  )
+                );
+              }
+            } catch (e) {
+              // Ignore malformed JSON
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error("Failed to send test message:", error);
       const errorMessage: TestMessage = {
         id: (Date.now() + 1).toString(),
         content:
-          "Sorry, I encountered an error processing your message. Please try again.",
+          "Sorry, I encountered an error processing your message. Please check that your support bot is properly configured and try again.",
         role: "system",
         timestamp: new Date(),
       };
@@ -118,11 +229,42 @@ export function AdminTestChat({
 
     // Re-add initial message if bot exists
     if (supportBot) {
+      const memberContext = selectedMemberId
+        ? testMembers.find((m) => m.id === selectedMemberId)
+        : null;
+
+      const greeting = memberContext
+        ? `Hi ${memberContext.firstName}! I'm here to help you. What can I assist you with today?`
+        : supportBot.initialMessage ||
+          "Hi! I'm here to help you. What can I assist you with today?";
+
       const initialMessage: TestMessage = {
         id: "initial-reset",
-        content:
-          supportBot.initialMessage ||
-          "Hi! I'm here to help you. What can I assist you with today?",
+        content: greeting,
+        role: "ai",
+        timestamp: new Date(),
+      };
+      setMessages([initialMessage]);
+    }
+  };
+
+  const handleMemberChange = (memberId: string) => {
+    setSelectedMemberId(memberId === "none" ? null : memberId);
+
+    // Reset chat with new member context
+    setMessages([]);
+    if (supportBot) {
+      const memberContext =
+        memberId !== "none" ? testMembers.find((m) => m.id === memberId) : null;
+
+      const greeting = memberContext
+        ? `Hi ${memberContext.firstName}! I'm here to help you. What can I assist you with today?`
+        : supportBot.initialMessage ||
+          "Hi! I'm here to help you. What can I assist you with today?";
+
+      const initialMessage: TestMessage = {
+        id: "initial-member-change",
+        content: greeting,
         role: "ai",
         timestamp: new Date(),
       };
@@ -225,9 +367,40 @@ export function AdminTestChat({
             Reset Chat
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Test your support bot configuration • Model: {supportBot.model}
-        </p>
+        <div className="flex items-center gap-4">
+          <p className="text-sm text-muted-foreground">
+            Test your support bot configuration • Model: {supportBot.model}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <UserCheck size={16} className="text-muted-foreground" />
+          <span className="text-sm font-medium">Test as Member:</span>
+          <Select
+            value={selectedMemberId || "none"}
+            onValueChange={handleMemberChange}
+            disabled={loadingMembers}
+          >
+            <SelectTrigger className="w-[200px] h-8">
+              <SelectValue placeholder="Select member..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Member Context</SelectItem>
+              {testMembers.map((member) => (
+                <SelectItem key={member.id} value={member.id}>
+                  {member.firstName} {member.lastName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedMemberId && (
+            <Badge
+              variant="outline"
+              className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+            >
+              Member Context Active
+            </Badge>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col p-0">

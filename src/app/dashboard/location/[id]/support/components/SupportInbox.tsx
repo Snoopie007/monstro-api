@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, MessageSquare, User, Clock } from "lucide-react";
+import { Settings, MessageSquare, User, Clock, RefreshCw } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -29,19 +29,48 @@ interface SupportInboxProps {
 
 export function SupportInbox({
   locationId,
-  conversations,
+  conversations: initialConversations,
   selectedConversation,
   onConversationSelect,
   onConfigureBot,
 }: SupportInboxProps) {
+  const [conversations, setConversations] =
+    useState<SupportConversation[]>(initialConversations);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load conversations from API
+  const loadConversations = async () => {
+    if (!locationId) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `/api/protected/loc/${locationId}/support/conversations`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setConversations(data.conversations || []);
+      }
+    } catch (error) {
+      console.error("Failed to load conversations:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load conversations on mount and when locationId changes
+  useEffect(() => {
+    loadConversations();
+  }, [locationId]);
   const formatLastMessage = (conversation: SupportConversation) => {
     // TODO: Get actual last message from conversation
     return "Last message preview...";
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (date: Date | string) => {
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    const diff = now.getTime() - dateObj.getTime();
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
@@ -50,7 +79,7 @@ export function SupportInbox({
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
+    return dateObj.toLocaleDateString();
   };
 
   const getVendorStatusBadge = (conversation: SupportConversation) => {
@@ -81,23 +110,46 @@ export function SupportInbox({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">Inbox</CardTitle>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={onConfigureBot}
-                >
-                  <Settings size={16} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Configure bot</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <div className="flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={loadConversations}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw
+                      size={16}
+                      className={isLoading ? "animate-spin" : ""}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Refresh conversations</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={onConfigureBot}
+                  >
+                    <Settings size={16} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Configure bot</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 overflow-y-auto p-0">
@@ -169,8 +221,9 @@ export function SupportInbox({
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-sm truncate">
-                        {/* TODO: Get member name from conversation */}
-                        Member #{conversation.memberId.slice(-6)}
+                        {conversation.member
+                          ? `${conversation.member.firstName} ${conversation.member.lastName}`
+                          : `Member #${conversation.memberId.slice(-6)}`}
                       </h3>
                       <p className="text-xs text-muted-foreground truncate">
                         {formatLastMessage(conversation)}

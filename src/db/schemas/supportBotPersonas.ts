@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm/sql";
+import { sql, relations } from "drizzle-orm";
 import { supportBots } from "./supportBots";
 
 // AI persona for support bot (optional)
@@ -28,6 +28,17 @@ export const supportBotPersonas = pgTable(
     uniqueSupportBot: unique("support_bot_personas_unique").on(
       table.supportBotId
     ), // One persona per support bot
+  })
+);
+
+// Define relations
+export const supportBotPersonasRelations = relations(
+  supportBotPersonas,
+  ({ one }) => ({
+    supportBot: one(supportBots, {
+      fields: [supportBotPersonas.supportBotId],
+      references: [supportBots.id],
+    }),
   })
 );
 

@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm/sql";
+import { sql, relations } from "drizzle-orm";
 import { supportBots } from "./supportBots";
 import { members } from "./members";
 import { users } from "./users";
@@ -31,6 +31,25 @@ export const supportConversations = pgTable("support_conversations", {
     .defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
+
+// Define relations
+export const supportConversationsRelations = relations(
+  supportConversations,
+  ({ one, many }) => ({
+    supportBot: one(supportBots, {
+      fields: [supportConversations.supportBotId],
+      references: [supportBots.id],
+    }),
+    member: one(members, {
+      fields: [supportConversations.memberId],
+      references: [members.id],
+    }),
+    vendor: one(users, {
+      fields: [supportConversations.vendorId],
+      references: [users.id],
+    }),
+  })
+);
 
 export type SupportConversation = typeof supportConversations.$inferSelect;
 export type NewSupportConversation = typeof supportConversations.$inferInsert;

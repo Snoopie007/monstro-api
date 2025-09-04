@@ -6,7 +6,7 @@ import {
   integer,
   unique,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm/sql";
+import { sql, relations } from "drizzle-orm";
 import { locations } from "./locations";
 import {
   botStatusEnum,
@@ -15,6 +15,8 @@ import {
   BotStatus,
 } from "./SupportBotEnums";
 import { getDefaultSupportTools } from "@/libs/supportBotDefaults";
+import { supportBotPersonas } from "./supportBotPersonas";
+import { supportTriggers } from "./supportTriggers";
 
 // Single support bot per location
 export const supportBots = pgTable(
@@ -53,6 +55,19 @@ export const supportBots = pgTable(
     uniqueLocation: unique("support_bots_location_unique").on(table.locationId), // Only one support bot per location
   })
 );
+
+// Define relations
+export const supportBotsRelations = relations(supportBots, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [supportBots.locationId],
+    references: [locations.id],
+  }),
+  persona: one(supportBotPersonas, {
+    fields: [supportBots.id],
+    references: [supportBotPersonas.supportBotId],
+  }),
+  triggers: many(supportTriggers),
+}));
 
 export type SupportBot = typeof supportBots.$inferSelect;
 export type NewSupportBot = typeof supportBots.$inferInsert;
