@@ -1,4 +1,4 @@
-import { MonstroPlansBenefits } from "@/types/admin";
+import type { MonstroPlansBenefits } from "@/types/admin";
 import { relations } from "drizzle-orm";
 import { integer, serial, text, timestamp, pgTable, jsonb } from "drizzle-orm/pg-core";
 

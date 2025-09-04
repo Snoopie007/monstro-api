@@ -17,3 +17,11 @@ export * from "./ImportedMember";
 export * from "./rewards";
 export * from "./achievements";
 
+// Support Bot Schemas
+export * from "./support/SupportBotEnums";
+export * from "./support/supportBots";
+export * from "./support/supportConversations";
+export * from "./support/supportMessages";
+export * from "./support/supportTickets";
+export * from "./support/supportTriggers";
+

@@ -17,7 +17,7 @@ import { memberInvoices, members, memberContracts } from "./members";
 import { locations } from "./locations";
 import { transactions } from "./transactions";
 import { recurringReservations, reservations } from "./reservations";
-import { BillingCycleAnchorConfig } from "@/types";
+import type { BillingCycleAnchorConfig } from "@/types";
 import {
 	LocationStatusEnum,
 	PackageStatusEnum,
