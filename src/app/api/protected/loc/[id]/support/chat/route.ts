@@ -91,9 +91,13 @@ export async function POST(
 
     // Add member context for tool calls if testing with a member
     if (testMemberId && contactInfo.type === "member") {
-      systemPrompt += `\n\nIMPORTANT: When using member tools, use this member ID: ${testMemberId}`;
+      systemPrompt += `\n\nIMPORTANT: When using member tools, ALWAYS use this member ID: ${testMemberId}`;
       systemPrompt += `\nYou are currently helping: ${contactInfo.firstName} ${contactInfo.lastName}`;
-      systemPrompt += `\nFor membership status queries, call get_member_status with memberId: ${testMemberId}`;
+      systemPrompt += `\nFor ALL member tool calls, you MUST provide the memberId parameter like this:`;
+      systemPrompt += `\n- get_member_status: {"memberId": "${testMemberId}"}`;
+      systemPrompt += `\n- get_member_billing: {"memberId": "${testMemberId}"}`;
+      systemPrompt += `\n- get_member_bookable_sessions: {"memberId": "${testMemberId}"}`;
+      systemPrompt += `\nNEVER call these tools without the memberId parameter!`;
     }
 
     // Get AI model
@@ -125,8 +129,11 @@ export async function POST(
       async start(controller) {
         try {
           let fullResponse = "";
+          let toolCalls = [];
+          let currentToolCall = null;
 
           for await (const chunk of stream) {
+            // Handle text content
             if (chunk.content) {
               fullResponse += chunk.content;
               const data = JSON.stringify({
@@ -134,6 +141,113 @@ export async function POST(
                 ...(activatedTrigger && { trigger: activatedTrigger.name }),
               });
               controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            }
+
+            // Handle tool calls
+            if (chunk.tool_calls && chunk.tool_calls.length > 0) {
+              for (const toolCall of chunk.tool_calls) {
+                if (toolCall.type === 'tool_call') {
+                  console.log(`Tool call received: ${toolCall.name} with args:`, toolCall.args);
+                  currentToolCall = {
+                    id: toolCall.id,
+                    name: toolCall.name,
+                    args: toolCall.args
+                  };
+                  toolCalls.push(currentToolCall);
+                }
+              }
+            }
+          }
+
+          // If we have tool calls, execute them and get final response
+          if (toolCalls.length > 0) {
+            console.log(`Executing ${toolCalls.length} tool calls`);
+            
+            const toolResults = [];
+            for (const toolCall of toolCalls) {
+              try {
+                // Find the tool function
+                const tool = tools.find(t => t.name === toolCall.name);
+                if (tool) {
+                  console.log(`Executing tool: ${toolCall.name} with args:`, toolCall.args);
+                  
+                  // Add context for tools that need it
+                  const context = {
+                    locationId: params.id,
+                    supportBotId: supportBot.id,
+                    // Add other context as needed
+                  };
+                  
+                  // Ensure member tools have memberId - inject testMemberId if missing
+                  let args = { ...toolCall.args };
+                  if (['get_member_status', 'get_member_billing', 'get_member_bookable_sessions'].includes(toolCall.name)) {
+                    if (!args.memberId && testMemberId) {
+                      console.log(`Injecting missing memberId: ${testMemberId} for tool: ${toolCall.name}`);
+                      args.memberId = testMemberId;
+                    }
+                    
+                    if (!args.memberId) {
+                      throw new Error(`Tool ${toolCall.name} requires a memberId but none was provided`);
+                    }
+                  }
+                  
+                  // Use the proper LangChain tool invoke method with context as second parameter
+                  const result = await tool.invoke(args, context);
+                  toolResults.push({
+                    tool_call_id: toolCall.id,
+                    content: result
+                  });
+                  
+                  console.log(`Tool ${toolCall.name} executed successfully`);
+                } else {
+                  console.error(`Tool not found: ${toolCall.name}`);
+                  toolResults.push({
+                    tool_call_id: toolCall.id,
+                    content: `Error: Tool ${toolCall.name} not found`
+                  });
+                }
+              } catch (error) {
+                console.error(`Error executing tool ${toolCall.name}:`, error);
+                toolResults.push({
+                  tool_call_id: toolCall.id,
+                  content: `Error executing tool: ${error.message}`
+                });
+              }
+            }
+
+            // Add tool results to messages and get final response
+            const messagesWithTools = [
+              ...chatMessages,
+              {
+                role: "assistant",
+                content: fullResponse,
+                tool_calls: toolCalls.map(tc => ({
+                  id: tc.id,
+                  type: "function",
+                  function: { name: tc.name, arguments: JSON.stringify(tc.args) }
+                }))
+              },
+              ...toolResults.map(result => ({
+                role: "tool",
+                content: result.content,
+                tool_call_id: result.tool_call_id
+              }))
+            ];
+
+            // Get final response from model
+            const finalStream = await modelWithTools.stream(messagesWithTools, {
+              temperature: supportBot.temperature / 100,
+            });
+
+            // Stream the final response
+            for await (const chunk of finalStream) {
+              if (chunk.content) {
+                const data = JSON.stringify({
+                  content: chunk.content,
+                  ...(activatedTrigger && { trigger: activatedTrigger.name }),
+                });
+                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              }
             }
           }
 
