@@ -71,7 +71,11 @@ INSERT INTO members (id, user_id, email, phone, referral_code, avatar, stripe_cu
 INSERT INTO member_locations (location_id, member_id, points, status, invite_date, invite_accepted_date) VALUES
 ('acc_test_gym', 'mbr_test_john', 150, 'active', NOW() - INTERVAL '30 days', NOW() - INTERVAL '29 days'),
 ('acc_test_gym', 'mbr_test_jane', 200, 'active', NOW() - INTERVAL '45 days', NOW() - INTERVAL '44 days'),
-('acc_test_dance', 'mbr_test_bob', 75, 'active', NOW() - INTERVAL '20 days', NOW() - INTERVAL '19 days');
+('acc_test_dance', 'mbr_test_bob', 75, 'active', NOW() - INTERVAL '20 days', NOW() - INTERVAL '19 days'),
+-- Admin location members (for testing admin support bot)
+('acc_test_admin', 'mbr_test_john', 100, 'active', NOW() - INTERVAL '60 days', NOW() - INTERVAL '59 days'),
+('acc_test_admin', 'mbr_test_jane', 125, 'active', NOW() - INTERVAL '50 days', NOW() - INTERVAL '49 days'),
+('acc_test_admin', 'mbr_test_bob', 80, 'active', NOW() - INTERVAL '40 days', NOW() - INTERVAL '39 days');
 
 -- =========================================
 -- PROGRAMS (Classes/services offered)

@@ -345,8 +345,8 @@ export function AdminTestChat({
   }
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="h-full flex flex-col overflow-hidden">
+      <CardHeader className="flex-shrink-0 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CardTitle className="text-lg font-semibold">
@@ -403,67 +403,69 @@ export function AdminTestChat({
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0">
+      <CardContent className="flex-1 flex flex-col p-0 min-h-0">
         {/* Messages Area */}
-        <ScrollArea className="flex-1 px-4">
-          <div className="space-y-4 py-4">
-            {messages.map((message) => (
-              <div key={message.id} className="flex gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                    {getMessageIcon(message.role)}
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="space-y-4 p-4">
+              {messages.map((message) => (
+                <div key={message.id} className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                      {getMessageIcon(message.role)}
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      {getMessageBadge(message.role)}
+                      <span className="text-xs text-muted-foreground">
+                        {message.timestamp.toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <div className="text-sm leading-relaxed">
+                      {message.content}
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    {getMessageBadge(message.role)}
-                    <span className="text-xs text-muted-foreground">
-                      {message.timestamp.toLocaleTimeString()}
-                    </span>
+              ))}
+              {isLoading && (
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                      <Bot size={16} className="text-green-600" />
+                    </div>
                   </div>
-                  <div className="text-sm leading-relaxed">
-                    {message.content}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="flex gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                    <Bot size={16} className="text-green-600" />
-                  </div>
-                </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className="text-xs bg-green-50 text-green-700 border-green-200"
-                    >
-                      Bot
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      typing...
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Loader2
-                      size={16}
-                      className="animate-spin text-muted-foreground"
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      Processing your message...
-                    </span>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="text-xs bg-green-50 text-green-700 border-green-200"
+                      >
+                        Bot
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        typing...
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Loader2
+                        size={16}
+                        className="animate-spin text-muted-foreground"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        Processing your message...
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+        </div>
 
-        {/* Input Area */}
-        <div className="border-t bg-background p-4">
+        {/* Input Area - Fixed at bottom */}
+        <div className="flex-shrink-0 border-t bg-background p-4">
           <div className="flex gap-2">
             <Input
               value={inputValue}
