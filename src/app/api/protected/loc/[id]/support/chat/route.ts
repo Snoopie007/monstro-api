@@ -9,6 +9,43 @@ import {
   buildSupportTools,
   evaluateTriggers,
 } from "@/libs/server/ai/support";
+import { SupportBot, SupportTrigger } from "@/types/supportBot";
+import { SupportContact } from "@/types/support";
+
+// Type definitions for this route
+interface ChatMessage {
+  role: "user" | "ai" | "assistant" | "system";
+  content: string;
+}
+
+interface LangChainMessage {
+  role: "user" | "assistant" | "system" | "tool";
+  content: string;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
+}
+
+interface ToolCall {
+  id: string;
+  name: string;
+  args: Record<string, any>;
+  type?: string;
+}
+
+interface ToolResult {
+  tool_call_id: string;
+  content: string;
+}
+
+interface SupportBotWithTriggers extends SupportBot {
+  triggers: SupportTrigger[];
+}
+
+interface RequestBody {
+  messages: ChatMessage[];
+  sessionId: string;
+  testMemberId?: string;
+}
 
 export async function POST(
   req: NextRequest,
@@ -23,7 +60,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body: RequestBody = await req.json();
     const { messages, sessionId, testMemberId } = body;
 
     if (!messages?.length || !sessionId) {
@@ -34,25 +71,25 @@ export async function POST(
     }
 
     // Get support bot configuration (simplified for testing)
-    const supportBot = await db.query.supportBots.findFirst({
+    const supportBotResult = await db.query.supportBots.findFirst({
       where: eq(supportBots.locationId, params.id),
     });
 
     // Get active triggers separately for now
-    const activeTriggers = supportBot
+    const activeTriggers = supportBotResult
       ? await db.query.supportTriggers.findMany({
           where: (triggers, { eq, and }) =>
             and(
-              eq(triggers.supportBotId, supportBot.id),
+              eq(triggers.supportBotId, supportBotResult.id),
               eq(triggers.isActive, true)
             ),
         })
       : [];
 
-    // Attach triggers to supportBot
-    if (supportBot) {
-      (supportBot as any).triggers = activeTriggers;
-    }
+    // Create properly typed support bot with triggers
+    const supportBot: SupportBotWithTriggers | null = supportBotResult
+      ? { ...supportBotResult, triggers: activeTriggers }
+      : null;
 
     if (!supportBot) {
       return NextResponse.json(
@@ -110,10 +147,10 @@ export async function POST(
     const modelWithTools = tools.length > 0 ? model.bindTools(tools) : model;
 
     // Convert messages to LangChain format
-    const chatMessages = [
+    const chatMessages: LangChainMessage[] = [
       { role: "system", content: systemPrompt },
-      ...messages.map((msg: any) => ({
-        role: msg.role === "ai" ? "assistant" : "user",
+      ...messages.map((msg: ChatMessage): LangChainMessage => ({
+        role: msg.role === "ai" ? "assistant" : msg.role === "user" ? "user" : "system",
         content: msg.content,
       })),
     ];
@@ -129,8 +166,8 @@ export async function POST(
       async start(controller) {
         try {
           let fullResponse = "";
-          let toolCalls = [];
-          let currentToolCall = null;
+          let toolCalls: ToolCall[] = [];
+          let currentToolCall: ToolCall | null = null;
 
           for await (const chunk of stream) {
             // Handle text content
@@ -163,7 +200,7 @@ export async function POST(
           if (toolCalls.length > 0) {
             console.log(`Executing ${toolCalls.length} tool calls`);
             
-            const toolResults = [];
+            const toolResults: ToolResult[] = [];
             for (const toolCall of toolCalls) {
               try {
                 // Find the tool function
@@ -208,27 +245,29 @@ export async function POST(
                 }
               } catch (error) {
                 console.error(`Error executing tool ${toolCall.name}:`, error);
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                 toolResults.push({
                   tool_call_id: toolCall.id,
-                  content: `Error executing tool: ${error.message}`
+                  content: `Error executing tool: ${errorMessage}`
                 });
               }
             }
 
             // Add tool results to messages and get final response
-            const messagesWithTools = [
+            const messagesWithTools: LangChainMessage[] = [
               ...chatMessages,
               {
-                role: "assistant",
+                role: "assistant"
                 content: fullResponse,
                 tool_calls: toolCalls.map(tc => ({
                   id: tc.id,
-                  type: "function",
-                  function: { name: tc.name, arguments: JSON.stringify(tc.args) }
+                  name: tc.name,
+                  args: tc.args,
+                  type: "function"
                 }))
               },
               ...toolResults.map(result => ({
-                role: "tool",
+                role: "tool" as const,
                 content: result.content,
                 tool_call_id: result.tool_call_id
               }))
@@ -278,7 +317,7 @@ export async function POST(
 }
 
 // Helper function to get test member context (simplified to avoid relation errors)
-async function getTestMemberContext(memberId: string, locationId: string) {
+async function getTestMemberContext(memberId: string, locationId: string): Promise<SupportContact> {
   try {
     console.log(
       `Getting test member context for memberId: ${memberId}, locationId: ${locationId}`
