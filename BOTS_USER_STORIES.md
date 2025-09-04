@@ -28,11 +28,11 @@ This document outlines user stories for the simplified support bot functionality
 **So that** I can set up automated customer support  
 
 **Acceptance Criteria:**
-- [ ] I can access the "Support" page from location dashboard navigation
+- [x] I can access the "Support" page from location dashboard navigation
 - [ ] Support bot is automatically created for my location if it doesn't exist
-- [ ] I can see the current support bot configuration panel
-- [ ] Support bot starts with default Q&A assistant setup
-- [ ] I can see the bot's current status (Draft/Active/Paused)
+- [x] I can see the current support bot configuration panel
+- [x] Support bot starts with default Q&A assistant setup
+- [x] I can see the bot's current status (Draft/Active/Paused)
 
 **Technical Requirements:**
 - Support bot auto-creation API when location is accessed
@@ -45,12 +45,12 @@ This document outlines user stories for the simplified support bot functionality
 **So that** it can provide appropriate assistance to my customers  
 
 **Acceptance Criteria:**
-- [ ] I can edit support bot name, prompt, and initial message
-- [ ] I can select AI model (GPT, Claude, or Gemini)
-- [ ] I can set temperature (creativity level) via slider
-- [ ] I can save changes and see "Support Bot Updated" confirmation
-- [ ] Changes are immediately reflected in bot behavior
-- [ ] I can preview changes before saving
+- [x] I can edit support bot name, prompt, and initial message
+- [x] I can select AI model (GPT, Claude, or Gemini)
+- [x] I can set temperature (creativity level) via slider
+- [x] I can save changes and see "Support Bot Updated" confirmation
+- [x] Changes are immediately reflected in bot behavior
+- [x] I can preview changes before saving
 
 **Technical Requirements:**
 - Form pre-populated with current support bot settings
@@ -63,12 +63,12 @@ This document outlines user stories for the simplified support bot functionality
 **So that** I can activate it only when ready  
 
 **Acceptance Criteria:**
-- [ ] I can change support bot status between Draft, Active, and Paused
-- [ ] Only Active support bots are available for customer interactions
+- [x] I can change support bot status between Draft, Active, and Paused
+- [x] Only Active support bots are available for customer interactions
 - [ ] Draft support bots are only available for testing by me
 - [ ] Paused support bots show appropriate message to customers
-- [ ] Status changes take effect immediately
-- [ ] I can see clear indicators of current status
+- [x] Status changes take effect immediately
+- [x] I can see clear indicators of current status
 
 **Technical Requirements:**
 - Support bot status field controls public availability
@@ -81,12 +81,12 @@ This document outlines user stories for the simplified support bot functionality
 **So that** it can represent my brand and provide consistent customer experience  
 
 **Acceptance Criteria:**
-- [ ] I can access persona configuration in support bot settings
-- [ ] I can enter persona name, response style, and personality traits
+- [x] I can access persona configuration in support bot settings
+- [x] I can enter persona name, response style, and personality traits
 - [ ] I can choose from predefined avatar images
-- [ ] I can preview how the persona affects bot responses
+- [x] I can preview how the persona affects bot responses
 - [ ] I can save persona and see it applied immediately
-- [ ] I can modify or remove the persona later
+- [x] I can modify or remove the persona later
 
 **Technical Requirements:**
 - Support bot persona API endpoint (`PUT /api/protected/loc/[id]/support/persona`)
@@ -103,8 +103,8 @@ This document outlines user stories for the simplified support bot functionality
 **So that** I can verify responses and member-specific tool calls work correctly before going live  
 
 **Acceptance Criteria:**
-- [ ] I can see a chat interface in the support bot dashboard
-- [ ] I can type messages and receive immediate AI responses
+- [x] I can see a chat interface in the support bot dashboard
+- [x] I can type messages and receive immediate AI responses
 - [ ] Bot uses the configured prompt, model, and persona
 - [ ] Bot can access knowledge base documents for general facility info
 - [ ] Support tool calls work correctly:
@@ -115,7 +115,7 @@ This document outlines user stories for the simplified support bot functionality
   - [ ] Update ticket status when issues are resolved
 - [ ] Trigger-based tool calls execute when trigger phrases are used
 - [ ] Test chat behaves identically to member app chat
-- [ ] Session state tracks conversation context
+- [x] Session state tracks conversation context
 
 **Technical Requirements:**
 - Direct AI processing without complex queue system
@@ -130,12 +130,12 @@ This document outlines user stories for the simplified support bot functionality
 **So that** I can verify different scenarios and tool calls work  
 
 **Acceptance Criteria:**
-- [ ] I can click a "Reset Chat" button in the chat interface
-- [ ] Chat session resets to initial state
-- [ ] Previous conversation context is cleared
-- [ ] Bot returns to initial message and fresh session
-- [ ] I can test different conversation paths from the beginning
-- [ ] Trigger phrases can be tested multiple times
+- [x] I can click a "Reset Chat" button in the chat interface
+- [x] Chat session resets to initial state
+- [x] Previous conversation context is cleared
+- [x] Bot returns to initial message and fresh session
+- [x] I can test different conversation paths from the beginning
+- [x] Trigger phrases can be tested multiple times
 
 **Technical Requirements:**
 - Session reset clears conversation history and context
@@ -149,12 +149,12 @@ This document outlines user stories for the simplified support bot functionality
 **So that** I can verify personalization works with member data  
 
 **Acceptance Criteria:**
-- [ ] I can select a test member profile for testing
-- [ ] Bot responses are personalized based on test member information
+- [x] I can select a test member profile for testing
+- [x] Bot responses are personalized based on test member information
 - [ ] Bot can reference member data in responses (name, membership info)
-- [ ] Member-specific tool calls work with test context
+- [x] Member-specific tool calls work with test context
 - [ ] Test behavior matches exactly what members will experience
-- [ ] Privacy and data access controls are respected
+- [x] Privacy and data access controls are respected
 
 **Technical Requirements:**
 - Test member data integration in chat context
@@ -172,10 +172,10 @@ This document outlines user stories for the simplified support bot functionality
 **So that** my support bot can handle specific member questions automatically  
 
 **Acceptance Criteria:**
-- [ ] I can access triggers management in support bot dashboard
-- [ ] I can click "Add Trigger" and see creation form
-- [ ] I can enter trigger name and trigger phrases (keywords/intents)
-- [ ] I can select which support tool call should execute when triggered:
+- [x] I can access triggers management in support bot dashboard
+- [x] I can click "Add Trigger" and see creation form
+- [x] I can enter trigger name and trigger phrases (keywords/intents)
+- [x] I can select which support tool call should execute when triggered:
   - [ ] Get Member Status (for "membership status", "subscription info", etc.)
   - [ ] Get Member Billing (for "billing info", "payment history", etc.)  
   - [ ] Get Bookable Sessions (for "available classes", "what can I book", etc.)
@@ -183,9 +183,9 @@ This document outlines user stories for the simplified support bot functionality
   - [ ] Update Ticket Status (for "issue resolved", "problem fixed", etc.)
   - [ ] Search Knowledge Base (for general facility questions)
   - [ ] Escalate to Human (for complex issues)
-- [ ] I can add multiple example phrases that should activate this trigger
-- [ ] I can save trigger and see it in my support bot's trigger list
-- [ ] Triggers are immediately available for testing
+- [x] I can add multiple example phrases that should activate this trigger
+- [x] I can save trigger and see it in my support bot's trigger list
+- [x] Triggers are immediately available for testing
 
 **Technical Requirements:**
 - Trigger creation API stores trigger phrases and member-focused tool calls
@@ -218,12 +218,12 @@ This document outlines user stories for the simplified support bot functionality
 **So that** I can improve automated responses over time  
 
 **Acceptance Criteria:**
-- [ ] I can see list of all triggers for my support bot
-- [ ] I can edit trigger details (name, phrases, tool calls, requirements)
-- [ ] I can enable/disable triggers without deleting them
-- [ ] I can delete triggers I no longer need
-- [ ] I can see how many triggers are active
-- [ ] Changes take effect immediately in chat testing
+- [x] I can see list of all triggers for my support bot
+- [x] I can edit trigger details (name, phrases, tool calls, requirements)
+- [x] I can enable/disable triggers without deleting them
+- [x] I can delete triggers I no longer need
+- [x] I can see how many triggers are active
+- [x] Changes take effect immediately in chat testing
 
 **Technical Requirements:**
 - Trigger management API supports CRUD operations
@@ -299,12 +299,12 @@ This document outlines user stories for the simplified support bot functionality
 **So that** I can provide personal assistance when needed  
 
 **Acceptance Criteria:**
-- [ ] I can view active support conversations from my dashboard
-- [ ] I can click "Take Over" to switch from bot to human mode
-- [ ] Member is notified when I join the conversation
-- [ ] Support bot stops responding when I'm active in the conversation
-- [ ] I can see full conversation history before taking over
-- [ ] I can hand conversation back to bot when resolved
+- [x] I can view active support conversations from my dashboard
+- [x] I can click "Take Over" to switch from bot to human mode
+- [x] Member is notified when I join the conversation
+- [x] Support bot stops responding when I'm active in the conversation
+- [x] I can see full conversation history before taking over
+- [x] I can hand conversation back to bot when resolved
 
 **Technical Requirements:**
 - Vendor takeover functionality in conversation API
@@ -318,11 +318,11 @@ This document outlines user stories for the simplified support bot functionality
 **So that** I can provide hybrid human-AI assistance  
 
 **Acceptance Criteria:**
-- [ ] I can view bot suggestions even when I've taken over
-- [ ] I can ask bot to suggest responses based on knowledge base
-- [ ] I can re-enable bot for simple queries while staying involved
+- [x] I can view bot suggestions even when I've taken over
+- [x] I can ask bot to suggest responses based on knowledge base
+- [x] I can re-enable bot for simple queries while staying involved
 - [ ] Bot can escalate complex issues back to me automatically
-- [ ] Conversation maintains context across human-bot transitions
+- [x] Conversation maintains context across human-bot transitions
 
 **Technical Requirements:**
 - Hybrid conversation mode support
