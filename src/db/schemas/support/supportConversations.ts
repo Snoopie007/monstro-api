@@ -1,9 +1,9 @@
 import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { sql, relations } from "drizzle-orm";
-import { supportBots } from "./supportBots";
 import { members } from "../members";
 import { users } from "../users";
-
+import { supportBots } from "./SupportBots";
+import { messageRoleEnum, channelEnum } from "./SupportBotEnums";
 // Support conversations for authenticated members only
 export const supportConversations = pgTable("support_conversations", {
   id: text("id")
@@ -51,5 +51,22 @@ export const supportConversationsRelations = relations(
   })
 );
 
-export type SupportConversation = typeof supportConversations.$inferSelect;
-export type NewSupportConversation = typeof supportConversations.$inferInsert;
+export const supportMessages = pgTable("support_messages", {
+  id: text("id")
+    .primaryKey()
+    .default(sql`uuid_base62()`),
+  conversationId: text("conversation_id")
+    .notNull()
+    .references(() => supportConversations.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  role: messageRoleEnum("role").notNull().default('User'),
+  channel: channelEnum("channel").notNull().default('WebChat'),
+  metadata: jsonb("metadata")
+    .notNull()
+    .default(sql`'{}'::jsonb`),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+
