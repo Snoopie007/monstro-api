@@ -1,6 +1,8 @@
 import { db } from '@/db/db';
 import { eq, and } from 'drizzle-orm';
-import { supportBots, supportTriggers } from '@/db/schemas';
+import { supportBots } from '@/db/schemas/support/SupportBots';
+import { DEFAULT_SUPPORT_TOOLS } from '@/libs/ai/Tools';
+import { supportTriggers } from '@/db/schemas/support';
 
 export interface BotConfig {
   id: string;
@@ -31,8 +33,8 @@ export class BotConfigService {
    */
   async getBotConfig(locationId: string): Promise<BotConfig> {
     console.log(`🔧 Getting bot config for location: ${locationId}`);
-    
-    const supportBot = await db.query.supportBots.findFirst({
+
+    let supportBot = await db.query.supportBots.findFirst({
       where: eq(supportBots.locationId, locationId),
       // TODO: Add persona relation when available
       // with: {
@@ -40,8 +42,28 @@ export class BotConfigService {
       // }
     });
 
+    // Fallback: Auto-create support bot for existing locations that don't have one
+    // (New locations should get bots created during location creation)
     if (!supportBot) {
-      throw new Error(`No support bot configured for location ${locationId}`);
+      console.log(`🔄 Fallback: Creating bot for existing location ${locationId} without support bot...`);
+
+      const [newBot] = await db.insert(supportBots).values({
+        locationId,
+        name: 'Support Bot',
+        prompt: 'You are a helpful customer support assistant. You have access to member information tools to help with subscriptions, billing, and bookable sessions. You can also create support tickets and escalate to human agents when needed.',
+        temperature: 0,
+        initialMessage: 'Hi! I\'m here to help you. I can assist with your membership status, billing questions, available classes, and any other support needs. What can I help you with today?',
+        model: 'GPT',
+        status: 'Draft',
+        availableTools: DEFAULT_SUPPORT_TOOLS,
+      }).returning();
+
+      supportBot = newBot;
+    }
+
+    // Ensure supportBot exists (TypeScript guard)
+    if (!supportBot || !supportBot.id) {
+      throw new Error(`Failed to get or create support bot for location ${locationId}`);
     }
 
     // Get active triggers separately to avoid relation issues
@@ -61,7 +83,16 @@ export class BotConfigService {
     console.log(`🔧 Found bot: ${supportBot.name} with ${triggers.length} active triggers`);
 
     return {
-      ...supportBot,
+      id: supportBot.id,
+      locationId: supportBot.locationId,
+      name: supportBot.name,
+      prompt: supportBot.prompt,
+      temperature: supportBot.temperature,
+      initialMessage: supportBot.initialMessage,
+      model: supportBot.model,
+      status: supportBot.status,
+      availableTools: supportBot.availableTools,
+      persona: undefined, // TODO: Add when persona relation is available
       triggers
     };
   }
@@ -71,7 +102,7 @@ export class BotConfigService {
    */
   buildSystemPrompt(supportBot: BotConfig, memberContext: MemberContext): string {
     let prompt = supportBot.prompt;
-    
+
     // Add persona information if available
     if (supportBot.persona) {
       prompt += `\n\nPersona Instructions:
@@ -87,7 +118,7 @@ export class BotConfigService {
 - Member ID: ${memberContext.id}
 - Email: ${memberContext.email}
 - Member since: ${memberContext.memberSince.toLocaleDateString()}`;
-      
+
       if (memberContext.locationName) {
         prompt += `\n- Location: ${memberContext.locationName}`;
       }
@@ -113,7 +144,7 @@ ${supportBot.availableTools.map((tool: any) => `- ${tool.name}: ${tool.descripti
    */
   evaluateTriggers(message: string, triggers: any[]): any | null {
     const messageLower = message.toLowerCase();
-    
+
     for (const trigger of triggers) {
       for (const phrase of trigger.triggerPhrases) {
         if (messageLower.includes(phrase.toLowerCase())) {
@@ -122,7 +153,7 @@ ${supportBot.availableTools.map((tool: any) => `- ${tool.name}: ${tool.descripti
         }
       }
     }
-    
+
     return null;
   }
 
@@ -134,7 +165,7 @@ ${supportBot.availableTools.map((tool: any) => `- ${tool.name}: ${tool.descripti
       where: eq(supportBots.locationId, locationId),
       columns: { status: true }
     });
-    
+
     return bot?.status || 'Draft';
   }
 
@@ -145,7 +176,7 @@ ${supportBot.availableTools.map((tool: any) => `- ${tool.name}: ${tool.descripti
     const status = await this.getBotStatus(locationId);
     // TODO: Uncomment for production validation
     // return status === 'Active';
-    
+
     // For testing, allow Draft and Active bots
     return ['Draft', 'Active'].includes(status);
   }

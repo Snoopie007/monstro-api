@@ -2,11 +2,12 @@ import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { db } from '@/db/db';
 import { eq, and, gt, desc } from 'drizzle-orm';
-import {
-  members,
-  memberLocat ions,
+import { 
+  members, 
+  memberLocations, 
   supportConversations,
-  ticketStatusEnum
+  ticketStatusEnum,
+  TicketStatus
 } from '@/db/schemas';
 
 // Get member subscription/package status  
@@ -273,18 +274,19 @@ export const createSupportTicket = tool(
     try {
       console.log(`🎫 Creating support ticket for conversation: ${conversationId}`);
 
-      const [ticket] = await db
-        .insert(supportConversations)
-        .values({
-          conversationId,
+      const [conversation] = await db
+        .update(supportConversations)
+        .set({
           title,
           description,
           priority,
-          status: 'open',
+          status: TicketStatus.Open,
+          updatedAt: new Date(),
         })
+        .where(eq(supportConversations.id, conversationId))
         .returning();
 
-      return `Support ticket #${ticket?.id || 'unknown'} created successfully. I'll track this issue for you: "${title}"`;
+      return `Support ticket "${title}" created successfully. I'll track this issue for you.`;
     } catch (error) {
       console.error("Error creating support ticket:", error);
       return "I encountered an error creating your support ticket. Please contact support directly for assistance.";
