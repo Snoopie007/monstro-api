@@ -26,6 +26,7 @@ import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
 import { useMemberStatus } from "../../providers";
 import { CustomFieldsSection } from "@/components/custom-fields";
+import { MemberLocationProfile } from "@/types";
 
 const MemberInfoSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -49,14 +50,16 @@ export function EditMemberInfoDialog({
   const [loading, setLoading] = useState(false);
   const { member, ml, updateMemberLocation } = useMemberStatus();
 
+  const memberProfile = ml?.profile || member;
+
   const form = useForm<z.infer<typeof MemberInfoSchema>>({
     resolver: zodResolver(MemberInfoSchema),
     defaultValues: {
-      firstName: ml?.firstName || member?.firstName || "",
-      lastName: ml?.lastName || member?.lastName || "",
-      email: ml?.email || member?.email || "",
-      phone: ml?.phone || member?.phone || "",
-      avatar: ml?.avatar || member?.avatar || "",
+      firstName: memberProfile?.firstName || "",
+      lastName: memberProfile?.lastName || "",
+      email: memberProfile?.email || "",
+      phone: memberProfile?.phone || "",
+      avatar: memberProfile?.avatar || "",
     },
   });
 
@@ -64,11 +67,11 @@ export function EditMemberInfoDialog({
   useEffect(() => {
     if (isOpen) {
       form.reset({
-        firstName: ml?.firstName || member?.firstName || "",
-        lastName: ml?.lastName || member?.lastName || "",
-        email: ml?.email || member?.email || "",
-        phone: ml?.phone || member?.phone || "",
-        avatar: ml?.avatar || member?.avatar || "",
+        firstName: memberProfile?.firstName || "",
+        lastName: memberProfile?.lastName || "",
+        email: memberProfile?.email || "",
+        phone: memberProfile?.phone || "",
+        avatar: memberProfile?.avatar || "",
       });
     }
   }, [isOpen]);
@@ -93,10 +96,13 @@ export function EditMemberInfoDialog({
       return;
     }
 
-    // Update the member location in context with the new values
+    // Update the member location profile in context with the new values
     updateMemberLocation((prev) => ({
       ...prev,
-      ...values,
+      profile: {
+        ...prev.profile,
+        ...values,
+      } as MemberLocationProfile,
     }));
 
     toast.success("Member information updated successfully");

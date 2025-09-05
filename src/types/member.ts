@@ -72,6 +72,15 @@ export type MemberLocation = typeof memberLocations.$inferSelect & {
   member?: Member;
 };
 
+
+export type MemberLocationProfile = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  avatar: string;
+};
+
 export type FamilyPlan = {
   planName: string;
   planId: number;
