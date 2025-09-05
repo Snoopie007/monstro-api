@@ -12,3 +12,4 @@ export * from './program';
 export * from './attendance';
 export * from './DatabaseEnums';
 export * from './wallet';
+export * from './support';

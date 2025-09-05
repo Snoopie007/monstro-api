@@ -2,12 +2,11 @@ import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { db } from '@/db/db';
 import { eq, and, gt, desc } from 'drizzle-orm';
-import { 
-  members, 
-  memberLocations, 
-  supportTickets, 
+import {
+  members,
+  memberLocat ions,
   supportConversations,
-  TicketStatus
+  ticketStatusEnum
 } from '@/db/schemas';
 
 // Get member subscription/package status  
@@ -72,7 +71,7 @@ export const getMemberStatus = tool(
         //     });
         //   }
         // }
-        
+
         response += `*Detailed subscription and package information will be available once the database relations are fully configured.*`;
       } catch (relationError) {
         console.log("Relations not available yet, showing basic info only");
@@ -166,7 +165,7 @@ export const getMemberBilling = tool(
       // }
 
       response += `\n*For detailed billing information and payment history, please contact our support team.*`;
-      
+
       return response;
     } catch (error) {
       console.error("Error getting member billing:", error);
@@ -275,13 +274,13 @@ export const createSupportTicket = tool(
       console.log(`🎫 Creating support ticket for conversation: ${conversationId}`);
 
       const [ticket] = await db
-        .insert(supportTickets)
+        .insert(supportConversations)
         .values({
           conversationId,
           title,
           description,
           priority,
-          status: TicketStatus.Open,
+          status: 'open',
         })
         .returning();
 

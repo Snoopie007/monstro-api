@@ -1,9 +1,9 @@
 import { BotConfigService } from './bot-config.service';
-import { MemberContextBuilder } from './context/member-context';
-import { buildSupportTools } from './function-handlers';
+import { MemberContextBuilder } from './member-context';
+import { buildSupportTools } from './FnctionHandlers';
 import { AIModelService } from './models';
 import { db } from '@/db/db';
-import { supportConversations, supportMessages, supportBots, Channel, MessageRole } from '@/db/schemas';
+import { supportConversations, supportMessages, supportBots } from '@/db/schemas';
 import { eq, desc, and } from 'drizzle-orm';
 
 export interface ChatResponse {
@@ -37,10 +37,10 @@ export class ChatAIService {
   ): Promise<ChatResponse> {
     try {
       console.log(`🤖 Generating response for member ${memberId} at location ${locationId}`);
-      
+
       // Get bot configuration from existing tables
       const botConfig = await this.botConfigService.getBotConfig(locationId);
-      
+
       // Validate bot is ready for interactions
       if (!(await this.botConfigService.isBotActive(locationId))) {
         throw new Error(`Support bot is not active for location ${locationId}`);
@@ -53,10 +53,10 @@ export class ChatAIService {
 
       // Build member context with real database calls
       const memberContext = await this.contextBuilder.buildContext(memberId, locationId);
-      
+
       // Check for trigger matches
       const matchedTrigger = this.botConfigService.evaluateTriggers(
-        userMessage, 
+        userMessage,
         botConfig.triggers
       );
 
@@ -92,11 +92,11 @@ export class ChatAIService {
         response = await this.handleTriggeredResponse(matchedTrigger, tools, memberId, botConfig, conversation.id);
       } else {
         response = await this.handleGeneralResponse(
-          userMessage, 
-          tools, 
-          memberId, 
-          botConfig, 
-          memberContext, 
+          userMessage,
+          tools,
+          memberId,
+          botConfig,
+          memberContext,
           systemPrompt,
           conversation.id
         );
@@ -116,7 +116,7 @@ export class ChatAIService {
 
     } catch (error) {
       console.error('💥 AI Chat Error:', error);
-      
+
       // Still try to save error to conversation if possible
       if (conversationId) {
         try {
@@ -125,7 +125,7 @@ export class ChatAIService {
           console.error('Failed to save error message:', saveError);
         }
       }
-      
+
       throw new Error('Failed to generate AI response');
     }
   }
@@ -134,14 +134,14 @@ export class ChatAIService {
    * Handle triggered responses (when specific triggers are matched)
    */
   private async handleTriggeredResponse(
-    trigger: any, 
-    tools: any[], 
-    memberId: string, 
-    botConfig: any, 
+    trigger: any,
+    tools: any[],
+    memberId: string,
+    botConfig: any,
     conversationId: string
   ): Promise<string> {
     let response = `🎯 Trigger "${trigger.name}" activated!\n\n`;
-    
+
     // Execute trigger tool call
     if (trigger.toolCall?.name) {
       const tool = tools.find(t => t.name === trigger.toolCall.name);
@@ -181,36 +181,36 @@ export class ChatAIService {
     systemPrompt: string,
     conversationId: string
   ): Promise<string> {
-    
+
     // For common queries, use direct tool calling without AI model
     const messageLower = userMessage.toLowerCase();
-    
+
     if (messageLower.includes('membership') || messageLower.includes('subscription')) {
       const tool = tools.find(t => t.name === 'get_member_status');
       if (tool) {
-        return await tool.invoke({ memberId }, { 
-          locationId: botConfig.locationId, 
-          supportBotId: botConfig.id 
+        return await tool.invoke({ memberId }, {
+          locationId: botConfig.locationId,
+          supportBotId: botConfig.id
         });
       }
-    } 
-    
+    }
+
     if (messageLower.includes('billing') || messageLower.includes('payment')) {
       const tool = tools.find(t => t.name === 'get_member_billing');
       if (tool) {
-        return await tool.invoke({ memberId }, { 
-          locationId: botConfig.locationId, 
-          supportBotId: botConfig.id 
+        return await tool.invoke({ memberId }, {
+          locationId: botConfig.locationId,
+          supportBotId: botConfig.id
         });
       }
-    } 
-    
+    }
+
     if (messageLower.includes('classes') || messageLower.includes('book')) {
       const tool = tools.find(t => t.name === 'get_member_bookable_sessions');
       if (tool) {
-        return await tool.invoke({ memberId }, { 
-          locationId: botConfig.locationId, 
-          supportBotId: botConfig.id 
+        return await tool.invoke({ memberId }, {
+          locationId: botConfig.locationId,
+          supportBotId: botConfig.id
         });
       }
     }
@@ -218,12 +218,12 @@ export class ChatAIService {
     if (messageLower.includes('help') || messageLower.includes('issue') || messageLower.includes('problem')) {
       const tool = tools.find(t => t.name === 'create_support_ticket');
       if (tool) {
-        return await tool.invoke({ 
+        return await tool.invoke({
           title: 'General Support Request',
           description: userMessage,
           priority: 3
-        }, { 
-          locationId: botConfig.locationId, 
+        }, {
+          locationId: botConfig.locationId,
           supportBotId: botConfig.id,
           conversationId
         });
@@ -239,7 +239,7 @@ export class ChatAIService {
 
     // // Get conversation history for context
     // const conversationHistory = await this.getConversationMessages(conversationId, 15);
-    
+
     // // Build messages array for AI model
     // const messages = [
     //   { role: 'system', content: systemPrompt },
@@ -270,7 +270,7 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
   private async getConversationMessages(conversationId: string, limit: number = 20) {
     try {
       console.log(`📚 Getting conversation history for ${conversationId} (limit: ${limit})`);
-      
+
       const messages = await db.query.supportMessages.findMany({
         where: eq(supportMessages.conversationId, conversationId),
         orderBy: [desc(supportMessages.createdAt)],
@@ -279,7 +279,7 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
 
       // Return in chronological order for AI context
       const chronologicalMessages = messages.reverse().map(message => ({
-        role: message.role === 'ai' ? 'assistant' : message.role === 'user' ? 'user' : 'system',
+        role: message.role === 'AI' ? 'assistant' : message.role === 'User' ? 'user' : 'system',
         content: message.content,
         timestamp: message.createdAt.toISOString(),
         metadata: message.metadata
@@ -367,7 +367,7 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
         limit: 10
       });
 
-      return { 
+      return {
         conversations: conversations.map(conv => ({
           ...conv,
           createdAt: conv.createdAt.toISOString(),
@@ -421,8 +421,8 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
     const [savedMessage] = await db.insert(supportMessages).values({
       conversationId,
       content,
-      role: role === 'user' ? MessageRole.User : MessageRole.AI,
-      channel: Channel.WebChat,
+      role: role === 'user' ? 'User' : 'AI',
+      channel: 'WebChat',
       metadata: {
         savedAt: new Date().toISOString(),
         source: 'api-chat'
