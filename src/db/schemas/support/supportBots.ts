@@ -24,7 +24,7 @@ export const supportBots = pgTable("support_bots", {
   initialMessage: text("initial_message").notNull().default("Hi! I'm here to help you. I can assist with your membership status, billing questions, available classes, and any other support needs. What can I help you with today?"),
   model: botModelEnum("model").notNull().default('GPT'),
   status: botStatusEnum("status").notNull().default('Draft'),
-  availableTools: jsonb("available_tools").array().notNull().$default(() => DEFAULT_SUPPORT_TOOLS), // Default support tools
+  availableTools: jsonb("available_tools").array().notNull().$default(() => []), // Default support tools
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [

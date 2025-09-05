@@ -17,6 +17,9 @@ export * from "./ImportedMember";
 export * from "./rewards";
 export * from "./achievements";
 export * from "./support";
+export * from "./support/supportBots";
+export * from "./support/supportTriggers";
+export * from "./support/supportConversations";
 
 
 

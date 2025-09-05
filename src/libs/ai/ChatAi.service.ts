@@ -1,5 +1,5 @@
-import { BotConfigService } from './bot-config.service';
-import { MemberContextBuilder } from './member-context';
+import { BotConfigService } from './BotConfig.service';
+import { MemberContextBuilder } from './MemberContext';
 import { buildSupportTools } from './FnctionHandlers';
 import { AIModelService } from './models';
 import { db } from '@/db/db';

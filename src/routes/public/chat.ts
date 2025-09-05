@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { ChatAIService } from '@/libs/ai/chat-ai.service';
+import { ChatAIService } from '@/libs/ai/ChatAi.service';
 
 const chatAIService = new ChatAIService();
 

@@ -1,10 +1,9 @@
-import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, boolean, integer } from "drizzle-orm/pg-core";
 import { sql, relations } from "drizzle-orm";
 import { members } from "../members";
 import { users } from "../users";
-import { supportBots } from "./SupportBots";
-import { messageRoleEnum, channelEnum } from "./SupportBotEnums";
-
+import { supportBots } from "./supportBots";
+import { messageRoleEnum, channelEnum, ticketStatusEnum } from "./SupportBotEnums";
 // Support conversations for authenticated members only
 export const supportConversations = pgTable("support_conversations", {
   id: text("id").primaryKey().default(sql`uuid_base62()`),
@@ -14,6 +13,13 @@ export const supportConversations = pgTable("support_conversations", {
   vendorId: text("vendor_id").references(() => users.id, { onDelete: "set null" }),
   takenOverAt: timestamp("taken_over_at", { withTimezone: true }),
   isVendorActive: boolean("is_vendor_active").default(false),
+
+  // Ticket fields (merged from support_tickets)
+  title: text("title").notNull().default("Support Request"),
+  description: text("description"),
+  status: ticketStatusEnum("status").notNull().default('Open'),
+  priority: integer("priority").notNull().default(3), // 1=high, 2=medium, 3=low
+
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }),
