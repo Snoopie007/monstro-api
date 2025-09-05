@@ -26,5 +26,4 @@ export * from "./supportBotPersonas";
 export * from "./supportDocuments";
 export * from "./supportConversations";
 export * from "./supportMessages";
-export * from "./supportTickets";
 export * from "./supportLogs";

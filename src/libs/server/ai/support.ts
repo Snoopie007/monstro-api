@@ -1,7 +1,7 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { db } from "@/db/db";
-import { supportTickets, supportConversations } from "@/db/schemas";
+import { supportConversations } from "@/db/schemas";
 import { eq, and } from "drizzle-orm";
 
 // Build system prompt for support bot
@@ -382,18 +382,19 @@ export const createSupportTicket = tool(
     const conversationId = context?.conversationId;
 
     try {
-      const ticket = await db
-        .insert(supportTickets)
-        .values({
-          conversationId,
+      const [conversation] = await db
+        .update(supportConversations)
+        .set({
           title,
           description,
           priority,
           status: "open",
+          updatedAt: new Date(),
         })
+        .where(eq(supportConversations.id, conversationId))
         .returning();
 
-      return `Support ticket #${ticket[0].id} created successfully. I'll track this issue for you.`;
+      return `Support ticket "${title}" created successfully. I'll track this issue for you.`;
     } catch (error) {
       console.error("Error creating support ticket:", error);
       return "I encountered an error creating your support ticket. Please contact support directly for assistance.";
@@ -416,18 +417,18 @@ export const createSupportTicket = tool(
 
 // Update ticket status tool
 export const updateTicketStatus = tool(
-  async ({ ticketId, status, notes }) => {
+  async ({ conversationId, status, notes }) => {
     try {
       await db
-        .update(supportTickets)
+        .update(supportConversations)
         .set({
           status,
           updatedAt: new Date(),
           metadata: { statusChangeNotes: notes },
         })
-        .where(eq(supportTickets.id, ticketId));
+        .where(eq(supportConversations.id, conversationId));
 
-      return `Ticket #${ticketId} status updated to ${status}`;
+      return `Conversation ticket status updated to ${status}`;
     } catch (error) {
       console.error("Error updating ticket status:", error);
       return "I encountered an error updating the ticket status. Please contact support for assistance.";
@@ -437,7 +438,7 @@ export const updateTicketStatus = tool(
     name: "update_ticket_status",
     description: "Update the status of a support ticket",
     schema: z.object({
-      ticketId: z.string().describe("The ID of the ticket to update"),
+      conversationId: z.string().describe("The ID of the conversation to update"),
       status: z
         .enum(["open", "in_progress", "resolved", "closed"])
         .describe("New status for the ticket"),

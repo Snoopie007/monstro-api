@@ -137,11 +137,11 @@ INSERT INTO contracts (id, content, title, description, is_draft, editable, loca
 -- =========================================
 -- MEMBER CONTRACTS (Signed agreements)
 -- =========================================
-INSERT INTO member_contracts (id, member_id, contract_id, location_id, signed, variables, signature, created_at, updated_at) VALUES
-('mc_john_gym_waiver', 'mbr_test_john', 'contract_gym_waiver', 'acc_test_gym', true, '{"date": "2024-01-15"}', 'John Doe Signature', NOW(), NOW()),
-('mc_john_gym_membership', 'mbr_test_john', 'contract_gym_membership', 'acc_test_gym', true, '{"start_date": "2024-01-15", "plan": "premium"}', 'John Doe Signature', NOW(), NOW()),
-('mc_jane_gym_waiver', 'mbr_test_jane', 'contract_gym_waiver', 'acc_test_gym', true, '{"date": "2024-01-01"}', 'Jane Smith Signature', NOW(), NOW()),
-('mc_bob_dance_waiver', 'mbr_test_bob', 'contract_dance_waiver', 'acc_test_dance', true, '{"date": "2024-01-20"}', 'Bob Johnson Signature', NOW(), NOW());
+INSERT INTO member_contracts (id, member_id, contract_id, location_id, signature, created_at, updated_at) VALUES
+('mc_john_gym_waiver', 'mbr_test_john', 'contract_gym_waiver', 'acc_test_gym', 'John Doe Signature', NOW(), NOW()),
+('mc_john_gym_membership', 'mbr_test_john', 'contract_gym_membership', 'acc_test_gym', 'John Doe Signature', NOW(), NOW()),
+('mc_jane_gym_waiver', 'mbr_test_jane', 'contract_gym_waiver', 'acc_test_gym', 'Jane Smith Signature', NOW(), NOW()),
+('mc_bob_dance_waiver', 'mbr_test_bob', 'contract_dance_waiver', 'acc_test_dance', 'Bob Johnson Signature', NOW(), NOW());
 
 -- =========================================
 -- INVOICES (Billing records)
@@ -258,17 +258,17 @@ INSERT INTO support_triggers (id, support_bot_id, name, trigger_type, trigger_ph
 ('strig_dance_skill', 'sbot_dance', 'Skill Assessment', 'keyword', ARRAY['skill level', 'class placement', 'advancement', 'level up', 'evaluation'], '{"name": "escalate_to_human", "parameters": {"reason": "Student skill assessment and class placement inquiry", "urgency": "low"}}'::jsonb, ARRAY['What class level should my child be in?', 'Can my daughter advance to the next level?'], ARRAY['Instructor evaluation needed'], true, NOW(), NOW());
 
 -- =========================================
--- SUPPORT CONVERSATIONS (Sample chat sessions)
+-- SUPPORT CONVERSATIONS (Sample chat sessions with integrated ticket data)
 -- =========================================
-INSERT INTO support_conversations (id, support_bot_id, member_id, vendor_id, is_vendor_active, taken_over_at, metadata, created_at, updated_at) VALUES
--- Active conversation with vendor takeover
-('sconv_john_gym', 'sbot_gym', 'mbr_test_john', 'usr_test_vendor', true, NOW() - INTERVAL '15 minutes', ('{"takeoverReason": "Billing dispute requiring personal attention", "takeoverUrgency": "medium", "takeoverAt": "' || (NOW() - INTERVAL '15 minutes')::text || '"}')::jsonb, NOW() - INTERVAL '1 hour', NOW()),
--- Bot-only conversation
-('sconv_jane_gym', 'sbot_gym', 'mbr_test_jane', NULL, false, NULL, '{"resolutionType": "automated", "satisfactionRating": 5}'::jsonb, NOW() - INTERVAL '2 hours', NOW()),
--- Dance academy conversation with instructor takeover
-('sconv_bob_dance', 'sbot_dance', 'mbr_test_bob', 'usr_test_staff', true, NOW() - INTERVAL '30 minutes', '{"takeoverReason": "Class level assessment needed", "takeoverUrgency": "low", "instructorSpecialty": "ballet"}'::jsonb, NOW() - INTERVAL '45 minutes', NOW()),
--- Recently resolved conversation that was handed back to bot
-('sconv_admin_resolved', 'sbot_admin', 'mbr_test_john', NULL, false, NULL, ('{"handedBackAt": "' || (NOW() - INTERVAL '10 minutes')::text || '", "handedBackBy": "usr_test_admin", "originalTakeoverReason": "Complex account setup"}')::jsonb, NOW() - INTERVAL '3 hours', NOW());
+INSERT INTO support_conversations (id, support_bot_id, member_id, vendor_id, is_vendor_active, taken_over_at, title, description, status, priority, metadata, created_at, updated_at) VALUES
+-- Active conversation with vendor takeover (has ticket data)
+('sconv_john_gym', 'sbot_gym', 'mbr_test_john', 'usr_test_vendor', true, NOW() - INTERVAL '15 minutes', 'Duplicate Billing Charge', 'Member was charged twice for monthly membership. Requires refund processing and account review.', 'in_progress', 2, ('{"takeoverReason": "Billing dispute requiring personal attention", "takeoverUrgency": "medium", "takeoverAt": "' || (NOW() - INTERVAL '15 minutes')::text || '", "createdBy": "sbot_gym", "memberImpact": "billing", "estimatedResolution": "24 hours"}')::jsonb, NOW() - INTERVAL '1 hour', NOW()),
+-- Bot-only conversation (simple inquiry, no ticket created)
+('sconv_jane_gym', 'sbot_gym', 'mbr_test_jane', NULL, false, NULL, 'Gym Hours Inquiry', 'Member asking about gym operating hours', 'resolved', 3, '{"resolutionType": "automated", "satisfactionRating": 5}'::jsonb, NOW() - INTERVAL '2 hours', NOW()),
+-- Dance academy conversation with instructor takeover (has ticket data)
+('sconv_bob_dance', 'sbot_dance', 'mbr_test_bob', 'usr_test_staff', true, NOW() - INTERVAL '30 minutes', 'Ballet Class Level Assessment', 'Student requesting advancement to intermediate ballet class. Instructor evaluation in progress.', 'open', 3, '{"takeoverReason": "Class level assessment needed", "takeoverUrgency": "low", "instructorSpecialty": "ballet", "createdBy": "sbot_dance", "assessmentType": "skill_level", "currentClass": "Ballet Fundamentals"}'::jsonb, NOW() - INTERVAL '45 minutes', NOW()),
+-- Recently resolved conversation that was handed back to bot (has ticket data)
+('sconv_admin_resolved', 'sbot_admin', 'mbr_test_john', NULL, false, NULL, 'Enterprise Account Inquiry', 'Business owner inquiry about enterprise features and multi-location account setup. Successfully resolved with demo preparation.', 'resolved', 2, ('{"handedBackAt": "' || (NOW() - INTERVAL '10 minutes')::text || '", "handedBackBy": "usr_test_admin", "originalTakeoverReason": "Complex account setup", "createdBy": "sbot_admin", "resolutionTime": "2.5 hours", "complexity": "high", "leadType": "enterprise"}')::jsonb, NOW() - INTERVAL '3 hours', NOW());
 
 -- =========================================
 -- SUPPORT MESSAGES (Conversation history)
@@ -305,14 +305,6 @@ INSERT INTO support_messages (id, conversation_id, content, role, channel, metad
 ('smsg_admin_6', 'sconv_admin_resolved', 'The conversation has been handed back to the support bot.', 'system', 'System', ('{"handedBackBy": "usr_test_admin", "handedBackAt": "' || (NOW() - INTERVAL '10 minutes')::text || '"}')::jsonb, NOW() - INTERVAL '10 minutes');
 
 -- =========================================
--- SUPPORT TICKETS (Created from escalated conversations)
--- =========================================
-INSERT INTO support_tickets (id, conversation_id, title, description, status, priority, assigned_to, metadata, created_at, updated_at) VALUES
-('sticket_john_billing', 'sconv_john_gym', 'Duplicate Billing Charge', 'Member was charged twice for monthly membership. Requires refund processing and account review.', 'in_progress', 2, 'usr_test_vendor', '{"createdBy": "sbot_gym", "memberImpact": "billing", "estimatedResolution": "24 hours"}'::jsonb, NOW() - INTERVAL '15 minutes', NOW()),
-('sticket_bob_assessment', 'sconv_bob_dance', 'Ballet Class Level Assessment', 'Student requesting advancement to intermediate ballet class. Instructor evaluation in progress.', 'open', 3, 'usr_test_staff', '{"createdBy": "sbot_dance", "assessmentType": "skill_level", "currentClass": "Ballet Fundamentals"}'::jsonb, NOW() - INTERVAL '30 minutes', NOW()),
-('sticket_admin_setup', 'sconv_admin_resolved', 'Enterprise Account Inquiry', 'Business owner inquiry about enterprise features and multi-location account setup. Successfully resolved with demo preparation.', 'resolved', 2, 'usr_test_admin', '{"createdBy": "sbot_admin", "resolutionTime": "2.5 hours", "complexity": "high", "leadType": "enterprise"}'::jsonb, NOW() - INTERVAL '2 hours' + INTERVAL '30 minutes', NOW());
-
--- =========================================
 -- SUCCESS MESSAGE
 -- =========================================
 DO $$
@@ -339,15 +331,20 @@ BEGIN
     RAISE NOTICE 'SUPPORT BOT TEST DATA:';
     RAISE NOTICE '- 3 Support bots (Admin, FitZone Gym, Dance Academy)';
     RAISE NOTICE '- 7 Support triggers (escalation, billing, injury, equipment, etc.)';
-    RAISE NOTICE '- 4 Support conversations (with takeover/handoff scenarios)';
+    RAISE NOTICE '- 4 Support conversations (with integrated ticket data)';
     RAISE NOTICE '- 16 Support messages (realistic conversation flows)';
-    RAISE NOTICE '- 3 Support tickets (billing, assessment, admin setup)';
+    RAISE NOTICE '- Integrated ticket tracking (titles, descriptions, status, priority)';
     RAISE NOTICE '';
     RAISE NOTICE 'TAKEOVER & HANDOFF SCENARIOS:';
-    RAISE NOTICE '- Active vendor takeover (John gym billing issue)';
-    RAISE NOTICE '- Instructor takeover (Bob dance class assessment)';
-    RAISE NOTICE '- Completed handoff cycle (admin multi-location setup)';
-    RAISE NOTICE '- Automated resolution (Jane gym hours inquiry)';
+    RAISE NOTICE '- Active vendor takeover (John gym billing issue - ticket in progress)';
+    RAISE NOTICE '- Instructor takeover (Bob dance class assessment - ticket open)';
+    RAISE NOTICE '- Completed handoff cycle (admin multi-location setup - ticket resolved)';
+    RAISE NOTICE '- Automated resolution (Jane gym hours inquiry - simple resolution)';
+    RAISE NOTICE '';
+    RAISE NOTICE 'SCHEMA UPDATES:';
+    RAISE NOTICE '- Support tickets merged into support_conversations table';
+    RAISE NOTICE '- Simplified architecture with integrated ticket tracking';
+    RAISE NOTICE '- Vendor assignment via vendor_id field';
     RAISE NOTICE '=========================================';
     RAISE NOTICE 'You can now test your application locally!';
     RAISE NOTICE '=========================================';

@@ -19,33 +19,17 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Try to find existing support bot for this location
-    let supportBot = await db.query.supportBots.findFirst({
+    // Find existing support bot for this location
+    const supportBot = await db.query.supportBots.findFirst({
       where: eq(supportBots.locationId, params.id),
     });
 
-    // Auto-create support bot if it doesn't exist (User Story 1.1)
+    // Support bot should already exist from location creation
     if (!supportBot) {
-      const [newBot] = await db
-        .insert(supportBots)
-        .values({
-          locationId: params.id,
-          name: "Support Bot",
-          prompt:
-            "You are a helpful customer support assistant. You have access to member information tools to help with subscriptions, billing, and bookable sessions. You can also create support tickets and escalate to human agents when needed.",
-          initialMessage:
-            "Hi! I'm here to help you. I can assist with your membership status, billing questions, available classes, and any other support needs. What can I help you with today?",
-          temperature: 0,
-          model: BotModel.GPT,
-          status: BotStatus.Draft,
-          availableTools: getDefaultSupportTools(),
-        })
-        .returning();
-
-      // Fetch the newly created bot
-      supportBot = await db.query.supportBots.findFirst({
-        where: eq(supportBots.id, newBot.id),
-      });
+      return NextResponse.json(
+        { error: "Support bot not found for this location. Please contact support." }, 
+        { status: 404 }
+      );
     }
 
     // Serialize dates for consistent API response
@@ -57,7 +41,7 @@ export async function GET(
 
     return NextResponse.json({
       supportBot: serializedBot,
-      message: supportBot ? "Support bot found" : "Support bot created",
+      message: "Support bot found",
     });
   } catch (error) {
     console.error("Error fetching/creating support bot:", error);
