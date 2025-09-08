@@ -230,7 +230,6 @@ export class ChatAIService {
     // TODO: Implement full AI model integration for complex conversations
     // const model = this.modelService.getModel(botConfig.model, {
     //   temperature: botConfig.temperature / 100,
-    //   streaming: false,
     //   maxTokens: 500
     // });
 
