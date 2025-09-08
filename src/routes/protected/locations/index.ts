@@ -4,3 +4,4 @@ export * from './reservations';
 export * from './docs';
 export * from './sessions';
 export * from './checkin';
+export * from './support';

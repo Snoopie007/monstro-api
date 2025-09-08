@@ -1,6 +1,6 @@
 import { BotConfigService } from './BotConfig.service';
 import { MemberContextBuilder } from './MemberContext';
-import { buildSupportTools } from './FnctionHandlers';
+import { buildSupportTools } from './FNHandler';
 import { AIModelService } from './models';
 import { db } from '@/db/db';
 import { supportConversations, supportMessages, supportBots } from '@/db/schemas';

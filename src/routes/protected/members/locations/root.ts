@@ -6,7 +6,7 @@ import { mlAchievementsRoutes } from './achievements';
 import { mlDocsRoutes } from './docs';
 import { mlReferralsRoutes } from './referrals';
 import { mlRewardsRoutes } from './rewards';
-
+import { mlSupportRoutes } from './support';
 type Props = {
     memberId: string
     params: {
@@ -34,7 +34,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
         }
     })
     .group('/:lid', (app) => {
-        return app.get('/', async ({ memberId, params, status }: Props) => {
+        app.get('/', async ({ memberId, params, status }: Props) => {
             const { lid, mid } = params;
 
             try {
@@ -67,10 +67,13 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                 return { error: 'Internal server error' }
             }
         })
-            .use(mlReservationsRoutes)
-            .use(mlPlansRoutes)
-            .use(mlAchievementsRoutes)
-            .use(mlDocsRoutes)
-            .use(mlRewardsRoutes)
-            .use(mlReferralsRoutes)
+        app.use(mlReservationsRoutes)
+        app.use(mlPlansRoutes)
+        app.use(mlAchievementsRoutes)
+        app.use(mlDocsRoutes)
+        app.use(mlRewardsRoutes)
+        app.use(mlReferralsRoutes)
+        app.use(mlSupportRoutes)
+        return app;
+
     })

@@ -21,7 +21,6 @@ export async function mobileRefreshToken(app: Elysia) {
                 userId: userId,
                 email: email,
             });
-            console.log(accessToken);
             return status(200, { token: accessToken, refreshToken, expires });
         } catch (error) {
             console.error(error);

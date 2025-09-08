@@ -1,13 +1,10 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { db } from '@/db/db';
-import { eq, and, gt, desc } from 'drizzle-orm';
-import { 
-  members, 
-  memberLocations, 
+import { eq } from 'drizzle-orm';
+import {
+  members,
   supportConversations,
-  ticketStatusEnum,
-  TicketStatus
 } from '@/db/schemas';
 
 // Get member subscription/package status  
@@ -280,7 +277,7 @@ export const createSupportTicket = tool(
           title,
           description,
           priority,
-          status: TicketStatus.Open,
+          status: 'Open',
           updatedAt: new Date(),
         })
         .where(eq(supportConversations.id, conversationId))

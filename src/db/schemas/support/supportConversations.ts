@@ -1,52 +1,54 @@
 import { pgTable, text, timestamp, jsonb, boolean, integer } from "drizzle-orm/pg-core";
 import { sql, relations } from "drizzle-orm";
 import { members } from "../members";
-import { users } from "../users";
-import { supportBots } from "./SupportBots";
-import { messageRoleEnum, channelEnum, ticketStatusEnum } from "./SupportBotEnums";
-// Support conversations for authenticated members only
+import { supportAssistants } from "./SupportBots";
+import { messageRoleEnum, channelEnum, ticketStatusEnum, supportCategoryEnum } from "./SupportBotEnums";
+import { locations } from "../locations";
+
 export const supportConversations = pgTable("support_conversations", {
-  id: text("id").primaryKey().default(sql`uuid_base62()`),
-  supportBotId: text("support_bot_id").notNull().references(() => supportBots.id, { onDelete: "cascade" }),
+	id: text("id").primaryKey().default(sql`uuid_base62()`),
+	supportAssistantId: text("support_assistant_id").notNull().references(() => supportAssistants.id, { onDelete: "cascade" }),
+	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+	category: supportCategoryEnum("category").notNull().default('General'),
+	takenOverAt: timestamp("taken_over_at", { withTimezone: true }),
+	isVendorActive: boolean("is_vendor_active").default(false),
+	description: text("description"),
+	status: ticketStatusEnum("status").notNull().default('Open'),
+	priority: integer("priority").notNull().default(3), // 1=high, 2=medium, 3=low
+	metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	updated: timestamp("updated_at", { withTimezone: true }),
+});
 
-  memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-  vendorId: text("vendor_id").references(() => users.id, { onDelete: "set null" }),
-  takenOverAt: timestamp("taken_over_at", { withTimezone: true }),
-  isVendorActive: boolean("is_vendor_active").default(false),
-
-  // Ticket fields (merged from support_tickets)
-  title: text("title").notNull().default("Support Request"),
-  description: text("description"),
-  status: ticketStatusEnum("status").notNull().default('Open'),
-  priority: integer("priority").notNull().default(3), // 1=high, 2=medium, 3=low
-
-  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }),
+export const supportMessages = pgTable("support_messages", {
+	id: text("id").primaryKey().default(sql`uuid_base62()`),
+	conversationId: text("conversation_id").notNull().references(() => supportConversations.id, { onDelete: "cascade" }),
+	agentName: text("agent_name"),
+	agentId: text("agent_id"),
+	content: text("content").notNull(),
+	role: messageRoleEnum("role").notNull().default('User'),
+	channel: channelEnum("channel").notNull().default('WebChat'),
+	metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // Define relations
-export const supportConversationsRelations = relations(supportConversations, ({ one }) => ({
-  supportBot: one(supportBots, {
-    fields: [supportConversations.supportBotId],
-    references: [supportBots.id],
-  }),
-  member: one(members, {
-    fields: [supportConversations.memberId],
-    references: [members.id],
-  }),
-  vendor: one(users, {
-    fields: [supportConversations.vendorId],
-    references: [users.id],
-  }),
+export const supportConversationsRelations = relations(supportConversations, ({ one, many }) => ({
+	assistant: one(supportAssistants, {
+		fields: [supportConversations.supportAssistantId],
+		references: [supportAssistants.id],
+	}),
+	member: one(members, {
+		fields: [supportConversations.memberId],
+		references: [members.id],
+	}),
+	messages: many(supportMessages),
 }));
 
-export const supportMessages = pgTable("support_messages", {
-  id: text("id").primaryKey().default(sql`uuid_base62()`),
-  conversationId: text("conversation_id").notNull().references(() => supportConversations.id, { onDelete: "cascade" }),
-  content: text("content").notNull(),
-  role: messageRoleEnum("role").notNull().default('User'),
-  channel: channelEnum("channel").notNull().default('WebChat'),
-  metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const supportMessagesRelations = relations(supportMessages, ({ one }) => ({
+	conversation: one(supportConversations, {
+		fields: [supportMessages.conversationId],
+		references: [supportConversations.id],
+	}),
+}));
