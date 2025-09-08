@@ -12,7 +12,7 @@ import {
 	botStatusEnum,
 	botModelEnum,
 } from "./SupportBotEnums";
-import { supportConversations } from "./SupportConversations";
+import { supportConversations } from "./supportConversations";
 
 
 // Single support bot per location

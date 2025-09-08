@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, jsonb, boolean, integer } from "drizzle-orm/pg-core";
 import { sql, relations } from "drizzle-orm";
 import { members } from "../members";
-import { supportAssistants } from "./SupportBots";
+import { supportAssistants } from "./supportBots";
 import { messageRoleEnum, channelEnum, ticketStatusEnum, supportCategoryEnum } from "./SupportBotEnums";
 import { locations } from "../locations";
 

@@ -3,7 +3,7 @@ import { MemberContextBuilder } from './MemberContext';
 import { buildSupportTools } from './FNHandler';
 import { AIModelService } from './models';
 import { db } from '@/db/db';
-import { supportConversations, supportMessages, supportAssistants } from '@/db/schemas';
+import { supportConversations, supportMessages, supportAssistants } from '@/db/schemas/support';
 import { eq, desc, and } from 'drizzle-orm';
 
 export interface ChatResponse {
