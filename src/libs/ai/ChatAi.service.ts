@@ -3,7 +3,7 @@ import { MemberContextBuilder } from './MemberContext';
 import { buildSupportTools } from './FNHandler';
 import { AIModelService } from './models';
 import { db } from '@/db/db';
-import { supportConversations, supportMessages, supportBots } from '@/db/schemas';
+import { supportConversations, supportMessages, supportAssistants } from '@/db/schemas';
 import { eq, desc, and } from 'drizzle-orm';
 
 export interface ChatResponse {
@@ -67,10 +67,7 @@ export class ChatAIService {
         if (conversation.memberId !== memberId) {
           throw new Error('Conversation access denied');
         }
-      } else {
-        conversation = await this.createConversation(memberId, botConfig.id);
       }
-
       // Ensure conversation exists (TypeScript guard)
       if (!conversation) {
         throw new Error('Failed to get or create conversation');
@@ -273,7 +270,7 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
 
       const messages = await db.query.supportMessages.findMany({
         where: eq(supportMessages.conversationId, conversationId),
-        orderBy: [desc(supportMessages.createdAt)],
+        orderBy: [desc(supportMessages.created)],
         limit: Math.min(limit, 50),
       });
 
@@ -281,7 +278,7 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
       const chronologicalMessages = messages.reverse().map(message => ({
         role: message.role === 'AI' ? 'assistant' : message.role === 'User' ? 'user' : 'system',
         content: message.content,
-        timestamp: message.createdAt.toISOString(),
+        timestamp: message.created.toISOString(),
         metadata: message.metadata
       }));
 
@@ -306,7 +303,7 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
           eq(supportConversations.memberId, memberId)
         ),
         with: {
-          supportBot: true
+          assistant: true
         }
       });
 
@@ -317,21 +314,21 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
       // Get messages
       const messages = await db.query.supportMessages.findMany({
         where: eq(supportMessages.conversationId, conversationId),
-        orderBy: [desc(supportMessages.createdAt)],
+        orderBy: [desc(supportMessages.created)],
         limit: 50,
       });
 
       // Serialize dates for API response
       const serializedMessages = messages.map((message) => ({
         ...message,
-        createdAt: message.createdAt.toISOString(),
+        createdAt: message.created.toISOString(),
       }));
 
       return {
         conversation: {
           ...conversation,
-          createdAt: conversation.createdAt.toISOString(),
-          updatedAt: conversation.updatedAt?.toISOString(),
+          createdAt: conversation.created.toISOString(),
+          updatedAt: conversation.updated?.toISOString(),
           takenOverAt: conversation.takenOverAt?.toISOString(),
         },
         messages: serializedMessages.reverse()
@@ -349,8 +346,8 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
   async getMemberConversations(memberId: string, locationId: string) {
     try {
       // Get support bot for location
-      const supportBot = await db.query.supportBots.findFirst({
-        where: eq(supportBots.locationId, locationId)
+      const supportBot = await db.query.supportAssistants.findFirst({
+        where: eq(supportAssistants.locationId, locationId)
       });
 
       if (!supportBot) {
@@ -361,17 +358,17 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
       const conversations = await db.query.supportConversations.findMany({
         where: and(
           eq(supportConversations.memberId, memberId),
-          eq(supportConversations.supportBotId, supportBot.id)
+          eq(supportConversations.supportAssistantId, supportBot.id)
         ),
-        orderBy: desc(supportConversations.updatedAt),
+        orderBy: desc(supportConversations.updated),
         limit: 10
       });
 
       return {
         conversations: conversations.map(conv => ({
           ...conv,
-          createdAt: conv.createdAt.toISOString(),
-          updatedAt: conv.updatedAt?.toISOString(),
+          createdAt: conv.created.toISOString(),
+          updatedAt: conv.updated?.toISOString(),
           takenOverAt: conv.takenOverAt?.toISOString(),
         }))
       };
@@ -387,7 +384,7 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
     const conversation = await db.query.supportConversations.findFirst({
       where: eq(supportConversations.id, conversationId),
       with: {
-        supportBot: true
+        assistant: true
       }
     });
 
@@ -398,24 +395,7 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
     return conversation;
   }
 
-  private async createConversation(memberId: string, supportBotId: string) {
-    console.log(`✨ Creating new conversation for member ${memberId} with bot ${supportBotId}`);
 
-    const [newConversation] = await db
-      .insert(supportConversations)
-      .values({
-        supportBotId,
-        memberId,
-        isVendorActive: false,
-        metadata: {
-          createdBy: 'api-chat',
-          createdVia: 'member-app'
-        },
-      })
-      .returning();
-
-    return newConversation;
-  }
 
   private async saveMessage(conversationId: string, content: string, role: 'user' | 'ai') {
     const [savedMessage] = await db.insert(supportMessages).values({
@@ -433,7 +413,7 @@ What would you like to know about? (Powered by ${botConfig.model.toUpperCase()})
     await db
       .update(supportConversations)
       .set({
-        updatedAt: new Date(),
+        updated: new Date(),
       })
       .where(eq(supportConversations.id, conversationId));
 

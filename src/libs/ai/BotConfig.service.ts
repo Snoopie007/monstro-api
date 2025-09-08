@@ -1,6 +1,6 @@
 import { db } from '@/db/db';
 import { eq, and } from 'drizzle-orm';
-import { supportBots } from '@/db/schemas/support/SupportBots';
+import { supportAssistants } from '@/db/schemas/';
 import { DEFAULT_SUPPORT_TOOLS } from '@/libs/ai/Tools';
 import { supportTriggers } from '@/db/schemas/support';
 
@@ -34,8 +34,8 @@ export class BotConfigService {
   async getBotConfig(locationId: string): Promise<BotConfig> {
     console.log(`🔧 Getting bot config for location: ${locationId}`);
 
-    let supportBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, locationId),
+    let supportBot = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, locationId),
       // TODO: Add persona relation when available
       // with: {
       //   persona: true,
@@ -47,7 +47,7 @@ export class BotConfigService {
     if (!supportBot) {
       console.log(`🔄 Fallback: Creating bot for existing location ${locationId} without support bot...`);
 
-      const [newBot] = await db.insert(supportBots).values({
+      const [newBot] = await db.insert(supportAssistants).values({
         locationId,
         name: 'Support Bot',
         prompt: 'You are a helpful customer support assistant. You have access to member information tools to help with subscriptions, billing, and bookable sessions. You can also create support tickets and escalate to human agents when needed.',
@@ -69,7 +69,7 @@ export class BotConfigService {
     // Get active triggers separately to avoid relation issues
     const triggers = await db.query.supportTriggers.findMany({
       where: and(
-        eq(supportTriggers.supportBotId, supportBot.id),
+        eq(supportTriggers.supportAssistantId, supportBot.id),
         eq(supportTriggers.isActive, true)
       )
     });
@@ -161,8 +161,8 @@ ${supportBot.availableTools.map((tool: any) => `- ${tool.name}: ${tool.descripti
    * Get bot status for validation
    */
   async getBotStatus(locationId: string): Promise<string> {
-    const bot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, locationId),
+    const bot = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, locationId),
       columns: { status: true }
     });
 
