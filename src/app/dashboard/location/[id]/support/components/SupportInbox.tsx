@@ -221,12 +221,16 @@ export function SupportInbox({
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-sm truncate">
-                        {conversation.member
+                        {conversation.title || (conversation.member
                           ? `${conversation.member.firstName} ${conversation.member.lastName}`
-                          : `Member #${conversation.memberId.slice(-6)}`}
+                          : `Member #${conversation.memberId.slice(-6)}`)}
                       </h3>
                       <p className="text-xs text-muted-foreground truncate">
-                        {formatLastMessage(conversation)}
+                        {conversation.title
+                          ? (conversation.member
+                              ? `${conversation.member.firstName} ${conversation.member.lastName}`
+                              : `Member #${conversation.memberId.slice(-6)}`)
+                          : formatLastMessage(conversation)}
                       </p>
                     </div>
                   </div>

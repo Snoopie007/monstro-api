@@ -6,6 +6,7 @@ export type SupportConversation = {
   category: string;
   takenOverAt?: Date;
   isVendorActive: boolean;
+  title?: string;
   metadata: Record<string, any>;
   createdAt: Date;
   updatedAt: Date | null;

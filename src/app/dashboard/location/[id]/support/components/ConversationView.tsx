@@ -403,7 +403,7 @@ export function ConversationView({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CardTitle className="text-lg font-semibold">
-              Member #{conversation.memberId.slice(-6)}
+              {conversation.title || `Member #${conversation.memberId.slice(-6)}`}
             </CardTitle>
             <Badge
               variant="outline"

@@ -100,7 +100,7 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { memberId, initialMessage, category = "General" } = body;
+    const { memberId, initialMessage, category = "General", title } = body;
 
     if (!memberId) {
       return NextResponse.json(
@@ -129,6 +129,7 @@ export async function POST(
         locationId: params.id,
         memberId,
         category,
+        title,
         isVendorActive: false,
         metadata: {
           createdBy: session.user?.id,

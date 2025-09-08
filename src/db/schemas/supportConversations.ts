@@ -28,6 +28,9 @@ export const supportConversations = pgTable("support_conversations", {
   takenOverAt: timestamp("taken_over_at", { withTimezone: true }),
   isVendorActive: boolean("is_vendor_active").default(false),
 
+  // Conversation title
+  title: text("title"),
+
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
