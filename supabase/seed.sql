@@ -28,8 +28,8 @@ INSERT INTO vendors (id, first_name, last_name, user_id, stripe_customer_id, ema
 -- =========================================
 INSERT INTO locations (id, name, address, about, city, state, logo_url, country, postal_code, website, email, phone, timezone, vendor_id, slug, metadata, industry, legal_name, created_at, updated_at) VALUES
 ('acc_test_admin', 'Admin Headquarters', '1 Admin Way', 'Central administration and management hub', 'San Francisco', 'CA', 'https://api.dicebear.com/7.x/initials/svg?seed=AH', 'USA', '94105', 'https://admin.monstro.com', 'admin@monstro.com', '+19999999999', 'America/Los_Angeles', 'vdr_test_admin', 'admin-headquarters', '{"features": ["management", "administration", "support"]}', 'Management', 'Monstro Admin LLC', NOW(), NOW()),
-('acc_test_gym', 'FitZone Gym', '123 Main St', 'Premier fitness center with state-of-the-art equipment', 'New York', 'NY', 'https://api.dicebear.com/7.x/initials/svg?seed=FZ', 'USA', '10001', 'https://fitzone.com', 'info@fitzone.com', '+19999999999', 'America/New_York', 'vdr_test_gym', 'fitzone-gym', '{"features": ["pool", "sauna", "personal_training"]}', 'Fitness', 'FitZone LLC', NOW(), NOW()),
-('acc_test_dance', 'Dance Academy', '456 Broadway', 'Professional dance instruction for all ages', 'Los Angeles', 'CA', 'https://api.dicebear.com/7.x/initials/svg?seed=DA', 'USA', '90210', 'https://danceacademy.com', 'info@danceacademy.com', '+19999999999', 'America/Los_Angeles', 'vdr_test_dance', 'dance-academy', '{"features": ["ballet", "hip_hop", "jazz"]}', 'Dance', 'Dance Academy Inc', NOW(), NOW());
+('acc_test_gym', 'FitZone Gym', '123 Main St', 'Premier fitness center with state-of-the-art equipment', 'New York', 'NY', 'https://api.dicebear.com/7.x/initials/svg?seed=FZ', 'USA', '10001', 'https://fitzone.com', 'info@fitzone.com', '+19999999999', 'America/New_York', 'vdr_test_admin', 'fitzone-gym', '{"features": ["pool", "sauna", "personal_training"]}', 'Fitness', 'FitZone LLC', NOW(), NOW()),
+('acc_test_dance', 'Dance Academy', '456 Broadway', 'Professional dance instruction for all ages', 'Los Angeles', 'CA', 'https://api.dicebear.com/7.x/initials/svg?seed=DA', 'USA', '90210', 'https://danceacademy.com', 'info@danceacademy.com', '+19999999999', 'America/Los_Angeles', 'vdr_test_admin', 'dance-academy', '{"features": ["ballet", "hip_hop", "jazz"]}', 'Dance', 'Dance Academy Inc', NOW(), NOW());
 
 -- =========================================
 -- LOCATION STATE (Subscription/payment status)
@@ -160,6 +160,74 @@ INSERT INTO transactions (id, description, type, amount, tax_amount, status, loc
 ('txn_bob_payment', 'Dance class package payment', 'inbound', 25000, 2000, 'paid', 'acc_test_dance', 'mbr_test_bob', 'card', ARRAY['{"name": "10-Class Package", "amount": 25000}']::jsonb[], NOW() - INTERVAL '1 day', 'USD', '{"stripe_payment_id": "pi_test_789"}', false, 'inv_bob_dance', NOW(), NOW());
 
 -- =========================================
+-- MEMBER PLANS (Membership offerings by location)
+-- =========================================
+INSERT INTO member_plans (id, name, description, family, interval, interval_threshold, type, currency, price, total_class_limit, class_limit_interval, class_limit_threshold, location_id, created_at, updated_at) VALUES
+-- Admin location plans (for testing)
+('plan_admin_basic', 'Admin Basic Plan', 'Basic administrative access plan', false, 'month', 1, 'recurring', 'USD', 9900, NULL, NULL, NULL, 'acc_test_admin', NOW(), NOW()),
+('plan_admin_premium', 'Admin Premium Plan', 'Premium administrative access with extra features', false, 'month', 1, 'recurring', 'USD', 19900, NULL, NULL, NULL, 'acc_test_admin', NOW(), NOW()),
+
+-- FitZone Gym plans
+('plan_gym_basic', 'Basic Membership', 'Access to gym equipment and basic facilities', false, 'month', 1, 'recurring', 'USD', 4900, NULL, NULL, NULL, 'acc_test_gym', NOW(), NOW()),
+('plan_gym_premium', 'Premium Membership', 'Full gym access including all classes and personal training sessions', false, 'month', 1, 'recurring', 'USD', 7900, NULL, NULL, NULL, 'acc_test_gym', NOW(), NOW()),
+('plan_gym_family', 'Family Membership', 'Premium membership for up to 4 family members', true, 'month', 1, 'recurring', 'USD', 12900, NULL, NULL, NULL, 'acc_test_gym', NOW(), NOW()),
+('plan_gym_annual', 'Annual Premium', 'Premium membership paid annually with discount', false, 'year', 1, 'recurring', 'USD', 79900, NULL, NULL, NULL, 'acc_test_gym', NOW(), NOW()),
+('plan_gym_10pack', '10-Class Package', 'Package of 10 group fitness classes', false, 'month', 1, 'one-time', 'USD', 18000, 10, 'month', 3, 'acc_test_gym', NOW(), NOW()),
+('plan_gym_5pack', '5-Session PT Package', 'Package of 5 personal training sessions', false, 'month', 1, 'one-time', 'USD', 35000, 5, 'month', 2, 'acc_test_gym', NOW(), NOW()),
+
+-- Dance Academy plans
+('plan_dance_beginner', 'Beginner Monthly', 'Monthly unlimited beginner classes', false, 'month', 1, 'recurring', 'USD', 8900, NULL, NULL, NULL, 'acc_test_dance', NOW(), NOW()),
+('plan_dance_intermediate', 'Intermediate Monthly', 'Monthly unlimited intermediate classes', false, 'month', 1, 'recurring', 'USD', 10900, NULL, NULL, NULL, 'acc_test_dance', NOW(), NOW()),
+('plan_dance_advanced', 'Advanced Monthly', 'Monthly unlimited advanced classes including specialty workshops', false, 'month', 1, 'recurring', 'USD', 13900, NULL, NULL, NULL, 'acc_test_dance', NOW(), NOW()),
+('plan_dance_drop_in', 'Drop-in Classes', 'Single class drop-in rate', false, 'day', 1, 'one-time', 'USD', 2500, 1, 'week', 1, 'acc_test_dance', NOW(), NOW()),
+('plan_dance_8pack', '8-Class Package', 'Package of 8 classes, any level', false, 'month', 1, 'one-time', 'USD', 18000, 8, 'month', 3, 'acc_test_dance', NOW(), NOW()),
+('plan_dance_youth', 'Youth Monthly (Under 18)', 'Monthly unlimited classes for youth under 18', false, 'month', 1, 'recurring', 'USD', 6900, NULL, NULL, NULL, 'acc_test_dance', NOW(), NOW());
+
+-- =========================================
+-- MEMBER SUBSCRIPTIONS (Active recurring memberships)
+-- =========================================
+INSERT INTO member_subscriptions (id, member_id, member_plan_id, location_id, status, start_date, current_period_start, current_period_end, payment_method, metadata, created_at, updated_at) VALUES
+-- John's subscriptions
+('sub_john_gym', 'mbr_test_john', 'plan_gym_premium', 'acc_test_gym', 'active', NOW() - INTERVAL '2 months', NOW() - INTERVAL '1 month', NOW() + INTERVAL '1 month', 'card', '{"auto_renew": true, "preferred_billing_date": 15}', NOW(), NOW()),
+('sub_john_admin', 'mbr_test_john', 'plan_admin_premium', 'acc_test_admin', 'active', NOW() - INTERVAL '3 months', NOW() - INTERVAL '1 month', NOW() + INTERVAL '1 month', 'card', '{"auto_renew": true}', NOW(), NOW()),
+
+-- Jane's subscriptions  
+('sub_jane_gym', 'mbr_test_jane', 'plan_gym_basic', 'acc_test_gym', 'active', NOW() - INTERVAL '1 month', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days', 'card', '{"auto_renew": true, "billing_day": 1}', NOW(), NOW()),
+
+-- Bob's subscriptions
+('sub_bob_dance', 'mbr_test_bob', 'plan_dance_advanced', 'acc_test_dance', 'active', NOW() - INTERVAL '6 weeks', NOW() - INTERVAL '2 weeks', NOW() + INTERVAL '2 weeks', 'card', '{"auto_renew": true, "student_discount": true}', NOW(), NOW()),
+('sub_bob_admin', 'mbr_test_bob', 'plan_admin_basic', 'acc_test_admin', 'active', NOW() - INTERVAL '1 month', NOW() - INTERVAL '5 days', NOW() + INTERVAL '25 days', 'card', '{"auto_renew": false}', NOW(), NOW());
+
+-- =========================================
+-- MEMBER PACKAGES (Purchased class packages/credits)
+-- =========================================
+INSERT INTO member_packages (id, member_plan_id, location_id, member_id, start_date, expire_date, status, payment_method, total_class_attended, total_class_limit, metadata, created_at, updated_at) VALUES
+-- John's packages
+('pkg_john_gym_pt', 'plan_gym_5pack', 'acc_test_gym', 'mbr_test_john', NOW() - INTERVAL '3 weeks', NOW() + INTERVAL '5 weeks', 'active', 'card', 2, 5, '{"purchased_price": 35000, "trainer_preference": "Alex Rodriguez"}', NOW(), NOW()),
+
+-- Jane's packages
+('pkg_jane_gym_classes', 'plan_gym_10pack', 'acc_test_gym', 'mbr_test_jane', NOW() - INTERVAL '1 month', NOW() + INTERVAL '2 months', 'active', 'card', 6, 10, '{"purchased_price": 18000, "class_preferences": ["Group Fitness", "Cardio"]}', NOW(), NOW()),
+
+-- Bob's packages
+('pkg_bob_dance_extra', 'plan_dance_8pack', 'acc_test_dance', 'mbr_test_bob', NOW() - INTERVAL '2 weeks', NOW() + INTERVAL '10 weeks', 'active', 'card', 3, 8, '{"purchased_price": 18000, "class_level": "advanced", "workshop_access": true}', NOW(), NOW()),
+
+-- Expired package example
+('pkg_john_dance_old', 'plan_dance_drop_in', 'acc_test_dance', 'mbr_test_john', NOW() - INTERVAL '2 months', NOW() - INTERVAL '1 month', 'expired', 'card', 1, 1, '{"purchased_price": 2500}', NOW() - INTERVAL '2 months', NOW());
+
+-- =========================================
+-- INTEGRATIONS (Third-party service integrations)
+-- =========================================
+INSERT INTO integrations (id, service, api_key, secret_key, access_token, refresh_token, expires_at, account_id, metadata, created_at, updated_at, location_id) VALUES
+-- Stripe integration for FitZone Gym (main payment processing location)
+('int_stripe_gym', 'stripe', 'pk_test_51RuSdMAPm3T5SOduzE6wrQnTP36xP1h6TQnoJyTLCzV9PxDVKCqUmJFoTkxbgkN3RibtWtgdfFU8jEbXSrjdkMGE00IZNWxqsT', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'rt_Sq8vjBpEN9SgvBAXIybF2qMEyG33EfdOQhvzpcbbA9rYEXrw', NULL, 'acct_1RuSdMAPm3T5SOdu', '{"scope": "read_write", "connected_at": "2024-08-10", "webhook_endpoint": "https://monstro.com/webhooks/stripe"}', NOW() - INTERVAL '2 months', NOW() - INTERVAL '1 week', 'acc_test_gym'),
+
+-- Stripe integration for Dance Academy
+('int_stripe_dance', 'stripe', 'pk_test_51RuSdMAPm3T5SOduzE6wrQnTP36xP1h6TQnoJyTLCzV9PxDVKCqUmJFoTkxbgkN3RibtWtgdfFU8jEbXSrjdkMGE00IZNWxqsT', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'rt_Sq8vjBpEN9SgvBAXIybF2qMEyG33EfdOQhvzpcbbA9rYEXrw', NULL, 'acct_1RuSdMAPm3T5SOdu', '{"scope": "read_write", "connected_at": "2024-09-15", "webhook_endpoint": "https://monstro.com/webhooks/stripe"}', NOW() - INTERVAL '1 month', NOW() - INTERVAL '3 days', 'acc_test_dance'),
+
+-- Admin location integration (for testing admin features)
+('int_stripe_admin', 'stripe', 'pk_test_51RuSdMAPm3T5SOduzE6wrQnTP36xP1h6TQnoJyTLCzV9PxDVKCqUmJFoTkxbgkN3RibtWtgdfFU8jEbXSrjdkMGE00IZNWxqsT', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'rt_Sq8vjBpEN9SgvBAXIybF2qMEyG33EfdOQhvzpcbbA9rYEXrw', NULL, 'acct_1RuSdMAPm3T5SOdu', '{"scope": "read_write", "connected_at": "2024-07-01", "webhook_endpoint": "https://monstro.com/webhooks/stripe", "admin_integration": true}', NOW() - INTERVAL '4 months', NOW() - INTERVAL '2 weeks', 'acc_test_admin');
+
+-- =========================================
 -- SESSIONS (User authentication sessions)
 -- =========================================
 INSERT INTO sessions (id, session_token, user_id, expires, ip_address, browser_id, mac_address, created_at, updated_at) VALUES
@@ -214,31 +282,31 @@ INSERT INTO member_custom_fields (member_id, custom_field_id, value, created_at,
 ('mbr_test_bob', 'field_dance_allergies', 'None', NOW(), NOW());
 
 -- =========================================
--- SUPPORT BOTS (AI support chatbots)
+-- SUPPORT ASSISTANTS (AI support assistants)
 -- =========================================
-INSERT INTO support_bots (id, location_id, name, prompt, temperature, initial_message, model, status, available_tools, created_at, updated_at) VALUES
-('sbot_admin', 'acc_test_admin', 'Admin Support Bot', 'You are a helpful customer support assistant for Monstro Admin. You have access to member information tools to help with administrative tasks, billing queries, and general support. You can create support tickets and escalate to human agents when needed.', 20, 'Hi! I''m the Admin Support Bot. I can help with administrative questions, account management, and technical support. What can I assist you with today?', 'gpt', 'Active', ARRAY[
+INSERT INTO support_assistants (id, location_id, name, prompt, temperature, initial_message, model, status, available_tools, persona, created_at, updated_at) VALUES
+('sbot_admin', 'acc_test_admin', 'Admin Support Assistant', 'You are a helpful customer support assistant for Monstro Admin. You have access to member information tools to help with administrative tasks, billing queries, and general support. You can create support tickets and escalate to human agents when needed.', 20, 'Hi! I''m the Admin Support Assistant. I can help with administrative questions, account management, and technical support. What can I assist you with today?', 'gpt', 'Active', ARRAY[
   '{"name": "get_member_status", "description": "Get member subscription and package status information", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The member ID to look up"}}, "required": ["memberId"]}}',
   '{"name": "get_member_billing", "description": "Get member billing and payment information", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The member ID to look up"}}, "required": ["memberId"]}}',
   '{"name": "create_support_ticket", "description": "Create a support ticket for tracking issues", "category": "support", "parameters": {"type": "object", "properties": {"title": {"type": "string", "description": "Brief title"}, "description": {"type": "string", "description": "Detailed description"}, "priority": {"type": "number", "minimum": 1, "maximum": 3, "description": "Priority level"}}, "required": ["title", "description"]}}',
   '{"name": "escalate_to_human", "description": "Escalate to human agent", "category": "support", "parameters": {"type": "object", "properties": {"reason": {"type": "string", "description": "Reason for escalation"}, "urgency": {"type": "string", "enum": ["low", "medium", "high"], "description": "Urgency level"}}, "required": ["reason", "urgency"]}}'
-]::jsonb[], NOW(), NOW()),
-('sbot_gym', 'acc_test_gym', 'FitZone Support Bot', 'You are a helpful customer support assistant for FitZone Gym. You can help members with their membership status, billing questions, class bookings, and gym-related inquiries. You can create support tickets and escalate complex issues to our staff.', 30, 'Hi! I''m the FitZone Support Bot. I can help with your membership, class schedules, billing questions, and facility information. How can I assist you today?', 'gpt', 'Active', ARRAY[
+]::jsonb[], '{"name": "Admin Assistant", "responseStyle": "Professional and helpful", "personalityTraits": ["efficient", "knowledgeable", "supportive"]}'::jsonb, NOW(), NOW()),
+('sbot_gym', 'acc_test_gym', 'FitZone Support Assistant', 'You are a helpful customer support assistant for FitZone Gym. You can help members with their membership status, billing questions, class bookings, and gym-related inquiries. You can create support tickets and escalate complex issues to our staff.', 30, 'Hi! I''m the FitZone Support Assistant. I can help with your membership, class schedules, billing questions, and facility information. How can I assist you today?', 'gpt', 'Active', ARRAY[
   '{"name": "get_member_status", "description": "Get member subscription and package status information", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The member ID to look up"}}, "required": ["memberId"]}}',
   '{"name": "get_member_billing", "description": "Get member billing and payment information", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The member ID to look up"}}, "required": ["memberId"]}}',
   '{"name": "get_member_bookable_sessions", "description": "Get available classes and sessions to book", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The member ID to look up"}}, "required": ["memberId"]}}',
   '{"name": "search_knowledge_base", "description": "Search gym policies and information", "category": "knowledge", "parameters": {"type": "object", "properties": {"query": {"type": "string", "description": "Search query"}}, "required": ["query"]}}',
   '{"name": "create_support_ticket", "description": "Create a support ticket", "category": "support", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "description": {"type": "string"}, "priority": {"type": "number", "minimum": 1, "maximum": 3}}, "required": ["title", "description"]}}',
   '{"name": "escalate_to_human", "description": "Escalate to human trainer", "category": "support", "parameters": {"type": "object", "properties": {"reason": {"type": "string"}, "urgency": {"type": "string", "enum": ["low", "medium", "high"]}}, "required": ["reason", "urgency"]}}'
-]::jsonb[], NOW(), NOW()),
-('sbot_dance', 'acc_test_dance', 'Dance Academy Support Bot', 'You are a helpful customer support assistant for Dance Academy. You help students and parents with class information, billing, scheduling, and dance-related questions. You can escalate complex issues to our instructors.', 25, 'Hello! I''m the Dance Academy Support Bot. I can help with class schedules, billing, registration, and dance program information. What would you like to know?', 'gpt', 'Active', ARRAY[
+]::jsonb[], '{"name": "FitZone Assistant", "responseStyle": "Energetic and motivational", "personalityTraits": ["encouraging", "fitness-focused", "friendly"]}'::jsonb, NOW(), NOW()),
+('sbot_dance', 'acc_test_dance', 'Dance Academy Support Assistant', 'You are a helpful customer support assistant for Dance Academy. You help students and parents with class information, billing, scheduling, and dance-related questions. You can escalate complex issues to our instructors.', 25, 'Hello! I''m the Dance Academy Support Assistant. I can help with class schedules, billing, registration, and dance program information. What would you like to know?', 'gpt', 'Active', ARRAY[
   '{"name": "get_member_status", "description": "Get student enrollment and package status", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The student ID to look up"}}, "required": ["memberId"]}}',
   '{"name": "get_member_billing", "description": "Get billing and payment information", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The student ID to look up"}}, "required": ["memberId"]}}',
   '{"name": "get_member_bookable_sessions", "description": "Get available dance classes to book", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The student ID to look up"}}, "required": ["memberId"]}}',
   '{"name": "search_knowledge_base", "description": "Search dance academy policies and info", "category": "knowledge", "parameters": {"type": "object", "properties": {"query": {"type": "string", "description": "Search query"}}, "required": ["query"]}}',
   '{"name": "create_support_ticket", "description": "Create a support ticket", "category": "support", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "description": {"type": "string"}, "priority": {"type": "number", "minimum": 1, "maximum": 3}}, "required": ["title", "description"]}}',
   '{"name": "escalate_to_human", "description": "Escalate to dance instructor", "category": "support", "parameters": {"type": "object", "properties": {"reason": {"type": "string"}, "urgency": {"type": "string", "enum": ["low", "medium", "high"]}}, "required": ["reason", "urgency"]}}'
-]::jsonb[], NOW(), NOW());
+]::jsonb[], '{"name": "Dance Assistant", "responseStyle": "Graceful and encouraging", "personalityTraits": ["artistic", "patient", "inspiring"]}'::jsonb, NOW(), NOW());
 
 -- =========================================
 -- SUPPORT TRIGGERS (Automated escalation triggers)
@@ -258,17 +326,17 @@ INSERT INTO support_triggers (id, support_bot_id, name, trigger_type, trigger_ph
 ('strig_dance_skill', 'sbot_dance', 'Skill Assessment', 'keyword', ARRAY['skill level', 'class placement', 'advancement', 'level up', 'evaluation'], '{"name": "escalate_to_human", "parameters": {"reason": "Student skill assessment and class placement inquiry", "urgency": "low"}}'::jsonb, ARRAY['What class level should my child be in?', 'Can my daughter advance to the next level?'], ARRAY['Instructor evaluation needed'], true, NOW(), NOW());
 
 -- =========================================
--- SUPPORT CONVERSATIONS (Sample chat sessions with integrated ticket data)
+-- SUPPORT CONVERSATIONS (Sample chat sessions)
 -- =========================================
-INSERT INTO support_conversations (id, support_bot_id, member_id, vendor_id, is_vendor_active, taken_over_at, title, description, status, priority, metadata, created_at, updated_at) VALUES
--- Active conversation with vendor takeover (has ticket data)
-('sconv_john_gym', 'sbot_gym', 'mbr_test_john', 'usr_test_vendor', true, NOW() - INTERVAL '15 minutes', 'Duplicate Billing Charge', 'Member was charged twice for monthly membership. Requires refund processing and account review.', 'in_progress', 2, ('{"takeoverReason": "Billing dispute requiring personal attention", "takeoverUrgency": "medium", "takeoverAt": "' || (NOW() - INTERVAL '15 minutes')::text || '", "createdBy": "sbot_gym", "memberImpact": "billing", "estimatedResolution": "24 hours"}')::jsonb, NOW() - INTERVAL '1 hour', NOW()),
--- Bot-only conversation (simple inquiry, no ticket created)
-('sconv_jane_gym', 'sbot_gym', 'mbr_test_jane', NULL, false, NULL, 'Gym Hours Inquiry', 'Member asking about gym operating hours', 'resolved', 3, '{"resolutionType": "automated", "satisfactionRating": 5}'::jsonb, NOW() - INTERVAL '2 hours', NOW()),
--- Dance academy conversation with instructor takeover (has ticket data)
-('sconv_bob_dance', 'sbot_dance', 'mbr_test_bob', 'usr_test_staff', true, NOW() - INTERVAL '30 minutes', 'Ballet Class Level Assessment', 'Student requesting advancement to intermediate ballet class. Instructor evaluation in progress.', 'open', 3, '{"takeoverReason": "Class level assessment needed", "takeoverUrgency": "low", "instructorSpecialty": "ballet", "createdBy": "sbot_dance", "assessmentType": "skill_level", "currentClass": "Ballet Fundamentals"}'::jsonb, NOW() - INTERVAL '45 minutes', NOW()),
--- Recently resolved conversation that was handed back to bot (has ticket data)
-('sconv_admin_resolved', 'sbot_admin', 'mbr_test_john', NULL, false, NULL, 'Enterprise Account Inquiry', 'Business owner inquiry about enterprise features and multi-location account setup. Successfully resolved with demo preparation.', 'resolved', 2, ('{"handedBackAt": "' || (NOW() - INTERVAL '10 minutes')::text || '", "handedBackBy": "usr_test_admin", "originalTakeoverReason": "Complex account setup", "createdBy": "sbot_admin", "resolutionTime": "2.5 hours", "complexity": "high", "leadType": "enterprise"}')::jsonb, NOW() - INTERVAL '3 hours', NOW());
+INSERT INTO support_conversations (id, support_assistant_id, location_id, member_id, category, is_vendor_active, taken_over_at, metadata, created_at, updated_at) VALUES
+-- Active conversation with vendor takeover
+('sconv_john_gym', 'sbot_gym', 'acc_test_gym', 'mbr_test_john', 'Billing', true, NOW() - INTERVAL '15 minutes', ('{"takeoverReason": "Billing dispute requiring personal attention", "takeoverUrgency": "medium", "takeoverAt": "' || (NOW() - INTERVAL '15 minutes')::text || '", "createdBy": "sbot_gym", "memberImpact": "billing", "estimatedResolution": "24 hours"}')::jsonb, NOW() - INTERVAL '1 hour', NOW()),
+-- Bot-only conversation (simple inquiry)
+('sconv_jane_gym', 'sbot_gym', 'acc_test_gym', 'mbr_test_jane', 'General', false, NULL, '{"resolutionType": "automated", "satisfactionRating": 5}'::jsonb, NOW() - INTERVAL '2 hours', NOW()),
+-- Dance academy conversation with instructor takeover
+('sconv_bob_dance', 'sbot_dance', 'acc_test_dance', 'mbr_test_bob', 'Classes', true, NOW() - INTERVAL '30 minutes', '{"takeoverReason": "Class level assessment needed", "takeoverUrgency": "low", "instructorSpecialty": "ballet", "createdBy": "sbot_dance", "assessmentType": "skill_level", "currentClass": "Ballet Fundamentals"}'::jsonb, NOW() - INTERVAL '45 minutes', NOW()),
+-- Recently resolved conversation that was handed back to bot
+('sconv_admin_resolved', 'sbot_admin', 'acc_test_admin', 'mbr_test_john', 'Enterprise', false, NULL, ('{"handedBackAt": "' || (NOW() - INTERVAL '10 minutes')::text || '", "handedBackBy": "usr_test_admin", "originalTakeoverReason": "Complex account setup", "createdBy": "sbot_admin", "resolutionTime": "2.5 hours", "complexity": "high", "leadType": "enterprise"}')::jsonb, NOW() - INTERVAL '3 hours', NOW());
 
 -- =========================================
 -- SUPPORT MESSAGES (Conversation history)
@@ -328,12 +396,12 @@ BEGIN
     RAISE NOTICE '- Member tag assignments and custom field values';
     RAISE NOTICE '- Authentication sessions and OAuth accounts';
     RAISE NOTICE '';
-    RAISE NOTICE 'SUPPORT BOT TEST DATA:';
-    RAISE NOTICE '- 3 Support bots (Admin, FitZone Gym, Dance Academy)';
+    RAISE NOTICE 'SUPPORT ASSISTANT TEST DATA:';
+    RAISE NOTICE '- 3 Support assistants (Admin, FitZone Gym, Dance Academy)';
     RAISE NOTICE '- 7 Support triggers (escalation, billing, injury, equipment, etc.)';
-    RAISE NOTICE '- 4 Support conversations (with integrated ticket data)';
+    RAISE NOTICE '- 4 Support conversations (with integrated metadata)';
     RAISE NOTICE '- 16 Support messages (realistic conversation flows)';
-    RAISE NOTICE '- Integrated ticket tracking (titles, descriptions, status, priority)';
+    RAISE NOTICE '- Agent information tracking (agentId, agentName in messages)';
     RAISE NOTICE '';
     RAISE NOTICE 'TAKEOVER & HANDOFF SCENARIOS:';
     RAISE NOTICE '- Active vendor takeover (John gym billing issue - ticket in progress)';
@@ -341,10 +409,26 @@ BEGIN
     RAISE NOTICE '- Completed handoff cycle (admin multi-location setup - ticket resolved)';
     RAISE NOTICE '- Automated resolution (Jane gym hours inquiry - simple resolution)';
     RAISE NOTICE '';
+    RAISE NOTICE 'MEMBER PLANS & SUBSCRIPTIONS:';
+    RAISE NOTICE '- 12 Member plans (Basic/Premium memberships, class packages)';
+    RAISE NOTICE '- 5 Active member subscriptions (John, Jane, Bob across locations)';
+    RAISE NOTICE '- 4 Member packages (class credits, PT sessions, expired example)';
+    RAISE NOTICE '- Realistic pricing in cents (e.g. $79 = 7900 cents)';
+    RAISE NOTICE '- Mix of monthly/annual subscriptions and one-time packages';
+    RAISE NOTICE '';
+    RAISE NOTICE 'INTEGRATIONS:';
+    RAISE NOTICE '- 3 Stripe integrations (all locations with test keys)';
+    RAISE NOTICE '- Same Stripe test account for all locations';
+    RAISE NOTICE '- Webhook endpoints configured for payment processing';
+    RAISE NOTICE '- Ready for Stripe test mode functionality';
+    RAISE NOTICE '';
     RAISE NOTICE 'SCHEMA UPDATES:';
-    RAISE NOTICE '- Support tickets merged into support_conversations table';
-    RAISE NOTICE '- Simplified architecture with integrated ticket tracking';
-    RAISE NOTICE '- Vendor assignment via vendor_id field';
+    RAISE NOTICE '- support_bots table renamed to support_assistants';
+    RAISE NOTICE '- Persona data moved to JSONB field in support_assistants';
+    RAISE NOTICE '- support_conversations simplified (removed vendor_id, title, status, priority)';
+    RAISE NOTICE '- Added location_id and category to conversations';
+    RAISE NOTICE '- Added agentId and agentName to messages';
+    RAISE NOTICE '- All locations owned by admin@test.com (vdr_test_admin)';
     RAISE NOTICE '=========================================';
     RAISE NOTICE 'You can now test your application locally!';
     RAISE NOTICE '=========================================';

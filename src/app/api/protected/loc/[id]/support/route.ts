@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
-import { supportBots, supportBotPersonas } from "@/db/schemas";
+import { supportAssistants } from "@/db/schemas";
 import { BotModel, BotStatus } from "@/db/schemas/SupportBotEnums";
 import { getDefaultSupportTools } from "@/libs/supportBotDefaults";
 
@@ -19,32 +19,32 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find existing support bot for this location
-    const supportBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, params.id),
+    // Find existing support assistant for this location
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    // Support bot should already exist from location creation
-    if (!supportBot) {
+    // Support assistant should already exist from location creation
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location. Please contact support." }, 
+        { error: "Support assistant not found for this location. Please contact support." },
         { status: 404 }
       );
     }
 
     // Serialize dates for consistent API response
-    const serializedBot = {
-      ...supportBot,
-      createdAt: supportBot?.createdAt?.toISOString(),
-      updatedAt: supportBot?.updatedAt?.toISOString(),
+    const serializedAssistant = {
+      ...supportAssistant,
+      createdAt: supportAssistant?.createdAt?.toISOString(),
+      updatedAt: supportAssistant?.updatedAt?.toISOString(),
     };
 
     return NextResponse.json({
-      supportBot: serializedBot,
-      message: "Support bot found",
+      supportAssistant: serializedAssistant,
+      message: "Support assistant found",
     });
   } catch (error) {
-    console.error("Error fetching/creating support bot:", error);
+    console.error("Error fetching/creating support assistant:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -66,7 +66,7 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { name, prompt, initialMessage, temperature, model, status } = body;
+    const { name, prompt, initialMessage, temperature, model, status, persona } = body;
 
     // Validate required fields
     if (!name || !prompt || !initialMessage) {
@@ -100,21 +100,21 @@ export async function PUT(
       );
     }
 
-    // Find existing support bot
-    const existingBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, params.id),
+    // Find existing support assistant
+    const existingAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!existingBot) {
+    if (!existingAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found" },
+        { error: "Support assistant not found" },
         { status: 404 }
       );
     }
 
-    // Update support bot
-    const [updatedBot] = await db
-      .update(supportBots)
+    // Update support assistant
+    const [updatedAssistant] = await db
+      .update(supportAssistants)
       .set({
         name,
         prompt,
@@ -122,26 +122,27 @@ export async function PUT(
         temperature,
         model,
         status,
+        persona,
         updatedAt: new Date(),
       })
-      .where(eq(supportBots.id, existingBot.id))
+      .where(eq(supportAssistants.id, existingAssistant.id))
       .returning();
 
-    // Fetch updated bot
-    const supportBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.id, updatedBot.id),
+    // Fetch updated assistant
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.id, updatedAssistant.id),
     });
 
     // Serialize dates for consistent API response
-    const serializedBot = {
-      ...supportBot,
-      createdAt: supportBot?.createdAt?.toISOString(),
-      updatedAt: supportBot?.updatedAt?.toISOString(),
+    const serializedAssistant = {
+      ...supportAssistant,
+      createdAt: supportAssistant?.createdAt?.toISOString(),
+      updatedAt: supportAssistant?.updatedAt?.toISOString(),
     };
 
     return NextResponse.json({
-      supportBot: serializedBot,
-      message: "Support bot updated successfully",
+      supportAssistant: serializedAssistant,
+      message: "Support assistant updated successfully",
     });
   } catch (error) {
     console.error("Error updating support bot:", error);

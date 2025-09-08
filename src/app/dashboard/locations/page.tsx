@@ -28,7 +28,9 @@ export default async function LocationsPage() {
             <div>Invalid Session</div>
         )
     }
+    
     const locations = await fetchLocations(session.user.vendorId)
+    
     return (
         <div className='w-full h-full'>
             <div className='p-4'>

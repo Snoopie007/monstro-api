@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
-import { supportBots } from "@/db/schemas";
+import { supportAssistants } from "@/db/schemas";
 
 export async function PUT(
   req: NextRequest,
@@ -28,46 +28,46 @@ export async function PUT(
       );
     }
 
-    // Find existing support bot
-    const existingBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, params.id),
+    // Find existing support assistant
+    const existingAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!existingBot) {
+    if (!existingAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location" },
+        { error: "Support assistant not found for this location" },
         { status: 404 }
       );
     }
 
     // Update only the status
-    const [updatedBot] = await db
-      .update(supportBots)
+    const [updatedAssistant] = await db
+      .update(supportAssistants)
       .set({
         status,
         updatedAt: new Date(),
       })
-      .where(eq(supportBots.id, existingBot.id))
+      .where(eq(supportAssistants.id, existingAssistant.id))
       .returning();
 
-    // Fetch updated bot for complete response
-    const supportBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.id, updatedBot.id),
+    // Fetch updated assistant for complete response
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.id, updatedAssistant.id),
     });
 
     // Serialize dates for consistent API response
-    const serializedBot = {
-      ...supportBot,
-      createdAt: supportBot?.createdAt?.toISOString(),
-      updatedAt: supportBot?.updatedAt?.toISOString(),
+    const serializedAssistant = {
+      ...supportAssistant,
+      createdAt: supportAssistant?.createdAt?.toISOString(),
+      updatedAt: supportAssistant?.updatedAt?.toISOString(),
     };
 
     return NextResponse.json({
-      supportBot: serializedBot,
-      message: `Support bot status changed to ${status}`,
+      supportAssistant: serializedAssistant,
+      message: `Support assistant status changed to ${status}`,
     });
   } catch (error) {
-    console.error("Error updating support bot status:", error);
+    console.error("Error updating support assistant status:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

@@ -1,16 +1,16 @@
 import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { sql, relations } from "drizzle-orm";
-import { supportBots } from "./supportBots";
+import { supportAssistants } from "./supportAssistants";
 import { triggerTypeEnum, TriggerType } from "./SupportBotEnums";
 
-// Support bot triggers (previously scenarios)
+// Support assistant triggers
 export const supportTriggers = pgTable("support_triggers", {
   id: text("id")
     .primaryKey()
     .default(sql`uuid_base62()`),
-  supportBotId: text("support_bot_id")
+  supportAssistantId: text("support_bot_id")
     .notNull()
-    .references(() => supportBots.id, { onDelete: "cascade" }),
+    .references(() => supportAssistants.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   triggerType: triggerTypeEnum("trigger_type")
     .notNull()
@@ -39,9 +39,9 @@ export const supportTriggers = pgTable("support_triggers", {
 export const supportTriggersRelations = relations(
   supportTriggers,
   ({ one }) => ({
-    supportBot: one(supportBots, {
-      fields: [supportTriggers.supportBotId],
-      references: [supportBots.id],
+    supportAssistant: one(supportAssistants, {
+      fields: [supportTriggers.supportAssistantId],
+      references: [supportAssistants.id],
     }),
   })
 );

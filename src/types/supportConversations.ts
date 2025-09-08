@@ -1,8 +1,9 @@
 export type SupportConversation = {
   id: string;
-  supportBotId: string;
+  supportAssistantId: string;
   memberId: string; // Required - only authenticated members
-  vendorId?: string;
+  locationId: string;
+  category: string;
   takenOverAt?: Date;
   isVendorActive: boolean;
   metadata: Record<string, any>;
@@ -16,6 +17,8 @@ export type SupportMessage = {
   content: string;
   role: "user" | "ai" | "vendor" | "system" | "tool" | "tool_response";
   channel: "WebChat" | "Email" | "System";
+  agentId?: string;
+  agentName?: string;
   metadata: Record<string, any>;
   createdAt: Date;
 };

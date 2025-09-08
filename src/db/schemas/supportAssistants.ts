@@ -15,12 +15,11 @@ import {
   BotStatus,
 } from "./SupportBotEnums";
 import { getDefaultSupportTools } from "@/libs/supportBotDefaults";
-import { supportBotPersonas } from "./supportBotPersonas";
 import { supportTriggers } from "./supportTriggers";
 
-// Single support bot per location
-export const supportBots = pgTable(
-  "support_bots",
+// Single support assistant per location
+export const supportAssistants = pgTable(
+  "support_assistants",
   {
     id: text("id")
       .primaryKey()
@@ -46,28 +45,25 @@ export const supportBots = pgTable(
       .array()
       .notNull()
       .$default(() => getDefaultSupportTools()), // Default support tools
+    persona: jsonb("persona").notNull().default(sql`'{}'::jsonb`), // Persona data as JSONB
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }),
   },
   (table) => ({
-    uniqueLocation: unique("support_bots_location_unique").on(table.locationId), // Only one support bot per location
+    uniqueLocation: unique("support_bots_location_unique").on(table.locationId), // Only one support assistant per location
   })
 );
 
 // Define relations
-export const supportBotsRelations = relations(supportBots, ({ one, many }) => ({
+export const supportAssistantsRelations = relations(supportAssistants, ({ one, many }) => ({
   location: one(locations, {
-    fields: [supportBots.locationId],
+    fields: [supportAssistants.locationId],
     references: [locations.id],
-  }),
-  persona: one(supportBotPersonas, {
-    fields: [supportBots.id],
-    references: [supportBotPersonas.supportBotId],
   }),
   triggers: many(supportTriggers),
 }));
 
-export type SupportBot = typeof supportBots.$inferSelect;
-export type NewSupportBot = typeof supportBots.$inferInsert;
+export type SupportAssistant = typeof supportAssistants.$inferSelect;
+export type NewSupportAssistant = typeof supportAssistants.$inferInsert;

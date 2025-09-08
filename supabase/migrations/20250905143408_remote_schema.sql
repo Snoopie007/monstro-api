@@ -136,7 +136,7 @@ alter table "public"."member_contracts" drop column "signed";
 
 alter table "public"."member_contracts" drop column "variables";
 
-alter table "public"."member_contracts" add column "pdf_filename" text;
+alter table "public"."member_contracts" add column if not exists "pdf_filename" text;
 
 alter table "public"."member_contracts" enable row level security;
 
@@ -148,9 +148,10 @@ alter table "public"."member_has_tags" enable row level security;
 
 alter table "public"."member_invoices" enable row level security;
 
-alter table "public"."member_locations" add column "onboarded" boolean not null default false;
+-- Column already exists, skipping
+-- alter table "public"."member_locations" add column "onboarded" boolean not null default false;
 
-alter table "public"."member_locations" add column "profile" jsonb;
+alter table "public"."member_locations" add column if not exists "profile" jsonb;
 
 alter table "public"."member_locations" alter column "points" set default '0'::bigint;
 
@@ -172,7 +173,7 @@ alter table "public"."member_tags" alter column "location_id" drop not null;
 
 alter table "public"."member_tags" enable row level security;
 
-alter table "public"."members" add column "first_time" boolean not null default true;
+alter table "public"."members" add column if not exists "first_time" boolean not null default true;
 
 alter table "public"."members" enable row level security;
 
@@ -212,13 +213,13 @@ alter table "public"."staff_locations" enable row level security;
 
 alter table "public"."staffs" enable row level security;
 
-alter table "public"."support_conversations" add column "description" text;
+alter table "public"."support_conversations" add column if not exists "description" text;
 
-alter table "public"."support_conversations" add column "priority" integer not null default 3;
+alter table "public"."support_conversations" add column if not exists "priority" integer not null default 3;
 
-alter table "public"."support_conversations" add column "status" ticket_status not null default 'open'::ticket_status;
+alter table "public"."support_conversations" add column if not exists "status" ticket_status not null default 'open'::ticket_status;
 
-alter table "public"."support_conversations" add column "title" text not null default 'Support Request'::text;
+alter table "public"."support_conversations" add column if not exists "title" text not null default 'Support Request'::text;
 
 alter table "public"."support_plans" enable row level security;
 

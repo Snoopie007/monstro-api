@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq, and } from "drizzle-orm";
-import { supportTriggers } from "@/db/schemas";
+import { supportTriggers, supportAssistants } from "@/db/schemas";
 
 export async function GET(
   req: NextRequest,
@@ -17,14 +17,14 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get the support bot for this location
-    const supportBot = await db.query.supportBots.findFirst({
-      where: (bots, { eq }) => eq(bots.locationId, params.id),
+    // Get the support assistant for this location
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location" },
+        { error: "Support assistant not found for this location" },
         { status: 404 }
       );
     }
@@ -33,7 +33,7 @@ export async function GET(
     const trigger = await db.query.supportTriggers.findFirst({
       where: and(
         eq(supportTriggers.id, params.triggerId),
-        eq(supportTriggers.supportBotId, supportBot.id)
+        eq(supportTriggers.supportAssistantId, supportAssistant.id)
       ),
     });
 
@@ -82,23 +82,23 @@ export async function PUT(
       isActive,
     } = body;
 
-    // Get the support bot for this location
-    const supportBot = await db.query.supportBots.findFirst({
-      where: (bots, { eq }) => eq(bots.locationId, params.id),
+    // Get the support assistant for this location
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location" },
+        { error: "Support assistant not found for this location" },
         { status: 404 }
       );
     }
 
-    // Check if trigger exists and belongs to this support bot
+    // Check if trigger exists and belongs to this support assistant
     const existingTrigger = await db.query.supportTriggers.findFirst({
       where: and(
         eq(supportTriggers.id, params.triggerId),
-        eq(supportTriggers.supportBotId, supportBot.id)
+        eq(supportTriggers.supportAssistantId, supportAssistant.id)
       ),
     });
 
@@ -149,7 +149,7 @@ export async function PUT(
       .where(
         and(
           eq(supportTriggers.id, params.triggerId),
-          eq(supportTriggers.supportBotId, supportBot.id)
+          eq(supportTriggers.supportAssistantId, supportAssistant.id)
         )
       )
       .returning();
@@ -194,23 +194,23 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get the support bot for this location
-    const supportBot = await db.query.supportBots.findFirst({
-      where: (bots, { eq }) => eq(bots.locationId, params.id),
+    // Get the support assistant for this location
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location" },
+        { error: "Support assistant not found for this location" },
         { status: 404 }
       );
     }
 
-    // Check if trigger exists and belongs to this support bot
+    // Check if trigger exists and belongs to this support assistant
     const existingTrigger = await db.query.supportTriggers.findFirst({
       where: and(
         eq(supportTriggers.id, params.triggerId),
-        eq(supportTriggers.supportBotId, supportBot.id)
+        eq(supportTriggers.supportAssistantId, supportAssistant.id)
       ),
     });
 
@@ -224,7 +224,7 @@ export async function DELETE(
       .where(
         and(
           eq(supportTriggers.id, params.triggerId),
-          eq(supportTriggers.supportBotId, supportBot.id)
+          eq(supportTriggers.supportAssistantId, supportAssistant.id)
         )
       );
 

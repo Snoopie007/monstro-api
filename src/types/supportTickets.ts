@@ -15,7 +15,7 @@ export type SupportTicket = {
 
 export type SupportLog = {
   id: string;
-  supportBotId: string;
+  supportAssistantId: string;
   conversationId?: string;
   action: string; // 'chat', 'tool_call', 'vendor_takeover', etc.
   metadata: Record<string, any>;

@@ -36,46 +36,48 @@ import {
   Plus,
   MessageSquare,
 } from "lucide-react";
-import { SupportBot } from "@/types";
+import { SupportAssistant } from "@/types/supportBot";
 import { TriggersSection } from "./TriggersSection";
 import { PersonaSection } from "./PersonaSection";
 import { DocumentsSection } from "./DocumentsSection";
 
-interface SupportBotConfigSheetProps {
+interface SupportAssistantConfigSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   locationId: string;
-  supportBot: SupportBot | null;
-  onBotUpdate: (updatedBot: Partial<SupportBot>) => void;
+  supportAssistant: SupportAssistant | null;
+  onAssistantUpdate: (updatedAssistant: Partial<SupportAssistant>) => void;
 }
 
-export function SupportBotConfigSheet({
+export function SupportAssistantConfigSheet({
   open,
   onOpenChange,
   locationId,
-  supportBot,
-  onBotUpdate,
-}: SupportBotConfigSheetProps) {
-  const [editData, setEditData] = useState<Partial<SupportBot>>({});
+  supportAssistant,
+  onAssistantUpdate,
+}: SupportAssistantConfigSheetProps) {
+  const [editData, setEditData] = useState<Partial<SupportAssistant>>({});
   const [loading, setLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Initialize edit data when support bot changes
+  // Initialize edit data when support assistant changes
   useEffect(() => {
-    if (supportBot) {
+    if (supportAssistant) {
       setEditData({
-        name: supportBot.name,
-        prompt: supportBot.prompt,
-        initialMessage: supportBot.initialMessage,
-        temperature: supportBot.temperature,
-        model: supportBot.model,
-        status: supportBot.status,
+        name: supportAssistant.name,
+        prompt: supportAssistant.prompt,
+        initialMessage: supportAssistant.initialMessage,
+        temperature: supportAssistant.temperature,
+        model: supportAssistant.model,
+        status: supportAssistant.status,
+        availableTools: supportAssistant.availableTools,
+        persona: supportAssistant.persona,
       });
       setHasChanges(false);
     } else {
-      // Default values for new support bot
+      // Default values for new support assistant
       setEditData({
-        name: "Support Bot",
+        name: "Support Assistant",
         prompt: "You are a helpful customer support assistant.",
         initialMessage:
           "Hi! I'm here to help you. What can I assist you with today?",
@@ -85,9 +87,9 @@ export function SupportBotConfigSheet({
       });
       setHasChanges(false);
     }
-  }, [supportBot]);
+  }, [supportAssistant]);
 
-  const handleInputChange = (field: keyof SupportBot, value: any) => {
+  const handleInputChange = (field: keyof SupportAssistant, value: any) => {
     setEditData((prev) => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
@@ -97,10 +99,10 @@ export function SupportBotConfigSheet({
 
     setLoading(true);
     try {
-      await onBotUpdate(editData);
+      await onAssistantUpdate(editData);
       setHasChanges(false);
     } catch (error) {
-      console.error("Failed to update support bot:", error);
+      console.error("Failed to update support assistant:", error);
     } finally {
       setLoading(false);
     }
@@ -308,20 +310,20 @@ export function SupportBotConfigSheet({
             <TabsContent value="triggers" className="space-y-4">
               <TriggersSection
                 locationId={locationId}
-                supportBot={supportBot}
+                supportBot={supportAssistant}
               />
             </TabsContent>
 
             {/* Persona Tab */}
             <TabsContent value="persona" className="space-y-4">
-              <PersonaSection locationId={locationId} supportBot={supportBot} />
+              <PersonaSection locationId={locationId} supportBot={supportAssistant} />
             </TabsContent>
 
             {/* Knowledge Base Tab */}
             <TabsContent value="knowledge" className="space-y-4">
               <DocumentsSection
                 locationId={locationId}
-                supportBot={supportBot}
+                supportBot={supportAssistant}
               />
             </TabsContent>
           </Tabs>

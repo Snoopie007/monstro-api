@@ -1,4 +1,4 @@
-export type SupportBot = {
+export type SupportAssistant = {
   id: string;
   locationId: string;
   name: string;
@@ -8,6 +8,7 @@ export type SupportBot = {
   model: "anthropic" | "gpt" | "gemini";
   status: "Draft" | "Active" | "Paused";
   availableTools: SupportTool[];
+  persona: Record<string, any>; // JSONB field containing persona data
   createdAt: Date;
   updatedAt: Date | null;
 };
@@ -20,7 +21,7 @@ export type SupportTool = {
 
 export type SupportTrigger = {
   id: string;
-  supportBotId: string;
+  supportAssistantId: string;
   name: string;
   triggerType: "keyword" | "intent" | "condition";
   triggerPhrases: string[];
@@ -32,20 +33,9 @@ export type SupportTrigger = {
   updatedAt: Date | null;
 };
 
-export type SupportBotPersona = {
-  id: string;
-  supportBotId: string;
-  name: string;
-  image?: string;
-  responseStyle: string;
-  personalityTraits: string[];
-  createdAt: Date;
-  updatedAt: Date | null;
-};
-
 export type SupportDocument = {
   id: string;
-  supportBotId: string;
+  supportAssistantId: string;
   name: string;
   filePath?: string;
   url?: string;

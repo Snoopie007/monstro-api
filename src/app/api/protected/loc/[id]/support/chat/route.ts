@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db/db";
-import { eq } from "drizzle-orm";
-import { supportBots, supportTriggers } from "@/db/schemas";
+import { eq, and } from "drizzle-orm";
+import { supportAssistants, supportTriggers } from "@/db/schemas";
 import { getModel } from "@/libs/server/ai/models";
 import {
   buildSupportPrompt,
   buildSupportTools,
   evaluateTriggers,
 } from "@/libs/server/ai/support";
-import { SupportBot, SupportTrigger } from "@/types/supportBot";
+import { SupportAssistant, SupportTrigger } from "@/types/supportBot";
 import { SupportContact } from "@/types/support";
 
 // Type definitions for this route
@@ -37,7 +37,7 @@ interface ToolResult {
   content: string;
 }
 
-interface SupportBotWithTriggers extends SupportBot {
+interface SupportAssistantWithTriggers extends SupportAssistant {
   triggers: SupportTrigger[];
 }
 
@@ -71,29 +71,31 @@ export async function POST(
     }
 
     // Get support bot configuration (simplified for testing)
-    const supportBotResult = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, params.id),
+    const supportAssistantResult = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
     // Get active triggers separately for now
-    const activeTriggers = supportBotResult
-      ? await db.query.supportTriggers.findMany({
-          where: (triggers, { eq, and }) =>
+    const activeTriggers = supportAssistantResult
+      ? await db
+          .select()
+          .from(supportTriggers)
+          .where(
             and(
-              eq(triggers.supportBotId, supportBotResult.id),
-              eq(triggers.isActive, true)
-            ),
-        })
+              eq(supportTriggers.supportAssistantId, supportAssistantResult.id),
+              eq(supportTriggers.isActive, true)
+            )
+          )
       : [];
 
     // Create properly typed support bot with triggers
-    const supportBot: SupportBotWithTriggers | null = supportBotResult
-      ? { ...supportBotResult, triggers: activeTriggers }
+    const supportAssistant: SupportAssistantWithTriggers | null = supportAssistantResult
+      ? { ...supportAssistantResult, triggers: activeTriggers }
       : null;
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found" },
+        { error: "Support assistant not found" },
         { status: 404 }
       );
     }
@@ -110,7 +112,7 @@ export async function POST(
     // Check for trigger activation
     const activatedTrigger = evaluateTriggers(
       latestMessage.content,
-      supportBot.triggers
+      supportAssistant.triggers
     );
 
     // Build context for AI model
@@ -124,7 +126,7 @@ export async function POST(
         };
 
     // Build enhanced system prompt with member context
-    let systemPrompt = buildSupportPrompt(supportBot, contactInfo);
+    let systemPrompt = buildSupportPrompt(supportAssistant, contactInfo);
 
     // Add member context for tool calls if testing with a member
     if (testMemberId && contactInfo.type === "member") {
@@ -138,10 +140,10 @@ export async function POST(
     }
 
     // Get AI model
-    const model = getModel(supportBot.model);
+    const model = getModel(supportAssistant.model);
 
     // Build tools for the support bot
-    const tools = buildSupportTools(supportBot.availableTools);
+    const tools = buildSupportTools(supportAssistant.availableTools);
     console.log(`Built ${tools.length} tools for support bot`);
 
     const modelWithTools = tools.length > 0 ? model.bindTools(tools) : model;
@@ -157,7 +159,7 @@ export async function POST(
 
     // Stream response using LangChain
     const stream = await modelWithTools.stream(chatMessages, {
-      temperature: supportBot.temperature / 100,
+      temperature: supportAssistant.temperature / 100,
     });
 
     // Create streaming response
@@ -211,7 +213,7 @@ export async function POST(
                   // Add context for tools that need it
                   const context = {
                     locationId: params.id,
-                    supportBotId: supportBot.id,
+                    supportAssistantId: supportAssistant.id,
                     // Add other context as needed
                   };
                   
@@ -275,7 +277,7 @@ export async function POST(
 
             // Get final response from model
             const finalStream = await modelWithTools.stream(messagesWithTools, {
-              temperature: supportBot.temperature / 100,
+              temperature: supportAssistant.temperature / 100,
             });
 
             // Stream the final response

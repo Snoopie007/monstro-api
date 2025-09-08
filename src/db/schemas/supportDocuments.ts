@@ -1,17 +1,17 @@
 import { pgTable, text, timestamp, integer } from "drizzle-orm/pg-core";
 import { vector } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm/sql";
-import { supportBots } from "./supportBots";
+import { supportAssistants } from "./supportAssistants";
 import { documentTypeEnum } from "./SupportBotEnums";
 
-// Documents for support bot knowledge base
+// Documents for support assistant knowledge base
 export const supportDocuments = pgTable("support_documents", {
   id: text("id")
     .primaryKey()
     .default(sql`uuid_base62()`),
-  supportBotId: text("support_bot_id")
+  supportAssistantId: text("support_assistant_id")
     .notNull()
-    .references(() => supportBots.id, { onDelete: "cascade" }),
+    .references(() => supportAssistants.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   filePath: text("file_path"),
   url: text("url"),

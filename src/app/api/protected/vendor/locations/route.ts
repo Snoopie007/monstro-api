@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { locations, locationState, supportBots } from '@/db/schemas';
+import { locations, locationState, supportAssistants } from '@/db/schemas';
 import { BotModel, BotStatus } from '@/db/schemas/SupportBotEnums';
 import { getDefaultSupportTools } from '@/libs/supportBotDefaults';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
@@ -31,16 +31,17 @@ export async function POST(req: Request) {
                 ...DEFAULT_LOCATION_STATE
             })
 
-            // Create support bot for new location
-            await tx.insert(supportBots).values({
+            // Create support assistant for new location
+            await tx.insert(supportAssistants).values({
                 locationId: location.id,
-                name: "Support Bot",
+                name: "Support Assistant",
                 prompt: "You are a helpful customer support assistant. You have access to member information tools to help with subscriptions, billing, and bookable sessions. You can also create support tickets and escalate to human agents when needed.",
                 initialMessage: "Hi! I'm here to help you. I can assist with your membership status, billing questions, available classes, and any other support needs. What can I help you with today?",
                 temperature: 0,
                 model: BotModel.GPT,
                 status: BotStatus.Draft,
                 availableTools: getDefaultSupportTools(),
+                persona: {},
             });
 
             return { ...location, status: "incomplete" }

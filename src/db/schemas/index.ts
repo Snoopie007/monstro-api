@@ -18,11 +18,10 @@ export * from "./transactions";
 export * from "./accounts";
 export * from "./ImportMembers";
 
-// SUPPORT BOT SCHEMAS
+// SUPPORT ASSISTANT SCHEMAS
 export * from "./SupportBotEnums";
-export * from "./supportBots";
+export * from "./supportAssistants";
 export * from "./supportTriggers";
-export * from "./supportBotPersonas";
 export * from "./supportDocuments";
 export * from "./supportConversations";
 export * from "./supportMessages";

@@ -4,15 +4,16 @@ import React, { useState, useEffect } from "react";
 import { SupportInbox } from "./components/SupportInbox";
 import { AdminTestChat } from "./components/AdminTestChat";
 import { ConversationView } from "./components/ConversationView";
-import { SupportBotConfigSheet } from "./components/SupportBotConfigSheet";
+import { SupportAssistantConfigSheet } from "./components/SupportBotConfigSheet";
 import { toast } from "react-toastify";
 import { Location } from "@/types/location";
-import { SupportBot, SupportConversation } from "@/types";
+import { SupportAssistant } from "@/types/supportBot";
+import { SupportConversation } from "@/types/supportConversations";
 
 interface SupportPageClientProps {
   locationId: string;
   location: Location;
-  supportBot: SupportBot | null;
+  supportAssistant: SupportAssistant | null;
   conversations: SupportConversation[];
 }
 
@@ -27,11 +28,11 @@ interface SelectedConversation {
 export function SupportPageClient({
   locationId,
   location,
-  supportBot: initialSupportBot,
+  supportAssistant: initialSupportAssistant,
   conversations: initialConversations,
 }: SupportPageClientProps) {
-  const [supportBot, setSupportBot] = useState<SupportBot | null>(
-    initialSupportBot
+  const [supportAssistant, setSupportAssistant] = useState<SupportAssistant | null>(
+    initialSupportAssistant
   );
   const [conversations, setConversations] =
     useState<SupportConversation[]>(initialConversations);
@@ -45,7 +46,7 @@ export function SupportPageClient({
   // Load support bot (with auto-creation if needed)
   useEffect(() => {
     const loadSupportBot = async () => {
-      if (!supportBot) {
+      if (!supportAssistant) {
         try {
           const response = await fetch(
             `/api/protected/loc/${locationId}/support`
@@ -53,7 +54,7 @@ export function SupportPageClient({
 
           if (response.ok) {
             const data = await response.json();
-            setSupportBot(data.supportBot);
+            setSupportAssistant(data.supportAssistant);
           } else {
             console.error(
               "Failed to load/create support bot:",
@@ -73,7 +74,7 @@ export function SupportPageClient({
     setSelectedConversation(conversation);
   };
 
-  const handleBotConfigUpdate = async (updatedBot: Partial<SupportBot>) => {
+  const handleBotConfigUpdate = async (updatedBot: Partial<SupportAssistant>) => {
     try {
       const response = await fetch(`/api/protected/loc/${locationId}/support`, {
         method: "PUT",
@@ -85,7 +86,7 @@ export function SupportPageClient({
 
       if (response.ok) {
         const data = await response.json();
-        setSupportBot(data.supportBot);
+        setSupportAssistant(data.supportAssistant);
 
         // Show success message
 
@@ -106,7 +107,7 @@ export function SupportPageClient({
         return (
           <AdminTestChat
             locationId={locationId}
-            supportBot={supportBot}
+            supportBot={supportAssistant}
             onBotUpdate={handleBotConfigUpdate}
           />
         );
@@ -115,7 +116,7 @@ export function SupportPageClient({
           <ConversationView
             locationId={locationId}
             conversation={selectedConversation.data}
-            supportBot={supportBot}
+            supportBot={supportAssistant}
           />
         );
       default:
@@ -148,12 +149,12 @@ export function SupportPageClient({
       </div>
 
       {/* Support Bot Configuration Sheet */}
-      <SupportBotConfigSheet
+      <SupportAssistantConfigSheet
         open={configSheetOpen}
         onOpenChange={setConfigSheetOpen}
         locationId={locationId}
-        supportBot={supportBot}
-        onBotUpdate={handleBotConfigUpdate}
+        supportAssistant={supportAssistant}
+        onAssistantUpdate={handleBotConfigUpdate}
       />
     </>
   );

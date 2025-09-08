@@ -1,8 +1,8 @@
 import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db/db";
-import { eq, and } from "drizzle-orm";
-import { supportBots, supportBotPersonas } from "@/db/schemas";
+import { eq } from "drizzle-orm";
+import { supportAssistants } from "@/db/schemas";
 
 export async function GET(
   req: NextRequest,
@@ -17,38 +17,27 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find the support bot for this location
-    const supportBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, params.id),
+    // Find the support assistant for this location
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location" },
+        { error: "Support assistant not found for this location" },
         { status: 404 }
       );
     }
 
-    // Get the persona (should only be one per support bot)
-    const persona = await db.query.supportBotPersonas.findFirst({
-      where: eq(supportBotPersonas.supportBotId, supportBot.id),
-    });
-
-    // Serialize dates for consistent API response
-    const serializedPersona = persona
-      ? {
-          ...persona,
-          createdAt: persona.createdAt?.toISOString(),
-          updatedAt: persona.updatedAt?.toISOString(),
-        }
-      : null;
+    // Get the persona from the support assistant (now stored as JSONB)
+    const persona = supportAssistant.persona || {};
 
     return NextResponse.json({
-      persona: serializedPersona,
-      supportBotId: supportBot.id,
+      persona: persona,
+      supportAssistantId: supportAssistant.id,
     });
   } catch (error) {
-    console.error("Error fetching support bot persona:", error);
+    console.error("Error fetching support assistant persona:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -80,61 +69,56 @@ export async function POST(
       );
     }
 
-    // Find the support bot for this location
-    const supportBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, params.id),
+    // Find the support assistant for this location
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location" },
+        { error: "Support assistant not found for this location" },
         { status: 404 }
       );
     }
 
-    // Check if persona already exists (only one persona per support bot)
-    const existingPersona = await db.query.supportBotPersonas.findFirst({
-      where: eq(supportBotPersonas.supportBotId, supportBot.id),
-    });
-
-    if (existingPersona) {
+    // Check if persona already exists
+    if (supportAssistant.persona && Object.keys(supportAssistant.persona).length > 0) {
       return NextResponse.json(
         {
           error:
-            "Support bot already has a persona. Update or delete the existing one first.",
+            "Support assistant already has a persona. Update the existing one instead.",
         },
         { status: 409 }
       );
     }
 
-    // Create the persona
-    const [newPersona] = await db
-      .insert(supportBotPersonas)
-      .values({
-        supportBotId: supportBot.id,
-        name,
-        image,
-        responseStyle,
-        personalityTraits: personalityTraits || [],
-      })
-      .returning();
-
-    // Serialize dates for consistent API response
-    const serializedPersona = {
-      ...newPersona,
-      createdAt: newPersona.createdAt?.toISOString(),
-      updatedAt: newPersona.updatedAt?.toISOString(),
+    // Create the persona object
+    const personaData = {
+      name,
+      image,
+      responseStyle,
+      personalityTraits: personalityTraits || [],
     };
+
+    // Update the support assistant with the persona
+    const [updatedAssistant] = await db
+      .update(supportAssistants)
+      .set({
+        persona: personaData,
+        updatedAt: new Date(),
+      })
+      .where(eq(supportAssistants.id, supportAssistant.id))
+      .returning();
 
     return NextResponse.json(
       {
-        persona: serializedPersona,
-        message: "Support bot persona created successfully",
+        persona: personaData,
+        message: "Support assistant persona created successfully",
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error creating support bot persona:", error);
+    console.error("Error creating support assistant persona:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -166,56 +150,50 @@ export async function PUT(
       );
     }
 
-    // Find the support bot for this location
-    const supportBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, params.id),
+    // Find the support assistant for this location
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location" },
+        { error: "Support assistant not found for this location" },
         { status: 404 }
       );
     }
 
     // Check if persona exists
-    const existingPersona = await db.query.supportBotPersonas.findFirst({
-      where: eq(supportBotPersonas.supportBotId, supportBot.id),
-    });
-
-    if (!existingPersona) {
+    if (!supportAssistant.persona || Object.keys(supportAssistant.persona).length === 0) {
       return NextResponse.json(
         { error: "No persona found to update. Create one first." },
         { status: 404 }
       );
     }
 
-    // Update the persona
-    const [updatedPersona] = await db
-      .update(supportBotPersonas)
-      .set({
-        name,
-        image,
-        responseStyle,
-        personalityTraits: personalityTraits || [],
-        updatedAt: new Date(),
-      })
-      .where(eq(supportBotPersonas.id, existingPersona.id))
-      .returning();
-
-    // Serialize dates for consistent API response
-    const serializedPersona = {
-      ...updatedPersona,
-      createdAt: updatedPersona.createdAt?.toISOString(),
-      updatedAt: updatedPersona.updatedAt?.toISOString(),
+    // Update the persona object
+    const updatedPersonaData = {
+      name,
+      image,
+      responseStyle,
+      personalityTraits: personalityTraits || [],
     };
 
+    // Update the support assistant with the new persona
+    const [updatedAssistant] = await db
+      .update(supportAssistants)
+      .set({
+        persona: updatedPersonaData,
+        updatedAt: new Date(),
+      })
+      .where(eq(supportAssistants.id, supportAssistant.id))
+      .returning();
+
     return NextResponse.json({
-      persona: serializedPersona,
-      message: "Support bot persona updated successfully",
+      persona: updatedPersonaData,
+      message: "Support assistant persona updated successfully",
     });
   } catch (error) {
-    console.error("Error updating support bot persona:", error);
+    console.error("Error updating support assistant persona:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -236,40 +214,40 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find the support bot for this location
-    const supportBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, params.id),
+    // Find the support assistant for this location
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location" },
+        { error: "Support assistant not found for this location" },
         { status: 404 }
       );
     }
 
     // Check if persona exists
-    const existingPersona = await db.query.supportBotPersonas.findFirst({
-      where: eq(supportBotPersonas.supportBotId, supportBot.id),
-    });
-
-    if (!existingPersona) {
+    if (!supportAssistant.persona || Object.keys(supportAssistant.persona).length === 0) {
       return NextResponse.json(
         { error: "No persona found to delete" },
         { status: 404 }
       );
     }
 
-    // Delete the persona
+    // Clear the persona by setting it to an empty object
     await db
-      .delete(supportBotPersonas)
-      .where(eq(supportBotPersonas.id, existingPersona.id));
+      .update(supportAssistants)
+      .set({
+        persona: {},
+        updatedAt: new Date(),
+      })
+      .where(eq(supportAssistants.id, supportAssistant.id));
 
     return NextResponse.json({
-      message: "Support bot persona deleted successfully",
+      message: "Support assistant persona deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting support bot persona:", error);
+    console.error("Error deleting support assistant persona:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

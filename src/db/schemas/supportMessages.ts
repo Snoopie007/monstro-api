@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm/sql";
+import { sql, relations } from "drizzle-orm";
 import { supportConversations } from "./supportConversations";
 import { messageRoleEnum, channelEnum, Channel } from "./SupportBotEnums";
 
@@ -14,6 +14,8 @@ export const supportMessages = pgTable("support_messages", {
   content: text("content").notNull(),
   role: messageRoleEnum("role").notNull(),
   channel: channelEnum("channel").notNull().default(Channel.WebChat),
+  agentId: text("agent_id"),
+  agentName: text("agent_name"),
   metadata: jsonb("metadata")
     .notNull()
     .default(sql`'{}'::jsonb`),
@@ -21,6 +23,14 @@ export const supportMessages = pgTable("support_messages", {
     .notNull()
     .defaultNow(),
 });
+
+// Define relations
+export const supportMessagesRelations = relations(supportMessages, ({ one }) => ({
+  conversation: one(supportConversations, {
+    fields: [supportMessages.conversationId],
+    references: [supportConversations.id],
+  }),
+}));
 
 export type SupportMessage = typeof supportMessages.$inferSelect;
 export type NewSupportMessage = typeof supportMessages.$inferInsert;

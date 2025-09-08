@@ -1,18 +1,23 @@
-import { pgTable, text, timestamp, jsonb, boolean, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { sql, relations } from "drizzle-orm";
-import { supportBots } from "./supportBots";
+import { supportAssistants } from "./supportAssistants";
+import { locations } from "./locations";
 import { members } from "./members";
-import { users } from "./users";
-import { ticketStatusEnum, TicketStatus } from "./SupportBotEnums";
 
 // Support conversations for authenticated members only
 export const supportConversations = pgTable("support_conversations", {
   id: text("id")
     .primaryKey()
     .default(sql`uuid_base62()`),
-  supportBotId: text("support_bot_id")
+  supportAssistantId: text("support_assistant_id")
     .notNull()
-    .references(() => supportBots.id, { onDelete: "cascade" }),
+    .references(() => supportAssistants.id, { onDelete: "cascade" }),
+
+  // Location and categorization
+  locationId: text("location_id")
+    .notNull()
+    .references(() => locations.id, { onDelete: "cascade" }),
+  category: text("category").notNull().default("General"),
 
   // Member conversation (required)
   memberId: text("member_id")
@@ -20,17 +25,8 @@ export const supportConversations = pgTable("support_conversations", {
     .references(() => members.id, { onDelete: "cascade" }),
 
   // Vendor takeover functionality
-  vendorId: text("vendor_id").references(() => users.id, {
-    onDelete: "set null",
-  }),
   takenOverAt: timestamp("taken_over_at", { withTimezone: true }),
   isVendorActive: boolean("is_vendor_active").default(false),
-
-  // Ticket fields (merged from support_tickets)
-  title: text("title").notNull().default("Support Request"),
-  description: text("description"),
-  status: ticketStatusEnum("status").notNull().default(TicketStatus.Open),
-  priority: integer("priority").notNull().default(3), // 1=high, 2=medium, 3=low
 
   metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -43,17 +39,17 @@ export const supportConversations = pgTable("support_conversations", {
 export const supportConversationsRelations = relations(
   supportConversations,
   ({ one, many }) => ({
-    supportBot: one(supportBots, {
-      fields: [supportConversations.supportBotId],
-      references: [supportBots.id],
+    supportAssistant: one(supportAssistants, {
+      fields: [supportConversations.supportAssistantId],
+      references: [supportAssistants.id],
+    }),
+    location: one(locations, {
+      fields: [supportConversations.locationId],
+      references: [locations.id],
     }),
     member: one(members, {
       fields: [supportConversations.memberId],
       references: [members.id],
-    }),
-    vendor: one(users, {
-      fields: [supportConversations.vendorId],
-      references: [users.id],
     }),
   })
 );

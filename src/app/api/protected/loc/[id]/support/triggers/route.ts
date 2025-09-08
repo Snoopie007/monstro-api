@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq, desc } from "drizzle-orm";
-import { supportTriggers } from "@/db/schemas";
+import { supportTriggers, supportAssistants } from "@/db/schemas";
 import { TriggerType } from "@/db/schemas/SupportBotEnums";
 
 export async function GET(
@@ -18,21 +18,21 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get the support bot for this location first to ensure it exists
-    const supportBot = await db.query.supportBots.findFirst({
-      where: (bots, { eq }) => eq(bots.locationId, params.id),
+    // Get the support assistant for this location first to ensure it exists
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location" },
+        { error: "Support assistant not found for this location" },
         { status: 404 }
       );
     }
 
-    // Fetch all triggers for this support bot
+    // Fetch all triggers for this support assistant
     const triggers = await db.query.supportTriggers.findMany({
-      where: eq(supportTriggers.supportBotId, supportBot.id),
+      where: eq(supportTriggers.supportAssistantId, supportAssistant.id),
       orderBy: [desc(supportTriggers.createdAt)],
     });
 
@@ -102,14 +102,14 @@ export async function POST(
       );
     }
 
-    // Get the support bot for this location
-    const supportBot = await db.query.supportBots.findFirst({
-      where: (bots, { eq }) => eq(bots.locationId, params.id),
+    // Get the support assistant for this location
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location" },
+        { error: "Support assistant not found for this location" },
         { status: 404 }
       );
     }
@@ -118,7 +118,7 @@ export async function POST(
     const [newTrigger] = await db
       .insert(supportTriggers)
       .values({
-        supportBotId: supportBot.id,
+        supportAssistantId: supportAssistant.id,
         name: name.trim(),
         triggerType,
         triggerPhrases,

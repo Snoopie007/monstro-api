@@ -40,7 +40,6 @@ export const LocationsList = ({ locations }: { locations: Location[] }) => {
                     <Link href={url(l)} key={l.id}>
                         <Card key={l.id} className='p-4 rounded-sm min-h-36 bg-foreground/5 border-foreground/10'>
                             <div className='flex flex-row items-start gap-2 justify-between'>
-
                                 <div className='flex flex-col items-start justify-start'>
                                     <h3 className='text-sm font-bold'>{l.name}</h3>
 

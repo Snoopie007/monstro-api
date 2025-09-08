@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm/sql";
-import { supportBots } from "./supportBots";
+import { supportAssistants } from "./supportAssistants";
 import { supportConversations } from "./supportConversations";
 
 // Support interaction logs
@@ -8,9 +8,9 @@ export const supportLogs = pgTable("support_logs", {
   id: text("id")
     .primaryKey()
     .default(sql`uuid_base62()`),
-  supportBotId: text("support_bot_id")
+  supportAssistantId: text("support_assistant_id")
     .notNull()
-    .references(() => supportBots.id, { onDelete: "cascade" }),
+    .references(() => supportAssistants.id, { onDelete: "cascade" }),
   conversationId: text("conversation_id").references(
     () => supportConversations.id,
     { onDelete: "cascade" }

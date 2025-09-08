@@ -3,10 +3,11 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq, desc } from "drizzle-orm";
 import {
-  supportBots,
+  supportAssistants,
   supportConversations,
   supportMessages,
 } from "@/db/schemas";
+import { MessageRole, Channel } from "@/db/schemas/SupportBotEnums";
 
 export async function GET(
   req: NextRequest,
@@ -21,21 +22,21 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get support bot for this location
-    const supportBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, params.id),
+    // Get support assistant for this location
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json({
         conversations: [],
-        message: "No support bot found for this location",
+        message: "No support assistant found for this location",
       });
     }
 
-    // Get conversations for this support bot (simplified to avoid relation errors)
+    // Get conversations for this support assistant (simplified to avoid relation errors)
     const conversations = await db.query.supportConversations.findMany({
-      where: eq(supportConversations.supportBotId, supportBot.id),
+      where: eq(supportConversations.supportAssistantId, supportAssistant.id),
       orderBy: [desc(supportConversations.updatedAt)],
       limit: 20,
     });
@@ -99,7 +100,7 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { memberId, initialMessage } = body;
+    const { memberId, initialMessage, category = "General" } = body;
 
     if (!memberId) {
       return NextResponse.json(
@@ -108,14 +109,14 @@ export async function POST(
       );
     }
 
-    // Get support bot for this location
-    const supportBot = await db.query.supportBots.findFirst({
-      where: eq(supportBots.locationId, params.id),
+    // Get support assistant for this location
+    const supportAssistant = await db.query.supportAssistants.findFirst({
+      where: eq(supportAssistants.locationId, params.id),
     });
 
-    if (!supportBot) {
+    if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support bot not found for this location" },
+        { error: "Support assistant not found for this location" },
         { status: 404 }
       );
     }
@@ -124,8 +125,10 @@ export async function POST(
     const [newConversation] = await db
       .insert(supportConversations)
       .values({
-        supportBotId: supportBot.id,
+        supportAssistantId: supportAssistant.id,
+        locationId: params.id,
         memberId,
+        category,
         isVendorActive: false,
         metadata: {
           createdBy: session.user?.id,
@@ -139,8 +142,8 @@ export async function POST(
       await db.insert(supportMessages).values({
         conversationId: newConversation.id,
         content: initialMessage,
-        role: "system",
-        channel: "System",
+        role: MessageRole.System,
+        channel: Channel.System,
         metadata: {
           createdBy: session.user?.id,
         },

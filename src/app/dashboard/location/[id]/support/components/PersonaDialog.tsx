@@ -10,13 +10,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { X, Plus } from "lucide-react";
 import { toast } from "react-toastify";
 import { SupportBotPersona } from "@/types/supportBot";
+import { usePersonaForm } from "./hooks/usePersonaForm";
+import { PersonalityTraitsInput } from "./PersonalityTraitsInput";
+import { TextField, TextAreaField } from "./PersonaFormFields";
 
 interface PersonaDialogProps {
   open: boolean;
@@ -33,44 +31,22 @@ export function PersonaDialog({
   initialData,
   isEditing = false,
 }: PersonaDialogProps) {
-  const [formData, setFormData] = useState({
-    name: initialData?.name || "",
-    image: initialData?.image || "",
-    responseStyle: initialData?.responseStyle || "",
-    personalityTraits: initialData?.personalityTraits || [],
-  });
-  const [newTrait, setNewTrait] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const addPersonalityTrait = () => {
-    if (
-      newTrait.trim() &&
-      !formData.personalityTraits.includes(newTrait.trim())
-    ) {
-      setFormData((prev) => ({
-        ...prev,
-        personalityTraits: [...prev.personalityTraits, newTrait.trim()],
-      }));
-      setNewTrait("");
-    }
-  };
-
-  const removePersonalityTrait = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      personalityTraits: prev.personalityTraits.filter((_, i) => i !== index),
-    }));
-  };
+  const {
+    formData,
+    updateField,
+    addPersonalityTrait,
+    removePersonalityTrait,
+    resetForm,
+    validateForm,
+  } = usePersonaForm(initialData);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.responseStyle.trim()) {
-      toast.error("Please fill in all required fields");
+    const validation = validateForm();
+    if (!validation.isValid) {
+      toast.error(validation.errors.join(", "));
       return;
     }
 
@@ -80,12 +56,7 @@ export function PersonaDialog({
 
       // Reset form if creating new persona
       if (!isEditing) {
-        setFormData({
-          name: "",
-          image: "",
-          responseStyle: "",
-          personalityTraits: [],
-        });
+        resetForm();
       }
 
       onOpenChange(false);
@@ -113,84 +84,39 @@ export function PersonaDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-4">
-          <div className="space-y-2">
-            <Label htmlFor="persona-name">
-              Persona Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="persona-name"
-              value={formData.name}
-              onChange={(e) => handleInputChange("name", e.target.value)}
-              placeholder="e.g., Alex, Friendly Assistant, etc."
-              required
-            />
-          </div>
+          <TextField
+            id="persona-name"
+            label="Persona Name"
+            value={formData.name}
+            onChange={(value) => updateField("name", value)}
+            placeholder="e.g., Alex, Friendly Assistant, etc."
+            required
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="persona-image">Avatar Image URL (optional)</Label>
-            <Input
-              id="persona-image"
-              value={formData.image}
-              onChange={(e) => handleInputChange("image", e.target.value)}
-              placeholder="https://example.com/avatar.jpg"
-              type="url"
-            />
-          </div>
+          <TextField
+            id="persona-image"
+            label="Avatar Image URL (optional)"
+            type="url"
+            value={formData.image}
+            onChange={(value) => updateField("image", value)}
+            placeholder="https://example.com/avatar.jpg"
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="response-style">
-              Response Style <span className="text-red-500">*</span>
-            </Label>
-            <Textarea
-              id="response-style"
-              value={formData.responseStyle}
-              onChange={(e) =>
-                handleInputChange("responseStyle", e.target.value)
-              }
-              placeholder="Describe how the bot should respond (e.g., friendly and professional, casual and helpful, etc.)"
-              rows={3}
-              required
-            />
-          </div>
+          <TextAreaField
+            id="response-style"
+            label="Response Style"
+            value={formData.responseStyle}
+            onChange={(value) => updateField("responseStyle", value)}
+            placeholder="Describe how the bot should respond (e.g., friendly and professional, casual and helpful, etc.)"
+            rows={3}
+            required
+          />
 
-          <div className="space-y-2">
-            <Label>Personality Traits</Label>
-            <div className="flex gap-2">
-              <Input
-                value={newTrait}
-                onChange={(e) => setNewTrait(e.target.value)}
-                placeholder="Add a personality trait"
-                onKeyPress={(e) =>
-                  e.key === "Enter" &&
-                  (e.preventDefault(), addPersonalityTrait())
-                }
-              />
-              <Button type="button" onClick={addPersonalityTrait} size="sm">
-                <Plus size={16} />
-              </Button>
-            </div>
-
-            {formData.personalityTraits.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.personalityTraits.map((trait, index) => (
-                  <Badge
-                    key={index}
-                    variant="outline"
-                    className="gap-1 bg-blue-50 text-blue-700 border-blue-200"
-                  >
-                    {trait}
-                    <button
-                      type="button"
-                      onClick={() => removePersonalityTrait(index)}
-                      className="ml-1 hover:text-red-500"
-                    >
-                      <X size={12} />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
+          <PersonalityTraitsInput
+            traits={formData.personalityTraits}
+            onAddTrait={addPersonalityTrait}
+            onRemoveTrait={removePersonalityTrait}
+          />
 
           <DialogFooter>
             <Button
