@@ -11,9 +11,10 @@ import { locations } from "../locations";
 import {
 	botStatusEnum,
 	botModelEnum,
-} from "./SupportBotEnums";
-import { supportConversations } from "./supportConversations";
-
+} from "./SupportEnums";
+import { supportConversations } from "./SupportConversations";
+import type { SupportPersona } from "@/types";
+import { supportTriggers } from "./SupportTriggers";
 
 // Single support bot per location
 export const supportAssistants = pgTable("support_assistants", {
@@ -26,7 +27,7 @@ export const supportAssistants = pgTable("support_assistants", {
 	model: botModelEnum("model").notNull().default('GPT'),
 	status: botStatusEnum("status").notNull().default('Draft'),
 	availableTools: jsonb("available_tools").array().notNull().$default(() => []),
-	persona: jsonb("persona").notNull().default(sql`'{}'::jsonb`),
+	persona: jsonb("persona").$type<SupportPersona>().notNull().default(sql`'{}'::jsonb`),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
@@ -40,5 +41,6 @@ export const supportAssistantsRelations = relations(supportAssistants, ({ one, m
 		references: [locations.id],
 	}),
 	conversations: many(supportConversations),
+	triggers: many(supportTriggers),
 }));
 

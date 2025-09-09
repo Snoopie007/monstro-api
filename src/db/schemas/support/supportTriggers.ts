@@ -1,7 +1,8 @@
 import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { sql, relations } from "drizzle-orm";
-import { triggerTypeEnum } from "./SupportBotEnums";
-import { supportAssistants } from "./supportBots";
+import { triggerTypeEnum } from "./SupportEnums";
+import { supportAssistants } from "./SupportAssistant";
+import type { SupportTools } from "@/types";
 
 // Support bot triggers (previously scenarios)
 export const supportTriggers = pgTable("support_triggers", {
@@ -10,7 +11,7 @@ export const supportTriggers = pgTable("support_triggers", {
   name: text("name").notNull(),
   triggerType: triggerTypeEnum("trigger_type").notNull().default('Keyword'),
   triggerPhrases: text("trigger_phrases").array().notNull().default(sql`ARRAY[]::text[]`),
-  toolCall: jsonb("tool_call").notNull(), // Specific tool call to execute
+  toolCall: jsonb("tool_call").$type<SupportTools>().notNull(), // Specific tool call to execute
   examples: text("examples").array().notNull().default(sql`ARRAY[]::text[]`),
   requirements: text("requirements").array().notNull().default(sql`ARRAY[]::text[]`),
   isActive: boolean("is_active").notNull().default(true),

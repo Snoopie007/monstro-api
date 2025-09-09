@@ -1,7 +1,6 @@
 import { db } from "@/db/db"
-import { eq, getTableColumns } from "drizzle-orm"
 import { Elysia } from "elysia"
-import { supportConversations } from "@/db/schemas/"
+import { supportAssistants, supportConversations } from "@/db/schemas/"
 
 type Props = {
     memberId: string
@@ -23,21 +22,16 @@ export function mlSupportRoutes(app: Elysia) {
 
         try {
 
-            const assistant = await db.query.supportAssistants.findFirst({
-                where: (b, { eq }) => eq(b.locationId, lid),
-                with: {
-                    conversations: {
-                        where: (b, { eq }) => eq(b.memberId, mid)
-                    }
-                }
+            const conversations = await db.query.supportConversations.findMany({
+                where: (b, { eq, and }) => and(eq(b.locationId, lid), eq(b.memberId, mid))
             });
 
-            if (!assistant) {
+            if (!conversations) {
                 return status(404, { error: "No support assistant found" });
             }
 
 
-            return status(200, assistant);
+            return status(200, conversations);
         } catch (error) {
             console.error('Database error:', error);
             return status(500, { error: "Failed to fetch support conversations" });
@@ -45,15 +39,21 @@ export function mlSupportRoutes(app: Elysia) {
     }).post('/support', async ({ memberId, params, status, body }: Props & { body: PostBody }) => {
         const { mid, lid } = params;
 
-        const { assistantId } = body;
         try {
 
+            const assistant = await db.query.supportAssistants.findFirst({
+                where: (b, { eq, and }) => and(eq(b.locationId, lid), eq(b.id, body.assistantId))
+            });
 
+            if (!assistant) {
+                return status(404, { error: "Support assistant not found" });
+            }
             const [conversation] = await db.insert(supportConversations).values({
                 memberId: mid,
                 locationId: lid,
-                supportAssistantId: assistantId
+                supportAssistantId: assistant.id
             }).returning();
+
             return status(200, conversation);
         } catch (error) {
             console.error('Database error:', error);

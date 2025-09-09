@@ -263,47 +263,47 @@ export const getMemberBookableSessions = tool(
 );
 
 // Create support ticket tool
-export const createSupportTicket = tool(
-  async (input: any, context?: any) => {
-    const { title, description, priority = 3 } = input;
-    const conversationId = context?.conversationId;
+// export const createSupportTicket = tool(
+//   async (input: any, context?: any) => {
+//     const { title, description, priority = 3 } = input;
+//     const conversationId = context?.conversationId;
 
-    try {
-      console.log(`🎫 Creating support ticket for conversation: ${conversationId}`);
+//     try {
+//       console.log(`🎫 Creating support ticket for conversation: ${conversationId}`);
 
-      const [conversation] = await db
-        .update(supportConversations)
-        .set({
-          title,
-          description,
-          priority,
-          status: 'Open',
-          updatedAt: new Date(),
-        })
-        .where(eq(supportConversations.id, conversationId))
-        .returning();
+//       const [conversation] = await db
+//         .update(supportConversations)
+//         .set({
+//           title,
+//           description,
+//           priority,
+//           status: 'Open',
+//           updated: new Date(),
+//         })
+//         .where(eq(supportConversations.id, conversationId))
+//         .returning();
 
-      return `Support ticket "${title}" created successfully. I'll track this issue for you.`;
-    } catch (error) {
-      console.error("Error creating support ticket:", error);
-      return "I encountered an error creating your support ticket. Please contact support directly for assistance.";
-    }
-  },
-  {
-    name: "create_support_ticket",
-    description: "Create a support ticket for tracking customer issues",
-    schema: z.object({
-      title: z.string().describe("Brief title for the support ticket"),
-      description: z.string().describe("Detailed description of the issue"),
-      priority: z
-        .number()
-        .min(1)
-        .max(3)
-        .default(3)
-        .describe("Priority level: 1=high, 2=medium, 3=low"),
-    }),
-  }
-);
+//       return `Support ticket "${title}" created successfully. I'll track this issue for you.`;
+//     } catch (error) {
+//       console.error("Error creating support ticket:", error);
+//       return "I encountered an error creating your support ticket. Please contact support directly for assistance.";
+//     }
+//   },
+//   {
+//     name: "create_support_ticket",
+//     description: "Create a support ticket for tracking customer issues",
+//     schema: z.object({
+//       title: z.string().describe("Brief title for the support ticket"),
+//       description: z.string().describe("Detailed description of the issue"),
+//       priority: z
+//         .number()
+//         .min(1)
+//         .max(3)
+//         .default(3)
+//         .describe("Priority level: 1=high, 2=medium, 3=low"),
+//     }),
+//   }
+// );
 
 // Escalate to human tool
 export const escalateToHuman = tool(
@@ -395,8 +395,6 @@ export function buildSupportTools(availableTools: any[]) {
     get_member_billing: getMemberBilling,
     get_member_bookable_sessions: getMemberBookableSessions,
 
-    // Ticket management tools
-    create_support_ticket: createSupportTicket,
 
     // General support tools
     search_knowledge_base: searchKnowledgeBase,
