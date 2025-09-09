@@ -2,7 +2,7 @@ import { pgTable, text, timestamp, jsonb, boolean, integer } from "drizzle-orm/p
 import { sql, relations } from "drizzle-orm";
 import { members } from "../members";
 import { supportAssistants } from "./SupportAssistant";
-import { messageRoleEnum, channelEnum, ticketStatusEnum } from "./SupportEnums";
+import { messageRoleEnum, channelEnum, assistantStatusEnum } from "./SupportEnums";
 import { locations } from "../locations";
 
 export const supportConversations = pgTable("support_conversations", {
@@ -15,7 +15,7 @@ export const supportConversations = pgTable("support_conversations", {
 	takenOverAt: timestamp("taken_over_at", { withTimezone: true }),
 	isVendorActive: boolean("is_vendor_active").default(false),
 	description: text("description"),
-	status: ticketStatusEnum("status").notNull().default('open'),
+	status: assistantStatusEnum("status").notNull().default('active'),
 	priority: integer("priority").notNull().default(3), // 1=high, 2=medium, 3=low
 	metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -28,7 +28,7 @@ export const supportMessages = pgTable("support_messages", {
 	agentName: text("agent_name"),
 	agentId: text("agent_id"),
 	content: text("content").notNull(),
-	role: messageRoleEnum("role").notNull().default('user'),
+	role: messageRoleEnum("role").notNull(),
 	channel: channelEnum("channel").notNull().default('WebChat'),
 	metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

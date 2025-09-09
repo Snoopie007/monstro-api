@@ -12,48 +12,9 @@ export type StaffStatus = 'active' | 'inactive';
 export type ProgramStatus = 'active' | 'inactive';
 export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type TransactionType = 'inbound' | 'outbound';
-
-export enum BotStatus {
-    Draft = "Draft",
-    Active = "Active",
-    Paused = "Paused",
-}
-
-export enum Channel {
-    WebChat = "WebChat",
-    Email = "Email",
-    System = "System",
-}
-
-export enum MessageRole {
-    User = "user",
-    AI = "ai",
-    Vendor = "vendor",
-    System = "system",
-    Tool = "tool",
-    ToolResponse = "tool_response",
-}
-
-export enum BotModel {
-    Anthropic = "anthropic",
-    GPT = "gpt",
-    Gemini = "gemini",
-}
-
-export enum DocumentType {
-    File = "file",
-    Website = "website",
-}
-
-export enum TicketStatus {
-    Open = "open",
-    InProgress = "in_progress",
-    Resolved = "resolved",
-    Closed = "closed",
-}
-
-export enum TriggerType {
-    Keyword = "keyword",
-    Intent = "intent",
-    Condition = "condition",
-}
+export type ASsistantStatus = "draft" | "active" | "paused";
+export type Channel = "webchat" | "email" | "system";
+export type MessageRole = "user" | "ai" | "vendor" | "system" | "tool" | "tool_response";
+export type ConversationStatus = "open" | "in_progress" | "resolved" | "closed";
+export type TriggerType = "keyword" | "intent" | "condition";
+export type BotModel = "gpt" | "anthropic" | "gemini";

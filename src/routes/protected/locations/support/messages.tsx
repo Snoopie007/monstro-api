@@ -1,8 +1,11 @@
 import type { Elysia } from "elysia";
-import { ChatAIService } from "@/libs/ai/AI";
+import { getModel, calculateAICost, DEFAULT_SUPPORT_TOOLS } from "@/libs/ai";
 import { db } from "@/db/db";
+import { supportConversations, supportMessages } from "@/db/schemas/support";
+import { eq } from "drizzle-orm";
+import { formattedPrompt } from "@/libs/ai/Prompts";
+import { ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
 
-const chatAIService = new ChatAIService();
 type Props = {
     params: {
         mid: string;
@@ -15,7 +18,12 @@ type Props = {
     };
     status: any;
 };
-export async function supportMessages(app: Elysia) {
+
+
+
+
+
+export async function supportMessagesRoute(app: Elysia) {
 
     return app.post('/message', async ({ body, status, params }: Props) => {
         const { lid, cid } = params;
@@ -26,7 +34,11 @@ export async function supportMessages(app: Elysia) {
             const conversation = await db.query.supportConversations.findFirst({
                 where: (b, { eq }) => eq(b.id, cid),
                 with: {
-                    assistant: true
+                    assistant: {
+                        with: {
+                            triggers: true
+                        }
+                    }
                 }
             });
 
@@ -52,14 +64,50 @@ export async function supportMessages(app: Elysia) {
                 return status(404, { error: "Member  not found" });
             }
 
+            const messages = await db.query.supportMessages.findMany({
+                where: (s, { eq }) => eq(s.conversationId, cid),
+                orderBy: (b, { desc }) => desc(b.created),
+                limit: 50,
+            });
+
             //Taken Over? Return
+            const model = getModel(conversation.assistant.model, (output) => {
+                const usage = output.llmOutput?.tokenUsage;
+                if (usage) {
+                    const cost = calculateAICost(usage, conversation.assistant.model);
+                    //Wallet
+                }
+            });
 
-            const msg = await chatAIService.generateResponse(
-                conversation,
-                ml,
-                message,
-            );
+            const tools: Record<string, any>[] = [];
+            DEFAULT_SUPPORT_TOOLS.forEach(tool => {
+                tools.push({
+                    type: "function",
+                    function: tool
+                });
+            });
 
+            console.log('🔧 Tools:', tools);
+            const modelWithTools = model.bindTools(tools);
+            const systemPrompt = await formattedPrompt({ ml, assistant: conversation.assistant });
+
+            const prompt = ChatPromptTemplate.fromMessages([
+                SystemMessagePromptTemplate.fromTemplate(systemPrompt),
+                new MessagesPlaceholder(`history`),
+            ]);
+
+            const modelWithPrompt = prompt.pipe(modelWithTools);
+
+            const history = [...messages, { role: 'user', content: message }].map(m => ({ role: m.role, content: m.content }));
+
+            const response = await modelWithPrompt.invoke({ history });
+
+            const msg = await saveMessage(cid, response.content.toString(), 'ai');
+
+            // Update conversation timestamp
+            await db.update(supportConversations).set({
+                updated: new Date(),
+            }).where(eq(supportConversations.id, cid));
             return status(200, msg);
 
         } catch (error) {
@@ -69,4 +117,22 @@ export async function supportMessages(app: Elysia) {
         }
     })
 
+}
+
+
+async function saveMessage(conversationId: string, content: string, role: 'user' | 'ai') {
+    const [savedMessage] = await db.insert(supportMessages).values({
+        conversationId,
+        content,
+        role,
+        channel: 'WebChat',
+        metadata: {
+            savedAt: new Date().toISOString(),
+            source: 'api-chat'
+        },
+    }).returning();
+
+
+
+    return savedMessage;
 }

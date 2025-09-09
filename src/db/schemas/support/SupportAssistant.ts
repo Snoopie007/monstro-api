@@ -9,8 +9,8 @@ import {
 import { sql, relations } from "drizzle-orm";
 import { locations } from "../locations";
 import {
-	botStatusEnum,
-	botModelEnum,
+	assistantStatusEnum,
+	botModelEnum
 } from "./SupportEnums";
 import { supportConversations } from "./SupportConversations";
 import type { SupportPersona } from "@/types";
@@ -24,8 +24,9 @@ export const supportAssistants = pgTable("support_assistants", {
 	prompt: text("prompt").notNull().default("You are a helpful customer support assistant. You have access to member information tools to help with subscriptions, billing, and bookable sessions. You can also create support tickets and escalate to human agents when needed."),
 	temperature: integer("temperature").notNull().default(0),
 	initialMessage: text("initial_message").notNull().default("Hi! I'm here to help you. I can assist with your membership status, billing questions, available classes, and any other support needs. What can I help you with today?"),
-	model: botModelEnum("model").notNull().default('GPT'),
-	status: botStatusEnum("status").notNull().default('Draft'),
+	model: botModelEnum("model").notNull().default('gpt'),
+	modelId: text("model_id").notNull(),
+	status: assistantStatusEnum("status").notNull().default('draft'),
 	availableTools: jsonb("available_tools").array().notNull().$default(() => []),
 	persona: jsonb("persona").$type<SupportPersona>().notNull().default(sql`'{}'::jsonb`),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -9,7 +9,7 @@ export const supportTriggers = pgTable("support_triggers", {
   id: text("id").primaryKey().default(sql`uuid_base62()`),
   supportAssistantId: text("support_assistant_id").notNull().references(() => supportAssistants.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  triggerType: triggerTypeEnum("trigger_type").notNull().default('Keyword'),
+  triggerType: triggerTypeEnum("trigger_type").notNull().default('keyword'),
   triggerPhrases: text("trigger_phrases").array().notNull().default(sql`ARRAY[]::text[]`),
   toolCall: jsonb("tool_call").$type<SupportTools>().notNull(), // Specific tool call to execute
   examples: text("examples").array().notNull().default(sql`ARRAY[]::text[]`),
