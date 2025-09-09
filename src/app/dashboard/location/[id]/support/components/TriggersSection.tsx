@@ -22,18 +22,18 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "react-toastify";
-import { SupportBot, SupportTrigger } from "@/types";
+import { SupportAssistant, SupportTrigger } from "@/types";
 import { NewTriggerForm } from "./NewTriggerForm";
 import { EditTriggerForm } from "./EditTriggerForm";
 
 interface TriggersSectionProps {
   locationId: string;
-  supportBot: SupportBot | null;
+  supportAssistant: SupportAssistant | null;
 }
 
 export function TriggersSection({
   locationId,
-  supportBot,
+  supportAssistant,
 }: TriggersSectionProps) {
   const [triggers, setTriggers] = useState<SupportTrigger[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,7 +46,7 @@ export function TriggersSection({
   // Load triggers when component mounts or supportBot changes
   useEffect(() => {
     const loadTriggers = async () => {
-      if (!supportBot) return;
+      if (!supportAssistant) return;
 
       setLoading(true);
       try {
@@ -72,10 +72,10 @@ export function TriggersSection({
     };
 
     loadTriggers();
-  }, [supportBot]);
+  }, [supportAssistant]);
 
   const handleCreateTrigger = async (triggerData: Partial<SupportTrigger>) => {
-    if (!supportBot) return;
+    if (!supportAssistant) return;
 
     try {
       // Create trigger via API
@@ -232,7 +232,7 @@ export function TriggersSection({
     }
   };
 
-  if (!supportBot) {
+  if (!supportAssistant) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">

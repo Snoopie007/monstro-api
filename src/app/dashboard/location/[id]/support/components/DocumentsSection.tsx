@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { FileText, Upload, Trash2, Download, ExternalLink } from "lucide-react";
-import { SupportBot } from "@/types";
+import { SupportAssistant } from "@/types";
 
 interface DocumentsSectionProps {
   locationId: string;
-  supportBot: SupportBot | null;
+  supportAssistant: SupportAssistant | null;
 }
 
 interface SupportDocument {
@@ -24,7 +24,7 @@ interface SupportDocument {
 
 export function DocumentsSection({
   locationId,
-  supportBot,
+  supportAssistant,
 }: DocumentsSectionProps) {
   const [documents, setDocuments] = useState<SupportDocument[]>([
     // Placeholder documents for demo
@@ -49,7 +49,7 @@ export function DocumentsSection({
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
-    if (!file || !supportBot) return;
+    if (!file || !supportAssistant) return;
 
     setUploading(true);
     try {
@@ -125,12 +125,12 @@ export function DocumentsSection({
               onChange={handleFileUpload}
               style={{ display: "none" }}
               id="file-upload"
-              disabled={uploading || !supportBot}
+              disabled={uploading || !supportAssistant}
             />
             <Button
               size="sm"
               onClick={() => document.getElementById("file-upload")?.click()}
-              disabled={uploading || !supportBot}
+              disabled={uploading || !supportAssistant}
               className="gap-2"
             >
               <Upload size={16} />

@@ -6,32 +6,32 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User, Plus, Edit2, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { SupportBot, SupportBotPersona } from "@/types";
+import { SupportAssistant } from "@/types";
 import { PersonaDialog } from "./PersonaDialog";
 
 interface PersonaSectionProps {
   locationId: string;
-  supportBot: SupportBot | null;
+  supportAssistant: SupportAssistant | null;
 }
 
 export function PersonaSection({
   locationId,
-  supportBot,
+  supportAssistant,
 }: PersonaSectionProps) {
-  const [persona, setPersona] = useState<SupportBotPersona | null>(null);
+  const [persona, setPersona] = useState<Record<string, any> | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Load persona when component mounts or supportBot changes
   useEffect(() => {
-    if (supportBot) {
+    if (supportAssistant) {
       loadPersona();
     }
-  }, [supportBot]);
+  }, [supportAssistant]);
 
   const loadPersona = async () => {
-    if (!supportBot) return;
+    if (!supportAssistant) return;
 
     try {
       setLoading(true);
@@ -92,9 +92,9 @@ export function PersonaSection({
   };
 
   const handleSubmitPersona = async (
-    personaData: Partial<SupportBotPersona>
+    personaData: Partial<Record<string, any>>
   ) => {
-    if (!supportBot) return;
+    if (!supportAssistant) return;
 
     try {
       const method = isEditing ? "PUT" : "POST";
@@ -123,7 +123,7 @@ export function PersonaSection({
     }
   };
 
-  if (!supportBot) {
+  if (!supportAssistant) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center h-32">
@@ -217,7 +217,7 @@ export function PersonaSection({
                   <div>
                     <h4 className="font-medium mb-2">Personality Traits</h4>
                     <div className="flex flex-wrap gap-2">
-                      {persona.personalityTraits.map((trait, index) => (
+                      {persona.personalityTraits.map((trait: string, index: number) => (
                         <Badge
                           key={index}
                           variant="outline"

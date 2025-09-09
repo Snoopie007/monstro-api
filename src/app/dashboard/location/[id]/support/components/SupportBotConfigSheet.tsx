@@ -310,20 +310,20 @@ export function SupportAssistantConfigSheet({
             <TabsContent value="triggers" className="space-y-4">
               <TriggersSection
                 locationId={locationId}
-                supportBot={supportAssistant}
+                supportAssistant={supportAssistant}
               />
             </TabsContent>
 
             {/* Persona Tab */}
             <TabsContent value="persona" className="space-y-4">
-              <PersonaSection locationId={locationId} supportBot={supportAssistant} />
+              <PersonaSection locationId={locationId} supportAssistant={supportAssistant} />
             </TabsContent>
 
             {/* Knowledge Base Tab */}
             <TabsContent value="knowledge" className="space-y-4">
               <DocumentsSection
                 locationId={locationId}
-                supportBot={supportAssistant}
+                supportAssistant={supportAssistant}
               />
             </TabsContent>
           </Tabs>
