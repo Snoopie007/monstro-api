@@ -37,9 +37,11 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { SupportAssistant } from "@/types/supportBot";
+import { KnowledgeBase } from "@/types/knowledgeBase";
 import { TriggersSection } from "./TriggersSection";
 import { PersonaSection } from "./PersonaSection";
 import { DocumentsSection } from "./DocumentsSection";
+import { toast } from "react-toastify";
 
 interface SupportAssistantConfigSheetProps {
   open: boolean;
@@ -105,6 +107,27 @@ export function SupportAssistantConfigSheet({
       console.error("Failed to update support assistant:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleKnowledgeBaseUpdate = async (updates: Partial<KnowledgeBase>) => {
+    if (!supportAssistant) return;
+
+    const currentKnowledgeBase = supportAssistant.knowledgeBase || { qa_entries: [], document: null };
+    const updatedKnowledgeBase = {
+      ...currentKnowledgeBase,
+      ...updates
+    };
+
+    try {
+      await onAssistantUpdate({
+        knowledgeBase: updatedKnowledgeBase
+      });
+      
+      toast.success("Knowledge base updated successfully");
+    } catch (error) {
+      console.error("Failed to update knowledge base:", error);
+      toast.error("Failed to update knowledge base. Please try again.");
     }
   };
 
@@ -324,6 +347,8 @@ export function SupportAssistantConfigSheet({
               <DocumentsSection
                 locationId={locationId}
                 supportAssistant={supportAssistant}
+                knowledgeBase={supportAssistant?.knowledgeBase || { qa_entries: [], document: null }}
+                onKnowledgeBaseUpdate={handleKnowledgeBaseUpdate}
               />
             </TabsContent>
           </Tabs>

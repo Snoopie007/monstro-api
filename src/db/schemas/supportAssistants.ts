@@ -46,6 +46,9 @@ export const supportAssistants = pgTable(
       .notNull()
       .$default(() => getDefaultSupportTools()), // Default support tools
     persona: jsonb("persona").notNull().default(sql`'{}'::jsonb`), // Persona data as JSONB
+    knowledgeBase: jsonb("knowledge_base")
+      .notNull()
+      .default(sql`'{"qa_entries": [], "document": null}'::jsonb`), // Knowledge base data as JSONB
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

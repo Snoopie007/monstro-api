@@ -29,10 +29,6 @@ export enum BotModel {
   Gemini = "gemini",
 }
 
-export enum DocumentType {
-  File = "file",
-  Website = "website",
-}
 
 export enum TicketStatus {
   Open = "open",
@@ -75,10 +71,6 @@ export const botModelEnum = pgEnum("bot_model", [
   BotModel.Gemini,
 ]);
 
-export const documentTypeEnum = pgEnum("document_type", [
-  DocumentType.File,
-  DocumentType.Website,
-]);
 
 export const ticketStatusEnum = pgEnum("ticket_status", [
   TicketStatus.Open,

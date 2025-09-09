@@ -1,227 +1,259 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/ScrollArea";
-import { FileText, Upload, Trash2, Download, ExternalLink } from "lucide-react";
+import { Plus, FileText, MessageSquare } from "lucide-react";
 import { SupportAssistant } from "@/types";
+import { 
+  KnowledgeBase, 
+  QAEntryUI, 
+  // DocumentMetadataUI, // Commented out until document upload is implemented
+  convertQAEntryToUI, 
+  // convertDocumentToUI // Commented out until document upload is implemented
+} from "@/types/knowledgeBase";
+import { QAEntryForm } from "./QAEntryForm";
+import { QAEntryList } from "./QAEntryList";
+// import { SingleDocumentUpload } from "./SingleDocumentUpload"; // Commented out until document upload is implemented
 
 interface DocumentsSectionProps {
   locationId: string;
   supportAssistant: SupportAssistant | null;
-}
-
-interface SupportDocument {
-  id: string;
-  name: string;
-  type: "file" | "website";
-  size?: number;
-  url?: string;
-  createdAt: Date;
+  knowledgeBase: KnowledgeBase;
+  onKnowledgeBaseUpdate: (updates: Partial<KnowledgeBase>) => Promise<void>;
 }
 
 export function DocumentsSection({
   locationId,
   supportAssistant,
+  knowledgeBase,
+  onKnowledgeBaseUpdate,
 }: DocumentsSectionProps) {
-  const [documents, setDocuments] = useState<SupportDocument[]>([
-    // Placeholder documents for demo
-    {
-      id: "1",
-      name: "Membership Guide.pdf",
-      type: "file",
-      size: 245760,
-      createdAt: new Date(Date.now() - 86400000),
-    },
-    {
-      id: "2",
-      name: "Class Schedule Policy",
-      type: "website",
-      url: "https://example.com/policy",
-      createdAt: new Date(Date.now() - 172800000),
-    },
-  ]);
-  const [uploading, setUploading] = useState(false);
+  const [showQAForm, setShowQAForm] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<QAEntryUI | null>(null);
+  // const [isUploading, setIsUploading] = useState(false); // Commented out until document upload is implemented
+  const [isSubmittingQA, setIsSubmittingQA] = useState(false);
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file || !supportAssistant) return;
+  // Convert JSONB data to UI-friendly format
+  const qaEntries = knowledgeBase.qa_entries.map(convertQAEntryToUI);
+  // const existingDocument = knowledgeBase.document ? convertDocumentToUI(knowledgeBase.document) : null; // Commented out until document upload is implemented
 
-    setUploading(true);
+
+  // TODO: Document upload handlers - Commented out until text extraction is implemented
+  /*
+  const handleDocumentUpload = async (file: File) => {
+    if (!supportAssistant?.id) return;
+
+    setIsUploading(true);
     try {
-      // TODO: Implement file upload API
-      // const uploadedDoc = await uploadSupportDocument(supportBot.id, file);
-      // setDocuments(prev => [...prev, uploadedDoc]);
+      // Call API to upload file and process chunks
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch(`/api/protected/loc/${locationId}/support/document`, {
+        method: 'POST',
+        body: formData,
+      });
 
-      console.log("TODO: Upload document:", file.name);
-
-      // Placeholder - add to local state
-      const newDoc: SupportDocument = {
-        id: Date.now().toString(),
-        name: file.name,
-        type: "file",
-        size: file.size,
-        createdAt: new Date(),
-      };
-
-      setDocuments((prev) => [...prev, newDoc]);
+      if (!response.ok) throw new Error('Upload failed');
+      
+      const result = await response.json();
+      
+      // Update knowledge base with new document metadata
+      await onKnowledgeBaseUpdate({
+        document: result.documentMetadata
+      });
     } catch (error) {
       console.error("Failed to upload document:", error);
+      throw error; // Re-throw so component can handle error display
     } finally {
-      setUploading(false);
-      // Clear the input
-      event.target.value = "";
+      setIsUploading(false);
     }
   };
 
-  const handleDeleteDocument = async (documentId: string) => {
+  const handleDocumentReplace = async (file: File) => {
+    if (!supportAssistant?.id) return;
+
+    setIsUploading(true);
     try {
-      // TODO: Implement document deletion API
-      // await deleteSupportDocument(documentId);
+      // Call API to replace file and process chunks
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch(`/api/protected/loc/${locationId}/support/document`, {
+        method: 'PUT',
+        body: formData,
+      });
 
-      console.log("TODO: Delete document:", documentId);
+      if (!response.ok) throw new Error('Replace failed');
+      
+      const result = await response.json();
+      
+      // Update knowledge base with new document metadata
+      await onKnowledgeBaseUpdate({
+        document: result.documentMetadata
+      });
+    } catch (error) {
+      console.error("Failed to replace document:", error);
+      throw error;
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
-      setDocuments((prev) => prev.filter((doc) => doc.id !== documentId));
+  const handleDocumentDelete = async () => {
+    if (!existingDocument) return;
+
+    try {
+      const response = await fetch(`/api/protected/loc/${locationId}/support/document`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Delete failed');
+
+      await onKnowledgeBaseUpdate({
+        document: null
+      });
     } catch (error) {
       console.error("Failed to delete document:", error);
+      throw error;
+    }
+  };
+  */
+
+  // Q&A entry handlers
+  const handleQASubmit = async (entry: { question: string; answer: string }) => {
+    if (!supportAssistant?.id) return;
+
+    setIsSubmittingQA(true);
+    try {
+      if (editingEntry) {
+        // Update existing entry
+        const updatedEntries = knowledgeBase.qa_entries.map(existing =>
+          existing.id === editingEntry.id 
+            ? { ...existing, question: entry.question, answer: entry.answer }
+            : existing
+        );
+        
+        await onKnowledgeBaseUpdate({
+          qa_entries: updatedEntries
+        });
+        
+        setEditingEntry(null);
+      } else {
+        // Create new entry
+        const newEntry = {
+          id: crypto.randomUUID(),
+          question: entry.question,
+          answer: entry.answer,
+          created_at: new Date().toISOString(),
+        };
+        
+        await onKnowledgeBaseUpdate({
+          qa_entries: [...knowledgeBase.qa_entries, newEntry]
+        });
+      }
+      
+      setShowQAForm(false);
+    } catch (error) {
+      console.error("Failed to save Q&A entry:", error);
+      throw error;
+    } finally {
+      setIsSubmittingQA(false);
     }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  const handleQAEdit = (entry: QAEntryUI) => {
+    setEditingEntry(entry);
+    setShowQAForm(true);
   };
 
-  const getDocumentIcon = (type: string) => {
-    switch (type) {
-      case "file":
-        return <FileText size={16} className="text-blue-600" />;
-      case "website":
-        return <ExternalLink size={16} className="text-green-600" />;
-      default:
-        return <FileText size={16} className="text-gray-600" />;
+  const handleQADelete = async (entryId: string) => {
+    try {
+      const filteredEntries = knowledgeBase.qa_entries.filter(e => e.id !== entryId);
+      await onKnowledgeBaseUpdate({
+        qa_entries: filteredEntries
+      });
+    } catch (error) {
+      console.error("Failed to delete Q&A entry:", error);
     }
+  };
+
+  const handleQAFormCancel = () => {
+    setShowQAForm(false);
+    setEditingEntry(null);
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
+    <div className="space-y-6">
+      {/* TODO: Document Upload Section - Commented out until text extraction is implemented */}
+      {/* 
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
             <FileText size={18} />
-            Knowledge Base
-          </CardTitle>
-          <div className="flex gap-2">
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx,.txt"
-              onChange={handleFileUpload}
-              style={{ display: "none" }}
-              id="file-upload"
-              disabled={uploading || !supportAssistant}
-            />
+            <div>
+              <CardTitle>Support Document</CardTitle>
+              <CardDescription>
+                Upload one PDF or document that contains your support information.
+                {existingDocument && " You can replace the existing document at any time."}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <SingleDocumentUpload
+            existingDocument={existingDocument}
+            onUpload={handleDocumentUpload}
+            onReplace={handleDocumentReplace}
+            onDelete={handleDocumentDelete}
+            isUploading={isUploading}
+            supportAssistantId={supportAssistant?.id}
+          />
+        </CardContent>
+      </Card>
+      */}
+
+      {/* Q&A Knowledge Base Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquare size={18} />
+              <div>
+                <CardTitle>Knowledge Base Q&A</CardTitle>
+                <CardDescription>
+                  Add specific questions and answers for your support bot's knowledge base.
+                </CardDescription>
+              </div>
+            </div>
             <Button
-              size="sm"
-              onClick={() => document.getElementById("file-upload")?.click()}
-              disabled={uploading || !supportAssistant}
+              onClick={() => setShowQAForm(true)}
+              disabled={!supportAssistant}
               className="gap-2"
             >
-              <Upload size={16} />
-              {uploading ? "Uploading..." : "Upload Document"}
+              <Plus size={16} />
+              Add Q&A Entry
             </Button>
           </div>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Upload PDFs and documents for your support bot to reference when
-          answering questions
-        </p>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[300px]">
-          {documents.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FileText size={48} className="mx-auto mb-4 opacity-50" />
-              <p>No documents uploaded yet</p>
-              <p className="text-sm">
-                Upload PDFs to build your knowledge base
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {documents.map((document) => (
-                <div
-                  key={document.id}
-                  className="p-3 border rounded-lg hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className="mt-0.5">
-                        {getDocumentIcon(document.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-sm truncate">
-                          {document.name}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${
-                              document.type === "file"
-                                ? "bg-blue-50 text-blue-700 border-blue-200"
-                                : "bg-green-50 text-green-700 border-green-200"
-                            }`}
-                          >
-                            {document.type}
-                          </Badge>
-                          {document.size && (
-                            <span className="text-xs text-muted-foreground">
-                              {formatFileSize(document.size)}
-                            </span>
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            {document.createdAt.toLocaleDateString()}
-                          </span>
-                        </div>
-                        {document.url && (
-                          <p className="text-xs text-muted-foreground mt-1 truncate">
-                            {document.url}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 ml-2">
-                      {document.type === "file" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                        >
-                          <Download size={14} />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteDocument(document.id)}
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+        </CardHeader>
+        <CardContent>
+          {showQAForm && (
+            <QAEntryForm
+              onSubmit={handleQASubmit}
+              onCancel={handleQAFormCancel}
+              initialData={editingEntry}
+              isSubmitting={isSubmittingQA}
+            />
           )}
-        </ScrollArea>
-      </CardContent>
-    </Card>
+          <QAEntryList
+            entries={qaEntries}
+            onEdit={handleQAEdit}
+            onDelete={handleQADelete}
+            isLoading={false}
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 }

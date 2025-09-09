@@ -1,3 +1,4 @@
+export * from './alert';
 export * from './AlertDialog';
 export * from './archive-confirmation';
 export * from './card';

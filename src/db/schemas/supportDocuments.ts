@@ -2,39 +2,22 @@ import { pgTable, text, timestamp, integer } from "drizzle-orm/pg-core";
 import { vector } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm/sql";
 import { supportAssistants } from "./supportAssistants";
-import { documentTypeEnum } from "./SupportBotEnums";
 
-// Documents for support assistant knowledge base
-export const supportDocuments = pgTable("support_documents", {
+// Document chunks for RAG (references support assistant directly)
+export const supportDocumentChunks = pgTable("support_document_chunks", {
   id: text("id")
     .primaryKey()
     .default(sql`uuid_base62()`),
   supportAssistantId: text("support_assistant_id")
     .notNull()
     .references(() => supportAssistants.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  filePath: text("file_path"),
-  url: text("url"),
-  type: documentTypeEnum("type").notNull(),
-  size: integer("size"),
+  content: text("content").notNull(),
+  embedding: vector("embedding", { dimensions: 384 }),
+  chunkIndex: integer("chunk_index").notNull().default(0), // Order of chunks in document
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });
 
-// Document chunks for RAG
-export const supportDocumentChunks = pgTable("support_document_chunks", {
-  id: text("id")
-    .primaryKey()
-    .default(sql`uuid_base62()`),
-  documentId: text("document_id").references(() => supportDocuments.id, {
-    onDelete: "cascade",
-  }),
-  content: text("content").notNull(),
-  embedding: vector("embedding", { dimensions: 384 }),
-});
-
-export type SupportDocument = typeof supportDocuments.$inferSelect;
-export type NewSupportDocument = typeof supportDocuments.$inferInsert;
 export type SupportDocumentChunk = typeof supportDocumentChunks.$inferSelect;
 export type NewSupportDocumentChunk = typeof supportDocumentChunks.$inferInsert;

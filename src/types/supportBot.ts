@@ -1,3 +1,5 @@
+import { KnowledgeBase } from "./knowledgeBase";
+
 export type SupportAssistant = {
   id: string;
   locationId: string;
@@ -8,6 +10,7 @@ export type SupportAssistant = {
   model: "anthropic" | "gpt" | "gemini";
   status: "Draft" | "Active" | "Paused";
   availableTools: SupportTool[];
+  knowledgeBase?: KnowledgeBase;
   persona: Record<string, any>; // JSONB field containing persona data
   createdAt: Date;
   updatedAt: Date | null;
@@ -33,20 +36,11 @@ export type SupportTrigger = {
   updatedAt: Date | null;
 };
 
-export type SupportDocument = {
-  id: string;
-  supportAssistantId: string;
-  name: string;
-  filePath?: string;
-  url?: string;
-  type: "file" | "website";
-  size?: number;
-  createdAt: Date;
-};
-
 export type SupportDocumentChunk = {
   id: string;
-  documentId: string;
+  supportAssistantId: string;
   content: string;
   embedding?: number[];
+  chunkIndex: number;
+  createdAt: Date;
 };

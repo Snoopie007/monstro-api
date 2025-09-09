@@ -6,6 +6,16 @@ import { supportAssistants } from "@/db/schemas";
 import { BotModel, BotStatus } from "@/db/schemas/SupportBotEnums";
 import { getDefaultSupportTools } from "@/libs/supportBotDefaults";
 
+// Helper function to serialize support assistant data for API response
+function serializeSupportAssistant(assistant: any) {
+  return {
+    ...assistant,
+    knowledgeBase: assistant?.knowledgeBase || { qa_entries: [], document: null },
+    createdAt: assistant?.createdAt?.toISOString(),
+    updatedAt: assistant?.updatedAt?.toISOString(),
+  };
+}
+
 export async function GET(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
@@ -19,10 +29,12 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find existing support assistant for this location
-    const supportAssistant = await db.query.supportAssistants.findFirst({
-      where: eq(supportAssistants.locationId, params.id),
-    });
+    // Find existing support assistant for this location - use explicit select for JSONB fields
+    const supportAssistantResult = await db.select().from(supportAssistants)
+      .where(eq(supportAssistants.locationId, params.id))
+      .limit(1);
+    
+    const supportAssistant = supportAssistantResult[0] || null;
 
     // Support assistant should already exist from location creation
     if (!supportAssistant) {
@@ -32,12 +44,8 @@ export async function GET(
       );
     }
 
-    // Serialize dates for consistent API response
-    const serializedAssistant = {
-      ...supportAssistant,
-      createdAt: supportAssistant?.createdAt?.toISOString(),
-      updatedAt: supportAssistant?.updatedAt?.toISOString(),
-    };
+    // Serialize data for consistent API response
+    const serializedAssistant = serializeSupportAssistant(supportAssistant);
 
     return NextResponse.json({
       supportAssistant: serializedAssistant,
@@ -66,12 +74,26 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { name, prompt, initialMessage, temperature, model, status, persona } = body;
+    const { name, prompt, initialMessage, temperature, model, status, persona, knowledgeBase } = body;
 
-    // Validate required fields
-    if (!name || !prompt || !initialMessage) {
+    // Validate required fields only if they are being updated
+    if (name !== undefined && !name) {
       return NextResponse.json(
-        { error: "Name, prompt, and initial message are required" },
+        { error: "Name cannot be empty" },
+        { status: 400 }
+      );
+    }
+
+    if (prompt !== undefined && !prompt) {
+      return NextResponse.json(
+        { error: "Prompt cannot be empty" },
+        { status: 400 }
+      );
+    }
+
+    if (initialMessage !== undefined && !initialMessage) {
+      return NextResponse.json(
+        { error: "Initial message cannot be empty" },
         { status: 400 }
       );
     }
@@ -100,10 +122,12 @@ export async function PUT(
       );
     }
 
-    // Find existing support assistant
-    const existingAssistant = await db.query.supportAssistants.findFirst({
-      where: eq(supportAssistants.locationId, params.id),
-    });
+    // Find existing support assistant - use explicit select for JSONB fields
+    const existingAssistantResult = await db.select().from(supportAssistants)
+      .where(eq(supportAssistants.locationId, params.id))
+      .limit(1);
+    
+    const existingAssistant = existingAssistantResult[0] || null;
 
     if (!existingAssistant) {
       return NextResponse.json(
@@ -112,33 +136,29 @@ export async function PUT(
       );
     }
 
-    // Update support assistant
+    // Prepare update data (only include defined values)
+    const updateData: any = {
+      updatedAt: new Date(),
+    };
+
+    if (name !== undefined) updateData.name = name;
+    if (prompt !== undefined) updateData.prompt = prompt;
+    if (initialMessage !== undefined) updateData.initialMessage = initialMessage;
+    if (temperature !== undefined) updateData.temperature = temperature;
+    if (model !== undefined) updateData.model = model;
+    if (status !== undefined) updateData.status = status;
+    if (persona !== undefined) updateData.persona = persona;
+    if (knowledgeBase !== undefined) updateData.knowledgeBase = knowledgeBase;
+
+    // Update support assistant and get updated data directly from returning()
     const [updatedAssistant] = await db
       .update(supportAssistants)
-      .set({
-        name,
-        prompt,
-        initialMessage,
-        temperature,
-        model,
-        status,
-        persona,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(supportAssistants.id, existingAssistant.id))
       .returning();
 
-    // Fetch updated assistant
-    const supportAssistant = await db.query.supportAssistants.findFirst({
-      where: eq(supportAssistants.id, updatedAssistant.id),
-    });
-
-    // Serialize dates for consistent API response
-    const serializedAssistant = {
-      ...supportAssistant,
-      createdAt: supportAssistant?.createdAt?.toISOString(),
-      updatedAt: supportAssistant?.updatedAt?.toISOString(),
-    };
+    // Serialize the updated assistant data
+    const serializedAssistant = serializeSupportAssistant(updatedAssistant);
 
     return NextResponse.json({
       supportAssistant: serializedAssistant,
