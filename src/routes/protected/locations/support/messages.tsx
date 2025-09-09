@@ -60,6 +60,8 @@ export async function supportMessagesRoute(app: Elysia) {
                 }
             });
 
+            await saveMessage(cid, message, 'user');
+
             if (!ml) {
                 return status(404, { error: "Member  not found" });
             }
@@ -69,6 +71,8 @@ export async function supportMessagesRoute(app: Elysia) {
                 orderBy: (b, { desc }) => desc(b.created),
                 limit: 50,
             });
+
+
 
             //Taken Over? Return
             const model = getModel(conversation.assistant.model, (output) => {
@@ -98,11 +102,22 @@ export async function supportMessagesRoute(app: Elysia) {
 
             const modelWithPrompt = prompt.pipe(modelWithTools);
 
-            const history = [...messages, { role: 'user', content: message }].map(m => ({ role: m.role, content: m.content }));
+            const history = messages.map(m => ({ role: m.role, content: m.content }));
 
-            const response = await modelWithPrompt.invoke({ history });
+            const res = await modelWithPrompt.invoke({ history });
+            console.log('🟢 Response:', res.content.toString());
 
-            const msg = await saveMessage(cid, response.content.toString(), 'ai');
+            if (res.tool_calls?.length) {
+                for (const toolCall of res.tool_calls) {
+                    console.log(toolCall)
+                    // const tool = Tools[toolCall.name as keyof typeof Tools];
+                    // if (tool) {
+                    //     const { next: nextGoal, message } = await tool(toolCall, currentNode);
+
+                    // }
+                }
+            }
+            const msg = await saveMessage(cid, res.content.toString(), 'ai');
 
             // Update conversation timestamp
             await db.update(supportConversations).set({

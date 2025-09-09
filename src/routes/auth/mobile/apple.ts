@@ -19,12 +19,11 @@ type AppleNewAccountBody = {
 }
 
 export async function mobileAppleLogin(app: Elysia) {
-    return app.post('/apple', async ({ body, set }) => {
-        const { idToken } = JSON.parse(body as string) as AppleLoginBody;
+    return app.post('/apple', async ({ body, status }) => {
+        const { idToken } = body as AppleLoginBody;
 
         if (!idToken) {
-            set.status = 400;
-            return { message: "Id token is required" };
+            return status(400, { message: "Id token is required" });
         }
 
         try {
@@ -42,8 +41,7 @@ export async function mobileAppleLogin(app: Elysia) {
             });
 
             if (!account) {
-                set.status = 404;
-                return { message: "No Account" };
+                return status(404, { message: "No Account" });
             }
 
             const user = await db.query.users.findFirst({
@@ -54,8 +52,7 @@ export async function mobileAppleLogin(app: Elysia) {
             });
 
             if (!user) {
-                set.status = 404;
-                return { message: "No Account" };
+                return status(404, { message: "No Account" });
             }
 
             const { password, member, ...rest } = user;
@@ -73,18 +70,16 @@ export async function mobileAppleLogin(app: Elysia) {
                 userId: user.id,
                 email: user.email,
             });
-
-            set.status = 200;
-            return { token: accessToken, refreshToken, user: data, expires };
+            console.log(accessToken, refreshToken, user, data, expires);
+            return status(200, { token: accessToken, refreshToken, user: data, expires });
         } catch (error) {
             console.error(error);
             const errorMessage = error instanceof Error ? error.message : String(error);
-            set.status = 500;
-            return { message: errorMessage };
+            return status(500, { message: errorMessage });
         }
     })
         .post('/apple/new', async ({ body, status }) => {
-            const { token, email, name, phone } = JSON.parse(body as string) as AppleNewAccountBody;
+            const { token, email, name, phone } = body as AppleNewAccountBody;
 
             if (!token) {
                 return status(400, { message: "Id token is required" });
