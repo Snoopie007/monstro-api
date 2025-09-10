@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq, and, desc } from "drizzle-orm";
 import { supportConversations, supportMessages } from "@/db/schemas";
+import { Channel } from "@/db/schemas/SupportBotEnums";
 
 export async function GET(
   req: NextRequest,
@@ -84,12 +85,13 @@ export async function POST(
         { status: 404 }
       );
     }
+    const {agentId} = conversation.metadata as Record<string, any>;
 
     // Only allow vendor messages if vendor has taken over
     if (
       role === "vendor" &&
       (!conversation.isVendorActive ||
-        conversation.vendorId !== session.user.id)
+        agentId !== session.user.id)
     ) {
       return NextResponse.json(
         {
@@ -107,11 +109,14 @@ export async function POST(
         conversationId: params.conversationId,
         content: content.trim(),
         role,
-        channel: "WebChat",
+        channel: Channel.WebChat,
+        // Populate agentId and agentName when vendor sends message
+        agentId: session.user.id,
+        agentName: session.user.name,
         metadata: {
           senderId: session.user.id,
           senderName: session.user.name || "Support Agent",
-        },
+        }, 
       })
       .returning();
 

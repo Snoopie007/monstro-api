@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { supportConversations, supportMessages } from "@/db/schemas";
+import { Channel, MessageRole } from "@/db/schemas/SupportBotEnums";
 
 export async function POST(
   req: NextRequest,
@@ -44,14 +45,13 @@ export async function POST(
     const [updatedConversation] = await db
       .update(supportConversations)
       .set({
-        vendorId: session.user.id,
         isVendorActive: true,
-        takenOverAt: new Date(),
         metadata: {
-          ...conversation.metadata,
+          ...(conversation.metadata as object || {}),
+          agentId: session.user.id,
           takeoverReason: reason,
           takeoverUrgency: urgency || "medium",
-          takeoverAt: new Date().toISOString(),
+          takenOverAt: new Date().toISOString(),
         },
         updatedAt: new Date(),
       })
@@ -62,12 +62,15 @@ export async function POST(
     await db.insert(supportMessages).values({
       conversationId: params.conversationId,
       content: `A support agent has joined the conversation to help with: ${reason}`,
-      role: "system",
-      channel: "System",
+      role: MessageRole.System,
+      channel: Channel.System,
+      // Populate agentId and agentName for takeover system message
+      agentId: session.user.id,
+      agentName: session.user.name || "Support Agent",
       metadata: {
         takeoverReason: reason,
         takeoverUrgency: urgency || "medium",
-        vendorId: session.user.id,
+        agentId: session.user.id,
       },
     });
 
@@ -76,7 +79,6 @@ export async function POST(
         ...updatedConversation,
         createdAt: updatedConversation.createdAt.toISOString(),
         updatedAt: updatedConversation.updatedAt?.toISOString(),
-        takenOverAt: updatedConversation.takenOverAt?.toISOString(),
       },
       message: "Conversation taken over successfully",
     });
@@ -115,7 +117,8 @@ export async function DELETE(
     }
 
     // Check if user is the one who took over
-    if (conversation.vendorId !== session.user.id) {
+    const {agentId} = conversation.metadata as Record<string, any>;
+    if (!conversation.isVendorActive || agentId !== session.user.id) {
       return NextResponse.json(
         { error: "Unauthorized - you did not take over this conversation" },
         { status: 403 }
@@ -128,7 +131,7 @@ export async function DELETE(
       .set({
         isVendorActive: false,
         metadata: {
-          ...conversation.metadata,
+          ...(conversation.metadata as object || {}),
           handedBackAt: new Date().toISOString(),
           handedBackBy: session.user.id,
         },
@@ -141,8 +144,11 @@ export async function DELETE(
     await db.insert(supportMessages).values({
       conversationId: params.conversationId,
       content: "The conversation has been handed back to the support bot.",
-      role: "system",
-      channel: "System",
+      role: MessageRole.System,
+      channel: Channel.System,
+      // Populate agentId and agentName for handback system message
+      agentId: session.user.id,
+      agentName: session.user.name || "Support Agent",
       metadata: {
         handedBackBy: session.user.id,
         handedBackAt: new Date().toISOString(),
@@ -154,7 +160,6 @@ export async function DELETE(
         ...updatedConversation,
         createdAt: updatedConversation.createdAt.toISOString(),
         updatedAt: updatedConversation.updatedAt?.toISOString(),
-        takenOverAt: updatedConversation.takenOverAt?.toISOString(),
       },
       message: "Conversation handed back to bot successfully",
     });

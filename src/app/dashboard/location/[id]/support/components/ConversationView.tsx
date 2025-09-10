@@ -17,12 +17,13 @@ import {
   Copy,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { SupportBot, SupportConversation } from "@/types";
+import { SupportAssistant, SupportConversation } from "@/types";
+import { toast } from "react-toastify";
 
 interface ConversationViewProps {
   locationId: string;
   conversation?: SupportConversation;
-  supportBot: SupportBot | null;
+  supportBot: SupportAssistant | null;
 }
 
 interface ConversationMessage {
@@ -180,12 +181,17 @@ export function ConversationView({
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, systemMessage]);
+        
+        // Show success toast
+        toast.success("Successfully took over the conversation");
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to take over conversation");
       }
     } catch (error) {
       console.error("Failed to take over conversation:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to take over conversation";
+      toast.error(errorMessage);
     }
   };
 
@@ -216,12 +222,17 @@ export function ConversationView({
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, systemMessage]);
+        
+        // Show success toast
+        toast.success("Successfully handed conversation back to bot");
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to hand back conversation");
       }
     } catch (error) {
       console.error("Failed to hand back to bot:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to hand back conversation";
+      toast.error(errorMessage);
     }
   };
 
@@ -462,37 +473,39 @@ export function ConversationView({
         </p>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0">
+      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
         {/* Messages Area */}
-        <ScrollArea className="flex-1 px-4">
-          <div className="space-y-4 py-4">
-            {messages.map((message) => (
-              <div key={message.id} className="flex gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                    {getMessageIcon(message.role)}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ScrollArea className="h-full px-4">
+            <div className="space-y-4 py-4">
+              {messages.map((message) => (
+                <div key={message.id} className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                      {getMessageIcon(message.role)}
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      {getMessageBadge(message.role)}
+                      <span className="text-xs text-muted-foreground">
+                        {message.timestamp.toLocaleTimeString()}
+                      </span>
+                    </div>
+                    <div className="text-sm leading-relaxed">
+                      {message.content}
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    {getMessageBadge(message.role)}
-                    <span className="text-xs text-muted-foreground">
-                      {message.timestamp.toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <div className="text-sm leading-relaxed">
-                    {message.content}
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+        </div>
 
         {/* Bot Suggestion Area - Only show if vendor has taken over and there's a suggestion */}
         {isVendorTakenOver && botSuggestion && (
-          <div className="border-t bg-muted/30 p-4">
+          <div className="flex-shrink-0 border-t bg-muted/30 p-4">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
@@ -546,7 +559,7 @@ export function ConversationView({
 
         {/* Input Area - Only show if vendor has taken over */}
         {isVendorTakenOver && (
-          <div className="border-t bg-background p-4">
+          <div className="flex-shrink-0 border-t bg-background p-4">
             <div className="flex gap-2">
               <Input
                 value={inputValue}
