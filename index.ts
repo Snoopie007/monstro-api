@@ -4,6 +4,7 @@ import "./src/libs/worker"; // Import worker to start processing
 import { serverConfig } from "./src/config";
 import { RateLimitMiddleware } from "./src/middlewares";
 import { AuthRoutes, ProtectedRoutes, PublicRoutes } from "./src/routes";
+import { realtimeRoutes, realtimeHealthRoutes } from "./src/routes/realtime";
 
 const CORS_CONFIG = {
   origin: "*",
@@ -54,6 +55,9 @@ app
     return "";
   })
   .group("/api", (app) => app.use(AuthRoutes).use(ProtectedRoutes))
+  .group("/api/realtime", (app) =>
+    app.use(realtimeRoutes).use(realtimeHealthRoutes)
+  )
   .use(PublicRoutes)
   .onError(({ code, error, set }) => {
     console.error(`❌ Error ${code}:`, error);
