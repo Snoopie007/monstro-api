@@ -14,21 +14,7 @@ export interface SupportTool {
 
 // Default tool definitions for support bots
 export const DEFAULT_SUPPORT_TOOLS: SupportTool[] = [
-    {
-        name: "GetMemberStatus",
-        description: "Get member subscription and package status information including active subscriptions, available packages, and membership details",
-        category: "member_info",
-        parameters: {
-            type: "object",
-            properties: {
-                memberId: {
-                    type: "string",
-                    description: "The member ID to look up (automatically provided from session)",
-                },
-            },
-            required: ["memberId"],
-        },
-    },
+
     {
         name: "GetMemberBilling",
         description: "Get member billing and payment information including payment methods, transaction history, and upcoming payments",
@@ -77,7 +63,7 @@ export const DEFAULT_SUPPORT_TOOLS: SupportTool[] = [
     },
     {
         name: "EscalateToHuman",
-        description: "Escalate the conversation to a human agent when the bot cannot help or when complex issues require human intervention",
+        description: "When member requests to speak to a human or human agent, trigger this tool.",
         category: "support",
         parameters: {
             type: "object",

@@ -5,7 +5,8 @@ import { supportConversations, supportMessages } from "@/db/schemas/support";
 import { eq } from "drizzle-orm";
 import { formattedPrompt } from "@/libs/ai/Prompts";
 import { ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
-
+import { ToolFunctions } from "@/libs/ai/FNHandler";
+import type { MessageRole } from "@/types";
 type Props = {
     params: {
         mid: string;
@@ -52,6 +53,11 @@ export async function supportMessagesRoute(app: Elysia) {
                 return status(400, { error: "Conversation is not active" });
             }
 
+            if (conversation.isVendorActive) {
+                const msg = await saveMessage(cid, message, 'user');
+                return status(200, msg);
+            }
+
             const ml = await db.query.memberLocations.findFirst({
                 where: (b, { eq, and }) => and(eq(b.memberId, mid), eq(b.locationId, lid)),
                 with: {
@@ -91,7 +97,7 @@ export async function supportMessagesRoute(app: Elysia) {
                 });
             });
 
-            console.log('🔧 Tools:', tools);
+
             const modelWithTools = model.bindTools(tools);
             const systemPrompt = await formattedPrompt({ ml, assistant: conversation.assistant });
 
@@ -105,24 +111,31 @@ export async function supportMessagesRoute(app: Elysia) {
             const history = messages.map(m => ({ role: m.role, content: m.content }));
 
             const res = await modelWithPrompt.invoke({ history });
-            console.log('🟢 Response:', res.content.toString());
 
+            let c = res.content.toString();
+            let r: MessageRole = 'assistant';
             if (res.tool_calls?.length) {
                 for (const toolCall of res.tool_calls) {
                     console.log(toolCall)
-                    // const tool = Tools[toolCall.name as keyof typeof Tools];
-                    // if (tool) {
-                    //     const { next: nextGoal, message } = await tool(toolCall, currentNode);
+                    const tool = ToolFunctions[toolCall.name as keyof typeof ToolFunctions];
+                    if (tool) {
+                        const { content, role, completed } = await tool(toolCall, {
+                            conversation,
+                            ml,
+                        });
 
-                    // }
+                        c = content;
+                        r = role;
+                    }
                 }
             }
-            const msg = await saveMessage(cid, res.content.toString(), 'ai');
+            const msg = await saveMessage(cid, c, r);
 
             // Update conversation timestamp
             await db.update(supportConversations).set({
                 updated: new Date(),
             }).where(eq(supportConversations.id, cid));
+
             return status(200, msg);
 
         } catch (error) {
@@ -135,7 +148,7 @@ export async function supportMessagesRoute(app: Elysia) {
 }
 
 
-async function saveMessage(conversationId: string, content: string, role: 'user' | 'ai') {
+async function saveMessage(conversationId: string, content: string, role: MessageRole) {
     const [savedMessage] = await db.insert(supportMessages).values({
         conversationId,
         content,
