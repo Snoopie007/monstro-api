@@ -14,7 +14,11 @@ export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type TransactionType = 'inbound' | 'outbound';
 export type ASsistantStatus = "draft" | "active" | "paused";
 export type Channel = "webchat" | "email" | "system";
+<<<<<<< HEAD
 export type MessageRole = "human" | "ai" | "staff" | "system" | "tool" | "staff" | "tool_message" | "tool_call";
+=======
+export type MessageRole = "human" | "ai" | "staff" | "system" | "tool" | "tool_message";
+>>>>>>> e1285d0d20ff24823d6c0aa9228494b9bfd0da7c
 export type ConversationStatus = "open" | "in_progress" | "resolved" | "closed";
 export type TriggerType = "keyword" | "intent" | "condition";
 export type BotModel = "gpt" | "anthropic" | "gemini";
