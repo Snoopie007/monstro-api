@@ -1,12 +1,14 @@
 import type { Elysia } from "elysia";
-import { getModel, calculateAICost, DEFAULT_SUPPORT_TOOLS } from "@/libs/ai";
+import { getModel, calculateAICost, DEFAULT_SUPPORT_TOOLS, formatHistory } from "@/libs/ai";
 import { db } from "@/db/db";
 import { supportConversations, supportMessages } from "@/db/schemas/support";
 import { eq } from "drizzle-orm";
 import { formattedPrompt } from "@/libs/ai/Prompts";
 import { ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
+import { AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
 import { ToolFunctions } from "@/libs/ai/FNHandler";
-import type { MessageRole } from "@/types";
+import type { SupportConversation, MemberLocation, NewSupportMessage, SupportMessage } from "@/types";
+import { Runnable } from "@langchain/core/runnables";
 type Props = {
     params: {
         mid: string;
@@ -52,10 +54,9 @@ export async function supportMessagesRoute(app: Elysia) {
                 console.log('🟢 Conversation is not active');
                 return status(400, { error: "Conversation is not active" });
             }
-
+            await saveMessage({ conversationId: cid, role: 'human', content: message });
             if (conversation.isVendorActive) {
-                const msg = await saveMessage(cid, message, 'user');
-                return status(200, msg);
+                return status(200, { success: true });
             }
 
             const ml = await db.query.memberLocations.findFirst({
@@ -66,18 +67,15 @@ export async function supportMessagesRoute(app: Elysia) {
                 }
             });
 
-            await saveMessage(cid, message, 'user');
-
             if (!ml) {
-                return status(404, { error: "Member  not found" });
+                return status(404, { error: "Member location not found" });
             }
 
             const messages = await db.query.supportMessages.findMany({
                 where: (s, { eq }) => eq(s.conversationId, cid),
-                orderBy: (b, { desc }) => desc(b.created),
-                limit: 50,
+                orderBy: (b, { asc }) => asc(b.created),
+                limit: 20,
             });
-
 
 
             //Taken Over? Return
@@ -86,6 +84,7 @@ export async function supportMessagesRoute(app: Elysia) {
                 if (usage) {
                     const cost = calculateAICost(usage, conversation.assistant.model);
                     //Wallet
+
                 }
             });
 
@@ -96,7 +95,7 @@ export async function supportMessagesRoute(app: Elysia) {
                     function: tool
                 });
             });
-
+            //Trigger Tools Need to be Added
 
             const modelWithTools = model.bindTools(tools);
             const systemPrompt = await formattedPrompt({ ml, assistant: conversation.assistant });
@@ -108,28 +107,9 @@ export async function supportMessagesRoute(app: Elysia) {
 
             const modelWithPrompt = prompt.pipe(modelWithTools);
 
-            const history = messages.map(m => ({ role: m.role, content: m.content }));
+            const history = formatHistory(messages);
 
-            const res = await modelWithPrompt.invoke({ history });
-
-            let c = res.content.toString();
-            let r: MessageRole = 'assistant';
-            if (res.tool_calls?.length) {
-                for (const toolCall of res.tool_calls) {
-                    console.log(toolCall)
-                    const tool = ToolFunctions[toolCall.name as keyof typeof ToolFunctions];
-                    if (tool) {
-                        const { content, role, completed } = await tool(toolCall, {
-                            conversation,
-                            ml,
-                        });
-
-                        c = content;
-                        r = role;
-                    }
-                }
-            }
-            const msg = await saveMessage(cid, c, r);
+            const msg = await invokeBot(modelWithPrompt, history, conversation, ml);
 
             // Update conversation timestamp
             await db.update(supportConversations).set({
@@ -148,19 +128,110 @@ export async function supportMessagesRoute(app: Elysia) {
 }
 
 
-async function saveMessage(conversationId: string, content: string, role: MessageRole) {
+
+
+async function invokeBot(
+    model: Runnable,
+    history: BaseMessage[],
+    conversation: SupportConversation,
+    ml: MemberLocation
+) {
+
+    const res = await model.invoke({ history: history });
+
+
+    let completed = true;
+    let msg: NewSupportMessage | undefined = undefined;
+
+    // If there are tool calls, we need to handle them properly
+    if (res.tool_calls?.length) {
+
+        for (const toolCall of res.tool_calls) {
+            console.log('Processing tool call:', toolCall.name);
+            const tool = ToolFunctions[toolCall.name as keyof typeof ToolFunctions];
+
+            if (toolCall.name !== 'EscalateToHuman') {
+
+                await saveMessage({
+                    conversationId: conversation.id,
+                    content: res.content.toString(),
+                    channel: 'WebChat',
+                    role: 'tool_call',
+                    metadata: {
+                        tool_calls: res.tool_calls
+                    }
+                });
+
+                history.push(new AIMessage({
+                    content: res.content.toString(),
+                    tool_calls: res.tool_calls
+                }));
+            }
+
+            const data = await tool(toolCall, {
+                conversation,
+                ml,
+            });
+
+
+
+
+            const result = await saveMessage({
+                conversationId: conversation.id,
+                ...data,
+                metadata: {
+                    tool_call_id: toolCall.id,
+                    tool_name: toolCall.name,
+                    tool_args: toolCall.args,
+                },
+                channel: 'WebChat',
+            })
+
+
+            if (data.role === 'ai') {
+                msg = result;
+            } else {
+                history.push(new ToolMessage({
+                    content: result.content,
+                    tool_call_id: toolCall.id,
+                    name: toolCall.name,
+                }));
+            }
+            completed = data.completed;
+
+        }
+    } else {
+        msg = await saveMessage({
+            conversationId: conversation.id,
+            content: res.content.toString(),
+            channel: 'WebChat',
+            role: 'ai',
+        })
+
+    }
+
+
+    if (completed && msg) {
+
+        return msg;
+    }
+
+
+
+    return await invokeBot(model, history, conversation, ml);
+}
+
+async function saveMessage(newMessage: NewSupportMessage): Promise<SupportMessage> {
+
     const [savedMessage] = await db.insert(supportMessages).values({
-        conversationId,
-        content,
-        role,
+        ...newMessage,
         channel: 'WebChat',
-        metadata: {
-            savedAt: new Date().toISOString(),
-            source: 'api-chat'
-        },
     }).returning();
 
 
+    if (!savedMessage) {
+        throw new Error('Failed to save message');
+    }
 
     return savedMessage;
 }

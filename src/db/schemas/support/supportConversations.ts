@@ -30,7 +30,7 @@ export const supportMessages = pgTable("support_messages", {
 	content: text("content").notNull(),
 	role: messageRoleEnum("role").notNull(),
 	channel: channelEnum("channel").notNull().default('WebChat'),
-	metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
+	metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

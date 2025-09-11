@@ -4,10 +4,10 @@ import { ChatOpenAI } from "@langchain/openai";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 
 import type {
-	MemberLocation, SupportAssistant,
-	SupportTrigger,
-	BotModel
+	BotModel,
+	SupportMessage
 } from '@/types';
+import { HumanMessage, ToolMessage, AIMessage, BaseMessage, SystemMessage } from "@langchain/core/messages";
 
 
 
@@ -129,7 +129,51 @@ function getModel(model: BotModel, handleLLMEnd: (output: any) => void) {
 	}
 }
 
+
+function formatHistory(messages: SupportMessage[]) {
+	let history = [];
+	for (const message of messages) {
+		if (['staff', 'ai'].includes(message.role)) {
+			history.push(
+				new AIMessage({
+					content: message.content
+				})
+			)
+		} else if (message.role === 'human') {
+			history.push(
+				new HumanMessage({
+					content: message.content
+				})
+			)
+		} else if (['tool', 'tool_message'].includes(message.role)) {
+			history.push(
+				new ToolMessage({
+					content: message.content,
+					tool_call_id: message.metadata.tool_call_id,
+					name: message.metadata.tool_name
+				})
+			)
+		} else if (message.role === 'tool_call') {
+			history.push(
+				new AIMessage({
+					content: message.content,
+					tool_calls: message.metadata.tool_calls
+				})
+			)
+		} else {
+			history.push(
+				new SystemMessage({
+					content: message.content
+				})
+			)
+		}
+	}
+	return history;
+}
+
 export {
 	calculateAICost,
-	getModel
+	getModel,
+
+	formatHistory
 }

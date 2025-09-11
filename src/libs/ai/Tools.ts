@@ -15,41 +15,34 @@ export interface SupportTool {
 // Default tool definitions for support bots
 export const DEFAULT_SUPPORT_TOOLS: SupportTool[] = [
 
-    {
-        name: "GetMemberBilling",
-        description: "Get member billing and payment information including payment methods, transaction history, and upcoming payments",
-        category: "member_info",
-        parameters: {
-            type: "object",
-            properties: {
-                memberId: {
-                    type: "string",
-                    description: "The member ID to look up (automatically provided from session)",
-                },
-            },
-            required: ["memberId"],
-        },
-    },
+    // {
+    //     name: "GetMemberBilling",
+    //     description: "When member requests billing information, trigger this tool.",
+    //     parameters: {
+    //         type: "object",
+    //         properties: {
+    //             planId: {
+    //                 type: "string",
+    //                 description: "Plan ID to get billing information for",
+    //             },
+    //         },
+    //         required: ["planId"],
+    //     },
+    // },
     {
         name: "GetMemberSessions",
         description: "Get classes and sessions the member can book based on their active subscriptions and available packages",
-        category: "member_info",
-        parameters: {
-            type: "object",
-            properties: {
-                memberId: {
-                    type: "string",
-                    description: "The member ID to look up (automatically provided from session)",
-                },
-            },
-            required: ["memberId"],
-        },
+
+    },
+    {
+        name: "GetMemberPlans",
+        description: "When member requests plans information, trigger this tool.",
     },
 
     {
         name: "SearchKnowledgeBase",
         description: "Search the knowledge base for general facility information, policies, and frequently asked questions",
-        category: "knowledge",
+
         parameters: {
             type: "object",
             properties: {
@@ -64,7 +57,7 @@ export const DEFAULT_SUPPORT_TOOLS: SupportTool[] = [
     {
         name: "EscalateToHuman",
         description: "When member requests to speak to a human or human agent, trigger this tool.",
-        category: "support",
+
         parameters: {
             type: "object",
             properties: {
