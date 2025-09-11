@@ -406,7 +406,7 @@ async function sendConversationState(ws: any, conversationId: string) {
         type: "conversation_state",
         data: {
           conversation,
-          mode: conversation.isVendorActive ? "agent" : "assistant",
+          mode: conversation.isVendorActive ? "staff" : "ai",
           agentInfo:
             (conversation.metadata as Record<string, any>)?.agent || null,
         },

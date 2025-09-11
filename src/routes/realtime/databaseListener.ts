@@ -173,10 +173,9 @@ export class DatabaseListener {
 
       if (isWebSocketMessage && senderId) {
         // Don't send the message back to the sender - prevents echo
-        this.connectionManager.broadcastToConversationExcludingMember(
+        this.connectionManager.broadcastToConversation(
           message.conversation_id,
-          messageData,
-          senderId
+          messageData
         );
       } else {
         // For messages from other sources (AI, admin, etc.), broadcast to everyone
@@ -231,7 +230,7 @@ export class DatabaseListener {
         oldConversation && oldConversation.is_vendor_active !== undefined;
 
       if (modeChanged && hasValidOldData) {
-        const mode = newConversation.is_vendor_active ? "agent" : "assistant";
+        const mode = newConversation.is_vendor_active ? "staff" : "ai";
         const agentInfo = newConversation.metadata?.agent;
 
         // Broadcast mode change to conversation participants
@@ -245,8 +244,8 @@ export class DatabaseListener {
             agentInfo,
             status: newConversation.status,
             previousMode: oldConversation.is_vendor_active
-              ? "agent"
-              : "assistant",
+              ? "staff"
+              : "ai",
           },
           timestamp: new Date().toISOString(),
         });
