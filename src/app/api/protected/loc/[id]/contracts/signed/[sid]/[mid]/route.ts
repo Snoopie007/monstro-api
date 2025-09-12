@@ -8,7 +8,7 @@ import { generateContractHtml } from "@/libs/ContractTemplates";
 
 export async function GET(
     req: NextRequest,
-    props: { params: Promise<{ id: number; sid: string; mid: string }> }
+    props: { params: Promise<{ id: string; sid: string; mid: string }> }
 ) {
     const params = await props.params;
     const session = await auth();
