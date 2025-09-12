@@ -9,6 +9,7 @@ export const LocationStatusEnum = pgEnum("location_status", [
   "trialing",
   "unpaid",
   "incomplete_expired",
+  "archived",
 ]);
 export const PlanType = pgEnum("plan_type", ["recurring", "one-time"]);
 export const IntervalType = pgEnum("interval_type", [

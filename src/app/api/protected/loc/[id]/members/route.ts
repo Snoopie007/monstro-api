@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db/db";
-import { and, eq, ilike, or, sql, inArray, exists } from "drizzle-orm";
+import { and, eq, ne, ilike, or, sql, inArray, exists } from "drizzle-orm";
 import {
   memberLocations,
   members,
@@ -9,7 +9,6 @@ import {
   memberTags,
   memberHasTags,
   memberCustomFields,
-  memberFields,
 } from "@/db/schemas";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 
@@ -32,7 +31,10 @@ export async function GET(
 
     if (session) {
       // Base condition: Filter by locationId from memberLocations
-      const baseCondition = eq(memberLocations.locationId, params.id);
+      const baseCondition = and(
+        eq(memberLocations.locationId, params.id),
+        ne(memberLocations.status, "archived")
+      );
 
       // Optional search condition for members (case-insensitive match)
       const searchCondition = query
