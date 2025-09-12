@@ -134,14 +134,7 @@ export class DatabaseListener {
 				timestamp: new Date().toISOString(),
 			};
 
-			const senderId = message.metadata?.senderId;
-			const isWebSocketMessage = message.metadata?.source === "websocket";
-
-			if (isWebSocketMessage && senderId) {
-				this.connectionManager.broadcastToConversationExcludingMember(message.conversation_id, messageData, senderId);
-			} else {
-				this.connectionManager.broadcastToConversation(message.conversation_id, messageData);
-			}
+			this.connectionManager.broadcastToConversation(message.conversation_id, messageData);
 		} catch (error) {
 			console.error("❌ Error handling message insert:", error);
 		}
@@ -185,7 +178,7 @@ export class DatabaseListener {
 			const hasValidOldData = oldConversation && oldConversation.is_vendor_active !== undefined;
 
 			if (modeChanged && hasValidOldData) {
-				const mode = newConversation.is_vendor_active ? "agent" : "assistant";
+				const mode = newConversation.is_vendor_active ? "staff" : "ai";
 				const agentInfo = newConversation.metadata?.agent;
 
 				this.connectionManager.broadcastToConversation(newConversation.id, {
@@ -197,7 +190,7 @@ export class DatabaseListener {
 						takenOverAt: newConversation.taken_over_at,
 						agentInfo,
 						status: newConversation.status,
-						previousMode: oldConversation.is_vendor_active ? "agent" : "assistant",
+						previousMode: oldConversation.is_vendor_active ? "staff" : "ai",
 					},
 					timestamp: new Date().toISOString(),
 				});

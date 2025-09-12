@@ -6,16 +6,6 @@ import { jwtVerify } from "jose";
 import { ConnectionManager, DatabaseListener } from "@/libs/ws/";
 import { setHealthCheckInstances } from "./health";
 
-interface WebSocketData {
-	conversationId: string;
-	memberId: string;
-	locationId: string;
-	token: string;
-}
-
-// Use Elysia's WebSocket type instead of extending standard WebSocket
-type AuthenticatedWebSocket = any; // Will be properly typed by Elysia
-
 // Initialize managers
 const connectionManager = new ConnectionManager();
 const databaseListener = new DatabaseListener(connectionManager);
@@ -24,7 +14,7 @@ const databaseListener = new DatabaseListener(connectionManager);
 setHealthCheckInstances(connectionManager, databaseListener);
 
 export function realtimeRoutes(app: Elysia) {
-	return app.derive(async ({ status, params, headers, query }) => {
+	return app.derive(async ({ status, params, query }) => {
 		try {
 			const { cid } = params as { cid: string };
 			const { token } = query as { token: string };
@@ -77,28 +67,19 @@ export function realtimeRoutes(app: Elysia) {
 			try {
 				const { memberId, params } = data as { memberId: string, params: { cid: string } };
 
+				const conversation = await db.query.supportConversations.findFirst({
+					where: eq(supportConversations.id, params.cid),
+				});
 
-				try {
+				if (!conversation) {
+					return close(1011, "Conversation not found");
+				}
 
-					const conversation = await db.query.supportConversations.findFirst({
-						where: eq(supportConversations.id, params.cid),
-					});
+				// Guard rail: Only allow live chat when vendor is active
+				if (!conversation.isVendorActive) {
+					console.log("conversation not active");
+					return close(1011, "Live chat not available - AI mode only");
 
-					if (!conversation) {
-						return close(1011, "Conversation not found");
-
-					}
-
-					// Guard rail: Only allow live chat when vendor is active
-					if (!conversation.isVendorActive) {
-						console.log("conversation not active");
-						return close(1011, "Live chat not available - AI mode only");
-
-					}
-
-				} catch (error) {
-					close(1011, "Authentication failed");
-					return;
 				}
 
 				// Register connection
@@ -110,15 +91,14 @@ export function realtimeRoutes(app: Elysia) {
 
 				subscribe(`conversation:${params.cid}`);
 
-
 				send(JSON.stringify({
 					type: "connection",
 					status: "connected",
+					isVendorActive: conversation.isVendorActive,
 					timestamp: new Date().toISOString(),
 				}));
 
-				// Send current conversation state
-				// await sendConversationState(ws, params.cid as string);
+
 			} catch (error) {
 				console.error("❌ Error in WebSocket open handler:", error);
 			}
@@ -319,47 +299,6 @@ async function handleSendMessage(ws: any, payload: any) {
 	}
 }
 
-// Send current conversation state
-async function sendConversationState(ws: any, conversationId: string) {
-	try {
-		const conversation = await db.query.supportConversations.findFirst({
-			where: eq(supportConversations.id, conversationId),
-			with: {
-				messages: {
-					orderBy: (m, { asc }) => asc(m.created),
-					limit: 50,
-				},
-				assistant: true,
-			},
-		});
-
-		if (conversation) {
-			const stateData = {
-				type: "conversation_state",
-				data: {
-					conversation,
-					mode: conversation.isVendorActive ? "staff" : "ai",
-					agentInfo:
-						(conversation.metadata as Record<string, any>)?.agent || null,
-				},
-			};
-
-			ws.send(JSON.stringify(stateData));
-		}
-	} catch (error) {
-		console.error("❌ Error sending conversation state:", error);
-		try {
-			ws.send(
-				JSON.stringify({
-					type: "error",
-					message: "Failed to load conversation state",
-				})
-			);
-		} catch (sendError) {
-			console.error("❌ Failed to send error message:", sendError);
-		}
-	}
-}
 
 // Start database listener and periodic cleanup when module loads
 databaseListener.start();

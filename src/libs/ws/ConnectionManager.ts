@@ -4,7 +4,6 @@ interface WebSocketConnection {
 	ws: any; // Elysia WebSocket type
 	cid: string;
 	mid: string;
-	connectedAt: Date;
 }
 
 interface ConversationConnections {
@@ -35,7 +34,6 @@ export class ConnectionManager {
 			ws,
 			cid,
 			mid,
-			connectedAt: new Date(),
 		};
 
 		// Track member connections
@@ -50,9 +48,9 @@ export class ConnectionManager {
 
 	// Remove a WebSocket connection
 	removeConnection(cid: string, mid: string) {
-		const conversationConnections = this.connections.get(cid);
-		if (conversationConnections && conversationConnections[mid]) {
-			delete conversationConnections[mid];
+		const cc = this.connections.get(cid);
+		if (cc && cc[mid]) {
+			delete cc[mid];
 
 			// Remove from member connections tracking
 			const memberConversations = this.memberConnections.get(mid);
@@ -64,7 +62,7 @@ export class ConnectionManager {
 			}
 
 			// Clean up empty conversation groups
-			if (Object.keys(conversationConnections).length === 0) {
+			if (Object.keys(cc).length === 0) {
 				this.connections.delete(cid);
 			}
 
@@ -81,6 +79,8 @@ export class ConnectionManager {
 			console.log(`📭 No connections found for conversation: ${cid}`);
 			return;
 		}
+
+
 
 		const messageStr = JSON.stringify(message);
 		let sentCount = 0;
@@ -107,48 +107,7 @@ export class ConnectionManager {
 		);
 	}
 
-	// Broadcast message to all connections in a conversation EXCEPT the specified member
-	broadcastToConversationExcludingMember(
-		cid: string,
-		message: BroadcastMessage,
-		excludeMemberId: string
-	) {
-		const cc = this.connections.get(cid);
-		if (!cc) {
-			console.log(
-				`📭 No connections found for conversation: ${cid}`
-			);
-			return;
-		}
 
-		const messageStr = JSON.stringify(message);
-		let sentCount = 0;
-		let errorCount = 0;
-		let excludedCount = 0;
-
-		Object.values(cc).forEach(({ ws, mid }) => {
-			// Skip the sender to prevent echo
-			if (mid === excludeMemberId) {
-				excludedCount++;
-				return;
-			}
-
-			try {
-				// For Elysia WebSockets, we'll just try to send and catch errors
-				ws.send(messageStr);
-				sentCount++;
-			} catch (error) {
-				console.error(`❌ Failed to send message to member ${mid}:`, error);
-				errorCount++;
-				// Clean up failed connection
-				this.removeConnection(cid, mid);
-			}
-		});
-
-		console.log(
-			`📤 Broadcasted to conversation ${cid}: ${sentCount} sent, ${errorCount} errors, ${excludedCount} excluded (sender)`
-		);
-	}
 
 	// Broadcast message to all connections for a specific member
 	broadcastToMember(mid: string, message: BroadcastMessage) {
@@ -187,14 +146,14 @@ export class ConnectionManager {
 	}
 
 	// Get all connections for a conversation
-	getConversationConnections(conversationId: string): WebSocketConnection[] {
-		const cc = this.connections.get(conversationId);
+	getConversationConnections(cid: string): WebSocketConnection[] {
+		const cc = this.connections.get(cid);
 		return cc ? Object.values(cc) : [];
 	}
 
 	// Get all conversations a member is connected to
-	getMemberConversations(memberId: string): string[] {
-		const mc = this.memberConnections.get(memberId);
+	getMemberConversations(mid: string): string[] {
+		const mc = this.memberConnections.get(mid);
 		return mc ? Array.from(mc) : [];
 	}
 
