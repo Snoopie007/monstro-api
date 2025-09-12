@@ -1,7 +1,8 @@
 import type { SupportMessage } from "@/types";
 
 interface WebSocketConnection {
-	ws: any; // Elysia WebSocket type
+	send: (data: unknown, compress?: boolean) => number;
+	ping: (data?: unknown) => number;
 	cid: string;
 	mid: string;
 }
@@ -13,8 +14,7 @@ interface ConversationConnections {
 
 type BroadcastMessage = {
 	type: string;
-	data: SupportMessage;
-	timestamp: string;
+	data: Record<string, any>;
 }
 
 export class ConnectionManager {
@@ -22,7 +22,7 @@ export class ConnectionManager {
 	private memberConnections: Map<string, Set<string>> = new Map(); // memberId -> Set of conversationIds
 
 	// Add a new WebSocket connection
-	addConnection(cid: string, mid: string, ws: any) {
+	addConnection(cid: string, mid: string, send: (data: unknown, compress?: boolean) => number, ping: (data?: unknown) => number) {
 		// Initialize conversation connections if not exists
 		if (!this.connections.has(cid)) {
 			this.connections.set(cid, {});
@@ -30,11 +30,7 @@ export class ConnectionManager {
 
 		// Add connection
 		const cc = this.connections.get(cid)!;
-		cc[mid] = {
-			ws,
-			cid,
-			mid,
-		};
+		cc[mid] = { send, cid, mid, ping };
 
 		// Track member connections
 		if (!this.memberConnections.has(mid)) {
@@ -73,46 +69,34 @@ export class ConnectionManager {
 	}
 
 	// Broadcast message to all connections in a conversation
-	broadcastToConversation(cid: string, message: any) {
-		const conversationConnections = this.connections.get(cid);
-		if (!conversationConnections) {
+	broadcastToConversation(cid: string, message: BroadcastMessage) {
+		const cc = this.connections.get(cid);
+		if (!cc) {
 			console.log(`📭 No connections found for conversation: ${cid}`);
 			return;
 		}
-
-
-
 		const messageStr = JSON.stringify(message);
 		let sentCount = 0;
 		let errorCount = 0;
 
-		Object.values(conversationConnections).forEach(({ ws, mid }) => {
+		Object.values(cc).forEach(({ send, mid }) => {
 			try {
-				// For Elysia WebSockets, we'll just try to send and catch errors
-				ws.send(messageStr);
+				send(messageStr);
 				sentCount++;
 			} catch (error) {
-				console.error(
-					`❌ Failed to send message to member ${mid}:`,
-					error
-				);
+				console.error(`❌ Failed to send message to member ${mid}:`, error);
 				errorCount++;
-				// Clean up failed connection
 				this.removeConnection(cid, mid);
 			}
 		});
 
-		console.log(
-			`📤 Broadcasted to conversation ${cid}: ${sentCount} sent, ${errorCount} errors`
-		);
+		console.log(`📤 Broadcasted to conversation ${cid}: ${sentCount} sent, ${errorCount} errors`);
 	}
 
 
-
-	// Broadcast message to all connections for a specific member
 	broadcastToMember(mid: string, message: BroadcastMessage) {
-		const memberConversations = this.memberConnections.get(mid);
-		if (!memberConversations) {
+		const mc = this.memberConnections.get(mid);
+		if (!mc) {
 			console.log(`📭 No connections found for member: ${mid}`);
 			return;
 		}
@@ -121,28 +105,25 @@ export class ConnectionManager {
 		let sentCount = 0;
 		let errorCount = 0;
 
-		memberConversations.forEach((conversationId) => {
-			const cc = this.connections.get(conversationId);
+		mc.forEach((cid) => {
+			const cc = this.connections.get(cid);
 			const connection = cc?.[mid];
 
 			if (connection) {
 				try {
-					connection.ws.send(messageStr);
+					connection.send(messageStr);
 					sentCount++;
 				} catch (error) {
-					console.error(
-						`❌ Failed to send message to member ${mid} in conversation ${conversationId}:`,
-						error
-					);
+					console.error(`❌ Failed to send message to member ${mid} in conversation ${cid}:`, error);
+
 					errorCount++;
-					this.removeConnection(conversationId, mid);
+					this.removeConnection(cid, mid);
 				}
 			}
 		});
 
-		console.log(
-			`📤 Broadcasted to member ${mid}: ${sentCount} sent, ${errorCount} errors`
-		);
+		console.log(`📤 Broadcasted to member ${mid}: ${sentCount} sent, ${errorCount} errors`);
+
 	}
 
 	// Get all connections for a conversation
@@ -160,15 +141,13 @@ export class ConnectionManager {
 	// Check if a member is connected to a conversation
 	isConnected(conversationId: string, memberId: string): boolean {
 		const cc = this.connections.get(conversationId);
-		return !!cc?.[memberId]?.ws;
+		return !!cc?.[memberId]?.send;
 	}
 
 	// Get connection statistics
 	getStats() {
-		const totalConnections = Array.from(this.connections.values()).reduce(
-			(total, connections) => total + Object.keys(connections).length,
-			0
-		);
+		const totalConnections = Array.from(this.connections.values())
+			.reduce((total, c) => total + Object.keys(c).length, 0);
 
 		return {
 			totalConnections,
@@ -193,7 +172,7 @@ export class ConnectionManager {
 				([memberId, connection]) => {
 					try {
 						// Try to send a ping to check if connection is alive
-						connection.ws.ping?.();
+						connection.ping?.();
 					} catch (error) {
 						// Connection is dead, remove it
 						this.removeConnection(conversationId, memberId);

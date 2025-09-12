@@ -1,10 +1,10 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient, RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { ConnectionManager } from "./ConnectionManager";
 
 export class DatabaseListener {
 	private supabase: SupabaseClient | null = null;
 	private connectionManager: ConnectionManager;
-	private channels: any[] = [];
+	private channels: RealtimeChannel[] = [];
 	private isRunning = false;
 
 	constructor(connectionManager: ConnectionManager) {
@@ -29,7 +29,6 @@ export class DatabaseListener {
 			},
 		});
 
-		console.log("✅ Supabase client initialized for database listener");
 	}
 
 	async start() {
@@ -51,17 +50,8 @@ export class DatabaseListener {
 					schema: "public",
 					table: "support_messages",
 				}, (payload) => this.handleMessageInsert(payload))
-				.on("postgres_changes", {
-					event: "UPDATE",
-					schema: "public",
-					table: "support_messages",
-				}, (payload) => this.handleMessageUpdate(payload))
 				.subscribe((status) => {
-					console.log("📡 Messages channel status:", status);
-					if (status === "SUBSCRIBED") {
-						console.log("✅ Successfully subscribed to support_messages changes");
-					} else if (status === "CHANNEL_ERROR") {
-						console.error("❌ Error subscribing to support_messages changes");
+					if (status === "CHANNEL_ERROR") {
 						this.handleReconnection("messages");
 					}
 				});
@@ -74,19 +64,13 @@ export class DatabaseListener {
 					table: "support_conversations",
 				}, (payload) => this.handleConversationUpdate(payload))
 				.subscribe((status) => {
-					console.log("📡 Conversations channel status:", status);
-					if (status === "SUBSCRIBED") {
-						console.log("✅ Successfully subscribed to support_conversations changes");
-					} else if (status === "CHANNEL_ERROR") {
-						console.error("❌ Error subscribing to support_conversations changes");
+					if (status === "CHANNEL_ERROR") {
 						this.handleReconnection("conversations");
 					}
 				});
 
 			this.channels = [messagesChannel, conversationsChannel];
 			this.isRunning = true;
-
-			console.log("🚀 Database listener started successfully");
 		} catch (error) {
 			console.error("❌ Failed to start database listener:", error);
 		}
@@ -114,24 +98,19 @@ export class DatabaseListener {
 		}
 	}
 
-	private handleMessageInsert(payload: any) {
+	private handleMessageInsert(payload: Record<string, any>) {
 		try {
 			const message = payload.new;
 
 			const messageData = {
 				type: "new_message",
 				data: {
-					id: message.id,
+					...message,
 					conversationId: message.conversation_id,
-					content: message.content,
-					role: message.role,
-					channel: message.channel,
 					agentName: message.agent_name,
 					agentId: message.agent_id,
-					metadata: message.metadata,
 					created: message.created_at,
 				},
-				timestamp: new Date().toISOString(),
 			};
 
 			this.connectionManager.broadcastToConversation(message.conversation_id, messageData);
@@ -140,112 +119,47 @@ export class DatabaseListener {
 		}
 	}
 
-	private handleMessageUpdate(payload: any) {
-		try {
-			const message = payload.new;
 
-
-
-			this.connectionManager.broadcastToConversation(message.conversation_id, {
-				type: "message_updated",
-				data: {
-					id: message.id,
-					conversationId: message.conversation_id,
-					content: message.content,
-					role: message.role,
-					channel: message.channel,
-					agentName: message.agent_name,
-					agentId: message.agent_id,
-					metadata: message.metadata,
-					created: message.created_at,
-				},
-				timestamp: new Date().toISOString(),
-			});
-		} catch (error) {
-			console.error("❌ Error handling message update:", error);
-		}
-	}
 
 	private handleConversationUpdate(payload: any) {
 		try {
-			const newConversation = payload.new;
-			const oldConversation = payload.old;
-
-			const oldVendorActive = oldConversation?.is_vendor_active ?? false;
-			const newVendorActive = newConversation?.is_vendor_active ?? false;
-			const modeChanged = oldVendorActive !== newVendorActive;
-
-			const hasValidOldData = oldConversation && oldConversation.is_vendor_active !== undefined;
-
-			if (modeChanged && hasValidOldData) {
-				const mode = newConversation.is_vendor_active ? "staff" : "ai";
-				const agentInfo = newConversation.metadata?.agent;
-
-				this.connectionManager.broadcastToConversation(newConversation.id, {
-					type: "mode_change",
-					data: {
-						conversationId: newConversation.id,
-						mode,
-						isVendorActive: newConversation.is_vendor_active,
-						takenOverAt: newConversation.taken_over_at,
-						agentInfo,
-						status: newConversation.status,
-						previousMode: oldConversation.is_vendor_active ? "staff" : "ai",
-					},
-					timestamp: new Date().toISOString(),
-				});
-
-				const systemMessage = newConversation.is_vendor_active ? `🤝 ${agentInfo?.name || "A team member"} has joined the conversation and will assist you from here.` : `🤖 You're now chatting with our AI assistant. I'm here to help!`;
-
-				this.connectionManager.broadcastToConversation(newConversation.id, {
-					type: "system_message",
-					data: {
-						content: systemMessage,
-						mode,
-						timestamp: new Date().toISOString(),
-					},
-				});
+			if (!payload.new || !payload.old) {
+				return;
 			}
 
-			this.connectionManager.broadcastToConversation(newConversation.id, {
-				type: "conversation_updated",
+			this.connectionManager.broadcastToConversation(payload.new.id, {
+				type: "mode_change",
 				data: {
-					id: newConversation.id,
-					title: newConversation.title,
-					status: newConversation.status,
-					isVendorActive: newConversation.is_vendor_active,
-					takenOverAt: newConversation.taken_over_at,
-					metadata: newConversation.metadata,
-					updated: newConversation.updated_at,
+					conversationId: payload.new.id,
+					isVendorActive: payload.new.is_vendor_active,
+					takenOverAt: payload.new.taken_over_at,
+					status: payload.new.status,
+					priority: payload.new.priority,
+					metadata: payload.new.metadata,
+					updated: payload.new.updated_at,
 				},
-				timestamp: new Date().toISOString(),
+
 			});
+
+
 		} catch (error) {
 			console.error("Error handling conversation update:", error);
 		}
 	}
 
 	private handleReconnection(channelType: string) {
-		console.log(`🔄 Attempting to reconnect ${channelType} channel...`);
+		console.log(`Reconnecting ${channelType} channel...`);
 
 		setTimeout(() => {
-			if (this.isRunning) {
-				this.stop().then(() => {
-					setTimeout(() => {
-						this.start();
-					}, 2000);
-				});
-			}
+			if (!this.isRunning) return;
+			this.stop().then(() => {
+				setTimeout(() => {
+					this.start();
+				}, 2000);
+			});
 		}, 5000);
 	}
 
-	getStatus() {
-		return {
-			isRunning: this.isRunning,
-			channelCount: this.channels.length,
-			supabaseConnected: !!this.supabase,
-		};
-	}
 
 	async healthCheck() {
 		if (!this.supabase || !this.isRunning) {

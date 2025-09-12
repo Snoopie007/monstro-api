@@ -62,7 +62,7 @@ export function realtimeRoutes(app: Elysia) {
 
 	}).ws("/support/:cid", {
 		async open(ws) {
-			const { data, close, subscribe, send } = ws;
+			const { data, close, subscribe, send, ping } = ws;
 
 			try {
 				const { memberId, params } = data as { memberId: string, params: { cid: string } };
@@ -86,7 +86,8 @@ export function realtimeRoutes(app: Elysia) {
 				connectionManager.addConnection(
 					params.cid as string,
 					memberId as string,
-					ws
+					send,
+					ping
 				);
 
 				subscribe(`conversation:${params.cid}`);
