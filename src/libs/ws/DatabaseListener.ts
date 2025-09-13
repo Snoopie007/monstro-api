@@ -128,7 +128,7 @@ export class DatabaseListener {
 			}
 
 			this.connectionManager.broadcastToConversation(payload.new.id, {
-				type: "mode_change",
+				type: "conversation_updates",
 				data: {
 					conversationId: payload.new.id,
 					isVendorActive: payload.new.is_vendor_active,
