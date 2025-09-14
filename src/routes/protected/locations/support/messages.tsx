@@ -138,8 +138,6 @@ async function invokeBot(
 ) {
 
     const res = await model.invoke({ history: history });
-
-
     let completed = true;
     let msg: NewSupportMessage | undefined = undefined;
 
@@ -172,9 +170,6 @@ async function invokeBot(
                 conversation,
                 ml,
             });
-
-
-
 
             const result = await saveMessage({
                 conversationId: conversation.id,
@@ -210,9 +205,8 @@ async function invokeBot(
 
     }
 
-
     if (completed && msg) {
-
+        console.log('🟢 Returning msg');
         return msg;
     }
 
