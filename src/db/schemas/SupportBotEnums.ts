@@ -16,11 +16,15 @@ export enum Channel {
 
 export enum MessageRole {
   User = "user",
-  AI = "ai",
-  Vendor = "vendor",
+  Assistant = "assistant",
+  Staff = "staff",
   System = "system",
   Tool = "tool",
+  Developer = "developer",
+  ToolResult = "tool_result",
   ToolResponse = "tool_response",
+  ToolMessage = "tool_message",
+  Agent = "agent",
 }
 
 export enum BotModel {
@@ -28,7 +32,6 @@ export enum BotModel {
   GPT = "gpt",
   Gemini = "gemini",
 }
-
 
 export enum TicketStatus {
   Open = "open",
@@ -58,11 +61,15 @@ export const channelEnum = pgEnum("channel", [
 
 export const messageRoleEnum = pgEnum("message_role", [
   MessageRole.User,
-  MessageRole.AI,
-  MessageRole.Vendor,
+  MessageRole.Assistant,
+  MessageRole.Staff,
   MessageRole.System,
   MessageRole.Tool,
+  MessageRole.Developer,
+  MessageRole.ToolResult,
   MessageRole.ToolResponse,
+  MessageRole.ToolMessage,
+  MessageRole.Agent,
 ]);
 
 export const botModelEnum = pgEnum("bot_model", [
@@ -70,7 +77,6 @@ export const botModelEnum = pgEnum("bot_model", [
   BotModel.GPT,
   BotModel.Gemini,
 ]);
-
 
 export const ticketStatusEnum = pgEnum("ticket_status", [
   TicketStatus.Open,

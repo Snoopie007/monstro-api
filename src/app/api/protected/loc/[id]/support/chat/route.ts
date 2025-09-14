@@ -89,9 +89,10 @@ export async function POST(
       : [];
 
     // Create properly typed support bot with triggers
-    const supportAssistant: SupportAssistantWithTriggers | null = supportAssistantResult
-      ? { ...supportAssistantResult, triggers: activeTriggers }
-      : null;
+    const supportAssistant: SupportAssistantWithTriggers | null =
+      supportAssistantResult
+        ? { ...supportAssistantResult, triggers: activeTriggers }
+        : null;
 
     if (!supportAssistant) {
       return NextResponse.json(
@@ -151,10 +152,17 @@ export async function POST(
     // Convert messages to LangChain format
     const chatMessages: LangChainMessage[] = [
       { role: "system", content: systemPrompt },
-      ...messages.map((msg: ChatMessage): LangChainMessage => ({
-        role: msg.role === "ai" ? "assistant" : msg.role === "user" ? "user" : "system",
-        content: msg.content,
-      })),
+      ...messages.map(
+        (msg: ChatMessage): LangChainMessage => ({
+          role:
+            msg.role === "assistant"
+              ? "assistant"
+              : msg.role === "user"
+              ? "user"
+              : "system",
+          content: msg.content,
+        })
+      ),
     ];
 
     // Stream response using LangChain
@@ -185,12 +193,15 @@ export async function POST(
             // Handle tool calls
             if (chunk.tool_calls && chunk.tool_calls.length > 0) {
               for (const toolCall of chunk.tool_calls) {
-                if (toolCall.type === 'tool_call') {
-                  console.log(`Tool call received: ${toolCall.name} with args:`, toolCall.args);
+                if (toolCall.type === "tool_call") {
+                  console.log(
+                    `Tool call received: ${toolCall.name} with args:`,
+                    toolCall.args
+                  );
                   currentToolCall = {
                     id: toolCall.id,
                     name: toolCall.name,
-                    args: toolCall.args
+                    args: toolCall.args,
                   };
                   toolCalls.push(currentToolCall);
                 }
@@ -201,56 +212,70 @@ export async function POST(
           // If we have tool calls, execute them and get final response
           if (toolCalls.length > 0) {
             console.log(`Executing ${toolCalls.length} tool calls`);
-            
+
             const toolResults: ToolResult[] = [];
             for (const toolCall of toolCalls) {
               try {
                 // Find the tool function
-                const tool = tools.find(t => t.name === toolCall.name);
+                const tool = tools.find((t) => t.name === toolCall.name);
                 if (tool) {
-                  console.log(`Executing tool: ${toolCall.name} with args:`, toolCall.args);
-                  
+                  console.log(
+                    `Executing tool: ${toolCall.name} with args:`,
+                    toolCall.args
+                  );
+
                   // Add context for tools that need it
                   const context = {
                     locationId: params.id,
                     supportAssistantId: supportAssistant.id,
                     // Add other context as needed
                   };
-                  
+
                   // Ensure member tools have memberId - inject testMemberId if missing
                   let args = { ...toolCall.args };
-                  if (['get_member_status', 'get_member_billing', 'get_member_bookable_sessions'].includes(toolCall.name)) {
+                  if (
+                    [
+                      "get_member_status",
+                      "get_member_billing",
+                      "get_member_bookable_sessions",
+                    ].includes(toolCall.name)
+                  ) {
                     if (!args.memberId && testMemberId) {
-                      console.log(`Injecting missing memberId: ${testMemberId} for tool: ${toolCall.name}`);
+                      console.log(
+                        `Injecting missing memberId: ${testMemberId} for tool: ${toolCall.name}`
+                      );
                       args.memberId = testMemberId;
                     }
-                    
+
                     if (!args.memberId) {
-                      throw new Error(`Tool ${toolCall.name} requires a memberId but none was provided`);
+                      throw new Error(
+                        `Tool ${toolCall.name} requires a memberId but none was provided`
+                      );
                     }
                   }
-                  
+
                   // Use the proper LangChain tool invoke method with context as second parameter
                   const result = await tool.invoke(args, context);
                   toolResults.push({
                     tool_call_id: toolCall.id,
-                    content: result
+                    content: result,
                   });
-                  
+
                   console.log(`Tool ${toolCall.name} executed successfully`);
                 } else {
                   console.error(`Tool not found: ${toolCall.name}`);
                   toolResults.push({
                     tool_call_id: toolCall.id,
-                    content: `Error: Tool ${toolCall.name} not found`
+                    content: `Error: Tool ${toolCall.name} not found`,
                   });
                 }
               } catch (error) {
                 console.error(`Error executing tool ${toolCall.name}:`, error);
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                const errorMessage =
+                  error instanceof Error ? error.message : "Unknown error";
                 toolResults.push({
                   tool_call_id: toolCall.id,
-                  content: `Error executing tool: ${errorMessage}`
+                  content: `Error executing tool: ${errorMessage}`,
                 });
               }
             }
@@ -261,18 +286,18 @@ export async function POST(
               {
                 role: "assistant",
                 content: fullResponse,
-                tool_calls: toolCalls.map(tc => ({
+                tool_calls: toolCalls.map((tc) => ({
                   id: tc.id,
                   name: tc.name,
                   args: tc.args,
-                  type: "function"
-                }))
+                  type: "function",
+                })),
               },
-              ...toolResults.map(result => ({
+              ...toolResults.map((result) => ({
                 role: "tool" as const,
                 content: result.content,
-                tool_call_id: result.tool_call_id
-              }))
+                tool_call_id: result.tool_call_id,
+              })),
             ];
 
             // Get final response from model
@@ -319,7 +344,10 @@ export async function POST(
 }
 
 // Helper function to get test member context (simplified to avoid relation errors)
-async function getTestMemberContext(memberId: string, locationId: string): Promise<SupportContact> {
+async function getTestMemberContext(
+  memberId: string,
+  locationId: string
+): Promise<SupportContact> {
   try {
     console.log(
       `Getting test member context for memberId: ${memberId}, locationId: ${locationId}`

@@ -57,7 +57,7 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { content, role = "vendor" } = body;
+    const { content, role = "staff" } = body;
 
     if (!content || !content.trim()) {
       return NextResponse.json(
@@ -67,9 +67,9 @@ export async function POST(
     }
 
     // Validate role
-    if (!["vendor", "system"].includes(role)) {
+    if (!["staff", "system"].includes(role)) {
       return NextResponse.json(
-        { error: "Invalid role. Must be vendor or system" },
+        { error: "Invalid role. Must be staff or system" },
         { status: 400 }
       );
     }
@@ -85,18 +85,16 @@ export async function POST(
         { status: 404 }
       );
     }
-    const {agentId} = conversation.metadata as Record<string, any>;
-
-    // Only allow vendor messages if vendor has taken over
+    const { agentId } = conversation.metadata as Record<string, any>;
+    // Only allow staff messages if vendor has taken over
     if (
-      role === "vendor" &&
-      (!conversation.isVendorActive ||
-        agentId !== session.user.id)
+      role === "staff" &&
+      (!conversation.isVendorActive || agentId !== session.user.id)
     ) {
       return NextResponse.json(
         {
           error:
-            "Unauthorized - you must take over the conversation to send vendor messages",
+            "Unauthorized - you must take over the conversation to send staff messages",
         },
         { status: 403 }
       );
@@ -110,13 +108,13 @@ export async function POST(
         content: content.trim(),
         role,
         channel: Channel.WebChat,
-        // Populate agentId and agentName when vendor sends message
+        // Populate agentId and agentName when staff sends message
         agentId: session.user.id,
         agentName: session.user.name,
         metadata: {
           senderId: session.user.id,
           senderName: session.user.name || "Support Agent",
-        }, 
+        },
       })
       .returning();
 
@@ -136,7 +134,7 @@ export async function POST(
       success: "Message sent successfully",
     });
   } catch (error) {
-    console.error("Error sending vendor message:", error);
+    console.error("Error sending staff message:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

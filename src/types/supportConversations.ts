@@ -10,13 +10,29 @@ export type SupportConversation = {
   metadata: Record<string, any>;
   createdAt: Date;
   updatedAt: Date | null;
+  member?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
 };
 
 export type SupportMessage = {
   id: string;
   conversationId: string;
   content: string;
-  role: "user" | "ai" | "vendor" | "system" | "tool" | "tool_response";
+  role:
+    | "user"
+    | "assistant"
+    | "staff"
+    | "system"
+    | "tool"
+    | "developer"
+    | "tool_result"
+    | "tool_response"
+    | "tool_message"
+    | "agent";
   channel: "WebChat" | "Email" | "System";
   agentId?: string;
   agentName?: string;
@@ -26,9 +42,13 @@ export type SupportMessage = {
 
 export type MessageRole =
   | "user"
-  | "ai"
-  | "vendor"
+  | "assistant"
+  | "staff"
   | "system"
   | "tool"
-  | "tool_response";
+  | "developer"
+  | "tool_result"
+  | "tool_response"
+  | "tool_message"
+  | "agent";
 export type Channel = "WebChat" | "Email" | "System";

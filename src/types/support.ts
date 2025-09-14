@@ -66,7 +66,7 @@ export type SupportChatSession = {
   messages: Array<{
     id: string;
     content: string;
-    role: "user" | "ai" | "vendor" | "system";
+    role: "user" | "assistant" | "staff" | "system";
     timestamp: Date;
     metadata?: Record<string, any>;
   }>;

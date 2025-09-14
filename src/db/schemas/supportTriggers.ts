@@ -8,7 +8,7 @@ export const supportTriggers = pgTable("support_triggers", {
   id: text("id")
     .primaryKey()
     .default(sql`uuid_base62()`),
-  supportAssistantId: text("support_bot_id")
+  supportAssistantId: text("support_assistant_id")
     .notNull()
     .references(() => supportAssistants.id, { onDelete: "cascade" }),
   name: text("name").notNull(),

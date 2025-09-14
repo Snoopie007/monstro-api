@@ -262,7 +262,7 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
             <Button
               onClick={() =>
                 router.push(
-                  `/dashboard/location/${resolvedParams.id}/members/${resolvedParams.mid}/billing`
+                  `/dashboard/location/${resolvedParams.id}/members/${resolvedParams.mid}`
                 )
               }
               variant="default"

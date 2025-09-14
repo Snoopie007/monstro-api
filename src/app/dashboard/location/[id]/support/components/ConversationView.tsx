@@ -15,10 +15,12 @@ import {
   MessageSquare,
   Lightbulb,
   Copy,
+  Brain,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { SupportAssistant, SupportConversation } from "@/types";
+import { SupportAssistant, SupportConversation, SupportMessage } from "@/types";
 import { toast } from "react-toastify";
+import { useSupportRealtime } from "./hooks/useSupportRealtime";
 
 interface ConversationViewProps {
   locationId: string;
@@ -29,7 +31,7 @@ interface ConversationViewProps {
 interface ConversationMessage {
   id: string;
   content: string;
-  role: "user" | "ai" | "vendor" | "system";
+  role: "user" | "assistant" | "staff" | "system" | "ai";
   timestamp: Date;
   metadata?: Record<string, any>;
 }
@@ -44,7 +46,9 @@ export function ConversationView({
   const [isLoading, setIsLoading] = useState(false);
   const [isVendorTakenOver, setIsVendorTakenOver] = useState(false);
   const [botSuggestion, setBotSuggestion] = useState<string | null>(null);
-  const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
+  const [currentConversation, setCurrentConversation] = useState<
+    SupportConversation | undefined
+  >(conversation);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -54,6 +58,11 @@ export function ConversationView({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Update current conversation when prop changes
+  useEffect(() => {
+    setCurrentConversation(conversation);
+  }, [conversation]);
 
   // Load conversation messages
   useEffect(() => {
@@ -94,7 +103,7 @@ export function ConversationView({
             id: "2",
             content:
               "Hello! I'd be happy to help you with your membership. Could you please tell me what specific information you need?",
-            role: "ai",
+            role: "assistant",
             timestamp: new Date(Date.now() - 3590000),
           },
         ];
@@ -106,8 +115,49 @@ export function ConversationView({
     loadConversationMessages();
   }, [conversation, locationId]);
 
+  // Handle realtime updates for conversation and messages
+  const handleConversationUpdate = (
+    updatedConversation: SupportConversation
+  ) => {
+    if (conversation && updatedConversation.id === conversation.id) {
+      // Update both the vendor state and the current conversation
+      setIsVendorTakenOver(updatedConversation.isVendorActive);
+      setCurrentConversation(updatedConversation);
+    }
+  };
+
+  const handleNewMessage = (newMessage: SupportMessage) => {
+    // Only add message if it's for this conversation
+    if (conversation && newMessage.conversationId === conversation.id) {
+      const formattedMessage: ConversationMessage = {
+        id: newMessage.id,
+        content: newMessage.content,
+        role: newMessage.role as ConversationMessage["role"],
+        timestamp: new Date(newMessage.createdAt),
+        metadata: newMessage.metadata,
+      };
+      setMessages((prev) => [...prev, formattedMessage]);
+    }
+  };
+
+  const { isAiMode } = useSupportRealtime({
+    locationId,
+    conversationId: conversation?.id,
+    conversation: currentConversation,
+    onConversationUpdate: handleConversationUpdate,
+    onNewMessage: handleNewMessage,
+  });
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading || !conversation) return;
+
+    // Prevent sending messages when conversation is in AI mode (not vendor active)
+    if (isAiMode(currentConversation)) {
+      toast.error(
+        "Cannot send messages when conversation is in AI mode. Take over the conversation first."
+      );
+      return;
+    }
 
     const messageContent = inputValue.trim();
     setInputValue("");
@@ -123,7 +173,7 @@ export function ConversationView({
           },
           body: JSON.stringify({
             content: messageContent,
-            role: "vendor",
+            role: "staff",
           }),
         }
       );
@@ -140,6 +190,23 @@ export function ConversationView({
         setMessages((prev) => [...prev, newMessage]);
       } else {
         const errorData = await response.json();
+
+        // Handle specific error case for staff takeover required
+        if (
+          response.status === 403 &&
+          errorData.error?.includes("take over the conversation")
+        ) {
+          toast.info(
+            "You need to take over this conversation to send messages as a staff member.",
+            {
+              autoClose: 5000,
+            }
+          );
+        } else {
+          // Handle other errors with generic message
+          toast.error(errorData.error || "Failed to send message");
+        }
+
         throw new Error(errorData.error || "Failed to send message");
       }
     } catch (error) {
@@ -173,6 +240,14 @@ export function ConversationView({
         const data = await response.json();
         setIsVendorTakenOver(true);
 
+        // Update current conversation state immediately
+        if (currentConversation) {
+          setCurrentConversation({
+            ...currentConversation,
+            isVendorActive: true,
+          });
+        }
+
         // Add system message
         const systemMessage: ConversationMessage = {
           id: Date.now().toString(),
@@ -181,7 +256,7 @@ export function ConversationView({
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, systemMessage]);
-        
+
         // Show success toast
         toast.success("Successfully took over the conversation");
       } else {
@@ -190,7 +265,10 @@ export function ConversationView({
       }
     } catch (error) {
       console.error("Failed to take over conversation:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to take over conversation";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to take over conversation";
       toast.error(errorMessage);
     }
   };
@@ -214,6 +292,14 @@ export function ConversationView({
         setIsVendorTakenOver(false);
         setBotSuggestion(null); // Clear any bot suggestions
 
+        // Update current conversation state immediately
+        if (currentConversation) {
+          setCurrentConversation({
+            ...currentConversation,
+            isVendorActive: false,
+          });
+        }
+
         // Add system message
         const systemMessage: ConversationMessage = {
           id: Date.now().toString(),
@@ -222,7 +308,7 @@ export function ConversationView({
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, systemMessage]);
-        
+
         // Show success toast
         toast.success("Successfully handed conversation back to bot");
       } else {
@@ -231,77 +317,11 @@ export function ConversationView({
       }
     } catch (error) {
       console.error("Failed to hand back to bot:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to hand back conversation";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to hand back conversation";
       toast.error(errorMessage);
-    }
-  };
-
-  const handleGetBotSuggestion = async () => {
-    if (!conversation || !supportBot) return;
-
-    setIsLoadingSuggestion(true);
-    try {
-      const response = await fetch(
-        `/api/protected/loc/${locationId}/support/chat`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            messages: messages.map((msg) => ({
-              role: msg.role === "ai" ? "ai" : "user",
-              content: msg.content,
-            })),
-            sessionId: `suggestion-${Date.now()}`,
-            getSuggestionOnly: true, // Flag to indicate we want a suggestion, not a full chat response
-          }),
-        }
-      );
-
-      if (response.ok) {
-        // Handle streaming response for suggestion
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error("No response body reader available");
-
-        let suggestionContent = "";
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = new TextDecoder().decode(value);
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-              if (data === "[DONE]") {
-                setBotSuggestion(suggestionContent);
-                setIsLoadingSuggestion(false);
-                return;
-              }
-
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.content) {
-                  suggestionContent += parsed.content;
-                }
-              } catch (e) {
-                // Ignore malformed JSON
-              }
-            }
-          }
-        }
-      } else {
-        throw new Error("Failed to get bot suggestion");
-      }
-    } catch (error) {
-      console.error("Failed to get bot suggestion:", error);
-      setBotSuggestion(
-        "Sorry, I couldn't generate a suggestion right now. Please try again."
-      );
-    } finally {
-      setIsLoadingSuggestion(false);
     }
   };
 
@@ -333,9 +353,11 @@ export function ConversationView({
     switch (role) {
       case "user":
         return <User size={16} className="text-blue-600" />;
-      case "ai":
+      case "assistant":
         return <Bot size={16} className="text-green-600" />;
-      case "vendor":
+      case "ai":
+        return <Brain size={16} className="text-cyan-600" />;
+      case "staff":
         return <UserCheck size={16} className="text-purple-600" />;
       case "system":
         return <MessageSquare size={16} className="text-orange-600" />;
@@ -355,7 +377,7 @@ export function ConversationView({
             Member
           </Badge>
         );
-      case "ai":
+      case "assistant":
         return (
           <Badge
             variant="outline"
@@ -364,7 +386,16 @@ export function ConversationView({
             Bot
           </Badge>
         );
-      case "vendor":
+      case "ai":
+        return (
+          <Badge
+            variant="outline"
+            className="text-xs bg-cyan-50 text-cyan-700 border-cyan-200"
+          >
+            AI
+          </Badge>
+        );
+      case "staff":
         return (
           <Badge
             variant="outline"
@@ -414,7 +445,11 @@ export function ConversationView({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CardTitle className="text-lg font-semibold">
-              {conversation.title || `Member #${conversation.memberId.slice(-6)}`}
+              {currentConversation?.title ||
+                conversation.title ||
+                `Member #${(
+                  currentConversation?.memberId || conversation.memberId
+                ).slice(-6)}`}
             </CardTitle>
             <Badge
               variant="outline"
@@ -439,37 +474,23 @@ export function ConversationView({
                 Take Over
               </Button>
             ) : (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGetBotSuggestion}
-                  disabled={isLoadingSuggestion}
-                  className="gap-2"
-                >
-                  {isLoadingSuggestion ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Lightbulb size={14} />
-                  )}
-                  Get Suggestion
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleHandBackToBot}
-                  className="gap-2"
-                >
-                  <Bot size={14} />
-                  Hand to Bot
-                </Button>
-              </>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleHandBackToBot}
+                className="gap-2"
+              >
+                <Bot size={14} />
+                Hand to Bot
+              </Button>
             )}
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
           Started {new Date(conversation.createdAt).toLocaleDateString()} •
-          {conversation.isVendorActive ? " Agent active" : " Bot handling"}
+          {currentConversation?.isVendorActive
+            ? " Agent active"
+            : " Bot handling"}
         </p>
       </CardHeader>
 

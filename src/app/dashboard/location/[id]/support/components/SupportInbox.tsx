@@ -3,7 +3,14 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings, MessageSquare, User, Clock, RefreshCw } from "lucide-react";
+import {
+  Settings,
+  MessageSquare,
+  User,
+  Clock,
+  RefreshCw,
+  AlertTriangle,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -12,6 +19,7 @@ import {
 } from "@/components/ui/ToolTip";
 import { SupportConversation } from "@/types/supportConversations";
 import { Badge } from "@/components/ui/badge";
+import { useSupportRealtime } from "./hooks/useSupportRealtime";
 
 interface SelectedConversation {
   type: "admin-test" | "member-conversation";
@@ -37,6 +45,35 @@ export function SupportInbox({
   const [conversations, setConversations] =
     useState<SupportConversation[]>(initialConversations);
   const [isLoading, setIsLoading] = useState(false);
+  const [notificationBadges, setNotificationBadges] = useState<Set<string>>(
+    new Set()
+  );
+
+  // Handle realtime updates
+  const handleConversationUpdate = (
+    updatedConversation: SupportConversation
+  ) => {
+    setConversations((prevConversations) =>
+      prevConversations.map((conv) =>
+        conv.id === updatedConversation.id ? updatedConversation : conv
+      )
+    );
+  };
+
+  const handleVendorActiveChange = (
+    conversationId: string,
+    isVendorActive: boolean
+  ) => {
+    if (isVendorActive) {
+      setNotificationBadges((prev) => new Set([...prev, conversationId]));
+    }
+  };
+
+  useSupportRealtime({
+    locationId,
+    onConversationUpdate: handleConversationUpdate,
+    onVendorActiveChange: handleVendorActiveChange,
+  });
 
   // Load conversations from API
   const loadConversations = async () => {
@@ -155,33 +192,33 @@ export function SupportInbox({
       <CardContent className="space-y-2 overflow-y-auto p-0">
         {/* Admin Test Chat - Always first with border bottom */}
         <div
-          className={`p-3 cursor-pointer transition-colors border-b border-foreground/10 ${
+          className={`p-3 cursor-pointer transition-colors border-b border-foreground/10 overflow-hidden ${
             selectedConversation.type === "admin-test"
               ? "bg-primary/5 border-l-4 border-l-primary"
               : "hover:bg-muted/50"
           }`}
-          onClick={() =>
+          onClick={() => {
             onConversationSelect({
               type: "admin-test",
               id: "admin-test",
-            })
-          }
+            });
+          }}
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          <div className="flex items-center justify-between mb-2 min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
                 <MessageSquare size={14} className="text-white" />
               </div>
-              <div>
-                <h3 className="font-medium text-sm">Test Chat</h3>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-medium text-sm truncate">Test Chat</h3>
+                <p className="text-xs text-muted-foreground truncate">
                   Admin testing interface
                 </p>
               </div>
             </div>
             <Badge
               variant="outline"
-              className="text-xs bg-orange-50 text-orange-700 border-orange-200"
+              className="text-xs bg-orange-50 text-orange-700 border-orange-200 flex-shrink-0 ml-2"
             >
               Test
             </Badge>
@@ -200,44 +237,62 @@ export function SupportInbox({
             conversations.map((conversation) => (
               <div
                 key={conversation.id}
-                className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                className={`p-3 rounded-lg cursor-pointer transition-colors overflow-hidden ${
                   selectedConversation.type === "member-conversation" &&
                   selectedConversation.id === conversation.id
                     ? "bg-primary/5 border-l-4 border-l-primary"
                     : "hover:bg-muted/50"
                 }`}
-                onClick={() =>
+                onClick={() => {
                   onConversationSelect({
                     type: "member-conversation",
                     id: conversation.id,
                     data: conversation,
-                  })
-                }
+                  });
+                  // Clear notification badge when conversation is selected
+                  setNotificationBadges((prev) => {
+                    const newSet = new Set(prev);
+                    newSet.delete(conversation.id);
+                    return newSet;
+                  });
+                }}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2 flex-1">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                <div className="flex items-start justify-between mb-2 min-w-0">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
                       <User size={14} className="text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-sm truncate">
-                        {conversation.title || (conversation.member
-                          ? `${conversation.member.firstName} ${conversation.member.lastName}`
-                          : `Member #${conversation.memberId.slice(-6)}`)}
+                        {conversation.title ||
+                          (conversation.member
+                            ? `${conversation.member.firstName} ${conversation.member.lastName}`
+                            : `Member #${conversation.memberId.slice(-6)}`)}
                       </h3>
                       <p className="text-xs text-muted-foreground truncate">
                         {conversation.title
-                          ? (conversation.member
-                              ? `${conversation.member.firstName} ${conversation.member.lastName}`
-                              : `Member #${conversation.memberId.slice(-6)}`)
+                          ? conversation.member
+                            ? `${conversation.member.firstName} ${conversation.member.lastName}`
+                            : `Member #${conversation.memberId.slice(-6)}`
                           : formatLastMessage(conversation)}
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock size={10} />
-                      {formatTime(conversation.createdAt)}
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
+                    <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                        <Clock size={10} />
+                        {formatTime(conversation.createdAt)}
+                      </div>
+                      {notificationBadges.has(conversation.id) && (
+                        <Badge
+                          variant="destructive"
+                          className="text-xs px-1.5 py-0.5 h-5 animate-pulse whitespace-nowrap"
+                        >
+                          <AlertTriangle size={10} className="mr-1" />
+                          Human
+                        </Badge>
+                      )}
                     </div>
                     {getVendorStatusBadge(conversation)}
                   </div>
