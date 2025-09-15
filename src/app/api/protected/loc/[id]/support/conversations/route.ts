@@ -7,7 +7,7 @@ import {
   supportConversations,
   supportMessages,
 } from "@/db/schemas";
-import { MessageRole, Channel } from "@/db/schemas/SupportBotEnums";
+import { MessageRole, Channel } from "@/db/schemas/support/SupportBotEnums";
 
 export async function GET(
   req: NextRequest,

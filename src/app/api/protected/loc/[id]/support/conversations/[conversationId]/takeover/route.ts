@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { supportConversations, supportMessages } from "@/db/schemas";
-import { Channel, MessageRole } from "@/db/schemas/SupportBotEnums";
+import { Channel, MessageRole } from "@/db/schemas/support/SupportBotEnums";
 
 export async function POST(
   req: NextRequest,
@@ -117,7 +117,7 @@ export async function DELETE(
     }
 
     // Check if user is the one who took over
-    const {agentId} = conversation.metadata as Record<string, any>;
+    const { agentId } = conversation.metadata as Record<string, any>;
     if (!conversation.isVendorActive || agentId !== session.user.id) {
       return NextResponse.json(
         { error: "Unauthorized - you did not take over this conversation" },

@@ -5,15 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Plus, FileText, MessageSquare } from "lucide-react";
 import { SupportAssistant } from "@/types";
-import { 
-  KnowledgeBase, 
-  QAEntryUI, 
+import {
+  KnowledgeBase,
+  QAEntryUI,
   // DocumentMetadataUI, // Commented out until document upload is implemented
-  convertQAEntryToUI, 
+  convertQAEntryToUI,
   // convertDocumentToUI // Commented out until document upload is implemented
 } from "@/types/knowledgeBase";
-import { QAEntryForm } from "./QAEntryForm";
-import { QAEntryList } from "./QAEntryList";
+import { QAEntryForm, QAEntryList } from ".";
 // import { SingleDocumentUpload } from "./SingleDocumentUpload"; // Commented out until document upload is implemented
 
 interface DocumentsSectionProps {
@@ -130,15 +129,15 @@ export function DocumentsSection({
       if (editingEntry) {
         // Update existing entry
         const updatedEntries = knowledgeBase.qa_entries.map(existing =>
-          existing.id === editingEntry.id 
+          existing.id === editingEntry.id
             ? { ...existing, question: entry.question, answer: entry.answer }
             : existing
         );
-        
+
         await onKnowledgeBaseUpdate({
           qa_entries: updatedEntries
         });
-        
+
         setEditingEntry(null);
       } else {
         // Create new entry
@@ -148,12 +147,12 @@ export function DocumentsSection({
           answer: entry.answer,
           created_at: new Date().toISOString(),
         };
-        
+
         await onKnowledgeBaseUpdate({
           qa_entries: [...knowledgeBase.qa_entries, newEntry]
         });
       }
-      
+
       setShowQAForm(false);
     } catch (error) {
       console.error("Failed to save Q&A entry:", error);

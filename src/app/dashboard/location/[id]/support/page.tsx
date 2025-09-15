@@ -1,100 +1,73 @@
-import { SupportPageClient } from "./SupportPageClient";
-import { SupportAssistant, SupportConversation, SupportTool } from "@/types";
-import { KnowledgeBase } from "@/types/knowledgeBase";
+
+import { SupportAssistant } from "@/types";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
-import {
-  locations,
-  supportAssistants,
-  supportConversations,
-} from "@/db/schemas";
+import { supportAssistants } from "@/db/schemas";
+import { notFound } from "next/navigation";
+import { SupportList } from "./components";
+import { SupportProvider } from "./providers/SupportProvider";
 
-async function getSupportPageData(id: string) {
-  // Get the support assistant with location
-  const supportAssistantData = await db.query.supportAssistants.findFirst({
-    where: eq(supportAssistants.locationId, id),
-    with: {
-      location: true,
-    },
-  });
+async function getAssistant(lid: string): Promise<SupportAssistant | null> {
+	// Get the support assistant with location
+	try {
+		const assistant = await db.query.supportAssistants.findFirst({
+			where: eq(supportAssistants.locationId, lid),
+			with: {
+				conversations: {
+					with: {
+						member: true,
+					},
+					orderBy: (conversations, { desc }) => [desc(conversations.created)],
+				},
+			},
+		});
 
-  // Get conversations for this location
-  const conversationsData = await db.query.supportConversations.findMany({
-    where: eq(supportConversations.locationId, id),
-    with: {
-      member: true,
-      supportAssistant: true,
-    },
-    orderBy: (conversations, { desc }) => [desc(conversations.createdAt)],
-  });
+		if (!assistant) {
+			return null;
+		}
 
-  // Transform conversations to match the expected type
-  const conversations: SupportConversation[] = conversationsData.map(
-    (conv) => ({
-      ...conv,
-      takenOverAt: conv.takenOverAt || undefined,
-      isVendorActive: conv.isVendorActive || false,
-      title: conv.title || undefined,
-      metadata: conv.metadata as Record<string, any>,
-    })
-  );
+		return assistant;
+	} catch (error) {
+		console.error("Error fetching support assistant:", error);
+		return null;
+	}
 
-  // Transform support assistant to match expected type
-  const supportAssistant: SupportAssistant | null = supportAssistantData
-    ? {
-        ...supportAssistantData,
-        availableTools:
-          (supportAssistantData.availableTools as SupportTool[]) || [],
-        knowledgeBase: supportAssistantData.knowledgeBase as
-          | KnowledgeBase
-          | undefined,
-        persona: supportAssistantData.persona as Record<string, any>,
-        model: supportAssistantData.model as "anthropic" | "gpt" | "gemini",
-        status: supportAssistantData.status as "Draft" | "Active" | "Paused",
-      }
-    : null;
 
-  return {
-    location: supportAssistantData?.location,
-    supportAssistant,
-    conversations,
-  };
 }
 
 export default async function SupportPage(props: {
-  params: Promise<{ id: string }>;
+	params: Promise<{ id: string }>;
 }) {
-  const params = await props.params;
+	const params = await props.params;
 
-  try {
-    const { location, supportAssistant, conversations } =
-      await getSupportPageData(params.id);
+	const assistant = await getAssistant(params.id);
 
-    // Handle case where support assistant doesn't exist
-    if (!location) {
-      throw new Error("Location not found");
-    }
 
-    return (
-      <SupportPageClient
-        locationId={params.id}
-        location={location}
-        conversations={conversations}
-        supportAssistant={supportAssistant}
-      />
-    );
-  } catch (error) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-58px)]">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold text-muted-foreground">
-            Location not found
-          </h2>
-          <p className="text-muted-foreground">
-            The requested location could not be found.
-          </p>
-        </div>
-      </div>
-    );
-  }
+	if (!assistant) {
+		// Create a new assistant
+		return notFound();
+	}
+
+
+
+	return (
+		<div className="w-full h-full">
+
+			<SupportProvider assistant={assistant} >
+				<div className="flex flex-row h-full transition-all duration-300 ease-in-out gap-1">
+					<div className="flex-none w-[25%]">
+						<SupportList lid={params.id} />
+					</div>
+					<div className="flex-1 py-2">
+						<div className="bg-foreground/5 rounded-lg h-full">
+							{/* <ChatBox /> */}
+						</div>
+					</div>
+					<div className="flex-none w-[25%] ">
+						{/* Additional User Info */}
+					</div>
+				</div>
+			</SupportProvider>
+		</div>
+	);
 }

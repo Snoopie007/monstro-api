@@ -1,83 +1,65 @@
-// Unified support system types for the simplified bot approach
 
-export type SupportContact = {
-  id: string;
-  firstName?: string;
-  lastName?: string;
-  email: string;
-  phone?: string;
-  type: "member"; // Only authenticated members supported
-  supportMetadata?: Record<string, any>;
+import type {
+  supportAssistants,
+  supportTriggers,
+  supportConversations,
+  supportMessages
+} from "@/db/schemas/";
+import type { Member } from "./member";
+
+
+export type SupportTrigger = typeof supportTriggers.$inferSelect;
+export type NewSupportTrigger = typeof supportTriggers.$inferInsert;
+export type SupportConversation = typeof supportConversations.$inferSelect & {
+  assistant?: SupportAssistant;
+  member?: Member;
+  messages?: SupportMessage[];
 };
+export type SupportConversationStatus = typeof supportConversations.$inferSelect["status"];
 
-export type SupportSystemStatus = {
-  isActive: boolean;
-  lastHealthCheck: Date;
-  activeConversations: number;
-  totalTickets: number;
-  resolvedTickets: number;
+
+export type NewSupportConversation = typeof supportConversations.$inferInsert;
+export type SupportAssistant = typeof supportAssistants.$inferSelect & {
+  triggers?: SupportTrigger[];
+  conversations?: SupportConversation[];
+  persona: SupportPersona;
 };
+export type NewSupportAssistant = typeof supportAssistants.$inferInsert & {
+  persona: SupportPersona;
+};
+export type SupportMessage = typeof supportMessages.$inferSelect;
+export type NewSupportMessage = typeof supportMessages.$inferInsert;
 
-export type SupportBotConfig = {
-  id: string;
-  locationId: string;
+
+export type SupportPersona = {
   name: string;
-  prompt: string;
-  initialMessage: string;
-  temperature: number;
-  model: "anthropic" | "gpt" | "gemini";
-  status: "Draft" | "Active" | "Paused";
-  availableTools: string[];
-  persona?: {
-    name: string;
-    image?: string;
-    responseStyle: string;
-    personalityTraits: string[];
-  };
-  triggers: SupportTriggerConfig[];
-  documents: SupportDocumentInfo[];
+  avatar: string;
+  responseStyle: string;
+  personality: string[];
 };
 
-export type SupportTriggerConfig = {
-  id: string;
+
+export type SupportTool = {
   name: string;
-  triggerType: "keyword" | "intent" | "condition";
-  triggerPhrases: string[];
-  toolCall: {
-    name: string;
-    parameters: Record<string, any>;
-  };
-  examples: string[];
-  requirements: string[];
-  isActive: boolean;
+  description: string;
+  parameters: Record<string, any>;
+  args: Record<string, any>;
 };
 
-export type SupportDocumentInfo = {
-  id: string;
-  name: string;
-  type: "file" | "website";
-  size?: number;
-  createdAt: Date;
-};
+// Test Chat API Routes
+export interface TestChatMessage {
+  role: "user" | "ai" | "assistant" | "system" | "tool";
+  content: string;
+  timestamp: number;
+  tool_calls?: any[];
+  tool_call_id?: string;
+  metadata?: any;
+}
 
-export type SupportChatSession = {
+export interface TestChatSession {
   sessionId: string;
-  memberId: string; // Required authenticated member ID
-  messages: Array<{
-    id: string;
-    content: string;
-    role: "user" | "assistant" | "staff" | "system";
-    timestamp: Date;
-    metadata?: Record<string, any>;
-  }>;
-  isVendorActive: boolean;
-  vendorId?: string;
-  member?: SupportContact; // Member info (renamed from contact)
-};
-
-export type VendorTakeoverRequest = {
-  conversationId: string;
-  reason: string;
-  urgency: "low" | "medium" | "high";
-  vendorId: string;
-};
+  locationId: string;
+  messages: TestChatMessage[];
+  lastActivity: number;
+  testMemberId?: string;
+}

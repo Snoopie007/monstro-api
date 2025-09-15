@@ -19,10 +19,5 @@ export * from "./accounts";
 export * from "./ImportMembers";
 
 // SUPPORT ASSISTANT SCHEMAS
-export * from "./SupportBotEnums";
-export * from "./supportAssistants";
-export * from "./supportTriggers";
-export * from "./supportDocuments";
-export * from "./supportConversations";
-export * from "./supportMessages";
-export * from "./supportLogs";
+export * from "./support";
+

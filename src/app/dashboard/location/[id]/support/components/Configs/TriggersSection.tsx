@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "react-toastify";
 import { SupportAssistant, SupportTrigger } from "@/types";
-import { NewTriggerForm } from "./NewTriggerForm";
-import { EditTriggerForm } from "./EditTriggerForm";
+import { NewTriggerForm, EditTriggerForm } from ".";
+
 
 interface TriggersSectionProps {
   locationId: string;

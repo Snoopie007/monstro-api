@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, integer } from "drizzle-orm/pg-core";
 import { vector } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm/sql";
-import { supportAssistants } from "./supportAssistants";
+import { supportAssistants } from "./SupportAssistants";
 
 // Document chunks for RAG (references support assistant directly)
 export const supportDocumentChunks = pgTable("support_document_chunks", {
@@ -18,6 +18,3 @@ export const supportDocumentChunks = pgTable("support_document_chunks", {
     .notNull()
     .defaultNow(),
 });
-
-export type SupportDocumentChunk = typeof supportDocumentChunks.$inferSelect;
-export type NewSupportDocumentChunk = typeof supportDocumentChunks.$inferInsert;

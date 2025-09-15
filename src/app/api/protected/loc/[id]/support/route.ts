@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { supportAssistants } from "@/db/schemas";
-import { BotModel, BotStatus } from "@/db/schemas/SupportBotEnums";
+import { BotModel, BotStatus } from "@/db/schemas/support/";
 import { getDefaultSupportTools } from "@/libs/supportBotDefaults";
 
 // Helper function to serialize support assistant data for API response
@@ -33,7 +33,7 @@ export async function GET(
     const supportAssistantResult = await db.select().from(supportAssistants)
       .where(eq(supportAssistants.locationId, params.id))
       .limit(1);
-    
+
     const supportAssistant = supportAssistantResult[0] || null;
 
     // Support assistant should already exist from location creation
@@ -126,7 +126,7 @@ export async function PUT(
     const existingAssistantResult = await db.select().from(supportAssistants)
       .where(eq(supportAssistants.locationId, params.id))
       .limit(1);
-    
+
     const existingAssistant = existingAssistantResult[0] || null;
 
     if (!existingAssistant) {

@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq, desc } from "drizzle-orm";
 import { supportTriggers, supportAssistants } from "@/db/schemas";
-import { TriggerType } from "@/db/schemas/SupportBotEnums";
+import { TriggerType } from "@/db/schemas/support/SupportBotEnums";
 
 export async function GET(
   req: NextRequest,

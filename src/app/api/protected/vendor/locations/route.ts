@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { locations, locationState, supportAssistants } from '@/db/schemas';
-import { BotModel, BotStatus } from '@/db/schemas/SupportBotEnums';
+import { BotModel, BotStatus } from '@/db/schemas/support/SupportBotEnums';
 import { getDefaultSupportTools } from '@/libs/supportBotDefaults';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 

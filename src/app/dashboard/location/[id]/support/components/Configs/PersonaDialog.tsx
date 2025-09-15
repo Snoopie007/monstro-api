@@ -11,16 +11,16 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
-import { SupportBotPersona } from "@/types/supportBot";
-import { usePersonaForm } from "./hooks/usePersonaForm";
+import { SupportPersona } from "@/types/support";
+import { usePersonaForm } from "../../hooks/usePersonaForm";
 import { PersonalityTraitsInput } from "./PersonalityTraitsInput";
 import { TextField, TextAreaField } from "./PersonaFormFields";
 
 interface PersonaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (personaData: Partial<SupportBotPersona>) => Promise<void>;
-  initialData?: SupportBotPersona | null;
+  onSubmit: (personaData: Partial<SupportPersona>) => Promise<void>;
+  initialData?: SupportPersona | null;
   isEditing?: boolean;
 }
 
@@ -131,8 +131,8 @@ export function PersonaDialog({
               {isSubmitting
                 ? "Saving..."
                 : isEditing
-                ? "Update Persona"
-                : "Create Persona"}
+                  ? "Update Persona"
+                  : "Create Persona"}
             </Button>
           </DialogFooter>
         </form>

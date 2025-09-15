@@ -19,7 +19,4 @@ export * from "./integrations";
 export * from "./tag";
 
 // SUPPORT BOT TYPES
-export * from "./supportBot";
-export * from "./supportConversations";
-export * from "./supportTickets";
 export * from "./support";

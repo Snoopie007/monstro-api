@@ -1,24 +1,25 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/ScrollArea";
-import { 
-  MessageSquare, 
-  Edit, 
-  Trash2, 
-  MoreVertical,
-  ChevronDown,
-  ChevronUp 
-} from "lucide-react";
 import {
+  Button,
+  Card,
+  CardContent,
+  Badge,
+  ScrollArea,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui";
+import {
+  MessageSquare,
+  Edit,
+  Trash2,
+  MoreVertical,
+  ChevronDown,
+  ChevronUp
+} from "lucide-react";
 import { QAEntryUI } from "@/types/knowledgeBase";
 
 interface QAEntryListProps {
@@ -88,7 +89,7 @@ export function QAEntryList({
       <div className="space-y-3">
         {entries.map((entry) => {
           const isExpanded = expandedEntries.has(entry.id);
-          
+
           return (
             <Card key={entry.id} className="hover:shadow-sm transition-shadow">
               <CardContent className="p-4">
@@ -145,7 +146,7 @@ export function QAEntryList({
                     >
                       <Edit size={14} />
                     </Button>
-                    
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button

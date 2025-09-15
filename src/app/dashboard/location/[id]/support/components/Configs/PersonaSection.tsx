@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User, Plus, Edit2, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { SupportAssistant } from "@/types";
+import { SupportAssistant, SupportPersona } from "@/types";
 import { PersonaDialog } from "./PersonaDialog";
 
 interface PersonaSectionProps {
@@ -238,7 +238,7 @@ export function PersonaSection({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSubmit={handleSubmitPersona}
-        initialData={persona}
+        initialData={persona as SupportPersona}
         isEditing={isEditing}
       />
     </>

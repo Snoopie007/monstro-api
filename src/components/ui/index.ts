@@ -23,3 +23,4 @@ export * from './separator';
 export * from './TablePage';
 export * from './ToolTip';
 export * from './ToggleGroup';
+export * from './slider';

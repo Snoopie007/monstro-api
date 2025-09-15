@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq, and, desc } from "drizzle-orm";
 import { supportConversations, supportMessages } from "@/db/schemas";
-import { Channel } from "@/db/schemas/SupportBotEnums";
+import { Channel } from "@/db/schemas/support/SupportBotEnums";
 
 export async function GET(
   req: NextRequest,
