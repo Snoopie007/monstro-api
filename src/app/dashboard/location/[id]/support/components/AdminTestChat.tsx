@@ -138,7 +138,6 @@ export function AdminTestChat({
     setIsLoading(true);
 
     try {
-      console.log(session?.user);
       // Call the new monstro-api test chat endpoint
       const apiUrl =
         process.env.NEXT_PUBLIC_MONSTRO_API_URL || "http://localhost:3001";
