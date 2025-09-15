@@ -69,7 +69,7 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
 };
 
 export type MemberLocation = typeof memberLocations.$inferSelect & {
-  location?: Location;
+  location?: Partial<Location>;
   member?: Member;
 };
 

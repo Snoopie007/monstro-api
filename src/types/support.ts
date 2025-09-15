@@ -42,3 +42,21 @@ export type SupportTools = {
     parameters: Record<string, any>;
     args: Record<string, any>;
 };
+
+// Test Chat API Routes
+export interface TestChatMessage {
+    role: "user" | "ai" | "assistant" | "system" | "tool";
+    content: string;
+    timestamp: number;
+    tool_calls?: any[];
+    tool_call_id?: string;
+    metadata?: any;
+  }
+  
+  export interface TestChatSession {
+    sessionId: string;
+    locationId: string;
+    messages: TestChatMessage[];
+    lastActivity: number;
+    testMemberId?: string;
+  }
