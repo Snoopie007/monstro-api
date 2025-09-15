@@ -4,6 +4,7 @@ import { SignJWT } from "jose";
 import bcrypt from "bcryptjs";
 import { getRedisClient } from "./libs/server/redis";
 import { isAfter } from "date-fns";
+import { signSupabaseJWT } from "./libs/server/supabase-jwt";
 
 class CustomLoginError extends CredentialsSignin {
   constructor(code: string) {
@@ -122,6 +123,20 @@ export default {
             };
           });
 
+          // Create Supabase JWT token
+          const userPayload = {
+            id: rest.id.toString(),
+            name: rest.name,
+            email: rest.email,
+            role: "vendor",
+            vendorId: vendor?.id || 0,
+            staffId: 0,
+          };
+          const sbToken = await signSupabaseJWT(
+            userPayload,
+            rest.id.toString()
+          );
+
           return {
             id: rest.id.toString(),
             name: rest.name,
@@ -133,6 +148,7 @@ export default {
             stripeCustomerId: vendor?.stripeCustomerId,
             role: "vendor",
             token: jwt,
+            sbToken: sbToken,
             locations: encodedLocations,
           };
         } catch (error) {

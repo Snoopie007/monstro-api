@@ -22,12 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SupportBot } from "@/types";
+import { SupportAssistant } from "@/types";
+import { useSession } from "next-auth/react";
 
 interface AdminTestChatProps {
   locationId: string;
-  supportBot: SupportBot | null;
-  onBotUpdate: (updatedBot: Partial<SupportBot>) => void;
+  supportBot: SupportAssistant | null;
+  onBotUpdate: (updatedBot: Partial<SupportAssistant>) => void;
 }
 
 interface TestMessage {
@@ -50,6 +51,7 @@ export function AdminTestChat({
   supportBot,
   onBotUpdate,
 }: AdminTestChatProps) {
+  const { data: session } = useSession();
   const [messages, setMessages] = useState<TestMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -136,16 +138,21 @@ export function AdminTestChat({
     setIsLoading(true);
 
     try {
-      // Call the actual support bot chat API
+      console.log(session?.user);
+      // Call the new monstro-api test chat endpoint
+      const apiUrl =
+        process.env.NEXT_PUBLIC_MONSTRO_API_URL || "http://localhost:3001";
       const response = await fetch(
-        `/api/protected/loc/${locationId}/support/chat`,
+        `${apiUrl}/api/protected/locations/${locationId}/support/test-chat`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            // Include auth headers if needed
+            Authorization: `Bearer ${session?.user.sbToken || ""}`,
           },
           body: JSON.stringify({
-            messages: [...messages, userMessage],
+            message: inputValue.trim(), // Send the current message instead of full history
             sessionId,
             testMemberId: selectedMemberId, // Include selected member for context
           }),
@@ -153,61 +160,28 @@ export function AdminTestChat({
       );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          `HTTP error! status: ${response.status} - ${
+            errorData.error || "Unknown error"
+          }`
+        );
       }
 
-      // Handle streaming response
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("No response body reader available");
-      }
+      // Handle JSON response from new API
+      const responseData = await response.json();
 
-      let aiContent = "";
       const aiMessage: TestMessage = {
         id: (Date.now() + 1).toString(),
-        content: "",
+        content:
+          responseData.content || "Sorry, I didn't receive a proper response.",
         role: "ai",
-        timestamp: new Date(),
+        timestamp: new Date(responseData.timestamp || Date.now()),
+        metadata: responseData.metadata,
       };
 
-      // Add the AI message to the list so we can update it as we stream
+      // Add the AI message to the list
       setMessages((prev) => [...prev, aiMessage]);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = new TextDecoder().decode(value);
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6);
-            if (data === "[DONE]") {
-              setIsLoading(false);
-              return;
-            }
-
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.content) {
-                aiContent += parsed.content;
-
-                // Update the AI message content in real-time
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === aiMessage.id
-                      ? { ...msg, content: aiContent }
-                      : msg
-                  )
-                );
-              }
-            } catch (e) {
-              // Ignore malformed JSON
-            }
-          }
-        }
-      }
     } catch (error) {
       console.error("Failed to send test message:", error);
       const errorMessage: TestMessage = {
