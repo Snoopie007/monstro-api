@@ -33,7 +33,7 @@ export function ChatMessage({ message, member }: ChatMessageProps) {
     return (
         <div key={message.id} className="flex gap-3">
             <div className="flex-shrink-0">
-                <div className='size-8 rounded-full     bg-foreground/10 border-foreground/10'>
+                <div className='size-10 rounded-full     bg-foreground/10 border-foreground/10'>
 
                 </div>
             </div>
