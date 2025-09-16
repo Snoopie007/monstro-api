@@ -11,6 +11,7 @@ import { tryCatch } from "@/libs/utils";
 import { ChatMessage } from "./ChatMessage";
 import { MoreHorizontal } from "lucide-react";
 import { ChatInput } from "./ChatInput";
+import { format } from "date-fns";
 
 
 export function ChatView({ lid }: { lid: string }) {
@@ -31,7 +32,12 @@ export function ChatView({ lid }: { lid: string }) {
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
-
+	// Auto-scroll to bottom when messages change
+	useEffect(() => {
+		if (messagesEndRef.current) {
+			messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+		}
+	}, [messages]);
 
 
 	useEffect(() => {
@@ -203,10 +209,12 @@ export function ChatView({ lid }: { lid: string }) {
 			{current && (
 				<div className='flex flex-row gap-2 items-center justify-between border-b border-foreground/5 p-4'>
 					<div className='flex flex-col '>
-						<span className='text-sm font-bold'>
+						<span className=' font-bold'>
 							{current.title}
 						</span>
-
+						<div className='text-sm text-muted-foreground'>
+							Opened by {current.member?.firstName} {current.member?.lastName} on {format(current.created, "MMM d, yyyy")}
+						</div>
 					</div>
 					<div className='flex flex-row gap-1 items-center'>
 						<Button variant="outline" size="icon" className='size-8 rounded-lg border-foreground/10' >
@@ -220,7 +228,7 @@ export function ChatView({ lid }: { lid: string }) {
 			<div className='flex flex-col h-full flex-1  overflow-hidden'>
 				<div className='relative h-full flex flex-col'>
 					<ScrollArea className="h-full px-4">
-						<div className="space-y-4 py-4">
+						<div className="space-y-8 py-4">
 							{messages.map((message) => (
 								<ChatMessage key={message.id} message={message} member={current.member} />
 							))}

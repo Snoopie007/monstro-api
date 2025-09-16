@@ -1,7 +1,8 @@
 
-import { Member, SupportMessage } from '@/types'
+import { Member, SupportAssistant, SupportMessage } from '@/types'
 import { format } from 'date-fns';
 import React, { useMemo } from 'react'
+import { useSupport } from '../../providers/SupportProvider';
 
 interface ChatMessageProps {
     message: SupportMessage;
@@ -9,25 +10,24 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ message, member }: ChatMessageProps) {
+    const { assistant } = useSupport()
 
-
-    const isMember = useMemo(() => {
-        return message.role === "human";
-    }, [message.role]);
-
-    const isStaff = useMemo(() => {
-        return message.role === "staff";
-    }, [message.role]);
-    const isAI = useMemo(() => {
-        return message.role === "ai";
-    }, [message.role]);
-    const isSystem = useMemo(() => {
-        return message.role === "system";
-    }, [message.role]);
-
+    const { isMember, isStaff, isAI, isSystem } = useMemo(() => ({
+        isMember: message.role === "human",
+        isStaff: message.role === "staff",
+        isAI: message.role === "ai",
+        isSystem: message.role === "system"
+    }), [message.role]);
 
     const userName = useMemo(() => {
-        return isMember ? member?.firstName + " " + member?.lastName : message.agentName
+
+        if (isStaff) {
+            return message.agentName
+        }
+        if (isAI) {
+            return assistant?.persona.name
+        }
+        return member?.firstName
     }, [message]);
 
     return (
@@ -43,7 +43,7 @@ export function ChatMessage({ message, member }: ChatMessageProps) {
                         {userName}
                     </span>
                     <span className="text-sm text-muted-foreground">
-                        {format(message.created || new Date(), "HH:mm")}
+                        {format(message.created || new Date(), "HH:mm a")}
                     </span>
                 </div>
                 <div className="leading-relaxed">

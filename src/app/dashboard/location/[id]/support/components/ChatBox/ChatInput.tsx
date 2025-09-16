@@ -1,24 +1,18 @@
 "use client";
 import { useState } from "react";
 import { useSupport } from "../../providers/SupportProvider";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui";
 import { toast } from "react-toastify";
-import { Input } from "@/components/forms";
+import { Textarea } from "@/components/forms";
 
 
 export function ChatInput({ lid }: { lid: string }) {
     const { current } = useSupport();
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSendMessage();
-        }
-    };
 
-    const handleSendMessage = async () => {
+    async function handleSendMessage() {
         if (!message || loading || !current) return;
 
         if (current.isVendorActive) {
@@ -52,74 +46,55 @@ export function ChatInput({ lid }: { lid: string }) {
             setLoading(false);
         }
     };
+
+
+    async function handleUseSuggestion() {
+        //Suggestion Logic
+    }
+
+    async function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            e.preventDefault();
+            await handleSendMessage();
+        }
+    }
+
     return (
         <div>
 
-            {/* Bot Suggestion Area - Only show if vendor has taken over and there's a suggestion */}
-            {/* {isVendorTakenOver && botSuggestion && (
-                <div className="flex-shrink-0 border-t bg-muted/30 p-4">
-                    <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                                <Lightbulb size={14} className="text-white" />
-                            </div>
-                        </div>
-                        <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
-                                <Badge
-                                    variant="outline"
-                                    className="text-xs bg-blue-50 text-blue-700 border-blue-200"
-                                >
-                                    Bot Suggestion
-                                </Badge>
-                            </div>
-                            <div className="text-sm leading-relaxed bg-white border rounded-lg p-3">
-                                {botSuggestion}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button variant="outline"
-                                    size="sm"
-                                    onClick={handleUseSuggestion}
-                                    className="gap-2"
-                                >
-                                    <Send size={12} />
-                                    Use as Response
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setBotSuggestion(null)}
-                                    className="text-muted-foreground"
-                                >
-                                    Dismiss
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )} */}
 
-            <div className="flex-shrink-0 p-2">
-                <div className="flex gap-2">
-                    <Input
+
+            <div className="flex-shrink-0 p-4">
+                <div className="flex gap-2 bg-background rounded-lg overflow-hidden flex-col pb-2">
+                    <Textarea
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        onKeyDown={handleKeyPress}
-                        placeholder="Your message..."
+                        onKeyDown={handleKeyDown}
+                        placeholder="Your message... (Ctrl+Enter to send)"
                         disabled={loading}
-                        className="flex-1"
+                        className="border-none resize-none p-4 focus-visible:ring-0 focus-visible:outline-hidden"
+                        style={{ minHeight: '80px', maxHeight: '250px' }}
                     />
-                    <Button onClick={handleSendMessage} disabled={!message || loading} size="sm" className="gap-2">
-                        disabled={!message || loading}
-                        {loading ? (
-                            <Loader2 size={16} className="animate-spin" />
-                        ) : (
-                            <>
-                                <Send size={16} />
-                                Send
-                            </>
-                        )}
-                    </Button>
+                    <div className="px-2 justify-end flex gap-2">
+                        <Button variant="outline"
+                            size="sm"
+                            onClick={handleUseSuggestion}
+                            className="gap-2"
+                        >
+                            <Sparkles size={14} className="text-muted-foreground" />
+                            AI Suggest
+                        </Button>
+                        <Button onClick={handleSendMessage} disabled={!message || loading} size="sm" className="gap-1">
+                            {loading ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <>
+                                    <Send size={14} />
+                                    Send
+                                </>
+                            )}
+                        </Button>
+                    </div>
 
                 </div>
             </div>
