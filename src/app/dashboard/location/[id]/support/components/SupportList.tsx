@@ -117,7 +117,11 @@ export function SupportList({ lid }: { lid: string }) {
 
 			<div className="flex-col flex-1 space-y-2 ">
 				<div className="space-y-4 px-2">
-					<Input placeholder="Search" className="rounded-lg w-full bg-foreground/5 border-none" />
+					<Input placeholder="Search"
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						className="rounded-lg w-full bg-foreground/5 border-none"
+					/>
 					<div className="flex flex-row gap-2 items-center">
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>

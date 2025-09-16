@@ -28,25 +28,20 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-
+	Slider,
 } from "@/components/forms";
 import {
 	Settings,
 	Save,
-	FileText,
-	User,
-	Zap,
 } from "lucide-react";
-import { SupportAssistant } from "@/types/support";
+import { SupportAssistant } from "@/types";
 import { KnowledgeBase } from "@/types/knowledgeBase";
 import {
 	TriggersSection,
 	PersonaSection,
-	DocumentsSection,
-} from "./Configs";
+} from "./";
 import { toast } from "react-toastify";
 import { useSupport } from "../providers";
-import { Slider } from "@/components/ui/slider";
 
 interface BotConfigProps {
 	lid: string;

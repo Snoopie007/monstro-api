@@ -1,62 +1,59 @@
-"use client";
+"use client"
 
-import * as React from "react";
-import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { CheckIcon } from "lucide-react";
+import * as React from "react"
+import { Checkbox as CheckboxPrimitive } from "radix-ui"
 
-import { cn } from "@/libs/utils";
-import { cva, type VariantProps } from "class-variance-authority";
-
-const checkboxVarients = cva(
-  "peer h-4 w-4 shrink-0 rounded-sm border border-foreground ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50  data-[state=checked]:text-primary-foreground",
-  {
-    variants: {
-      variant: {
-        default: "bg-transparent  data-[state=checked]:bg-primary",
-        red: "bg-red-500 data-[state=checked]:bg-red-500",
-        green: "bg-green-400 data-[state=checked]:bg-green-400",
-        blue: "bg-blue-500 data-[state=checked]:bg-blue-500",
-        pink: "bg-pink-500 data-[state=checked]:bg-pink-500",
-        cyan: "bg-cyan-400 data-[state=checked]:bg-cyan-400",
-        lime: "bg-lime-400 data-[state=checked]:bg-lime-400",
-        orange: "bg-orange-500 data-[state=checked]:bg-orange-500",
-        fuchsia: "bg-fuchsia-500 data-[state=checked]:bg-fuchsia-500",
-        sky: "bg-sky-400 data-[state=checked]:bg-sky-400",
-        lemon: "bg-lime-500 data-[state=checked]:bg-lime-500",
-        purple: "bg-purple-500 data-[state=checked]:bg-purple-500",
-        yellow: "bg-yellow-400 data-[state=checked]:bg-yellow-400",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-);
+import { cn } from "@/components/event-calendar/utils"
 
 function Checkbox({
   className,
-  variant,
   ...props
-}: React.ComponentProps<typeof CheckboxPrimitive.Root> &
-  VariantProps<typeof checkboxVarients>) {
+}: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
       className={cn(
-        "peer border-input dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-        checkboxVarients({ variant }),
+        "peer border-input data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex size-4 shrink-0 items-center justify-center rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
     >
       <CheckboxPrimitive.Indicator
         data-slot="checkbox-indicator"
-        className="flex items-center justify-center text-current transition-none"
+        className="grid place-content-center text-current"
       >
-        <CheckIcon className="size-3.5" />
+        {props.checked === "indeterminate" ? (
+          <svg
+            width="9"
+            height="9"
+            viewBox="0 0 9 9"
+            fill="currentcolor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              d="M0.75 4.5C0.75 4.08579 1.08579 3.75 1.5 3.75H7.5C7.91421 3.75 8.25 4.08579 8.25 4.5C8.25 4.91421 7.91421 5.25 7.5 5.25H1.5C1.08579 5.25 0.75 4.91421 0.75 4.5Z"
+            />
+          </svg>
+        ) : (
+          <svg
+            width="9"
+            height="9"
+            viewBox="0 0 9 9"
+            fill="currentcolor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              d="M8.53547 0.62293C8.88226 0.849446 8.97976 1.3142 8.75325 1.66099L4.5083 8.1599C4.38833 8.34356 4.19397 8.4655 3.9764 8.49358C3.75883 8.52167 3.53987 8.45309 3.3772 8.30591L0.616113 5.80777C0.308959 5.52987 0.285246 5.05559 0.563148 4.74844C0.84105 4.44128 1.31533 4.41757 1.62249 4.69547L3.73256 6.60459L7.49741 0.840706C7.72393 0.493916 8.18868 0.396414 8.53547 0.62293Z"
+            />
+          </svg>
+        )}
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
-  );
+  )
 }
 
-export { Checkbox };
+export { Checkbox }

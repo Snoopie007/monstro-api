@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
+import { Card, CardContent, CardHeader, CardTitle, Button } from "@/components/ui";
+import { Label, Textarea } from "@/components/forms";
 import { X, Plus } from "lucide-react";
 import { QAEntryUI } from "@/types/knowledgeBase";
 

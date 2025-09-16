@@ -3,7 +3,7 @@
 import React from "react";
 import { Input } from "@/components/forms/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { Switch } from "@/components/forms/switch";
 import {
   Select,
   SelectContent,

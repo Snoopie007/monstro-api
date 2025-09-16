@@ -1,4 +1,4 @@
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@/components/forms/checkbox";
 import { MemberPlan } from "@/types/member";
 
 interface PlanCheckboxProps {

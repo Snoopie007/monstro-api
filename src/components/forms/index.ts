@@ -9,3 +9,5 @@ export * from "./TagInput";
 export * from "./label";
 export * from "./OTPInput";
 export * from "./PriceInput";
+export * from "./switch";
+export * from "./slider";

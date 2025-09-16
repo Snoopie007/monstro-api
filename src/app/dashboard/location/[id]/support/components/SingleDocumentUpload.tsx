@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
 	Upload,
-	FileText,
 	Trash2,
 	Download,
 	AlertCircle,
@@ -31,7 +30,6 @@ export function SingleDocumentUpload({
 	onReplace,
 	onDelete,
 	isUploading = false,
-	supportAssistantId,
 }: SingleDocumentUploadProps) {
 	const [dragOver, setDragOver] = useState(false);
 	const [error, setError] = useState<string | null>(null);

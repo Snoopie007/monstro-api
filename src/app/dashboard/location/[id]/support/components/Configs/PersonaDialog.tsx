@@ -7,9 +7,9 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  Button,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui";
 import { toast } from "react-toastify";
 import { SupportPersona } from "@/types/support";
 import { usePersonaForm } from "../../hooks/usePersonaForm";

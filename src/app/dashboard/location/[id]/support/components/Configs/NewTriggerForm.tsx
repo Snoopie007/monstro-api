@@ -1,21 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Button, Badge } from "@/components/ui";
 import {
+  Label, Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+} from "@/components/forms";
 import { X, Plus } from "lucide-react";
 import { toast } from "react-toastify";
-import { SupportTrigger } from "@/types/supportBot";
+import { SupportTrigger } from "@/types/support";
 
 interface NewTriggerFormProps {
   onSubmit: (triggerData: Partial<SupportTrigger>) => void;
@@ -65,7 +62,7 @@ export function NewTriggerForm({ onSubmit, onCancel }: NewTriggerFormProps) {
     name: "",
     triggerType: "keyword",
     triggerPhrases: [],
-    toolCall: { name: "", parameters: {} },
+    toolCall: { name: "", parameters: {}, description: "", args: [] },
     examples: [],
     requirements: [],
     isActive: true,
@@ -82,7 +79,7 @@ export function NewTriggerForm({ onSubmit, onCancel }: NewTriggerFormProps) {
   const handleToolCallChange = (toolName: string) => {
     setFormData((prev) => ({
       ...prev,
-      toolCall: { name: toolName, parameters: {} },
+      toolCall: { name: toolName, parameters: {}, description: "", args: [] },
     }));
   };
 

@@ -2,8 +2,8 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui";
+import { Input } from "@/components/forms";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import {
 	Send,
@@ -21,7 +21,7 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
+} from "@/components/forms";
 import { SupportAssistant } from "@/types";
 import { useSession } from "next-auth/react";
 

@@ -20,35 +20,26 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { SupportAssistant, SupportConversation, SupportMessage } from "@/types";
 import { toast } from "react-toastify";
-import { useSupportRealtime } from "../hooks/useSupportRealtime";
+import { useSupportRealtime } from "../../hooks/useSupportRealtime";
+import { useSupport } from "../../providers/SupportProvider";
 
-interface ConversationViewProps {
-	locationId: string;
-	conversation?: SupportConversation;
-	supportBot: SupportAssistant | null;
-}
 
-interface ConversationMessage {
-	id: string;
-	content: string;
-	role: "user" | "assistant" | "staff" | "system" | "ai";
-	timestamp: Date;
-	metadata?: Record<string, any>;
-}
+export function ChatBox({ lid }: { lid: string }) {
 
-export function ConversationView({
-	locationId,
-	conversation,
-	supportBot,
-}: ConversationViewProps) {
-	const [messages, setMessages] = useState<ConversationMessage[]>([]);
+	const { current } = useSupport();
+	const [messages, setMessages] = useState<SupportMessage[]>([]);
 	const [inputValue, setInputValue] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [isVendorTakenOver, setIsVendorTakenOver] = useState(false);
 	const [botSuggestion, setBotSuggestion] = useState<string | null>(null);
-	const [currentConversation, setCurrentConversation] = useState<
-		SupportConversation | undefined
-	>(conversation);
+
+
+	useEffect(() => {
+		if (current) {
+			setMessages(current.messages || []);
+		}
+	}, [current]);
+
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
 	const scrollToBottom = () => {
