@@ -44,8 +44,8 @@ export async function GET(
     // Serialize dates for consistent API response
     const serializedTrigger = {
       ...trigger,
-      createdAt: trigger.createdAt?.toISOString(),
-      updatedAt: trigger.updatedAt?.toISOString(),
+      createdAt: trigger.created?.toISOString(),
+      updatedAt: trigger.updated?.toISOString(),
     };
 
     return NextResponse.json({ trigger: serializedTrigger });
@@ -164,8 +164,8 @@ export async function PUT(
     // Serialize dates for consistent API response
     const serializedTrigger = {
       ...updatedTrigger,
-      createdAt: updatedTrigger.createdAt?.toISOString(),
-      updatedAt: updatedTrigger.updatedAt?.toISOString(),
+      createdAt: updatedTrigger.created?.toISOString(),
+      updatedAt: updatedTrigger.updated?.toISOString(),
     };
 
     return NextResponse.json({

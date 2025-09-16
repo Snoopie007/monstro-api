@@ -45,7 +45,7 @@ export async function PUT(
       .update(supportAssistants)
       .set({
         status,
-        updatedAt: new Date(),
+        updated: new Date(),
       })
       .where(eq(supportAssistants.id, existingAssistant.id))
       .returning();
@@ -58,8 +58,8 @@ export async function PUT(
     // Serialize dates for consistent API response
     const serializedAssistant = {
       ...supportAssistant,
-      createdAt: supportAssistant?.createdAt?.toISOString(),
-      updatedAt: supportAssistant?.updatedAt?.toISOString(),
+      createdAt: supportAssistant?.created?.toISOString(),
+      updatedAt: supportAssistant?.updated?.toISOString(),
     };
 
     return NextResponse.json({

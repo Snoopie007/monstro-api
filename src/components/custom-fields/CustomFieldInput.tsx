@@ -1,25 +1,24 @@
 "use client";
 
 import React from "react";
-import { Input } from "@/components/forms/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/forms/switch";
 import {
+  Input,
+  Switch,
+  Checkbox,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/forms/checkbox";
-import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
+} from "@/components/forms";
 import {
+  Calendar,
+  Button,
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/libs/utils";

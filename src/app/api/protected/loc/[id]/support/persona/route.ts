@@ -94,6 +94,8 @@ export async function POST(
 
     // Create the persona object
     const personaData = {
+      avatar: "",
+      personality: [],
       name,
       image,
       responseStyle,
@@ -105,7 +107,7 @@ export async function POST(
       .update(supportAssistants)
       .set({
         persona: personaData,
-        updatedAt: new Date(),
+        updated: new Date(),
       })
       .where(eq(supportAssistants.id, supportAssistant.id))
       .returning();
@@ -172,6 +174,8 @@ export async function PUT(
 
     // Update the persona object
     const updatedPersonaData = {
+      avatar: image,
+      personality: personalityTraits,
       name,
       image,
       responseStyle,
@@ -183,7 +187,7 @@ export async function PUT(
       .update(supportAssistants)
       .set({
         persona: updatedPersonaData,
-        updatedAt: new Date(),
+        updated: new Date(),
       })
       .where(eq(supportAssistants.id, supportAssistant.id))
       .returning();
@@ -238,8 +242,8 @@ export async function DELETE(
     await db
       .update(supportAssistants)
       .set({
-        persona: {},
-        updatedAt: new Date(),
+        persona: undefined,
+        updated: new Date(),
       })
       .where(eq(supportAssistants.id, supportAssistant.id));
 

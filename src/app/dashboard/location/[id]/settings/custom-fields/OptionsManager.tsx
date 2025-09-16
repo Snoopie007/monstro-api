@@ -7,8 +7,7 @@ import {
 import { FormField, FormMessage } from "@/components/forms";
 import { GripVertical, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Input } from "@/components/forms/input";
 
 interface OptionsManagerProps {
   fieldKey: string;

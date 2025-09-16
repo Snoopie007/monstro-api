@@ -4,13 +4,15 @@ import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { supportAssistants } from "@/db/schemas";
 import { BotModel, BotStatus } from "@/db/schemas/support/";
-import { getDefaultSupportTools } from "@/libs/supportBotDefaults";
 
 // Helper function to serialize support assistant data for API response
 function serializeSupportAssistant(assistant: any) {
   return {
     ...assistant,
-    knowledgeBase: assistant?.knowledgeBase || { qa_entries: [], document: null },
+    knowledgeBase: assistant?.knowledgeBase || {
+      qa_entries: [],
+      document: null,
+    },
     createdAt: assistant?.createdAt?.toISOString(),
     updatedAt: assistant?.updatedAt?.toISOString(),
   };
@@ -30,7 +32,9 @@ export async function GET(
     }
 
     // Find existing support assistant for this location - use explicit select for JSONB fields
-    const supportAssistantResult = await db.select().from(supportAssistants)
+    const supportAssistantResult = await db
+      .select()
+      .from(supportAssistants)
       .where(eq(supportAssistants.locationId, params.id))
       .limit(1);
 
@@ -39,7 +43,10 @@ export async function GET(
     // Support assistant should already exist from location creation
     if (!supportAssistant) {
       return NextResponse.json(
-        { error: "Support assistant not found for this location. Please contact support." },
+        {
+          error:
+            "Support assistant not found for this location. Please contact support.",
+        },
         { status: 404 }
       );
     }
@@ -74,7 +81,16 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { name, prompt, initialMessage, temperature, model, status, persona, knowledgeBase } = body;
+    const {
+      name,
+      prompt,
+      initialMessage,
+      temperature,
+      model,
+      status,
+      persona,
+      knowledgeBase,
+    } = body;
 
     // Validate required fields only if they are being updated
     if (name !== undefined && !name) {
@@ -107,7 +123,7 @@ export async function PUT(
     }
 
     // Validate model
-    if (model && !Object.values(BotModel).includes(model as BotModel)) {
+    if (model && !Object.values(BotModel.enumValues).includes(model)) {
       return NextResponse.json(
         { error: "Invalid model. Must be anthropic, gpt, or gemini" },
         { status: 400 }
@@ -115,7 +131,7 @@ export async function PUT(
     }
 
     // Validate status
-    if (status && !Object.values(BotStatus).includes(status as BotStatus)) {
+    if (status && !Object.values(BotStatus.enumValues).includes(status)) {
       return NextResponse.json(
         { error: "Invalid status. Must be Draft, Active, or Paused" },
         { status: 400 }
@@ -123,7 +139,9 @@ export async function PUT(
     }
 
     // Find existing support assistant - use explicit select for JSONB fields
-    const existingAssistantResult = await db.select().from(supportAssistants)
+    const existingAssistantResult = await db
+      .select()
+      .from(supportAssistants)
       .where(eq(supportAssistants.locationId, params.id))
       .limit(1);
 
@@ -143,7 +161,8 @@ export async function PUT(
 
     if (name !== undefined) updateData.name = name;
     if (prompt !== undefined) updateData.prompt = prompt;
-    if (initialMessage !== undefined) updateData.initialMessage = initialMessage;
+    if (initialMessage !== undefined)
+      updateData.initialMessage = initialMessage;
     if (temperature !== undefined) updateData.temperature = temperature;
     if (model !== undefined) updateData.model = model;
     if (status !== undefined) updateData.status = status;

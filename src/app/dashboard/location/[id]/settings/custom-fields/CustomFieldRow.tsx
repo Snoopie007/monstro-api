@@ -1,32 +1,26 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { FormField } from "@/components/forms";
 import {
+  FormField,
   FormItem,
   FormControl,
   FormMessage,
   FormLabel,
   FormDescription,
-} from "@/components/forms/form";
-
-import { Input } from "@/components/ui/input";
-
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+  Input,
+  Label,
+} from "@/components/forms";
 
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Button, Card, CardContent, Separator } from "@/components/ui";
 import { Copy, Trash2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import { OptionsManager } from "./OptionsManager";
 
 import { Pill } from "@/components/ui/kibo-ui/pill";
 import { customFieldTypeOptions } from "./schemas";
-import { Textarea } from "@/components/ui/textarea";
+import { Textarea } from "@/components/forms";
 import React from "react";
 
 interface CustomFieldRowProps {

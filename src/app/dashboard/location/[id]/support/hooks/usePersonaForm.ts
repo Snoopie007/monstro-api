@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { SupportBotPersona } from "@/types/supportBot";
+import { SupportPersona } from "@/types";
 
 export interface PersonaFormData {
   name: string;
@@ -8,14 +8,14 @@ export interface PersonaFormData {
   personalityTraits: string[];
 }
 
-const getInitialFormData = (initialData?: SupportBotPersona | null): PersonaFormData => ({
+const getInitialFormData = (initialData?: SupportPersona | null): PersonaFormData => ({
   name: initialData?.name || "",
-  image: initialData?.image || "",
+  image: initialData?.avatar || "",
   responseStyle: initialData?.responseStyle || "",
-  personalityTraits: initialData?.personalityTraits || [],
+  personalityTraits: initialData?.personality || [],
 });
 
-export function usePersonaForm(initialData?: SupportBotPersona | null) {
+export function usePersonaForm(initialData?: SupportPersona | null) {
   const [formData, setFormData] = useState<PersonaFormData>(() => 
     getInitialFormData(initialData)
   );
