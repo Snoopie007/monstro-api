@@ -33,16 +33,20 @@ export function ChatMessage({ message, member }: ChatMessageProps) {
     return (
         <div key={message.id} className="flex gap-3">
             <div className="flex-shrink-0">
+                <div className='size-8 rounded-full     bg-foreground/10 border-foreground/10'>
 
+                </div>
             </div>
             <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-sm  text-indigo-500 font-bold">
+                        {userName}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
                         {format(message.created || new Date(), "HH:mm")}
                     </span>
                 </div>
-                <div className="text-sm leading-relaxed">
+                <div className="leading-relaxed">
                     {message.content}
                 </div>
             </div>
