@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ScrollArea } from "@/components/ui";
+import { Button, ScrollArea } from "@/components/ui";
 
 import { SupportMessage } from "@/types";
 import { toast } from "react-toastify";
 import { useSupportRealtime } from "../../hooks/useSupportRealtime";
 import { useSupport } from "../../providers/SupportProvider";
 import { tryCatch } from "@/libs/utils";
-import { cn } from "@/components/event-calendar";
 import { ChatMessage } from "./ChatMessage";
+import { MoreHorizontal } from "lucide-react";
+import { ChatInput } from "./ChatInput";
 
 
 export function ChatView({ lid }: { lid: string }) {
@@ -199,26 +200,25 @@ export function ChatView({ lid }: { lid: string }) {
 
 	return (
 		<div className="h-full flex flex-col">
-			<div className="pb-3">
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-2">
-						<div className="text-lg font-semibold">
+			{current && (
+				<div className='flex flex-row gap-2 items-center justify-between border-b border-foreground/5 p-4'>
+					<div className='flex flex-col '>
+						<span className='text-sm font-bold'>
 							{current.title}
-						</div>
-						<div className={cn("size-2 rounded-full", current.isVendorActive ? "bg-green-500" : "bg-gray-300")}>
+						</span>
 
-						</div>
 					</div>
-					<div className="flex items-center gap-2">
+					<div className='flex flex-row gap-1 items-center'>
+						<Button variant="outline" size="icon" className='size-8 rounded-lg border-foreground/10' >
+							<MoreHorizontal className="size-4" />
+						</Button>
 
 					</div>
 				</div>
+			)}
 
-			</div>
-
-			<div className="flex-1 flex flex-col p-0 overflow-hidden">
-				{/* Messages Area */}
-				<div className="flex-1 min-h-0 overflow-hidden">
+			<div className='flex flex-col h-full flex-1  overflow-hidden'>
+				<div className='relative h-full flex flex-col'>
 					<ScrollArea className="h-full px-4">
 						<div className="space-y-4 py-4">
 							{messages.map((message) => (
@@ -227,6 +227,7 @@ export function ChatView({ lid }: { lid: string }) {
 							<div ref={messagesEndRef} />
 						</div>
 					</ScrollArea>
+					<ChatInput lid={lid} />
 				</div>
 
 			</div>
