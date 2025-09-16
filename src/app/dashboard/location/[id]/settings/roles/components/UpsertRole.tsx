@@ -140,7 +140,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                                                 {RoleColors && RoleColors.map((color) => (
                                                     <FormControl key={color}>
                                                         <Checkbox
-                                                            variant={color}
+                                                            // variant={color}
                                                             className={cn(` h-6 w-6`)}
                                                             checked={field.value === color}
                                                             onCheckedChange={(checked) => {

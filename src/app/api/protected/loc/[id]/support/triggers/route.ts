@@ -3,7 +3,6 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq, desc } from "drizzle-orm";
 import { supportTriggers, supportAssistants } from "@/db/schemas";
-import { TriggerType } from "@/db/schemas/support/SupportBotEnums";
 
 export async function GET(
   req: NextRequest,
@@ -33,14 +32,14 @@ export async function GET(
     // Fetch all triggers for this support assistant
     const triggers = await db.query.supportTriggers.findMany({
       where: eq(supportTriggers.supportAssistantId, supportAssistant.id),
-      orderBy: [desc(supportTriggers.createdAt)],
+      orderBy: [desc(supportTriggers.created)],
     });
 
     // Serialize dates for consistent API response
     const serializedTriggers = triggers.map((trigger) => ({
       ...trigger,
-      createdAt: trigger.createdAt?.toISOString(),
-      updatedAt: trigger.updatedAt?.toISOString(),
+      createdAt: trigger.created?.toISOString(),
+      updatedAt: trigger.updated?.toISOString(),
     }));
 
     return NextResponse.json({
@@ -72,7 +71,7 @@ export async function POST(
     const body = await req.json();
     const {
       name,
-      triggerType = TriggerType.Keyword,
+      triggerType = "keyword",
       triggerPhrases = [],
       toolCall,
       examples = [],
@@ -126,15 +125,15 @@ export async function POST(
         examples,
         requirements,
         isActive,
-        createdAt: new Date(),
+        created: new Date(),
       })
       .returning();
 
     // Serialize dates for consistent API response
     const serializedTrigger = {
       ...newTrigger,
-      createdAt: newTrigger.createdAt?.toISOString(),
-      updatedAt: newTrigger.updatedAt?.toISOString(),
+      createdAt: newTrigger.created?.toISOString(),
+      updatedAt: newTrigger.updated?.toISOString(),
     };
 
     return NextResponse.json(

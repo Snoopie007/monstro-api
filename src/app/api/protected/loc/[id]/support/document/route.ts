@@ -343,3 +343,16 @@ export async function DELETE(
   }
 }
 */
+
+
+
+// Placeholder exports to make this a valid module until document processing is implemented
+// For resolving build error
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  return NextResponse.json(
+    { error: "Document upload functionality not yet implemented" },
+    { status: 501 }
+  );
+}
