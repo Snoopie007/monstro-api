@@ -10,4 +10,4 @@ export { TextAlign } from "@tiptap/extension-text-align";
 export { Placeholder } from '@tiptap/extension-placeholder'
 export { TextStyle } from '@tiptap/extension-text-style'
 export { TableOfContents } from '@tiptap-pro/extension-table-of-contents'
-export { ExtensionKit, AIExtensionKit } from './ExtensionKit'
+export { ExtensionKit, SupportExtensionKit } from './ExtensionKit'

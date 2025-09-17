@@ -14,7 +14,7 @@ export function ChatMessage({ message, member }: ChatMessageProps) {
 
     const { isMember, isStaff, isAI, isSystem } = useMemo(() => ({
         isMember: message.role === "human",
-        isStaff: message.role === "staff",
+        isStaff: message.agentId,
         isAI: message.role === "ai",
         isSystem: message.role === "system"
     }), [message.role]);

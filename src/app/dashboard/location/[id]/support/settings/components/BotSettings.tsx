@@ -71,7 +71,7 @@ export function BotSettings({ lid }: { lid: string }) {
 
                             <ScrollArea className='h-[calc(100%-110px)] w-full  '>
                                 <div className='px-4'>
-                                    <BotFields form={form} lid={lid} assistant={assistant} />
+                                    <BotFields form={form} lid={lid} />
                                 </div>
                             </ScrollArea>
                             <div className='flex flex-row justify-end px-4 py-2  '>

@@ -2,9 +2,10 @@
 import { interpolate, tryCatch } from "@/libs/utils";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui";
-import { Brush, Loader2, } from "lucide-react";
+import { Brush, Loader2, BrushCleaning } from "lucide-react";
 import { TestChatMessages, TestChatInput } from "."
 import { useBotSettingContext } from "../../provider";
+import { MemberSelect } from "./MemberSelect";
 
 
 
@@ -65,13 +66,16 @@ export function TestChatBox({ lid }: { lid: string }) {
         <div className="flex flex-col h-full bg-foreground/5  rounded-lg">
             <div className="flex flex-row items-center justify-between flex-initial  px-4 h-[50px]">
 
-
+                <div className=" font-medium">
+                    Test Your Support Bot
+                </div>
                 <div className="flex flex-row gap-2">
-                    {/* <ContactSelect lid={location.id} /> */}
+                    <MemberSelect lid={lid} />
                     <Button variant={'ghost'} size={'icon'} className='size-6 hover:bg-foreground/10'
                         onClick={resetChat}
                     >
-                        {loading ? <Loader2 size="14" className="animate-spin" /> : <Brush size="14" />}
+
+                        {loading ? <Loader2 size="14" className="animate-spin" /> : <BrushCleaning size="14" />}
                     </Button>
 
                 </div>

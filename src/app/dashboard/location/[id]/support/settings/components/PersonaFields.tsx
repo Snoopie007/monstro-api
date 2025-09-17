@@ -2,8 +2,6 @@ import { FormLabel } from "@/components/forms"
 import { UseFormReturn } from "react-hook-form"
 import { SupportBotSchema } from "@/libs/FormSchemas"
 import { z } from "zod"
-// import { AIPersonalities } from "@/libs/AIPersonalities"
-
 import { InputTags } from "@/components/forms"
 import {
     FormField,
@@ -13,12 +11,12 @@ import {
     Textarea,
     Input,
 } from "@/components/forms"
-import { SupportPersona } from "@/types/support"
+import { cn } from "@/components/event-calendar"
 
 
 interface PersonaFieldsProps {
     form: UseFormReturn<z.infer<typeof SupportBotSchema>>
-    persona: SupportPersona
+
 }
 
 const BotPersonalities = [
@@ -32,18 +30,21 @@ const DummyImages = [
     "https://randomuser.me/api/portraits/lego/3.jpg",
     "https://randomuser.me/api/portraits/lego/4.jpg",
 ]
-export function PersonaFields({ form, persona }: PersonaFieldsProps) {
+export function PersonaFields({ form }: PersonaFieldsProps) {
+    const avatar = form.watch('persona.avatar')
     return (
-        <div>
+        <div className='space-y-2 bg-foreground/5 rounded-md p-4'>
             <fieldset className='space-y-2'>
-                <FormLabel size={'sm'}>Choose a Avatar</FormLabel>
+                <FormLabel size={'sm'}>Give your bot an avatar</FormLabel>
                 <div className='flex flex-row gap-2'>
                     {DummyImages.map((image, i) => (
                         <div key={i}
-                            className={`relative border-2 group border-transparent cursor-pointer 
-                                            transition-all duration-300 hover:scale-110
-                                             ${persona.avatar === image ? 'scale-110 ' : ''}`}
-                            data-selected={persona.avatar === image}
+                            className={cn(
+                                'relative border-2 group border-transparent cursor-pointer',
+                                'transition-all duration-300 hover:scale-110',
+                                avatar === image ? 'scale-110 ' : ''
+                            )}
+                            data-selected={avatar === image}
                             onClick={() => {
                                 form.setValue('persona.avatar', image)
                             }}
@@ -64,7 +65,7 @@ export function PersonaFields({ form, persona }: PersonaFieldsProps) {
                     name="name"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel size={'sm'}>Name</FormLabel>
+                            <FormLabel size={'sm'}>Give your bot a name</FormLabel>
                             <FormControl>
                                 <Input {...field} className='rounded-md border-foreground/5 shadow-none' />
                             </FormControl>
@@ -81,7 +82,7 @@ export function PersonaFields({ form, persona }: PersonaFieldsProps) {
                         <FormItem>
                             <FormLabel size={'sm'}>Response Instructions</FormLabel>
                             <FormControl>
-                                <Textarea {...field} className='rounded-md border-foreground/5 h-40 shadow-none resize-none'
+                                <Textarea {...field} className='rounded-md border-foreground/5 h-30 shadow-none resize-none'
                                     placeholder='eg. respond in a friendly and engaging manner, use emojis, etc.' />
                             </FormControl>
                             <FormMessage />

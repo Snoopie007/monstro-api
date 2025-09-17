@@ -1,5 +1,6 @@
 import { MentionNodeAttrs, MentionOptions } from '@tiptap/extension-mention';
 import { Node } from '@tiptap/pm/model';
+import { CustomVariableGroup } from '@/types';
 import {
     FontSize,
     Placeholder,
@@ -46,26 +47,28 @@ const ExtensionKit = () => [
 
 
 
-const AIExtensionKit = () => [
-    StarterKit.configure({
-        heading: false,
-        horizontalRule: false,
-    }),
+function SupportExtensionKit(variables?: CustomVariableGroup[]) {
+    return [
+        StarterKit.configure({
+            heading: false,
+            horizontalRule: false,
+        }),
 
-    Variable.configure({
-        HTMLAttributes: {
-            class: 'variable',
-        },
-        renderText(props: { options: MentionOptions<any, MentionNodeAttrs>; node: Node }) {
-            return `@${props.node.attrs.value}`
-        },
-        suggestion: VariableOptions
-    }),
-    TextStyle,
-]
+        Variable.configure({
+            HTMLAttributes: {
+                class: 'variable',
+            },
+            renderText(props: { options: MentionOptions<any, MentionNodeAttrs>; node: Node }) {
+                return `@${props.node.attrs.value}`
+            },
+            // suggestion: VariableOptions(variables ?? [])
+        }),
+        TextStyle,
+    ]
+}
 
 
 
 
 
-export { ExtensionKit, AIExtensionKit }
+export { ExtensionKit, SupportExtensionKit }

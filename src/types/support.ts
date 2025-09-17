@@ -49,7 +49,7 @@ export type SupportTool = {
 };
 
 
-export type SupportMessageRole = "user" | "ai" | "assistant" | "system" | "tool" | "tool_response" | "tool_call";
+export type SupportMessageRole = "human" | "ai" | "assistant" | "system" | "tool" | "tool_response" | "tool_call";
 
 
 // Test Chat API Routes
@@ -71,3 +71,14 @@ export interface TestChatSession {
   lastActivity: number;
   testMemberId?: string;
 }
+
+export type CustomVariableGroup = {
+  name: string;
+  variables: CustomVariable[];
+}
+
+export type CustomVariable = {
+  id: number;
+  label: string;
+  value: string;
+};

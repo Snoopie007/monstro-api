@@ -47,10 +47,10 @@ export function TestChatInput({ lid }: { lid: string }) {
                 // First valid content chunk received
                 if (!hasReceivedContent) {
                     hasReceivedContent = true;
-                    // setMessage((prev) => [...prev, { ...newMessage, isLoading: true }]);
+                    setMessage((prev) => [...prev, { ...newMessage, isLoading: true }]);
                 } else {
-                    // newMessage.content += content;
-                    // setMessage((prev) => [...prev.slice(0, -1), { ...newMessage, isLoading: false }]);
+                    newMessage.content += content;
+                    setMessage((prev) => [...prev.slice(0, -1), { ...newMessage, isLoading: false }]);
                 }
 
             }
@@ -64,7 +64,7 @@ export function TestChatInput({ lid }: { lid: string }) {
 
         const userMessage: TestChatMessage = {
             id: nanoid(),
-            role: "user",
+            role: "human",
             content: input.trim(),
             isLoading: false,
             timestamp: new Date().getTime()

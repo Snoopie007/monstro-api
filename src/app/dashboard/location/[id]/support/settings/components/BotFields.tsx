@@ -22,15 +22,16 @@ import {
     ScrollArea,
 } from "@/components/ui";
 
-import { SupportAssistant } from "@/types";
+import { SupportAssistant, CustomVariable } from "@/types";
 import { useCallback } from "react";
-// import { VariableSelect } from "./VariableSelect";
-import { ExtensionKit } from "@/components/extensions";
+import { VariableSelect } from "./VariableSelect";
+import { SupportExtensionKit } from "@/components/extensions";
 import { ExpandTextarea } from ".";
 import { cn } from "@/libs/utils";
 // import { PersonaComponent, KBComponent, ScenarioComp } from ".";
 import Placeholder from "@tiptap/extension-placeholder";
-
+import { useBotSettingContext } from "../provider";
+import { PersonaFields } from "./PersonaFields";
 
 
 const Models = [
@@ -41,15 +42,15 @@ const Models = [
 interface BotFieldsProps {
     form: UseFormReturn<z.infer<typeof SupportBotSchema>>
     lid: string
-    assistant: SupportAssistant
 }
 
-export function BotFields({ form, lid, assistant }: BotFieldsProps) {
+export function BotFields({ form, lid }: BotFieldsProps) {
+    const { assistant } = useBotSettingContext();
 
 
     const initialMessageEditor = useEditor({
         immediatelyRender: false,
-        extensions: [...ExtensionKit(),
+        extensions: [...SupportExtensionKit(),
         Placeholder.configure({
             placeholder: 'Write something...',
         })],
@@ -62,7 +63,7 @@ export function BotFields({ form, lid, assistant }: BotFieldsProps) {
 
     const promptEditor = useEditor({
         immediatelyRender: false,
-        extensions: [...ExtensionKit(),
+        extensions: [...SupportExtensionKit(),
         Placeholder.configure({
             placeholder: 'Write something...',
         })],
@@ -75,35 +76,19 @@ export function BotFields({ form, lid, assistant }: BotFieldsProps) {
 
 
 
-    // const handleVariableSelect = useCallback((value: CustomVariable, editor: Editor | null) => {
-    //     if (!editor) return;
-    //     editor.chain().focus().insertContent({
-    //         type: "mention",
-    //         attrs: value
-    //     }).run()
-    // }, []);
+    const handleVariableSelect = useCallback((value: CustomVariable, editor: Editor | null) => {
+        if (!editor) return;
+        editor.chain().focus().insertContent({
+            type: "mention",
+            attrs: value
+        }).run()
+    }, []);
 
     return (
         <Form {...form} >
-            <form id={"newAIForm"} className="space-y-4 pb-10  ">
+            <form id={"newBotForm"} className="space-y-4 pb-10  ">
 
-                <fieldset >
-                    <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                            <FormItem className="space-y-0">
-                                <FormLabel size={'sm'}>Name</FormLabel>
-                                <FormControl>
-                                    <Input type='text' placeholder="Give your bot a name" className="border-foreground/5 shadow-none"  {...field} />
-                                </FormControl>
 
-                                <FormMessage className="text-xs" />
-                            </FormItem>
-
-                        )}
-                    />
-                </fieldset>
                 <fieldset>
                     <FormField
                         control={form.control}
@@ -139,7 +124,7 @@ export function BotFields({ form, lid, assistant }: BotFieldsProps) {
                         )}
                     />
                 </fieldset>
-
+                <PersonaFields form={form} />
                 {/* <ScenarioComp lid={lid} />
                 <KBComponent lid={lid} docs={docs} /> */}
 
@@ -148,9 +133,9 @@ export function BotFields({ form, lid, assistant }: BotFieldsProps) {
                         <FormLabel size="sm">Prompt</FormLabel>
                         {promptEditor && (
                             <div className="flex flex-row gap-1">
-                                {/* <VariableSelect onSelect={(value) => {
+                                <VariableSelect onSelect={(value) => {
                                     handleVariableSelect(value, promptEditor)
-                                }} /> */}
+                                }} />
                                 <ExpandTextarea type="Prompt" initialContent={promptEditor.getHTML()}
                                     onUpdate={promptEditor.commands.setContent} />
                             </div>
@@ -165,9 +150,9 @@ export function BotFields({ form, lid, assistant }: BotFieldsProps) {
                         <FormLabel size="sm">Initial Message</FormLabel>
                         {initialMessageEditor && (
                             <div className="flex flex-row gap-1">
-                                {/* <VariableSelect onSelect={(value) => {
+                                <VariableSelect onSelect={(value) => {
                                     handleVariableSelect(value, initialMessageEditor)
-                                }} /> */}
+                                }} />
                                 <ExpandTextarea type="Initial Message" initialContent={initialMessageEditor.getHTML()}
                                     onUpdate={initialMessageEditor.commands.setContent} />
                             </div>

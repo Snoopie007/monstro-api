@@ -8,19 +8,21 @@ import { tryCatch } from '@/libs/utils'
 import { toast } from 'react-toastify'
 import { Input } from '@/components/forms'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useBotSettingContext } from '../../provider'
 
-export function ContactSelect({ lid }: { lid: string }) {
+export function MemberSelect({ lid }: { lid: string }) {
     const [open, setOpen] = useState(false)
-    const [contacts, setContacts] = useState<Member[]>([])
+    const [members, setMembers] = useState<Member[]>([])
+    const { member, setMember } = useBotSettingContext();
 
     const [loading, setLoading] = useState(false)
     const [search, setSearch] = useState('')
-    const [filteredContacts, setFilteredContacts] = useState<Member[]>([])
+    const [filteredMembers, setFilteredMembers] = useState<Member[]>([])
 
     const handleContactChange = (open: boolean) => {
         if (open) {
 
-            if (contacts.length === 0) {
+            if (members.length === 0) {
                 fetchContacts()
             }
         }
@@ -29,16 +31,16 @@ export function ContactSelect({ lid }: { lid: string }) {
 
 
     async function fetchContacts() {
-        if (contacts.length > 0) return
+        if (members.length > 0) return
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/locs/${lid}/contacts?limit=5`)
+            fetch(`/api/protected/locs/${lid}/members?limit=5`)
         )
         setLoading(false)
         if (error || !result) return
         const data = await result.json()
-        setContacts(data)
-        setFilteredContacts(data)
+        setMembers(data)
+        setFilteredMembers(data)
     }
 
     return (
@@ -71,14 +73,14 @@ export function ContactSelect({ lid }: { lid: string }) {
                                 <Skeleton className='h-6 w-full' />
                             </>
                         ) : (
-                            filteredContacts.map((contact) => (
-                                <div key={contact.id} className='text-xs font-medium cursor-pointer hover:bg-foreground/5 rounded-md px-2 py-1.5'
+                            filteredMembers.map((member) => (
+                                <div key={member.id} className='text-xs font-medium cursor-pointer hover:bg-foreground/5 rounded-md px-2 py-1.5'
                                     onClick={() => {
-                                        setMember(contact)
+                                        setMember(member)
                                         setOpen(false)
                                     }}
                                 >
-                                    {contact.firstName} {contact.lastName}
+                                    {member.firstName} {member.lastName}
                                 </div>
                             ))
                         )}
