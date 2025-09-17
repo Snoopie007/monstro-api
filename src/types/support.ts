@@ -1,29 +1,47 @@
-
 import type {
   supportAssistants,
   supportTriggers,
   supportConversations,
-  supportMessages
+  supportMessages,
 } from "@/db/schemas/";
 import type { Member } from "./member";
+import { KnowledgeBase } from "./knowledgeBase";
 
-
+// Settings UI Types
+export interface SupportAssistantSettingsRequest {
+  prompt: string;
+  initialMessage: string;
+  temperature: number;
+  model: string;
+  persona: SupportPersona;
+  triggers: SupportTrigger[];
+  knowledgeBase: KnowledgeBase;
+}
 export type SupportTrigger = typeof supportTriggers.$inferSelect;
-export type NewSupportTrigger = typeof supportTriggers.$inferInsert;
+
 export type SupportConversation = typeof supportConversations.$inferSelect & {
   assistant?: SupportAssistant;
   member?: Member;
   messages?: SupportMessage[];
 };
-export type SupportConversationStatus = typeof supportConversations.$inferSelect["status"];
-
+export type SupportConversationStatus =
+  (typeof supportConversations.$inferSelect)["status"];
 
 export type NewSupportConversation = typeof supportConversations.$inferInsert;
 export type SupportAssistant = typeof supportAssistants.$inferSelect & {
   triggers?: SupportTrigger[];
   conversations?: SupportConversation[];
   persona: SupportPersona;
+  knowledgeBase: KnowledgeBase;
 };
+
+export type SupportAssistantSettings = typeof supportAssistants.$inferSelect & {
+  triggers?: SupportTrigger[];
+  conversations?: SupportConversation[];
+  persona: SupportPersona;
+  knowledgeBase: KnowledgeBase;
+};
+
 export type NewSupportAssistant = typeof supportAssistants.$inferInsert & {
   persona: SupportPersona;
 };
@@ -32,14 +50,12 @@ export type SupportMessage = typeof supportMessages.$inferSelect & {
 };
 export type NewSupportMessage = typeof supportMessages.$inferInsert;
 
-
 export type SupportPersona = {
   name: string;
   avatar: string;
   responseStyle: string;
   personality: string[];
 };
-
 
 export type SupportTool = {
   name: string;
@@ -48,9 +64,14 @@ export type SupportTool = {
   args: Record<string, any>;
 };
 
-
-export type SupportMessageRole = "human" | "ai" | "assistant" | "system" | "tool" | "tool_response" | "tool_call";
-
+export type SupportMessageRole =
+  | "human"
+  | "ai"
+  | "assistant"
+  | "system"
+  | "tool"
+  | "tool_response"
+  | "tool_call";
 
 // Test Chat API Routes
 export interface TestChatMessage {
@@ -75,7 +96,7 @@ export interface TestChatSession {
 export type CustomVariableGroup = {
   name: string;
   variables: CustomVariable[];
-}
+};
 
 export type CustomVariable = {
   id: number;

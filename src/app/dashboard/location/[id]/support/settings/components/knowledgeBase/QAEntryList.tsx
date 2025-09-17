@@ -1,0 +1,77 @@
+"use client";
+
+import React from "react";
+import { Button, Card, CardContent, ScrollArea } from "@/components/ui";
+import { MessageSquare, Edit, Trash2 } from "lucide-react";
+import { QAEntry } from "@/types/knowledgeBase";
+
+interface QAEntryListProps {
+  entries: QAEntry[];
+  onEdit: (entry: QAEntry) => void;
+  onDelete: (entryId: string) => void;
+  isLoading?: boolean;
+}
+
+export function QAEntryList({ entries, onEdit, onDelete }: QAEntryListProps) {
+  const truncateText = (text: string, limit: number = 100) => {
+    if (text.length <= limit) return text;
+    return text.substring(0, limit) + "...";
+  };
+
+  if (entries.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <MessageSquare size={16} className="mx-auto mb-4 opacity-50" />
+        <p>No Q&A entries yet</p>
+        <p className="text-sm">Click "Add Q&A Entry" above to get started</p>
+      </div>
+    );
+  }
+
+  return (
+    <ScrollArea className="max-h-[50vh] overflow-y-auto">
+      <div className="space-y-3">
+        {entries.map((entry) => {
+          return (
+            <Card
+              key={entry.id}
+              className="border-foreground/10 hover:shadow-sm transition-shadow"
+            >
+              <CardContent className="px-4 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium leading-relaxed">
+                    {truncateText(entry.question, 30)}
+                  </p>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(entry)}
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                      title="Edit entry"
+                    >
+                      <Edit size={14} />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(entry.id)}
+                      className="h-8 w-8 p-0 text-red-600 focus:text-red-600"
+                      title="Delete entry"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </ScrollArea>
+  );
+}

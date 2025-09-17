@@ -1,20 +1,23 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button, Badge } from "@/components/ui";
 import {
-  Label, Input,
+  Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
 } from "@/components/forms";
 import { X, Plus } from "lucide-react";
 import { toast } from "react-toastify";
-import { SupportTrigger } from "@/types/support";
+import { SupportTrigger } from "@/types";
 
-interface NewTriggerFormProps {
+interface EditTriggerFormProps {
+  trigger: SupportTrigger;
   onSubmit: (triggerData: Partial<SupportTrigger>) => void;
   onCancel: () => void;
 }
@@ -57,20 +60,26 @@ const AVAILABLE_TOOLS = [
   },
 ];
 
-export function NewTriggerForm({ onSubmit, onCancel }: NewTriggerFormProps) {
-  const [formData, setFormData] = useState<Partial<SupportTrigger>>({
-    name: "",
-    triggerType: "keyword",
-    triggerPhrases: [],
-    toolCall: { name: "", parameters: {}, description: "", args: [] },
-    examples: [],
-    requirements: [],
-    isActive: true,
-  });
-
+export function EditTriggerForm({
+  trigger,
+  onSubmit,
+  onCancel,
+}: EditTriggerFormProps) {
+  const [formData, setFormData] = useState<Partial<SupportTrigger>>({});
   const [newPhrase, setNewPhrase] = useState("");
   const [newExample, setNewExample] = useState("");
-  const [newRequirement, setNewRequirement] = useState("");
+
+  // Initialize form data with trigger values
+  useEffect(() => {
+    setFormData({
+      name: trigger.name,
+      triggerType: trigger.triggerType,
+      triggerPhrases: [...trigger.triggerPhrases],
+      toolCall: trigger.toolCall,
+      examples: [...trigger.examples],
+      isActive: trigger.isActive,
+    });
+  }, [trigger]);
 
   const handleInputChange = (field: keyof SupportTrigger, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -117,23 +126,6 @@ export function NewTriggerForm({ onSubmit, onCancel }: NewTriggerFormProps) {
     }));
   };
 
-  const addRequirement = () => {
-    if (newRequirement.trim()) {
-      setFormData((prev) => ({
-        ...prev,
-        requirements: [...(prev.requirements || []), newRequirement.trim()],
-      }));
-      setNewRequirement("");
-    }
-  };
-
-  const removeRequirement = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      requirements: prev.requirements?.filter((_, i) => i !== index) || [],
-    }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -151,7 +143,6 @@ export function NewTriggerForm({ onSubmit, onCancel }: NewTriggerFormProps) {
       toast.error("Please select a tool to execute");
       return;
     }
-
     onSubmit(formData);
   };
 
@@ -159,11 +150,17 @@ export function NewTriggerForm({ onSubmit, onCancel }: NewTriggerFormProps) {
     (tool) => tool.name === formData.toolCall?.name
   );
 
+  const CamelCaseToolName = (toolName: string) => {
+    return toolName
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic Information */}
-      <div className="space-y-4">
-        <div>
+    <form onSubmit={handleSubmit} className="space-y-6 p-4">
+      {/* Active Status Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex-1 mr-4">
           <Label htmlFor="trigger-name">Trigger Name *</Label>
           <Input
             id="trigger-name"
@@ -172,53 +169,59 @@ export function NewTriggerForm({ onSubmit, onCancel }: NewTriggerFormProps) {
             placeholder="e.g., Membership Status Check"
           />
         </div>
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="is-active">Active</Label>
+          <Switch
+            id="is-active"
+            checked={formData.isActive}
+            onCheckedChange={(checked) =>
+              handleInputChange("isActive", checked)
+            }
+          />
+        </div>
+      </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="trigger-type">Trigger Type</Label>
-            <Select
-              value={formData.triggerType}
-              onValueChange={(value) => handleInputChange("triggerType", value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="keyword">Keyword</SelectItem>
-                <SelectItem value="intent">Intent</SelectItem>
-                <SelectItem value="condition">Condition</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="trigger-type">Trigger Type</Label>
+          <Select
+            value={formData.triggerType}
+            onValueChange={(value) => handleInputChange("triggerType", value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="keyword">Keyword</SelectItem>
+              <SelectItem value="intent">Intent</SelectItem>
+              <SelectItem value="condition">Condition</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div>
-            <Label htmlFor="tool-call">Tool to Execute *</Label>
-            <Select
-              value={formData.toolCall?.name || ""}
-              onValueChange={handleToolCallChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a tool" />
-              </SelectTrigger>
-              <SelectContent>
-                {AVAILABLE_TOOLS.map((tool) => (
-                  <SelectItem key={tool.name} value={tool.name}>
-                    <div>
-                      <div className="font-medium">{tool.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {tool.description}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedTool && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {selectedTool.description}
-              </p>
-            )}
-          </div>
+        <div>
+          <Label htmlFor="tool-call">Tool to Execute *</Label>
+          <Select
+            key={formData.toolCall?.name || "empty"}
+            value={formData.toolCall?.name || ""}
+            onValueChange={handleToolCallChange}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a tool" />
+            </SelectTrigger>
+            <SelectContent>
+              {AVAILABLE_TOOLS.map((tool) => (
+                <SelectItem key={tool.name} value={tool.name}>
+                  {CamelCaseToolName(tool.name)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedTool && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {selectedTool.description}
+            </p>
+          )}
         </div>
       </div>
 
@@ -290,50 +293,12 @@ export function NewTriggerForm({ onSubmit, onCancel }: NewTriggerFormProps) {
         </div>
       </div>
 
-      {/* Requirements */}
-      <div>
-        <Label>Requirements</Label>
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <Input
-              value={newRequirement}
-              onChange={(e) => setNewRequirement(e.target.value)}
-              placeholder="Enter requirement"
-              onKeyPress={(e) =>
-                e.key === "Enter" && (e.preventDefault(), addRequirement())
-              }
-            />
-            <Button type="button" onClick={addRequirement} size="sm">
-              <Plus size={14} />
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {formData.requirements?.map((requirement, index) => (
-              <Badge
-                key={index}
-                variant="outline"
-                className="gap-1 bg-orange-50 text-orange-700 border-orange-200"
-              >
-                {requirement}
-                <button
-                  type="button"
-                  onClick={() => removeRequirement(index)}
-                  className="ml-1 hover:text-destructive"
-                >
-                  <X size={12} />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Actions */}
       <div className="flex justify-end gap-2 pt-4 border-t">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit">Create Trigger</Button>
+        <Button type="submit">Update Trigger</Button>
       </div>
     </form>
   );
