@@ -4,11 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useMemo, useState } from "react";
 import { BotFields } from ".";
 import { z } from "zod";
-import { ScrollArea, Skeleton } from "@/components/ui";
+import { ScrollArea, Skeleton, Button } from "@/components/ui";
+import { Form } from "@/components/forms";
 import { sleep } from "@/libs/utils";
 import { toast } from "react-toastify";
-import { SupportSettingsSchema } from "@/libs/FormSchemas/SupportSettingsSchema";
+import { SupportSettingsSchema } from "@/libs/FormSchemas";
 import { useBotSettingContext } from "../provider";
+import { Loader2 } from "lucide-react";
 
 export function BotSettings({ lid }: { lid: string }) {
   const { assistant } = useBotSettingContext();
@@ -39,6 +41,7 @@ export function BotSettings({ lid }: { lid: string }) {
 
   const triggers = form.watch("triggers");
   const qaEntries = form.watch("knowledgeBase.qa_entries");
+
   const renderForm = useMemo(() => {
     return (
       <BotFields
@@ -72,7 +75,7 @@ export function BotSettings({ lid }: { lid: string }) {
 
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="flex-1 rounded-lg bg-foreground/5 overflow-hidden">
+      <div className="flex-1 rounded-lg  overflow-hidden">
         {isLoading ? (
           <div className="flex flex-col gap-4 h-full p-4">
             <Skeleton className="w-full h-20 rounded-lg bg-foreground/5" />
@@ -81,10 +84,34 @@ export function BotSettings({ lid }: { lid: string }) {
           </div>
         ) : (
           assistant && (
-            <div className="h-full flex flex-col py-4">
-              <ScrollArea className="flex-1 w-full">
-                <div className="px-4">{renderForm}</div>
-              </ScrollArea>
+            <div className="h-full flex flex-col bg-foreground/5">
+
+              <Form {...form}>
+                <form id="newBotForm" className=" flex flex-col h-full">
+                  <div className="flex flex-row justify-between px-4 py-3 border-b border-foreground/5 ">
+                    <div className=" font-medium text-sm">Bot Settings</div>
+
+                  </div>
+                  <ScrollArea className="flex-1 w-full p-4  h-full ">
+                    <div className="space-y-4">
+
+                      {renderForm}
+                    </div>
+                  </ScrollArea>
+                  <div className="flex flex-row justify-end px-4 py-3 border-t border-foreground/5 ">
+                    <Button
+                      variant="foreground"
+                      type="submit"
+                      className="rounded-sm"
+                      disabled={isSaving}
+                      onClick={form.handleSubmit(onSubmit)}
+                    >
+                      {isSaving ? <Loader2 className="size-4 animate-spin" /> : "Save Changes"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+
             </div>
           )
         )}

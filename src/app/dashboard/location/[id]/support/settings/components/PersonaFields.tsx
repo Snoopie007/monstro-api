@@ -41,7 +41,7 @@ const DummyImages = [
 export function PersonaFields({ form }: PersonaFieldsProps) {
   const avatar = form.watch("persona.avatar");
   return (
-    <div className="space-y-2 bg-foreground/5 rounded-md p-4">
+    <>
       <fieldset className="space-y-2">
         <FormLabel size={"sm"}>Give your bot an avatar</FormLabel>
         <div className="flex flex-row gap-2">
@@ -110,6 +110,6 @@ export function PersonaFields({ form }: PersonaFieldsProps) {
           )}
         />
       </fieldset>
-    </div>
+    </>
   );
 }

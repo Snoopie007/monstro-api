@@ -1,3 +1,4 @@
+"use client";
 import { FormLabel } from "@/components/forms";
 import {
   Button,

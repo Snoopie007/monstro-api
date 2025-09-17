@@ -46,7 +46,7 @@ export const SupportSettingsSchema = z.object({
           .string()
           .min(4, { message: "Answer is too short" })
           .max(500, { message: "Answer is too long" }),
-          created: z.string(),
+        created: z.string(),
       })
     ),
     document: z
