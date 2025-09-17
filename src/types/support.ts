@@ -27,7 +27,9 @@ export type SupportAssistant = typeof supportAssistants.$inferSelect & {
 export type NewSupportAssistant = typeof supportAssistants.$inferInsert & {
   persona: SupportPersona;
 };
-export type SupportMessage = typeof supportMessages.$inferSelect;
+export type SupportMessage = typeof supportMessages.$inferSelect & {
+  role: SupportMessageRole;
+};
 export type NewSupportMessage = typeof supportMessages.$inferInsert;
 
 
@@ -46,12 +48,18 @@ export type SupportTool = {
   args: Record<string, any>;
 };
 
+
+export type SupportMessageRole = "user" | "ai" | "assistant" | "system" | "tool" | "tool_response" | "tool_call";
+
+
 // Test Chat API Routes
 export interface TestChatMessage {
-  role: "user" | "ai" | "assistant" | "system" | "tool";
+  id: string;
+  role: SupportMessageRole;
   content: string;
   timestamp: number;
-  tool_calls?: any[];
+  isLoading: boolean;
+  tool_calls?: Record<string, any>[];
   tool_call_id?: string;
   metadata?: any;
 }

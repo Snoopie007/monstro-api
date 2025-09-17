@@ -73,7 +73,7 @@
     "@vercel/functions": "^2.0.0",
     "@xenova/transformers": "^2.13.4",
     "@xyflow/react": "^12.8.4",
-    "ai": "^4.3.9",
+    "ai": "^5.0.44",
     "bcryptjs": "^3.0.2",
     "bullmq": "^5.53.3",
     "class-variance-authority": "^0.7.1",

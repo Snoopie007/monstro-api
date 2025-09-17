@@ -22,14 +22,13 @@ import { Input } from "@/components/forms";
 import {
 	RefreshCw,
 	MoreHorizontal,
+	Settings,
 } from "lucide-react";
 import { SupportConversation, SupportConversationStatus } from "@/types/";
-import { BotConfig } from "./BotConfig";
-
 import { formatDistance } from "date-fns";
 import { useSupport } from "../providers";
 import { cn } from "@/libs/utils";
-
+import Link from "next/link";
 
 export function SupportList({ lid }: { lid: string }) {
 
@@ -104,7 +103,11 @@ export function SupportList({ lid }: { lid: string }) {
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<BotConfig lid={lid} />
+								<Button variant="ghost" size="icon" className="size-8" asChild>
+									<Link href={`/dashboard/location/${lid}/support/settings`}>
+										<Settings size={16} />
+									</Link>
+								</Button>
 							</TooltipTrigger>
 							<TooltipContent>
 								<p>Configure bot</p>

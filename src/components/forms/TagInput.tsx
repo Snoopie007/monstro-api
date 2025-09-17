@@ -1,100 +1,103 @@
 'use client'
-import { ScrollArea } from "@/components/ui";
+import { ScrollArea } from "@/components/ui/ScrollArea";
+import { cn } from "@/libs/utils";
 import { XIcon } from "lucide-react";
-import { ChangeEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
+import { ChangeEvent, KeyboardEvent, useCallback, useRef, useState } from "react";
 
 interface TagInputProps {
     list: string[];
-    value?: string[];
+    value: string[];
+    placeholder?: string;
     onChange: (tags: string[]) => void;
+    className?: string;
 }
 
-export function InputTags({ value, list, onChange }: TagInputProps) {
-
-    const [input, setInput] = useState<string>("");
-    const [tags, setTags] = useState<string[]>([]);
+export function InputTags({ value, list, onChange, placeholder = "Type to add tags...", className }: TagInputProps) {
+    const [input, setInput] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
-    useEffect(() => {
-        setTags(value || [])
-    }, [value])
-
 
     const filteredList = useCallback(() => {
-        if (!input || input === '') return list;
-        const filtered = list.filter(item => item.toLowerCase().includes(input?.toLowerCase()));
-        console.log(filtered)
-        if (filtered.length < 1) return list;
-        return filtered;
+        if (!input.trim()) return list;
+
+        const filtered = list.filter(item =>
+            item.toLowerCase().includes(input.toLowerCase().trim())
+        );
+        return filtered.length ? filtered : list;
     }, [input, list]);
 
-    function handleChange(e: ChangeEvent<HTMLInputElement>) {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         setInput(e.target.value);
-    }
+    };
 
-    function handleEnter(e: KeyboardEvent<HTMLInputElement>) {
-        if (e.key === 'Enter') {
-            addItem(input);
-            onChange(tags);
+    const handleEnter = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && input.trim()) {
+            handleSelect(input.trim());
         }
-    }
-    function handleSelect(item: string) {
-        addItem(item);
-        onChange(tags);
-    }
+    };
 
-
-    function addItem(item: string) {
-        if (list.includes(item)) {
-            setTags([...tags, item]);
+    const handleSelect = (item: string) => {
+        if (list.includes(item) && !value.includes(item)) {
+            onChange([...value, item]);
             setInput("");
         }
-    }
+    };
 
-    function handleRemove(item: string) {
-        setTags(tags.filter(tag => tag !== item));
-        setInput("");
-    }
+    const handleRemove = (item: string) => {
+        onChange(value.filter(tag => tag !== item));
+    };
+
     return (
         <div className="relative">
-
-            <div className=' px-3 bg-background text-foreground rounded-sm border flex flex-row items-center'>
-                <div className="">
-                    <ul className="flex gap-1 flex-row ">
-                        {tags.map((item, i) => (
-                            <li key={i} className="flex flex-row gap-1 items-center bg-indigo-600 text-white px-2 text-sm font-medium py-1 rounded-sm">
+            <div className={cn("px-2 bg-background rounded-sm border flex flex-row items-center", className)}>
+                <div>
+                    <ul className="flex gap-1 flex-row">
+                        {value.map((item, i) => (
+                            <li
+                                key={i}
+                                className="flex flex-row gap-1 items-center bg-indigo-500 text-white px-2 text-[0.8rem] font-medium py-1 rounded-sm"
+                            >
                                 <span>{item}</span>
-                                <XIcon className="cursor-pointer" size={14} onClick={() => handleRemove(item)} />
+                                <XIcon
+                                    className="cursor-pointer hover:opacity-80"
+                                    size={14}
+                                    onClick={() => handleRemove(item)}
+                                />
                             </li>
                         ))}
                     </ul>
                 </div>
                 <div className="flex-initial w-full">
                     <input
-                        type='text'
+                        type="text"
                         ref={inputRef}
-                        onKeyUp={handleEnter}
                         value={input}
                         onChange={handleChange}
-                        className='border-none w-full bg-transparent py-2 px-1 focus:outline-none focus-visible:ring-0 focus:ring-0'
+                        onKeyUp={handleEnter}
+                        className="border-none placeholder:text-sm w-full bg-transparent py-2 px-1 focus:outline-none focus-visible:ring-0 focus:ring-0"
+                        placeholder={placeholder}
                     />
-
                 </div>
-
             </div>
-            {input && (
-                <div className="absolute  bg-background  z-50 border border-foreground/10  w-[250px] rounded-sm top-[45px] left-0 text-background">
-                    <ScrollArea className="h-[150px] ">
-                        {filteredList().map((item, i) => (
-                            <div key={i}
-                                onClick={() => { handleSelect(item) }}
-                                className="px-3 last-of-type:border-b-0 text-foreground hover:bg-indigo-500 hover:text-white cursor-pointer py-1.5 border-b border-foreground/5 text-sm font-medium"
-                            >
-                                {item}
-                            </div>
-                        ))}
+
+            {input.trim() && (
+                <div className="absolute bg-background z-50 border w-[250px] border-foreground/5 rounded-md top-[45px] left-0">
+                    <ScrollArea className="h-[150px] p-1">
+                        <div className="space-y-0.5">
+                            {filteredList().map((item, i) => (
+                                <div
+                                    key={i}
+                                    onClick={() => handleSelect(item)}
+                                    className={cn(
+                                        "px-2 py-1.5 hover:bg-foreground/5 rounded-sm cursor-pointer text-sm font-medium"
+                                    )}
+                                >
+                                    {item}
+                                </div>
+                            ))}
+                        </div>
                     </ScrollArea>
                 </div>
             )}
         </div>
-    )
+    );
 }
