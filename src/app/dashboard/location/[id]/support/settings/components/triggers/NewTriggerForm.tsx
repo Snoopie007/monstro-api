@@ -1,24 +1,21 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button, Badge } from "@/components/ui";
 import {
-  Input,
   Label,
+  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Switch,
 } from "@/components/forms";
-
 import { X, Plus } from "lucide-react";
 import { toast } from "react-toastify";
-import { SupportTrigger } from "@/types";
+import { SupportTrigger } from "@/types/support";
 
-interface EditTriggerFormProps {
-  trigger: SupportTrigger;
+interface NewTriggerFormProps {
   onSubmit: (triggerData: Partial<SupportTrigger>) => void;
   onCancel: () => void;
 }
@@ -61,28 +58,20 @@ const AVAILABLE_TOOLS = [
   },
 ];
 
-export function EditTriggerForm({
-  trigger,
-  onSubmit,
-  onCancel,
-}: EditTriggerFormProps) {
-  const [formData, setFormData] = useState<Partial<SupportTrigger>>({});
+export function NewTriggerForm({ onSubmit, onCancel }: NewTriggerFormProps) {
+  // Internal state
+  const [formData, setFormData] = useState<Partial<SupportTrigger>>({
+    name: "",
+    triggerType: "keyword",
+    triggerPhrases: [],
+    toolCall: { name: "", parameters: {}, description: "", args: [] },
+    examples: [],
+    requirements: [],
+    isActive: true,
+  });
   const [newPhrase, setNewPhrase] = useState("");
   const [newExample, setNewExample] = useState("");
   const [newRequirement, setNewRequirement] = useState("");
-
-  // Initialize form data with trigger values
-  useEffect(() => {
-    setFormData({
-      name: trigger.name,
-      triggerType: trigger.triggerType,
-      triggerPhrases: [...trigger.triggerPhrases],
-      toolCall: { ...trigger.toolCall },
-      examples: [...trigger.examples],
-      requirements: [...trigger.requirements],
-      isActive: trigger.isActive,
-    });
-  }, [trigger]);
 
   const handleInputChange = (field: keyof SupportTrigger, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -171,30 +160,24 @@ export function EditTriggerForm({
     (tool) => tool.name === formData.toolCall?.name
   );
 
+  const CamelCaseToolName = (toolName: string) => {
+    return toolName
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Basic Information */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex-1 mr-4">
-            <Label htmlFor="trigger-name">Trigger Name *</Label>
-            <Input
-              id="trigger-name"
-              value={formData.name || ""}
-              onChange={(e) => handleInputChange("name", e.target.value)}
-              placeholder="e.g., Membership Status Check"
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="is-active">Active</Label>
-            <Switch
-              id="is-active"
-              checked={formData.isActive}
-              onCheckedChange={(checked) =>
-                handleInputChange("isActive", checked)
-              }
-            />
-          </div>
+        <div>
+          <Label htmlFor="trigger-name">Trigger Name *</Label>
+          <Input
+            id="trigger-name"
+            value={formData.name || ""}
+            onChange={(e) => handleInputChange("name", e.target.value)}
+            placeholder="e.g., Membership Status Check"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -227,12 +210,7 @@ export function EditTriggerForm({
               <SelectContent>
                 {AVAILABLE_TOOLS.map((tool) => (
                   <SelectItem key={tool.name} value={tool.name}>
-                    <div>
-                      <div className="font-medium">{tool.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {tool.description}
-                      </div>
-                    </div>
+                    {CamelCaseToolName(tool.name)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -357,7 +335,7 @@ export function EditTriggerForm({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit">Update Trigger</Button>
+        <Button type="submit">Create Trigger</Button>
       </div>
     </form>
   );

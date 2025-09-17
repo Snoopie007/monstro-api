@@ -15,6 +15,8 @@ import {
 import { supportConversations } from "./SupportConversations";
 import type { SupportPersona } from "@/types";
 import { supportTriggers } from "./SupportTriggers";
+import { KnowledgeBase } from "@/types/knowledgeBase";
+
 // Single support bot per location
 export const supportAssistants = pgTable("support_assistants", {
   id: text("id").primaryKey().default(sql`uuid_base62()`),
@@ -28,6 +30,7 @@ export const supportAssistants = pgTable("support_assistants", {
   status: assistantStatusEnum("status").notNull().default('draft'),
   availableTools: jsonb("available_tools").array().notNull().$default(() => []),
   persona: jsonb("persona").$type<SupportPersona>().notNull().default(sql`'{}'::jsonb`),
+  knowledgeBase: jsonb("knowledge_base").$type<KnowledgeBase>().notNull().default(sql`'{}'::jsonb`),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
