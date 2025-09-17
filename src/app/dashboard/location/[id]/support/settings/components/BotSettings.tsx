@@ -67,18 +67,18 @@ export function BotSettings({ lid }: { lid: string }) {
                     </div>
                 ) : (
                     assistant && (
-                        <div className='py-4'>
+                        <div className=''>
 
-                            <ScrollArea className='h-[calc(100%-110px)] w-full  '>
+                            <ScrollArea className='h-[calc(100vh-140px)] w-full py-4  '>
                                 <div className='px-4'>
-                                    <BotFields form={form} lid={lid} />
+                                    <BotFields form={form} lid={lid} assistant={assistant} />
                                 </div>
                             </ScrollArea>
-                            <div className='flex flex-row justify-end px-4 py-2  '>
+                            <div className='flex flex-row justify-end p-4 border-t border-foreground/5  '>
                                 <Button variant={'foreground'} size={'sm'} className="rounded-sm"
                                     disabled={isSaving}
                                     onClick={form.handleSubmit(onSubmit)}>
-                                    {isSaving ? <Loader2 className='size-4 animate-spin' /> : 'Save'}
+                                    {isSaving ? <Loader2 className='size-4 animate-spin' /> : 'Save Changes'}
                                 </Button>
                             </div>
                         </div>

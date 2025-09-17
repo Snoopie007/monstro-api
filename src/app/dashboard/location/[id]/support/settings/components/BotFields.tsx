@@ -32,6 +32,7 @@ import { cn } from "@/libs/utils";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useBotSettingContext } from "../provider";
 import { PersonaFields } from "./PersonaFields";
+import { TriggerField } from "./Triggers/TriggerField";
 
 
 const Models = [
@@ -42,12 +43,11 @@ const Models = [
 interface BotFieldsProps {
     form: UseFormReturn<z.infer<typeof SupportBotSchema>>
     lid: string
+    assistant: SupportAssistant
 }
 
-export function BotFields({ form, lid }: BotFieldsProps) {
-    const { assistant } = useBotSettingContext();
-
-
+export function BotFields({ form, lid, assistant }: BotFieldsProps) {
+    const { updateAssistant } = useBotSettingContext();
     const initialMessageEditor = useEditor({
         immediatelyRender: false,
         extensions: [...SupportExtensionKit(),
@@ -57,7 +57,10 @@ export function BotFields({ form, lid }: BotFieldsProps) {
         content: assistant?.initialMessage || '',
         onUpdate: ({ editor }) => {
             form.setValue("initialMessage", editor.getHTML())
-
+            updateAssistant((prev) => ({
+                ...prev,
+                initialMessage: editor.getHTML()
+            }))
         }
     });
 
@@ -70,7 +73,10 @@ export function BotFields({ form, lid }: BotFieldsProps) {
         content: assistant?.prompt || '',
         onUpdate: ({ editor }) => {
             form.setValue("prompt", editor.getHTML())
-
+            updateAssistant((prev) => ({
+                ...prev,
+                prompt: editor.getHTML()
+            }))
         }
     });
 
@@ -125,8 +131,12 @@ export function BotFields({ form, lid }: BotFieldsProps) {
                     />
                 </fieldset>
                 <PersonaFields form={form} />
-                {/* <ScenarioComp lid={lid} />
-                <KBComponent lid={lid} docs={docs} /> */}
+                {assistant && (
+                    <TriggerField lid={lid} assistant={assistant} />
+                    // <KBComponent lid={lid} docs={docs} /> */}
+                )}
+
+
 
                 <fieldset className="  space-y-1">
                     <div className="flex flex-row items-center justify-between">

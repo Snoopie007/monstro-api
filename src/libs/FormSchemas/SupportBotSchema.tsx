@@ -14,3 +14,9 @@ export const SupportBotSchema = z.object({
         personality: z.array(z.string()).optional(),
     })
 });
+
+
+export const TriggerSchema = z.object({
+    name: z.string().min(4, { message: "Title is too short" }).max(50, { message: "Name is too long" }),
+
+});

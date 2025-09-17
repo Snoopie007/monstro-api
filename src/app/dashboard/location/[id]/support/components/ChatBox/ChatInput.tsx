@@ -84,7 +84,7 @@ export function ChatInput({ lid }: { lid: string }) {
                             <Sparkles size={14} className="text-muted-foreground" />
                             AI Suggest
                         </Button>
-                        <Button onClick={handleSendMessage} disabled={!message || loading} size="sm" className="gap-1">
+                        <Button onClick={handleSendMessage} variant="foreground" disabled={!message || loading} size="sm" className="gap-1">
                             {loading ? (
                                 <Loader2 size={16} className="animate-spin" />
                             ) : (

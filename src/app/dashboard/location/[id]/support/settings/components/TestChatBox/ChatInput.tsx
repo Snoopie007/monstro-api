@@ -122,7 +122,7 @@ export function TestChatInput({ lid }: { lid: string }) {
                         <Button
                             type="submit"
                             ref={btnRef}
-                            variant="default"
+                            variant="foreground"
                             size="sm"
                             disabled={isLoading}
                         >

@@ -16,6 +16,7 @@ type BotSettingAction =
     | { type: 'RESET_MESSAGE' }
     | { type: 'SET_MEMBER'; payload: Member }
     | { type: 'SET_ASSISTANT'; payload: SupportAssistant }
+    | { type: 'UPDATE_ASSISTANT'; payload: SupportAssistant | ((prev: SupportAssistant) => SupportAssistant) }
 
 const BotSettingContext = createContext<{
     state: BotSettingState;
@@ -65,6 +66,18 @@ function reducer(state: BotSettingState, action: BotSettingAction): BotSettingSt
                 ...state,
                 assistant: action.payload
             };
+        case 'UPDATE_ASSISTANT':
+            if (typeof action.payload === 'function' && state.assistant) {
+                const updatedAssistant = action.payload(state.assistant);
+                return {
+                    ...state,
+                    assistant: updatedAssistant
+                };
+            }
+            return {
+                ...state,
+                assistant: action.payload as SupportAssistant
+            };
         default:
             return state;
     }
@@ -107,6 +120,10 @@ export function useBotSettingContext() {
         dispatch({ type: 'RESET_MESSAGE' });
     }
 
+    function updateAssistant(assistant: SupportAssistant | ((prev: SupportAssistant) => SupportAssistant)) {
+        dispatch({ type: 'UPDATE_ASSISTANT', payload: assistant });
+    }
+
     return {
         messages,
         sessionId,
@@ -114,6 +131,7 @@ export function useBotSettingContext() {
         assistant,
         setMessage,
         resetMessage,
-        setMember
+        setMember,
+        updateAssistant
     };
 }
