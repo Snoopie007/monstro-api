@@ -15,10 +15,7 @@ import {
 	TooltipTrigger,
 	DialogDescription,
 } from "@/components/ui";
-import { SupportTrigger } from "@/types";
-import { UseFormReturn } from "react-hook-form";
-import { z } from "zod";
-import { SupportSettingsSchema } from "@/libs/FormSchemas";
+import { SupportAssistant, SupportTrigger } from "@/types";
 import { FormLabel } from "@/components/forms";
 import {
 	NewTriggerForm,
@@ -28,10 +25,11 @@ import {
 import { VisuallyHidden } from "react-aria";
 
 interface TriggerFieldsProps {
-	form: UseFormReturn<z.infer<typeof SupportSettingsSchema>>;
+
+	assistant: SupportAssistant;
 }
 
-export function TriggerFields({ form }: TriggerFieldsProps) {
+export function TriggerFields({ assistant }: TriggerFieldsProps) {
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [editingTrigger, setEditingTrigger] = useState<SupportTrigger | null>(

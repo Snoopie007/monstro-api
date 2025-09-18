@@ -11,21 +11,20 @@ export const InvoiceItemSchema = z.object({
   price: z.number().min(0, "Price must be non-negative"), // in cents
 });
 
-export const RecurringSettingsSchema = z
-  .object({
-    interval: z.enum(["day", "week", "month", "year"], {
-      required_error: "Please select a billing interval",
-    }),
-    intervalCount: z
-      .number()
-      .min(1, "Interval count must be at least 1")
-      .max(12, "Interval count cannot exceed 12")
-      .default(1),
-    startDate: z.date({
-      required_error: "Start date is required",
-    }),
-    endDate: z.date().optional(),
-  })
+export const RecurringSettingsSchema = z.object({
+  interval: z.enum(["day", "week", "month", "year"], {
+    required_error: "Please select a billing interval",
+  }),
+  intervalCount: z
+    .number()
+    .min(1, "Interval count must be at least 1")
+    .max(12, "Interval count cannot exceed 12")
+    .default(1),
+  startDate: z.date({
+    required_error: "Start date is required",
+  }),
+  endDate: z.date().optional(),
+})
   .refine(
     (data) => {
       if (data.endDate && data.startDate) {
@@ -72,19 +71,15 @@ export const CreateInvoiceSchema = z
       message: "Recurring settings are required for recurring invoices",
       path: ["recurringSettings"],
     }
-  )
-  .refine(
-    (data) => {
-      if (data.dueDate && data.dueDate < new Date()) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "Due date cannot be in the past",
-      path: ["dueDate"],
+  ).refine((data) => {
+    if (data.dueDate && data.dueDate < new Date()) {
+      return false;
     }
-  );
+    return true;
+  }, {
+    message: "Due date cannot be in the past",
+    path: ["dueDate"],
+  });
 
 // TypeScript types
 export type InvoiceItem = z.infer<typeof InvoiceItemSchema>;

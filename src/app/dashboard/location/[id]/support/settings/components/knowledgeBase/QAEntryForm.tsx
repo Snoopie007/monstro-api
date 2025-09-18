@@ -1,157 +1,124 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { UseFormReturn } from "react-hook-form";
+import { useFieldArray, UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Button,
+	Button,
+	Dialog,
+	DialogContent,
+	DialogTrigger,
+	DialogTitle,
+	DialogDescription,
+	DialogFooter,
+	Input,
 } from "@/components/ui";
-import { Label, Textarea } from "@/components/forms";
-import { X, Plus } from "lucide-react";
+import { FormControl, FormItem, FormField, FormLabel, Label, Textarea } from "@/components/forms";
+import { VisuallyHidden } from "react-aria";
 import { QAEntry } from "@/types/knowledgeBase";
-import { SupportSettingsSchema } from "@/libs/FormSchemas/SupportSettingsSchema";
+import { KnowledgeBaseSchema } from "@/libs/FormSchemas/";
+import { Form } from "@/components/forms";
+import { Trash2 } from "lucide-react";
 
 interface QAEntryFormProps {
-  form: UseFormReturn<z.infer<typeof SupportSettingsSchema>>;
-  onSubmit: (entry: { question: string; answer: string }) => void;
-  onCancel: () => void;
-  initialData?: QAEntry | null;
-  isSubmitting?: boolean;
+	form: UseFormReturn<z.infer<typeof KnowledgeBaseSchema>>;
+
 }
 
 export function QAEntryForm({
-  form,
-  onSubmit,
-  onCancel,
-  initialData,
-  isSubmitting = false,
+	form,
 }: QAEntryFormProps) {
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [errors, setErrors] = useState<{ question?: string; answer?: string }>(
-    {}
-  );
+	const [open, setOpen] = useState(false);
+	const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (initialData) {
-      setQuestion(initialData.question);
-      setAnswer(initialData.answer);
-    }
-  }, [initialData]);
+	const { fields, remove, append } = useFieldArray({
+		control: form.control,
+		name: "qa_entries",
+	});
 
-  const validateForm = () => {
-    const newErrors: { question?: string; answer?: string } = {};
-    if (!question.trim()) {
-      newErrors.question = "Question is required";
-    } else if (question.trim().length < 4) {
-      newErrors.question = "Question must be at least 4 characters";
-    }
+	async function handleSubmit(v: z.infer<typeof KnowledgeBaseSchema>) {
+		if (!form.formState.isValid) return;
 
-    if (!answer.trim()) {
-      newErrors.answer = "Answer is required";
-    } else if (answer.trim().length < 4) {
-      newErrors.answer = "Answer must be at least 4 characters";
-    }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+		//Call API
+	};
 
-  const handleSubmit = () => {
-    if (!validateForm()) {
-      return;
-    }
 
-    const currentEntries = form.getValues("knowledgeBase.qa_entries") || [];
-    const newEntry = {
-      id: initialData?.id || crypto.randomUUID(),
-      question: question.trim(),
-      answer: answer.trim(),
-      created: initialData?.created || new Date().toISOString(),
-    };
+	return (
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogTrigger asChild>
+				<Button size="sm" variant="ghost" className="hover:bg-foreground/10">
+					Q&A Entry
+				</Button>
+			</DialogTrigger>
+			<DialogContent className="max-w-2xl p-4">
+				<VisuallyHidden>
+					<DialogTitle></DialogTitle>
+					<DialogDescription></DialogDescription>
+				</VisuallyHidden>
+				<Form {...form}>
+					<form className="space-y-2">
 
-    let updatedEntries;
-    if (initialData) {
-      // Update existing entry
-      updatedEntries = currentEntries.map((entry) =>
-        entry.id === initialData.id ? newEntry : entry
-      );
-    } else {
-      // Add new entry
-      updatedEntries = [...currentEntries, newEntry];
-    }
+						<fieldset className="space-y-2">
+							<FormLabel size="sm">Q & A</FormLabel>
+							{fields.map((field, i) => (
+								<div key={i}>
+									<div className="flex gap-1 items-center">
+										<FormField
+											key={field.id}
+											control={form.control}
+											name={`qa_entries.${i}.question`}
+											render={({ field }) => (
+												<FormItem>
+													<FormControl>
+														<Input {...field} className="w-full" placeholder="Question" />
+													</FormControl>
 
-    form.setValue("knowledgeBase.qa_entries", updatedEntries);
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name={`qa_entries.${i}.answer`}
+											render={({ field }) => (
+												<FormItem>
+													<FormControl>
+														<Input {...field} className="w-full" placeholder="Answer" />
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+									</div>
+									<Button type="button" variant="ghost" size="icon"
+										className="rounded-sm size-5 hover:bg-red-500 hover:text-white transition-all duration-200"
+										onClick={() => remove(i)}>
+										<Trash2 className="size-3.5" />
+									</Button>
+								</div>
+							))}
 
-    // Call the onSubmit callback if needed for additional logic
-    onSubmit({
-      question: question.trim(),
-      answer: answer.trim(),
-    });
-  };
+						</fieldset>
 
-  const handleReset = () => {
-    setQuestion("");
-    setAnswer("");
-    setErrors({});
-  };
 
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="question" size="tiny">Question</Label>
-        <Textarea
-          id="question"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Enter the question that customers might ask..."
-          className={`min-h-[100px] ${errors.question ? "border-red-500" : ""
-            }`}
-          disabled={isSubmitting}
-        />
-        {errors.question && (
-          <p className="text-sm text-red-500">{errors.question}</p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          Examples: "What are your operating hours?", "How do I cancel my
-          membership?"
-        </p>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="answer" size="tiny">Answer</Label>
-        <Textarea
-          id="answer"
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          placeholder="Enter the detailed answer to provide to customers..."
-          className={`min-h-[120px] ${errors.answer ? "border-red-500" : ""}`}
-          disabled={isSubmitting}
-        />
-        {errors.answer && (
-          <p className="text-sm text-red-500">{errors.answer}</p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          Provide a complete, helpful answer that your support bot can use to
-          respond to customers.
-        </p>
-      </div>
-
-      <div className="flex gap-2 pt-2 justify-end">
-        <Button type="button" size="sm" onClick={handleSubmit}
-          disabled={isSubmitting || !question.trim() || !answer.trim()}
-          variant="foreground">
-          Save
-        </Button>
-        <Button type="button" size="sm" variant="outline" onClick={onCancel} disabled={isSubmitting}        >
-          Cancel
-        </Button>
-      </div>
-    </div>
-  );
+						<DialogFooter className="flex gap-2 pt-2 justify-end">
+							<Button type="button" size="sm"
+								onClick={form.handleSubmit(handleSubmit)}
+								disabled={form.formState.isSubmitting || !form.formState.isValid}
+								variant="foreground">
+								Save
+							</Button>
+							<Button type="button" size="sm"
+								variant="outline"
+								onClick={() => setOpen(false)}
+								disabled={form.formState.isSubmitting}
+							>
+								Cancel
+							</Button>
+						</DialogFooter>
+					</form>
+				</Form>
+			</DialogContent>
+		</Dialog>
+	);
 }

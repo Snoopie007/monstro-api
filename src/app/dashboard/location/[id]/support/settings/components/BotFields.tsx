@@ -198,9 +198,12 @@ export function BotFields({ form, lid, isSaving, onSubmit }: BotFieldsProps) {
 					)}
 				/>
 			</fieldset>
-			<TriggerFields form={form} />
-			<KnowledgeBaseFields form={form} />
-
+			{assistant && (
+				<>
+					<TriggerFields assistant={assistant} />
+					<KnowledgeBaseFields assistant={assistant} />
+				</>
+			)}
 		</>
 
 	);
