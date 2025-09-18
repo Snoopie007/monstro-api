@@ -47,7 +47,7 @@ export const serverConfig = {
 
 // Queue configuration
 export const queueConfig = {
-    name: process.env.QUEUE_NAME || 'myQueue',
+
     defaultJobOptions: {
         attempts: 3,
         backoff: {

@@ -1,5 +1,5 @@
 import { Worker } from "bullmq";
-import { redisConfig } from "../config";
+import { redisConfig } from "./config";
 
 // Create a worker to process jobs
 const worker = new Worker('workflow', async (job) => {
