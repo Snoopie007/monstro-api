@@ -4,7 +4,7 @@ export type QAEntry = {
   id: string;
   question: string;
   answer: string;
-  created: string | undefined; // ISO string in JSONB
+  created?: string; // ISO string in JSONB
 };
 
 export type DocumentMetadata = {

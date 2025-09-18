@@ -6,38 +6,61 @@ import { InfoIcon } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useState, useEffect } from 'react'
-import { QAEntry } from '@/types/knowledgeBase'
 import { QAEntryForm } from './QAEntryForm'
 import { QAEntryList } from './QAEntryList'
 import { SupportAssistant } from '@/types'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { tryCatch } from '@/libs/utils'
+import { toast } from 'react-toastify'
 
 export function KBBox({ assistant }: { assistant: SupportAssistant }) {
-    const [entries, setEntries] = useState<QAEntry[]>(
-        assistant.knowledgeBase.qa_entries
-    )
-
     const form = useForm<z.infer<typeof KnowledgeBaseSchema>>({
         resolver: zodResolver(KnowledgeBaseSchema),
         defaultValues: {
-            ...assistant.knowledgeBase,
+            qa_entries: [],
+            document: null,
         },
+        mode: 'onBlur',
     })
 
     useEffect(() => {
-        form.reset({
-            ...assistant.knowledgeBase,
-            qa_entries: entries,
-        })
-    }, [entries])
+        if (
+            assistant.knowledgeBase.qa_entries &&
+            assistant.knowledgeBase.qa_entries.length > 0
+        ) {
+            form.reset({
+                qa_entries: assistant.knowledgeBase.qa_entries,
+                document: null,
+            })
+        }
+    }, [assistant.knowledgeBase.qa_entries])
 
     async function handleQADelete(entryId: string) {
         const currentEntries = form.getValues('qa_entries') || []
         const updatedEntries = currentEntries.filter(
             (entry) => entry.id !== entryId
         )
-        form.setValue('qa_entries', updatedEntries)
 
+        const { result, error } = await tryCatch(
+            fetch(
+                `/api/protected/loc/${assistant.id}/support/settings/knowledge`,
+                {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        qa_entries: updatedEntries,
+                        document: null,
+                    }),
+                }
+            )
+        )
+
+        if (error || !result || !result.ok) {
+            return toast.error('Failed to delete QA entry')
+        }
+
+        const { data } = (await result?.json()) as { data: SupportAssistant[] }
+        form.setValue('qa_entries', data[0].knowledgeBase.qa_entries)
+        toast.success('QA entry deleted')
         await form.trigger('qa_entries')
     }
 
@@ -60,15 +83,11 @@ export function KBBox({ assistant }: { assistant: SupportAssistant }) {
                     </Tooltip>
                 </div>
 
-                <QAEntryForm form={form} />
+                <QAEntryForm form={form} assistant={assistant} />
             </div>
             <QAEntryList
                 entries={form.watch('qa_entries')}
-                onEdit={(entry) => {
-                    // setEditingEntry(entry);
-                }}
                 onDelete={handleQADelete}
-                isLoading={false}
             />
         </div>
     )
