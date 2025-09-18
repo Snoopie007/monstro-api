@@ -62,7 +62,13 @@ const AVAILABLE_TOOLS = [
 	},
 ];
 
-function TriggerPhrasesField({ form }: { form: UseFormReturn<z.infer<typeof TriggerSchema>> }) {
+
+interface FieldProps {
+	form: UseFormReturn<z.infer<typeof TriggerSchema>>;
+}
+
+function TriggerPhrasesField({ form }: FieldProps) {
+
 	const { fields, remove, append } = useFieldArray({
 		control: form.control,
 		name: "triggerPhrases",
@@ -106,7 +112,7 @@ function TriggerPhrasesField({ form }: { form: UseFormReturn<z.infer<typeof Trig
 	)
 }
 
-function ExampleField({ form }: { form: UseFormReturn<z.infer<typeof TriggerSchema>> }) {
+function ExampleField({ form }: FieldProps) {
 	const { fields, remove, append } = useFieldArray({
 		control: form.control,
 		name: "examples",
@@ -151,7 +157,7 @@ function ExampleField({ form }: { form: UseFormReturn<z.infer<typeof TriggerSche
 	)
 }
 
-function RequirementField({ form }: { form: UseFormReturn<z.infer<typeof TriggerSchema>> }) {
+function RequirementField({ form }: FieldProps) {
 	const { fields, remove, append } = useFieldArray({
 		control: form.control,
 		name: "requirements",
@@ -211,9 +217,6 @@ export function TriggerFields() {
 		mode: "onChange"
 	});
 
-	// const [newPhrase, setNewPhrase] = useState("");
-	// const [newExample, setNewExample] = useState("");
-	// const [newRequirement, setNewRequirement] = useState("");
 
 	// const handleInputChange = (field: keyof SupportTrigger, value: any) => {
 	// 	setFormData((prev) => ({ ...prev, [field]: value }));
@@ -227,9 +230,6 @@ export function TriggerFields() {
 	// };
 
 
-	async function handleSubmit(v: z.infer<typeof TriggerSchema>) {
-		if (!form.formState.isValid) return;
-	};
 
 	// const selectedTool = AVAILABLE_TOOLS.find(
 	// 	(tool) => tool.name === formData.toolCall?.name

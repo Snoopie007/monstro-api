@@ -8,7 +8,7 @@ import {
     DialogDescription,
 } from "@/components/ui";
 
-import { SupportAssistant } from "@/types";
+import { SupportAssistant, SupportTrigger } from "@/types";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,18 +18,19 @@ import {
 import { Loader2 } from "lucide-react";
 import { cn, tryCatch, sleep } from "@/libs/utils";
 import { toast } from "react-toastify";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TriggerSchema } from "@/libs/FormSchemas";
 import { VisuallyHidden } from "react-aria";
 import { TriggerFields } from "./TriggerFields";
 
 interface TriggerDialogProps {
     assistant: SupportAssistant
+    trigger: SupportTrigger | null
 }
 
 const InputStyle = 'rounded-md h-9 border border-foreground/10 '
 
-export function TriggerDialog({ assistant, }: TriggerDialogProps) {
+export function TriggerDialog({ assistant, trigger }: TriggerDialogProps) {
 
     const [loading, setLoading] = useState(false)
     const [open, setOpen] = useState(false)
@@ -38,21 +39,45 @@ export function TriggerDialog({ assistant, }: TriggerDialogProps) {
         resolver: zodResolver(TriggerSchema),
         defaultValues: {
             name: '',
+            triggerType: 'keyword',
+            triggerPhrases: [],
+            toolCall: { name: '', parameters: {}, description: '', args: {} },
+            examples: [],
+            requirements: [],
         },
         mode: "onChange",
     });
 
-    async function onSubmit(v: z.infer<typeof TriggerSchema>) {
+    useEffect(() => {
+        if (trigger) {
+            setOpen(true)
+            form.reset({
+                name: trigger.name,
+                triggerType: trigger.triggerType,
+                triggerPhrases: trigger.triggerPhrases.map((p) => ({ value: p })),
+                toolCall: trigger.toolCall,
+                examples: trigger.examples.map((e) => ({ value: e })),
+                requirements: trigger.requirements.map((r) => ({ value: r })),
+            })
+        }
+    }, [trigger])
 
-        if (!assistant) return
+    async function onSubmit(v: z.infer<typeof TriggerSchema>) {
+        if (!form.formState.isValid || !assistant) return
+
+        const phrash = v.triggerPhrases.map((p) => p.value)
+        const examples = v.examples.map((e) => e.value)
+        const requirements = v.requirements.map((r) => r.value)
+
         setLoading(true)
         const { result, error } = await tryCatch(
             fetch(`/api/protected/bots/${assistant.id}/triggers`, {
                 method: "POST",
                 body: JSON.stringify({
-                    // ...v,
-                    // requirements: v.requirements.map((r) => r.value),
-                    // examples: v.examples.map((e) => e.value),
+                    ...v,
+                    requirements: requirements,
+                    examples: examples,
+                    triggerPhrases: phrash,
                 }),
             })
         )
@@ -67,12 +92,14 @@ export function TriggerDialog({ assistant, }: TriggerDialogProps) {
         setOpen(false)
     }
 
-    const handleOpenChange = (open: boolean) => {
+    function onClose(open: boolean) {
+        if (!open) {
+            form.reset()
+        }
         setOpen(open)
-        form.reset()
     }
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
+        <Dialog open={open} onOpenChange={onClose}>
             <DialogTrigger asChild>
                 <Button variant={'ghost'} size={'xs'} className="rounded-sm">
                     + Trigger
@@ -83,25 +110,25 @@ export function TriggerDialog({ assistant, }: TriggerDialogProps) {
                     <DialogTitle></DialogTitle>
                     <DialogDescription></DialogDescription>
                 </VisuallyHidden>
-                <DialogBody className=" p-4">
-                    <Form {...form}>
-                        <form className="space-y-1">
+                <Form {...form}>
+                    <form className="space-y-1">
+                        <DialogBody className=" p-4">
 
                             <TriggerFields />
 
-                        </form>
-                    </Form>
-                </DialogBody>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant={'outline'} size={'sm'}>Cancel</Button>
-                    </DialogClose>
-                    <Button variant={'foreground'} size={'sm'}
-                        onClick={form.handleSubmit(onSubmit)}
-                        disabled={loading}>
-                        {loading ? <Loader2 className="size-4 animate-spin" /> : "Create"}
-                    </Button>
-                </DialogFooter>
+                        </DialogBody>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button variant={'outline'} size={'sm'}>Cancel</Button>
+                            </DialogClose>
+                            <Button variant={'foreground'} size={'sm'}
+                                onClick={form.handleSubmit(onSubmit)}
+                                disabled={loading || !form.formState.isValid}>
+                                {loading ? <Loader2 className="size-4 animate-spin" /> : "Create"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
             </DialogContent>
         </Dialog >
     );

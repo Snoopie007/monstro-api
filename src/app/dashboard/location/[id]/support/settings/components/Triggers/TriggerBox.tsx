@@ -8,12 +8,11 @@ import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-	DialogDescription,
 } from "@/components/ui";
-import { SupportAssistant } from "@/types";
+import { SupportAssistant, SupportTrigger } from "@/types";
 import { FormLabel } from "@/components/forms";
 import {
-	ExistingTriggerItem,
+	TriggerItem,
 } from ".";
 import { TriggerDialog } from "./TriggerDialog";
 
@@ -23,13 +22,20 @@ interface TriggerFieldsProps {
 }
 
 export function TriggerBox({ assistant }: TriggerFieldsProps) {
-	// const [createDialogOpen, setCreateDialogOpen] = useState(false);
-	// const [editDialogOpen, setEditDialogOpen] = useState(false);
-	// const [editingTrigger, setEditingTrigger] = useState<SupportTrigger | null>(
-	// 	null
-	// );
-	// const triggers = form.watch("triggers") as SupportTrigger[];
 
+	const [triggers, setTriggers] = useState<SupportTrigger[]>(assistant.triggers || []);
+	const [selectedTrigger, setSelectedTrigger] = useState<SupportTrigger | null>(null);
+
+
+	async function handleUpdate(trigger: SupportTrigger | null, type: 'create' | 'update' | 'delete') {
+		// if (type === 'create') {
+		// 	setTriggers([...triggers, trigger]);
+		// } else if (type === 'update') {
+		// 	setTriggers(triggers.map((t) => t.id === trigger.id ? trigger : t));
+		// } else if (type === 'delete') {
+		// 	setTriggers(triggers.filter((t) => t.id !== trigger.id));
+		// }
+	}
 	// const handleCreateTrigger = async (triggerData: Partial<SupportTrigger>) => {
 	// 	const tmpId =
 	// 		triggerData.id ||
@@ -105,7 +111,7 @@ export function TriggerBox({ assistant }: TriggerFieldsProps) {
 						</TooltipContent>
 					</Tooltip>
 				</div>
-				<TriggerDialog assistant={assistant} />
+				<TriggerDialog assistant={assistant} trigger={selectedTrigger} />
 			</div>
 			<ScrollArea className="max-h-[30vh] overflow-y-auto">
 				{assistant.triggers?.length === 0 ? (
@@ -118,14 +124,12 @@ export function TriggerBox({ assistant }: TriggerFieldsProps) {
 					</div>
 				) : (
 					<div className="space-y-2 py-2">
-						{assistant.triggers?.map((trigger) => (
-							<ExistingTriggerItem
-								key={trigger.id}
+						{assistant.triggers?.map((trigger, index) => (
+							<TriggerItem
+								key={index}
 								trigger={trigger}
-								handleToggleTrigger={() => { }}
-								setEditingTrigger={() => { }}
-								setEditDialogOpen={() => { }}
-								handleDeleteTrigger={() => { }}
+								onSelect={setSelectedTrigger}
+								onUpdate={() => { }}
 							/>
 						))}
 					</div>
