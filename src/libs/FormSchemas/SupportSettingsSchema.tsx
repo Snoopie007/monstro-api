@@ -11,10 +11,8 @@ export const TriggerSchema = z.object({
 		value: z.string(),
 	})),
 	toolCall: z.object({
-		name: z.string(),
-		description: z.string(),
+		tool: z.string(),
 		parameters: z.record(z.any()),
-		args: z.record(z.any()),
 	}).optional(),
 	examples: z.array(z.object({
 		value: z.string(),

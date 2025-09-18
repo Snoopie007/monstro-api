@@ -24,6 +24,6 @@
 		"@public/*": ["./public/*"]
 	  }
 	},
-	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "next.config.ts", "src/app/api/protected/loc/[id]/tax/settings", "src/app/dashboard/location/[id]/support/settings/components"],
+	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "next.config.ts", "src/app/api/protected/loc/[id]/tax/settings"],
 	"exclude": ["node_modules"]
   }
