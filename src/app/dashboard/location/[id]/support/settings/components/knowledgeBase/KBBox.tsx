@@ -18,7 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 
 
-export function KnowledgeBaseFields({ assistant }: { assistant: SupportAssistant }) {
+export function KBBox({ assistant }: { assistant: SupportAssistant }) {
 
 
 	const [entries, setEntries] = useState<QAEntry[]>(assistant.knowledgeBase.qa_entries);
@@ -54,8 +54,8 @@ export function KnowledgeBaseFields({ assistant }: { assistant: SupportAssistant
 
 
 	return (
-		<div className="space-y-4 bg-background rounded-lg">
-			<div className="flex items-center justify-between px-4 py-2">
+		<div className="bg-background rounded-lg px-4 py-2">
+			<div className="flex items-center justify-between border-b border-foreground/10 pb-2">
 				<div className="flex items-center gap-2">
 					<FormLabel size="sm">Knowledge Base</FormLabel>
 					<Tooltip>

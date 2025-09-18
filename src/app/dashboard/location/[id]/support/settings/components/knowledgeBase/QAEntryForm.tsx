@@ -14,18 +14,18 @@ import {
 	DialogFooter,
 	Input,
 } from "@/components/ui";
-import { FormControl, FormItem, FormField, FormLabel, Label, Textarea } from "@/components/forms";
+import { FormControl, FormItem, FormField } from "@/components/forms";
 import { VisuallyHidden } from "react-aria";
-import { QAEntry } from "@/types/knowledgeBase";
 import { KnowledgeBaseSchema } from "@/libs/FormSchemas/";
 import { Form } from "@/components/forms";
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus, PlusIcon } from "lucide-react";
 
 interface QAEntryFormProps {
 	form: UseFormReturn<z.infer<typeof KnowledgeBaseSchema>>;
 
 }
-
+const InputStyle = "w-full border-none focus-visible:ring-0 focus-visible:outline-hidden rounded-none";
+const FieldStyle = "w-full border rounded-md border-foreground/10 items-center flex flex-row gap-1 overflow-hidden space-y-0 ";
 export function QAEntryForm({
 	form,
 }: QAEntryFormProps) {
@@ -48,60 +48,72 @@ export function QAEntryForm({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button size="sm" variant="ghost" className="hover:bg-foreground/10">
-					Q&A Entry
+				<Button size="xs" variant="ghost" className="hover:bg-foreground/10">
+					+ Q&A Entry
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="max-w-2xl p-4">
+			<DialogContent className="max-w-2xl p-4 space-y-2">
 				<VisuallyHidden>
 					<DialogTitle></DialogTitle>
 					<DialogDescription></DialogDescription>
 				</VisuallyHidden>
+				<div className="flex justify-between items-center">
+					<div className="space-y-1">
+						<div className=" font-medium">Question and Answer</div>
+						<p className="text-sm text-muted-foreground">Here an example of a question and answer. </p>
+					</div>
+					<Button variant="outline" size="icon" className="rounded-sm size-5  hover:bg-foreground/10"
+						onClick={() => append({ id: '', question: '', answer: '', created: '' })}>
+						<PlusIcon className="size-4 text-muted-foreground" />
+					</Button>
+				</div>
 				<Form {...form}>
 					<form className="space-y-2">
 
-						<fieldset className="space-y-2">
-							<FormLabel size="sm">Q & A</FormLabel>
-							{fields.map((field, i) => (
-								<div key={i}>
-									<div className="flex gap-1 items-center">
-										<FormField
-											key={field.id}
-											control={form.control}
-											name={`qa_entries.${i}.question`}
-											render={({ field }) => (
-												<FormItem>
-													<FormControl>
-														<Input {...field} className="w-full" placeholder="Question" />
-													</FormControl>
+						{fields.map((field, i) => (
+							<fieldset key={i} className="flex flex-row gap-1">
+								<div className="flex flex-1 flex-col gap-1 items-center w-full">
+									<FormField
+										key={field.id}
+										control={form.control}
+										name={`qa_entries.${i}.question`}
+										render={({ field }) => (
+											<FormItem className={FieldStyle}>
+												<div className="px-4 border-r border-foreground/10 h-full items-center flex">Q</div>
+												<FormControl>
 
-												</FormItem>
-											)}
-										/>
-										<FormField
-											control={form.control}
-											name={`qa_entries.${i}.answer`}
-											render={({ field }) => (
-												<FormItem>
-													<FormControl>
-														<Input {...field} className="w-full" placeholder="Answer" />
-													</FormControl>
-												</FormItem>
-											)}
-										/>
-									</div>
-									<Button type="button" variant="ghost" size="icon"
-										className="rounded-sm size-5 hover:bg-red-500 hover:text-white transition-all duration-200"
-										onClick={() => remove(i)}>
-										<Trash2 className="size-3.5" />
-									</Button>
+													<Input {...field}
+														className={InputStyle}
+														placeholder="Question" />
+												</FormControl>
+
+											</FormItem>
+										)}
+									/>
+									<FormField
+										control={form.control}
+										name={`qa_entries.${i}.answer`}
+										render={({ field }) => (
+											<FormItem className={FieldStyle}>
+												<div className="px-4 border-r border-foreground/10 h-full items-center flex">A</div>
+												<FormControl>
+
+													<Input {...field} className={InputStyle} placeholder="Answer" />
+												</FormControl>
+											</FormItem>
+										)}
+									/>
 								</div>
-							))}
+								<Button type="button" variant="ghost" size="icon"
+									className="rounded-sm size-5 hover:bg-red-500 hover:text-white transition-all duration-200"
+									onClick={() => remove(i)}>
+									<Trash2 className="size-3.5" />
+								</Button>
+							</fieldset>
+						))}
 
-						</fieldset>
 
-
-						<DialogFooter className="flex gap-2 pt-2 justify-end">
+						<DialogFooter className="flex gap-1 pt-2 justify-end">
 							<Button type="button" size="sm"
 								onClick={form.handleSubmit(handleSubmit)}
 								disabled={form.formState.isSubmitting || !form.formState.isValid}

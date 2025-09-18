@@ -18,10 +18,7 @@ export function ExistingTriggerItem({
   handleDeleteTrigger,
 }: ExistingTriggerItemProps) {
   return (
-    <div
-      key={trigger.id}
-      className="px-3 py-1 border rounded-lg border-foreground/10 hover:bg-background/40 transition-colors"
-    >
+    <div key={trigger.id}    >
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium">{trigger.name}</p>
         <div className="flex items-center gap-1">
@@ -61,6 +58,6 @@ export function ExistingTriggerItem({
           </Button>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

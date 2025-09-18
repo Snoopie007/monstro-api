@@ -14,14 +14,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
     Form,
-    FormField, FormItem, FormLabel,
-    FormControl, Input,
-    FormDescription,
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectItem,
-    SelectContent
 } from "@/components/forms";
 import { Loader2 } from "lucide-react";
 import { cn, tryCatch, sleep } from "@/libs/utils";
@@ -29,6 +21,7 @@ import { toast } from "react-toastify";
 import { useState } from "react";
 import { TriggerSchema } from "@/libs/FormSchemas";
 import { VisuallyHidden } from "react-aria";
+import { TriggerFields } from "./TriggerFields";
 
 interface TriggerDialogProps {
     assistant: SupportAssistant
@@ -81,7 +74,7 @@ export function TriggerDialog({ assistant, }: TriggerDialogProps) {
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant={'foreground'} size={'xs'} className="rounded-sm">
+                <Button variant={'ghost'} size={'xs'} className="rounded-sm">
                     + Trigger
                 </Button>
             </DialogTrigger>
@@ -94,23 +87,7 @@ export function TriggerDialog({ assistant, }: TriggerDialogProps) {
                     <Form {...form}>
                         <form className="space-y-1">
 
-                            <fieldset className="grid grid-cols-2 gap-2">
-                                <FormField
-                                    control={form.control}
-                                    name="name"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel size="sm">Name</FormLabel>
-                                            <FormControl>
-                                                <Input {...field} className={InputStyle} />
-                                            </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-
-
-                            </fieldset>
-
+                            <TriggerFields />
 
                         </form>
                     </Form>

@@ -30,9 +30,8 @@ import { cn } from "@/libs/utils";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useBotSettingContext } from "../provider";
 import { PersonaFields } from "./PersonaFields";
-import { TriggerFields } from "./Triggers";
-import { KnowledgeBaseFields } from "./knowledgeBase";
-import { Loader2 } from "lucide-react";
+import { TriggerBox } from "./Triggers";
+import { KBBox } from "./knowledgeBase";
 
 const Models = ["anthropic", "gpt", "gemini"];
 
@@ -200,8 +199,8 @@ export function BotFields({ form, lid, isSaving, onSubmit }: BotFieldsProps) {
 			</fieldset>
 			{assistant && (
 				<>
-					<TriggerFields assistant={assistant} />
-					<KnowledgeBaseFields assistant={assistant} />
+					<TriggerBox assistant={assistant} />
+					<KBBox assistant={assistant} />
 				</>
 			)}
 		</>

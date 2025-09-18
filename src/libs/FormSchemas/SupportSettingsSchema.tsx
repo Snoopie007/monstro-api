@@ -7,16 +7,21 @@ export const TriggerSchema = z.object({
 		.min(4, { message: "Name is too short" })
 		.max(50, { message: "Name is too long" }),
 	triggerType: z.enum(["keyword", "intent", "condition"]),
-	triggerPhrases: z.array(z.string()),
-	toolCall: z
-		.object({
-			name: z.string(),
-			description: z.string(),
-			parameters: z.record(z.any()),
-			args: z.record(z.any()),
-		})
-		.optional(),
-	examples: z.array(z.string()),
+	triggerPhrases: z.array(z.object({
+		value: z.string(),
+	})),
+	toolCall: z.object({
+		name: z.string(),
+		description: z.string(),
+		parameters: z.record(z.any()),
+		args: z.record(z.any()),
+	}).optional(),
+	examples: z.array(z.object({
+		value: z.string(),
+	})),
+	requirements: z.array(z.object({
+		value: z.string(),
+	})),
 });
 
 export const KnowledgeBaseSchema = z.object({

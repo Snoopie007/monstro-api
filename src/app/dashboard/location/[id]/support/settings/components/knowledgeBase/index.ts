@@ -1,1 +1,1 @@
-export * from "./KnowledgeBaseFields";
+export * from "./KBBox";
