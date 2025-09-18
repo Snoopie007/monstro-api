@@ -20,10 +20,10 @@ export function QAEntryList({ entries, onEdit, onDelete }: QAEntryListProps) {
 
   if (entries.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <MessageSquare size={16} className="mx-auto mb-4 opacity-50" />
-        <p>No Q&A entries yet</p>
-        <p className="text-sm">Click "Add Q&A Entry" above to get started</p>
+      <div className="text-center py-8" >
+        <MessageSquare size={16} className="mx-auto text-muted-foreground mb-2" />
+        <p className="text-sm font-medium">No Q&A entries yet</p>
+        <p className="text-xs text-muted-foreground">Click "Add Q&A Entry" above to get started</p>
       </div>
     );
   }

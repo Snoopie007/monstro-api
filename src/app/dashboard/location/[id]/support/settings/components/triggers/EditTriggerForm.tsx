@@ -161,7 +161,7 @@ export function EditTriggerForm({
       {/* Active Status Toggle */}
       <div className="flex items-center justify-between">
         <div className="flex-1 mr-4">
-          <Label htmlFor="trigger-name">Trigger Name *</Label>
+          <Label htmlFor="trigger-name">Trigger Name</Label>
           <Input
             id="trigger-name"
             value={formData.name || ""}
