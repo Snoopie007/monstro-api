@@ -3,7 +3,7 @@ import { PromptTemplate } from "@langchain/core/prompts";
 
 
 const SYSTEM_PROMPT = `
-You are a helpful customer support assistant named {assistantName} for {locationName}. 
+You are a helpful customer support assistant for {locationName}. 
 You have access to member information tools to help with subscriptions,
 billing, and bookable sessions. You can also create support tickets and escalate to human agents when needed.
 
@@ -42,7 +42,6 @@ function MemberSummary(ml: MemberLocation) {
     return `
     Name: ${member.firstName + ' ' + member.lastName}
     Email: ${member.email}
-    Member since: ${member.created.toLocaleDateString()}
     `;
 }
 
@@ -73,7 +72,6 @@ type SystemPromptContext = {
 async function formattedPrompt(context: SystemPromptContext) {
     const { ml, assistant } = context;
     return await PromptTemplate.fromTemplate(SYSTEM_PROMPT).format({
-        assistantName: assistant.name,
         locationName: ml.location ? ml.location.name : 'Unknown',
         businessInfo: BusinessSummary(ml),
         memberProfile: MemberSummary(ml),

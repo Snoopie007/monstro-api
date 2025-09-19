@@ -12,15 +12,14 @@ import {
 	assistantStatusEnum,
 	botModelEnum
 } from "./SupportEnums";
-import { supportConversations } from "./SupportConversations";
+import { supportConversations } from "./supportConversations";
 import type { SupportPersona } from "@/types";
-import { supportTriggers } from "./SupportTriggers";
+import { supportTriggers } from "./supportTriggers";
 
 // Single support bot per location
 export const supportAssistants = pgTable("support_assistants", {
 	id: text("id").primaryKey().default(sql`uuid_base62()`),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-	name: text("name").notNull().default("Support Bot"),
 	prompt: text("prompt").notNull().default("You are a helpful customer support assistant. You have access to member information tools to help with subscriptions, billing, and bookable sessions. You can also create support tickets and escalate to human agents when needed."),
 	temperature: integer("temperature").notNull().default(0),
 	initialMessage: text("initial_message").notNull().default("Hi! I'm here to help you. I can assist with your membership status, billing questions, available classes, and any other support needs. What can I help you with today?"),
