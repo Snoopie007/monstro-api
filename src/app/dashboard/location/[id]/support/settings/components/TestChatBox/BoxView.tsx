@@ -6,12 +6,13 @@ import { Brush, Loader2, BrushCleaning } from "lucide-react";
 import { TestChatMessages, TestChatInput } from "."
 import { useBotSettingContext } from "../../provider";
 import { MemberSelect } from "./MemberSelect";
+import { TestChatMessage } from "@/types";
 
 
 
 
 export function TestChatBox({ lid }: { lid: string }) {
-    const { assistant } = useBotSettingContext();
+    const { assistant, member, setMessage } = useBotSettingContext();
     const [loading, setLoading] = useState(false);
     useEffect(() => {
         if (!assistant?.initialMessage) return;
@@ -25,38 +26,27 @@ export function TestChatBox({ lid }: { lid: string }) {
         if (!assistant?.initialMessage) return;
 
         const content = interpolate(assistant.initialMessage, {
-            prospect: { firstName: "John" },
-            bot: { name: "Mary" },
+            prospect: { firstName: member?.firstName },
             location
         });
 
-        // setMessages((prev: StreamSupportMessage[]) => {
-        //     const initialMsg = {
-        //         id: 'initial',
-        //         role: 'ai',
-        //         content,
-        //         isLoading: false,
-        //         created: new Date()
-        //     }
-        //     return [initialMsg, ...prev];
-        // });
+        setMessage(prev => {
+            const initialMsg = {
+                id: 'initial',
+                role: 'assistant' as const,
+                content,
+                isLoading: false,
+                timestamp: new Date().getTime(),
+            }
+            return [initialMsg, ...prev];
+        });
     }
     async function resetChat() {
         if (!assistant) return;
-
+        setMessage([]);
         setLoading(true);
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/support/chat/${assistant.id}`, {
-                method: "PUT",
-                body: JSON.stringify({ assistantId: assistant.id })
-            })
-        )
+        await new Promise(resolve => setTimeout(resolve, 1000));
         setLoading(false);
-        if (error || !result || !result.ok) {
-            console.error(error);
-        }
-
-        // resetMessage();
         setInitialMessage();
     }
 

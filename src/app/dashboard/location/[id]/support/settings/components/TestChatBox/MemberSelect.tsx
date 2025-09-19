@@ -34,13 +34,13 @@ export function MemberSelect({ lid }: { lid: string }) {
         if (members.length > 0) return
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/locs/${lid}/members?limit=5`)
+            fetch(`/api/protected/loc/${lid}/members?limit=5`)
         )
         setLoading(false)
         if (error || !result) return
         const data = await result.json()
-        setMembers(data)
-        setFilteredMembers(data)
+        setMembers(data.members)
+        setFilteredMembers(data.members)
     }
 
     return (
