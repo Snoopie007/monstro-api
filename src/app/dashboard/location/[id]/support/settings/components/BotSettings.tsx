@@ -33,9 +33,7 @@ export function BotSettings({ lid }: { lid: string }) {
     })
 
     useEffect(() => {
-        console.log('assistant objecT: ', assistant)
         if (assistant) {
-            console.log('model assistant effect: ', assistant.model)
             const typed = {
                 prompt: assistant.prompt || '',
                 initialMessage: assistant.initialMessage || '',
@@ -53,7 +51,6 @@ export function BotSettings({ lid }: { lid: string }) {
     }, [assistant])
 
     async function onSubmit(v: z.infer<typeof SupportSettingsSchema>) {
-        console.log('values to save: ', v)
         if (!assistant) return
         setIsSaving(true)
         const { result, error } = await tryCatch(
