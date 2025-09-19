@@ -1,10 +1,10 @@
 import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
-import "./src/libs/queues/worker"; // Import worker to start processing
-import { serverConfig } from "./src/libs/queues/config";
+import { serverConfig } from "./src/config";
 import { RateLimitMiddleware } from "./src/middlewares";
 import { AuthRoutes, ProtectedRoutes, PublicRoutes } from "./src/routes";
 import { realtimeRoutes, realtimeHealthRoutes } from "./src/routes/realtime";
+import "./src/workers/worker"; // Import worker to start processing
 
 const CORS_CONFIG = {
   origin: "*",
