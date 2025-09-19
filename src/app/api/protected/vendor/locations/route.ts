@@ -35,12 +35,11 @@ export async function POST(req: Request) {
       // Create support assistant for new location
       await tx.insert(supportAssistants).values({
         locationId: location.id,
-        name: "Support Assistant",
         prompt:
           "You are a helpful customer support assistant. You have access to member information tools to help with subscriptions, billing, and bookable sessions. You can also create support tickets and escalate to human agents when needed.",
         initialMessage:
           "Hi! I'm here to help you. I can assist with your membership status, billing questions, available classes, and any other support needs. What can I help you with today?",
-        temperature: 0,
+        temperature: "0",
         status: "draft",
         availableTools: getDefaultSupportTools(),
         persona: {} as SupportPersona,

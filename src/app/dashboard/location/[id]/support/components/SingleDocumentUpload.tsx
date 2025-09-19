@@ -158,7 +158,7 @@ export function SingleDocumentUpload({
 										)}
 									</div>
 									<p className="text-xs text-green-700">
-										Uploaded {existingDocument.createdAt.toLocaleDateString()}
+										Uploaded {existingDocument.created}
 									</p>
 								</div>
 							</div>

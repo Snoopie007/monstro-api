@@ -91,6 +91,7 @@ interface BotSettingProviderProps {
 export function BotSettingProvider({ children, assistant }: BotSettingProviderProps) {
     const [state, dispatch] = useReducer(reducer, initialState);
     useEffect(() => {
+        console.log('assistant set in context', assistant)
         dispatch({ type: 'SET_ASSISTANT', payload: assistant });
     }, [assistant]);
     return (

@@ -25,7 +25,7 @@ export function ChatMessage({ message, member }: ChatMessageProps) {
             return message.agentName
         }
         if (isAI) {
-            return assistant?.persona.name
+            return "Support Assistant"
         }
         return member?.firstName
     }, [message]);

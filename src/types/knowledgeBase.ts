@@ -25,4 +25,5 @@ export type DocumentMetadataUI = {
   name: string;
   filePath: string;
   size: number;
+  created?: string;
 };

@@ -14,8 +14,6 @@ export interface SupportAssistantSettingsRequest {
   temperature: number;
   model: string;
   persona: SupportPersona;
-  triggers: SupportTrigger[];
-  knowledgeBase: KnowledgeBase;
 }
 export type SupportTrigger = typeof supportTriggers.$inferSelect;
 
@@ -51,7 +49,6 @@ export type SupportMessage = typeof supportMessages.$inferSelect & {
 export type NewSupportMessage = typeof supportMessages.$inferInsert;
 
 export type SupportPersona = {
-  name: string;
   avatar: string;
   responseStyle: string;
   personality: string[];

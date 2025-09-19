@@ -41,9 +41,12 @@ export function QAEntryList({ entries, onDelete }: QAEntryListProps) {
     return (
         <ScrollArea className="max-h-[50vh] overflow-y-auto py-2">
             <div className="space-y-3">
-                {entries.map((entry) => {
+                {entries.map((entry, index) => {
                     return (
-                        <div className="flex items-center justify-between gap-2">
+                        <div
+                            key={index}
+                            className="flex items-center justify-between gap-2"
+                        >
                             <p className="text-sm font-medium leading-relaxed">
                                 {truncateText(entry.question, 30)}
                             </p>
