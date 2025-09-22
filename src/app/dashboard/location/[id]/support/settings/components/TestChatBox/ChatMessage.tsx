@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef } from 'react'
 import { ScrollArea } from '@/components/ui'
 
 import { TestChatMessage } from '@/types'
-import { Placeholder } from '../../../components'
 import { useBotSettingContext } from '../../provider'
 
 export function TestChatMessages() {
@@ -33,9 +32,8 @@ export function TestChatMessages() {
 
 function MessageFormat({ message }: { message?: TestChatMessage }) {
     const isAgent = useMemo(() => {
-        return message?.role === 'assistant'
+        return message?.role === 'ai'
     }, [message])
-    console.log(message?.content)
     return (
         <div className={cn(`message mb-3 break-words`)}>
             <div className="flex gap-4 flex-row justify-start">
@@ -46,15 +44,11 @@ function MessageFormat({ message }: { message?: TestChatMessage }) {
                     <span className="font-semibold leading-none">
                         {isAgent ? 'Monstro' : 'You'}
                     </span>
-                    {message?.isLoading ? (
-                        <Placeholder />
-                    ) : (
-                        <div className="text-base text-foreground py-2 prose prose-sm max-w-none">
-                            <ReactMarkdown>
-                                {message?.content || ''}
-                            </ReactMarkdown>
-                        </div>
-                    )}
+                    <div className="text-base text-foreground py-2 prose prose-sm max-w-none">
+                        <ReactMarkdown>
+                            {message?.content || ''}
+                        </ReactMarkdown>
+                    </div>
                 </div>
             </div>
         </div>

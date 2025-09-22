@@ -75,7 +75,6 @@ export interface TestChatMessage {
   id: string;
   role: SupportMessageRole;
   content: string;
-  isLoading: boolean;
   tool_calls?: Record<string, any>[];
   tool_call_id?: string;
   metadata?: any;

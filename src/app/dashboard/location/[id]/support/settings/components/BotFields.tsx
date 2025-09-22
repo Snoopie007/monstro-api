@@ -97,14 +97,13 @@ export function BotFields({ form }: BotFieldsProps) {
                     control={form.control}
                     name="model"
                     render={({ field }) => {
-                        console.log('What the field value is now: ', field.value)
                         return (
                             <FormItem className="flex-1">
                                 <FormLabel size="sm">Model</FormLabel>
                                 <Select
                                     {...field}
                                     value={field.value}
-                                    onValueChange={field.onChange} 
+                                    onValueChange={field.onChange}
                                 >
                                     <FormControl>
                                         <SelectTrigger className="border-foreground/5 shadow-none">

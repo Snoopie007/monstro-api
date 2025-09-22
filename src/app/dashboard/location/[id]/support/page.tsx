@@ -39,7 +39,6 @@ export default async function SupportPage(props: {
 	params: Promise<{ id: string }>;
 }) {
 	const params = await props.params;
-
 	const assistant = await getAssistant(params.id);
 
 
