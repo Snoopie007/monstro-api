@@ -6,8 +6,6 @@ import { Brush, Loader2, BrushCleaning } from "lucide-react";
 import { TestChatMessages, TestChatInput } from "."
 import { useBotSettingContext } from "../../provider";
 import { MemberSelect } from "./MemberSelect";
-import { TestChatMessage } from "@/types";
-
 
 
 

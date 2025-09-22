@@ -75,20 +75,20 @@ export interface TestChatMessage {
   id: string;
   role: SupportMessageRole;
   content: string;
-  timestamp: number;
   isLoading: boolean;
   tool_calls?: Record<string, any>[];
   tool_call_id?: string;
   metadata?: any;
+  timestamp: number;
 }
 
-export interface TestChatSession {
-  sessionId: string;
-  locationId: string;
-  messages: TestChatMessage[];
-  lastActivity: number;
-  testMemberId?: string;
-}
+// export interface TestChatSession {
+//   id: string;
+//   locationId: string;
+//   messages: TestChatMessage[];
+//   lastActivity: number;
+//   testMemberId?: string;
+// }
 
 export type CustomVariableGroup = {
   name: string;

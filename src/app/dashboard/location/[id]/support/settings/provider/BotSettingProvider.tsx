@@ -7,7 +7,6 @@ import { createContext, useContext, useReducer, ReactNode, useEffect } from 'rea
 type BotSettingState = {
     messages: TestChatMessage[];
     assistant: SupportAssistant | null;
-    sessionId: string;
     member: Member | null;
 };
 
@@ -26,7 +25,6 @@ const BotSettingContext = createContext<{
 const initialState: BotSettingState = {
     messages: [],
     assistant: null,
-    sessionId: Math.random().toString(36).substring(7),
     member: null
 };
 
@@ -54,7 +52,6 @@ function reducer(state: BotSettingState, action: BotSettingAction): BotSettingSt
             return {
                 ...state,
                 messages: [],
-                sessionId: Math.random().toString(36).substring(7)
             };
         case 'SET_MEMBER':
             return {
@@ -91,7 +88,6 @@ interface BotSettingProviderProps {
 export function BotSettingProvider({ children, assistant }: BotSettingProviderProps) {
     const [state, dispatch] = useReducer(reducer, initialState);
     useEffect(() => {
-        console.log('assistant set in context', assistant)
         dispatch({ type: 'SET_ASSISTANT', payload: assistant });
     }, [assistant]);
     return (
@@ -107,7 +103,7 @@ export function useBotSettingContext() {
         throw new Error('useBotSettingContext must be used within a BotSettingProvider');
     }
     const { state, dispatch } = context;
-    const { messages, sessionId, member, assistant } = state;
+    const { messages, member, assistant } = state;
 
     function setMessage(message: TestChatMessage | TestChatMessage[] | ((prev: TestChatMessage[]) => TestChatMessage[])) {
         dispatch({ type: 'SET_MESSAGE', payload: message });
@@ -127,7 +123,6 @@ export function useBotSettingContext() {
 
     return {
         messages,
-        sessionId,
         member,
         assistant,
         setMessage,

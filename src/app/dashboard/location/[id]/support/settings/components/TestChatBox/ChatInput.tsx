@@ -1,5 +1,4 @@
 'use client'
-import { interpolate } from "@/libs/utils";
 import { Button } from '@/components/ui'
 import { TestChatMessage } from '@/types'
 import { nanoid } from 'nanoid'
@@ -12,33 +11,60 @@ export function TestChatInput({ lid }: { lid: string }) {
     const btnRef = useRef<HTMLButtonElement>(null)
     const [input, setInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
-    const { messages, sessionId, setMessage, assistant, member } =
-        useBotSettingContext()
+    const { messages, setMessage, assistant, member } = useBotSettingContext()
 
-    async function handleResponse(response: Response) {
-        // add to messages state
-        const responseData = await response.json()
-        console.log(responseData);
-        const interpolatedContent = interpolate(responseData.content, {
-          prospect: { firstName: member?.firstName },
-          location
-      });
-        setMessage(prev => [...prev, {
+    async function handleStream(response: Response) {
+        console.log('handleStream')
+        const reader = response.body?.getReader();
+        if (!reader) return;
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        const newMessage: TestChatMessage = {
             id: nanoid(),
-            role: 'assistant',
-            content: interpolatedContent || 'Sorry, I didn\'t receive a proper response.',
-            isLoading: false,
+            role: "ai",
+            content: '',
+            isLoading: true,
             timestamp: new Date().getTime(),
-        }])
-        setIsLoading(false)
+        };
+
+
+        let hasReceivedContent = false;
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const chunks = buffer.split("\n");
+            buffer = chunks.pop() || "";
+
+            for (const chunk of chunks) {
+                if (chunk.trim() === "") continue;
+
+                const content = chunk.split(':')[1]?.replace(/^"|"$/g, '');
+
+                // First valid content chunk received
+                if (!hasReceivedContent) {
+                    hasReceivedContent = true;
+                    setMessage((prev) => [...prev, { ...newMessage, isLoading: true }]);
+                } else {
+                    console.log(content)
+                    newMessage.content += content;
+                    setMessage((prev) => [...prev.slice(0, -1), { ...newMessage, isLoading: false }]);
+                }
+
+            }
+        }
+        setIsLoading(false);
     }
 
     async function sendMessage(e: FormEvent<HTMLFormElement>) {
         e.preventDefault()
-        if (!assistant || !input.trim()) return
+        if (!assistant || !input.trim() || isLoading || !member) return
 
 
-        const userMessage: TestChatMessage = {
+        const newMessage: TestChatMessage = {
             id: nanoid(),
             role: 'human',
             content: input.trim(),
@@ -46,39 +72,29 @@ export function TestChatInput({ lid }: { lid: string }) {
             timestamp: new Date().getTime(),
         }
 
-        setMessage([...messages, userMessage])
+        setMessage([...messages, newMessage])
         setInput('')
         setIsLoading(true)
 
         try {
-            // Call the new monstro-api test chat endpoint
-            const apiUrl =
-                process.env.NEXT_PUBLIC_MONSTRO_API_URL ||
-                'http://localhost:3001'
-            const response = await fetch(
-                `${apiUrl}/api/protected/locations/${lid}/support/test-chat`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${session?.user.sbToken || ''}`,
-                    },
-                    body: JSON.stringify({
-                        sessionId,
-                        lid,
-                        // contact: {},
-                        // messages: [...messages, userMessage],
-                        message: input.trim(),
-                        testMemberId: member?.id,
-                    }),
-                }
-            )
+            const api = process.env.NEXT_PUBLIC_MONSTRO_API_URL || 'http://localhost:3001'
+            const response = await fetch(`${api}/api/protected/locations/${lid}/support/test`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session?.user.sbToken || ''}`,
+                },
+                body: JSON.stringify({
+                    message: newMessage,
+                    memberId: member?.id,
+                }),
+            })
 
             if (!response.ok) {
                 throw new Error('Failed to send message')
             }
 
-            await handleResponse(response)
+            await handleStream(response)
         } catch (error) {
             console.error('Error sending message:', error)
             setIsLoading(false)
@@ -113,7 +129,7 @@ export function TestChatInput({ lid }: { lid: string }) {
                             ref={btnRef}
                             variant="foreground"
                             size="sm"
-                            disabled={isLoading}
+                            disabled={isLoading || !member}
                         >
                             <span>{isLoading ? 'Sending...' : 'Send'}</span>
                         </Button>
