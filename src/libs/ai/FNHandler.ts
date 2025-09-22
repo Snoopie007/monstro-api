@@ -19,7 +19,7 @@ type Context = {
 }
 
 
-type ToolCallResponse = {
+export type ToolCallResponse = {
 	content: string;
 	role: MessageRole;
 	completed: boolean;

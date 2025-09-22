@@ -1,5 +1,5 @@
 import type { Elysia } from "elysia";
-import { getModel, calculateAICost } from "@/libs/ai";
+import { getModel, calculateAICost, chunkedStream } from "@/libs/ai";
 import { db } from "@/db/db";
 import { supportAssistants } from "@/db/schemas/support";
 import { eq } from "drizzle-orm";
@@ -127,12 +127,22 @@ export async function testChatRoute(app: Elysia) {
 
 			return res;
 		} catch (error) {
-			const message = error instanceof Error ? error.message : "Unknown error";
-			console.error("💥 Test chat error:", message);
-			return status(500, {
-				error: "Failed to process test message",
-				details: message,
-			});
+			console.log(error)
+			if (error instanceof Error) {
+				console.log("BOT Error:", error.message);
+
+
+				const stream = chunkedStream(`**Bot ended.** Reason: ${error.message}`);
+
+				const res = createUIMessageStreamResponse({
+					stream: toUIMessageStream(stream)
+				});
+
+				return res;
+			} else {
+				console.log(error);
+				return status(500, { message: "Internal Server Error" })
+			}
 		}
 	}).get("/test/:sid", async ({ params, status }) => {
 		try {

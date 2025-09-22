@@ -1,5 +1,5 @@
 import type { SupportConversation } from "@/types";
-import { ToolFunctions } from "./FNHandler";
+import { ToolFunctions, type ToolCallResponse } from "./FNHandler";
 import { BaseMessage, ToolMessage, trimMessages } from "@langchain/core/messages";
 import type { SupportAssistant, MemberLocation } from "@/types";
 import type { ChatOpenAI } from "@langchain/openai";
@@ -12,8 +12,12 @@ import {
 	MessagesPlaceholder,
 	SystemMessagePromptTemplate
 } from "@langchain/core/prompts";
+import type { ToolCall } from "@langchain/core/messages/tool";
 
-
+type Context = {
+	conversation: SupportConversation;
+	ml: MemberLocation;
+}
 
 export async function* invokeTestBot(
 	conversation: SupportConversation,
@@ -61,16 +65,21 @@ export async function* invokeTestBot(
 	responses.push(res);
 	// If there are tool calls, we need to handle them properly
 	if (res.tool_calls?.length) {
+		let data: ToolCallResponse | undefined = undefined;
 
 		for (const toolCall of res.tool_calls) {
 			console.log('Processing tool call:', toolCall.name);
 			const tool = ToolFunctions[toolCall.name as keyof typeof ToolFunctions];
 
 			if (toolCall.name !== 'EscalateToHuman') {
-
+				data = await tool(toolCall, { conversation, ml });
+			} else {
+				data = {
+					content: 'Respond Exactly Like this: I have notified our support team of your request.',
+					role: 'tool',
+					completed: false,
+				}
 			}
-
-			const data = await tool(toolCall, { conversation, ml });
 
 			if (data) {
 				responses.push(new ToolMessage({
@@ -80,21 +89,19 @@ export async function* invokeTestBot(
 				}));
 				completed = data.completed;
 			}
-
-
 		}
 	}
 
 	await history.addMessages(responses);
 
 	if (!completed) {
-		//
 		yield* invokeTestBot(conversation, assistant, ml, systemPrompt, model, history);
 		return;
 	}
 	yield responses[0]?.content as string;
 	return;
 }
+
 
 
 export function createMockConversation(aid: string, mid: string, lid: string): SupportConversation {

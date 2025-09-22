@@ -7,7 +7,7 @@ import type {
 	BotModel,
 	SupportMessage
 } from '@/types';
-import { HumanMessage, ToolMessage, AIMessage, BaseMessage, SystemMessage } from "@langchain/core/messages";
+import { HumanMessage, ToolMessage, AIMessage, BaseMessage, SystemMessage, AIMessageChunk } from "@langchain/core/messages";
 
 
 
@@ -171,9 +171,36 @@ function formatHistory(messages: SupportMessage[]) {
 	return history;
 }
 
+// Improved streaming function that chunks the message
+function chunkedStream(message: string) {
+	return new ReadableStream({
+		async start(controller) {
+			// Split the message into smaller chunks
+			const chunkSize = 10; // Characters per chunk
+			const delay = 20; // Milliseconds between chunks
+
+			for (let i = 0; i < message.length; i += chunkSize) {
+				const chunk = message.substring(i, i + chunkSize);
+
+				// Create an AIMessageChunk with just this portion of the message
+				const messageChunk = new AIMessageChunk({
+					content: chunk,
+				});
+
+				controller.enqueue(messageChunk);
+
+				// Add a small delay between chunks to simulate typing
+				await new Promise(resolve => setTimeout(resolve, delay));
+			}
+
+			controller.close();
+		}
+	});
+}
+
 export {
 	calculateAICost,
 	getModel,
-
+	chunkedStream,
 	formatHistory
 }
