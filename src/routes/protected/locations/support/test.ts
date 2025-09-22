@@ -6,7 +6,8 @@ import { eq } from "drizzle-orm";
 import { formattedPrompt } from "@/libs/ai/Prompts";
 import { BaseMessage } from "@langchain/core/messages";
 import { invokeTestBot, createMockConversation } from "@/libs/ai/TestChat";
-import { LangChainAdapter } from 'ai';
+import { toUIMessageStream } from '@ai-sdk/langchain';
+import { createUIMessageStreamResponse } from 'ai';
 import type {
 	SupportConversation,
 } from "@/types";
@@ -96,9 +97,6 @@ export async function testChatRoute(app: Elysia) {
 					const delay = 30; // Reduced delay for smoother streaming
 					const iterator = invokeTestBot(session, assistant, ml, systemPrompt, model, history);
 
-					// Send initial loading message
-					controller.enqueue({ content: "Loading..." });
-
 					try {
 						for await (const value of iterator) {
 
@@ -123,7 +121,11 @@ export async function testChatRoute(app: Elysia) {
 				}
 			});
 
-			return LangChainAdapter.toDataStreamResponse(stream);
+			const res = createUIMessageStreamResponse({
+				stream: toUIMessageStream(stream)
+			});
+
+			return res;
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
 			console.error("💥 Test chat error:", message);
