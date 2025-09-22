@@ -285,7 +285,7 @@ export function TriggerFields({ form }: FieldProps) {
                         <FormItem>
                             <FormLabel size="tiny">Trigger Type</FormLabel>
                             <FormControl>
-                                <Select {...field}>
+                                <Select value={field.value} onValueChange={field.onChange} key={field.value}>
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>
