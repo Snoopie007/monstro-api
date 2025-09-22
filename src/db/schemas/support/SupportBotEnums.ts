@@ -1,10 +1,10 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
 // Drizzle pg enums for database schema
-export const assistantStatusEnum = pgEnum("assistant_status", [
-  "active",
-  "draft",
-  "paused",
+export const assistantStatusEnum = pgEnum("bot_status", [
+  "Active",
+  "Draft",
+  "Paused",
 ]);
 export const conversationStatusEnum = pgEnum("conversation_status", [
   "open",

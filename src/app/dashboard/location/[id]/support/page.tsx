@@ -1,72 +1,71 @@
-
-import { SupportAssistant } from "@/types";
-import { db } from "@/db/db";
-import { eq } from "drizzle-orm";
-import { supportAssistants } from "@/db/schemas";
-import { notFound } from "next/navigation";
-import { SupportList, ChatView } from "./components";
-import { SupportProvider } from "./providers/SupportProvider";
+import { SupportAssistant } from '@/types'
+import { db } from '@/db/db'
+import { eq } from 'drizzle-orm'
+import { supportAssistants } from '@/db/schemas'
+import { notFound } from 'next/navigation'
+import { SupportList, ChatView } from './components'
+import { SupportProvider } from './providers/SupportProvider'
+import CreateAssistant from './components/CreateAssistant'
 
 async function getAssistant(lid: string): Promise<SupportAssistant | null> {
-	// Get the support assistant with location
-	try {
-		const assistant = await db.query.supportAssistants.findFirst({
-			where: eq(supportAssistants.locationId, lid),
-			with: {
-				conversations: {
-					with: {
-						member: true,
-					},
-					orderBy: (conversations, { desc }) => [desc(conversations.created)],
-				},
-			},
-		});
+    // Get the support assistant with location
+    try {
+        const assistant = await db.query.supportAssistants.findFirst({
+            where: eq(supportAssistants.locationId, lid),
+            with: {
+                conversations: {
+                    with: {
+                        member: true,
+                    },
+                    orderBy: (conversations, { desc }) => [
+                        desc(conversations.created),
+                    ],
+                },
+            },
+        })
 
-		if (!assistant) {
-			return null;
-		}
+        if (!assistant) {
+            return null
+        }
 
-		return assistant;
-	} catch (error) {
-		console.error("Error fetching support assistant:", error);
-		return null;
-	}
-
-
+        return assistant
+    } catch (error) {
+        console.error('Error fetching support assistant:', error)
+        return null
+    }
 }
 
 export default async function SupportPage(props: {
-	params: Promise<{ id: string }>;
+    params: Promise<{ id: string }>
 }) {
-	const params = await props.params;
-	const assistant = await getAssistant(params.id);
+    const params = await props.params
+    const assistant = await getAssistant(params.id)
 
+    if (!assistant) {
+        return (
+            <div className="w-full h-full">
+                <CreateAssistant />
+            </div>
+        )
+    }
 
-	if (!assistant) {
-		// Create a new assistant
-		return notFound();
-	}
-
-
-
-	return (
-		<div className="w-full h-full">
-
-			<SupportProvider assistant={assistant} >
-				<div className="flex flex-row h-full transition-all duration-300 ease-in-out gap-1">
-					<div className="flex-none w-[25%]">
-						<SupportList lid={params.id} />
-					</div>
-					<div className="flex-1 py-2">
-						<div className="bg-foreground/5 rounded-lg h-full">
-							<ChatView lid={params.id} />
-						</div>
-					</div>
-					<div className="flex-none w-[25%] ">
-						{/* Additional User Info */}
-					</div>
-				</div>
-			</SupportProvider>
-		</div>
-	);
+    return (
+        <div className="w-full h-full">
+            <SupportProvider assistant={assistant}>
+                <div className="flex flex-row h-full transition-all duration-300 ease-in-out gap-1">
+                    <div className="flex-none w-[25%]">
+                        <SupportList lid={params.id} />
+                    </div>
+                    <div className="flex-1 py-2">
+                        <div className="bg-foreground/5 rounded-lg h-full">
+                            <ChatView lid={params.id} />
+                        </div>
+                    </div>
+                    <div className="flex-none w-[25%] ">
+                        {/* Additional User Info */}
+                    </div>
+                </div>
+            </SupportProvider>
+        </div>
+    )
 }

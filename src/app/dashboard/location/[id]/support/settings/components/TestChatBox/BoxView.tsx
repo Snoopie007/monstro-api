@@ -51,7 +51,7 @@ export function TestChatBox({ lid }: { lid: string }) {
 
 
     return (
-        <div className="flex flex-col h-full bg-foreground/5  rounded-lg">
+        <div className="flex flex-col h-full bg-foreground/5 rounded-lg">
             <div className="flex flex-row items-center justify-between flex-initial  px-4 h-[50px]">
 
                 <div className=" font-medium">
