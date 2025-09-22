@@ -60,7 +60,6 @@ export function TestChatInput({ lid }: TestChatInputProps) {
                         const jsonStr = line.substring(6); // Remove "data: " prefix
                         const data = JSON.parse(jsonStr);
 
-                        console.log('Parsed stream data:', data);
 
                         switch (data.type) {
                             case 'text-start':
