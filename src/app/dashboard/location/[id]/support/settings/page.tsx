@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { BotSettings, TestChatBox } from "./components";
-import { notFound } from "next/navigation.js";
+import {  redirect } from "next/navigation.js";
 import { BotSettingProvider } from "./provider";
 
 async function getAssistant(lid: string) {
@@ -26,7 +26,7 @@ export default async function SupportBotSettingsPage(props: {
 	const assistant = await getAssistant(params.id);
 
 	if (!assistant) {
-		return notFound();
+		redirect(`/dashboard/location/${params.id}/support`);
 	}
 	return (
 		<div className="flex flex-row h-[calc(100vh-58px)] p-2 gap-2 overflow-hidden">

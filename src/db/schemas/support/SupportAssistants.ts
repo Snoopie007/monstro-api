@@ -37,7 +37,7 @@ export const supportAssistants = pgTable(
             ),
         model: botModelEnum('model').notNull().default('gpt'),
         modelId: text('model_id').notNull(),
-        status: assistantStatusEnum('status').notNull().default('draft'),
+        status: assistantStatusEnum('status').notNull().default('Draft'),
         availableTools: jsonb('available_tools')
             .array()
             .notNull()

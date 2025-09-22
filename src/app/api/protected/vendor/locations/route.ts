@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { locations, locationState, supportAssistants } from "@/db/schemas";
-import { getDefaultSupportTools } from "@/libs/supportBotDefaults";
+import { DEFAULT_SUPPORT_TOOLS } from "@/libs/SupportDefaults";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { SupportPersona } from "@/types";
 
@@ -40,8 +40,8 @@ export async function POST(req: Request) {
         initialMessage:
           "Hi! I'm here to help you. I can assist with your membership status, billing questions, available classes, and any other support needs. What can I help you with today?",
         temperature: "0",
-        status: "draft",
-        availableTools: getDefaultSupportTools(),
+        status: "Draft",
+        availableTools: DEFAULT_SUPPORT_TOOLS,
         persona: {} as SupportPersona,
         modelId: "gpt-4o",
       });
