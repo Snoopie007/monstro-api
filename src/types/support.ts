@@ -44,19 +44,19 @@ export type SupportTools = {
 };
 
 // Test Chat API Routes
-export interface TestChatMessage {
+export type TestChatMessage = {
     role: "user" | "ai" | "assistant" | "system" | "tool";
     content: string;
     timestamp: number;
     tool_calls?: any[];
     tool_call_id?: string;
     metadata?: any;
-  }
-  
-  export interface TestChatSession {
-    sessionId: string;
+}
+
+export type TestChatSession = {
+    id: string;
     locationId: string;
     messages: TestChatMessage[];
     lastActivity: number;
     testMemberId?: string;
-  }
+}

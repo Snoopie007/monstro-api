@@ -15,7 +15,17 @@ async function verifyToken(token: string) {
     }
 }
 
-
+async function verifyTokenX(token: string) {
+    try {
+        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+        const { payload } = await jwtVerify(token, secret);
+        const { user } = payload as { user: ExtendedUser };
+        return { mid: user.memberId };
+    } catch (error) {
+        console.log("Token verification error", error);
+        return null;
+    }
+}
 
 export async function AuthMiddleware(app: Elysia) {
     return app.derive(async ({ headers, status }) => {
@@ -36,3 +46,22 @@ export async function AuthMiddleware(app: Elysia) {
 
 }
 
+export async function AuthXMiddleware(app: Elysia) {
+    return app.derive(async ({ headers, status }) => {
+
+        const auth = headers['authorization']
+
+        if (!auth) return status(401, { error: "Unauthorized" })
+
+        const token = auth.split(" ")[1];
+
+        if (!token) return status(401, { error: "Unauthorized" })
+
+        const result = await verifyTokenX(token);
+
+        if (!result) return status(401, { error: "Unauthorized" })
+
+        return { memberId: result.mid }
+
+    })
+}
