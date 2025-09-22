@@ -177,10 +177,10 @@ export function TestChatInput({ lid }: TestChatInputProps) {
                     <textarea
                         value={input}
                         onKeyUp={handleKeyUp}
-                        placeholder="Type your message here..."
+                        placeholder={!member || isStreaming ? "Select a member to start chatting" : "Type your message here..."}
                         onChange={(e) => setInput(e.target.value)}
                         className="w-full  resize-none  focus-visible:outline-none p-4"
-                        disabled={isStreaming}
+                        disabled={!member || isStreaming}
                     />
                     <div className=" flex flex-row gap-2 justify-end p-2">
                         <Button
