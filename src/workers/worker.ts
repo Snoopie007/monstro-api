@@ -9,7 +9,6 @@ const worker = new Worker('email', async (job) => {
     const { name, data } = job;
     console.log(`Processing [${name}] with data:`, data);
 
-
     await emailSender.send({
         options: {
             to: data.to,

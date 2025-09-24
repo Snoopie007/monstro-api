@@ -12,12 +12,6 @@ import {
 	MessagesPlaceholder,
 	SystemMessagePromptTemplate
 } from "@langchain/core/prompts";
-import type { ToolCall } from "@langchain/core/messages/tool";
-
-type Context = {
-	conversation: SupportConversation;
-	ml: MemberLocation;
-}
 
 export async function* invokeTestBot(
 	conversation: SupportConversation,
@@ -74,6 +68,7 @@ export async function* invokeTestBot(
 			if (toolCall.name !== 'EscalateToHuman') {
 				data = await tool(toolCall, { conversation, ml });
 			} else {
+
 				data = {
 					content: 'Respond Exactly Like this: I have notified our support team of your request.',
 					role: 'tool',
