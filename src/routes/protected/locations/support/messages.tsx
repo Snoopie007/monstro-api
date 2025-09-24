@@ -71,7 +71,7 @@ export async function supportMessagesRoute(app: Elysia) {
 
             const messages = await db.query.supportMessages.findMany({
                 where: (s, { eq }) => eq(s.conversationId, cid),
-                orderBy: (b, { asc }) => asc(b.created),
+                orderBy: (b, { desc }) => desc(b.created),
                 limit: 20,
             });
 
@@ -107,14 +107,14 @@ export async function supportMessagesRoute(app: Elysia) {
 
             const history = formatHistory(messages);
 
-            const msg = await invokeBot(modelWithPrompt, history, conversation, ml);
+            await invokeBot(modelWithPrompt, history, conversation, ml);
 
             // Update conversation timestamp
             await db.update(supportConversations).set({
                 updated: new Date(),
             }).where(eq(supportConversations.id, cid));
 
-            return status(200, msg);
+            return status(200, { success: true });
 
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
@@ -135,6 +135,7 @@ async function invokeBot(
     ml: MemberLocation
 ) {
 
+    console.log('Invoking bot', history);
     const res = await model.invoke({ history: history });
 
     if (res.tool_calls?.length) {
@@ -184,7 +185,7 @@ async function invokeBot(
         }
         return await invokeBot(model, history, conversation, ml);
     } else {
-        return await saveMessage({
+        await saveMessage({
             conversationId: conversation.id,
             content: res.content.toString(),
             channel: 'WebChat',

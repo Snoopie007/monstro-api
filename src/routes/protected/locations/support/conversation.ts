@@ -20,7 +20,7 @@ const openai = new OpenAI({
 export async function supportConversation(app: Elysia) {
     return app.get('/', async ({ params, status }) => {
         const { cid } = params as { cid: string };
-
+        console.log('🟢 Fetching support conversation', cid);
         try {
             const conversation = await db.query.supportConversations.findFirst({
                 where: (b, { eq }) => eq(b.id, cid),

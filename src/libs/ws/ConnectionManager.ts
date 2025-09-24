@@ -1,4 +1,3 @@
-import type { SupportMessage } from "@/types";
 
 interface WebSocketConnection {
 	send: (data: unknown, compress?: boolean) => number;

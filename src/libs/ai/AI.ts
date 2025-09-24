@@ -132,7 +132,7 @@ function getModel(model: BotModel, handleLLMEnd: (output: any) => void) {
 
 function formatHistory(messages: SupportMessage[]) {
 	let history = [];
-	for (const message of messages) {
+	for (const message of messages.reverse()) {
 		if (['staff', 'ai'].includes(message.role)) {
 			history.push(
 				new AIMessage({
