@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { supportConversations, supportMessages } from "@/db/schemas";
+import { SupportMessage } from "@/types/support";
 
 export async function POST(
 	req: NextRequest,
@@ -57,21 +58,20 @@ export async function POST(
 			.where(eq(supportConversations.id, params.cid))
 			.returning();
 
-		// Add system message about takeover
-		await db.insert(supportMessages).values({
-			conversationId: params.cid,
-			content: `A support agent has joined the conversation to help with: ${reason}`,
-			role: "system",
-			channel: "WebChat",
-			// Populate agentId and agentName for takeover system message
-			agentId: session.user.id,
-			agentName: session.user.name || "Support Agent",
-			metadata: {
-				takeoverReason: reason,
-				takeoverUrgency: urgency || "medium",
+
+			const systemMessage: SupportMessage = {
+				id: `system-${Date.now()}`,
+				conversationId: params.cid,
+				content: `${session.user.name} has joined the conversation`,
+				role: 'system' as const,
+				channel: 'System',
+				agentName: session.user.name,
 				agentId: session.user.id,
-			},
-		});
+				metadata: {},
+				created: new Date(),
+			}
+			
+			await db.insert(supportMessages).values([systemMessage]);
 
 		return NextResponse.json(updatedConversation, { status: 200 });
 	} catch (error) {
@@ -131,21 +131,6 @@ export async function DELETE(
 			})
 			.where(eq(supportConversations.id, params.cid))
 			.returning();
-
-		// Add system message about handing back
-		await db.insert(supportMessages).values({
-			conversationId: params.cid,
-			content: "The conversation has been handed back to the support bot.",
-			role: "system",
-			channel: "WebChat",
-			// Populate agentId and agentName for handback system message
-			agentId: session.user.id,
-			agentName: session.user.name || "Support Agent",
-			metadata: {
-				handedBackBy: session.user.id,
-				handedBackAt: new Date().toISOString(),
-			},
-		});
 
 		return NextResponse.json({ success: "Conversation handed back to bot successfully" }, { status: 200 });
 	} catch (error) {

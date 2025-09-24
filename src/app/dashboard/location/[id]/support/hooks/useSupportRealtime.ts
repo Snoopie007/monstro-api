@@ -115,7 +115,6 @@ export function useSupportRealtime({
     const handleConversationUpdate = useCallback(
         (payload: any) => {
             try {
-                console.log(payload)
                 if (!payload.new || !payload.old) {
                     return
                 }
@@ -143,11 +142,7 @@ export function useSupportRealtime({
                 }
 
                 // Only process if it's for our location
-				console.log(conversation.location_id === locationId)
                 if (conversation.location_id === locationId) {
-					console.log('calling onConversationUpdate')
-					console.log(conversation.location_id)
-					console.log(locationId)
                     callbacksRef.current.onConversationUpdate?.(
                         formattedConversation
                     )
@@ -157,7 +152,6 @@ export function useSupportRealtime({
                         payload.old.is_vendor_active === false &&
                         conversation.is_vendor_active === true
                     ) {
-						console.log('calling onVendorActiveChange')
                         callbacksRef.current.onVendorActiveChange?.(
                             conversation.id,
                             true
@@ -173,7 +167,6 @@ export function useSupportRealtime({
 
     const handleConversationInsert = useCallback(
         (payload: any) => {
-            console.log('handleConversationInsert', payload)
             const conversation = payload.new
             const formattedConversation: SupportConversation = {
                 id: conversation.id,
@@ -261,9 +254,6 @@ export function useSupportRealtime({
 					handleConversationInsert
 				)
                 .subscribe((status: string, error?: any) => {
-                    console.log(
-                        `[SupportRealtime] Conversations channel status: ${status}`
-                    )
                     if (error) {
                         console.error(
                             '[SupportRealtime] Conversations channel error:',
@@ -274,7 +264,6 @@ export function useSupportRealtime({
                         console.error('Conversations channel failed:', status)
                         setError(`Conversations channel failed: ${status}`)
                     }
-                    console.log('Conversations channel status:', status)
                 })
 
             channelsRef.current = [messagesChannel, conversationsChannel]

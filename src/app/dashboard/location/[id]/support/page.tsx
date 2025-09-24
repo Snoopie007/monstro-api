@@ -2,7 +2,6 @@ import { SupportAssistant } from '@/types'
 import { db } from '@/db/db'
 import { eq } from 'drizzle-orm'
 import { supportAssistants } from '@/db/schemas'
-import { notFound } from 'next/navigation'
 import { SupportList, ChatView } from './components'
 import { SupportProvider } from './providers/SupportProvider'
 import CreateAssistant from './components/CreateAssistant'
@@ -58,7 +57,7 @@ export default async function SupportPage(props: {
                     </div>
                     <div className="flex-1 py-2">
                         <div className="bg-foreground/5 rounded-lg h-full">
-                            <ChatView lid={params.id} />
+                            <ChatView lid={params.id}/>
                         </div>
                     </div>
                     <div className="flex-none w-[25%] ">

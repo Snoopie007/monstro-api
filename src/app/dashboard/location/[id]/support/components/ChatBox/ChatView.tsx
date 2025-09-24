@@ -15,7 +15,8 @@ import { format } from 'date-fns'
 export function ChatView({ lid }: { lid: string }) {
     const { current, updateConversation, setConversations, conversations } = useSupport()
     const [messages, setMessages] = useState<SupportMessage[]>([])
-
+    
+    
     const { isAiMode } = useSupportRealtime({
         locationId: lid,
         conversationId: current?.id,
@@ -30,34 +31,16 @@ export function ChatView({ lid }: { lid: string }) {
                 conversation.id === current?.id &&
                 conversation.isVendorActive !== current?.isVendorActive
             ) {
-                const systemMessage = createSystemMessage(
-                    conversation.isVendorActive 
-                        ? 'Vendor has joined the conversation'
-                        : 'Vendor has left the conversation'
-                );
-                
-                // Send system message to API
-                const { error } = await tryCatch(
-                    fetch(`/api/protected/loc/${lid}/support/conversations/${conversation.id}/messages`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(systemMessage),
-                    })
-                );
                 updateConversation(conversation.id, {
                     isVendorActive: conversation.isVendorActive,
                 })
             } else if (conversation.updated?.toISOString() !== current?.updated?.toISOString() && conversation.id === current?.id && conversation.title !== current?.title) {
-                console.log('title changed', conversation.title, current?.title)
                 updateConversation(conversation.id, {
                     title: conversation.title,
                 })
             }
         },
         onConversationInsert: async (conversation) => {
-            console.log(conversation);
             const member = await tryCatch(
                 fetch(`/api/protected/loc/${lid}/member/${conversation.memberId}/info`)
             )
@@ -106,21 +89,8 @@ export function ChatView({ lid }: { lid: string }) {
         }
 
         const data = await result.json()
-        console.log(data)
         setMessages(data)
     }
-
-    const createSystemMessage = (content: string): SupportMessage => ({
-        id: `system-${Date.now()}`,
-        conversationId: current?.id || '',
-        content,
-        role: 'system',
-        channel: 'System',
-        agentName: null,
-        agentId: null,
-        metadata: {},
-        created: new Date(),
-    })
 
     if (!current) {
         return (
@@ -187,9 +157,9 @@ export function ChatView({ lid }: { lid: string }) {
                                         new Date(a.created).getTime() -
                                         new Date(b.created).getTime()
                                 )
-                                .map((message) => (
+                                .map((message, index) => (
                                     <ChatMessage
-                                        key={message.id}
+                                        key={index}
                                         message={message}
                                         member={current.member}
                                     />
