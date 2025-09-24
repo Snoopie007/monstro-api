@@ -13,6 +13,7 @@ enum ActionType {
     SET_CURRENT,
     UPDATE_CONVERSATION,
     UPDATE_ASSISTANT,
+    SET_CONVERSATIONS,
 }
 
 type StateType = {
@@ -29,7 +30,7 @@ const initState: StateType = {
 
 type ReducerAction = {
     type: ActionType,
-    payload?: SupportConversation | { id: string, data: Partial<SupportConversation> } | string | null | SupportAssistant
+    payload?: SupportConversation | { id: string, data: Partial<SupportConversation> } | string | null | SupportAssistant | SupportConversation[]
 }
 
 const reducer = (state: StateType, action: ReducerAction): StateType => {
@@ -40,7 +41,6 @@ const reducer = (state: StateType, action: ReducerAction): StateType => {
         case ActionType.UPDATE_CONVERSATION: {
             const { id, data } = action.payload as { id: string, data: Partial<SupportConversation> };
             if (!state.conversations) return state;
-
             const updatedConversations = state.conversations.map(c =>
                 c.id === id ? { ...c, ...data } as SupportConversation : c
             );
@@ -58,6 +58,9 @@ const reducer = (state: StateType, action: ReducerAction): StateType => {
 
         case ActionType.UPDATE_ASSISTANT:
             return { ...state, assistant: action.payload as SupportAssistant }
+
+        case ActionType.SET_CONVERSATIONS:
+            return { ...state, conversations: action.payload as SupportConversation[] }
         default:
             throw new Error("Unknown action type")
     }
@@ -74,6 +77,10 @@ const SupportContextReturns = (initialState: StateType) => {
         dispatch({ type: ActionType.UPDATE_CONVERSATION, payload: { id, data } })
     }, []);
 
+    const setConversations = useCallback((conversations: SupportConversation[]) => {
+        dispatch({ type: ActionType.SET_CONVERSATIONS, payload: conversations })
+    }, []);
+
     const updateAssistant = useCallback((assistant: SupportAssistant) => {
         dispatch({ type: ActionType.UPDATE_ASSISTANT, payload: assistant })
     }, []);
@@ -83,6 +90,7 @@ const SupportContextReturns = (initialState: StateType) => {
         setCurrentConversation,
         updateConversation,
         updateAssistant,
+        setConversations,
     }
 }
 
@@ -92,7 +100,8 @@ export const SupportContext = createContext<SupportContextType>({
     state: initState,
     setCurrentConversation: () => { },
     updateConversation: () => { },
-    updateAssistant: () => { }
+    updateAssistant: () => { },
+    setConversations: () => { }
 })
 
 interface SupportProviderProps {
@@ -122,13 +131,14 @@ export function SupportProvider({ children, assistant }: SupportProviderProps) {
 }
 
 export function useSupport() {
-    const { state, setCurrentConversation, updateConversation, updateAssistant } = useContext(SupportContext);
+    const { state, setCurrentConversation, updateConversation, updateAssistant, setConversations } = useContext(SupportContext);
     const { current, conversations, assistant } = state;
 
     return {
         current,
         setCurrent: setCurrentConversation,
         conversations,
+        setConversations,
         updateConversation,
         assistant,
         updateAssistant

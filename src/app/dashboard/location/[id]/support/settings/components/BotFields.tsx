@@ -101,8 +101,8 @@ export function BotFields({ form }: BotFieldsProps) {
                             <FormItem className="flex-1">
                                 <FormLabel size="sm">Model</FormLabel>
                                 <Select
-                                    {...field}
-                                    value={field.value}
+                                    key={field.value || 'gpt'}
+                                    value={field.value || 'gpt'}
                                     onValueChange={field.onChange}
                                 >
                                     <FormControl>
