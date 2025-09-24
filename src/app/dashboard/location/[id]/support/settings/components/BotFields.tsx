@@ -52,10 +52,10 @@ export function BotFields({ form }: BotFieldsProps) {
         ],
         content: assistant?.initialMessage || '',
         onCreate: ({ editor }) => {
-            form.setValue('initialMessage', editor.getHTML())
+            form.setValue('initialMessage', editor.getText())
         },
         onUpdate: ({ editor }) => {
-            form.setValue('initialMessage', editor.getHTML())
+            form.setValue('initialMessage', editor.getText())
         },
     })
 
@@ -189,7 +189,7 @@ export function BotFields({ form }: BotFieldsProps) {
                                         />
                                         <ExpandTextarea
                                             type="Initial Message"
-                                            initialContent={initialMessageEditor.getHTML()}
+                                            initialContent={initialMessageEditor.getText()}
                                             onUpdate={
                                                 initialMessageEditor.commands
                                                     .setContent
