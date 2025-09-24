@@ -49,7 +49,9 @@ export class DatabaseListener {
 					event: "INSERT",
 					schema: "public",
 					table: "support_messages",
-				}, (payload) => this.handleMessageInsert(payload))
+				}, (payload) => {
+					this.handleMessageInsert(payload);
+				})
 				.subscribe((status) => {
 					if (status === "CHANNEL_ERROR") {
 						this.handleReconnection("messages");
@@ -103,7 +105,7 @@ export class DatabaseListener {
 			const message = payload.new;
 
 			const messageData = {
-				type: "new_message",
+				type: message.role === 'system' ? "system_message" : "new_message",
 				data: {
 					...message,
 					conversationId: message.conversation_id,
@@ -121,7 +123,8 @@ export class DatabaseListener {
 
 
 
-	private handleConversationUpdate(payload: any) {
+
+	private handleConversationUpdate(payload: Record<string, any>) {
 		try {
 			if (!payload.new || !payload.old) {
 				return;

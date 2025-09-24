@@ -1,11 +1,10 @@
-import { tool } from '@langchain/core/tools';
-import { z } from 'zod';
+
 import { db } from '@/db/db';
 import { eq } from 'drizzle-orm';
 import { supportConversations } from '@/db/schemas';
-import type { MessageRole, SupportConversation } from '@/types';
+import type { SupportConversation } from '@/types';
 import type { MemberLocation } from '@/types/member';
-import { ToolMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
+
 type ToolCall = {
 	id?: string;
 	name: string;
@@ -18,14 +17,7 @@ type Context = {
 	ml: MemberLocation;
 }
 
-
-export type ToolCallResponse = {
-	content: string;
-	role: MessageRole;
-	completed: boolean;
-}
-
-async function EscalateToHuman(toolCall: ToolCall, context: Context): Promise<ToolCallResponse> {
+async function EscalateToHuman(toolCall: ToolCall, context: Context): Promise<string> {
 
 	const { args } = toolCall;
 
@@ -42,15 +34,11 @@ async function EscalateToHuman(toolCall: ToolCall, context: Context): Promise<To
 	}
 
 
-	return {
-		content: 'I have notified our support team of your request. They will be with you shortly to help with your request.',
-		role: 'ai',
-		completed: true,
-	}
+	return `Respond Exactly Like this: I have notified our support team of your request. `
 }
 
 
-async function GetMemberPlans(toolCall: ToolCall, context: Context): Promise<ToolCallResponse> {
+async function GetMemberPlans(toolCall: ToolCall, context: Context): Promise<string> {
 
 	const { ml } = context;
 	let plans = [];
@@ -117,11 +105,7 @@ async function GetMemberPlans(toolCall: ToolCall, context: Context): Promise<Too
 	}
 
 
-	return {
-		content: `Here are the member plans in json format: ${JSON.stringify(plans)}`,
-		role: 'tool',
-		completed: false,
-	}
+	return `Here are the member plans in json format: ${JSON.stringify(plans)}`
 }
 
 async function RAGTool(toolCall: ToolCall) {
@@ -146,30 +130,7 @@ async function RAGTool(toolCall: ToolCall) {
 
 
 
-// Knowledge base search tool (placeholder)
-export const SearchKnowledgeBase = tool(
-	async (input: any, context?: any) => {
-		const { query } = input;
-		const supportBotId = context?.supportBotId;
 
-		try {
-			console.log(`📚 Searching knowledge base for: "${query}" in bot: ${supportBotId}`);
-
-
-			return `I searched our knowledge base for "${query}" but the knowledge base system is not yet fully configured. Let me help you with your membership details or connect you with a human agent for specific facility information.`;
-		} catch (error) {
-			console.error("Error searching knowledge base:", error);
-			return "I encountered an error searching our knowledge base. Please contact support for assistance.";
-		}
-	},
-	{
-		name: "search_knowledge_base",
-		description: "Search the knowledge base for general facility and policy information",
-		schema: z.object({
-			query: z.string().describe("Search query for the knowledge base"),
-		}),
-	}
-);
 
 const ToolFunctions = {
 	EscalateToHuman,

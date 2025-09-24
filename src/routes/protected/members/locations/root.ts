@@ -17,7 +17,7 @@ type Props = {
 }
 
 export const membersLocations = new Elysia({ prefix: '/locations' })
-    .get('/', async ({ memberId, params, status }: Props) => {
+    .get('/', async ({ params, status }: Props) => {
 
         try {
             const mls = await db.query.memberLocations.findMany({
@@ -26,7 +26,6 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                     location: true
                 }
             })
-
             return status(200, mls);
         } catch (error) {
             status(500, { error: 'Internal server error' });
@@ -34,7 +33,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
         }
     })
     .group('/:lid', (app) => {
-        app.get('/', async ({ memberId, params, status }: Props) => {
+        app.get('/', async ({ params, status }: Props) => {
             const { lid, mid } = params;
 
             try {
@@ -60,9 +59,9 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                         }
                     }
                 });
-
                 return status(200, ml);
             } catch (error) {
+                console.error(error);
                 status(500, { error: 'Internal server error' });
                 return { error: 'Internal server error' }
             }

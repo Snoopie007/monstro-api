@@ -160,12 +160,6 @@ function formatHistory(messages: SupportMessage[]) {
 					tool_calls: message.metadata.tool_calls
 				})
 			)
-		} else {
-			history.push(
-				new SystemMessage({
-					content: message.content
-				})
-			)
 		}
 	}
 	return history;

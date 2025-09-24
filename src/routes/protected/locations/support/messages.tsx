@@ -9,6 +9,8 @@ import { AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
 import { ToolFunctions } from "@/libs/ai/FNHandler";
 import type { SupportConversation, MemberLocation, NewSupportMessage, SupportMessage } from "@/types";
 import { Runnable } from "@langchain/core/runnables";
+
+
 type Props = {
     params: {
         mid: string;
@@ -21,10 +23,6 @@ type Props = {
     };
     status: any;
 };
-
-
-
-
 
 export async function supportMessagesRoute(app: Elysia) {
 
@@ -138,65 +136,55 @@ async function invokeBot(
 ) {
 
     const res = await model.invoke({ history: history });
-    let completed = true;
-    let msg: NewSupportMessage | undefined = undefined;
 
-    // If there are tool calls, we need to handle them properly
     if (res.tool_calls?.length) {
 
         for (const toolCall of res.tool_calls) {
             console.log('Processing tool call:', toolCall.name);
             const tool = ToolFunctions[toolCall.name as keyof typeof ToolFunctions];
 
-            if (toolCall.name !== 'EscalateToHuman') {
 
-                await saveMessage({
-                    conversationId: conversation.id,
-                    content: res.content.toString(),
-                    channel: 'WebChat',
-                    role: 'tool_call',
-                    metadata: {
-                        tool_calls: res.tool_calls
-                    }
-                });
+            await saveMessage({
+                conversationId: conversation.id,
+                content: res.content.toString(),
+                channel: 'WebChat',
+                metadata: {
+                    tool_calls: res.tool_calls,
+                },
+                role: 'tool_call',
+            });
+            history.push(new AIMessage({
+                content: res.content.toString(),
+                tool_calls: res.tool_calls
+            }));
 
-                history.push(new AIMessage({
-                    content: res.content.toString(),
-                    tool_calls: res.tool_calls
-                }));
-            }
 
-            const data = await tool(toolCall, {
+
+            const toolResult = await tool(toolCall, {
                 conversation,
                 ml,
             });
-
-            const result = await saveMessage({
+            await saveMessage({
                 conversationId: conversation.id,
-                ...data,
+                content: toolResult,
                 metadata: {
                     tool_call_id: toolCall.id,
                     tool_name: toolCall.name,
                     tool_args: toolCall.args,
                 },
                 channel: 'WebChat',
-            })
-
-
-            if (data.role === 'ai') {
-                msg = result;
-            } else {
-                history.push(new ToolMessage({
-                    content: result.content,
-                    tool_call_id: toolCall.id,
-                    name: toolCall.name,
-                }));
-            }
-            completed = data.completed;
+                role: 'tool',
+            });
+            history.push(new ToolMessage({
+                content: toolResult,
+                tool_call_id: toolCall.id,
+                name: toolCall.name,
+            }));
 
         }
+        return await invokeBot(model, history, conversation, ml);
     } else {
-        msg = await saveMessage({
+        return await saveMessage({
             conversationId: conversation.id,
             content: res.content.toString(),
             channel: 'WebChat',
@@ -205,14 +193,6 @@ async function invokeBot(
 
     }
 
-    if (completed && msg) {
-        console.log('🟢 Returning msg');
-        return msg;
-    }
-
-
-
-    return await invokeBot(model, history, conversation, ml);
 }
 
 async function saveMessage(newMessage: NewSupportMessage): Promise<SupportMessage> {

@@ -71,15 +71,19 @@ export class ConnectionManager {
 	// Broadcast message to all connections in a conversation
 	broadcastToConversation(cid: string, message: BroadcastMessage) {
 		const cc = this.connections.get(cid);
+
 		if (!cc) {
 			console.log(`📭 No connections found for conversation: ${cid}`);
 			return;
 		}
+
+
 		const messageStr = JSON.stringify(message);
 		let sentCount = 0;
 		let errorCount = 0;
 
 		Object.values(cc).forEach(({ send, mid }) => {
+			if (mid === message.data.memberId) return;
 			try {
 				send(messageStr);
 				sentCount++;

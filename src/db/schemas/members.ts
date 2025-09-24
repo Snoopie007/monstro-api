@@ -343,21 +343,18 @@ export const membersRelations = relations(members, ({ many, one }) => ({
 	customFields: many(memberCustomFields),
 }));
 
-export const familyMemberRelations = relations(
-	familyMembers,
-	({ one, many }) => ({
-		member: one(members, {
-			relationName: "memberFamilyMembers",
-			fields: [familyMembers.memberId],
-			references: [members.id],
-		}),
-		relatedMember: one(members, {
-			relationName: "relatedMemberFamily",
-			fields: [familyMembers.relatedMemberId],
-			references: [members.id],
-		}),
-	})
-);
+export const familyMemberRelations = relations(familyMembers, ({ one, many }) => ({
+	member: one(members, {
+		relationName: "memberFamilyMembers",
+		fields: [familyMembers.memberId],
+		references: [members.id],
+	}),
+	relatedMember: one(members, {
+		relationName: "relatedMemberFamily",
+		fields: [familyMembers.relatedMemberId],
+		references: [members.id],
+	}),
+}));
 
 export const memberAchievementsRelations = relations(
 	memberAchievements,
@@ -373,8 +370,7 @@ export const memberAchievementsRelations = relations(
 	})
 );
 
-export const memberPointsHistoryRelations = relations(
-	memberPointsHistory,
+export const memberPointsHistoryRelations = relations(memberPointsHistory,
 	({ one }) => ({
 		member: one(members, {
 			fields: [memberPointsHistory.memberId],
@@ -383,6 +379,10 @@ export const memberPointsHistoryRelations = relations(
 		location: one(locations, {
 			fields: [memberPointsHistory.locationId],
 			references: [locations.id],
+		}),
+		memberLocation: one(memberLocations, {
+			fields: [memberPointsHistory.memberId, memberPointsHistory.locationId],
+			references: [memberLocations.memberId, memberLocations.locationId],
 		}),
 		achievement: one(achievements, {
 			fields: [memberPointsHistory.achievementId],
