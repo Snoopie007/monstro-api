@@ -3,6 +3,7 @@ import { Member, SupportAssistant, SupportMessage } from '@/types'
 import { format } from 'date-fns';
 import React, { useMemo } from 'react'
 import { useSupport } from '../../providers/SupportProvider';
+import ReactMarkdown from 'react-markdown';
 
 interface ChatMessageProps {
     message: SupportMessage;
@@ -48,7 +49,9 @@ export function ChatMessage({ message, member }: ChatMessageProps) {
                     </span>
                 </div>
                 <div className="leading-relaxed">
+                <ReactMarkdown>
                     {message.content}
+                </ReactMarkdown>
                 </div>
             </div>
         </div>
