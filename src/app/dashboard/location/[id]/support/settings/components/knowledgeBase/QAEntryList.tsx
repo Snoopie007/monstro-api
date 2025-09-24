@@ -56,7 +56,7 @@ export function QAEntryList({ entries, onDelete }: QAEntryListProps) {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => handleDelete(entry.id)}
-                                    className="size-8 p-0 text-red-600 focus:text-red-600"
+                                    className="size-6 p-0 text-red-600 focus:text-red-600"
                                     title="Delete entry"
                                     disabled={isDeleting}
                                 >
