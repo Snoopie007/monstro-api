@@ -157,7 +157,7 @@ export function ChatView({ lid }: { lid: string }) {
                                         new Date(a.created).getTime() -
                                         new Date(b.created).getTime()
                                 )
-                                .filter((message) => ["ai", "human", "system"].includes(message.role))
+                                .filter((message) => ["ai", "human", "system", "staff"].includes(message.role))
                                 .map((message, index) => (
                                     <ChatMessage
                                         key={index}
