@@ -62,9 +62,11 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
 		}
 		const { agentId } = conversation.metadata as Record<string, any>;
 		// Only allow staff messages if vendor has taken over
+		// Allow when vendor is active and agentId is not set yet (assistant escalation case)
 		if (
 			role === "staff" &&
-			(!conversation.isVendorActive || agentId !== session.user.id)
+			(!conversation.isVendorActive ||
+			 (agentId && agentId !== session.user.id))
 		) {
 			throw new Error("Unauthorized - you must take over the conversation to send staff messages");
 		}
@@ -86,6 +88,16 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
 				},
 			})
 			.returning();
+
+		// If agentId is not set in conversation metadata, assign current user as the agent
+		if (!agentId && conversation.isVendorActive) {
+			await db.update(supportConversations).set({
+				metadata: {
+					...(conversation.metadata as Record<string, any>),
+					agentId: session.user.id,
+				}
+			}).where(eq(supportConversations.id, params.cid));
+		}
 
 		// Update conversation timestamp
 		await db.update(supportConversations).set({
