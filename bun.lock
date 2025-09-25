@@ -138,6 +138,10 @@
         "tailwind-merge": "^2.5.5",
         "typescript": "^5",
       },
+      "optionalDependencies": {
+        "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
+        "lightningcss-linux-x64-gnu": "^1.29.1",
+      },
     },
   },
   "overrides": {

@@ -129,6 +129,10 @@
         "yjs": "^13.6.20",
         "zod": "^3.23.8"
     },
+    "optionalDependencies": {
+      "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
+      "lightningcss-linux-x64-gnu": "^1.29.1"
+    },
     "devDependencies": {
         "@types/google.maps": "^3.58.1",
         "@types/node": "^20",
