@@ -61,8 +61,6 @@ export function TriggerItem({ trigger, onSelect, onUpdate }: TriggerItemProps) {
         toast.success('Trigger toggled')
         onUpdate({ ...trigger, isActive: !trigger.isActive }, 'update')
     }
-
-
     return (
         <div key={trigger.id}>
             <div className="flex items-center justify-between">
