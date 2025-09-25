@@ -125,6 +125,10 @@
     "yjs": "^13.6.20",
     "zod": "^3.23.8"
   },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
+    "lightningcss-linux-x64-gnu": "^1.29.1"
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.3",
     "@tailwindcss/typography": "^0.5.15",
