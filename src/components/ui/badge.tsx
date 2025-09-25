@@ -33,6 +33,7 @@ const badgeVariants = cva(
         incomplete_expired: "bg-red-300 text-red-800",
         unpaid: "bg-red-300 text-red-800",
         trialing: "bg-blue-300 text-blue-800",
+        archived: "bg-red-300 text-red-800",
       },
       roles: {
         red: "bg-red-300  text-red-800",
@@ -57,6 +58,7 @@ const badgeVariants = cva(
         canceled: "bg-red-300 text-red-800",
         unpaid: "bg-red-300 text-red-800",
         incomplete_expired: "bg-red-300 text-red-800",
+        archived: "bg-red-300 text-red-800",
       },
       inv: {
         unpaid: "bg-red-300 text-red-800",

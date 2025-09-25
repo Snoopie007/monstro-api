@@ -28,7 +28,7 @@ type PromiseReturnType = {
 
 async function fetchStripeKeys(
   id: string,
-  mid: string
+  mid: string,
 ): Promise<PromiseReturnType | null> {
   if (!id || !mid) {
     return null;
@@ -64,6 +64,7 @@ async function fetchStripeKeys(
         },
       },
     });
+
     if (!ml) {
       throw new Error("Member  not found");
     }
@@ -77,7 +78,7 @@ async function fetchStripeKeys(
 }
 
 async function fetchStripePyamentMethods(
-  customerId: string
+  customerId: string,
 ): Promise<Stripe.PaymentMethod[]> {
   try {
     const stripe = new MemberStripePayments();
@@ -142,7 +143,7 @@ export default async function MemberProfilePage(props: {
             <Tabs defaultValue="Subscriptions" className="w-full">
               <TabsList
                 className={cn(
-                  "bg-transparent p-2.5 border-b w-full border-foreground/10 justify-start"
+                  "bg-transparent p-2.5 border-b w-full border-foreground/10 justify-start",
                 )}
               >
                 {MemberDetailsMenu.map((item, index) => (

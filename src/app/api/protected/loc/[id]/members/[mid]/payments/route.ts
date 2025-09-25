@@ -83,7 +83,7 @@ export async function POST(
 
 export async function PUT(
   req: Request,
-  props: { params: Promise<{ id: string }> }
+  props: { params: Promise<{ id: string; mid: string }> }
 ) {
   const params = await props.params;
   const session = await auth();
@@ -119,9 +119,9 @@ export async function PUT(
         { message: "Success", data: paymentMethod.data },
         { status: 200 }
       );
+    } else {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   } catch (err) {
     console.log(err);
     return NextResponse.json({ error: err }, { status: 500 });
@@ -130,7 +130,7 @@ export async function PUT(
 
 export async function DELETE(
   req: Request,
-  props: { params: Promise<{ id: string }> }
+  props: { params: Promise<{ id: string; mid: string }> }
 ) {
   const params = await props.params;
   const session = await auth();
@@ -169,8 +169,6 @@ export async function DELETE(
         { status: 200 }
       );
     }
-
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   } catch (err) {
     console.log(err);
     return NextResponse.json({ error: err }, { status: 500 });

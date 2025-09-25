@@ -31,7 +31,7 @@ export const PkgColumns = (locationId: string): ColumnDef<MemberPlan, any>[] => 
                     {programCount > 0 ? (
                         <>
                             {planPrograms?.slice(0, 3).map((planProgram: PlanProgram) => (
-                                <Badge key={planProgram.program?.id} size={"tiny"} className="rounded-sm bg-foreground/10">
+                                <Badge key={planProgram.program?.id} size={"tiny"} className="rounded-sm bg-foreground/10 text-foreground/70">
                                     {planProgram.program?.name}
                                 </Badge>
                             ))}

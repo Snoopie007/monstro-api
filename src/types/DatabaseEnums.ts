@@ -1,4 +1,4 @@
-export type LocationStatus = 'incomplete' | 'active' | 'past_due' | 'canceled' | 'paused' | 'trialing' | 'unpaid' | 'incomplete_expired';
+export type LocationStatus = 'incomplete' | 'active' | 'past_due' | 'canceled' | 'paused' | 'trialing' | 'unpaid' | 'incomplete_expired' | "archived";
 export type PlanType = 'recurring' | 'one-time';
 export type Interval = 'day' | 'week' | 'month' | 'year';
 export type PackageStatus = 'active' | 'incomplete' | 'expired' | 'completed';
