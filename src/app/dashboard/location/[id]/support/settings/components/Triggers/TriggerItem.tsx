@@ -63,7 +63,6 @@ export function TriggerItem({ trigger, onSelect, onUpdate }: TriggerItemProps) {
     }
 
 
-
     return (
         <div key={trigger.id}>
             <div className="flex items-center justify-between">
