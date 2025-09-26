@@ -50,6 +50,7 @@ export class DatabaseListener {
 					schema: "public",
 					table: "support_messages",
 				}, (payload) => {
+					console.log("🚀 Message insert", payload);
 					this.handleMessageInsert(payload);
 				})
 				.subscribe((status) => {
@@ -64,7 +65,10 @@ export class DatabaseListener {
 					event: "UPDATE",
 					schema: "public",
 					table: "support_conversations",
-				}, (payload) => this.handleConversationUpdate(payload))
+				}, (payload) => {
+					console.log("🚀 Conversation update", payload);
+					this.handleConversationUpdate(payload);
+				})
 				.subscribe((status) => {
 					if (status === "CHANNEL_ERROR") {
 						this.handleReconnection("conversations");

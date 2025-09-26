@@ -84,6 +84,7 @@ export class ConnectionManager {
 		Object.values(cc).forEach(({ send, mid }) => {
 			if (mid === message.data.memberId) return;
 			try {
+				console.log("🚀 Sending message to member", mid);
 				send(messageStr);
 				sentCount++;
 			} catch (error) {
@@ -114,6 +115,7 @@ export class ConnectionManager {
 
 			if (connection) {
 				try {
+					console.log("🚀 Sending message to member", mid);
 					connection.send(messageStr);
 					sentCount++;
 				} catch (error) {

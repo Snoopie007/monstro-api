@@ -64,9 +64,10 @@ export function realtimeRoutes(app: Elysia) {
 	}).ws("/support/:cid", {
 		async open(ws) {
 			const { data, close, subscribe, send, ping } = ws;
+			const { memberId, params } = data as { memberId: string, params: { cid: string } };
 
+			console.log("🚀 WebSocket open", memberId, params);
 			try {
-				const { memberId, params } = data as { memberId: string, params: { cid: string } };
 
 				const conversation = await db.query.supportConversations.findFirst({
 					where: eq(supportConversations.id, params.cid),

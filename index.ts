@@ -14,12 +14,17 @@ const CORS_CONFIG = {
 
 const app = new Elysia();
 
-app
-  .use(cors(CORS_CONFIG))
+app.use(cors(CORS_CONFIG))
   .use(RateLimitMiddleware())
 
   .onRequest(({ request }) => {
-    console.log(`🔍 ${request.method} ${request.url}`);
+    // Check if request came through HTTPS proxy
+    const headers = request.headers;
+    const protocol = headers.get('x-forwarded-proto') || (request.url.startsWith('https') ? 'https' : 'http');
+    const host = headers.get('x-forwarded-host') || headers.get('host') || 'localhost';
+    const originalUrl = `${protocol}://${host}${request.url}`;
+
+    console.log(`🔍 ${request.method} ${originalUrl}`);
   })
   // Dedicated health check endpoint
   .get("/healthcheck", () => {
