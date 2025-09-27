@@ -10,7 +10,6 @@ import {
 	unique,
 	uuid,
 	bigint,
-	smallint,
 } from "drizzle-orm/pg-core";
 import { locations, memberLocations } from "./locations";
 import { users } from "./users";
@@ -143,13 +142,8 @@ export const memberRewards = pgTable(
 			.notNull()
 			.references(() => locations.id, { onDelete: "cascade" }),
 		previousPoints: integer("previous_points"),
-		dateClaimed: timestamp("date_claimed", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-		status: smallint("status"),
-		created: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		dateClaimed: timestamp("date_claimed", { withTimezone: true }).notNull().defaultNow(),
+		created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		updated: timestamp("updated_at", { withTimezone: true }),
 	},
 	(t) => [primaryKey({ columns: [t.id] })]
@@ -186,14 +180,9 @@ export const memberInvoices = pgTable("member_invoices", {
 		.$type<Record<string, any>>()
 		.default(sql`'{}'::jsonb`),
 	currency: text("currency"),
-	memberId: text("member_id")
-		.notNull()
-		.references(() => members.id, { onDelete: "cascade" }),
-	locationId: text("location_id")
-		.notNull()
-		.references(() => locations.id, { onDelete: "cascade" }),
-	memberPackageId: text("member_package_id").references(
-		() => memberPackages.id,
+	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+	memberPackageId: text("member_package_id").references(() => memberPackages.id,
 		{ onDelete: "cascade" }
 	),
 	memberSubscriptionId: text("member_subscription_id").references(
@@ -257,19 +246,17 @@ export const memberTags = pgTable("member_tags", {
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
 
-export const memberHasTags = pgTable(
-	"member_has_tags",
-	{
-		memberId: text("member_id")
-			.notNull()
-			.references(() => members.id, { onDelete: "cascade" }),
-		tagId: text("tag_id")
-			.notNull()
-			.references(() => memberTags.id, { onDelete: "cascade" }),
-		created: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-	},
+export const memberHasTags = pgTable("member_has_tags", {
+	memberId: text("member_id")
+		.notNull()
+		.references(() => members.id, { onDelete: "cascade" }),
+	tagId: text("tag_id")
+		.notNull()
+		.references(() => memberTags.id, { onDelete: "cascade" }),
+	created: timestamp("created_at", { withTimezone: true })
+		.notNull()
+		.defaultNow(),
+},
 	(t) => [primaryKey({ columns: [t.memberId, t.tagId] })]
 );
 
@@ -356,19 +343,16 @@ export const familyMemberRelations = relations(familyMembers, ({ one, many }) =>
 	}),
 }));
 
-export const memberAchievementsRelations = relations(
-	memberAchievements,
-	({ one }) => ({
-		member: one(members, {
-			fields: [memberAchievements.memberId],
-			references: [members.id],
-		}),
-		achievement: one(achievements, {
-			fields: [memberAchievements.achievementId],
-			references: [achievements.id],
-		}),
-	})
-);
+export const memberAchievementsRelations = relations(memberAchievements, ({ one }) => ({
+	member: one(members, {
+		fields: [memberAchievements.memberId],
+		references: [members.id],
+	}),
+	achievement: one(achievements, {
+		fields: [memberAchievements.achievementId],
+		references: [achievements.id],
+	}),
+}));
 
 export const memberPointsHistoryRelations = relations(memberPointsHistory,
 	({ one }) => ({
