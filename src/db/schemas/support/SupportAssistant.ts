@@ -12,9 +12,9 @@ import {
 	assistantStatusEnum,
 	botModelEnum
 } from "./SupportEnums";
-import { supportConversations } from "./supportConversations";
+import { supportConversations } from "./SupportConversations";
 import type { SupportPersona } from "@/types";
-import { supportTriggers } from "./supportTriggers";
+import { supportTriggers } from "./SupportTriggers";
 
 // Single support bot per location
 export const supportAssistants = pgTable("support_assistants", {

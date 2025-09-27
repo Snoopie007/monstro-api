@@ -1,5 +1,5 @@
 import type { SupportConversation } from "@/types";
-import { ToolFunctions, type ToolCallResponse } from "./FNHandler";
+import { ToolFunctions } from "./FNHandler";
 import { BaseMessage, ToolMessage, trimMessages } from "@langchain/core/messages";
 import type { SupportAssistant, MemberLocation } from "@/types";
 import type { ChatOpenAI } from "@langchain/openai";
@@ -59,7 +59,8 @@ export async function* invokeTestBot(
 	responses.push(res);
 	// If there are tool calls, we need to handle them properly
 	if (res.tool_calls?.length) {
-		let data: ToolCallResponse | undefined = undefined;
+		// TEMP FIX
+		let data: any | undefined = undefined;
 
 		for (const toolCall of res.tool_calls) {
 			console.log('Processing tool call:', toolCall.name);
