@@ -242,33 +242,6 @@ export function EventCalendar({
     setIsEventDialogOpen(true);
   };
 
-  const handleEventSave = (event: CalendarEvent) => {
-    if (event.id) {
-      onEventUpdate?.(event);
-      // Show toast notification when an event is updated
-      toast.success(
-        `Event "${event.title}" updated on ${format(
-          new Date(event.start),
-          "MMM d, yyyy"
-        )}`
-      );
-    } else {
-      onEventAdd?.({
-        ...event,
-        id: Math.random().toString(36).substring(2, 11),
-      });
-      // Show toast notification when an event is added
-      toast.success(
-        `Event "${event.title}" added on ${format(
-          new Date(event.start),
-          "MMM d, yyyy"
-        )}`
-      );
-    }
-    setIsEventDialogOpen(false);
-    setSelectedEvent(null);
-  };
-
   const handleEventDelete = (eventId: string) => {
     const deletedEvent = events.find((e) => e.id === eventId);
     onEventDelete?.(eventId);

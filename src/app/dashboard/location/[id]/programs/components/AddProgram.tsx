@@ -16,7 +16,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem, FormLabel } from '@/components/forms';
-import { cn, sleep, tryCatch } from "@/libs/utils";
+import { cn, getTimezoneOffset, sleep, tryCatch } from "@/libs/utils";
 
 import SessionComponent from './ProgramSessions';
 import { NewProgramSchema } from '../schemas';
@@ -59,10 +59,16 @@ export function AddProgram({ lid }: { lid: string }) {
         setLoading(true);
 
         try {
+            const offsetString = getTimezoneOffset();
+
             const { result, error } = await tryCatch(
                 fetch(`/api/protected/loc/${lid}/programs`, {
                     method: "POST",
-                    body: JSON.stringify(v)
+                    body: JSON.stringify(v),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Timezone-Offset': offsetString,
+                    }
                 })
             )
 

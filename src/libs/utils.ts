@@ -193,6 +193,17 @@ function interpolate(template: string, variables: Record<string, any>): string {
     // Clean up whitespace
     return output.trim().replace(/\n\s*\n\s*\n/g, '\n\n');
 }
+
+function getTimezoneOffset() {
+	const offsetMinutes = new Date().getTimezoneOffset();
+      const offsetHours = -offsetMinutes / 60;
+      const offsetString = offsetHours >= 0 
+      ? `+${Math.abs(offsetHours).toString().padStart(2, '0')}:00`
+      : `-${Math.abs(offsetHours).toString().padStart(2, '0')}:00`;
+  //  Results in: "+08:00", "-05:00", etc.
+	return offsetString;
+}
+
 export {
 	sleep,
 	tryCatch,
@@ -203,7 +214,8 @@ export {
 	formatPhone,
 	interEmailsAndText,
 	authenticateMember,
-	interpolate
+	interpolate,
+	getTimezoneOffset
 }
 
 

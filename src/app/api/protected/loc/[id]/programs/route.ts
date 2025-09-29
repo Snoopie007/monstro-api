@@ -1,9 +1,10 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { programSessions, programs as program, programs } from '@/db/schemas';
 import { ProgramSession } from '@/types';
+import { format, addMinutes, setHours, setMinutes, setSeconds, startOfDay } from 'date-fns';
 
 
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
@@ -48,9 +49,13 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 
 export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
 	const params = await props.params;
+	const timezoneOffset = req.headers.get('X-Timezone-Offset') || '+00:00';
 	const { sessions, ...data } = await req.json();
-	console.log(sessions, data);
 	try {
+		const utcSessions = sessions.map((session: ProgramSession) => ({
+			...session,
+			time: convertLocalTimeToUTC(session.time, timezoneOffset)
+		}))
 		await db.transaction(async (tx) => {
 			/** 
 			 * Create the main program record with location ID and other data
@@ -62,7 +67,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 			}).returning({ id: programs.id });
 
 
-			await tx.insert(programSessions).values(sessions.map(({ id, ...s }: ProgramSession)  => ({
+			await tx.insert(programSessions).values(utcSessions.map(({ id, ...s }: ProgramSession)  => ({
 				...s,
 				status: 1,
 				programId: program.id,
@@ -74,4 +79,28 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 		console.log(err);
 		return NextResponse.json({ error: err }, { status: 500 });
 	}
+}
+
+function convertLocalTimeToUTC(localTime: string, timezoneOffset: string): string {
+    const [hours, minutes, seconds] = localTime.split(':').map(Number);
+    
+    // Parse timezone offset (e.g., "+08:00" -> 8, "-05:00" -> -5)
+    const offsetMatch = timezoneOffset.match(/([+-])(\d{2}):(\d{2})/);
+    if (!offsetMatch) return localTime;
+    
+    const sign = offsetMatch[1] === '+' ? 1 : -1;
+    const offsetHours = parseInt(offsetMatch[2]) * sign;
+    const offsetMinutes = parseInt(offsetMatch[3]) * sign;
+    const totalOffsetMinutes = (offsetHours * 60) + offsetMinutes;
+    
+    // Create date with the local time
+    let date = startOfDay(new Date());
+    date = setHours(date, hours);
+    date = setMinutes(date, minutes);
+    date = setSeconds(date, seconds || 0);
+    
+    // Convert to UTC by subtracting the offset
+    const utcDate = addMinutes(date, -totalOffsetMinutes);
+    
+    return format(utcDate, 'HH:mm:ss');
 }
