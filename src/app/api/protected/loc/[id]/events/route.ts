@@ -89,7 +89,6 @@ export async function GET(
     // Generate available session slots
     locationSessions.forEach((session) => {
       if (!session.program) return;
-
       let currentDate = new Date(startDate);
       const sessionDay = session.day;
       const currentDay = currentDate.getDay();
@@ -99,9 +98,8 @@ export async function GET(
       }
 
       while (currentDate <= endDate) {
-        const [hours, minutes] = session.time.split(":");
         const start = new Date(
-          `${currentDate.toISOString().split("T")[0]}T${hours}:${minutes}:00`
+          `${currentDate.toISOString().split("T")[0]}T${session.time}Z`
         );
         const end = new Date(start.getTime() + session.duration * 60000);
 

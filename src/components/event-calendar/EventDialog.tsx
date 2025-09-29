@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
 
-import { cn, sleep, tryCatch } from "@/libs/utils";
+import { cn, getTimezoneOffset, sleep, tryCatch } from "@/libs/utils";
 import { format, getDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
@@ -127,10 +127,15 @@ export function EventDialog({
     setLoading(true);
 
     try {
+      const offsetString = getTimezoneOffset();
       const { result, error } = await tryCatch(
         fetch(`/api/protected/loc/${lid}/programs`, {
           method: "POST",
           body: JSON.stringify(v),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Timezone-Offset': offsetString,
+          }
         })
       );
 
