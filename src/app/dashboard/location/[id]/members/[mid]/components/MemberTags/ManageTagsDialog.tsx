@@ -22,25 +22,6 @@ export function ManageTagsDialog({ isManageDialogOpen, setIsManageDialogOpen, op
         <div>
             {/* Dialog with TagsFilter component inside */}
             <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-                {/* <DialogTrigger asChild>
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={openManageDialog}
-                                    className="h-6 w-6 p-0 hover:bg-muted"
-                                >
-                                    <PlusIcon className="h-3 w-3" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Manage tags</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </DialogTrigger> */}
                 <DialogContent className="max-w-md border-foreground/10">
                     <DialogHeader>
                         <DialogTitle className="text-base">Manage Member Tags</DialogTitle>

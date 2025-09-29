@@ -16,7 +16,6 @@ import { MemberDeleteButton, MemberEditButton } from "../ContactInfo";
 type MemberProfileData = {
   totalPointsEarned: number;
   lastSeenFormatted: string;
-  isLoadingCheckIn: boolean;
 };
 
 interface MemberProfileProps {
@@ -76,7 +75,7 @@ export function MemberProfile({ params, profileData }: MemberProfileProps) {
               </div>
               <div className="flex flex-row gap-2 items-center">
                 <strong>Last seen:</strong>
-                <span className={profileData.isLoadingCheckIn ? "text-muted-foreground" : ""}>
+                <span>
                   {profileData.lastSeenFormatted}
                 </span>
               </div>

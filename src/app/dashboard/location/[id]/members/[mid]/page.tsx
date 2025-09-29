@@ -32,7 +32,6 @@ type PromiseReturnType = {
 type MemberProfileData = {
   totalPointsEarned: number;
   lastSeenFormatted: string;
-  isLoadingCheckIn: boolean;
 };
 
 async function fetchStripeKeys(
@@ -138,14 +137,12 @@ async function fetchMemberProfileData(
     return {
       totalPointsEarned,
       lastSeenFormatted,
-      isLoadingCheckIn: false,
     };
   } catch (error) {
     console.error("Error fetching member profile data:", error);
     return {
       totalPointsEarned: currentPoints,
       lastSeenFormatted: "Never",
-      isLoadingCheckIn: false,
     };
   }
 }
