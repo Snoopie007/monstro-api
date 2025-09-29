@@ -12,7 +12,6 @@ import { ChevronLeft, Mail, PhoneCall } from "lucide-react";
 import { useMemberStatus } from "../../providers/MemberContext";
 import { useRouter } from "next/navigation";
 import { MemberDeleteButton, MemberEditButton } from "../ContactInfo";
-import { MemberTagsInline } from "./MemberTagsInline";
 
 interface MemberProfileProps {
   params: { id: string; mid: string };
@@ -58,9 +57,6 @@ export function MemberProfile({ params }: MemberProfileProps) {
             <div className="flex flex-col  text-sm gap-1.5 ">
               <div className=" font-bold text-lg ">
                 {memberProfile?.firstName}
-              </div>
-              <div className="flex items-center gap-2">
-                <MemberTagsInline params={params} />
               </div>
               <div className="flex flex-row gap-2 items-center">
                 <Mail size={14} />

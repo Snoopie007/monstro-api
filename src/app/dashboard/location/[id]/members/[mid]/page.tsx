@@ -20,6 +20,7 @@ import { MemberStripePayments } from "@/libs/server/stripe";
 import { MemberPackages } from "./components/MemberPackages/MemberPackages";
 import { MemberInvoices } from "./components/MemberInvoices/MemberInvoices";
 import { CustomFieldsSection } from "@/components/custom-fields";
+import { MemberTagSection } from "./components/MemberTags/MemberTagsSection";
 
 type PromiseReturnType = {
   member: Member | undefined;
@@ -138,6 +139,7 @@ export default async function MemberProfilePage(props: {
               params={params}
               familyMembers={member.familyMembers}
             />
+            <MemberTagSection params={params} />
           </div>
           <div className="col-span-8">
             <Tabs defaultValue="Subscriptions" className="w-full">
