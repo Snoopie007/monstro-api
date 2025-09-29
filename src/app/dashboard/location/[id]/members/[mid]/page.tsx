@@ -12,7 +12,7 @@ import {
 import { cn } from "@/libs/utils";
 import { PaymentMethods, MemberProfile, MemberEditButton } from "./components";
 import { db } from "@/db/db";
-import { and } from "drizzle-orm";
+import { and, eq, or, desc } from "drizzle-orm";
 import { MemberProvider } from "./providers/MemberContext";
 import { Member, MemberLocation } from "@/types";
 import Stripe from "stripe";
@@ -21,10 +21,18 @@ import { MemberPackages } from "./components/MemberPackages/MemberPackages";
 import { MemberInvoices } from "./components/MemberInvoices/MemberInvoices";
 import { CustomFieldsSection } from "@/components/custom-fields";
 import { MemberTagSection } from "./components/MemberTags/MemberTagsSection";
+import { attendances, reservations, recurringReservations } from "@/db/schemas";
+import { format } from "date-fns";
 
 type PromiseReturnType = {
   member: Member | undefined;
   ml: MemberLocation | undefined;
+};
+
+type MemberProfileData = {
+  totalPointsEarned: number;
+  lastSeenFormatted: string;
+  isLoadingCheckIn: boolean;
 };
 
 async function fetchStripeKeys(
@@ -78,6 +86,70 @@ async function fetchStripeKeys(
   }
 }
 
+async function fetchMemberProfileData(
+  id: string,
+  mid: string,
+  currentPoints: number = 0
+): Promise<MemberProfileData> {
+  try {
+    // Fetch latest check-in
+    const latestCheckIn = await db
+      .select({
+        checkInTime: attendances.checkInTime,
+      })
+      .from(attendances)
+      .leftJoin(reservations, eq(attendances.reservationId, reservations.id))
+      .leftJoin(recurringReservations, eq(attendances.recurringId, recurringReservations.id))
+      .where(
+        and(
+          or(
+            and(
+              eq(reservations.memberId, mid),
+              eq(reservations.locationId, id)
+            ),
+            and(
+              eq(recurringReservations.memberId, mid),
+              eq(recurringReservations.locationId, id)
+            )
+          )
+        )
+      )
+      .orderBy(desc(attendances.checkInTime))
+      .limit(1);
+
+    // Fetch reward claims for points calculation
+    const rewardClaims = await db.query.memberRewards.findMany({
+      where: (memberRewards, { eq }) => eq(memberRewards.memberId, mid)
+    });
+
+    // Calculate total points earned
+    const pointsSpent = rewardClaims.reduce((total, claim) => {
+      return total + (claim.previousPoints ? (claim.previousPoints - currentPoints) : 0);
+    }, 0);
+
+    const totalPointsEarned = currentPoints + Math.abs(pointsSpent);
+
+    // Format last seen date
+    const latestCheckInDate = latestCheckIn[0]?.checkInTime;
+    const lastSeenFormatted = latestCheckInDate 
+      ? format(new Date(latestCheckInDate), "MMM d, yyyy 'at' h:mm a")
+      : "Never";
+
+    return {
+      totalPointsEarned,
+      lastSeenFormatted,
+      isLoadingCheckIn: false,
+    };
+  } catch (error) {
+    console.error("Error fetching member profile data:", error);
+    return {
+      totalPointsEarned: currentPoints,
+      lastSeenFormatted: "Never",
+      isLoadingCheckIn: false,
+    };
+  }
+}
+
 async function fetchStripePyamentMethods(
   customerId: string,
 ): Promise<Stripe.PaymentMethod[]> {
@@ -115,6 +187,13 @@ export default async function MemberProfilePage(props: {
   }
   const { member, ml } = res;
 
+  // Fetch member profile data (check-ins and reward claims)
+  const memberProfileData = await fetchMemberProfileData(
+    params.id, 
+    params.mid, 
+    ml.points || 0
+  );
+
   if (member.stripeCustomerId) {
     paymentMethods = await fetchStripePyamentMethods(member.stripeCustomerId);
   }
@@ -125,7 +204,7 @@ export default async function MemberProfilePage(props: {
         {/* Main content */}
         <div className="grid grid-cols-12 flex-1">
           <div className="col-span-4  border-r border-foreground/10   ">
-            <MemberProfile params={params} />
+            <MemberProfile params={params} profileData={memberProfileData} />
             {/* Custom Fields Section */}
             <CustomFieldsSection
               memberId={params.mid}
