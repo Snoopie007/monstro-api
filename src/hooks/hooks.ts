@@ -6,7 +6,12 @@ async function fetcher(data: { url: string; id: string; query?: string }) {
   const res = await fetch(
     `/api/protected/loc/${data.id}/${data.url}${
       data.query ? `?${data.query}` : ""
-    }`
+    }`,
+    {
+      headers: {
+        "X-Timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+      },
+    }
   );
   if (!res.ok) {
     throw new Error("An error occurred while fetching the data.");
