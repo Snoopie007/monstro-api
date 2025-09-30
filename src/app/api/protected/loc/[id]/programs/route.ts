@@ -52,10 +52,6 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 	const timezoneOffset = req.headers.get('X-Timezone-Offset') || '+00:00';
 	const { sessions, ...data } = await req.json();
 	try {
-		const utcSessions = sessions.map((session: ProgramSession) => ({
-			...session,
-			time: convertLocalTimeToUTC(session.time, timezoneOffset)
-		}))
 		await db.transaction(async (tx) => {
 			/** 
 			 * Create the main program record with location ID and other data
@@ -67,7 +63,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
 			}).returning({ id: programs.id });
 
 
-			await tx.insert(programSessions).values(utcSessions.map(({ id, ...s }: ProgramSession)  => ({
+			await tx.insert(programSessions).values(sessions.map(({ id, ...s }: ProgramSession)  => ({
 				...s,
 				status: 1,
 				programId: program.id,
