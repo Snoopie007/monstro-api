@@ -13,6 +13,7 @@ interface TestChatInputProps {
 
 export function TestChatInput({ lid }: TestChatInputProps) {
     const { data: session } = useSession()
+
     const btnRef = useRef<HTMLButtonElement>(null)
     const [input, setInput] = useState('')
     const { messages, setMessage, assistant, member } = useBotSettingContext()
@@ -130,11 +131,11 @@ export function TestChatInput({ lid }: TestChatInputProps) {
 
         try {
             const api = process.env.NEXT_PUBLIC_MONSTRO_API_URL || 'http://localhost:3001'
-            const response = await fetch(`${api}/api/protected/locations/${lid}/support/test`, {
+            const response = await fetch(`${api}/x/loc/${lid}/support/test`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${session?.user.sbToken || ''}`,
+                    Authorization: `Bearer ${session?.user.sbToken}`,
                 },
                 body: JSON.stringify({
                     message: newMessage,
