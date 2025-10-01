@@ -54,6 +54,8 @@
         "@stripe/react-stripe-js": "^3.1.1",
         "@stripe/stripe-js": "^5.6.0",
         "@supabase/supabase-js": "^2.46.2",
+        "@tailwindcss/postcss": "^4.0.3",
+        "@tailwindcss/typography": "^0.5.15",
         "@tanstack/react-table": "^8.20.5",
         "@tiptap-pro/extension-drag-handle": "^2.17.3",
         "@tiptap-pro/extension-drag-handle-react": "^2.17.3",
@@ -65,10 +67,6 @@
         "@tiptap/extension-text-align": "^2.11.5",
         "@tiptap/extension-text-style": "^2.11.5",
         "@tiptap/extension-underline": "^2.11.5",
-        "@tailwindcss/postcss": "^4.0.3",
-        "@tailwindcss/typography": "^0.5.15",
-        "tailwindcss": "^4.0.14",
-        "tailwindcss-animate": "^1.0.7",
         "@tiptap/pm": "^2.11.5",
         "@tiptap/react": "^2.11.5",
         "@tiptap/starter-kit": "^2.11.5",
@@ -96,7 +94,7 @@
         "libphonenumber-js": "^1.12.10",
         "lucide-react": "^0.544.0",
         "nanoid": "^5.0.9",
-        "next": "^15.5.3",
+        "next": "^15.5.4",
         "next-auth": "^5.0.0-beta.25",
         "next-mdx-remote": "^5.0.0",
         "next-themes": "^0.4.6",
@@ -123,6 +121,8 @@
         "sqids": "^0.3.0",
         "stripe": "^18.2.1",
         "swr": "^2.3.2",
+        "tailwindcss": "^4.0.14",
+        "tailwindcss-animate": "^1.0.7",
         "twilio": "^5.5.0",
         "y-prosemirror": "^1.2.13",
         "y-protocols": "^1.0.6",
@@ -130,8 +130,8 @@
         "zod": "^3.23.8"
     },
     "optionalDependencies": {
-      "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
-      "lightningcss-linux-x64-gnu": "^1.29.1"
+        "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
+        "lightningcss-linux-x64-gnu": "^1.29.1"
     },
     "devDependencies": {
         "@types/google.maps": "^3.58.1",
