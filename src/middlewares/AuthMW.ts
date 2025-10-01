@@ -1,9 +1,13 @@
-import type { ExtendedUser } from '@/types/auth';
+import type { ExtendedVendorUser } from '@/types/auth';
 import { Elysia } from 'elysia';
 import { jwtVerify } from 'jose';
 
 
 async function verifyToken(token: string) {
+    if (!process.env.SUPABASE_JWT_SECRET) {
+        return null;
+    }
+
     try {
         const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET);
         const { payload } = await jwtVerify(token, secret);
@@ -16,11 +20,18 @@ async function verifyToken(token: string) {
 }
 
 async function verifyTokenX(token: string) {
+
+    if (!process.env.SUPABASE_JWT_SECRET) {
+        return null;
+    }
+
     try {
-        const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-        const { payload } = await jwtVerify(token, secret);
-        const { user } = payload as { user: ExtendedUser };
-        return { mid: user.memberId };
+        const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET);
+
+        const { payload } = await jwtVerify(token, secret, { clockTolerance: '999y' });
+        const user = payload as ExtendedVendorUser;
+
+        return { vendorId: user.vendorId };
     } catch (error) {
         console.log("Token verification error", error);
         return null;
@@ -61,7 +72,7 @@ export async function AuthXMiddleware(app: Elysia) {
 
         if (!result) return status(401, { error: "Unauthorized" })
 
-        return { memberId: result.mid }
+        return { vendorId: result.vendorId }
 
     })
 }

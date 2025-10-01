@@ -1,12 +1,13 @@
 import { Elysia } from 'elysia';
 import { AuthXMiddleware } from '@/middlewares';
+import { xSupport } from './loc/support/root';
 
 
 
-export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
+export const XRoutes = new Elysia()
     .use(AuthXMiddleware)
-    .group('/locations/:lid', (app) => {
-
+    .group('/loc/:lid', (app) => {
+        app.use(xSupport);
         return app;
     })
 

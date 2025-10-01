@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { serverConfig } from "./src/config";
 import { RateLimitMiddleware } from "./src/middlewares";
-import { AuthRoutes, ProtectedRoutes, PublicRoutes } from "./src/routes";
+import { AuthRoutes, ProtectedRoutes, PublicRoutes, XRoutes } from "./src/routes";
 import { realtimeRoutes, realtimeHealthRoutes } from "./src/routes/realtime";
 import "./src/workers/worker"; // Import worker to start processing
 
@@ -24,7 +24,7 @@ app.use(cors(CORS_CONFIG))
     const host = headers.get('x-forwarded-host') || headers.get('host') || 'localhost';
     const originalUrl = `${protocol}://${host}${request.url}`;
 
-    console.log(`🔍 ${request.method} ${originalUrl}`);
+    console.log(`🔍 ${originalUrl}`);
   })
   // Dedicated health check endpoint
   .get("/healthcheck", () => {
@@ -46,6 +46,7 @@ app.use(cors(CORS_CONFIG))
     return "";
   })
   .group("/api", (app) => app.use(AuthRoutes).use(ProtectedRoutes))
+  .group("/x", (app) => app.use(XRoutes))
   .group("/api/realtime", (app) =>
     app.use(realtimeRoutes).use(realtimeHealthRoutes)
   )
