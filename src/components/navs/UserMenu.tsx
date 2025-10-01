@@ -11,11 +11,10 @@ import {
 
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { CreditCard, User } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { cn } from "@/libs/utils";
 import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
-import { Ole } from "next/font/google";
 import { Location } from "@/types/location";
 
 const MenuItemStyle =
@@ -23,6 +22,7 @@ const MenuItemStyle =
 
 export function UserMenu() {
   const session = useSession();
+  console.log(session)
   const user = session.data?.user;
   const { theme, setTheme } = useTheme();
 

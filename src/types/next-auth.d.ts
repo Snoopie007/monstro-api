@@ -4,14 +4,15 @@ export type ExtendedUser = DefaultUser["user"] & {
     role: string;
     stripeCustomerId: string;
     phone: string;
-    currentLocationId: string | null;
-    token: string;
+    sbToken: string;
     email: string;
-    expireTime: Date | null;
-    locations: Record<string, unknown>[] | null;
+    locations: { id: string, name: string, status: string }[] | null;
     vendorId: number | 0,
     staffId: number | 0
 };
+
+
+
 
 declare module "next-auth" {
     interface Session {
