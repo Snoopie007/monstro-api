@@ -146,7 +146,6 @@ export const memberRewards = pgTable(
     dateClaimed: timestamp("date_claimed", { withTimezone: true })
       .notNull()
       .defaultNow(),
-    status: smallint("status"),
     created: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

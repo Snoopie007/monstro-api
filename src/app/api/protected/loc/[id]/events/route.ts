@@ -1,6 +1,7 @@
 import { db } from "@/db/db";
 import { CalendarEvent, Reservation } from "@/types";
-import { endOfMonth, startOfMonth, addDays } from "date-fns";
+import { endOfMonth, startOfMonth, addDays, addMinutes } from "date-fns";
+import { toDate,  } from 'date-fns-tz'
 import { NextResponse, NextRequest } from "next/server";
 
 export async function GET(
@@ -12,6 +13,7 @@ export async function GET(
   const startDateParam = searchParams.get("startDate");
   const endDateParam = searchParams.get("endDate");
   const planIdsParam = searchParams.get("planIds");
+  const timezone = req.headers.get("X-Timezone") || "America/Los_Angeles";
 
   // If startDate and endDate are provided, use them directly
   // Otherwise, fallback to month boundaries for backward compatibility
@@ -20,7 +22,6 @@ export async function GET(
     : startOfMonth(new Date(searchParams.get("date") || new Date()));
   const endDate = endDateParam ? new Date(endDateParam) : endOfMonth(startDate);
 
-  // Parse plan IDs for filtering (optional)
   const planIds = planIdsParam ? planIdsParam.split(",") : null;
 
   try {
@@ -89,7 +90,7 @@ export async function GET(
     // Generate available session slots
     locationSessions.forEach((session) => {
       if (!session.program) return;
-      let currentDate = new Date(startDate);
+      let currentDate = toDate(startDate, {timeZone: "UTC"});
       const sessionDay = session.day;
       const currentDay = currentDate.getDay();
 
@@ -98,13 +99,15 @@ export async function GET(
       }
 
       while (currentDate <= endDate) {
-        const start = new Date(
-          `${currentDate.toISOString().split("T")[0]}T${session.time}Z`
-        );
-        const end = new Date(start.getTime() + session.duration * 60000);
-
+        const parsedSessionStartDate = `${currentDate.toISOString().split("T")[0]}T${session.time}`;
+        const endTime = addMinutes(parsedSessionStartDate, session.duration).getHours();
+        const endMinutes = addMinutes(parsedSessionStartDate, session.duration).getMinutes();
+        const parsedSessionEndDate = `${currentDate.toISOString().split("T")[0]}T${endTime}:${endMinutes}`;
+        const start = toDate(parsedSessionStartDate, { timeZone: timezone });
+        
+        const end = toDate(parsedSessionEndDate, { timeZone: timezone });
         const id = `${start.toISOString()}-${session.id}`;
-
+      
         // Check if this session already has a reservation
         const hasReservation =
           reservations.some(

@@ -12,12 +12,18 @@ import { ChevronLeft, Mail, PhoneCall } from "lucide-react";
 import { useMemberStatus } from "../../providers/MemberContext";
 import { useRouter } from "next/navigation";
 import { MemberDeleteButton, MemberEditButton } from "../ContactInfo";
-import { MemberTagsInline } from "./MemberTagsInline";
+
+type MemberProfileData = {
+  totalPointsEarned: number;
+  lastSeenFormatted: string;
+};
 
 interface MemberProfileProps {
   params: { id: string; mid: string };
+  profileData: MemberProfileData;
 }
-export function MemberProfile({ params }: MemberProfileProps) {
+
+export function MemberProfile({ params, profileData }: MemberProfileProps) {
   const { member, ml } = useMemberStatus();
   const router = useRouter();
 
@@ -59,9 +65,6 @@ export function MemberProfile({ params }: MemberProfileProps) {
               <div className=" font-bold text-lg ">
                 {memberProfile?.firstName}
               </div>
-              <div className="flex items-center gap-2">
-                <MemberTagsInline params={params} />
-              </div>
               <div className="flex flex-row gap-2 items-center">
                 <Mail size={14} />
                 <span>{memberProfile?.email}</span>
@@ -71,19 +74,21 @@ export function MemberProfile({ params }: MemberProfileProps) {
                 <span>{memberProfile?.phone}</span>
               </div>
               <div className="flex flex-row gap-2 items-center">
-                <strong> Last seen:</strong>
-                <span>{/* {formatDateTime(member.updated)} */}</span>
+                <strong>Last seen:</strong>
+                <span>
+                  {profileData.lastSeenFormatted}
+                </span>
               </div>
             </div>
           </div>
           <div className="flex-1 flex flex-col text-sm gap-2">
             <div className="flex flex-col">
-              <strong>Points Earned</strong>
-              <span>{ml.points}</span>
+              <strong>Total Points Earned</strong>
+              <span>{profileData.totalPointsEarned}</span>
             </div>
             <div className="flex flex-col">
-              <strong className="">Points Reedemed</strong>
-              <span>{member.reedemPoints}</span>
+              <strong className="">Current Points Balance</strong>
+              <span>{ml?.points || 0}</span>
             </div>
           </div>
         </div>
