@@ -111,7 +111,12 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                                         Email
                                     </FormLabel>
                                     <FormControl>
-                                        <Input type="email" className={InputStyle} disabled placeholder="Email" {...field} />
+                                        <Input
+                                            type="email"
+                                            className={InputStyle}
+                                            disabled
+                                            placeholder="Email" {...field}
+                                        />
                                     </FormControl>
                                 </FormItem>
                             )} />

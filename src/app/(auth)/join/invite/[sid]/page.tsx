@@ -33,13 +33,11 @@ export default async function InvitePackagePage(props: InvitePackagePageProps) {
     const tos = await getTOS("term-of-use")
 
     if (!sale) {
-        return <div className="flex flex-col gap-4">
-            <div className="w-full max-w-lg mx-auto  border bg-white border-gray-200 rounded-sm p-1 space-y-4  ">
-                <div className="space-y-6  p-4">
-                    <div className="text-center">
-                        Uh oh, we can't find that the associated account with your invitation link to join Monstro.
-                        Please contact your sales rep.
-                    </div>
+        return <div className="h-screen flex items-center justify-center ">
+            <div className="w-full max-w-lg mx-auto  border bg-white border-gray-200 rounded-lg p-6 ">
+                <div className="text-center">
+                    Uh oh, we can't find that the associated account with your invitation link to join Monstro.
+                    Please contact your sales rep.
                 </div>
             </div>
         </div>;
