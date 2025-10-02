@@ -59,9 +59,10 @@ export function CustomFieldDisplay({
           (opt) => opt.value === value
         );
         return (
-          <Badge variant="secondary" className="text-xs">
-            {selectedOption?.label || value}
-          </Badge>
+          // <Badge variant="secondary" className="text-xs">
+          //   {selectedOption?.label || value}
+          // </Badge>
+          <span className="text-sm w-full">{selectedOption?.label || value}</span>
         );
 
       case "multi-select":

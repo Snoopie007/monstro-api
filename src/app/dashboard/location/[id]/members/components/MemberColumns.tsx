@@ -1,25 +1,41 @@
 import { Checkbox } from "@/components/forms/checkbox";
 import { Badge } from "@/components/ui";
 import { Member } from "@/types";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, FilterFn } from "@tanstack/react-table";
 import Link from "next/link";
 import {
   CustomFieldDisplay,
   type CustomFieldDefinition,
 } from "@/components/custom-fields";
 
-interface MemberWithCustomFields extends Member {
+export interface MemberWithCustomFieldsColumns extends Member {
   customFields?: Array<{
     fieldId: string;
     value: string;
   }>;
 }
 
+const customFieldFilter: FilterFn<MemberWithCustomFieldsColumns> = (row, columnId, filterValue) => {
+  if (columnId.startsWith('custom-field-')) {
+    const fieldId = columnId.replace('custom-field-', '');
+    const member = row.original;
+    const customFieldValue = member.customFields?.find(
+      cf => cf.fieldId === fieldId
+    )?.value;
+
+    if (!customFieldValue) return false;
+
+    // Case-insensitive string matching
+    return customFieldValue.toLowerCase().includes(filterValue.toLowerCase());
+  }
+  return false;
+};
+
 export const MemberColumns = (
   locationId: string,
   customFields?: CustomFieldDefinition[]
-): ColumnDef<MemberWithCustomFields, any>[] => {
-  const baseColumns: ColumnDef<MemberWithCustomFields, any>[] = [
+): ColumnDef<MemberWithCustomFieldsColumns, any>[] => {
+  const baseColumns: ColumnDef<MemberWithCustomFieldsColumns, any>[] = [
     {
       id: "select",
       header: ({ table }) => (
@@ -94,19 +110,19 @@ export const MemberColumns = (
         }
 
         return (
-          <div className="flex flex-wrap gap-1">
-            {tags.slice(0, 3).map((tag: any) => (
+          <div className="flex gap-1 min-w-0">
+            {tags.slice(0, 2).map((tag: any) => (
               <Badge
                 key={tag.id}
                 variant="secondary"
-                className="text-xs px-1.5 py-0.5"
+                className="text-xs px-1.5 py-0.5 shrink-0"
               >
                 {tag.name}
               </Badge>
             ))}
-            {tags.length > 3 && (
-              <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                +{tags.length - 3}
+            {tags.length > 2 && (
+              <Badge variant="outline" className="text-xs px-1.5 py-0.5 shrink-0">
+                +{tags.length - 2}
               </Badge>
             )}
           </div>
@@ -116,11 +132,13 @@ export const MemberColumns = (
     },
   ];
 
-  // Generate custom field columns
-  const customFieldColumns: ColumnDef<MemberWithCustomFields, any>[] =
+    // Generate custom field columns
+    const customFieldColumns: ColumnDef<MemberWithCustomFieldsColumns, any>[] =
     customFields?.map((field) => ({
+      accessorKey: `custom-field-${field.id}`,
       id: `custom-field-${field.id}`,
       header: field.name,
+      filterFn: customFieldFilter,
       cell: ({ row }) => {
         const member = row.original;
         const customFieldValue = member.customFields?.find(

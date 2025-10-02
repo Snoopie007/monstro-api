@@ -1,6 +1,6 @@
 import { MonstroPlansBenefits } from "@/types/admin";
 import { relations } from "drizzle-orm";
-import { integer, serial, text, timestamp, pgTable, jsonb } from "drizzle-orm/pg-core";
+import { integer, serial, text, timestamp, pgTable, jsonb, boolean } from "drizzle-orm/pg-core";
 
 
 export const monstroPackages = pgTable('monstro_packages', {
@@ -26,6 +26,7 @@ export const monstroPackagePaymentPlans = pgTable('monstro_package_payment_plans
     trial: integer('trial').notNull(),
     priceId: text('price_id'),
     testPriceId: text('test_price_id'),
+    active: boolean('active').notNull().default(true),
     created: timestamp('created_at').notNull().defaultNow(),
     updated: timestamp('updated_at'),
 });

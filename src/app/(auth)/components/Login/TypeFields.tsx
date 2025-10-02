@@ -43,9 +43,9 @@ export function TypeFields({ form }: { form: UseFormReturn<z.infer<typeof LoginS
 
     return (
         <div className='space-y-6 '>
-            <div className='space-y-0'>
-                <div className='text-lg font-bold'>Send verification to</div>
-                <p className='text-sm text-muted-foreground'>
+            <div className=' mb-4 space-y-1'>
+                <div className='text-2xl font-bold'>Send verification to</div>
+                <p className='text-gray-500'>
                     Select either email or phone to verify your account.
                 </p>
             </div>
@@ -64,13 +64,15 @@ export function TypeFields({ form }: { form: UseFormReturn<z.infer<typeof LoginS
                                 >
                                     {['email', 'sms'].map((type) => (
                                         <FormItem key={type} className='w-full flex '>
-                                            <FormLabel className="w-full space-x-2 border border-gray-200 px-4 py-3 cursor-pointer rounded-sm font-normal leading-none ">
+                                            <FormLabel className="w-full space-x-2 border flex items-center border-gray-200 p-4 cursor-pointer rounded-lg  ">
 
                                                 <FormControl>
-                                                    <RadioGroupItem value={type} className='border-black ' />
+                                                    <RadioGroupItem value={type} className='border-gray-300 ' />
                                                 </FormControl>
 
-                                                {type === 'email' ? formatEmail(user?.email || '') : formatPhone(user?.phone || '')}
+                                                <span className='leading-none'>
+                                                    {type === 'email' ? formatEmail(user?.email || '') : formatPhone(user?.phone || '')}
+                                                </span>
 
 
                                             </FormLabel>
@@ -83,7 +85,10 @@ export function TypeFields({ form }: { form: UseFormReturn<z.infer<typeof LoginS
                 />
             </fieldset>
             <fieldset >
-                <Button onClick={handleGetToken} disabled={loading}
+                <Button
+                    size="lg"
+                    onClick={handleGetToken}
+                    disabled={loading}
                     className={cn("children:hidden", loading && "children:block")}
                 >
                     <Loader2 className='size-4 mr-2 animate-spin' />

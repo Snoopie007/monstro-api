@@ -54,20 +54,20 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
     return (
         <div className="space-y-4">
 
-            <div className="space-y-1">
-                <div className="text-base font-medium">
+            <div className="space-y-1  mb-4">
+                <div className="text-2xl font-bold">
                     Authenticate your identity
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-gray-500">
                     We've sent you an email to {rest.email}. The code will expire in 30 minutes.
                 </p>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 space-y-1">
                 <FormField
                     control={form.control}
                     name="token"
                     render={({ field }) => (
-                        <FormItem>
+                        <FormItem className="flex ">
                             <FormControl>
                                 <InputOTP maxLength={6} {...field}>
                                     {Array.from({ length: 6 }).map((_, index) => (
@@ -81,8 +81,9 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
                     )} />
                 <OTPRetry type={type} />
             </div>
-            <div className="">
+            <div className="flex ">
                 <Button
+                    size="lg"
                     disabled={form.formState.isSubmitting || loading || !form.formState.isValid}
                     className={cn(
                         "children:hidden cursor-pointer ",

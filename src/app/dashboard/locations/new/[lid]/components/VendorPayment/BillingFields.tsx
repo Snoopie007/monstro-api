@@ -14,7 +14,7 @@ import { VendorBillingSchema } from "@/libs/FormSchemas/schemas";
 import { z } from "zod";
 
 
-const INPUT_STYLES = "bg-background text-foreground border-foreground/10"
+const INPUT_STYLES = "bg-background rounded-lg text-foreground border-foreground/10"
 
 interface BillingFieldsProps {
     form: UseFormReturn<z.infer<typeof VendorBillingSchema>>

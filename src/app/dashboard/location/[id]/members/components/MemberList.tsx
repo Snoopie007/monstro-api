@@ -11,14 +11,14 @@ import {
 } from "@tanstack/react-table";
 import { useState, useMemo, useEffect } from "react";
 import { CustomFieldDefinition } from "@/components/custom-fields";
-import { MemberColumns } from "./MemberColumns";
+import { MemberColumns, MemberWithCustomFieldsColumns } from "./MemberColumns";
 import { Input } from "@/components/forms";
 import { MemberTable } from "./MemberTable";
 import ErrorComponent from "@/components/error";
 import { AddMember } from "./CreateMember";
 import { Member } from "@/types/member";
 
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, FilterIcon } from "lucide-react";
 import { debounce } from "@tiptap-pro/extension-table-of-contents";
 import { Separator } from "@/components/ui";
 import {
@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/TablePage";
 import { ImportMembers } from ".";
 import TagsFilter from "./TagsFilter";
+import { FilterPopover, SortPopover } from "./FilterAndSort";
 
 export function MemberList({
 	params,
@@ -59,6 +60,12 @@ export function MemberList({
 		selectedTags,
 		tagOperator
 	); // Send `page + 1` because the backend may use 1-based indexing.
+
+	const handleSortChange = (sort: {id: string, direction: 'asc' | 'desc'}[]) => {
+		// TODO: implement sorting by columns given
+		console.log("sort", sort)
+		setPage(0); // Reset to first page when filters change
+	}
 
 	// Fetch custom fields
 	useEffect(() => {
@@ -98,7 +105,6 @@ export function MemberList({
 		data: !isLoading && data?.members ? data.members : [], // Only use data when it's available
 		columns,
 		pageCount: totalPages, // Set total pages from the API
-		filterFns: {},
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		getPaginationRowModel: getPaginationRowModel(),
@@ -136,6 +142,11 @@ export function MemberList({
 		setPage(0); // Reset to first page when filters change
 	};
 
+	const handleFiltersChange = (filters: { id: string, value: unknown }[]) => {
+		setColumnFilters(filters);
+		setPage(0); // Reset to first page when filters change
+	};
+
 	if (error) {
 		return <ErrorComponent error={error} />;
 	}
@@ -145,6 +156,9 @@ export function MemberList({
 			<TablePageHeader>
 				<TablePageHeaderSection>
 					<div className="flex flex-row items-center gap-2">
+						{/* <FilterPopover columns={columns} filters={columnFilters} onFiltersChange={handleFiltersChange} />
+						<SortPopover columns={columns} onSortChange={handleSortChange} /> */}
+					
 						<Input
 							placeholder="Find a member..."
 							// value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}

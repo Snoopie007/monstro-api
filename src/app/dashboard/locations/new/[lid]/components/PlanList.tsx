@@ -1,9 +1,12 @@
 
 import { cn } from "@/libs/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui";
-import { useNewLocation } from "../../provider/NewLocationContext";
+import { useNewLocation } from "../provider/NewLocationContext";
 import { useState } from "react";
 import { MonstroPlan } from "@/types/admin";
+import { InfoIcon } from "./InfoIcon";
+
+
 
 export default function PlanList() {
     const { locationState, updateLocationState, plans } = useNewLocation();
@@ -33,20 +36,21 @@ export default function PlanList() {
     return (
         <div className="flex flex-col gap-2">
             {plans.map((plan, i) => (
-                <div key={i} onClick={() => handlePlanSelect(plan)} data-selected={isSelected(plan)} data-expanded={isExpanded(plan)}
+                <div key={i} onClick={() => handlePlanSelect(plan)} data-selected={isSelected(plan)}
+                    data-expanded={isExpanded(plan)}
                     className={cn(
-                        "flex flex-col gap-2 text-foreground group cursor-pointer",
-                        " hover:border-indigo-500 border border-foreground/10 p-4 rounded-sm",
-                        "data-[selected=true]:border-indigo-500 ",
+                        "flex flex-col gap-2 text-foreground group cursor-pointer opacity-70",
+                        " hover:border-indigo-500 border border-foreground/10 p-4 rounded-lg",
+                        "data-[selected=true]:border-indigo-500 data-[selected=true]:opacity-100",
 
                     )}
                 >
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <div className="flex flex-row  items-center justify-between">
-                            <h2 className="text-base font-bold flex flex-row gap-1 items-center">
+                            <h2 className="text-lg font-bold flex flex-row gap-1 items-center">
                                 {plan.name}
                             </h2>
-                            <span className="text-xs font-semibold bg-indigo-500 text-white px-2 py-1 rounded-sm">
+                            <span className="text-sm font-semibold bg-indigo-500 text-white px-2 py-1 rounded-sm">
                                 ${plan.price}{plan.id !== 1 && `/${plan.threshold} ${plan.interval}`}
                             </span>
                         </div>
@@ -55,16 +59,16 @@ export default function PlanList() {
 
                     <button
                         onClick={(e) => toggleExpanded(e, plan)}
-                        className="text-xs text-indigo-500 hover:text-indigo-600 font-medium text-left cursor-pointer"
+                        className="text-sm text-indigo-500 hover:text-indigo-600 font-medium text-left cursor-pointer"
                     >
                         <span className="group-data-[expanded=true]:hidden">See Details</span>
                         <span className="group-data-[expanded=false]:hidden">Hide Details</span>
                     </button>
 
-                    <div className="space-y-2 border-t border-foreground/10 pt-4 group-data-[expanded=true]:block hidden">
-                        <ul className="text-sm grid grid-cols-2 gap-2">
+                    <div className="space-y-4 border-t border-foreground/10 pt-4 group-data-[expanded=true]:block hidden">
+                        <ul className="text-sm grid grid-cols-2 gap-4">
                             {plan.benefits.map((benefit, index) => (
-                                <li key={index} className="flex flex-row gap-2 text-sm items-center font-medium">
+                                <li key={index} className="flex flex-row gap-2 items-center font-medium">
                                     <span>{benefit.name}</span>
                                     {benefit.description && (
                                         <Tooltip>
@@ -80,9 +84,11 @@ export default function PlanList() {
                             ))}
                         </ul>
                         {plan.note && (
-                            <p className="text-xs  flex flex-row gap-0.5 items-center">
-                                <span className="text-red-500 pt-0.5">*</span>
-                                <span className="italic text-gray-600">{plan.note}</span>
+                            <p className="text-sm  items-start">
+                                <span className="text-red-500">*</span>
+                                <span className=" text-muted-foreground">{" "}
+                                    Stripe transaction fees (2.9% + $0.30) apply.
+                                </span>
                             </p>
                         )}
                     </div>
@@ -92,12 +98,3 @@ export default function PlanList() {
     );
 }
 
-function InfoIcon() {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" >
-            <circle cx="12" cy="12" r="10" className="fill-indigo-500 stroke-0" />
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" className="text-white" />
-            <path d="M12 17h.01" className="text-white" />
-        </svg>
-    )
-}

@@ -26,7 +26,7 @@ export function LoginForm() {
 
 
 	return (
-		<div>
+		<div className="w-full">
 			<Form {...form}>
 				<form className="w-full space-y-6">
 

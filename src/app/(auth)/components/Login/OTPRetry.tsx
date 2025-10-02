@@ -53,22 +53,20 @@ export function OTPRetry({ type }: OTPRetryProps) {
     }
 
     return (
-        <div className='flex flex-col gap-2'>
-            <div className='text-sm text-gray-500 flex items-center gap-1'>
-                Didn't receive an {type === 'email' ? 'email' : 'text'}?
-                {loading && <Loader2 className='size-3 animate-spin ml-1' />}
-                <button
-                    type="button"
-                    className={`${countdown > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-indigo-600 hover:text-indigo-800 cursor-pointer'} font-medium`}
-                    onClick={resend}
-                    disabled={countdown > 0 || loading}
-                    aria-disabled={countdown > 0 || loading}
-                >
-                    {countdown > 0
-                        ? `Resend in ${countdown}s`
-                        : "Resend"}
-                </button>
-            </div>
+        <div className=' text-gray-500 items-center '>
+            Didn't receive an {type === 'email' ? 'email' : 'text'}? {" "}
+            {loading && <Loader2 className='size-3 animate-spin ml-1' />}
+            <button
+                type="button"
+                className={`${countdown > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-indigo-600 hover:text-indigo-800 cursor-pointer'} font-bold`}
+                onClick={resend}
+                disabled={countdown > 0 || loading}
+                aria-disabled={countdown > 0 || loading}
+            >
+                {countdown > 0
+                    ? `Resend in ${countdown}s`
+                    : "Resend"}
+            </button>
         </div>
     )
 }

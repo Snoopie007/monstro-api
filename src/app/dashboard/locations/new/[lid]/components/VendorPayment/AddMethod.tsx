@@ -80,12 +80,12 @@ export default function AddPaymentMethod() {
     return (
 
         <div className="relative group" data-open={open}>
-            <Button variant={"outline"} size={"sm"} onClick={() => setOpen(true)}
-                className="cursor-pointer group-data-[open=true]:hidden w-full border-dashed border-foreground/10 "
+            <Button variant={"outline"} onClick={() => setOpen(true)}
+                className=" group-data-[open=true]:hidden w-full border-dashed border-foreground/40 "
             >
                 + Payment Method
             </Button>
-            <div className="hidden bg-foreground/5 border border-foreground/10 pt-2 px-4 pb-4 rounded-sm group-data-[open=true]:block">
+            <div className="hidden bg-foreground/5 border border-foreground/10 pt-2 px-4 pb-4 rounded-lg group-data-[open=true]:block">
                 <Form {...form} >
                     <form>
                         <fieldset>
@@ -112,8 +112,8 @@ export default function AddPaymentMethod() {
                                     }}
                                 />
 
-                                <span className="flex flex-row items-center  text-gray-400">
-                                    <LockIcon size={12} className="" />
+                                <span className="flex flex-row items-center  text-muted-foreground">
+
                                     <span className="text-xs leading-none">
                                         This is secure 128-bit SSL encrypted payment.
                                     </span>
@@ -122,9 +122,9 @@ export default function AddPaymentMethod() {
                         </fieldset>
                         <BillingFields form={form} />
                     </form>
-                    <div className="flex justify-end mt-2">
+                    <div className="flex justify-start mt-2">
                         <Button
-                            className={cn("children:hidden rounded-t-none w-full", { "children:inline-flex": loading })}
+                            className={cn("children:hidden  ", { "children:inline-flex": loading })}
                             variant={"foreground"}
                             onClick={form.handleSubmit(onSubmit)}
                             size={"sm"}

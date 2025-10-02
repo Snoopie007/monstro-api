@@ -50,79 +50,85 @@ export function LoginFields({ form }: LoginFieldsProps) {
 
 
 
+    const InputStyle = "bg-white border border-gray-200 rounded-lg h-12 text-base";
+
     return (
-        <div className='space-y-4'>
-            <div className='space-y-1'>
-                <h1 className="text-lg font-bold ">
-                    Sign in to Monstro
+        <div className="space-y-4 flex flex-col">
+            <div className="space-y-1">
+                <h1 className="text-lg font-bold">
+                    Welcome back!
                 </h1>
+                <p className="text-gray-500">
+                    Sign in to Monstro-X to have some fun! Let's go!
+                </p>
             </div>
-            <fieldset >
+            <fieldset>
                 <FormField
                     control={form.control}
                     name="email"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className='text-[0.65rem] font-semibold  uppercase'>
-                                Email
-                            </FormLabel>
                             <FormControl>
                                 <Input
                                     type="email"
-                                    className={"bg-white border border-gray-200 rounded-sm py-4 px-4 text-sm  "}
-                                    placeholder="Your email"
+                                    className={InputStyle}
+                                    placeholder="Email"
                                     {...field}
                                 />
                             </FormControl>
-
-                            <FormMessage />
+                            <FormMessage className="text-xs" />
                         </FormItem>
                     )}
                 />
             </fieldset>
-            <fieldset >
+            <fieldset className="space-y-0.5">
                 <FormField
                     control={form.control}
                     name="password"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="flex flex-row justify-between">
-                                <span className="text-[0.65rem] font-semibold  uppercase">Password</span>
-                                <Link href={"/login/forgot"} className={"font-semibold text-[0.65rem]  uppercase"}					>
-                                    Forgot your password?
-                                </Link>
-
-                            </FormLabel>
                             <FormControl>
                                 <Input
                                     type="password"
-                                    className={"bg-white border border-gray-200  rounded-sm p-4 text-sm shadow-none"}
-                                    placeholder="••••••••"
+                                    className={InputStyle}
+                                    placeholder="Password"
                                     {...field}
                                 />
                             </FormControl>
-
                             <FormMessage className="text-xs" />
                         </FormItem>
                     )}
                 />
 
             </fieldset>
-            <fieldset>
+
+            <div className="justify-start space-y-1">
                 <Button
+                    size="lg"
                     className={cn(
-                        "w-full bg-indigo-600 text-white children:hidden",
+                        "children:hidden  bg-indigo-600 text-white ",
                         { "children:inline-block": loading }
                     )}
                     disabled={loading}
                     onClick={verifyEmailAndPassword}
                 >
-                    <Loader2 size={16} className="animate-spin mr-2" />
+                    <Loader2 className="mr-2 size-4 animate-spin" />
                     Login
                 </Button>
+                <div className='text-gray-500'>
+                    <span className="text-gray-500">Don't have an account? {` `}</span>
+                    <Link href={"/join"} className={"inline-flex text-indigo-500  font-bold"} >
+                        Create account
+                    </Link>
+                    <span className="text-gray-500">
+                        .{` `} Trouble logging in? {` `}
+                    </span>
+                    <Link href={"/login/forgot"} className=" text-indigo-500  font-bold">
+                        Reset your password.
+                    </Link>
+                </div>
+            </div>
 
-
-            </fieldset>
         </div>
     )
 }

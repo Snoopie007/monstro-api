@@ -24,76 +24,76 @@ export function MemberTable<TData, TValue>({
   isLoading: boolean;
 }) {
   return (
-    <Table className="w-auto  border-r border-b border-foreground/5">
-      <TableHeader>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow
-            key={headerGroup.id}
-            className="align-middle text-sm  bg-foreground/5"
-          >
-            {headerGroup.headers.map((header) => {
-              return (
-                <TableHead
-                  key={header.id}
-                  className="h-auto border-l border-foreground/5 py-1  text-foreground"
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </TableHead>
-              );
-            })}
-          </TableRow>
-        ))}
-      </TableHeader>
-      <TableBody>
-        {isLoading ? (
-          <TableRow>
-            {table.getHeaderGroups()[0].headers.map((header, i) => {
-              return (
-                <TableCell key={i}>
-                  <Skeleton className="w-full h-4 g-gray-100" />
-                </TableCell>
-              );
-            })}
-          </TableRow>
-        ) : (
-          <>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className="border border-foreground/5 py-1"
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+      <Table className="w-full border-r border-b border-foreground/5">
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow
+              key={headerGroup.id}
+              className="align-middle text-sm bg-foreground/5"
+            >
+              {headerGroup.headers.map((header) => {
+                return (
+                  <TableHead
+                    key={header.id}
+                    className="h-auto border-l border-foreground/5 py-1 text-foreground whitespace-nowrap"
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            <TableRow>
+              {table.getHeaderGroups()[0].headers.map((header, i) => {
+                return (
+                  <TableCell key={i} className="whitespace-nowrap">
+                    <Skeleton className="w-full h-4 g-gray-100" />
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          ) : (
+            <>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        className="border border-foreground/5 py-1 whitespace-nowrap"
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns}
+                    className="h-6 w-full font-medium text-center whitespace-nowrap"
+                  >
+                    No members found.
+                  </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns}
-                  className="h-6 w-full font-medium text-center"
-                >
-                  No members found.
-                </TableCell>
-              </TableRow>
-            )}
-          </>
-        )}
-      </TableBody>
-    </Table>
+              )}
+            </>
+          )}
+        </TableBody>
+      </Table>
   );
 }
