@@ -30,12 +30,12 @@ export default function PaymentDetails({ userSelection }: { userSelection: any }
     }, [userSelection.paymentPlan]);
 
     return (
-        <div className="bg-foreground/5 border border-foreground/10 rounded-sm p-4">
+        <div className=" border border-foreground/10 rounded-lg p-4">
             <div className='grid grid-cols-6 gap-2'>
                 <div className='col-span-3 grid grid-cols-2   text-foreground'>
                     <div className='space-y-0 flex flex-col'>
                         <span className='text-[0.65rem] uppercase  text-muted-foreground'>{userSelection.pkg ? "Package" : "Plan"}</span>
-                        <span className='text-sm font-bold '>
+                        <span className='text-sm font-semibold '>
                             {userSelection.pkg ? `${userSelection.pkg.name}` : userSelection.plan?.name}
                         </span>
                     </div>
@@ -72,7 +72,7 @@ export default function PaymentDetails({ userSelection }: { userSelection: any }
 
 
                 </div>
-                <div className="flex flex-col gap-2 text-xs col-span-3 text-foreground">
+                <div className="flex flex-col gap-2 text-sm col-span-3 text-foreground">
 
 
                     {!userSelection.pkg && userSelection.plan
@@ -105,8 +105,8 @@ export default function PaymentDetails({ userSelection }: { userSelection: any }
                         <span>Wallet Balance</span>
                         <span>{formatAmountForDisplay(10, 'USD')}</span>
                     </div>
-                    <hr className="my-2 border-dashed border-gray-300" />
-                    <div className="flex justify-between font-bold text-sm">
+                    <hr className="my-1 border-dashed border-gray-300" />
+                    <div className="flex justify-between font-semibold ">
                         <span>Due Today</span>
                         <span>{dueToday()}</span>
                     </div>

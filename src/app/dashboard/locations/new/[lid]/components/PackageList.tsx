@@ -1,10 +1,10 @@
 
 import { cn } from "@/libs/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui";
-import { useNewLocation } from "../../provider/NewLocationContext";
-import React, { useState, useMemo, useCallback } from "react";
+import { useNewLocation } from "../provider/NewLocationContext";
+import React, { useState, useCallback } from "react";
 import { MonstroPackage } from "@/types/admin";
-
+import { InfoIcon } from "./InfoIcon";
 export default function PackageList() {
     const { locationState, updateLocationState, packages } = useNewLocation();
     const [expandedPackageId, setExpandedPackageId] = useState<number | null>(null);
@@ -45,13 +45,7 @@ export default function PackageList() {
         });
     }, [locationState, updateLocationState]);
 
-    const InfoIcon = useMemo(() => (
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" >
-            <circle cx="12" cy="12" r="10" className="fill-indigo-500 stroke-0" />
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" className="text-white" />
-            <path d="M12 17h.01" className="text-white" />
-        </svg>
-    ), []);
+
 
     return (
         <div className="flex flex-col gap-2">
@@ -62,23 +56,22 @@ export default function PackageList() {
                     <PackageInfo
                         pkg={pkg}
                         onExpandClick={toggleExpanded}
-                        InfoIcon={InfoIcon}
                     />
                     <div className="flex-col gap-2 group-data-[selected=true]:flex hidden">
                         <div className="text-sm text-foreground font-semibold">
-                            Select a payment plan
+                            Choose a payment plan
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                             {pkg.paymentPlans?.map((paymentPlan) => (
                                 <div key={paymentPlan.name}
                                     className={cn(
                                         `border border-foreground/10 px-4 py-2 space-y-1 text-sm text-foreground rounded-sm group
-                                         hover:border-indigo-500 hover:text-white cursor-pointer`,
+                                         hover:border-indigo-500  cursor-pointer`,
                                         isPaymentPlan(paymentPlan.id) && "bg-indigo-500 text-white"
                                     )}
                                     onClick={(e) => handlePaymentPlanSelect(e, paymentPlan.id)}
                                 >
-                                    <div className="text-sm font-semibold">{paymentPlan.name}</div>
+                                    <div className=" font-semibold">{paymentPlan.name}</div>
                                     <p className={cn("text-xs text-muted-foreground", isPaymentPlan(paymentPlan.id) && "text-white/80")}>{paymentPlan.description}</p>
                                 </div>
                             ))}
@@ -93,42 +86,43 @@ export default function PackageList() {
 interface PackageInfoProps {
     pkg: MonstroPackage;
     onExpandClick: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, pkgId: number) => void;
-    InfoIcon: React.ReactNode;
 }
 
-const PackageInfo = React.memo(({ pkg, onExpandClick, InfoIcon }: PackageInfoProps) => {
+const PackageInfo = React.memo(({ pkg, onExpandClick }: PackageInfoProps) => {
     return (
         <div className={cn(`flex flex-col gap-2 text-foreground cursor-pointer
              hover:border-indigo-500 opacity-70 border border-foreground/10 p-4 rounded-sm
              group-data-[selected=true]:border-indigo-500 group-data-[selected=true]:opacity-100
              hover:opacity-100
             `)} >
-            <div className="space-y-3 group-data-[selected=true]:space-y-0">
+            <div className="space-y-3 ">
                 <div className="flex flex-row gap-2 items-center justify-between">
-                    <h2 className="text-base font-bold flex flex-row gap-1 items-center">
+                    <h2 className="text-lg font-bold flex flex-row gap-1 items-center">
                         {pkg.name}
                     </h2>
-                    <span className="text-xs font-semibold bg-indigo-500 text-white px-2 py-1 rounded-sm">${pkg.price}</span>
+                    <span className="text-sm font-semibold bg-indigo-500 text-white px-2 py-1 rounded-sm">
+                        ${pkg.price}
+                    </span>
                 </div>
-                <p className="text-sm text-muted-foreground group-data-[selected=true]:hidden" dangerouslySetInnerHTML={{ __html: pkg.description }} />
+                <p className="text-sm text-muted-foreground " dangerouslySetInnerHTML={{ __html: pkg.description }} />
             </div>
 
             <button
                 onClick={(e) => onExpandClick(e, pkg.id)}
-                className="text-xs text-indigo-500 hover:text-indigo-600 font-medium text-left cursor-pointer"
+                className="text-sm text-indigo-500 hover:text-indigo-600 font-medium text-left cursor-pointer"
             >
                 <span className="group-data-[expanded=true]:hidden">See Details</span>
                 <span className="group-data-[expanded=false]:hidden">Hide Details</span>
             </button>
             <div className="space-y-2 border-t border-foreground/10 pt-4 group-data-[expanded=true]:block hidden">
-                <ul className="text-sm grid grid-cols-2 gap-2">
+                <ul className="flex flex-col gap-4">
                     {pkg.benefits.map((benefit) => (
-                        <li key={benefit.name} className="flex flex-row gap-2 text-[0.8rem] items-center font-medium">
+                        <li key={benefit.name} className="flex flex-row gap-2 text-sm items-center font-medium">
                             <span>{benefit.name}</span>
                             {benefit.description && (
                                 <Tooltip>
                                     <TooltipTrigger className="cursor-pointer">
-                                        {InfoIcon}
+                                        <InfoIcon />
                                     </TooltipTrigger>
                                     <TooltipContent className="max-w-[200px] border-foreground/10 border leading-1 font-normal">
                                         <span className="text-xs">{benefit.description}</span>
