@@ -11,7 +11,7 @@ export default async function ResetPasswordPage(props: Props) {
     const token = params.token
 
     return (
-        <div className=" w-full shadow-xs border  bg-white border-gray-200 rounded-sm p-1 space-y-4  ">
+        <div className=" w-full  ">
             <ResetPasswordForm token={token} />
         </div>
     )

@@ -29,6 +29,8 @@ interface InviteFormProps {
     tos: MonstroLegal | undefined;
 }
 
+const InputStyle = "bg-white border border-gray-200 rounded-lg h-12 text-base"
+
 export function InviteForm({ sale, tos }: InviteFormProps) {
 
     const [loading, setLoading] = useState<boolean>(false);
@@ -95,10 +97,10 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                     <div className="space-y-2">
 
                         <div className="space-y-1">
-                            <div className="text-base font-medium">
+                            <div className="text-xl font-bold">
                                 Create your account
                             </div>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-gray-500">
                                 Welcome to Monstro! Please set your password to complete your account setup.
                             </p>
                         </div>
@@ -109,7 +111,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                                         Email
                                     </FormLabel>
                                     <FormControl>
-                                        <Input type="email" className="bg-white border border-gray-200  rounded-sm p-4 text-sm shadow-none" disabled placeholder="Email" {...field} />
+                                        <Input type="email" className={InputStyle} disabled placeholder="Email" {...field} />
                                     </FormControl>
                                 </FormItem>
                             )} />
@@ -122,7 +124,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                                         Setup Your Password
                                     </FormLabel>
                                     <FormControl>
-                                        <Input type="password" placeholder="••••••••" className="bg-white border border-gray-200  rounded-sm p-4 text-sm shadow-none [&:not(:placeholder-shown)]:text-lg" {...field} />
+                                        <Input type="password" placeholder="••••••••" className={InputStyle} {...field} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -130,12 +132,12 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                         </fieldset>
                         <TermsAndConditions checked={checked} tos={tos} setChecked={setChecked} />
 
-                        <div className={"grid grid-cols-2 gap-2"}>
+                        <div >
 
                             <Button
                                 type="button"
                                 className={cn(
-                                    "col-span-2 children:hidden w-full bg-indigo-600 text-white cursor-pointer ",
+                                    " children:hidden  bg-indigo-500 text-white cursor-pointer ",
 
                                     { "children:inline-block": loading })
                                 }
@@ -143,7 +145,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                                 disabled={loading || !checked}
                             >
                                 <Loader2 className="mr-2 size-4 animate-spin" />
-                                Continue
+                                Create Account
                             </Button>
                         </div>
                     </div>

@@ -26,7 +26,7 @@ export default auth(async (req) => {
 		const { pathname, searchParams } = req.nextUrl
 		const isLoggedin = !!req.auth
 		const locations = req.auth?.user?.locations || []
-
+		console.log(pathname)
 		if (pathname.startsWith("/api/protected")) {
 			if (!isLoggedin) {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
@@ -43,6 +43,7 @@ export default auth(async (req) => {
 
 			const url = new URL("/login", req.nextUrl.origin)
 			url.searchParams.set("callbackUrl", pathname)
+
 			return NextResponse.redirect(url)
 		}
 

@@ -19,6 +19,9 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
+const InputStyle = "bg-white border border-gray-200 rounded-lg h-12 text-base"
+
+
 export function ResetPasswordForm({ token }: { token: string }) {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -51,87 +54,87 @@ export function ResetPasswordForm({ token }: { token: string }) {
         setSuccess(true)
     }
 
+
+    if (success) {
+        return (
+            <div className="space-y-2">
+                <div className="space-y-2">
+                    <h1 className="text-lg  font-bold">
+                        You're all set!
+                    </h1>
+                    <p className="text-sm text-gray-500">
+                        Your password has been reset successfully. You can now login to your account.
+
+                    </p>
+                </div>
+                <Button asChild>
+                    <Link href={`/login`}>Login</Link>
+                </Button>
+            </div>
+        )
+    }
+
     return (
 
-        <div className="space-y-3 p-4">
-            {success ? (
-                <div className="space-y-2">
-                    <div className="space-y-2">
-                        <h1 className="text-lg  font-bold">
-                            You're all set!
-                        </h1>
-                        <p className="text-sm text-gray-500">
-                            Your password has been reset successfully. You can now login to your account.
+        <div className="space-y-2">
+            <div className="space-y-1">
+                <h1 className="text-xl  font-bold">
+                    Set your new password
+                </h1>
+                <p className=" text-gray-500 text-sm">
+                    Create a new password and reset your account. Your reset link is valid for 30 minutes.
+                </p>
+            </div >
 
-                        </p>
-                    </div>
-                    <Button size="sm" asChild>
-                        <Link href={`/login`}>Login</Link>
-                    </Button>
-                </div>
-            ) : (
-                <div className="space-y-2">
-                    <div>
-                        <h1 className="text-lg  font-bold">
-                            Set your new password
-                        </h1>
-                        <p className="text-sm text-gray-500">
-                            Create a new password and reset your account. Your reset link is valid for 30 minutes.
-                        </p>
-                    </div>
-
-                    <div className="space-y-4 ">
-                        <Form {...form}>
-                            <form className="space-y-1">
-                                <fieldset>
-                                    <FormField
-                                        control={form.control}
-                                        name="password"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel size="tiny">New Password</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} className="bg-white border border-gray-200 rounded-sm py-4 px-4 text-sm " type="password" placeholder="••••••••" />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </fieldset>
-                                <fieldset>
-                                    <FormField
-                                        control={form.control}
-                                        name="confirmPassword"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel size="tiny">Confirm New Password</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} className="bg-white border border-gray-200 rounded-sm py-4 px-4 text-sm " type="password" placeholder="••••••••" />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </fieldset>
-
-                            </form>
-                        </Form>
+            <div className="space-y-4 ">
+                <Form {...form}>
+                    <form className="space-y-1">
                         <fieldset>
-                            <Button type="submit"
-                                onClick={form.handleSubmit(onSubmit)}
-                                disabled={loading}
-                                className={cn("children:hidden", loading && "children:block")}
-
-                            >
-                                <Loader2 className="size-4 animate-spin mr-2" />
-                                Update Password
-                            </Button>
+                            <FormField
+                                control={form.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel size="tiny">New Password</FormLabel>
+                                        <FormControl>
+                                            <Input {...field} className={InputStyle} type="password" placeholder="••••••••" />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </fieldset>
-                    </div>
+                        <fieldset>
+                            <FormField
+                                control={form.control}
+                                name="confirmPassword"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel size="tiny">Confirm New Password</FormLabel>
+                                        <FormControl>
+                                            <Input {...field} className={InputStyle} type="password" placeholder="••••••••" />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </fieldset>
 
-                </div>
-            )}
+                    </form>
+                </Form>
+                <fieldset>
+                    <Button type="submit"
+                        onClick={form.handleSubmit(onSubmit)}
+                        disabled={loading}
+                        className={cn("children:hidden", loading && "children:block")}
 
-        </div>
+                    >
+                        <Loader2 className="size-4 animate-spin mr-2" />
+                        Update Password
+                    </Button>
+                </fieldset>
+            </div>
+
+        </div >
     )
 }

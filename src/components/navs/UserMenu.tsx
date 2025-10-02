@@ -16,6 +16,7 @@ import { cn } from "@/libs/utils";
 import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 import { Location } from "@/types/location";
+import { useMemo } from "react";
 
 const MenuItemStyle =
 	"flex flex-row items-center justify-start text-xs hover:bg-foreground/5";
@@ -29,12 +30,16 @@ export function UserMenu() {
 	const pathName = usePathname();
 	const pathSegments = pathName.split("/").filter(Boolean);
 	const locationId = pathSegments[2];
-	const currentDetectedLocation = user.locations.find(
-		(location: Location) => location.id === locationId
-	);
-	const locationBillingLink = currentDetectedLocation
-		? `/dashboard/location/${locationId}/settings/billing`
-		: `/dashboard/location/${user.locations[0].id}/settings/billing`;
+
+	const currentLocation = useMemo(() => {
+		if (!user) return null;
+		return user.locations.find(
+			(location: Location) => location.id === locationId
+		);
+	}, [user, locationId]);
+
+
+
 
 	async function logOut() {
 		await signOut();
@@ -73,7 +78,7 @@ export function UserMenu() {
 			</Link>
 		  </DropdownMenuItem> */}
 				<DropdownMenuItem className={MenuItemStyle} asChild>
-					<Link href={locationBillingLink}>
+					<Link href={'/'}>
 						<CreditCard className="size-3 mr-1.5" />
 						Billing
 					</Link>

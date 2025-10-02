@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/libs/utils";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { MonstroLegal } from "@/libs/server/MDXParse";
-
+import { VisuallyHidden } from "@react-aria/visually-hidden";
 
 
 interface TermsAndConditionsProps {
@@ -30,30 +30,28 @@ export function TermsAndConditions({ checked, setChecked, tos }: TermsAndConditi
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <div className="items-center  flex space-x-1 border group  px-2 py-2.5 rounded-sm cursor-pointer">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="group" data-checked={checked}>
+                <div className="items-center  flex space-x-1 border group  px-3 py-4 rounded-lg cursor-pointer">
+                    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="group" data-checked={checked}>
                         <rect x="1" y="1" width="14" height="14" rx="2" strokeWidth="1.5" className="stroke-gray-500" />
                         <path d="M12 5L6.5 10.5L4 8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
                             className={cn("stroke-gray-600 opacity-0 ",
                                 " group-data-[checked=true]:opacity-100 "
                             )} />
                     </svg>
-                    <p className="text-xs leading-none">
+                    <p className="text-sm leading-none">
                         You have read and agree to our <span className="text-red-500">Terms of Service</span> and <span className="text-red-500">Privacy Policy</span>.
                     </p>
                 </div>
             </DialogTrigger>
-            <DialogContent className="max-w-[600px] space-y-4 py-4 border-none bg-white text-black">
-                <DialogHeader className="hidden">
-                    <DialogTitle></DialogTitle>
+            <DialogContent className="max-w-[600px] space-y-4 rounded-lg py-4 border-none bg-white text-black">
+                <VisuallyHidden className="hidden">
+                    <DialogTitle>Terms of Service</DialogTitle>
                     <DialogDescription></DialogDescription>
-                </DialogHeader>
+                </VisuallyHidden>
                 <div className="flex flex-col  ">
-                    <p className="font-semibold  text-base px-4 pb-2">Monstro <span className="text-red-500">Terms of Service</span></p>
+                    <p className="font-semibold  text-lg px-4 pb-3">Monstro <span className="text-red-500">Terms of Service</span></p>
                     <div className="bg-red-500 text-white p-4 ">
-                        <p className="text-sm">
-                            You must scroll to the bottom of the page to accept the terms of service.
-                        </p>
+                        You must scroll to the bottom of the page to accept the terms of service.
                     </div>
                     <ScrollArea className="h-[500px] px-4 border-y border-gray-200" onScrollCapture={handleScroll}>
                         <div className='prose py-4   text-black prose-strong:text-black prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'>
@@ -64,7 +62,7 @@ export function TermsAndConditions({ checked, setChecked, tos }: TermsAndConditi
                 </div>
                 <DialogFooter className="px-4 py-0">
                     <DialogClose asChild>
-                        <Button variant={"clear"} onClick={() => setChecked(false)} size={"xs"} >
+                        <Button variant={"clear"} onClick={() => setChecked(false)}  >
                             Decline
                         </Button>
                     </DialogClose>
@@ -73,7 +71,7 @@ export function TermsAndConditions({ checked, setChecked, tos }: TermsAndConditi
                             disabled={!scrolled}
                             onClick={() => setChecked(true)}
                             variant={"continue"}
-                            size={"xs"}
+
                         >
                             Accept
                         </Button>
