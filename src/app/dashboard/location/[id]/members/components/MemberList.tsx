@@ -156,8 +156,8 @@ export function MemberList({
 			<TablePageHeader>
 				<TablePageHeaderSection>
 					<div className="flex flex-row items-center gap-2">
-						<FilterPopover columns={columns} filters={columnFilters} onFiltersChange={handleFiltersChange} />
-						<SortPopover columns={columns} onSortChange={handleSortChange} />
+						{/* <FilterPopover columns={columns} filters={columnFilters} onFiltersChange={handleFiltersChange} />
+						<SortPopover columns={columns} onSortChange={handleSortChange} /> */}
 					
 						<Input
 							placeholder="Find a member..."
