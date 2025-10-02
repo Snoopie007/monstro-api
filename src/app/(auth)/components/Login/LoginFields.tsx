@@ -55,10 +55,10 @@ export function LoginFields({ form }: LoginFieldsProps) {
     return (
         <div className="space-y-4 flex flex-col">
             <div className="space-y-1">
-                <h1 className="text-lg font-bold">
+                <h1 className="text-2xl font-bold">
                     Welcome back!
                 </h1>
-                <p className="text-gray-500">
+                <p className="text-gray-500 text-sm">
                     Sign in to Monstro-X to have some fun! Let's go!
                 </p>
             </div>
