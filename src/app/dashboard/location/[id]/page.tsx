@@ -12,7 +12,7 @@ import {
 } from '@/components/reports'
 import { useReport } from '@/hooks/useReports';
 
-export default async function LocationDashboard(props: { params: Promise<{ id: string }> }) {
+export default function LocationDashboard(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { id } = params;
     const { transactions, mls } = useReport({
