@@ -9,6 +9,7 @@ import { and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { MonstroData } from "@/libs/data";
 import { EmailSender } from "@/libs/server/emails";
+import { hasPermission, canView } from "@/libs/server/permissions";
 
 type StaffProps = {
   id: string;
@@ -20,6 +21,13 @@ export async function GET(
   props: { params: Promise<StaffProps> }
 ) {
   const params = await props.params;
+  
+  // Check if user can view staff (view is implicit for authenticated users)
+  const canViewAuth = await canView(params.id);
+  if (!canViewAuth) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+  
   try {
     const staffs = await db.query.staffsLocations.findMany({
       where: (staffsLocations, { eq }) =>
@@ -45,6 +53,12 @@ export async function POST(
 ) {
   const params = await props.params;
   const data = await req.json();
+
+  // Check if user has permission to create staff
+  const hasAuth = await hasPermission("add member", params.id);
+  if (!hasAuth) {
+    return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+  }
 
   // Validate role exists
   const role = await db.query.roles.findFirst({

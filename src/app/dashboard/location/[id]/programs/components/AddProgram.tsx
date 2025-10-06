@@ -75,6 +75,11 @@ export function AddProgram({ lid }: { lid: string }) {
             await sleep(1000);
             setLoading(false);
 
+            if(result?.status === 403) {
+                toast.error("You are not authorized to create a program");
+                return;
+            }
+
             if (error || !result || !result.ok) {
                 toast.error(error?.message || "Something went wrong");
                 return;

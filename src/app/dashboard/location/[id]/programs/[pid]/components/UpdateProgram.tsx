@@ -69,6 +69,11 @@ export function UpdateProgram({ pid, lid }: UpdateProgramProps) {
                 })
             );
 
+            if(result?.status === 403) {
+                toast.error("You are not authorized to update this program");
+                return;
+            }
+
             if (error || !result || !result.ok) {
                 toast.error("Error updating the program, please try again.");
                 return;

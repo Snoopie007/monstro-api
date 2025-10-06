@@ -24,6 +24,7 @@ import {
 } from '@/db/schemas'
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { MemberSortableField, sortColumnMap } from '@/types/member'
+import { hasPermission, canView } from "@/libs/server/permissions";
 
 export async function GET(
     req: Request,
@@ -45,6 +46,12 @@ export async function GET(
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        // Check if user can view members (view is implicit for authenticated users)
+        const canViewAuth = await canView(params.id);
+        if (!canViewAuth) {
+            return NextResponse.json({ error: "Access denied" }, { status: 403 });
         }
 
         // Base condition: Filter by locationId from memberLocations
@@ -260,6 +267,11 @@ export async function POST(
             )
         }
 
+        const canEditAuth = await hasPermission("add member", params.id);
+        if (!canEditAuth) {
+            return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        }
+
         // const [{ exists }] = await db.execute<{ exists: boolean }>(
         //     sql`select exists(${db.select({ n: sql`1` }).from(members).where(eq(members.email, data.email))}) as exists`
         // )
@@ -286,6 +298,12 @@ export async function POST(
         })
 
         if (!user) {
+
+            const canAddAuth = await hasPermission("add member", params.id);
+            if (!canAddAuth) {
+                return NextResponse.json({ error: "Access denied" }, { status: 403 });
+            }
+
             /** Create User if there isn't one */
             const [res] = await db
                 .insert(users)

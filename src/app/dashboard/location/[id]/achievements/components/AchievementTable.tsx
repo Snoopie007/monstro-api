@@ -9,13 +9,14 @@ import { Input } from '@/components/forms';
 import { CreateAchievement, AchievementColumns, CreateTrigger } from '.';
 import { useAchievements } from '../providers';
 import { flexRender, getCoreRowModel, useReactTable } from '@/libs/table-utils';
+import { usePermission } from '@/hooks/usePermissions';
 
 
 export function AchievementTable({ lid }: { lid: string }) {
-
+    const canEditAchievement = usePermission("edit achievement", lid);
     const { achievements } = useAchievements();
-
-    const columns = AchievementColumns();
+    const canAddAchievement = usePermission("add achievement", lid);
+    const columns = AchievementColumns({ canEditAchievement });
 
     const table = useReactTable({
         data: achievements,
@@ -39,7 +40,7 @@ export function AchievementTable({ lid }: { lid: string }) {
                         }}
                         variant="search"
                     />
-                    <CreateAchievement lid={lid} />
+                    {canAddAchievement && <CreateAchievement lid={lid} />}
                 </TablePageHeaderSection>
             </TablePageHeader>
             <TablePageContent>

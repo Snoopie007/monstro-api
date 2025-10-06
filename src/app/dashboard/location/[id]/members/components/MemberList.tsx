@@ -31,6 +31,8 @@ import TagsFilter from './TagsFilter'
 import { FilterPopover, SortPopover } from './FilterAndSort'
 import { MembersTabState } from './useMemberTabData'
 import { debounce } from '@tiptap-pro/extension-table-of-contents'
+import { hasPermission } from '@/libs/server/permissions'
+import { usePermission } from '@/hooks/usePermissions'
 
 export function MemberList({
     params,
@@ -58,6 +60,7 @@ export function MemberList({
     }) => void
     handleFetchForCurrentTab: (id: number) => void
 }) {
+    const canAddMember = usePermission("add member", params.id)
     const {
         page,
         pageSize,
@@ -194,6 +197,22 @@ export function MemberList({
         )
     }
 
+    
+
+    const renderAddMember = useMemo(() => {
+        if (canAddMember) {
+            return <AddMember lid={params.id} stripeKey={stripeKey} />
+        }
+        return null
+    }, [canAddMember])
+
+    const renderImportMembers = useMemo(() => {
+        if (canAddMember) {
+            return <ImportMembers lid={params.id} />
+        }
+        return null
+    }, [canAddMember])
+
     return (
         <TablePage>
             <TablePageHeader>
@@ -223,8 +242,8 @@ export function MemberList({
                             onTagsChange={handleTagsChange}
                             canCreateTags={true}
                         />
-                        <AddMember lid={params.id} stripeKey={stripeKey} />
-                        <ImportMembers lid={params.id} />
+                        {renderAddMember}
+                        {renderImportMembers}
                     </div>
                 </TablePageHeaderSection>
             </TablePageHeader>

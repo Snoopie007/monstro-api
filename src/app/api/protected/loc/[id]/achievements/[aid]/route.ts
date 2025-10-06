@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { achievements } from "@/db/schemas";
 import { eq } from "drizzle-orm";
+import { hasPermission } from "@/libs/server/permissions";
 
 type Params = {
   aid: string;
@@ -34,6 +35,10 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
   }
 
   try {
+    const canEditAchievement = await hasPermission("edit achievement", params.id);
+    if (!canEditAchievement) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
     const achievement = await db
       .update(achievements)
       .set(data)

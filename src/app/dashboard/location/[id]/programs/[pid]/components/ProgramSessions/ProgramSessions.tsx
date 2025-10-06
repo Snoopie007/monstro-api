@@ -19,9 +19,10 @@ interface ProgramSessionsProps {
     sessions: ProgramSession[];
     pid: string;
     lid: string;
+    editable: boolean
 }
 
-export function ProgramSessions({ sessions, pid, lid }: ProgramSessionsProps) {
+export function ProgramSessions({ sessions, pid, lid, editable }: ProgramSessionsProps) {
 
     const calculateTime = useCallback((time: string, duration: number) => {
 
@@ -41,9 +42,7 @@ export function ProgramSessions({ sessions, pid, lid }: ProgramSessionsProps) {
                         Sessions
                     </div>
                     <div className="flex-initial fl ex flex-row items-center h-full">
-
-                        <CreateSession pid={pid} lid={lid} />
-
+                        {editable && <CreateSession pid={pid} lid={lid} />}
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">

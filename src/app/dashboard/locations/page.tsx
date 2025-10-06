@@ -2,18 +2,40 @@ import { db } from '@/db/db'
 import React from 'react'
 import { auth } from '@/auth'
 import { LocationsList } from './components/LocationsList'
+import { inArray } from 'drizzle-orm'
 
 
 
-async function fetchLocations(vid: string) {
+async function fetchLocations(id: string, role: string) {
     try {
-        const locations = await db.query.locations.findMany({
-            where: (locations, { eq }) => eq(locations.vendorId, vid),
-            with: {
-                locationState: true
+        if (role === "vendor") {
+            const locations = await db.query.locations.findMany({
+                where: (locations, { eq }) => eq(locations.vendorId, id),
+                with: {
+                    locationState: true
+                }
+            })
+            return locations
+        } else if (role === "staff") {
+            const staffLocations = await db.query.staffsLocations.findMany({
+                where: (staffLocations, { eq }) => eq(staffLocations.staffId, id),
+            })  
+            
+            const locationIds = staffLocations.map(sl => sl.locationId)
+            
+            if (locationIds.length === 0) {
+                return []
             }
-        })
-        return locations
+            
+            const locations = await db.query.locations.findMany({
+                where: (locations) => inArray(locations.id, locationIds),
+                with: {
+                    locationState: true
+                }
+            })
+            return locations
+        }
+        return []
     } catch (error) {
         console.error(error)
         return []
@@ -28,9 +50,7 @@ export default async function LocationsPage() {
             <div>Invalid Session</div>
         )
     }
-    
-    const locations = await fetchLocations(session.user.vendorId)
-    
+    const locations = await fetchLocations(session.user.role === "staff" ? session.user.staffId : session.user.vendorId, session.user.role) || []
     return (
         <div className='w-full h-full'>
             <div className='p-4'>

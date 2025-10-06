@@ -53,6 +53,12 @@ export function TopMenu({ editor, contract, isSidebarOpen, toggleSidebar, lid }:
                 })
             );
 
+            if(result?.status === 403) {
+                toast.error("You are not authorized to edit this contract");
+                setLoadingState(false);
+                return;
+            }
+
             if (error || !result || !result.ok) {
                 toast.error('Something went wrong', { theme: 'dark' });
                 setLoadingState(false);

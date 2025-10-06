@@ -3,6 +3,7 @@ import { db } from '@/db/db';
 
 import { eq, sql } from 'drizzle-orm';
 import { programs } from '@/db/schemas';
+import { hasPermission } from '@/libs/server/permissions';
 
 type Params = {
 	id: string;
@@ -38,6 +39,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 	const params = await props.params;
 	const data = await req.json()
 	try {
+		const canEditProgram = await hasPermission("edit program", params.id);
+		if (!canEditProgram) {
+			return NextResponse.json({ error: "Access denied" }, { status: 403 });
+		}
 		await db.update(programs).set({
 			...data
 		}).where(eq(programs.id, params.pid))

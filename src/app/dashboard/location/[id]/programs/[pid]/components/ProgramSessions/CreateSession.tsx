@@ -54,6 +54,11 @@ export function CreateSession({ pid, lid }: CreateSessionProps) {
             })
         )
         setLoading(false);
+        if(result?.status === 403) {
+            toast.error("You are not authorized to create a session");
+            return;
+        }
+
         if (error || !result || !result.ok) {
             toast.error(error?.message || "Something went wrong, please try again later")
             return

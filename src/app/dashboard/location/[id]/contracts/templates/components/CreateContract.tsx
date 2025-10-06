@@ -62,6 +62,11 @@ export function CreateContract({ locationId }: { locationId: string }) {
             })
         );
 
+        if(result?.status === 403) {
+            toast.error("You are not authorized to create a contract");
+            return;
+        }
+
         if (error || !result || !result.ok) {
             return toast.error(error?.message || "Failed to create contract");
 

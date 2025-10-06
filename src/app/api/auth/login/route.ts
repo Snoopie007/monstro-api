@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
         },
       });
     }
-    console.log('user', user);
 
     if ((!user || !user.user || !user.user.password)) {
       return NextResponse.json({ error: "User not found" }, { status: 401 });

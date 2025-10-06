@@ -2,6 +2,7 @@ import { db } from "@/db/db";
 import { eq, sql } from "drizzle-orm";
 import { programSessions, reservations } from "@/db/schemas";
 import { NextResponse, NextRequest } from "next/server";
+import { hasPermission } from "@/libs/server/permissions";
 
 type Params = {
   id: string;
@@ -44,6 +45,11 @@ export async function POST(
   const { time, duration, day } = await req.json();
 
   try {
+    const canAddSession = await hasPermission("edit program", params.pid);
+    if (!canAddSession) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+    
     await db.transaction(async (tx) => {
       const [session] = await tx
         .insert(programSessions)

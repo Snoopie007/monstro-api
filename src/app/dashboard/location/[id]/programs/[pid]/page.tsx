@@ -9,9 +9,11 @@ import LoadingComponent from '@/components/loading';
 import ErrorComponent from '@/components/error';
 import { Card, CardContent, CardHeader } from '@/components/ui';
 import { ProgramSessions } from './components/ProgramSessions';
+import { usePermission } from '@/hooks/usePermissions';
 
 export default function Program(props: { params: Promise<{ id: string, pid: string }> }) {
     const params = use(props.params);
+    const canEditProgram = usePermission("edit program", params.id);
     const { program, error, isLoading } = useProgram(params.id, params.pid);
 
     if (error) { return (<ErrorComponent error={error} />) }
@@ -35,7 +37,7 @@ export default function Program(props: { params: Promise<{ id: string, pid: stri
                                 </Avatar>
                                 <div className='text-foreground text-sm font-semibold'> {program.name}</div>
                             </div>
-                            <UpdateProgram pid={program.id} lid={params.id} />
+                            {canEditProgram && <UpdateProgram pid={program.id} lid={params.id} />}
                         </CardHeader>
                         <CardContent className='px-4'>
                             <p className=" text-muted-foreground text-sm">
@@ -43,7 +45,7 @@ export default function Program(props: { params: Promise<{ id: string, pid: stri
                             </p>
                         </CardContent>
                     </Card>
-                    <ProgramSessions sessions={program.sessions} pid={params.pid} lid={params.id} />
+                    <ProgramSessions editable={canEditProgram} sessions={program.sessions} pid={params.pid} lid={params.id} />
                 </div>
 
                 <div className="col-span-7">
