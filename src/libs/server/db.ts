@@ -63,17 +63,16 @@ async function checkWalletBalance(location: Location) {
 				}
 			});
 			if (!clientSecret) { throw new Error("Payment failed") }
-			wallet.balance += wallet.rechargeAmount;
+			const newBalance = wallet.balance += wallet.rechargeAmount;
+
+
+			await db.update(wallets).set({
+				balance: newBalance,
+				updated: new Date()
+			}).where(eq(wallets.id, wallet.id))
+
 		}
 
-		await db.update(wallets).set({
-			balance: wallet.balance,
-			credits: wallet.credits,
-			lastCharged: new Date()
-		}).where(eq(wallets.id, wallet.id))
-
-
-		location.wallet = wallet;
 		return location;
 	} catch (error) {
 		console.error("Error charging wallet:", error);
@@ -97,7 +96,7 @@ async function chargeWallet(location: Location, amount: number, description: str
 
 	try {
 
-		db.transaction(async (tx) => {
+		await db.transaction(async (tx) => {
 			await tx.update(wallets).set({
 				balance: wallet.balance,
 				credits: wallet.credits,
@@ -120,6 +119,7 @@ async function chargeWallet(location: Location, amount: number, description: str
 		throw new Error("Error charging wallet");
 	}
 }
+
 
 function getSessionState(session: ProgramSession, mid: string) {
 	const reservations = session.reservations?.length ?? 0;
