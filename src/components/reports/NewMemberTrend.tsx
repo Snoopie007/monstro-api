@@ -13,7 +13,7 @@ interface NewMemberTrendProps {
 type Trend = {
     value: number
     change: string
-    changeType: 'positive' | 'negative'
+    changeType: '+' | '-' | '~'
 }
 
 export function NewMemberTrend({ mls }: NewMemberTrendProps) {
@@ -28,12 +28,12 @@ export function NewMemberTrend({ mls }: NewMemberTrendProps) {
 
         const current = countNew(now)
         const previous = countNew(lastMonth)
-        const changePct = previous === 0 ? (current > 0 ? 100 : 0) : ((current - previous) / previous) * 100
+        const change = previous === 0 ? (current > 0 ? 100 : 0) : ((current - previous) / previous) * 100
 
         return {
             value: current,
-            change: `${Math.abs(changePct).toFixed(1)}%`,
-            changeType: changePct >= 0 ? 'positive' : 'negative',
+            change: `${Math.abs(change).toFixed(1)}%`,
+            changeType: change === 0 ? '~' : change > 0 ? '+' : '-',
         }
     }, [mls])
 
@@ -59,12 +59,15 @@ export function NewMemberTrend({ mls }: NewMemberTrendProps) {
                         <Skeleton className='bg-foreground/10 w-14 h-4' />
                     ) : (
                         <Badge size='small' className='rounded-md border border-foreground/10 text-[0.7rem] flex items-center gap-1'>
-                            {trend.changeType === 'positive' ? (
+                            {trend.changeType === '+' ? (
                                 <TrendingUp className='size-3 text-green-500' />
-                            ) : (
+                            ) : trend.changeType === '-' ? (
                                 <TrendingDown className='size-3 text-red-500' />
-                            )}
-                            <span>{trend.changeType === 'positive' ? '+' : '-'}{trend.change}</span>
+                            ) : null}
+                            <span>
+                                {trend.changeType === '~' ? '' : trend.changeType}
+                                {trend.change}
+                            </span>
                         </Badge>
                     )}
                 </div>
@@ -74,11 +77,10 @@ export function NewMemberTrend({ mls }: NewMemberTrendProps) {
                     <Skeleton className='bg-foreground/10 w-full h-5' />
                 ) : (
                     <p className='font-bold'>
-                        Trending {trend.changeType === 'positive' ? 'up' : 'down'} {trend.change}
+                        {trend.changeType === '~' ? 'No change' : `Trending ${trend.changeType === '+' ? 'up' : 'down'} ${trend.change}`}
                     </p>
                 )}
             </CardContent>
         </Card>
     )
 }
-
