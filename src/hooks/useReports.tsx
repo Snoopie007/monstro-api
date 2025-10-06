@@ -1,64 +1,76 @@
 import useSWR from "swr";
 import { fetcher } from "./hooks";
-import { UseReportResult, ReportData } from "@/types/reports";
 import { useMemo } from "react";
+import { Transaction, MemberLocation } from "@/types";
 
 interface UseReportParams {
-  locationId: string;
-  startDate?: Date;
-  endDate?: Date;
+	lid: string;
+	startDate?: Date;
+	endDate?: Date;
+}
+
+type ReportData = {
+	transactions: Transaction[];
+	mls: MemberLocation[];
+}
+
+type ReportResult = {
+	transactions: Transaction[];
+	mls: MemberLocation[];
+	isLoading: boolean;
+	error: any;
+	refetch: () => void;
 }
 
 function useReport({
-  locationId,
-  startDate,
-  endDate,
-}: UseReportParams): UseReportResult {
-  // Create a stable query string using useMemo to prevent unnecessary re-fetches
-  const queryString = useMemo(() => {
-    const params = new URLSearchParams();
+	lid,
+	startDate,
+	endDate,
+}: UseReportParams): ReportResult {
+	// Create a stable query string using useMemo to prevent unnecessary re-fetches
+	const queryString = useMemo(() => {
+		const params = new URLSearchParams();
 
-    if (startDate) {
-      params.append("startDate", startDate.toISOString().split("T")[0]);
-    }
+		if (startDate) {
+			params.append("startDate", startDate.toISOString().split("T")[0]);
+		}
 
-    if (endDate) {
-      params.append("endDate", endDate.toISOString().split("T")[0]);
-    }
+		if (endDate) {
+			params.append("endDate", endDate.toISOString().split("T")[0]);
+		}
 
-    return params.toString();
-  }, [startDate, endDate]);
+		return params.toString();
+	}, [startDate, endDate]);
 
-  // Create a stable SWR key
-  const swrKey = useMemo(() => {
-    const baseUrl = "reports";
-    return queryString
-      ? { url: `${baseUrl}?${queryString}`, id: locationId }
-      : { url: baseUrl, id: locationId };
-  }, [queryString, locationId]);
+	// Create a stable SWR key
+	const swrKey = useMemo(() => {
+		const baseUrl = "reports";
+		return queryString ? { url: `${baseUrl}?${queryString}`, id: lid } : { url: baseUrl, id: lid };
+	}, [queryString, lid]);
 
-  const { data, error, isLoading, mutate } = useSWR<ReportData>(
-    swrKey,
-    fetcher
-  );
+	const { data, error, isLoading, mutate } = useSWR<ReportData>(
+		swrKey,
+		fetcher
+	);
 
-  // Memoize the return value to prevent unnecessary re-renders
-  const result = useMemo(
-    () => ({
-      reports: data,
-      error,
-      isLoading,
-      refetch: () => mutate(),
-    }),
-    [data, error, isLoading, mutate]
-  );
+	// Memoize the return value to prevent unnecessary re-renders
+	const result = useMemo(
+		() => ({
+			transactions: data?.transactions || [],
+			mls: data?.mls || [],
+			error,
+			isLoading,
+			refetch: () => mutate(),
+		}),
+		[data, error, isLoading, mutate]
+	);
 
-  return result;
+	return result;
 }
 
 // Legacy function for backward compatibility
 function useReportLegacy(id: string) {
-  return useReport({ locationId: id });
+	return useReport({ lid: id });
 }
 
 export { useReport, useReportLegacy };

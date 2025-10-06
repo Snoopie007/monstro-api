@@ -5,7 +5,6 @@ import {
   AtSign,
   CalendarClock,
   Receipt,
-  SquareChartGantt,
   Settings,
   BookText,
 } from "lucide-react";
@@ -89,11 +88,6 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
     name: "Transactions",
     path: "transactions",
     icon: <Receipt size={16} />,
-  },
-  {
-    name: "Reporting",
-    path: "reporting",
-    icon: <SquareChartGantt size={16} />,
   },
 
   {
