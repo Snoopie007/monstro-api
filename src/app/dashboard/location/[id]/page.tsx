@@ -49,7 +49,7 @@ export default function LocationDashboard({ id }: { id: string }) {
                 </div>
                 <div className='col-span-1 space-y-4'>
                     <TopSpenders mls={mls} transactions={transactions} />
-                    <ChurnedMembers />
+                    <ChurnedMembers lid={id} />
                 </div>
             </div>
         </ScrollArea>
