@@ -1,5 +1,5 @@
 "use client";
-import React from 'react'
+import React, { use } from 'react'
 import { ScrollArea } from '@/components/ui'
 import {
     RevenueChart, RecurringRevenueChart,
@@ -13,7 +13,7 @@ import {
 import { useReport } from '@/hooks/useReports';
 
 export default async function LocationDashboard(props: { params: Promise<{ id: string }> }) {
-    const params = await props.params;
+    const params = use(props.params);
     const { id } = params;
     const { transactions, mls } = useReport({
         lid: id,
