@@ -1,8 +1,8 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { ColumnFiltersState } from '@tanstack/react-table'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { toast } from 'react-toastify'
 import { CustomFieldDefinition } from '@/components/custom-fields'
+import { ApiClient, createMonstroApiClient } from '@/libs/api'
 
 interface TableState {
     page: number
@@ -12,10 +12,11 @@ interface TableState {
     selectedTags: string[]
     tagOperator: 'AND' | 'OR'
     sorting: { id: string; direction: 'asc' | 'desc' }[]
+    isLoading: boolean
     data: {
-        error: string | null,
+        error: string | null
         members: any[] | null
-        count: number,
+        count: number
         customFields: CustomFieldDefinition[]
     }
 }
@@ -24,22 +25,24 @@ export interface MembersTabState {
     id: number
     name: string
     active: boolean
+    locationId: string
     state: TableState
 }
 
-export function useMemberTabData() {
-    const supabaseRef = useRef<SupabaseClient | null>(null)
+export function useMemberTabData(locationId: string, memberId?: string) {
+    const apiRef = useRef<ApiClient | null>(null)
 
     const [pageState, setPageState] = useState<{
         isActiveTabFetching: boolean
     }>({
-        isActiveTabFetching: false,
+        isActiveTabFetching: true,
     })
     const [membersTabs, setMembersTabs] = useState<MembersTabState[]>([
         {
-            id: 1,
-            name: 'Members',
+            id: Math.floor(1000 + Math.random() * 9000),
+            name: 'All Members',
             active: true,
+            locationId,
             state: {
                 page: 0,
                 pageSize: 25,
@@ -48,59 +51,117 @@ export function useMemberTabData() {
                 selectedTags: [],
                 tagOperator: 'AND',
                 sorting: [],
+                isLoading: true,
                 data: {
                     error: null,
                     members: [],
                     count: 0,
-                    customFields: []
+                    customFields: [],
                 },
             },
         },
     ])
 
-    const handleNewTab = async () => {
-        setPageState((v) => ({ ...v, isActiveTabFetching: true }))
+    const handleNewTab = useCallback(async () => {
+        const newTabId = Math.floor(1000 + Math.random() * 9000)
 
-        try {
-            const members =
-                (await supabaseRef.current
-                    ?.from('members')
-                    .select('*')
-                    .limit(25)
-                    .then(({ data }) => data)) || []
-            setMembersTabs((v) => [
-                ...v,
-                {
-                    id: v.length + 1,
-                    name: `Members ${v.length + 1}`,
-                    active: true,
-                    state: {
-                        page: 0,
-                        pageSize: 25,
-                        columnFilters: [],
-                        searchQuery: '',
-                        selectedTags: [],
-                        tagOperator: 'AND',
-                        sorting: [],
-                        data: {
-                            error: null,
-                            members: members,
-                            count: members.length,
-                            customFields: [],
-                        },
+        // Create tab immediately with loading state
+        setMembersTabs((v) => [
+            ...v,
+            {
+                id: newTabId,
+                name: `All Members`,
+                active: true,
+                locationId,
+                state: {
+                    page: 0,
+                    pageSize: 25,
+                    columnFilters: [],
+                    searchQuery: '',
+                    selectedTags: [],
+                    tagOperator: 'AND',
+                    sorting: [],
+                    isLoading: true,
+                    data: {
+                        error: null,
+                        members: [],
+                        count: 0,
+                        customFields: [],
                     },
                 },
-            ])
-        } catch (error) {
-            toast.error('Something went wrong. Please try again.')
-        } finally {
-            setPageState((v) => ({ ...v, isActiveTabFetching: false }))
-        }
-    }
+            },
+        ])
 
-    const handleRemoveTab = (id: number) => {
-        setMembersTabs((v) => v.filter((tab) => tab.id !== id))
-    }
+        // Fetch data asynchronously
+        try {
+            // Fetch all members for this location
+            const response = await apiRef.current?.get(
+                `/protected/loc/${locationId}/members`,
+                {
+                    size: 25,
+                    page: 1,
+                }
+            )
+            const members = response?.members || []
+            const count = response?.count || 0
+
+            // Update tab with fetched data
+            setMembersTabs((v) =>
+                v.map((tab) =>
+                    tab.id === newTabId
+                        ? {
+                              ...tab,
+                              state: {
+                                  ...tab.state,
+                                  isLoading: false,
+                                  data: {
+                                      error: null,
+                                      members: members,
+                                      count: count,
+                                      customFields:
+                                          response?.customFields || [],
+                                  },
+                              },
+                          }
+                        : tab
+                )
+            )
+        } catch (error) {
+            console.error('Error fetching members:', error)
+            toast.error('Something went wrong. Please try again.')
+
+            // Update tab with error state
+            setMembersTabs((v) =>
+                v.map((tab) =>
+                    tab.id === newTabId
+                        ? {
+                              ...tab,
+                              state: {
+                                  ...tab.state,
+                                  isLoading: false,
+                                  data: {
+                                      ...tab.state.data,
+                                      error: 'Failed to fetch members',
+                                  },
+                              },
+                          }
+                        : tab
+                )
+            )
+        }
+    }, [locationId, memberId])
+
+    const handleRemoveTab = useCallback((id: number) => {
+        // find the tab with the given id and remove it and make the first tab active
+        setMembersTabs((v) => {
+            const tabsWithNewActiveTab = v.map((tab) =>
+                tab.id === id
+                    ? { ...tab, active: true }
+                    : { ...tab, active: false }
+            )
+            return tabsWithNewActiveTab.filter((tab) => tab.id !== id)
+        })
+    }, [])
 
     /**
      * Handles pagination, filter, search, and sorting for a specific tab
@@ -113,225 +174,161 @@ export function useMemberTabData() {
      * @param tagOperator - The tag operator to filter the members by
      * @param sorting - The sorting configuration to sort the members by
      */
-    const handleChangeParam = ({
-        id,
-        page,
-        pageSize,
-        searchQuery,
-        selectedTags,
-        columnFilters,
-        tagOperator,
-        sorting = [],
-    }: {
-        id: number
-        page: number
-        pageSize: number
-        searchQuery: string
-        selectedTags: string[]
-        columnFilters: ColumnFiltersState
-        tagOperator: 'AND' | 'OR'
-        sorting: { id: string; direction: 'asc' | 'desc' }[]
-    }) => {
-        setMembersTabs((v) =>
-            v.map((tab) =>
-                tab.id === id
-                    ? {
-                          ...tab,
-                          state: {
-                              ...tab.state,
-                              page,
-                              pageSize,
-                              searchQuery,
-                              selectedTags,
-                              columnFilters,
-                              tagOperator,
-                              sorting,
-                          },
-                      }
-                    : tab
-            )
-        )
-    }
-
-    /**
-     * Apply column-specific filters based on data type
-     */
-    const applyColumnFilter = (
-        query: any,
-        columnId: string,
-        value: unknown
-    ) => {
-        // Text columns - case-insensitive partial match
-        const textColumns = [
-            'first_name',
-            'last_name',
-            'email',
-            'phone',
-            'gender',
-            'referral_code',
-            'stripe_customer_id',
-        ]
-
-        // Boolean columns - exact match
-        const booleanColumns = ['first_time']
-
-        // Timestamp columns - date range or exact date
-        const timestampColumns = ['created_at', 'updated_at', 'dob']
-
-        // UUID columns - exact match
-        const uuidColumns = ['id', 'user_id']
-
-        if (textColumns.includes(columnId)) {
-            // Case-insensitive partial match for text
-            return query?.ilike(columnId, `%${value}%`)
-        } else if (booleanColumns.includes(columnId)) {
-            // Boolean exact match
-            const boolValue = value === 'true' || value === true
-            return query?.eq(columnId, boolValue)
-        } else if (timestampColumns.includes(columnId)) {
-            // For timestamps, support different formats:
-            // 1. Exact date match
-            // 2. Date range (if value is an object with from/to)
-
-            if (
-                typeof value === 'object' &&
-                value !== null &&
-                'from' in value &&
-                'to' in value
-            ) {
-                // Date range filter
-                const { from, to } = value as { from: string; to: string }
-                if (from) query = query?.gte(columnId, from)
-                if (to) query = query?.lte(columnId, to)
-                return query
-            } else if (typeof value === 'string') {
-                // For partial date matching, use date comparison
-                // This will match dates that start with the given string (e.g., "2024" matches all dates in 2024)
-                return query?.gte(columnId, value)
-            }
-        } else if (uuidColumns.includes(columnId)) {
-            // UUID exact match
-            return query?.eq(columnId, value)
-        } else {
-            // Default: exact match for unknown column types
-            return query?.eq(columnId, value)
-        }
-
-        return query
-    }
-
-    const handleFetchForCurrentTab = async (id: number) => {
-        setPageState((v) => ({ ...v, isActiveTabFetching: true }))
-        try {
-            // Guard-rail to check if the tab exists and its active
-            const currentTab = membersTabs.find((tab) => tab.id === id && tab.active)
-            if (!currentTab) return
-
-            const {
-                page,
-                pageSize,
-                searchQuery,
-                selectedTags,
-                tagOperator,
-                columnFilters,
-                sorting,
-            } = currentTab.state
-
-            let query = supabaseRef.current
-                ?.from('members')
-                .select('*', { count: 'exact' })
-
-
-            // Apply text search
-            if (searchQuery) {
-                query = query?.ilike('name', `%${searchQuery}%`)
-            }
-
-            // Apply tag filters
-            if (selectedTags.length > 0) {
-                if (tagOperator === 'AND') {
-                    query = query?.contains('tags', selectedTags)
-                } else {
-                    query = query?.overlaps('tags', selectedTags)
-                }
-            }
-
-            // Apply column filters dynamically based on column type
-            if (columnFilters && columnFilters.length > 0) {
-                columnFilters.forEach((filter) => {
-                    const { id: columnId, value } = filter
-
-                    if (
-                        !value ||
-                        (typeof value === 'string' && value.trim() === '')
-                    ) {
-                        return // Skip empty filters
-                    }
-
-                    // Apply filter based on column type
-                    query = applyColumnFilter(query, columnId, value)
-                })
-            }
-
-            // Apply sorting
-            if (sorting && sorting.length > 0) {
-                sorting.forEach(({ id: columnId, direction }) => {
-                    query = query?.order(columnId, {
-                        ascending: direction === 'asc',
-                    })
-                })
-            } else {
-                // Default sorting by created_at descending
-                query = query?.order('created_at', { ascending: false })
-            }
-
-            // Apply pagination
-            const members = await query
-                ?.range(page * pageSize, (page + 1) * pageSize - 1)
-                ?.limit(pageSize)
-                ?.then((res) => {
-                    console.log(res);
-                })
-
-            const customFields = await supabaseRef.current
-                ?.from('member_fields')
-                .select(`*, member_custom_fields(value)`)
-                .eq('location_id', id)
-                .then(({ data }) => data)
-
-            console.log(`[SUPABASE CLIENT FETCH]: Custom Fields: ${JSON.stringify(customFields)}`)
-            console.log(`[SUPABASE CLIENT FETCH]: Members: ${JSON.stringify(members)}`)
-
+    const handleChangeParam = useCallback(
+        ({
+            id,
+            page,
+            pageSize,
+            searchQuery,
+            selectedTags,
+            columnFilters,
+            tagOperator,
+            sorting = [],
+        }: {
+            id: number
+            page: number
+            pageSize: number
+            searchQuery: string
+            selectedTags: string[]
+            columnFilters: ColumnFiltersState
+            tagOperator: 'AND' | 'OR'
+            sorting: { id: string; direction: 'asc' | 'desc' }[]
+        }) => {
             setMembersTabs((v) =>
                 v.map((tab) =>
                     tab.id === id
                         ? {
                               ...tab,
-                              state: { ...tab.state, members: members || [], customFields: customFields || [] },
+                              state: {
+                                  ...tab.state,
+                                  page,
+                                  pageSize,
+                                  searchQuery,
+                                  selectedTags,
+                                  columnFilters,
+                                  tagOperator,
+                                  sorting,
+                              },
                           }
                         : tab
                 )
             )
-        } catch (error) {
-            toast.error('Something went wrong. Please try again.')
-        } finally {
-            setPageState((v) => ({ ...v, isActiveTabFetching: false }))
-        }
-    }
+        },
+        []
+    )
+
+    const handleFetchForCurrentTab = useCallback(
+        async (id: number) => {
+            // Set loading state for the specific tab
+            setMembersTabs((v) =>
+                v.map((tab) =>
+                    tab.id === id
+                        ? {
+                              ...tab,
+                              state: {
+                                  ...tab.state,
+                                  isLoading: true,
+                              },
+                          }
+                        : tab
+                )
+            )
+
+            try {
+                // Guard-rail to check if the tab exists and its active
+                const currentTab = membersTabs.find(
+                    (tab) => tab.id === id && tab.active
+                )
+                if (!currentTab) return
+
+                const {
+                    page,
+                    pageSize,
+                    searchQuery,
+                    selectedTags,
+                    tagOperator,
+                    sorting,
+                } = currentTab.state
+
+                // Prepare API parameters
+                const params: Record<string, any> = {
+                    size: pageSize,
+                    page: page + 1, // API uses 1-based indexing
+                    query: searchQuery || undefined,
+                    tags: selectedTags.length > 0 ? selectedTags : undefined,
+                    tagOperator:
+                        selectedTags.length > 0 ? tagOperator : undefined,
+                }
+
+                // Add sorting parameters
+                if (sorting && sorting.length > 0) {
+                    const { id: sortColumn, direction } = sorting[0]
+                    params.sortBy = sortColumn
+                    params.sortOrder = direction
+                }
+
+                // Fetch members and custom fields from API
+                const response = await apiRef.current?.get(
+                    `/protected/loc/${currentTab.locationId}/members`,
+                    params
+                )
+
+                setMembersTabs((v) =>
+                    v.map((tab) =>
+                        tab.id === id
+                            ? {
+                                  ...tab,
+                                  state: {
+                                      ...tab.state,
+                                      isLoading: false,
+                                      data: {
+                                          members: response?.members || [],
+                                          customFields:
+                                              response?.customFields || [],
+                                          count: response?.count || 0,
+                                          error: response?.error || null,
+                                      },
+                                  },
+                              }
+                            : tab
+                    )
+                )
+            } catch (error) {
+                toast.error('Something went wrong. Please try again.')
+
+                // Set error state for the specific tab
+                setMembersTabs((v) =>
+                    v.map((tab) =>
+                        tab.id === id
+                            ? {
+                                  ...tab,
+                                  state: {
+                                      ...tab.state,
+                                      isLoading: false,
+                                      data: {
+                                          ...tab.state.data,
+                                          error: 'Failed to fetch members',
+                                      },
+                                  },
+                              }
+                            : tab
+                    )
+                )
+            }
+        },
+        [membersTabs]
+    )
 
     useEffect(() => {
-        supabaseRef.current = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
+        apiRef.current = createMonstroApiClient()
 
         return () => {
-            supabaseRef.current = null
+            apiRef.current = null
         }
     }, [])
 
     return {
-        supabaseRef,
+        apiRef,
         pageState,
         membersTabs,
         isLoading: pageState.isActiveTabFetching,

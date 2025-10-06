@@ -38,8 +38,6 @@ export function MemberList({
     tabId,
     memberTab,
     isLoading,
-    handleNewTab,
-    handleRemoveTab,
     handleChangeParam,
     handleFetchForCurrentTab,
 }: {
@@ -48,8 +46,6 @@ export function MemberList({
     stripeKey: string | null
     memberTab: MembersTabState
     isLoading: boolean
-    handleNewTab: () => void
-    handleRemoveTab: (id: number) => void
     handleChangeParam: (params: {
         id: number
         page: number
@@ -177,7 +173,6 @@ export function MemberList({
     })
 
     useEffect(() => {
-        console.log('fetching for tab', tabId)
         if (!isLoading && data.members && data.members.length === 0) {
             handleFetchForCurrentTab(tabId)
         }

@@ -1,7 +1,7 @@
 'use client'
 
 import { ColumnFiltersState } from '@tanstack/react-table'
-import { useMemo, useState, memo, useRef } from 'react'
+import { useMemo, memo, useEffect } from 'react'
 import {
     Button,
     Tabs,
@@ -24,18 +24,29 @@ interface MembersPageProps {
 }
 
 export default function MembersPage({ id, stripeKey }: MembersPageProps) {
-    const currentActiveTabCachedMembersRef = useRef<any[] | null>(null)
+    if (!id) {
+        return <div>Loading...</div>
+    }
+
     const {
         membersTabs,
         handleNewTab,
         handleRemoveTab,
         handleChangeParam,
         handleFetchForCurrentTab,
-        isLoading,
-    } = useMemberTabData()
-    if (!id) {
-        return <div>Loading...</div>
-    }
+    } = useMemberTabData(id)
+
+    useEffect(() => {
+        // Only fetch on initial mount when we have exactly one tab with no data
+        if (
+            membersTabs.length === 1 &&
+            membersTabs[0].active &&
+            membersTabs[0].state.data.members &&
+            membersTabs[0].state.data.members.length === 0
+        ) {
+            handleFetchForCurrentTab(membersTabs[0].id)
+        }
+    }, []) // Run only once on mount
 
     const renderTabs = useMemo(() => {
         return membersTabs.map((tab) => (
@@ -45,9 +56,7 @@ export default function MembersPage({ id, stripeKey }: MembersPageProps) {
                 tabName={tab.name}
                 id={id}
                 stripeKey={stripeKey}
-                isLoading={isLoading}
-                handleNewTab={handleNewTab}
-                handleRemoveTab={handleRemoveTab}
+                isLoading={tab.state.isLoading}
                 handleChangeParam={handleChangeParam}
                 handleFetchForCurrentTab={handleFetchForCurrentTab}
             />
@@ -57,17 +66,21 @@ export default function MembersPage({ id, stripeKey }: MembersPageProps) {
     return (
         <Tabs
             activationMode="manual"
-            defaultValue={membersTabs[0].name}
+            defaultValue={String(membersTabs[0].id)}
             className="w-full"
         >
             <TabsList className="w-full p-0 bg-background justify-start border-b rounded-none gap-1">
                 {membersTabs.map((tab) => (
                     <TabsTrigger
-                        key={tab.name}
-                        value={tab.name}
+                        key={tab.id}
+                        value={String(tab.id)}
                         className="min-w-38 gap-1 group rounded-none bg-background h-full data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary relative"
                     >
-                        <span className="text-[13px]">{tab.name}</span>{' '}
+                        <span className="text-[13px]">
+                            {tab.name.length > 11
+                                ? `${tab.name.slice(0, 11)}...`
+                                : tab.name}
+                        </span>{' '}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -104,8 +117,6 @@ const MemberTabContent = memo(function MemberTabContent({
     id,
     stripeKey,
     isLoading,
-    handleNewTab,
-    handleRemoveTab,
     handleChangeParam,
     handleFetchForCurrentTab,
 }: {
@@ -114,8 +125,6 @@ const MemberTabContent = memo(function MemberTabContent({
     id: string
     stripeKey: string | null
     isLoading: boolean
-    handleNewTab: () => void
-    handleRemoveTab: (id: number) => void
     handleChangeParam: (params: {
         id: number
         page: number
@@ -129,15 +138,13 @@ const MemberTabContent = memo(function MemberTabContent({
     handleFetchForCurrentTab: (id: number) => void
 }) {
     return (
-        <TabsContent value={tabName}>
+        <TabsContent value={String(tab.id)}>
             <MemberList
                 memberTab={tab}
                 tabId={tab.id}
                 params={{ id: id }}
                 stripeKey={stripeKey}
                 isLoading={isLoading}
-                handleNewTab={handleNewTab}
-                handleRemoveTab={handleRemoveTab}
                 handleChangeParam={handleChangeParam}
                 handleFetchForCurrentTab={handleFetchForCurrentTab}
             />
