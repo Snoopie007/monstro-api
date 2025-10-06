@@ -12,9 +12,9 @@ import {
 } from '@/components/reports'
 import { useReport } from '@/hooks/useReports';
 
-export default function LocationDashboard({ locationId }: { locationId: string }) {
-    const { transactions, mls, isLoading, error, refetch } = useReport({
-        lid: locationId,
+export default function LocationDashboard({ id }: { id: string }) {
+    const { transactions, mls } = useReport({
+        lid: id,
         startDate: undefined,
         endDate: undefined,
     });
