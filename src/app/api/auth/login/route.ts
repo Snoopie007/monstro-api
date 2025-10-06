@@ -6,17 +6,30 @@ export async function POST(req: NextRequest) {
   const { email, password, lid } = await req.json();
 
   try {
-    const vendor = await db.query.vendors.findFirst({
+
+    let user = null;
+    user = await db.query.vendors.findFirst({
       where: (vendor, { eq }) => eq(vendor.email, email),
       with: {
         user: true,
       },
     });
-    if (!vendor || !vendor.user || !vendor.user.password) {
+
+    if (!user) {
+      user = await db.query.staffs.findFirst({
+        where: (staff, { eq }) => eq(staff.email, email),
+        with: {
+          user: true,
+        },
+      });
+    }
+    console.log('user', user);
+
+    if ((!user || !user.user || !user.user.password)) {
       return NextResponse.json({ error: "User not found" }, { status: 401 });
     }
 
-    const match = await bcrypt.compare(password, vendor.user.password);
+    const match = await bcrypt.compare(password, user?.user.password);
 
     if (!match) {
       return NextResponse.json({ error: "Invalid password" }, { status: 401 });
@@ -27,7 +40,7 @@ export async function POST(req: NextRequest) {
     if (lid) {
       location = await db.query.locations.findFirst({
         where: (locations, { eq, and }) =>
-          and(eq(locations.vendorId, vendor.id), eq(locations.id, lid)),
+          and(eq(locations.vendorId, user.id), eq(locations.id, lid)),
         columns: {
           id: true,
         },
@@ -42,9 +55,9 @@ export async function POST(req: NextRequest) {
     }
 
     const LoginUser = {
-      ...vendor,
-      id: vendor.user.id,
-      name: `${vendor.firstName} ${vendor.lastName}`,
+      ...user,
+      id: user.user.id,
+      name: `${user.firstName} ${user.lastName}`,
     };
 
     return NextResponse.json(
