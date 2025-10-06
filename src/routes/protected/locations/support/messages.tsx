@@ -9,7 +9,7 @@ import { AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
 import { ToolFunctions } from "@/libs/ai/FNHandler";
 import type { SupportConversation, MemberLocation, NewSupportMessage, SupportMessage } from "@/types";
 import { Runnable } from "@langchain/core/runnables";
-
+import { chargeWallet, checkWalletBalance } from "@/libs/wallet";
 
 type Props = {
     params: {
@@ -75,14 +75,12 @@ export async function supportMessagesRoute(app: Elysia) {
                 limit: 20,
             });
 
-
-            //Taken Over? Return
-            const model = getModel(conversation.assistant.model, (output) => {
+            const model = getModel(conversation.assistant.model, async (output) => {
                 const usage = output.llmOutput?.tokenUsage;
                 if (usage) {
                     const cost = calculateAICost(usage, conversation.assistant.model);
-                    //Wallet
-
+                    await checkWalletBalance(ml.location);
+                    await chargeWallet(ml.location, cost, `AI Support: ${cost}`);
                 }
             });
 
