@@ -39,6 +39,7 @@ export const programSessions = pgTable("program_sessions", {
 	time: time("time").notNull(),
 	duration: smallint("duration").notNull().default(0),
 	day: smallint("day").notNull().default(1),
+	staffId: text("staff_id").references(() => staffs.id, { onDelete: "set null" }),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [unique("unique_program_session").on(t.programId, t.time, t.duration, t.day)]);
@@ -71,6 +72,10 @@ export const programSessionsRelations = relations(programSessions, ({ one, many 
 	program: one(programs, {
 		fields: [programSessions.programId],
 		references: [programs.id],
+	}),
+	staff: one(staffs, {
+		fields: [programSessions.staffId],
+		references: [staffs.id],
 	}),
 	reservations: many(reservations),
 	recurringReservations: many(recurringReservations),
