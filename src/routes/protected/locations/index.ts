@@ -5,3 +5,4 @@ export * from './docs';
 export * from './sessions';
 export * from './checkin';
 export * from './support';
+export * from './leaderboard';

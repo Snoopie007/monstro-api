@@ -15,6 +15,7 @@ import {
     locationCheckin,
     locationDocs,
     locationReservations,
+    locationLeaderboard,
     locationRewards,
     locationSessions,
     locationSupport
@@ -41,5 +42,6 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(locationRewards);
         app.use(locationSessions);
         app.use(locationSupport);
+        app.use(locationLeaderboard);
         return app;
     })
