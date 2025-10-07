@@ -14,16 +14,20 @@ import SessionActions from "./actions";
 import { addMinutes, format } from "date-fns";
 import { CreateSession } from "./CreateSession";
 import { DaysOfWeek } from "../../../schemas";
+import { StaffRowData } from "@/hooks/useStaffs";
 
 interface ProgramSessionsProps {
     sessions: ProgramSession[];
     pid: string;
     lid: string;
     editable: boolean
+    availableStaff: StaffRowData[]
+    programAssignedStaff: StaffRowData
 }
 
-export function ProgramSessions({ sessions, pid, lid, editable }: ProgramSessionsProps) {
-
+export function ProgramSessions({ sessions, availableStaff, pid, lid, editable, programAssignedStaff }: ProgramSessionsProps) {
+    console.log(programAssignedStaff)
+    console.log(availableStaff)
     const calculateTime = useCallback((time: string, duration: number) => {
 
         const [hours, minutes] = time.split(':').map(Number)
@@ -42,7 +46,7 @@ export function ProgramSessions({ sessions, pid, lid, editable }: ProgramSession
                         Sessions
                     </div>
                     <div className="flex-initial fl ex flex-row items-center h-full">
-                        {editable && <CreateSession pid={pid} lid={lid} />}
+                        {editable && <CreateSession pid={pid} lid={lid} availableStaff={availableStaff} programAssignedStaff={programAssignedStaff} />}
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -72,7 +76,7 @@ export function ProgramSessions({ sessions, pid, lid, editable }: ProgramSession
                                             </TableCell>
 
                                             <TableCell className={"text-xs"}>
-                                                <SessionActions session={session} lid={lid} />
+                                                <SessionActions availableStaff={availableStaff} session={session} lid={lid} />
                                             </TableCell>
                                         </TableRow>
                                     );

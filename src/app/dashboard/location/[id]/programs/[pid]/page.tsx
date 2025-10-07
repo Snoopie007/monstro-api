@@ -9,17 +9,19 @@ import LoadingComponent from '@/components/loading';
 import ErrorComponent from '@/components/error';
 import { Card, CardContent, CardHeader } from '@/components/ui';
 import { ProgramSessions } from './components/ProgramSessions';
+import { useStaffs } from "@/hooks/useStaffs";
 import { usePermission } from '@/hooks/usePermissions';
 
 export default function Program(props: { params: Promise<{ id: string, pid: string }> }) {
     const params = use(props.params);
     const canEditProgram = usePermission("edit program", params.id);
     const { program, error, isLoading } = useProgram(params.id, params.pid);
+    const { staffs, error: staffsError, isLoading: staffsLoading } = useStaffs(params.id);
 
-    if (error) { return (<ErrorComponent error={error} />) }
+    if (error || staffsError) { return (<ErrorComponent error={error || staffsError} />) }
 
-    if (isLoading) { return (<LoadingComponent />) }
-
+    if (isLoading || staffsLoading) { return (<LoadingComponent />) }
+    
     if (program) {
         return (
             <div className="m-auto grid grid-cols-10 h-full ">
@@ -37,7 +39,7 @@ export default function Program(props: { params: Promise<{ id: string, pid: stri
                                 </Avatar>
                                 <div className='text-foreground text-sm font-semibold'> {program.name}</div>
                             </div>
-                            {canEditProgram && <UpdateProgram pid={program.id} lid={params.id} />}
+                            {canEditProgram && <UpdateProgram pid={program.id} lid={params.id} availableStaff={staffs} />}
                         </CardHeader>
                         <CardContent className='px-4'>
                             <p className=" text-muted-foreground text-sm">
@@ -45,7 +47,7 @@ export default function Program(props: { params: Promise<{ id: string, pid: stri
                             </p>
                         </CardContent>
                     </Card>
-                    <ProgramSessions editable={canEditProgram} sessions={program.sessions} pid={params.pid} lid={params.id} />
+                    <ProgramSessions availableStaff={staffs} programAssignedStaff={program.instructor} editable={canEditProgram} sessions={program.sessions} pid={params.pid} lid={params.id} />
                 </div>
 
                 <div className="col-span-7">

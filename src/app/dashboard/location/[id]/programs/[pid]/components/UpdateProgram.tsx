@@ -8,7 +8,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui";
-import { Form, FormField, FormLabel, FormMessage, FormItem, FormControl, Input, Textarea } from "@/components/forms";
+import { Form, FormField, FormLabel, FormMessage, FormItem, FormControl, Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, FormDescription } from "@/components/forms";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn, sleep, tryCatch } from "@/libs/utils";
@@ -18,13 +18,15 @@ import { Loader2, Pencil } from "lucide-react";
 import { useProgram } from "@/hooks/usePrograms";
 import { toast } from "react-toastify";
 import { UpdateProgramSchema } from "../../schemas";
+import { StaffRowData } from "@/hooks/useStaffs";
 
 export interface UpdateProgramProps {
     pid: string,
-    lid: string
+    lid: string,
+    availableStaff: StaffRowData[]
 }
 
-export function UpdateProgram({ pid, lid }: UpdateProgramProps) {
+export function UpdateProgram({ pid, lid, availableStaff }: UpdateProgramProps) {
     const [loading, setLoading] = useState<boolean>(false);
     const { program, mutate } = useProgram(lid, pid);
     const [open, setOpen] = useState<boolean>(false);
@@ -38,6 +40,7 @@ export function UpdateProgram({ pid, lid }: UpdateProgramProps) {
             capacity: program?.capacity || 0,
             minAge: program?.minAge || 0,
             maxAge: program?.maxAge || 0,
+            instructorId: program?.instructorId || undefined
         },
         mode: "onChange",
     });
@@ -51,6 +54,7 @@ export function UpdateProgram({ pid, lid }: UpdateProgramProps) {
                 capacity: program.capacity || 0,
                 minAge: program.minAge || 0,
                 maxAge: program.maxAge || 0,
+                instructorId: program.instructorId || undefined
             });
         }
     }, [program, open]);
@@ -58,14 +62,16 @@ export function UpdateProgram({ pid, lid }: UpdateProgramProps) {
     async function submitForm(v: z.infer<typeof UpdateProgramSchema>) {
         setLoading(true);
         try {
-            await sleep(2000);
             const { result, error } = await tryCatch(
                 fetch(`/api/protected/loc/${lid}/programs/${pid}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(v)
+                    body: JSON.stringify({
+                        ...v,
+                        instructorId: v.instructorId === "null" ? undefined : v.instructorId
+                    })
                 })
             );
 
@@ -141,6 +147,32 @@ export function UpdateProgram({ pid, lid }: UpdateProgramProps) {
                                     </FormItem>
                                 )}
                             />
+                            {availableStaff && availableStaff.length > 0 && (
+                                    <FormField control={form.control} name="instructorId" render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                            <FormLabel size={"tiny"}>Default Assigned Staff</FormLabel>
+                                            <FormDescription>Select a staff that will be assigned to the program by default. Leave blank to not assign a staff.</FormDescription>
+                                            <FormControl>
+                                                <Select
+                                                    {...field}
+                                                    value={field.value || ""}
+                                                    onValueChange={(e) => field.onChange(e)}
+                                                >
+                                                    <SelectTrigger className={cn("")}>
+                                                        <SelectValue placeholder="Select a default assigned staff" />
+                                                    </SelectTrigger>
+
+                                                    <SelectContent>
+                                                        {availableStaff.map((staff) => (
+                                                            <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                                                        ))}
+                                                        <SelectItem value={"null"} key={"none"}>None</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormControl>
+                                        </FormItem>
+                                    )} />
+                                )}
                             <div className='flex flex-row items-center gap-2 w-full'>
                                 <FormField
                                     control={form.control}

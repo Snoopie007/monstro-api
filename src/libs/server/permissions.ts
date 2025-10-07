@@ -32,11 +32,11 @@ export async function hasPermission(permission: Permission, locationId?: string)
   if (!session?.user) {
     return false;
   }
-
   // Vendors have all permissions for their locations
   if (session.user.role === "vendor") {
     if (!locationId) return true; // Vendor has global permission if no location specified
-    
+    console.log(locationId)
+    console.log(session.user.locations);
     return session.user.locations?.some((loc: any) => loc.id === locationId) || false;
   }
 

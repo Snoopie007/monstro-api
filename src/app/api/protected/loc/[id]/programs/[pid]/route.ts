@@ -18,7 +18,11 @@ export async function GET(req: Request, props: { params: Promise<Params> }) {
 			where: (programs, { eq }) => eq(programs.id, params.pid),
 			with: {
 					location: true,
-					instructor: true,
+					instructor: {
+						with: {
+							user: true
+						}
+					},
 					sessions: true,
 					planPrograms: {
 							with: {
@@ -43,9 +47,31 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 		if (!canEditProgram) {
 			return NextResponse.json({ error: "Access denied" }, { status: 403 });
 		}
+		console.log(data);
 		await db.update(programs).set({
-			...data
+			...data,
+			instructorId: data.instructorId  ? data.instructorId : null
 		}).where(eq(programs.id, params.pid))
+		return NextResponse.json({ success: true }, { status: 200 })
+	} catch (err) {
+		console.log(err)
+		return NextResponse.json({ error: err }, { status: 500 })
+	}
+}
+
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string, pid: string }> }) {
+	const params = await props.params;
+	const body = await req.json()
+	const { instructorId } = body;
+	console.log(body);
+	try {
+		const canEditProgram = await hasPermission("edit program", params.id);
+		if (!canEditProgram) {
+			return NextResponse.json({ error: "Access denied" }, { status: 403 });
+		}
+		const [updatedProgram] =  await db.update(programs).set({
+			instructorId: instructorId === "null" ? undefined : instructorId
+		}).where(eq(programs.id, params.pid)).returning()
 		return NextResponse.json({ success: true }, { status: 200 })
 	} catch (err) {
 		console.log(err)

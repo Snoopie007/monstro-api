@@ -21,12 +21,7 @@ export async function GET(
   props: { params: Promise<StaffProps> }
 ) {
   const params = await props.params;
-  
-  // Check if user can view staff (view is implicit for authenticated users)
-  const canViewAuth = await canView(params.id);
-  if (!canViewAuth) {
-    return NextResponse.json({ error: "Access denied" }, { status: 403 });
-  }
+
   
   try {
     const staffs = await db.query.staffsLocations.findMany({

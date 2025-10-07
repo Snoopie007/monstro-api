@@ -15,7 +15,7 @@ import { z } from "zod";
 import { useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem, FormLabel } from '@/components/forms';
+import { Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem, FormLabel, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, FormDescription } from '@/components/forms';
 import { cn, getTimezoneOffset, sleep, tryCatch } from "@/libs/utils";
 
 import SessionComponent from './ProgramSessions';
@@ -25,6 +25,7 @@ import { toast } from 'react-toastify';
 import { usePrograms } from '@/hooks/usePrograms';
 import { Loader2 } from 'lucide-react';
 import { VisuallyHidden } from 'react-aria';
+import { useStaffs } from '@/hooks/useStaffs';
 
 
 
@@ -33,6 +34,7 @@ export function AddProgram({ lid }: { lid: string }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const { mutate } = usePrograms(lid);
+    const { staffs, error: staffsError, isLoading: staffsLoading } = useStaffs(lid);
     const form = useForm<z.infer<typeof NewProgramSchema>>({
         resolver: zodResolver(NewProgramSchema),
         defaultValues: {
@@ -48,6 +50,7 @@ export function AddProgram({ lid }: { lid: string }) {
                     duration: 30,
                 }
             ],
+            instructorId: undefined
         },
         mode: "onChange",
     })
@@ -144,6 +147,32 @@ export function AddProgram({ lid }: { lid: string }) {
                                                     />
                                                 </FormControl>
 
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </fieldset>
+                                <fieldset>
+                                    <FormField
+                                        control={form.control}
+                                        name="instructorId"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel size={"tiny"}>Instructor</FormLabel>
+                                                <FormDescription>Select a staff member that will be assigned to the program by default. Leave blank to not assign a staff.</FormDescription>
+                                                <FormControl>
+                                                    <Select onValueChange={(v) => field.onChange(v)} value={field.value || "null"}>
+                                                        <SelectTrigger className={cn("")}>
+                                                            <SelectValue placeholder="Select a instructor" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {staffs.map((staff) => (
+                                                                <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                                                            ))}
+                                                            <SelectItem value={"null"} key={"none"}>None</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}

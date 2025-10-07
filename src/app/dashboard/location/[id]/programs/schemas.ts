@@ -6,6 +6,7 @@ const SessionSchema = z.object({
     day: z.coerce.number().min(1, { message: " required" }).max(7, { message: "required" }),
     time: z.string().min(1, { message: "required" }),
     duration: z.coerce.number().min(1, { message: "required" }),
+    staffId: z.string().optional(),
 });
 
 
@@ -17,6 +18,7 @@ const ProgramSchema = z.object({
     capacity: z.coerce.number().min(1, { message: "Capacity > 0" }),
     minAge: z.coerce.number().min(2, { message: "Min > 2" }),
     maxAge: z.coerce.number().min(3, { message: "Max > 3" }),
+    instructorId: z.string().optional(),
 })
 
 const UpdateProgramSchema = ProgramSchema.superRefine((data, ctx) => {
