@@ -9,7 +9,7 @@ type RoleProps = {
 }
 export async function GET(req: Request, props: { params: Promise<RoleProps> }) {
     const params = await props.params;
-
+    const query = new URL(req.url).searchParams.get("query");
 // Check if user can view roles (view is implicit for authenticated users)
     const canViewAuth = await canView(params.id);
     if (!canViewAuth) {
@@ -18,7 +18,7 @@ export async function GET(req: Request, props: { params: Promise<RoleProps> }) {
 
     try {
         const roles = await db.query.roles.findMany({
-            where: (roles, { eq }) => eq(roles.locationId, params.id),
+            where: (roles, { eq, and, ilike }) => and(eq(roles.locationId, params.id), query ? ilike(roles.name, `%${query}%`) : undefined),
             with: {
                 permissions: true
             }

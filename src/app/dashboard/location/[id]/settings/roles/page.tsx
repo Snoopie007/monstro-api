@@ -14,22 +14,26 @@ import {
   TableHead,
   TableBody,
   TableCell,
+  Input,
 } from "@/components/ui";
 import { Role } from "@/types";
 import useSWR from "swr";
 import { UpsertRole } from "./components";
 import RoleListActions from "./components/actions";
 import { SearchIcon, UserIcon, ShieldIcon } from "lucide-react";
+import { useDebounce } from "@/hooks";
 
 export default function RolesPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
+  const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 500);
+  
   const { permissions, isLoading: isLoadingPermissions } = usePermissions(
     params.id
   );
   const [currentRole, setCurrentRole] = useState<Partial<Role> | null>(null);
   const { mutate } = useSWR(`/api/protected/loc/${params.id}/roles`);
-  const { roles, isLoading: isLoadingRoles, error } = useRoles(params.id);
-
+  const { roles, isLoading: isLoadingRoles, error, mutate: mutateRoles } = useRoles(params.id, debouncedQuery);
   function handleCreateRole() {
     setCurrentRole({
       name: "",
@@ -39,6 +43,11 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
     });
   }
 
+  function handleSearchRoles(value: string) {
+    setQuery(value);
+  }
+
+  
   async function removeRole(roleId: number) {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this role?"
@@ -74,22 +83,18 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
           permissions={permissions}
           setCurrentRole={setCurrentRole}
           locationId={params.id}
+          onSave={() => {
+            setCurrentRole(null);
+            mutateRoles();
+          }}
         />
       )}
       <div className="mb-3">
         <div className="flex flex-row  justify-between items-center py-3">
-          <div className="relative flex-initial">
-            <input
-              placeholder="Search Roles"
-              className="rounded-sm border-foreground text-xs bg-transparent  py-1   pl-7 pr-3 border "
-            />
-            <div>
-              <SearchIcon className="text-gray-400  absolute left-[10px] top-[50%] -translate-y-[51%]" />
-            </div>
-          </div>
+          <Input value={query} onChange={(e) => handleSearchRoles(e.target.value)} placeholder="Search Roles" className="rounded-sm text-xs bg-transparent w-48" />
           <div className="flex-initial">
             <Button
-              size={"xs"}
+              size={"sm"}
               variant={"foreground"}
               onClick={handleCreateRole}
             >
@@ -114,6 +119,25 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {isLoadingRoles && (
+                <>
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-4">
+                    <Skeleton className="w-full h-4" />
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-4">
+                    <Skeleton className="w-full h-4" />
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-4">
+                    <Skeleton className="w-full h-4" />
+                  </TableCell>
+                </TableRow>
+                </>
+              )}
               {roles &&
                 !isLoadingRoles &&
                 roles.map((role: Role, index: number) => (
