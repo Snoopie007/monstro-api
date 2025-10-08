@@ -6,8 +6,27 @@ import { UpdateAchievement, UpdateTrigger } from ".";
 import { useAchievements } from "../providers";
 import { CircleFadingArrowUp } from "lucide-react";
 
-export const AchievementColumns = (): ColumnDef<Achievement, any>[] => {
+export const AchievementColumns = ({ canEditAchievement }: { canEditAchievement: boolean }): ColumnDef<Achievement, any>[] => {
   const { setCurrentAchievement } = useAchievements();
+
+  const renderUpdateTrigger = (achievement: Achievement) => {
+    return achievement.triggedAchievement ? (
+      <UpdateTrigger
+        achievement={achievement}
+        ta={achievement.triggedAchievement}
+      />
+    ) : (
+      <Button
+        variant={"ghost"}
+        size={"icon"}
+        className="size-5"
+        onClick={() => setCurrentAchievement(achievement)}
+      >
+        <CircleFadingArrowUp className="size-3" />
+      </Button>
+    )
+  }
+  
   return [
     {
       accessorKey: "name",
@@ -29,22 +48,8 @@ export const AchievementColumns = (): ColumnDef<Achievement, any>[] => {
               </span>
             </div>
             <div className="flex flex-row items-center gap-1">
-              <UpdateAchievement achievement={achievement} />
-              {achievement.triggedAchievement ? (
-                <UpdateTrigger
-                  achievement={achievement}
-                  ta={achievement.triggedAchievement}
-                />
-              ) : (
-                <Button
-                  variant={"ghost"}
-                  size={"icon"}
-                  className="size-5"
-                  onClick={() => setCurrentAchievement(achievement)}
-                >
-                  <CircleFadingArrowUp className="size-3" />
-                </Button>
-              )}
+              {canEditAchievement && <UpdateAchievement achievement={achievement} />}
+              {canEditAchievement && renderUpdateTrigger(achievement)}
             </div>
           </div>
         );

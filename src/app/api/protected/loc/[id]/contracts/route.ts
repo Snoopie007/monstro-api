@@ -3,6 +3,7 @@ import {auth} from "@/auth";
 import {db} from "@/db/db";
 
 import {contractTemplates} from "@/db/schemas";
+import { hasPermission } from "@/libs/server/permissions";
 
 export async function GET(
   req: Request,
@@ -34,6 +35,10 @@ export async function POST(
   const params = await props.params;
   const data = await req.json();
   try {
+    const canAddContract = await hasPermission("add contract", params.id);
+    if (!canAddContract) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
     const [{id}] = await db
       .insert(contractTemplates)
       .values({

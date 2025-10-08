@@ -21,11 +21,14 @@ import { toast } from "react-toastify";
 import { Loader2Icon, PencilIcon, Trash2Icon } from "lucide-react";
 import { Contract } from "@/types";
 import { Input } from "@/components/forms/input";
+import { usePermission } from "@/hooks/usePermissions";
 
 export default function ContractTemplatesPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
+    const canAddContract = usePermission("add contract", params.id);
+    const canEditContract = usePermission("edit contract", params.id);
+    const canDeleteContract = usePermission("delete contract", params.id);
     const { contracts, isLoading, error } = useContracts(params.id);
-
 
     return (
         <TablePage>
@@ -35,7 +38,7 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                         placeholder="Find a contract..."
                         variant="search"
                     />
-                    <CreateContract locationId={params.id} />
+                    {canAddContract && <CreateContract locationId={params.id} />}
                 </TablePageHeaderSection>
             </TablePageHeader>
             <TablePageContent>
@@ -56,7 +59,7 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                     <TableRow key={index} className='cursor-pointer'>
                                         <TableCell className="text-sm h-auto py-1 flex flex-row items-center justify-between w-[200px]">
                                             <span className="truncate">  {contract.title ? contract.title : "No Title"}</span>
-                                            {contract.editable && (
+                                            {contract.editable && canEditContract && (
                                                 <Button variant={"ghost"} asChild size={"icon"}
                                                     className="size-6 hover:bg-foreground/5 text-foreground/50 rounded-sm">
                                                     <Link href={`/builder/${params.id}/contract/${contract.id}`}>
@@ -88,7 +91,7 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-sm h-auto py-1">
-                                            <RemoveContract id={contract.id} editable={contract.editable} lid={params.id} />
+                                            <RemoveContract id={contract.id} editable={contract.editable && canDeleteContract} lid={params.id} />
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -125,6 +128,11 @@ function RemoveContract({ id, editable, lid }: { id: string, editable: boolean, 
             })
         )
         setLoading(false);
+        if(result?.status === 403) {
+            toast.error("You are not authorized to delete this contract");
+            return;
+        }
+        
         if (error && !result) {
             toast.error(error.message);
         }

@@ -7,6 +7,7 @@ import {
     Button,
     DropdownMenuSeparator
 } from '@/components/ui'
+import { StaffRowData } from '@/hooks/useStaffs'
 import { ProgramSession } from '@/types'
 import { useState } from 'react'
 import { tryCatch } from '@/libs/utils'
@@ -32,9 +33,10 @@ import { z } from 'zod'
 interface SessionActionsProps {
     session: ProgramSession
     lid: string
+    availableStaff: StaffRowData[],
 }
 
-export default function SessionActions({ session, lid }: SessionActionsProps) {
+export default function SessionActions({ session, availableStaff, lid }: SessionActionsProps) {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [formLoading, setFormLoading] = useState(false)
@@ -45,6 +47,7 @@ export default function SessionActions({ session, lid }: SessionActionsProps) {
             day: 1,
             time: "12:00:00",
             duration: 30,
+            staffId: session.staffId || undefined
         },
         mode: "onSubmit",
     })
@@ -134,7 +137,7 @@ export default function SessionActions({ session, lid }: SessionActionsProps) {
                     <DialogBody>
                         <FormProvider {...formMethods}>
                             <form>
-                                <SessionFields control={formMethods.control} />
+                                <SessionFields control={formMethods.control} availableStaff={availableStaff} />
                             </form>
                         </FormProvider>
                     </DialogBody>

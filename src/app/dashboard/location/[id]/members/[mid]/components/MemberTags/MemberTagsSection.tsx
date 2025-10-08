@@ -21,9 +21,10 @@ import { PlusIcon } from "lucide-react";
 
 interface MemberTagSectionProps {
     params: { id: string, mid: string }
+    editable: boolean
 }
 
-export function MemberTagSection({ params }: MemberTagSectionProps) {
+export function MemberTagSection({ params, editable }: MemberTagSectionProps) {
     const {
         tags: allTags,
         isLoading: isLoadingAllTags,
@@ -128,9 +129,9 @@ export function MemberTagSection({ params }: MemberTagSectionProps) {
                     <CardTitle className="text-sm  ">
                         Member Tags
                     </CardTitle>
-                    <Button variant="ghost" size="sm" onClick={openManageDialog}>
+                    {editable && <Button variant="ghost" size="sm" onClick={openManageDialog}>
                         <PlusIcon className="h-3 w-3" />
-                    </Button>
+                    </Button>}
                 </div>
             </CardHeader>
             <CardContent className='px-4 py-2' >

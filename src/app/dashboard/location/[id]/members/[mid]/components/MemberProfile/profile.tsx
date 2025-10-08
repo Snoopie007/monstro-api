@@ -12,6 +12,7 @@ import { ChevronLeft, Mail, PhoneCall } from "lucide-react";
 import { useMemberStatus } from "../../providers/MemberContext";
 import { useRouter } from "next/navigation";
 import { MemberDeleteButton, MemberEditButton } from "../ContactInfo";
+import { usePermission } from "@/hooks/usePermissions";
 
 type MemberProfileData = {
   totalPointsEarned: number;
@@ -24,6 +25,8 @@ interface MemberProfileProps {
 }
 
 export function MemberProfile({ params, profileData }: MemberProfileProps) {
+    const canDeleteMember = usePermission("delete member", params.id)
+    const canEditMember = usePermission("edit member", params.id)
   const { member, ml } = useMemberStatus();
   const router = useRouter();
 
@@ -44,8 +47,8 @@ export function MemberProfile({ params, profileData }: MemberProfileProps) {
             <ChevronLeft className="size-4" />
           </Button>
           <div className="flex flex-row space-x-2">
-            <MemberDeleteButton params={params} />
-            <MemberEditButton params={params} />
+            {canDeleteMember && <MemberDeleteButton params={params} />}
+            {canEditMember && <MemberEditButton params={params} />}
           </div>
         </div>
 

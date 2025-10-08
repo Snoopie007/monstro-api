@@ -39,6 +39,11 @@ export function DeleteMemberDialog({
 
     setLoading(false);
 
+    if(result?.status === 403) {
+      toast.error("You are not authorized to delete this member");
+      return;
+    }
+
     if (error || !result || !result.ok) {
       toast.error("Failed to delete member");
       return;

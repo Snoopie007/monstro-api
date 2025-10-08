@@ -20,7 +20,7 @@ import { Plus, X } from 'lucide-react';
 
 
 interface AddProgramSessionsProps {
-    control: Control<z.infer<typeof NewProgramSchema>>,
+    control: Control<z.infer<typeof NewProgramSchema>>
 };
 
 

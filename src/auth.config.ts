@@ -80,6 +80,41 @@ export default {
 									},
 								},
 							},
+							staff: {
+								columns: {
+									id: true,
+									phone: true,
+									avatar: true,
+								},
+								with: {
+									staffLocations: {
+										with: {
+											location: {
+												columns: {
+													id: true,
+													name: true,
+												},
+											},
+											roles: {
+												with: {
+													role: {
+														with: {
+															permissions: {
+																with: {
+																	permission: true,
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+										columns: {
+											status: true,
+										},
+									},
+								},
+							},
 						},
 					});
 
@@ -101,34 +136,77 @@ export default {
 					// 	);
 					// }
 
-					const {
-						vendor: { locations, ...vendor },
-						...rest
-					} = user;
+					// Determine user type and build appropriate payload
+					let userPayload;
 
-					const transformedLocations = locations.map((location) => {
-						const { locationState, ...restData } = location;
-						return {
-							...restData,
-							status: locationState ? locationState.status : "incomplete",
+					if (user.vendor) {
+						// User is a vendor
+						const {
+							vendor: { locations, ...vendor },
+							...rest
+						} = user;
+
+						const transformedLocations = locations.map((location: any) => {
+							const { locationState, ...restData } = location;
+							return {
+								...restData,
+								status: locationState ? locationState.status : "incomplete",
+							};
+						});
+
+						userPayload = {
+							id: rest.id,
+							name: rest.name,
+							email: rest.email,
+							phone: vendor.phone,
+							image: vendor?.avatar,
+							vendorId: vendor?.id,
+							stripeCustomerId: vendor?.stripeCustomerId,
+							role: "vendor",
+							locations: transformedLocations,
 						};
-					});
+					} else if (user.staff) {
+						// User is a staff member
+						const {
+							staff: { staffLocations, ...staff },
+							...rest
+						} = user;
 
+						const transformedLocations = staffLocations.map((staffLocation: any) => {
+							// Extract all permissions from all roles for this location
+							const permissions = new Set<string>();
+							staffLocation.roles.forEach((roleAssignment: any) => {
+								roleAssignment.role.permissions.forEach((rp: any) => {
+									permissions.add(rp.permission.name);
+								});
+							});
+
+							return {
+								id: staffLocation.location.id,
+								name: staffLocation.location.name,
+								status: staffLocation.status,
+								roles: staffLocation.roles.map((r: any) => r.role),
+								permissions: Array.from(permissions),
+							};
+						});
+
+						userPayload = {
+							id: rest.id,
+							name: rest.name,
+							email: rest.email,
+							phone: staff.phone,
+							image: staff?.avatar,
+							staffId: staff?.id,
+							role: "staff",
+							locations: transformedLocations,
+						};
+					} else {
+						throw new CustomLoginError("User is not associated with a vendor or staff account");
+					}
 					// Create Supabase JWT token
-					const userPayload = {
-						id: rest.id,
-						name: rest.name,
-						email: rest.email,
-						phone: vendor.phone,
-						image: vendor?.avatar,
-						vendorId: vendor?.id,
-						stripeCustomerId: vendor?.stripeCustomerId,
-						role: "vendor",
-						locations: transformedLocations,
-					};
 					const sbToken = await signSupabaseJWT(
 						userPayload,
-						rest.id
+						userPayload.id
 					);
 
 

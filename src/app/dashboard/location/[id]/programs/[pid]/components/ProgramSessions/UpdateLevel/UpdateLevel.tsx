@@ -37,11 +37,10 @@ export function UpsertLevel({ level, setCurrentLevel, lid }: UpdateProgramLevelP
     const form = useForm<z.infer<typeof SessionSchema>>({
         resolver: zodResolver(SessionSchema),
         defaultValues: {
-
             day: 1,
             time: "12:00",
             duration: 30,
-
+            staffId: level?.staffId || undefined
         },
         mode: "onSubmit",
     })
@@ -49,7 +48,12 @@ export function UpsertLevel({ level, setCurrentLevel, lid }: UpdateProgramLevelP
 
     useEffect(() => {
         if (level) {
-            form.reset(level)
+            form.reset({
+                day: level.day,
+                time: level.time,
+                duration: level.duration,
+                staffId: level.staffId || undefined
+            })
         }
     }, [level])
 

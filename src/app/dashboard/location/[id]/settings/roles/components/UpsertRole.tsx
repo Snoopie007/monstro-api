@@ -22,7 +22,7 @@ import { Permission, Role } from '@/types';
 import { CreateRoleSchema } from '../schema';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { SearchIcon } from 'lucide-react';
+import { Loader2, SearchIcon } from 'lucide-react';
 
 type CheckboxVarients = 'red' | 'green' | 'blue' | 'pink' | 'cyan' | 'lime' | 'orange' | 'fuchsia' | 'sky' | 'lemon' | 'purple' | 'yellow'
 const RoleColors: CheckboxVarients[] = [
@@ -35,29 +35,13 @@ interface UpsertRoleProps {
     role?: Partial<Role> | null
     permissions: Array<Permission>,
     setCurrentRole: Function,
-    locationId: string
+    locationId: string,
+    onSave: () => void
 }
 
-export function UpsertRole({ role, permissions, setCurrentRole, locationId }: UpsertRoleProps) {
-
+export function UpsertRole({ role, permissions, setCurrentRole, locationId, onSave }: UpsertRoleProps) {
     const [filteredPermissions, setFilteredPermissions] = useState<Array<Permission>>([])
-    useEffect(() => {
-
-        setFilteredPermissions(permissions);
-        if (role) {
-            const ids = role.permissions?.map((permission: any) => permission.id);
-
-            const permissionNames = permissions.filter((permission: Permission) => ids?.includes(permission.id)).map((permission) => permission.name);
-            form.reset({
-                name: role.name,
-                color: role.color || 'blue',
-                permissions: permissionNames
-            });
-
-        }
-    }, [role]);
-
-
+    const [isSubmitting, setIsSubmitting] = useState(false)
     const form = useForm<z.infer<typeof CreateRoleSchema>>({
         resolver: zodResolver(CreateRoleSchema),
         defaultValues: {
@@ -67,6 +51,20 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
         },
         mode: "onChange",
     });
+
+    useEffect(() => {
+        setFilteredPermissions(permissions);
+        if (role) {
+            const ids = role.permissions?.map((permission: any) => permission.permissionId);
+
+            const permissionNames = permissions.filter((permission: Permission) => ids?.includes(permission.id)).map((permission) => permission.name);
+            form.reset({
+                name: role.name,
+                color: role.color || 'blue',
+                permissions: permissionNames
+            });
+        }
+    }, [role, permissions]);
 
     function permissionFilter(query: string) {
         if (query === '') {
@@ -80,7 +78,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
     }
 
     async function handleSubmit(v: z.infer<typeof CreateRoleSchema>) {
-
+        setIsSubmitting(true)
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${locationId}/roles${role && role.id ? `/${role.id}` : ''}`, {
                 method: role && role.id ? 'PUT' : 'POST',
@@ -93,7 +91,8 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
         toast.success("Role Updated");
         form.reset();
         setCurrentRole(null);
-
+        onSave();
+        setIsSubmitting(false)
     };
 
     return (
@@ -134,14 +133,13 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                                     name="color"
                                     render={({ field }) => (
                                         <FormItem>
-
                                             <FormLabel size="tiny">Role Color</FormLabel>
                                             <div className='flex flex-row gap-1 justify-start'>
                                                 {RoleColors && RoleColors.map((color) => (
                                                     <FormControl key={color}>
                                                         <Checkbox
-                                                            // variant={color}
-                                                            className={cn(` h-6 w-6`)}
+                                                            variant={color}
+                                                            className={cn(`h-6 w-6`)}
                                                             checked={field.value === color}
                                                             onCheckedChange={(checked) => {
                                                                 console.log(color)
@@ -162,16 +160,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                                 <ScrollArea className='h-[580px] w-full  px-4 py-6 rounded-md '>
                                     <div className='space-y-2 pb-4'>
                                         <div className='text-sm font-medium'>Role Permissions</div>
-                                        <div className='relative flex-initial'>
-                                            <input
-                                                placeholder='Search Permissions'
-                                                className='w-full rounded-sm border-foreground text-sm bg-foreground/10  py-2  pl-7 pr-3 '
-                                                onChange={(e) => permissionFilter(e.target.value)}
-                                            />
-                                            <div>
-                                                <SearchIcon className="text-gray-400  absolute left-[10px] top-[50%] -translate-y-[51%]" />
-                                            </div>
-                                        </div>
+                                        <Input placeholder='Search Permissions' onChange={(e) => permissionFilter(e.target.value)} />
                                     </div>
                                     <div className='border-b border-foreground/10'></div>
                                     {filteredPermissions.map((permission) => (
@@ -223,7 +212,7 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                 </div>
                 <SheetFooter className='border-foreground/10 border-t w-full p-4 absolute bottom-0 left-0'>
                     <SheetClose asChild>
-                        <Button variant={"outline"} size={"sm"}                        >
+                        <Button variant={"outline"} size={"sm"} disabled={isSubmitting}>
                             Cancel
                         </Button>
 
@@ -234,10 +223,10 @@ export function UpsertRole({ role, permissions, setCurrentRole, locationId }: Up
                         onClick={
                             form.handleSubmit(handleSubmit)
                         }
+                        disabled={isSubmitting}
                     >
-                        Save
+                        {isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : "Save"}
                     </Button>
-
                 </SheetFooter>
             </SheetContent>
         </Sheet >
