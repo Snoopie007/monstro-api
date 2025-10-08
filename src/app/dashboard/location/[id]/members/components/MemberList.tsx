@@ -233,6 +233,7 @@ export function MemberList({
                             columns={columns}
                             filters={columnFilters}
                             onFiltersChange={handleFiltersChange}
+                            customFields={data.customFields}
                         />
                         <SortPopover
                             columns={columns}

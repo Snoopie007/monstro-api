@@ -102,6 +102,40 @@ export async function GET(
             }
         }
 
+        // Helper function to normalize enum values
+        const normalizeEnumValue = (columnId: string, value: string): string => {
+            switch (columnId) {
+                case 'status':
+                    // Status values should be lowercase and match the enum
+                    const statusMap: { [key: string]: string } = {
+                        'active': 'active',
+                        'inactive': 'incomplete',
+                        'past due': 'past_due',
+                        'past_due': 'past_due',
+                        'canceled': 'canceled',
+                        'cancelled': 'canceled',
+                        'paused': 'paused',
+                        'trialing': 'trialing',
+                        'unpaid': 'unpaid',
+                        'incomplete': 'incomplete',
+                        'incomplete expired': 'incomplete_expired',
+                        'incomplete_expired': 'incomplete_expired',
+                        'archived': 'archived'
+                    };
+                    return statusMap[value.toLowerCase()] || value.toLowerCase();
+                case 'gender':
+                    // Gender values can be case-insensitive, normalize to proper case
+                    const genderMap: { [key: string]: string } = {
+                        'male': 'Male',
+                        'female': 'Female',
+                        'other': 'Other'
+                    };
+                    return genderMap[value.toLowerCase()] || value;
+                default:
+                    return value;
+            }
+        };
+
         let columnFilterConditions: any[] = []
         if (columnFilters.length > 0) {
             for (const filter of columnFilters) {
@@ -119,15 +153,15 @@ export async function GET(
                         columnFilterConditions.push(ilike(members.phone, `%${value}%`))
                         break
                     case 'gender':
-                        columnFilterConditions.push(eq(members.gender, value))
+                        columnFilterConditions.push(eq(members.gender, normalizeEnumValue('gender', value)))
                         break
                     case 'status':
-                        columnFilterConditions.push(eq(memberLocations.status, value))
+                        columnFilterConditions.push(eq(memberLocations.status, normalizeEnumValue('status', value) as any))
                         break
                     default:
                         // Handle custom fields - check if it's a custom field ID
-                        if (id.startsWith('custom_')) {
-                            const fieldId = id.replace('custom_', '')
+                        if (id.startsWith('custom-field-')) {
+                            const fieldId = id.replace('custom-field-', '')
                             columnFilterConditions.push(
                                 exists(
                                     db

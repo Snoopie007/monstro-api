@@ -6,11 +6,12 @@ import { eq } from "drizzle-orm";
 // GET - Get staff assigned to session
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; pid: string; sid: string } }
+  { params }: { params: Promise<{ id: string; pid: string; sid: string }> }
 ) {
+  const {sid} = await params;
   try {
     const session = await db.query.programSessions.findFirst({
-      where: eq(programSessions.id, params.sid),
+      where: eq(programSessions.id, sid),
       with: {
         staff: {
           with: {
@@ -34,8 +35,9 @@ export async function GET(
 // PUT - Assign staff to session
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; pid: string; sid: string } }
+  { params }: { params: Promise<{ id: string; pid: string; sid: string }> }
 ) {
+  const {sid} = await params;
   try {
     const body = await request.json();
     const { staffId } = body;
@@ -54,7 +56,7 @@ export async function PUT(
     
     const [updatedSession] = await db.update(programSessions)
       .set({ staffId: staffId || null })
-      .where(eq(programSessions.id, params.sid))
+      .where(eq(programSessions.id, sid))
       .returning();
       
     if (!updatedSession) {
@@ -71,12 +73,13 @@ export async function PUT(
 // DELETE - Remove staff from session
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; pid: string; sid: string } }
+  { params }: { params: Promise<{ id: string; pid: string; sid: string }> }
 ) {
+  const {sid} = await params;
   try {
     const [updatedSession] = await db.update(programSessions)
       .set({ staffId: null })
-      .where(eq(programSessions.id, params.sid))
+      .where(eq(programSessions.id, sid))
       .returning();
       
     if (!updatedSession) {
