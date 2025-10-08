@@ -103,7 +103,7 @@ const TagsFilter = ({
       >
         {selectedTags.map((tagId) => (
           <TagsValue
-            className="bg-background/60 hover:bg-background/80"
+            className="bg-foreground/50 hover:bg-foreground/40 dark:bg-background/60 dark:hover:bg-background/80"
             key={tagId}
             onRemove={() => handleRemove(tagId)}
           >

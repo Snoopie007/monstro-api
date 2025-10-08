@@ -78,7 +78,7 @@ export async function GET(
 						SELECT COUNT(DISTINCT ${memberHasTags.tagId})
 						FROM ${memberHasTags}
 						WHERE ${memberHasTags.memberId} = ${members.id}
-						AND ${memberHasTags.tagId} = ANY(${tagIds})
+						AND ${memberHasTags.tagId} = ANY(ARRAY[${sql.join(tagIds.map(id => sql`${id}`), sql`, `)}])
 					) = ${tagIds.length}
 				`
             } else {

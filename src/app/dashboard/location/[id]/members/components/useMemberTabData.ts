@@ -249,13 +249,13 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                     tagOperator,
                     sorting,
                 } = currentTab.state
-
+                const finalTags = selectedTags.join(',');
                 // Prepare API parameters
                 const params: Record<string, any> = {
                     size: pageSize,
                     page: page + 1, // API uses 1-based indexing
                     query: searchQuery || undefined,
-                    tags: selectedTags.length > 0 ? selectedTags : undefined,
+                    tags: selectedTags.length > 0 ? finalTags : undefined,
                     tagOperator:
                         selectedTags.length > 0 ? tagOperator : undefined,
                 }
@@ -326,6 +326,21 @@ export function useMemberTabData(locationId: string, memberId?: string) {
             apiRef.current = null
         }
     }, [])
+
+    useEffect(() => {
+        // when any params change, fetch the data for the current tab
+        const currentTab = membersTabs.find((tab) => tab.active)
+        if (currentTab) {
+            handleFetchForCurrentTab(currentTab.id)
+        }
+    }, [membersTabs.find((tab) => tab.active)?.state.page,
+        membersTabs.find((tab) => tab.active)?.state.pageSize,
+        membersTabs.find((tab) => tab.active)?.state.searchQuery,
+        membersTabs.find((tab) => tab.active)?.state.selectedTags,
+        membersTabs.find((tab) => tab.active)?.state.columnFilters,
+        membersTabs.find((tab) => tab.active)?.state.tagOperator,
+        membersTabs.find((tab) => tab.active)?.state.sorting,
+    ])
 
     return {
         apiRef,

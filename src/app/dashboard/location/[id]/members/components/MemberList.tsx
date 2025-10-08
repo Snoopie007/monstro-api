@@ -171,6 +171,17 @@ export function MemberList({
                 typeof updater === 'function'
                     ? updater({ pageIndex: page, pageSize })
                     : updater
+
+            handleChangeParam({
+                id: tabId,
+                page: newState.pageIndex,
+                pageSize: newState.pageSize,
+                searchQuery,
+                selectedTags,
+                columnFilters,
+                tagOperator,
+                sorting,
+            })
         },
         manualPagination: true, // Enable manual pagination
     })
@@ -230,7 +241,6 @@ export function MemberList({
 
                         <Input
                             placeholder="Find a member..."
-                            // value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
                             onChange={(event) => {
                                 handleSearch(event.target.value)
                             }}
