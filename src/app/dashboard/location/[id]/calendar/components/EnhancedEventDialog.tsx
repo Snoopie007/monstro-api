@@ -12,7 +12,7 @@ import {
   MultiDialogContent,
 } from "@/components/ui/dialog";
 import { CalendarEvent as OldCalendarEvent } from "@/types";
-import { CalendarEvent } from "@/components/event-calendar/types";
+import { EnhancedEventDialogProps, Member, MemberWithValidation } from "@/components/event-calendar/types";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
   Search,
   Loader2,
   X,
+  User,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/ScrollArea";
@@ -49,45 +50,6 @@ function debounce<T extends (...args: any[]) => any>(
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
-}
-
-// Types for member data
-interface Member {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  avatar?: string;
-  memberLocation: {
-    status: string;
-  };
-}
-
-interface MemberWithValidation extends Member {
-  hasValidAccess: boolean;
-  accessType?: "subscription" | "package";
-  accessDetails?: string;
-}
-
-// Extend CalendarEvent to include original data
-interface ExtendedCalendarEvent extends CalendarEvent {
-  __originalData?: OldCalendarEvent["data"];
-}
-
-interface EnhancedEventDialogProps {
-  event: ExtendedCalendarEvent | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (event: CalendarEvent) => void;
-  onDelete: (eventId: string) => void;
-  lid?: string;
-  onRemoveReservation?: (
-    event: OldCalendarEvent,
-    memberId: string
-  ) => Promise<void>;
-  onRefreshEvents?: () => void;
-  onMemberUpdate?: () => void;
 }
 
 export function EnhancedEventDialog({
@@ -160,6 +122,7 @@ export function EnhancedEventDialog({
         end: event.end,
         duration: 0, // This should be calculated properly
         data: originalData,
+        staff: event.staff,
       };
 
       // Optimistic update
@@ -458,6 +421,15 @@ export function EnhancedEventDialog({
                 </span>
               </div>
 
+              {event.staff.id !== '' && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-muted-foreground">
+                <User className="h-4 w-4" />
+                <span>
+                  {event.staff.name}
+                </span>
+              </div>
+              )}
+
               {originalData.isRecurring && (
                 <Badge variant="secondary" className="w-fit">
                   Recurring Reservation
@@ -535,6 +507,7 @@ export function EnhancedEventDialog({
                                 end: event.end,
                                 duration: 0,
                                 data: originalData,
+                                staff: event.staff,
                               }}
                               lid={lid}
                               rid={rid}

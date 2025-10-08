@@ -49,6 +49,7 @@ function convertToNewCalendarEvent(
     allDay: false,
     color: "sky" as const, // Default color for all events
     location: undefined,
+    staff: oldEvent.staff,
     // Store original event data for dialog functionality
     __originalData: oldEvent.data,
   };
