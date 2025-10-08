@@ -248,6 +248,7 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                     selectedTags,
                     tagOperator,
                     sorting,
+                    columnFilters,
                 } = currentTab.state
                 const finalTags = selectedTags.join(',');
                 // Prepare API parameters
@@ -265,6 +266,11 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                     const { id: sortColumn, direction } = sorting[0]
                     params.sortBy = sortColumn
                     params.sortOrder = direction
+                }
+
+                // Add column filters parameters
+                if (columnFilters && columnFilters.length > 0) {
+                    params.columnFilters = JSON.stringify(columnFilters)
                 }
 
                 // Fetch members and custom fields from API

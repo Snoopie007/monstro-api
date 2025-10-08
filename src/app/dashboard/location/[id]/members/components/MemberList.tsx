@@ -155,7 +155,6 @@ export function MemberList({
         columns,
         pageCount: totalPages, // Set total pages from the API
         getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         onColumnFiltersChange: handleFiltersChange,
         getSortedRowModel: getSortedRowModel(),
@@ -184,6 +183,7 @@ export function MemberList({
             })
         },
         manualPagination: true, // Enable manual pagination
+        manualFiltering: true, // Enable manual filtering
     })
 
     useEffect(() => {

@@ -41,6 +41,11 @@ export async function GET(
     const sortBy = searchParams.get('sortBy') || 'created' // Sort column
     const sortOrder = searchParams.get('sortOrder') || 'desc' // Sort direction
 
+    // Parse column filters
+    const columnFiltersParam = searchParams.get('columnFilters')
+    const columnFilters = columnFiltersParam ? JSON.parse(columnFiltersParam) : []
+
+
     try {
         const session = await auth()
 
@@ -97,10 +102,59 @@ export async function GET(
             }
         }
 
+        let columnFilterConditions: any[] = []
+        if (columnFilters.length > 0) {
+            for (const filter of columnFilters) {
+                const { id, value } = filter
+                if (!value || value === '') continue // Skip empty filters
+
+                switch (id) {
+                    case 'name':
+                        columnFilterConditions.push(or(ilike(members.firstName, `%${value}%`), ilike(members.lastName, `%${value}%`)))
+                        break
+                    case 'email':
+                        columnFilterConditions.push(ilike(members.email, `%${value}%`))
+                        break
+                    case 'phone':
+                        columnFilterConditions.push(ilike(members.phone, `%${value}%`))
+                        break
+                    case 'gender':
+                        columnFilterConditions.push(eq(members.gender, value))
+                        break
+                    case 'status':
+                        columnFilterConditions.push(eq(memberLocations.status, value))
+                        break
+                    default:
+                        // Handle custom fields - check if it's a custom field ID
+                        if (id.startsWith('custom_')) {
+                            const fieldId = id.replace('custom_', '')
+                            columnFilterConditions.push(
+                                exists(
+                                    db
+                                        .select({ memberId: memberCustomFields.memberId })
+                                        .from(memberCustomFields)
+                                        .where(
+                                            and(
+                                                eq(memberCustomFields.memberId, members.id),
+                                                eq(memberCustomFields.customFieldId, fieldId),
+                                                ilike(memberCustomFields.value, `%${value}%`)
+                                            )
+                                        )
+                                )
+                            )
+                        }
+                        break
+                }
+            }
+        }
+
         // Combine all conditions
         const conditions = [baseCondition]
         if (searchCondition) conditions.push(searchCondition)
         if (tagCondition) conditions.push(tagCondition)
+        if (columnFilterConditions.length > 0) {
+            conditions.push(and(...columnFilterConditions))
+        }
         const whereCondition =
             conditions.length > 1 ? and(...conditions) : conditions[0]
 
