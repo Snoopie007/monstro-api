@@ -125,7 +125,7 @@ export function RecurringRevenueChart({ transactions, lid }: RecurringRevenueCha
                                 dataKey="month"
                                 tickLine={false}
                                 tickMargin={10}
-                                axisLine={false}
+                                axisLine={true}
                                 tickFormatter={(value) => value.slice(0, 3)}
                                 interval={0}
                             />

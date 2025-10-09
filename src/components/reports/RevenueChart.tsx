@@ -118,7 +118,7 @@ export function RevenueChart({ transactions, lid }: { transactions: Transaction[
                                 dataKey="month"
                                 tickLine={false}
                                 tickMargin={10}
-                                axisLine={false}
+                                axisLine={true}
                                 tickFormatter={(value) => value.slice(0, 3)}
                                 interval={0}
                             />
