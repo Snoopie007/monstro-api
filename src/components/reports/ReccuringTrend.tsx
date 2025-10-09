@@ -9,18 +9,37 @@ import { isSameMonth, isSameYear, subMonths } from 'date-fns'
 
 interface RecurringTrendProps {
     transactions: Transaction[]
+    lid?: string
 }
 
 type Trend = {
     value: number
+    previous: number
     change: string
     changeType: '+' | '-' | '~'
 }
 
-export function ReccuringTrend({ transactions }: RecurringTrendProps) {
+const DummyData = {
+    current: 18500,
+    previous: 17200,
+}
+
+export function ReccuringTrend({ transactions, lid }: RecurringTrendProps) {
     const [loading, setLoading] = useState(true)
 
     const trend = useMemo<Trend>(() => {
+        if (lid === 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s') {
+            const { current, previous } = DummyData
+            const change = previous === 0 ? (current > 0 ? 100 : 0) : ((current - previous) / previous) * 100
+
+            return {
+                value: current,
+                previous: previous,
+                change: `${Math.abs(change).toFixed(1)}%`,
+                changeType: change === 0 ? '~' : change > 0 ? '+' : '-',
+            }
+        }
+
         const now = new Date()
         const lastMonth = subMonths(now, 1)
 
@@ -48,10 +67,11 @@ export function ReccuringTrend({ transactions }: RecurringTrendProps) {
 
         return {
             value: current,
+            previous: previous,
             change: `${Math.abs(change).toFixed(1)}%`,
             changeType: change === 0 ? '~' : change > 0 ? '+' : '-',
         }
-    }, [transactions])
+    }, [transactions, lid])
 
     useEffect(() => {
         if (transactions) {
@@ -92,9 +112,14 @@ export function ReccuringTrend({ transactions }: RecurringTrendProps) {
                 {loading ? (
                     <Skeleton className='bg-foreground/10 w-full h-5' />
                 ) : (
-                    <p className='font-bold'>
-                        {trend.changeType === '~' ? 'No change' : `Trending ${trend.changeType === '+' ? 'up' : 'down'} ${trend.change}`}
-                    </p>
+                    <div>
+                        <p className='text-sm font-semibold'>
+                            {trend.changeType === '~' ? 'No change' : `Trending ${trend.changeType === '+' ? 'up' : 'down'} ${trend.change}`}
+                        </p>
+                        <p className='text-xs text-foreground/50'>
+                            Previous: ${trend.previous.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </p>
+                    </div>
                 )}
             </CardContent>
         </Card>

@@ -39,8 +39,6 @@ export async function GET(req: NextRequest, props: ReportProps) {
 			where: (ml, { and, eq, gte, lte }) =>
 				and(
 					eq(ml.locationId, id),
-					gte(ml.created, startDate),
-					lte(ml.created, endDate),
 				),
 			with: {
 				member: true,

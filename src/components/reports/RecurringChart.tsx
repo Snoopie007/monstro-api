@@ -20,12 +20,38 @@ type Data = {
     amount: number
 }
 
-export function RecurringRevenueChart({ transactions }: { transactions: Transaction[] }) {
+const DummyData: Data[] = [
+    { month: 'January', amount: 2400 },
+    { month: 'February', amount: 2650 },
+    { month: 'March', amount: 2800 },
+    { month: 'April', amount: 2950 },
+    { month: 'May', amount: 3200 },
+    { month: 'June', amount: 3100 },
+    { month: 'July', amount: 3350 },
+    { month: 'August', amount: 3500 },
+    { month: 'September', amount: 3400 },
+    { month: 'October', amount: 3750 },
+    { month: 'November', amount: 3900 },
+    { month: 'December', amount: 4200 }
+]
+
+interface RecurringRevenueChartProps {
+    lid: string
+    transactions: Transaction[]
+}
+
+export function RecurringRevenueChart({ transactions, lid }: RecurringRevenueChartProps) {
     const [range, setRange] = useState(12)
     const [loading, setLoading] = useState(true)
 
     const data = useMemo<Data[]>(() => {
+
+        if (lid === 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s') {
+            return DummyData
+        }
         if (transactions) {
+
+
             const recurringRevenueByMonth = Object.fromEntries(
                 MONTHS.map((month) => [month, 0])
             );
