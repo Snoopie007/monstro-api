@@ -5,6 +5,7 @@ import type { FamilyMember } from "@/types";
 import { generateReferralCode } from "@/libs/utils";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { emailQueue } from "@/libs/queues";
+import { evaluateTriggers } from "@/libs/achievements";
 
 
 
@@ -101,6 +102,18 @@ export async function memberFamilies(app: Elysia) {
                     },
                 });
 
+                const memberLocation = await db.query.memberLocations.findFirst({
+                    where: (memberLocations, { eq }) => eq(memberLocations.memberId, mid),
+                    columns: {
+                        locationId: true,
+                    },
+                });
+
+                if (!memberLocation) {
+                    return status(400, { error: "Member location not found" });
+                }
+
+
                 uid = existingUser?.id;
                 fm = await db.transaction(async (tx) => {
                     if (!uid) {
@@ -125,6 +138,18 @@ export async function memberFamilies(app: Elysia) {
 
                     if (!member) {
                         return await tx.rollback();
+                    }
+
+                    // Evaluate referral triggers for the inviting member
+                    try {
+                        await evaluateTriggers({
+                            memberId: mid,
+                            locationId: memberLocation.locationId,
+                            triggerType: 'referrals_count'
+                        });
+                    } catch (error) {
+                        console.error('Error evaluating referral triggers:', error);
+                        // Don't fail the request if trigger evaluation fails
                     }
 
                     const [familyMember] = await tx.insert(familyMembers).values({
