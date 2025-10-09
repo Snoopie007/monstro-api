@@ -204,7 +204,6 @@ export function EventCalendar({
       onEventClick(event);
       return;
     }
-
     // Default behavior: open built-in dialog
     setSelectedEvent(event);
     setIsEventDialogOpen(true);
@@ -237,6 +236,11 @@ export function EventCalendar({
       start: startTime,
       end: addHoursToDate(startTime, 1),
       allDay: false,
+      staff: {
+        id: "",
+        name: "",
+        avatar: "",
+      },
     };
     setSelectedEvent(newEvent);
     setIsEventDialogOpen(true);
@@ -475,6 +479,11 @@ export function EventCalendar({
                 end: new Date(),
                 allDay: false,
                 color: "sky",
+                staff: {
+                  id: "",
+                  name: "",
+                  avatar: "",
+                },
               };
               onEventAdd(event);
             }

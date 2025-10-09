@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/db/db';
 import { triggeredAchievements } from '@/db/schemas';
 import { and, eq } from 'drizzle-orm';
+import { hasPermission } from '@/libs/server/permissions';
 
 
 type Params = {
@@ -28,6 +29,10 @@ export async function PATCH(req: NextRequest, props: { params: Promise<Params> }
     const params = await props.params;
     const data = await req.json()
     try {
+        const canEditTrigger = await hasPermission("edit achievement", params.id);
+        if (!canEditTrigger) {
+            return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        }
         const trigger = await db.update(triggeredAchievements).set(data)
             .where(and(
                 eq(triggeredAchievements.achievementId, params.aid),

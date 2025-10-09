@@ -65,6 +65,11 @@ export function CreateAchievement({ lid }: CreateAchievementProps) {
       })
     );
 
+    if(result?.status === 403) {
+      toast.error("You are not authorized to create an achievement");
+      return;
+    }
+
     if (error || !result || !result.ok) {
       toast.error("Something went wrong, please try again later");
       return;

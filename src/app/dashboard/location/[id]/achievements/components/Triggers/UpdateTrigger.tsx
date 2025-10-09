@@ -50,6 +50,11 @@ export function UpdateTrigger({ achievement, ta }: UpdateTriggerProps) {
             })
         );
 
+        if(result?.status === 403) {
+            toast.error("You are not authorized to edit this trigger");
+            return;
+        }
+
         if (error || !result || !result.ok) {
             toast.error("Something went wrong, please try again later");
             return;

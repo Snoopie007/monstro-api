@@ -17,9 +17,10 @@ import AddChildMember from "./AddMember"
 interface MemberFamiliesProps {
     params: { id: string, mid: string }
     familyMembers: FamilyMember[] | undefined
+    editable: boolean
 }
 
-export function MemberFamilies({ params, familyMembers }: MemberFamiliesProps) {
+export function MemberFamilies({ params, familyMembers, editable }: MemberFamiliesProps) {
     const { member } = useMemberStatus()
 
     return (
@@ -31,7 +32,7 @@ export function MemberFamilies({ params, familyMembers }: MemberFamiliesProps) {
                     <CardTitle className="text-sm  ">
                         Family Members
                     </CardTitle>
-                    <AddChildMember parent={member} lid={params.id} />
+                    {editable && <AddChildMember parent={member} lid={params.id} />}
                 </div>
             </CardHeader>
             <CardContent className='p-0' >

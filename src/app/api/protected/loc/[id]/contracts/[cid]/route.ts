@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { contractTemplates } from '@/db/schemas/ContractTemplates';
 import { eq } from 'drizzle-orm';
+import { hasPermission } from '@/libs/server/permissions';
 
 type ContractId = {
   cid: string;
@@ -24,10 +25,13 @@ export async function GET(req: Request, props: { params: Promise<ContractId> }) 
 }
 
 export async function PUT(req: NextRequest, props: { params: Promise<ContractId> }) {
-  const { cid } = await props.params;
+  const { cid, id } = await props.params;
   const data = await req.json();
   try {
-
+    const canEditContract = await hasPermission("edit contract", id);
+    if (!canEditContract) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
     if (!cid) {
       return NextResponse.json({ error: "Contract ID is required" }, { status: 400 });
     }
@@ -53,8 +57,12 @@ export async function PUT(req: NextRequest, props: { params: Promise<ContractId>
 }
 
 export async function DELETE(req: NextRequest, props: { params: Promise<ContractId> }) {
-  const { cid } = await props.params;
+  const { cid, id } = await props.params;
   try {
+    const canDeleteContract = await hasPermission("delete contract", id);
+    if (!canDeleteContract) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
     const result = await db.delete(contractTemplates).where(eq(contractTemplates.id, cid)).returning();
 
 

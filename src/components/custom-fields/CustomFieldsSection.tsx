@@ -175,6 +175,18 @@ export function CustomFieldsSection({
     return null; // Don't show anything if no fields with values
   }
 
+  
+  const renderEditButton = () => {
+    if (editable) {
+      return (
+        <Button onClick={() => setIsEditing(true)} variant={"ghost"} size={"icon"} className="size-6 rounded-sm">
+          {isSaving ? null : <SettingsIcon className="size-4" />}
+        </Button>
+      )
+    }
+    return null
+  }
+
   const renderContent = () => (
     <div className="space-y-4 p-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -236,20 +248,12 @@ export function CustomFieldsSection({
     </div>
   );
 
+
   return (
     <Card className="border-x-0 border-t border-b-0 border-foreground/10">
       <CardHeader className="px-4 py-2 bg-foreground/5 flex flex-row items-center justify-between">
         <CardTitle className="text-sm ">{title}</CardTitle>
-        {!isEditing && (
-          <Button
-            onClick={() => setIsEditing(true)}
-            variant={"ghost"}
-            size={"icon"}
-            className="size-6 rounded-sm"
-          >
-            {isSaving ? null : <SettingsIcon className="size-4" />}
-          </Button>
-        )}
+        {!isEditing && renderEditButton()}
       </CardHeader>
       <CardContent className="p-0">{renderContent()}</CardContent>
     </Card>

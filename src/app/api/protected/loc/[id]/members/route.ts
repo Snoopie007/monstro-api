@@ -24,6 +24,7 @@ import {
 } from '@/db/schemas'
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { MemberSortableField, sortColumnMap } from '@/types/member'
+import { hasPermission, canView } from "@/libs/server/permissions";
 
 export async function GET(
     req: Request,
@@ -40,11 +41,22 @@ export async function GET(
     const sortBy = searchParams.get('sortBy') || 'created' // Sort column
     const sortOrder = searchParams.get('sortOrder') || 'desc' // Sort direction
 
+    // Parse column filters
+    const columnFiltersParam = searchParams.get('columnFilters')
+    const columnFilters = columnFiltersParam ? JSON.parse(columnFiltersParam) : []
+
+
     try {
         const session = await auth()
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        // Check if user can view members (view is implicit for authenticated users)
+        const canViewAuth = await canView(params.id);
+        if (!canViewAuth) {
+            return NextResponse.json({ error: "Access denied" }, { status: 403 });
         }
 
         // Base condition: Filter by locationId from memberLocations
@@ -71,7 +83,7 @@ export async function GET(
 						SELECT COUNT(DISTINCT ${memberHasTags.tagId})
 						FROM ${memberHasTags}
 						WHERE ${memberHasTags.memberId} = ${members.id}
-						AND ${memberHasTags.tagId} = ANY(${tagIds})
+						AND ${memberHasTags.tagId} = ANY(ARRAY[${sql.join(tagIds.map(id => sql`${id}`), sql`, `)}])
 					) = ${tagIds.length}
 				`
             } else {
@@ -90,10 +102,93 @@ export async function GET(
             }
         }
 
+        // Helper function to normalize enum values
+        const normalizeEnumValue = (columnId: string, value: string): string => {
+            switch (columnId) {
+                case 'status':
+                    // Status values should be lowercase and match the enum
+                    const statusMap: { [key: string]: string } = {
+                        'active': 'active',
+                        'inactive': 'incomplete',
+                        'past due': 'past_due',
+                        'past_due': 'past_due',
+                        'canceled': 'canceled',
+                        'cancelled': 'canceled',
+                        'paused': 'paused',
+                        'trialing': 'trialing',
+                        'unpaid': 'unpaid',
+                        'incomplete': 'incomplete',
+                        'incomplete expired': 'incomplete_expired',
+                        'incomplete_expired': 'incomplete_expired',
+                        'archived': 'archived'
+                    };
+                    return statusMap[value.toLowerCase()] || value.toLowerCase();
+                case 'gender':
+                    // Gender values can be case-insensitive, normalize to proper case
+                    const genderMap: { [key: string]: string } = {
+                        'male': 'Male',
+                        'female': 'Female',
+                        'other': 'Other'
+                    };
+                    return genderMap[value.toLowerCase()] || value;
+                default:
+                    return value;
+            }
+        };
+
+        let columnFilterConditions: any[] = []
+        if (columnFilters.length > 0) {
+            for (const filter of columnFilters) {
+                const { id, value } = filter
+                if (!value || value === '') continue // Skip empty filters
+
+                switch (id) {
+                    case 'name':
+                        columnFilterConditions.push(or(ilike(members.firstName, `%${value}%`), ilike(members.lastName, `%${value}%`)))
+                        break
+                    case 'email':
+                        columnFilterConditions.push(ilike(members.email, `%${value}%`))
+                        break
+                    case 'phone':
+                        columnFilterConditions.push(ilike(members.phone, `%${value}%`))
+                        break
+                    case 'gender':
+                        columnFilterConditions.push(eq(members.gender, normalizeEnumValue('gender', value)))
+                        break
+                    case 'status':
+                        columnFilterConditions.push(eq(memberLocations.status, normalizeEnumValue('status', value) as any))
+                        break
+                    default:
+                        // Handle custom fields - check if it's a custom field ID
+                        if (id.startsWith('custom-field-')) {
+                            const fieldId = id.replace('custom-field-', '')
+                            columnFilterConditions.push(
+                                exists(
+                                    db
+                                        .select({ memberId: memberCustomFields.memberId })
+                                        .from(memberCustomFields)
+                                        .where(
+                                            and(
+                                                eq(memberCustomFields.memberId, members.id),
+                                                eq(memberCustomFields.customFieldId, fieldId),
+                                                ilike(memberCustomFields.value, `%${value}%`)
+                                            )
+                                        )
+                                )
+                            )
+                        }
+                        break
+                }
+            }
+        }
+
         // Combine all conditions
         const conditions = [baseCondition]
         if (searchCondition) conditions.push(searchCondition)
         if (tagCondition) conditions.push(tagCondition)
+        if (columnFilterConditions.length > 0) {
+            conditions.push(and(...columnFilterConditions))
+        }
         const whereCondition =
             conditions.length > 1 ? and(...conditions) : conditions[0]
 
@@ -260,6 +355,11 @@ export async function POST(
             )
         }
 
+        const canEditAuth = await hasPermission("add member", params.id);
+        if (!canEditAuth) {
+            return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        }
+
         // const [{ exists }] = await db.execute<{ exists: boolean }>(
         //     sql`select exists(${db.select({ n: sql`1` }).from(members).where(eq(members.email, data.email))}) as exists`
         // )
@@ -286,6 +386,12 @@ export async function POST(
         })
 
         if (!user) {
+
+            const canAddAuth = await hasPermission("add member", params.id);
+            if (!canAddAuth) {
+                return NextResponse.json({ error: "Access denied" }, { status: 403 });
+            }
+
             /** Create User if there isn't one */
             const [res] = await db
                 .insert(users)

@@ -6,7 +6,7 @@ export type ExtendedUser = DefaultUser["user"] & {
     phone: string;
     sbToken: string;
     email: string;
-    locations: { id: string, name: string, status: string }[] | null;
+    locations: { id: string, name: string, status: string, roles?: any[], permissions?: string[] }[] | null;
     vendorId: number | 0,
     staffId: number | 0
 };

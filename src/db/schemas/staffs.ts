@@ -1,11 +1,8 @@
 import {
-  serial,
   text,
   timestamp,
   pgTable,
-  integer,
   primaryKey,
-  uuid,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { users } from "./users";
@@ -14,10 +11,10 @@ import { relations, sql } from "drizzle-orm";
 import { StaffStatusEnum } from "./DatabaseEnums";
 
 export const staffs = pgTable("staffs", {
-  id: uuid("id")
+  id: text("id")
     .primaryKey()
     .notNull()
-    .default(sql`uuid_base62()`),
+    .default(sql`uuid_base62('stf_')`),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull(),
@@ -33,7 +30,7 @@ export const staffs = pgTable("staffs", {
 export const staffsLocations = pgTable(
   "staff_locations",
   {
-    id: uuid("id")
+    id: text("id")
       .primaryKey()
       .notNull()
       .default(sql`uuid_base62()`),

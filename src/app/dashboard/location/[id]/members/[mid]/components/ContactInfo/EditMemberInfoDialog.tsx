@@ -90,6 +90,11 @@ export function EditMemberInfoDialog({
     );
 
     setLoading(false);
+    
+    if(result?.status === 403) {
+      toast.error("You are not authorized to edit this member");
+      return;
+    }
 
     if (error || !result || !result.ok) {
       toast.error("Failed to update member information");

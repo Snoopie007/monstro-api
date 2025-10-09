@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { achievements } from "@/db/schemas";
 import S3Bucket from "@/libs/server/s3";
+import { hasPermission } from "@/libs/server/permissions";
 
 export async function GET(
   req: NextRequest,
@@ -36,6 +37,10 @@ export async function POST(
   const file = data.get("file") as Blob | null;
 
   try {
+    const canAddAchievement = await hasPermission("add achievement", params.id);
+    if (!canAddAchievement) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
     let badgeUrl = data.get("badge") as string | null;
 
     if (file instanceof Blob && file.size > 0) {

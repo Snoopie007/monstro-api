@@ -1,19 +1,24 @@
 
-import { auth } from "@/auth";
 import { db } from "@/db/db";
 import { permissions, roleHasPermissions, roles } from "@/db/schemas";
 import { NextResponse } from "next/server";
-import { permission } from "process";
+import { hasPermission, canView } from "@/libs/server/permissions";
 
 type RoleProps = {
     id: string
 }
 export async function GET(req: Request, props: { params: Promise<RoleProps> }) {
     const params = await props.params;
+    const query = new URL(req.url).searchParams.get("query");
+// Check if user can view roles (view is implicit for authenticated users)
+    const canViewAuth = await canView(params.id);
+    if (!canViewAuth) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
 
     try {
         const roles = await db.query.roles.findMany({
-            where: (roles, { eq }) => eq(roles.locationId, params.id),
+            where: (roles, { eq, and, ilike }) => and(eq(roles.locationId, params.id), query ? ilike(roles.name, `%${query}%`) : undefined),
             with: {
                 permissions: true
             }
@@ -30,6 +35,13 @@ export async function GET(req: Request, props: { params: Promise<RoleProps> }) {
 export async function POST(req: Request, props: { params: Promise<RoleProps> }) {
     const params = await props.params;
     const data = await req.json()
+    
+// Check if user has permission to create roles
+    const hasAuth = await hasPermission("add role", params.id);
+    if (!hasAuth) {
+      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+    }
+    
     console.log(data)
     try {
         const [role] = await db.insert(roles).values({

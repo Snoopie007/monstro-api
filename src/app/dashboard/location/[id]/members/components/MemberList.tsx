@@ -31,6 +31,8 @@ import TagsFilter from './TagsFilter'
 import { FilterPopover, SortPopover } from './FilterAndSort'
 import { MembersTabState } from './useMemberTabData'
 import { debounce } from '@tiptap-pro/extension-table-of-contents'
+import { hasPermission } from '@/libs/server/permissions'
+import { usePermission } from '@/hooks/usePermissions'
 
 export function MemberList({
     params,
@@ -58,6 +60,7 @@ export function MemberList({
     }) => void
     handleFetchForCurrentTab: (id: number) => void
 }) {
+    const canAddMember = usePermission("add member", params.id)
     const {
         page,
         pageSize,
@@ -152,7 +155,6 @@ export function MemberList({
         columns,
         pageCount: totalPages, // Set total pages from the API
         getCoreRowModel: getCoreRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         onColumnFiltersChange: handleFiltersChange,
         getSortedRowModel: getSortedRowModel(),
@@ -168,8 +170,20 @@ export function MemberList({
                 typeof updater === 'function'
                     ? updater({ pageIndex: page, pageSize })
                     : updater
+
+            handleChangeParam({
+                id: tabId,
+                page: newState.pageIndex,
+                pageSize: newState.pageSize,
+                searchQuery,
+                selectedTags,
+                columnFilters,
+                tagOperator,
+                sorting,
+            })
         },
         manualPagination: true, // Enable manual pagination
+        manualFiltering: true, // Enable manual filtering
     })
 
     useEffect(() => {
@@ -194,6 +208,22 @@ export function MemberList({
         )
     }
 
+    
+
+    const renderAddMember = useMemo(() => {
+        if (canAddMember) {
+            return <AddMember lid={params.id} stripeKey={stripeKey} />
+        }
+        return null
+    }, [canAddMember])
+
+    const renderImportMembers = useMemo(() => {
+        if (canAddMember) {
+            return <ImportMembers lid={params.id} />
+        }
+        return null
+    }, [canAddMember])
+
     return (
         <TablePage>
             <TablePageHeader>
@@ -203,6 +233,7 @@ export function MemberList({
                             columns={columns}
                             filters={columnFilters}
                             onFiltersChange={handleFiltersChange}
+                            customFields={data.customFields}
                         />
                         <SortPopover
                             columns={columns}
@@ -211,7 +242,6 @@ export function MemberList({
 
                         <Input
                             placeholder="Find a member..."
-                            // value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
                             onChange={(event) => {
                                 handleSearch(event.target.value)
                             }}
@@ -223,8 +253,8 @@ export function MemberList({
                             onTagsChange={handleTagsChange}
                             canCreateTags={true}
                         />
-                        <AddMember lid={params.id} stripeKey={stripeKey} />
-                        <ImportMembers lid={params.id} />
+                        {renderAddMember}
+                        {renderImportMembers}
                     </div>
                 </TablePageHeaderSection>
             </TablePageHeader>
