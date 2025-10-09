@@ -17,12 +17,12 @@ import { toast } from 'react-toastify';
 import { tryCatch } from '@/libs/utils';
 import { Loader2 } from 'lucide-react';
 import { TriggerForm } from '.';
+import { useState } from 'react';
 
 
 export function CreateTrigger() {
-
     const { currentAchievement, setCurrentAchievement, triggers } = useAchievements();
-
+    const [isSaving, setIsSaving] = useState(false);
 
     const form = useForm<z.infer<typeof TriggerSchema>>({
         resolver: zodResolver(TriggerSchema),
@@ -38,20 +38,42 @@ export function CreateTrigger() {
 
     async function onSubmit(v: z.infer<typeof TriggerSchema>) {
         if (!currentAchievement) return;
+        setIsSaving(true);
         const lid = currentAchievement?.locationId;
         const aid = currentAchievement?.id;
+
+         // Build the payload with only the fields needed for this trigger type
+        const payload: any = {
+            triggerId: v.triggerId,
+            weight: v.weight,
+        };
+        
+        // Only include memberPlanId for plan_signup trigger (ID 4)
+        if (v.triggerId === '4' && v.memberPlanId) {
+            payload.memberPlanId = v.memberPlanId;
+        }
+        
+        // Only include time period fields for attendances/referrals (IDs 2 and 3, or 1 if that's being used)
+        if (['1', '2', '3'].includes(v.triggerId) && v.timePeriod && v.timePeriodUnit) {
+            payload.timePeriod = v.timePeriod;
+            payload.timePeriodUnit = v.timePeriodUnit;
+        }
+        
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/achievements/${aid}/triggers`, {
+            fetch(`/api/protected/loc/${lid}/achievements/${aid}/trigger`, {
                 method: 'POST',
-                body: JSON.stringify(v),
+                body: JSON.stringify(payload),
             })
         );
+
+
 
         if (error || !result || !result.ok) {
             toast.error("Something went wrong, please try again later");
             return;
         }
 
+        setIsSaving(false);
         form.reset();
         setCurrentAchievement(null);
     }
@@ -77,12 +99,12 @@ export function CreateTrigger() {
                         <TriggerForm lid={currentAchievement?.locationId} form={form} triggers={triggers} />
                         <SheetFooter className='border-t border-foreground/10 py-3 px-4'>
                             <SheetClose asChild>
-                                <Button variant={"outline"} size={"sm"}>
+                                <Button onClick={() => form.reset()} variant={"outline"} size={"sm"}>
                                     Cancel
                                 </Button>
                             </SheetClose>
-                            <Button variant={"foreground"} type='submit' size={"sm"} disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting ? <Loader2 className='size-3.5 animate-spin' /> : 'Create'}
+                            <Button onClick={() => onSubmit(form.getValues())} variant={"foreground"} type='submit' size={"sm"} disabled={isSaving}>
+                                {isSaving ? <Loader2 className='size-3.5 animate-spin' /> : 'Create'}
                             </Button>
                         </SheetFooter>
 
