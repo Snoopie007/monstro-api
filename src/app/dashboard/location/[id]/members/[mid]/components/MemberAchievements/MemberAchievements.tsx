@@ -61,7 +61,7 @@ export function MemberAchievements({
                     <TableCell>{ma.achievement?.points}</TableCell>
 
                     <TableCell>
-                      {format(ma.dateAchieved, "MMM d, yyyy")}
+                      {ma.dateAchieved ? format(ma.dateAchieved, "MMM d, yyyy") : "-"}
                     </TableCell>
                   </TableRow>
                 ))}
