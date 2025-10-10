@@ -1,7 +1,11 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis } from 'recharts'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import {
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+} from '@/components/ui/chart'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import { cn } from '../event-calendar'
@@ -11,13 +15,13 @@ import { Loader2 } from 'lucide-react'
 
 const chartConfig = {
     desktop: {
-        label: "Revenue",
-        color: "#10B981",
+        label: 'Revenue',
+        color: '#10B981',
     },
 }
 
 type Data = {
-    month: string,
+    month: string
     amount: number
 }
 
@@ -36,56 +40,64 @@ const DummyData = [
     { month: 'December', amount: 24800 },
 ]
 
-export function RevenueChart({ transactions, lid }: { transactions: Transaction[], lid: string }) {
+export function RevenueChart({
+    transactions,
+    lid,
+}: {
+    transactions: Transaction[]
+    lid: string
+}) {
     const [range, setRange] = useState(12)
     const [loading, setLoading] = useState(true)
 
     const data = useMemo<Data[]>(() => {
-        if (lid === 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s') {
+        if (lid === 'acc_BpT7jEb3Q16nOPL3vo7qlw') {
             return DummyData
         }
 
         if (transactions && transactions.length > 0) {
-            const revenueByMonth = Object.fromEntries(MONTHS.map((month) => [month, 0]));
+            const revenueByMonth = Object.fromEntries(
+                MONTHS.map((month) => [month, 0])
+            )
             transactions.forEach((transaction) => {
-                if (transaction.status === "paid" && !transaction.refunded) {
-                    const month = MONTHS[new Date(transaction.created as Date).getMonth()];
-                    revenueByMonth[month] += transaction.amount / 100;
+                if (transaction.status === 'paid' && !transaction.refunded) {
+                    const month =
+                        MONTHS[new Date(transaction.created as Date).getMonth()]
+                    revenueByMonth[month] += transaction.amount / 100
                 }
-            });
+            })
 
             const mappedData = MONTHS.map((month) => ({
                 month,
                 amount: revenueByMonth[month],
-            }));
+            }))
 
-            return mappedData;
+            return mappedData
         }
         // If transactions is empty array, return all months with 0 amount
         return MONTHS.map((month) => ({
             month,
             amount: 0,
-        }));
-    }, [transactions, lid]);
+        }))
+    }, [transactions, lid])
 
     const filteredData = useMemo(() => {
-        return data.slice(-range);
-    }, [data, range]);
+        return data.slice(-range)
+    }, [data, range])
 
     useEffect(() => {
         if (transactions) {
             setLoading(false)
         }
-    }, [transactions]);
-
+    }, [transactions])
 
     return (
-        <Card className='bg-foreground/5 rounded-lg border-foreground/10 p-0'>
-            <CardHeader className='flex flex-row justify-between items-center' >
-                <CardTitle className='text-lg font-semibold'>
+        <Card className="bg-foreground/5 rounded-lg border-foreground/10 p-0">
+            <CardHeader className="flex flex-row justify-between items-center">
+                <CardTitle className="text-lg font-semibold">
                     Gross Revenue
                 </CardTitle>
-                <div className='flex flex-row gap-2 bg-foreground/10 rounded-lg px-2 py-1'>
+                <div className="flex flex-row gap-2 bg-foreground/10 rounded-lg px-2 py-1">
                     {[3, 6, 12].map((item) => (
                         <div
                             key={item}
@@ -99,21 +111,32 @@ export function RevenueChart({ transactions, lid }: { transactions: Transaction[
                         </div>
                     ))}
                 </div>
-            </CardHeader >
-            <CardContent className='space-y-2 relative'>
+            </CardHeader>
+            <CardContent className="space-y-2 relative">
                 {loading ? (
-                    <div className='flex flex-row items-center justify-center h-[450px] gap-2'>
-                        <Loader2 className='animate-spin' size={16} /> Loading data...
+                    <div className="flex flex-row items-center justify-center h-[450px] gap-2">
+                        <Loader2 className="animate-spin" size={16} /> Loading
+                        data...
                     </div>
                 ) : (
-
-                    <ChartContainer config={chartConfig} className='w-full h-[450px]' >
+                    <ChartContainer
+                        config={chartConfig}
+                        className="w-full h-[450px]"
+                    >
                         <LineChart
                             accessibilityLayer
                             data={filteredData}
-                            margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
+                            margin={{
+                                left: 20,
+                                right: 20,
+                                top: 20,
+                                bottom: 20,
+                            }}
                         >
-                            <CartesianGrid vertical={false} horizontal={false} />
+                            <CartesianGrid
+                                vertical={false}
+                                horizontal={false}
+                            />
                             <XAxis
                                 dataKey="month"
                                 tickLine={false}
@@ -124,7 +147,7 @@ export function RevenueChart({ transactions, lid }: { transactions: Transaction[
                             />
 
                             <ChartTooltip
-                                cursor={{ stroke: "#ccc", strokeDasharray: 6 }}
+                                cursor={{ stroke: '#ccc', strokeDasharray: 6 }}
                                 content={<ChartTooltipContent hideLabel />}
                             />
                             <Line
@@ -136,11 +159,8 @@ export function RevenueChart({ transactions, lid }: { transactions: Transaction[
                             />
                         </LineChart>
                     </ChartContainer>
-
-
                 )}
-
             </CardContent>
-        </Card >
+        </Card>
     )
 }

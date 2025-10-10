@@ -1,27 +1,27 @@
 'use client'
 import { useMemo, useEffect, useState } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis } from 'recharts'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import {
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+} from '@/components/ui/chart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import { Transaction } from '@/types/transaction'
 import { MONTHS } from '@/libs/data'
 import { Loader2 } from 'lucide-react'
 
-
-
 const chartConfig = {
     desktop: {
-        label: "LTV",
-        color: "#8b5cf6",
+        label: 'LTV',
+        color: '#8b5cf6',
     },
 }
 
-
 type Data = {
-    month: string,
+    month: string
     amount: number
 }
-
 
 const DummyData = [
     { month: 'January', amount: 100 },
@@ -35,56 +35,60 @@ const DummyData = [
     { month: 'September', amount: 500 },
     { month: 'October', amount: 550 },
     { month: 'November', amount: 600 },
-    { month: 'December', amount: 650 }
+    { month: 'December', amount: 650 },
 ]
 
-
-export function CustomerLTVChart({ transactions, lid }: { transactions: Transaction[], lid?: string }) {
-
+export function CustomerLTVChart({
+    transactions,
+    lid,
+}: {
+    transactions: Transaction[]
+    lid?: string
+}) {
     const [loading, setLoading] = useState(true)
     const data = useMemo<Data[]>(() => {
-        if (lid === 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s') {
+        if (lid === 'acc_BpT7jEb3Q16nOPL3vo7qlw') {
             return DummyData
         }
 
         if (transactions && transactions.length > 0) {
             // Group transactions by member and month
-            const memberMonthlyTotals = new Map<string, Map<string, number>>();
+            const memberMonthlyTotals = new Map<string, Map<string, number>>()
 
             // Process each transaction
             transactions.forEach((tx) => {
-                if (!tx.memberId || !tx.created || tx.refunded) return;
+                if (!tx.memberId || !tx.created || tx.refunded) return
 
                 // Get or create member map
                 if (!memberMonthlyTotals.has(tx.memberId)) {
-                    memberMonthlyTotals.set(tx.memberId, new Map());
+                    memberMonthlyTotals.set(tx.memberId, new Map())
                 }
 
-                const memberMap = memberMonthlyTotals.get(tx.memberId)!;
-                const month = MONTHS[new Date(tx.created).getMonth()];
-                const currentAmount = memberMap.get(month) || 0;
-                memberMap.set(month, currentAmount + tx.amount / 100);
-            });
+                const memberMap = memberMonthlyTotals.get(tx.memberId)!
+                const month = MONTHS[new Date(tx.created).getMonth()]
+                const currentAmount = memberMap.get(month) || 0
+                memberMap.set(month, currentAmount + tx.amount / 100)
+            })
 
             // Calculate median LTV for each month
             const mappedData = MONTHS.map((month) => {
                 // Get all non-zero values for this month
                 const values = Array.from(memberMonthlyTotals.values())
                     .map((memberMap) => memberMap.get(month) || 0)
-                    .filter((amount) => amount > 0);
+                    .filter((amount) => amount > 0)
 
-                let median = 0;
+                let median = 0
                 if (values.length > 0) {
-                    values.sort((a, b) => a - b);
-                    const mid = Math.floor(values.length / 2);
+                    values.sort((a, b) => a - b)
+                    const mid = Math.floor(values.length / 2)
                     median =
                         values.length % 2 === 0
                             ? (values[mid - 1] + values[mid]) / 2
-                            : values[mid];
+                            : values[mid]
                 }
 
-                return { month, amount: median };
-            });
+                return { month, amount: median }
+            })
             return mappedData
         }
         return MONTHS.map((month) => ({
@@ -93,41 +97,49 @@ export function CustomerLTVChart({ transactions, lid }: { transactions: Transact
         }))
     }, [transactions, lid])
 
-
     useEffect(() => {
         if (transactions) {
             setLoading(false)
         }
-
-    }, [transactions]);
-
+    }, [transactions])
 
     const maxAmount = useMemo(() => {
-        if (!data) return 0;
+        if (!data) return 0
         return Math.max(...data.map((item: Data) => item.amount))
-    }, [data]);
+    }, [data])
 
     return (
-        <Card className='bg-foreground/5 rounded-lg border-foreground/10 p-0'>
-            <CardHeader className='flex flex-row justify-between items-center' >
-                <CardTitle className='text-lg font-semibold'>
+        <Card className="bg-foreground/5 rounded-lg border-foreground/10 p-0">
+            <CardHeader className="flex flex-row justify-between items-center">
+                <CardTitle className="text-lg font-semibold">
                     Customer LTV
                 </CardTitle>
-
-            </CardHeader >
-            <CardContent className='space-y-2 relative'>
+            </CardHeader>
+            <CardContent className="space-y-2 relative">
                 {loading ? (
-                    <div className='flex flex-row items-center justify-center h-[300px] gap-2'>
-                        <Loader2 className='animate-spin' size={16} /> Loading data...
+                    <div className="flex flex-row items-center justify-center h-[300px] gap-2">
+                        <Loader2 className="animate-spin" size={16} /> Loading
+                        data...
                     </div>
                 ) : (
-                    <ChartContainer config={chartConfig} className='w-full h-[300px]'>
+                    <ChartContainer
+                        config={chartConfig}
+                        className="w-full h-[300px]"
+                    >
                         <LineChart
                             accessibilityLayer
                             data={data}
-                            margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
+                            margin={{
+                                left: 20,
+                                right: 20,
+                                top: 20,
+                                bottom: 20,
+                            }}
                         >
-                            <CartesianGrid vertical={false} horizontal={false} />
+                            <CartesianGrid
+                                vertical={false}
+                                horizontal={false}
+                            />
                             <XAxis
                                 dataKey="month"
                                 tickLine={false}
@@ -137,21 +149,24 @@ export function CustomerLTVChart({ transactions, lid }: { transactions: Transact
                                 interval={0}
                             />
 
-                            <ChartTooltip cursor={{ stroke: "#29BDAD", strokeDasharray: 5 }} content={<ChartTooltipContent hideLabel />} />
+                            <ChartTooltip
+                                cursor={{
+                                    stroke: '#29BDAD',
+                                    strokeDasharray: 5,
+                                }}
+                                content={<ChartTooltipContent hideLabel />}
+                            />
                             <Line
                                 dataKey="amount"
                                 type="monotone"
                                 stroke="var(--color-desktop)"
                                 strokeWidth={2}
                                 dot={true}
-
                             />
                         </LineChart>
                     </ChartContainer>
                 )}
-
-
             </CardContent>
-        </Card >
+        </Card>
     )
 }
