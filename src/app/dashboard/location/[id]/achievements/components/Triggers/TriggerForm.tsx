@@ -54,7 +54,6 @@ export function TriggerForm({ lid, form, triggers }: TriggerFormProps) {
             <form>
                 <SheetSection className='border-b-0'>
                     <div className='space-y-1'>
-
                         <p className='bg-foreground/5 p-4 rounded-sm text-sm text-muted-foreground'>
                             Triggers are used to progress the achievement. For example, the number of referrals reached 5 or 10, etc..
                         </p>
@@ -85,7 +84,7 @@ export function TriggerForm({ lid, form, triggers }: TriggerFormProps) {
                             )}
                         />
                     </fieldset>
-                    {triggerId === '1' && (
+                    {triggerId !== '4' && (
                         <fieldset className='grid grid-cols-4 gap-2'>
                             <FormField
                                 control={form.control}
@@ -94,7 +93,7 @@ export function TriggerForm({ lid, form, triggers }: TriggerFormProps) {
                                     <FormItem className='col-span-1'>
                                         <FormLabel size={'tiny'}>Time Period</FormLabel>
                                         <FormControl>
-                                            <Input type='number' placeholder="Time Period" {...field} />
+                                            <Input type='number' placeholder="Time Period" {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

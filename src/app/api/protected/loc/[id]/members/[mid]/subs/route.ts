@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { MemberSubscription } from "@/types";
 import { addDays, addMonths } from "date-fns";
 import Stripe from "stripe";
+import { evaluateTriggers } from "@/libs/achievements";
 
 
 export async function GET(req: Request, props: { params: Promise<{ id: string, mid: string }> }) {
@@ -120,6 +121,19 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
             }
             return sub
         })
+        if (data.paymentMethod !== "card") {
+            try {
+                await evaluateTriggers({
+                    memberId: params.mid,
+                    locationId: params.id,
+                    triggerType: 'plan_signup',
+                    data: { memberPlanId: sub.memberPlanId }
+                });
+            } catch (error) {
+                console.error('Error evaluating plan signup triggers:', error);
+                // Don't fail the request if trigger evaluation fails
+            }
+        }
         if (hasIncompletePlan) {
             await db.update(memberLocations).set({
                 status: "active",

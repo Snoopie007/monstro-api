@@ -11,6 +11,7 @@ import { eq, sql } from "drizzle-orm";
 import { waitUntil } from "@vercel/functions";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { tryCatch } from "@/libs/utils";
+import { evaluateTriggers } from "@/libs/achievements";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
@@ -249,21 +250,34 @@ async function handleSubscriptionInvoicePayment(
 				})
 				.returning({ invoiceId: memberInvoices.id });
 
-			await createInvoiceTransaction(
-				tx,
-				{
-					...commonFields,
-					subscriptionId: subscription.id,
-					invoiceId,
-					amount: invoice.amount_paid,
-					description: subscription.plan?.name,
-				},
-				invoice
-			);
-		});
-	} catch (error) {
-		console.error("Error handling subscription invoice payment:", error);
-	}
+      await createInvoiceTransaction(
+        tx,
+        {
+          ...commonFields,
+          subscriptionId: subscription.id,
+          invoiceId,
+          amount: invoice.amount_paid,
+          description: subscription.plan?.name,
+        },
+        invoice
+      );
+    });
+
+    // Evaluate plan signup triggers after successful payment
+    try {
+      await evaluateTriggers({
+        memberId: subscription.memberId,
+        locationId: subscription.locationId,
+        triggerType: 'plan_signup',
+        data: { memberPlanId: subscription.memberPlanId }
+      });
+    } catch (error) {
+      console.error('Error evaluating plan signup triggers:', error);
+      // Don't fail the webhook if trigger evaluation fails
+    }
+  } catch (error) {
+    console.error("Error handling subscription invoice payment:", error);
+  }
 }
 
 async function handleRecurringInvoicePayment(invoice: ExtendedStripeInvoice) {
