@@ -16,6 +16,7 @@ import {
 import { MonstroData } from "@/libs/data";
 import { EmailSender } from "@/libs/server/emails";
 import { MemberRelationship } from "@/types/DatabaseEnums";
+import { evaluateTriggers } from "@/libs/achievements";
 
 type Props = {
   mid: string;
@@ -298,6 +299,18 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
         currentPeriodEnd: memberSubscription.currentPeriodEnd,
       });
       emailUrl = `invite/${params.id}/sub/${memberSubscription.id}`;
+
+      try {
+        await evaluateTriggers({
+            memberId: member.id,
+            locationId: params.id,
+            triggerType: 'plan_signup',
+            data: { memberPlanId: familyPlanId }
+        });
+      } catch (error) {
+          console.error('Error evaluating plan signup triggers:', error);
+          // Don't fail the request if trigger evaluation fails
+      }
     }
 
     await db.transaction(async (tx) => {
