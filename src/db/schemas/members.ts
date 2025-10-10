@@ -63,9 +63,7 @@ export const memberAchievements = pgTable(
 			.notNull()
 			.references(() => achievements.id, { onDelete: "cascade" }),
 		progress: integer("progress").default(0),
-		dateAchieved: timestamp("date_achieved", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		dateAchieved: timestamp("date_achieved", { withTimezone: true }),
 		created: timestamp("created_at", { withTimezone: true })
 			.notNull()
 			.defaultNow(),

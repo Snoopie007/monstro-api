@@ -1,9 +1,10 @@
 import { db } from "@/db/db";
-import { attendances, memberPackages } from "@/db/schemas";
+import { attendances, memberPackages, reservations, recurringReservations } from "@/db/schemas";
 import type { Reservation } from "@/types/attendance";
 import { isSameHour } from "date-fns";
 import Elysia from "elysia";
 import { eq } from "drizzle-orm";
+import { evaluateTriggers } from "@/libs/achievements/AchievementTriggerService";
 
 
 type CheckinBody = {
@@ -89,7 +90,7 @@ export async function locationCheckin(app: Elysia) {
                 checkInTime: new Date(),
                 startTime: startOn,
                 endTime: endOn,
-            });
+            }).returning();
 
             // If this is a package reservation, increment the total class attended
             if (reservation.memberPackage) {
@@ -100,6 +101,39 @@ export async function locationCheckin(app: Elysia) {
                             (reservation.memberPackage.totalClassAttended || 0) + 1,
                     })
                     .where(eq(memberPackages.id, reservation.memberPackage.id));
+            }
+
+            // Get member and location info for trigger evaluation
+            let memberInfo;
+            if (reservation.isRecurring && reservation.recurringId) {
+                memberInfo = await db.query.recurringReservations.findFirst({
+                    where: eq(recurringReservations.id, reservation.recurringId),
+                    with: {
+                        member: true
+                    }
+                });
+            } else {
+                memberInfo = await db.query.reservations.findFirst({
+                    where: eq(reservations.id, reservation.id),
+                    with: {
+                        member: true
+                    }
+                });
+            }
+
+            // Evaluate attendance triggers after successful check-in
+            if (memberInfo?.member) {
+                try {
+                    await evaluateTriggers({
+                        memberId: memberInfo.member.id,
+                        locationId: memberInfo.locationId,
+                        triggerType: 'attendances_count',
+                        data: { attendanceId: checkin[0]?.id }
+                    });
+                } catch (error) {
+                    console.error('Error evaluating attendance triggers:', error);
+                    // Don't fail the request if trigger evaluation fails
+                }
             }
 
             return status(200, checkin);
