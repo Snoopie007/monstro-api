@@ -23,10 +23,12 @@ import Loading from "@/components/loading";
 import { flexRender, getCoreRowModel, useReactTable } from "@/libs/table-utils";
 import { ProgramColumns } from "./components/ProgramColumns";
 import { Input } from "@/components/forms/input";
+import { usePermission } from "@/hooks/usePermissions";
 
 export default function Programs(props: { params: Promise<{ id: string }> }) {
 	const params = use(props.params);
 	const { data, isLoading, error } = usePrograms(params.id);
+	const canAddProgram = usePermission("add program", params.id);
 	const [searchQuery, setSearchQuery] = useState<string>("");
 
 	const columns = ProgramColumns(params.id);
@@ -54,7 +56,7 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
 						onChange={(e) => setSearchQuery(e.target.value)}
 						variant="search"
 					/>
-					<AddProgram lid={params.id} />
+					{canAddProgram && <AddProgram lid={params.id} />}
 				</TablePageHeaderSection>
 			</TablePageHeader>
 			<TablePageContent>

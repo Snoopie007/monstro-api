@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { CalendarEvent, Reservation } from "@/types";
+import { CalendarEvent, RecurringReservation, Reservation } from "@/types";
 import { endOfMonth, startOfMonth, addDays, addMinutes } from "date-fns";
 import { toDate,  } from 'date-fns-tz'
 import { NextResponse, NextRequest } from "next/server";
@@ -46,6 +46,7 @@ export async function GET(
             planPrograms: true,
           },
         },
+        staff: true
       },
     });
 
@@ -81,11 +82,12 @@ export async function GET(
         session: {
           with: {
             program: true,
+            staff: true,
           },
         },
         exceptions: true,
       },
-    });
+    }) as RecurringReservation[];
 
     // Generate available session slots
     locationSessions.forEach((session) => {
@@ -134,6 +136,11 @@ export async function GET(
               programId: session.program.id,
               members: [],
               isRecurring: false,
+            },
+            staff: {
+              id: session.staffId || "",
+              name: session.staff?.firstName + " " + session.staff?.lastName,
+              avatar: session.staff?.avatar,
             },
           });
         }
@@ -271,6 +278,11 @@ function addEventToCalendar(
         recurringId,
         members: [member],
         isRecurring: !!recurringId,
+      },
+      staff: {
+        id: reservation.session.staffId || "",
+        name: reservation.session.staff?.firstName + " " + reservation.session.staff?.lastName,
+        avatar: reservation.session.staff?.avatar,
       },
     });
   }

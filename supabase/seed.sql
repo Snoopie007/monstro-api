@@ -1,708 +1,459 @@
--- =========================================
--- MONSTRO APP TEST DATA SEED
--- =========================================
--- This file contains comprehensive test data for local development
--- Run after starting Supabase locally: supabase db reset
+-- Create the demo location
+INSERT INTO locations (id, name, address, about, city, state, country, postal_code, website, email, phone, timezone, vendor_id, slug, industry, legal_name, created_at, updated_at)
+VALUES ('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Demo', ' 76 River St', 'This is a demo location for testing purposes', 'Pittsburgh', 'PA', 'United States', '15212', 'https://demo.example.com', 'demo@example.com', '+1-555-0123', 'America/New_York', 'vdr_tJE2cshbSh20XuuZqWl7A', 'demo', 'Fitness & Recreation', 'Demo Location LLC', now(), now()) ON CONFLICT (id) DO NOTHING;
+
+-- Create the location state
+INSERT INTO location_state (location_id, status, agree_to_terms, last_renewal_date, start_date, settings, usage_percent, tax_rate, created_at, updated_at)
+VALUES ('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'active', true, now(), now(), '{"theme": "default", "features": ["membership", "classes", "events"]}'::jsonb, 25, 8, now(), now()) ON CONFLICT (location_id) DO NOTHING;
 
 -- =========================================
 -- USERS (Base authentication users)
 -- =========================================
 INSERT INTO users (id, name, email, email_verified_at, image, password, created_at, updated_at) VALUES
-('usr_test_admin', 'Admin User', 'admin@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_vendor', 'Vendor Owner', 'vendor@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=vendor', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_staff', 'Staff Member', 'staff@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=staff', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member1', 'John Doe', 'john@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=john', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member2', 'Jane Smith', 'jane@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=jane', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member3', 'Bob Johnson', 'bob@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=bob', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member4', 'Alice Williams', 'alice@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=alice', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member5', 'Charlie Brown', 'charlie@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=charlie', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member6', 'Diana Prince', 'diana@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=diana', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member7', 'Edward Norton', 'edward@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=edward', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member8', 'Fiona Gallagher', 'fiona@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=fiona', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member9', 'George Lucas', 'george@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=george', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member10', 'Helen Troy', 'helen@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=helen', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member11', 'Ian Malcolm', 'ian@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=ian', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member12', 'Jessica Jones', 'jessica@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=jessica', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member13', 'Kevin Hart', 'kevin@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=kevin', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member14', 'Laura Croft', 'laura@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=laura', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member15', 'Michael Scott', 'michael@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=michael', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member16', 'Nancy Drew', 'nancy@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=nancy', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member17', 'Oliver Queen', 'oliver@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=oliver', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member18', 'Pam Beesly', 'pam@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=pam', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member19', 'Quincy Jones', 'quincy@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=quincy', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member20', 'Rachel Green', 'rachel@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=rachel', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member21', 'Steve Rogers', 'steve@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=steve', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member22', 'Tina Fey', 'tina@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=tina', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member23', 'Uma Thurman', 'uma@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=uma', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member24', 'Victor Stone', 'victor@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=victor', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member25', 'Wanda Maximoff', 'wanda@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=wanda', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member26', 'Xavier Charles', 'xavier@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=xavier', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member27', 'Yoda Master', 'yoda@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=yoda', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
-('usr_test_member28', 'Zoe Saldana', 'zoe@test.com', NOW(), 'https://api.dicebear.com/7.x/avataaars/svg?seed=zoe', '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW());
+('usr_BpT7jEb3Q16nOPL3vo7qlw', 'John Doe', 'john@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Cx8mKfD4R27oPQ4wp8rmmx', 'Jane Smith', 'jane@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Dy9nLgE5S38pQR5xq9snny', 'Bob Johnson', 'bob@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Ez0oMhF6T49qRS6yr0tooz', 'Alice Williams', 'alice@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Fa1pNiG7U50rST7zs1uppa', 'Charlie Brown', 'charlie@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Gb2qOjH8V61sTU8at2vqqb', 'Diana Prince', 'diana@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Hc3rPkI9W72tUV9bu3wrrc', 'Edward Norton', 'edward@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Id4sQlJ0X83uVW0cv4xssd', 'Fiona Gallagher', 'fiona@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Je5tRmK1Y94vWX1dw5ytte', 'George Lucas', 'george@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Kf6uSnL2Z05wXY2ex6zuuf', 'Helen Troy', 'helen@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Lg7vToM3A16xYZ3fy7avvg', 'Ian Malcolm', 'ian@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Mh8wUpN4B27yZA4gz8bwwh', 'Jessica Jones', 'jessica@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Ni9xVqO5C38zAB5ha9cxxi', 'Kevin Hart', 'kevin@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Oj0yWrP6D49ABC6ib0dyyj', 'Laura Croft', 'laura@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Pk1zXsQ7E50BCD7jc1ezzk', 'Michael Scott', 'michael@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Ql2AyTrF8G61CDE8kd2faal', 'Nancy Drew', 'nancy@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Rm3BzUsG9H72DEF9le3gbbm', 'Oliver Queen', 'oliver@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Sn4CaVtH0I83EFG0mf4hccn', 'Pam Beesly', 'pam@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_To5DbWuI1J94FGH1ng5iddo', 'Quincy Jones', 'quincy@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Up6EcXvJ2K05GHI2oh6jeeo', 'Rachel Green', 'rachel@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Vq7FdYwK3L16HIJ3pi7kffp', 'Steve Rogers', 'steve@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Wr8GeZxL4M27IJK4qj8lggq', 'Tina Fey', 'tina@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Xs9HfAyM5N38JKL5rk9mhhr', 'Uma Thurman', 'uma@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Yt0IgBzN6O49KLM6sl0niis', 'Victor Stone', 'victor@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Zu1JhCaO7P50LMN7tm1ojjt', 'Wanda Maximoff', 'wanda@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Av2KiDbP8Q61MNO8un2pkkv', 'Xavier Charles', 'xavier@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Bw3LjEcQ9R72NOP9vo3qllw', 'Yoda Master', 'yoda@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Cx4MkFdR0S83OPQ0wp4rmmx', 'Zoe Saldana', 'zoe@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW());
 
 -- =========================================
--- VENDORS (Business owners)
+-- MEMBERS (Associated with users)
 -- =========================================
-INSERT INTO vendors (id, first_name, last_name, user_id, stripe_customer_id, email, avatar, phone, created_at, updated_at) VALUES
-('vdr_test_admin', 'Admin', 'User', 'usr_test_admin', 'cus_test_admin', 'admin@test.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', '+19999999999', NOW(), NOW()),
-('vdr_test_gym', 'Mike', 'Thompson', 'usr_test_vendor', 'cus_test_gym', 'gym@test.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=mike', '+19999999999', NOW(), NOW()),
-('vdr_test_dance', 'Sarah', 'Davis', 'usr_test_vendor', 'cus_test_dance', 'dance@test.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah', '+19999999999', NOW(), NOW());
+INSERT INTO members (id, user_id, email, phone, first_name, last_name, gender, first_time, dob, avatar, created_at, updated_at) VALUES
+('mbr_BpT7jEb3Q16nOPL3vo7qlw', 'usr_BpT7jEb3Q16nOPL3vo7qlw', 'john@test.com', '+1-555-0001', 'John', 'Doe', 'male', false, '1990-01-15'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=john', NOW(), NOW()),
+('mbr_Cx8mKfD4R27oPQ4wp8rmmx', 'usr_Cx8mKfD4R27oPQ4wp8rmmx', 'jane@test.com', '+1-555-0002', 'Jane', 'Smith', 'female', false, '1988-03-22'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=jane', NOW(), NOW()),
+('mbr_Dy9nLgE5S38pQR5xq9snny', 'usr_Dy9nLgE5S38pQR5xq9snny', 'bob@test.com', '+1-555-0003', 'Bob', 'Johnson', 'male', true, '1992-07-10'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=bob', NOW(), NOW()),
+('mbr_Ez0oMhF6T49qRS6yr0tooz', 'usr_Ez0oMhF6T49qRS6yr0tooz', 'alice@test.com', '+1-555-0004', 'Alice', 'Williams', 'female', false, '1985-11-05'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=alice', NOW(), NOW()),
+('mbr_Fa1pNiG7U50rST7zs1uppa', 'usr_Fa1pNiG7U50rST7zs1uppa', 'charlie@test.com', '+1-555-0005', 'Charlie', 'Brown', 'male', true, '1995-09-18'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=charlie', NOW(), NOW()),
+('mbr_Gb2qOjH8V61sTU8at2vqqb', 'usr_Gb2qOjH8V61sTU8at2vqqb', 'diana@test.com', '+1-555-0006', 'Diana', 'Prince', 'female', false, '1987-12-03'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=diana', NOW(), NOW()),
+('mbr_Hc3rPkI9W72tUV9bu3wrrc', 'usr_Hc3rPkI9W72tUV9bu3wrrc', 'edward@test.com', '+1-555-0007', 'Edward', 'Norton', 'male', true, '1991-04-25'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=edward', NOW(), NOW()),
+('mbr_Id4sQlJ0X83uVW0cv4xssd', 'usr_Id4sQlJ0X83uVW0cv4xssd', 'fiona@test.com', '+1-555-0008', 'Fiona', 'Gallagher', 'female', false, '1989-08-14'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=fiona', NOW(), NOW()),
+('mbr_Je5tRmK1Y94vWX1dw5ytte', 'usr_Je5tRmK1Y94vWX1dw5ytte', 'george@test.com', '+1-555-0009', 'George', 'Lucas', 'male', true, '1993-06-30'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=george', NOW(), NOW()),
+('mbr_Kf6uSnL2Z05wXY2ex6zuuf', 'usr_Kf6uSnL2Z05wXY2ex6zuuf', 'helen@test.com', '+1-555-0010', 'Helen', 'Troy', 'female', false, '1986-02-12'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=helen', NOW(), NOW()),
+('mbr_Lg7vToM3A16xYZ3fy7avvg', 'usr_Lg7vToM3A16xYZ3fy7avvg', 'ian@test.com', '+1-555-0011', 'Ian', 'Malcolm', 'male', true, '1994-10-08'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=ian', NOW(), NOW()),
+('mbr_Mh8wUpN4B27yZA4gz8bwwh', 'usr_Mh8wUpN4B27yZA4gz8bwwh', 'jessica@test.com', '+1-555-0012', 'Jessica', 'Jones', 'female', false, '1984-05-17'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=jessica', NOW(), NOW()),
+('mbr_Ni9xVqO5C38zAB5ha9cxxi', 'usr_Ni9xVqO5C38zAB5ha9cxxi', 'kevin@test.com', '+1-555-0013', 'Kevin', 'Hart', 'male', true, '1996-01-28'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=kevin', NOW(), NOW()),
+('mbr_Oj0yWrP6D49ABC6ib0dyyj', 'usr_Oj0yWrP6D49ABC6ib0dyyj', 'laura@test.com', '+1-555-0014', 'Laura', 'Croft', 'female', false, '1983-09-11'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=laura', NOW(), NOW()),
+('mbr_Pk1zXsQ7E50BCD7jc1ezzk', 'usr_Pk1zXsQ7E50BCD7jc1ezzk', 'michael@test.com', '+1-555-0015', 'Michael', 'Scott', 'male', true, '1997-03-04'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=michael', NOW(), NOW()),
+('mbr_Ql2AyTrF8G61CDE8kd2faal', 'usr_Ql2AyTrF8G61CDE8kd2faal', 'nancy@test.com', '+1-555-0016', 'Nancy', 'Drew', 'female', false, '1982-07-26'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=nancy', NOW(), NOW()),
+('mbr_Rm3BzUsG9H72DEF9le3gbbm', 'usr_Rm3BzUsG9H72DEF9le3gbbm', 'oliver@test.com', '+1-555-0017', 'Oliver', 'Queen', 'male', true, '1998-11-19'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=oliver', NOW(), NOW()),
+('mbr_Sn4CaVtH0I83EFG0mf4hccn', 'usr_Sn4CaVtH0I83EFG0mf4hccn', 'pam@test.com', '+1-555-0018', 'Pam', 'Beesly', 'female', false, '1981-04-13'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=pam', NOW(), NOW()),
+('mbr_To5DbWuI1J94FGH1ng5iddo', 'usr_To5DbWuI1J94FGH1ng5iddo', 'quincy@test.com', '+1-555-0019', 'Quincy', 'Jones', 'male', true, '1999-08-07'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=quincy', NOW(), NOW()),
+('mbr_Up6EcXvJ2K05GHI2oh6jeeo', 'usr_Up6EcXvJ2K05GHI2oh6jeeo', 'rachel@test.com', '+1-555-0020', 'Rachel', 'Green', 'female', false, '1980-12-21'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=rachel', NOW(), NOW()),
+('mbr_Vq7FdYwK3L16HIJ3pi7kffp', 'usr_Vq7FdYwK3L16HIJ3pi7kffp', 'steve@test.com', '+1-555-0021', 'Steve', 'Rogers', 'male', true, '2000-02-14'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=steve', NOW(), NOW()),
+('mbr_Wr8GeZxL4M27IJK4qj8lggq', 'usr_Wr8GeZxL4M27IJK4qj8lggq', 'tina@test.com', '+1-555-0022', 'Tina', 'Fey', 'female', false, '1979-06-09'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=tina', NOW(), NOW()),
+('mbr_Xs9HfAyM5N38JKL5rk9mhhr', 'usr_Xs9HfAyM5N38JKL5rk9mhhr', 'uma@test.com', '+1-555-0023', 'Uma', 'Thurman', 'female', false, '1978-10-02'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=uma', NOW(), NOW()),
+('mbr_Yt0IgBzN6O49KLM6sl0niis', 'usr_Yt0IgBzN6O49KLM6sl0niis', 'victor@test.com', '+1-555-0024', 'Victor', 'Stone', 'male', true, '2001-01-16'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=victor', NOW(), NOW()),
+('mbr_Zu1JhCaO7P50LMN7tm1ojjt', 'usr_Zu1JhCaO7P50LMN7tm1ojjt', 'wanda@test.com', '+1-555-0025', 'Wanda', 'Maximoff', 'female', false, '1977-03-28'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=wanda', NOW(), NOW()),
+('mbr_Av2KiDbP8Q61MNO8un2pkkv', 'usr_Av2KiDbP8Q61MNO8un2pkkv', 'xavier@test.com', '+1-555-0026', 'Xavier', 'Charles', 'male', true, '2002-05-11'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=xavier', NOW(), NOW()),
+('mbr_Bw3LjEcQ9R72NOP9vo3qllw', 'usr_Bw3LjEcQ9R72NOP9vo3qllw', 'yoda@test.com', '+1-555-0027', 'Yoda', 'Master', 'male', true, '2003-09-24'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=yoda', NOW(), NOW()),
+('mbr_Cx4MkFdR0S83OPQ0wp4rmmx', 'usr_Cx4MkFdR0S83OPQ0wp4rmmx', 'zoe@test.com', '+1-555-0028', 'Zoe', 'Saldana', 'female', false, '1976-07-17'::timestamp with time zone, 'https://api.dicebear.com/7.x/avataaars/png?seed=zoe', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- LOCATIONS (Business locations)
+-- MEMBER LOCATIONS (Associate members with Demo location)
 -- =========================================
-INSERT INTO locations (id, name, address, about, city, state, logo_url, country, postal_code, website, email, phone, timezone, vendor_id, slug, metadata, industry, legal_name, created_at, updated_at) VALUES
-('acc_test_admin', 'Admin Headquarters', '1 Admin Way', 'Central administration and management hub', 'San Francisco', 'CA', 'https://api.dicebear.com/7.x/initials/svg?seed=AH', 'USA', '94105', 'https://admin.monstro.com', 'admin@monstro.com', '+19999999999', 'America/Los_Angeles', 'vdr_test_admin', 'admin-headquarters', '{"features": ["management", "administration", "support"]}', 'Management', 'Monstro Admin LLC', NOW(), NOW()),
-('acc_test_gym', 'FitZone Gym', '123 Main St', 'Premier fitness center with state-of-the-art equipment', 'New York', 'NY', 'https://api.dicebear.com/7.x/initials/svg?seed=FZ', 'USA', '10001', 'https://fitzone.com', 'info@fitzone.com', '+19999999999', 'America/New_York', 'vdr_test_admin', 'fitzone-gym', '{"features": ["pool", "sauna", "personal_training"]}', 'Fitness', 'FitZone LLC', NOW(), NOW()),
-('acc_test_dance', 'Dance Academy', '456 Broadway', 'Professional dance instruction for all ages', 'Los Angeles', 'CA', 'https://api.dicebear.com/7.x/initials/svg?seed=DA', 'USA', '90210', 'https://danceacademy.com', 'info@danceacademy.com', '+19999999999', 'America/Los_Angeles', 'vdr_test_admin', 'dance-academy', '{"features": ["ballet", "hip_hop", "jazz"]}', 'Dance', 'Dance Academy Inc', NOW(), NOW());
+INSERT INTO member_locations (location_id, member_id, points, status, invite_date, invite_accepted_date, onboarded, created_at, updated_at) VALUES
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 2847, 'active', NOW() - INTERVAL '30 days', NOW() - INTERVAL '25 days', true, NOW() - INTERVAL '287 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Cx8mKfD4R27oPQ4wp8rmmx', 3921, 'active', NOW() - INTERVAL '45 days', NOW() - INTERVAL '40 days', true, NOW() - INTERVAL '156 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Dy9nLgE5S38pQR5xq9snny', 1456, 'active', NOW() - INTERVAL '15 days', NOW() - INTERVAL '10 days', true, NOW() - INTERVAL '73 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ez0oMhF6T49qRS6yr0tooz', 4732, 'active', NOW() - INTERVAL '60 days', NOW() - INTERVAL '55 days', true, NOW() - INTERVAL '342 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Fa1pNiG7U50rST7zs1uppa', 892, 'active', NOW() - INTERVAL '10 days', NOW() - INTERVAL '5 days', true, NOW() - INTERVAL '28 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Gb2qOjH8V61sTU8at2vqqb', 3184, 'active', NOW() - INTERVAL '35 days', NOW() - INTERVAL '30 days', true, NOW() - INTERVAL '198 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Hc3rPkI9W72tUV9bu3wrrc', 1673, 'active', NOW() - INTERVAL '20 days', NOW() - INTERVAL '15 days', true, NOW() - INTERVAL '124 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Id4sQlJ0X83uVW0cv4xssd', 4298, 'active', NOW() - INTERVAL '50 days', NOW() - INTERVAL '45 days', true, NOW() - INTERVAL '267 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Je5tRmK1Y94vWX1dw5ytte', 2156, 'active', NOW() - INTERVAL '25 days', NOW() - INTERVAL '20 days', true, NOW() - INTERVAL '91 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Kf6uSnL2Z05wXY2ex6zuuf', 4865, 'active', NOW() - INTERVAL '70 days', NOW() - INTERVAL '65 days', true, NOW() - INTERVAL '315 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Lg7vToM3A16xYZ3fy7avvg', 1329, 'active', NOW() - INTERVAL '18 days', NOW() - INTERVAL '13 days', true, NOW() - INTERVAL '45 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Mh8wUpN4B27yZA4gz8bwwh', 3567, 'active', NOW() - INTERVAL '40 days', NOW() - INTERVAL '35 days', true, NOW() - INTERVAL '234 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ni9xVqO5C38zAB5ha9cxxi', 1048, 'active', NOW() - INTERVAL '12 days', NOW() - INTERVAL '7 days', true, NOW() - INTERVAL '67 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Oj0yWrP6D49ABC6ib0dyyj', 4521, 'active', NOW() - INTERVAL '65 days', NOW() - INTERVAL '60 days', true, NOW() - INTERVAL '298 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Pk1zXsQ7E50BCD7jc1ezzk', 1794, 'active', NOW() - INTERVAL '22 days', NOW() - INTERVAL '17 days', true, NOW() - INTERVAL '112 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ql2AyTrF8G61CDE8kd2faal', 3845, 'active', NOW() - INTERVAL '55 days', NOW() - INTERVAL '50 days', true, NOW() - INTERVAL '189 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Rm3BzUsG9H72DEF9le3gbbm', 1267, 'active', NOW() - INTERVAL '16 days', NOW() - INTERVAL '11 days', true, NOW() - INTERVAL '82 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Sn4CaVtH0I83EFG0mf4hccn', 4193, 'active', NOW() - INTERVAL '68 days', NOW() - INTERVAL '63 days', true, NOW() - INTERVAL '329 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_To5DbWuI1J94FGH1ng5iddo', 2034, 'active', NOW() - INTERVAL '24 days', NOW() - INTERVAL '19 days', true, NOW() - INTERVAL '145 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Up6EcXvJ2K05GHI2oh6jeeo', 3276, 'active', NOW() - INTERVAL '38 days', NOW() - INTERVAL '33 days', true, NOW() - INTERVAL '223 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Vq7FdYwK3L16HIJ3pi7kffp', 1582, 'active', NOW() - INTERVAL '19 days', NOW() - INTERVAL '14 days', true, NOW() - INTERVAL '56 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Wr8GeZxL4M27IJK4qj8lggq', 3698, 'active', NOW() - INTERVAL '48 days', NOW() - INTERVAL '43 days', true, NOW() - INTERVAL '276 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Xs9HfAyM5N38JKL5rk9mhhr', 2759, 'active', NOW() - INTERVAL '32 days', NOW() - INTERVAL '27 days', true, NOW() - INTERVAL '167 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Yt0IgBzN6O49KLM6sl0niis', 1635, 'active', NOW() - INTERVAL '21 days', NOW() - INTERVAL '16 days', true, NOW() - INTERVAL '103 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Zu1JhCaO7P50LMN7tm1ojjt', 3912, 'active', NOW() - INTERVAL '52 days', NOW() - INTERVAL '47 days', true, NOW() - INTERVAL '245 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Av2KiDbP8Q61MNO8un2pkkv', 1143, 'active', NOW() - INTERVAL '14 days', NOW() - INTERVAL '9 days', true, NOW() - INTERVAL '34 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Bw3LjEcQ9R72NOP9vo3qllw', 967, 'active', NOW() - INTERVAL '11 days', NOW() - INTERVAL '6 days', true, NOW() - INTERVAL '19 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Cx4MkFdR0S83OPQ0wp4rmmx', 3456, 'active', NOW() - INTERVAL '42 days', NOW() - INTERVAL '37 days', true, NOW() - INTERVAL '212 days', NOW())
+ON CONFLICT (location_id, member_id) DO NOTHING;
+  
 
 -- =========================================
--- LOCATION STATE (Subscription/payment status)
+-- USERS (Staff users)
 -- =========================================
-INSERT INTO location_state (location_id, plan_id, pkg_id, payment_plan_id, status, agree_to_terms, last_renewal_date, start_date, stripe_subscription_id, settings, created_at, updated_at, usage_percent, tax_rate) VALUES
-('acc_test_admin', 0, 0, 0, 'active', true, NOW(), NOW(), 'sub_test_admin', '{"notifications": true, "auto_renewal": true}', NOW(), NOW(), 0, 0),
-('acc_test_gym', 1, 1, 1, 'active', true, NOW(), NOW(), 'sub_test_gym', '{"notifications": true, "auto_renewal": true}', NOW(), NOW(), 75, 8),
-('acc_test_dance', 2, 2, 2, 'active', true, NOW(), NOW(), 'sub_test_dance', '{"notifications": true, "auto_renewal": true}', NOW(), NOW(), 60, 9);
+INSERT INTO users (id, name, email, email_verified_at, image, password, created_at, updated_at) VALUES
+('usr_Fa1pNiG7U50rST7zs1uppa', 'Michael Brown', 'michael@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Gb2qOjH8V61sTU8at2vqqb', 'Sarah Davis', 'sarah@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Hc3rPkI9W72tUV9bu3wrrc', 'David Miller', 'david@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()),
+('usr_Id4sQlJ0X83uVW0cv4xssd', 'Jessica Wilson', 'jessica@test.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
 -- STAFFS (Employees/instructors)
 -- =========================================
 INSERT INTO staffs (id, first_name, last_name, email, phone, avatar, user_id, created_at, updated_at) VALUES
-('stf_test_trainer1', 'Alex', 'Rodriguez', 'alex@fitzone.com', '+19999999999', 'https://api.dicebear.com/7.x/avataaars/svg?seed=alex', 'usr_test_staff', NOW(), NOW()),
-('stf_test_trainer2', 'Emma', 'Wilson', 'emma@fitzone.com', '+19999999999', 'https://api.dicebear.com/7.x/avataaars/svg?seed=emma', 'usr_test_staff', NOW(), NOW()),
-('stf_test_dance1', 'Carlos', 'Martinez', 'carlos@danceacademy.com', '+19999999999', 'https://api.dicebear.com/7.x/avataaars/svg?seed=carlos', 'usr_test_staff', NOW(), NOW()),
-('stf_test_dance2', 'Lisa', 'Anderson', 'lisa@danceacademy.com', '+19999999999', 'https://api.dicebear.com/7.x/avataaars/svg?seed=lisa', 'usr_test_staff', NOW(), NOW());
+('stf_Fa1pNiG7U50rST7zs1uppa', 'Michael', 'Brown', 'michael@yogastudio.com', '+19999999999', 'https://api.dicebear.com/7.x/avataaars/png?seed=michael', 'usr_Fa1pNiG7U50rST7zs1uppa', NOW(), NOW()),
+('stf_Gb2qOjH8V61sTU8at2vqqb', 'Sarah', 'Davis', 'sarah@pilatesstudio.com', '+19999999999', 'https://api.dicebear.com/7.x/avataaars/png?seed=sarah', 'usr_Gb2qOjH8V61sTU8at2vqqb', NOW(), NOW()),
+('stf_Hc3rPkI9W72tUV9bu3wrrc', 'David', 'Miller', 'david@boxinggym.com', '+19999999999', 'https://api.dicebear.com/7.x/avataaars/png?seed=david', 'usr_Hc3rPkI9W72tUV9bu3wrrc', NOW(), NOW()),
+('stf_Id4sQlJ0X83uVW0cv4xssd', 'Jessica', 'Wilson', 'jessica@swimclub.com', '+19999999999', 'https://api.dicebear.com/7.x/avataaars/png?seed=jessica', 'usr_Id4sQlJ0X83uVW0cv4xssd', NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
 -- STAFF LOCATIONS (Staff assignments)
 -- =========================================
 INSERT INTO staff_locations (id, staff_id, location_id, status) VALUES
-('stfloc_1', 'stf_test_trainer1', 'acc_test_gym', 'active'),
-('stfloc_2', 'stf_test_trainer2', 'acc_test_gym', 'active'),
-('stfloc_3', 'stf_test_dance1', 'acc_test_dance', 'active'),
-('stfloc_4', 'stf_test_dance2', 'acc_test_dance', 'active');
+('Fa1pNiG7U50rST7zs1uppa', 'stf_Fa1pNiG7U50rST7zs1uppa', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'active'),
+('Gb2qOjH8V61sTU8at2vqqb', 'stf_Gb2qOjH8V61sTU8at2vqqb', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'active'),
+('Hc3rPkI9W72tUV9bu3wrrc', 'stf_Hc3rPkI9W72tUV9bu3wrrc', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'active'),
+('Id4sQlJ0X83uVW0cv4xssd', 'stf_Id4sQlJ0X83uVW0cv4xssd', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'active');
 
--- =========================================
--- MEMBERS (Customers)
--- =========================================
-INSERT INTO members (id, user_id, email, phone, referral_code, avatar, stripe_customer_id, created_at, updated_at, first_name, last_name, gender, dob) VALUES
-('mbr_test_john', 'usr_test_member1', 'john@test.com', '+19999999999', 'JOHN2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=john', 'cus_test_john', NOW(), NOW(), 'John', 'Doe', 'male', '1990-05-15'::timestamp),
-('mbr_test_jane', 'usr_test_member2', 'jane@test.com', '+19999999999', 'JANE2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=jane', 'cus_test_jane', NOW(), NOW(), 'Jane', 'Smith', 'female', '1988-03-22'::timestamp),
-('mbr_test_bob', 'usr_test_member3', 'bob@test.com', '+19999999999', 'BOB2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=bob', 'cus_test_bob', NOW(), NOW(), 'Bob', 'Johnson', 'male', '1992-11-08'::timestamp),
-('mbr_test_alice', 'usr_test_member4', 'alice@test.com', '+19999999998', 'ALICE2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=alice', 'cus_test_alice', NOW(), NOW(), 'Alice', 'Williams', 'female', '1985-03-15'::timestamp),
-('mbr_test_charlie', 'usr_test_member5', 'charlie@test.com', '+19999999997', 'CHARLIE2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=charlie', 'cus_test_charlie', NOW(), NOW(), 'Charlie', 'Brown', 'male', '1990-07-22'::timestamp),
-('mbr_test_diana', 'usr_test_member6', 'diana@test.com', '+19999999996', 'DIANA2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=diana', 'cus_test_diana', NOW(), NOW(), 'Diana', 'Prince', 'female', '1988-09-30'::timestamp),
-('mbr_test_edward', 'usr_test_member7', 'edward@test.com', '+19999999995', 'EDWARD2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=edward', 'cus_test_edward', NOW(), NOW(), 'Edward', 'Norton', 'male', '1987-12-05'::timestamp),
-('mbr_test_fiona', 'usr_test_member8', 'fiona@test.com', '+19999999994', 'FIONA2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=fiona', 'cus_test_fiona', NOW(), NOW(), 'Fiona', 'Gallagher', 'female', '1991-01-18'::timestamp),
-('mbr_test_george', 'usr_test_member9', 'george@test.com', '+19999999993', 'GEORGE2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=george', 'cus_test_george', NOW(), NOW(), 'George', 'Lucas', 'male', '1984-05-14'::timestamp),
-('mbr_test_helen', 'usr_test_member10', 'helen@test.com', '+19999999992', 'HELEN2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=helen', 'cus_test_helen', NOW(), NOW(), 'Helen', 'Troy', 'female', '1989-08-11'::timestamp),
-('mbr_test_ian', 'usr_test_member11', 'ian@test.com', '+19999999991', 'IAN2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=ian', 'cus_test_ian', NOW(), NOW(), 'Ian', 'Malcolm', 'male', '1986-04-27'::timestamp),
-('mbr_test_jessica', 'usr_test_member12', 'jessica@test.com', '+19999999990', 'JESSICA2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=jessica', 'cus_test_jessica', NOW(), NOW(), 'Jessica', 'Jones', 'female', '1993-06-03'::timestamp),
-('mbr_test_kevin', 'usr_test_member13', 'kevin@test.com', '+19999999989', 'KEVIN2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=kevin', 'cus_test_kevin', NOW(), NOW(), 'Kevin', 'Hart', 'male', '1982-11-20'::timestamp),
-('mbr_test_laura', 'usr_test_member14', 'laura@test.com', '+19999999988', 'LAURA2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=laura', 'cus_test_laura', NOW(), NOW(), 'Laura', 'Croft', 'female', '1994-02-14'::timestamp),
-('mbr_test_michael', 'usr_test_member15', 'michael@test.com', '+19999999987', 'MICHAEL2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=michael', 'cus_test_michael', NOW(), NOW(), 'Michael', 'Scott', 'male', '1975-03-15'::timestamp),
-('mbr_test_nancy', 'usr_test_member16', 'nancy@test.com', '+19999999986', 'NANCY2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=nancy', 'cus_test_nancy', NOW(), NOW(), 'Nancy', 'Drew', 'female', '1995-04-16'::timestamp),
-('mbr_test_oliver', 'usr_test_member17', 'oliver@test.com', '+19999999985', 'OLIVER2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=oliver', 'cus_test_oliver', NOW(), NOW(), 'Oliver', 'Queen', 'male', '1983-05-16'::timestamp),
-('mbr_test_pam', 'usr_test_member18', 'pam@test.com', '+19999999984', 'PAM2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=pam', 'cus_test_pam', NOW(), NOW(), 'Pam', 'Beesly', 'female', '1981-06-17'::timestamp),
-('mbr_test_quincy', 'usr_test_member19', 'quincy@test.com', '+19999999983', 'QUINCY2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=quincy', 'cus_test_quincy', NOW(), NOW(), 'Quincy', 'Jones', 'male', '1978-07-18'::timestamp),
-('mbr_test_rachel', 'usr_test_member20', 'rachel@test.com', '+19999999982', 'RACHEL2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=rachel', 'cus_test_rachel', NOW(), NOW(), 'Rachel', 'Green', 'female', '1987-08-19'::timestamp),
-('mbr_test_steve', 'usr_test_member21', 'steve@test.com', '+19999999981', 'STEVE2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=steve', 'cus_test_steve', NOW(), NOW(), 'Steve', 'Rogers', 'male', '1976-09-20'::timestamp),
-('mbr_test_tina', 'usr_test_member22', 'tina@test.com', '+19999999980', 'TINA2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=tina', 'cus_test_tina', NOW(), NOW(), 'Tina', 'Fey', 'female', '1979-10-21'::timestamp),
-('mbr_test_uma', 'usr_test_member23', 'uma@test.com', '+19999999979', 'UMA2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=uma', 'cus_test_uma', NOW(), NOW(), 'Uma', 'Thurman', 'female', '1978-11-22'::timestamp),
-('mbr_test_victor', 'usr_test_member24', 'victor@test.com', '+19999999978', 'VICTOR2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=victor', 'cus_test_victor', NOW(), NOW(), 'Victor', 'Stone', 'male', '1996-12-23'::timestamp),
-('mbr_test_wanda', 'usr_test_member25', 'wanda@test.com', '+19999999977', 'WANDA2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=wanda', 'cus_test_wanda', NOW(), NOW(), 'Wanda', 'Maximoff', 'female', '1997-01-24'::timestamp),
-('mbr_test_xavier', 'usr_test_member26', 'xavier@test.com', '+19999999976', 'XAVIER2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=xavier', 'cus_test_xavier', NOW(), NOW(), 'Xavier', 'Charles', 'male', '1974-02-25'::timestamp),
-('mbr_test_yoda', 'usr_test_member27', 'yoda@test.com', '+19999999975', 'YODA2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=yoda', 'cus_test_yoda', NOW(), NOW(), 'Yoda', 'Master', 'male', '1973-03-26'::timestamp),
-('mbr_test_zoe', 'usr_test_member28', 'zoe@test.com', '+19999999974', 'ZOE2024', 'https://api.dicebear.com/7.x/avataaars/svg?seed=zoe', 'cus_test_zoe', NOW(), NOW(), 'Zoe', 'Saldana', 'female', '1998-04-27'::timestamp);
-
--- =========================================
--- MEMBER LOCATIONS (Member enrollments)
--- =========================================
-INSERT INTO member_locations (location_id, member_id, points, status, invite_date, invite_accepted_date) VALUES
-('acc_test_gym', 'mbr_test_john', 150, 'active', NOW() - INTERVAL '30 days', NOW() - INTERVAL '29 days'),
-('acc_test_gym', 'mbr_test_jane', 200, 'active', NOW() - INTERVAL '45 days', NOW() - INTERVAL '44 days'),
-('acc_test_dance', 'mbr_test_bob', 75, 'active', NOW() - INTERVAL '20 days', NOW() - INTERVAL '19 days'),
--- Admin location members (for testing admin support bot)
-('acc_test_admin', 'mbr_test_john', 100, 'active', NOW() - INTERVAL '60 days', NOW() - INTERVAL '59 days'),
-('acc_test_admin', 'mbr_test_jane', 125, 'active', NOW() - INTERVAL '50 days', NOW() - INTERVAL '49 days'),
-('acc_test_admin', 'mbr_test_bob', 80, 'active', NOW() - INTERVAL '40 days', NOW() - INTERVAL '39 days'),
--- Additional members for gym
-('acc_test_gym', 'mbr_test_alice', 180, 'active', NOW() - INTERVAL '25 days', NOW() - INTERVAL '24 days'),
-('acc_test_gym', 'mbr_test_charlie', 95, 'active', NOW() - INTERVAL '35 days', NOW() - INTERVAL '34 days'),
-('acc_test_gym', 'mbr_test_diana', 220, 'active', NOW() - INTERVAL '15 days', NOW() - INTERVAL '14 days'),
-('acc_test_gym', 'mbr_test_edward', 160, 'active', NOW() - INTERVAL '45 days', NOW() - INTERVAL '44 days'),
-('acc_test_gym', 'mbr_test_fiona', 75, 'active', NOW() - INTERVAL '55 days', NOW() - INTERVAL '54 days'),
-('acc_test_gym', 'mbr_test_george', 190, 'active', NOW() - INTERVAL '20 days', NOW() - INTERVAL '19 days'),
-('acc_test_gym', 'mbr_test_helen', 135, 'active', NOW() - INTERVAL '30 days', NOW() - INTERVAL '29 days'),
-('acc_test_gym', 'mbr_test_ian', 110, 'active', NOW() - INTERVAL '40 days', NOW() - INTERVAL '39 days'),
-('acc_test_gym', 'mbr_test_jessica', 250, 'active', NOW() - INTERVAL '10 days', NOW() - INTERVAL '9 days'),
-('acc_test_gym', 'mbr_test_kevin', 85, 'active', NOW() - INTERVAL '50 days', NOW() - INTERVAL '49 days'),
-('acc_test_gym', 'mbr_test_laura', 175, 'active', NOW() - INTERVAL '28 days', NOW() - INTERVAL '27 days'),
-('acc_test_gym', 'mbr_test_michael', 140, 'active', NOW() - INTERVAL '38 days', NOW() - INTERVAL '37 days'),
-('acc_test_gym', 'mbr_test_nancy', 200, 'active', NOW() - INTERVAL '18 days', NOW() - INTERVAL '17 days'),
-('acc_test_gym', 'mbr_test_oliver', 120, 'active', NOW() - INTERVAL '42 days', NOW() - INTERVAL '41 days'),
-('acc_test_gym', 'mbr_test_pam', 165, 'active', NOW() - INTERVAL '32 days', NOW() - INTERVAL '31 days'),
--- Additional members for dance academy
-('acc_test_dance', 'mbr_test_quincy', 90, 'active', NOW() - INTERVAL '48 days', NOW() - INTERVAL '47 days'),
-('acc_test_dance', 'mbr_test_rachel', 155, 'active', NOW() - INTERVAL '26 days', NOW() - INTERVAL '25 days'),
-('acc_test_dance', 'mbr_test_steve', 130, 'active', NOW() - INTERVAL '36 days', NOW() - INTERVAL '35 days'),
-('acc_test_dance', 'mbr_test_tina', 185, 'active', NOW() - INTERVAL '22 days', NOW() - INTERVAL '21 days'),
-('acc_test_dance', 'mbr_test_uma', 105, 'active', NOW() - INTERVAL '44 days', NOW() - INTERVAL '43 days'),
-('acc_test_dance', 'mbr_test_victor', 240, 'active', NOW() - INTERVAL '12 days', NOW() - INTERVAL '11 days'),
-('acc_test_dance', 'mbr_test_wanda', 170, 'active', NOW() - INTERVAL '24 days', NOW() - INTERVAL '23 days'),
-('acc_test_dance', 'mbr_test_xavier', 115, 'active', NOW() - INTERVAL '46 days', NOW() - INTERVAL '45 days'),
-('acc_test_dance', 'mbr_test_yoda', 195, 'active', NOW() - INTERVAL '16 days', NOW() - INTERVAL '15 days'),
-('acc_test_dance', 'mbr_test_zoe', 145, 'active', NOW() - INTERVAL '34 days', NOW() - INTERVAL '33 days');
 
 -- =========================================
 -- PROGRAMS (Classes/services offered)
 -- =========================================
 INSERT INTO programs (id, location_id, instructor_id, name, description, icon, capacity, min_age, max_age, status, interval, interval_threshold, cancelation_threshold, allow_waitlist, waitlist_capacity, allow_make_up_class, created_at, updated_at) VALUES
-('prog_gym_pt', 'acc_test_gym', 'stf_test_trainer1', 'Personal Training', 'One-on-one fitness training sessions', '🏋️', 1, 16, 80, 'active', 'week', 1, 24, false, 0, true, NOW(), NOW()),
-('prog_gym_group', 'acc_test_gym', 'stf_test_trainer2', 'Group Fitness', 'High-energy group workout classes', '💪', 20, 18, 65, 'active', 'week', 2, 24, true, 5, true, NOW(), NOW()),
-('prog_dance_ballet', 'acc_test_dance', 'stf_test_dance1', 'Ballet Fundamentals', 'Learn the basics of classical ballet', '🩰', 15, 8, 18, 'active', 'week', 1, 24, true, 3, true, NOW(), NOW()),
-('prog_dance_hiphop', 'acc_test_dance', 'stf_test_dance2', 'Hip Hop Dance', 'Contemporary hip hop dance classes', '🕺', 12, 12, 25, 'active', 'week', 1, 24, false, 0, true, NOW(), NOW());
+('Fa1pNiG7U50rST7zs1uppa', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'stf_Fa1pNiG7U50rST7zs1uppa', 'Personal Training', 'One-on-one fitness training sessions', '🏋️', 1, 16, 80, 'active', 'week', 1, 24, false, 0, true, NOW(), NOW()),
+('Gb2qOjH8V61sTU8at2vqqb', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'stf_Gb2qOjH8V61sTU8at2vqqb', 'Group Fitness', 'High-energy group workout classes', '💪', 20, 18, 65, 'active', 'week', 2, 24, true, 5, true, NOW(), NOW()),
+('Hc3rPkI9W72tUV9bu3wrrc', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'stf_Hc3rPkI9W72tUV9bu3wrrc', 'Ballet Fundamentals', 'Learn the basics of classical ballet', '🩰', 15, 8, 18, 'active', 'week', 1, 24, true, 3, true, NOW(), NOW()),
+('Id4sQlJ0X83uVW0cv4xssd', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'stf_Id4sQlJ0X83uVW0cv4xssd', 'Hip Hop Dance', 'Contemporary hip hop dance classes', '🕺', 12, 12, 25, 'active', 'week', 1, 24, false, 0, true, NOW(), NOW());
+
 
 -- =========================================
--- PROGRAM TAGS (Categorization)
+-- MEMBER PLANS (Recurring and One-time plans)
 -- =========================================
-INSERT INTO program_tags (id, name) VALUES
-('tag_fitness', 'Fitness'),
-('tag_strength', 'Strength Training'),
-('tag_cardio', 'Cardio'),
-('tag_dance', 'Dance'),
-('tag_ballet', 'Ballet'),
-('tag_hiphop', 'Hip Hop');
+INSERT INTO member_plans (id, name, description, location_id, type, interval, interval_threshold, currency, price, created_at, updated_at) VALUES
+('pln_01JDQR8XYZABCDEFGHIJKLMN', 'All Programs Monthly', 'Monthly subscription with access to all programs', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'recurring', 'month', 1, 'USD', 19900, NOW(), NOW()),
+('pln_01JDQR8XYZABCDEFGHIJKLMO', 'All Programs Package', 'One-time purchase with access to all programs', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'one-time', 'month', 1, 'USD', 100000, NOW(), NOW());
 
 -- =========================================
--- PROGRAM HAS TAGS (Tag associations)
+-- PLAN PROGRAMS (Link plans to all programs)
 -- =========================================
-INSERT INTO program_has_tags (program_id, tag_id) VALUES
-('prog_gym_pt', 'tag_fitness'),
-('prog_gym_pt', 'tag_strength'),
-('prog_gym_group', 'tag_fitness'),
-('prog_gym_group', 'tag_cardio'),
-('prog_dance_ballet', 'tag_dance'),
-('prog_dance_ballet', 'tag_ballet'),
-('prog_dance_hiphop', 'tag_dance'),
-('prog_dance_hiphop', 'tag_hiphop');
+INSERT INTO plan_programs (plan_id, program_id) VALUES
+-- Recurring plan includes all programs
+('pln_01JDQR8XYZABCDEFGHIJKLMN', 'Fa1pNiG7U50rST7zs1uppa'), -- Personal Training
+('pln_01JDQR8XYZABCDEFGHIJKLMN', 'Gb2qOjH8V61sTU8at2vqqb'), -- Group Fitness
+('pln_01JDQR8XYZABCDEFGHIJKLMN', 'Hc3rPkI9W72tUV9bu3wrrc'), -- Ballet Fundamentals
+('pln_01JDQR8XYZABCDEFGHIJKLMN', 'Id4sQlJ0X83uVW0cv4xssd'), -- Hip Hop Dance
+-- One-time plan includes all programs
+('pln_01JDQR8XYZABCDEFGHIJKLMO', 'Fa1pNiG7U50rST7zs1uppa'), -- Personal Training
+('pln_01JDQR8XYZABCDEFGHIJKLMO', 'Gb2qOjH8V61sTU8at2vqqb'), -- Group Fitness
+('pln_01JDQR8XYZABCDEFGHIJKLMO', 'Hc3rPkI9W72tUV9bu3wrrc'), -- Ballet Fundamentals
+('pln_01JDQR8XYZABCDEFGHIJKLMO', 'Id4sQlJ0X83uVW0cv4xssd'); -- Hip Hop Dance
 
 -- =========================================
--- PROGRAM SESSIONS (Class schedules)
+-- PROGRAM SESSIONS (Scheduled classes for each program)
 -- =========================================
+
+-- Personal Training Sessions (1-on-1, flexible scheduling)
 INSERT INTO program_sessions (id, program_id, time, duration, day, created_at, updated_at) VALUES
-('pss_pt_mon', 'prog_gym_pt', '09:00:00'::time, 60, 1, NOW(), NOW()),
-('pss_pt_wed', 'prog_gym_pt', '09:00:00'::time, 60, 3, NOW(), NOW()),
-('pss_pt_fri', 'prog_gym_pt', '09:00:00'::time, 60, 5, NOW(), NOW()),
-('pss_group_mon', 'prog_gym_group', '18:00:00'::time, 45, 1, NOW(), NOW()),
-('pss_group_wed', 'prog_gym_group', '18:00:00'::time, 45, 3, NOW(), NOW()),
-('pss_group_fri', 'prog_gym_group', '18:00:00'::time, 45, 5, NOW(), NOW()),
-('pss_ballet_tue', 'prog_dance_ballet', '16:00:00'::time, 90, 2, NOW(), NOW()),
-('pss_ballet_thu', 'prog_dance_ballet', '16:00:00'::time, 90, 4, NOW(), NOW()),
-('pss_hiphop_mon', 'prog_dance_hiphop', '19:00:00'::time, 60, 1, NOW(), NOW()),
-('pss_hiphop_wed', 'prog_dance_hiphop', '19:00:00'::time, 60, 3, NOW(), NOW());
+('c2Vzc19wZXJzb25hbF9tb3JuaW5n', 'Fa1pNiG7U50rST7zs1uppa', '09:00:00', 60, 1, NOW(), NOW()), -- Monday 9 AM
+('c2Vzc19wZXJzb25hbF9hZnRlcm5vb24', 'Fa1pNiG7U50rST7zs1uppa', '14:00:00', 60, 1, NOW(), NOW()), -- Monday 2 PM
+('c2Vzc19wZXJzb25hbF9ldmVuaW5n', 'Fa1pNiG7U50rST7zs1uppa', '18:00:00', 60, 1, NOW(), NOW()), -- Monday 6 PM
+('c2Vzc19wZXJzb25hbF93ZWRfbW9ybmluZw', 'Fa1pNiG7U50rST7zs1uppa', '09:00:00', 60, 3, NOW(), NOW()), -- Wednesday 9 AM
+('c2Vzc19wZXJzb25hbF93ZWRfYWZ0ZXJub29u', 'Fa1pNiG7U50rST7zs1uppa', '14:00:00', 60, 3, NOW(), NOW()), -- Wednesday 2 PM
+('c2Vzc19wZXJzb25hbF9mcmVfbW9ybmluZw', 'Fa1pNiG7U50rST7zs1uppa', '09:00:00', 60, 5, NOW(), NOW()), -- Friday 9 AM
+('c2Vzc19wZXJzb25hbF9mcmVfZXZlbmluZw', 'Fa1pNiG7U50rST7zs1uppa', '18:00:00', 60, 5, NOW(), NOW()); -- Friday 6 PM
+
+-- Group Fitness Sessions (High-energy group classes)
+INSERT INTO program_sessions (id, program_id, time, duration, day, created_at, updated_at) VALUES
+('c2Vzc19ncm91cF9tb3JuaW5n', 'Gb2qOjH8V61sTU8at2vqqb', '07:00:00', 45, 1, NOW(), NOW()), -- Monday 7 AM
+('c2Vzc19ncm91cF9sdW5jaA', 'Gb2qOjH8V61sTU8at2vqqb', '12:00:00', 30, 1, NOW(), NOW()), -- Monday 12 PM
+('c2Vzc19ncm91cF9ldmVuaW5n', 'Gb2qOjH8V61sTU8at2vqqb', '19:00:00', 45, 1, NOW(), NOW()), -- Monday 7 PM
+('c2Vzc19ncm91cF90dWVfbW9ybmluZw', 'Gb2qOjH8V61sTU8at2vqqb', '07:00:00', 45, 2, NOW(), NOW()), -- Tuesday 7 AM
+('c2Vzc19ncm91cF90dWVfZXZlbmluZw', 'Gb2qOjH8V61sTU8at2vqqb', '19:00:00', 45, 2, NOW(), NOW()), -- Tuesday 7 PM
+('c2Vzc19ncm91cF93ZWRfbHVuY2g', 'Gb2qOjH8V61sTU8at2vqqb', '12:00:00', 30, 3, NOW(), NOW()), -- Wednesday 12 PM
+('c2Vzc19ncm91cF93ZWRfZXZlbmluZw', 'Gb2qOjH8V61sTU8at2vqqb', '19:00:00', 45, 3, NOW(), NOW()), -- Wednesday 7 PM
+('c2Vzc19ncm91cF90aHVfbW9ybmluZw', 'Gb2qOjH8V61sTU8at2vqqb', '07:00:00', 45, 4, NOW(), NOW()), -- Thursday 7 AM
+('c2Vzc19ncm91cF90aHVfZXZlbmluZw', 'Gb2qOjH8V61sTU8at2vqqb', '19:00:00', 45, 4, NOW(), NOW()), -- Thursday 7 PM
+('c2Vzc19ncm91cF9mcmVfbW9ybmluZw', 'Gb2qOjH8V61sTU8at2vqqb', '07:00:00', 45, 5, NOW(), NOW()), -- Friday 7 AM
+('c2Vzc19ncm91cF9zYXRfbW9ybmluZw', 'Gb2qOjH8V61sTU8at2vqqb', '09:00:00', 60, 6, NOW(), NOW()); -- Saturday 9 AM
+
+-- Ballet Fundamentals Sessions (Classical ballet for ages 8-18)
+INSERT INTO program_sessions (id, program_id, time, duration, day, created_at, updated_at) VALUES
+('c2Vzc19iYWxsZXRfYmVnaW5uZXI', 'Hc3rPkI9W72tUV9bu3wrrc', '16:00:00', 60, 1, NOW(), NOW()), -- Monday 4 PM
+('c2Vzc19iYWxsZXRfaW50ZXJtZWRpYXRl', 'Hc3rPkI9W72tUV9bu3wrrc', '17:00:00', 60, 1, NOW(), NOW()), -- Monday 5 PM
+('c2Vzc19iYWxsZXRfYmVnaW5uZXJfdHVl', 'Hc3rPkI9W72tUV9bu3wrrc', '16:00:00', 60, 2, NOW(), NOW()), -- Tuesday 4 PM
+('c2Vzc19iYWxsZXRfaW50ZXJtZWRpYXRlX3R1ZQ', 'Hc3rPkI9W72tUV9bu3wrrc', '17:00:00', 60, 2, NOW(), NOW()), -- Tuesday 5 PM
+('c2Vzc19iYWxsZXRfYmVnaW5uZXJfd2Vk', 'Hc3rPkI9W72tUV9bu3wrrc', '16:00:00', 60, 3, NOW(), NOW()), -- Wednesday 4 PM
+('c2Vzc19iYWxsZXRfaW50ZXJtZWRpYXRlX3dlZA', 'Hc3rPkI9W72tUV9bu3wrrc', '17:00:00', 60, 3, NOW(), NOW()), -- Wednesday 5 PM
+('c2Vzc19iYWxsZXRfYmVnaW5uZXJfdGh1', 'Hc3rPkI9W72tUV9bu3wrrc', '16:00:00', 60, 4, NOW(), NOW()), -- Thursday 4 PM
+('c2Vzc19iYWxsZXRfaW50ZXJtZWRpYXRlX3RodQ', 'Hc3rPkI9W72tUV9bu3wrrc', '17:00:00', 60, 4, NOW(), NOW()), -- Thursday 5 PM
+('c2Vzc19iYWxsZXRfc2F0dXJkYXk', 'Hc3rPkI9W72tUV9bu3wrrc', '10:00:00', 90, 6, NOW(), NOW()); -- Saturday 10 AM
+
+-- Hip Hop Dance Sessions (Contemporary hip hop for ages 12-25)
+INSERT INTO program_sessions (id, program_id, time, duration, day, created_at, updated_at) VALUES
+('c2Vzc19oaXBob3BfdGVlbg', 'Id4sQlJ0X83uVW0cv4xssd', '18:00:00', 60, 1, NOW(), NOW()), -- Monday 6 PM
+('c2Vzc19oaXBob3BfYWR1bHQ', 'Id4sQlJ0X83uVW0cv4xssd', '20:00:00', 60, 1, NOW(), NOW()), -- Monday 8 PM
+('c2Vzc19oaXBob3BfdGVlbl90dWU', 'Id4sQlJ0X83uVW0cv4xssd', '18:00:00', 60, 2, NOW(), NOW()), -- Tuesday 6 PM
+('c2Vzc19oaXBob3BfYWR1bHRfdHVl', 'Id4sQlJ0X83uVW0cv4xssd', '20:00:00', 60, 2, NOW(), NOW()), -- Tuesday 8 PM
+('c2Vzc19oaXBob3BfdGVlbl93ZWQ', 'Id4sQlJ0X83uVW0cv4xssd', '18:00:00', 60, 3, NOW(), NOW()), -- Wednesday 6 PM
+('c2Vzc19oaXBob3BfYWR1bHRfd2Vk', 'Id4sQlJ0X83uVW0cv4xssd', '20:00:00', 60, 3, NOW(), NOW()), -- Wednesday 8 PM
+('c2Vzc19oaXBob3BfdGVlbl90aHU', 'Id4sQlJ0X83uVW0cv4xssd', '18:00:00', 60, 4, NOW(), NOW()), -- Thursday 6 PM
+('c2Vzc19oaXBob3BfYWR1bHRfdGh1', 'Id4sQlJ0X83uVW0cv4xssd', '20:00:00', 60, 4, NOW(), NOW()), -- Thursday 8 PM
+('c2Vzc19oaXBob3BfZnJpZGF5', 'Id4sQlJ0X83uVW0cv4xssd', '19:00:00', 90, 5, NOW(), NOW()), -- Friday 7 PM
+('c2Vzc19oaXBob3Bfc2F0dXJkYXk', 'Id4sQlJ0X83uVW0cv4xssd', '14:00:00', 90, 6, NOW(), NOW()); -- Saturday 2 PM
+
 
 -- =========================================
--- CONTRACTS (Agreements and waivers)
+-- MEMBER POINTS HISTORY (Points earned this month)
 -- =========================================
-INSERT INTO contracts (id, content, title, description, is_draft, editable, location_id, type, require_signature, created_at, updated_at) VALUES
-('contract_gym_waiver', 'Standard gym liability waiver content...', 'Gym Liability Waiver', 'Standard waiver for gym activities', false, true, 'acc_test_gym', 'waiver', true, NOW(), NOW()),
-('contract_gym_membership', 'Membership agreement terms...', 'Gym Membership Agreement', 'Terms and conditions for gym membership', false, true, 'acc_test_gym', 'contract', true, NOW(), NOW()),
-('contract_dance_waiver', 'Dance studio liability waiver...', 'Dance Studio Waiver', 'Waiver for dance class participation', false, true, 'acc_test_dance', 'waiver', true, NOW(), NOW()),
-('contract_dance_terms', 'Dance class terms and conditions...', 'Dance Class Terms', 'Terms for dance instruction', false, true, 'acc_test_dance', 'contract', true, NOW(), NOW());
+INSERT INTO member_points_history (location_id, member_id, points, type, created_at, updated_at) VALUES
+-- John Doe - 150 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 50, 'attendance', NOW() - INTERVAL '5 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 30, 'achievement', NOW() - INTERVAL '3 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 70, 'bonus', NOW() - INTERVAL '1 day', NOW()),
+
+-- Jane Smith - 200 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Cx8mKfD4R27oPQ4wp8rmmx', 80, 'attendance', NOW() - INTERVAL '6 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Cx8mKfD4R27oPQ4wp8rmmx', 50, 'achievement', NOW() - INTERVAL '4 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Cx8mKfD4R27oPQ4wp8rmmx', 70, 'referral', NOW() - INTERVAL '2 days', NOW()),
+
+-- Bob Johnson - 120 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Dy9nLgE5S38pQR5xq9snny', 40, 'attendance', NOW() - INTERVAL '7 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Dy9nLgE5S38pQR5xq9snny', 30, 'achievement', NOW() - INTERVAL '5 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Dy9nLgE5S38pQR5xq9snny', 50, 'bonus', NOW() - INTERVAL '1 day', NOW()),
+
+-- Alice Williams - 180 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ez0oMhF6T49qRS6yr0tooz', 60, 'attendance', NOW() - INTERVAL '8 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ez0oMhF6T49qRS6yr0tooz', 40, 'achievement', NOW() - INTERVAL '6 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ez0oMhF6T49qRS6yr0tooz', 80, 'social', NOW() - INTERVAL '3 days', NOW()),
+
+-- Charlie Brown - 100 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Fa1pNiG7U50rST7zs1uppa', 35, 'attendance', NOW() - INTERVAL '9 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Fa1pNiG7U50rST7zs1uppa', 25, 'achievement', NOW() - INTERVAL '7 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Fa1pNiG7U50rST7zs1uppa', 40, 'bonus', NOW() - INTERVAL '2 days', NOW()),
+
+-- Diana Prince - 160 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Gb2qOjH8V61sTU8at2vqqb', 55, 'attendance', NOW() - INTERVAL '10 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Gb2qOjH8V61sTU8at2vqqb', 35, 'achievement', NOW() - INTERVAL '8 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Gb2qOjH8V61sTU8at2vqqb', 70, 'referral', NOW() - INTERVAL '4 days', NOW()),
+
+-- Edward Norton - 140 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Hc3rPkI9W72tUV9bu3wrrc', 45, 'attendance', NOW() - INTERVAL '11 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Hc3rPkI9W72tUV9bu3wrrc', 35, 'achievement', NOW() - INTERVAL '9 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Hc3rPkI9W72tUV9bu3wrrc', 60, 'social', NOW() - INTERVAL '5 days', NOW()),
+
+-- Fiona Gallagher - 190 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Id4sQlJ0X83uVW0cv4xssd', 65, 'attendance', NOW() - INTERVAL '12 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Id4sQlJ0X83uVW0cv4xssd', 45, 'achievement', NOW() - INTERVAL '10 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Id4sQlJ0X83uVW0cv4xssd', 80, 'bonus', NOW() - INTERVAL '6 days', NOW()),
+
+-- George Lucas - 130 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Je5tRmK1Y94vWX1dw5ytte', 50, 'attendance', NOW() - INTERVAL '13 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Je5tRmK1Y94vWX1dw5ytte', 30, 'achievement', NOW() - INTERVAL '11 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Je5tRmK1Y94vWX1dw5ytte', 50, 'referral', NOW() - INTERVAL '7 days', NOW()),
+
+-- Helen Troy - 170 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Kf6uSnL2Z05wXY2ex6zuuf', 60, 'attendance', NOW() - INTERVAL '14 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Kf6uSnL2Z05wXY2ex6zuuf', 40, 'achievement', NOW() - INTERVAL '12 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Kf6uSnL2Z05wXY2ex6zuuf', 70, 'social', NOW() - INTERVAL '8 days', NOW()),
+
+-- Ian Malcolm - 110 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Lg7vToM3A16xYZ3fy7avvg', 40, 'attendance', NOW() - INTERVAL '15 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Lg7vToM3A16xYZ3fy7avvg', 30, 'achievement', NOW() - INTERVAL '13 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Lg7vToM3A16xYZ3fy7avvg', 40, 'bonus', NOW() - INTERVAL '9 days', NOW()),
+
+-- Jessica Jones - 200 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Mh8wUpN4B27yZA4gz8bwwh', 70, 'attendance', NOW() - INTERVAL '16 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Mh8wUpN4B27yZA4gz8bwwh', 50, 'achievement', NOW() - INTERVAL '14 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Mh8wUpN4B27yZA4gz8bwwh', 80, 'referral', NOW() - INTERVAL '10 days', NOW()),
+
+-- Kevin Hart - 90 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ni9xVqO5C38zAB5ha9cxxi', 30, 'attendance', NOW() - INTERVAL '17 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ni9xVqO5C38zAB5ha9cxxi', 20, 'achievement', NOW() - INTERVAL '15 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ni9xVqO5C38zAB5ha9cxxi', 40, 'bonus', NOW() - INTERVAL '11 days', NOW()),
+
+-- Laura Croft - 150 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Oj0yWrP6D49ABC6ib0dyyj', 50, 'attendance', NOW() - INTERVAL '18 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Oj0yWrP6D49ABC6ib0dyyj', 30, 'achievement', NOW() - INTERVAL '16 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Oj0yWrP6D49ABC6ib0dyyj', 70, 'social', NOW() - INTERVAL '12 days', NOW()),
+
+-- Michael Scott - 120 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Pk1zXsQ7E50BCD7jc1ezzk', 45, 'attendance', NOW() - INTERVAL '19 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Pk1zXsQ7E50BCD7jc1ezzk', 25, 'achievement', NOW() - INTERVAL '17 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Pk1zXsQ7E50BCD7jc1ezzk', 50, 'referral', NOW() - INTERVAL '13 days', NOW()),
+
+-- Nancy Drew - 180 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ql2AyTrF8G61CDE8kd2faal', 60, 'attendance', NOW() - INTERVAL '20 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ql2AyTrF8G61CDE8kd2faal', 40, 'achievement', NOW() - INTERVAL '18 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Ql2AyTrF8G61CDE8kd2faal', 80, 'bonus', NOW() - INTERVAL '14 days', NOW()),
+
+-- Oliver Queen - 100 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Rm3BzUsG9H72DEF9le3gbbm', 35, 'attendance', NOW() - INTERVAL '21 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Rm3BzUsG9H72DEF9le3gbbm', 25, 'achievement', NOW() - INTERVAL '19 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Rm3BzUsG9H72DEF9le3gbbm', 40, 'social', NOW() - INTERVAL '15 days', NOW()),
+
+-- Pam Beesly - 160 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Sn4CaVtH0I83EFG0mf4hccn', 55, 'attendance', NOW() - INTERVAL '22 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Sn4CaVtH0I83EFG0mf4hccn', 35, 'achievement', NOW() - INTERVAL '20 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Sn4CaVtH0I83EFG0mf4hccn', 70, 'referral', NOW() - INTERVAL '16 days', NOW()),
+
+-- Quincy Jones - 140 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_To5DbWuI1J94FGH1ng5iddo', 50, 'attendance', NOW() - INTERVAL '23 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_To5DbWuI1J94FGH1ng5iddo', 30, 'achievement', NOW() - INTERVAL '21 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_To5DbWuI1J94FGH1ng5iddo', 60, 'bonus', NOW() - INTERVAL '17 days', NOW()),
+
+-- Rachel Green - 190 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Up6EcXvJ2K05GHI2oh6jeeo', 65, 'attendance', NOW() - INTERVAL '24 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Up6EcXvJ2K05GHI2oh6jeeo', 45, 'achievement', NOW() - INTERVAL '22 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Up6EcXvJ2K05GHI2oh6jeeo', 80, 'social', NOW() - INTERVAL '18 days', NOW()),
+
+-- Steve Rogers - 110 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Vq7FdYwK3L16HIJ3pi7kffp', 40, 'attendance', NOW() - INTERVAL '25 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Vq7FdYwK3L16HIJ3pi7kffp', 30, 'achievement', NOW() - INTERVAL '23 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Vq7FdYwK3L16HIJ3pi7kffp', 40, 'referral', NOW() - INTERVAL '19 days', NOW()),
+
+-- Tina Fey - 170 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Wr8GeZxL4M27IJK4qj8lggq', 60, 'attendance', NOW() - INTERVAL '26 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Wr8GeZxL4M27IJK4qj8lggq', 40, 'achievement', NOW() - INTERVAL '24 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Wr8GeZxL4M27IJK4qj8lggq', 70, 'bonus', NOW() - INTERVAL '20 days', NOW()),
+
+-- Uma Thurman - 130 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Xs9HfAyM5N38JKL5rk9mhhr', 50, 'attendance', NOW() - INTERVAL '27 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Xs9HfAyM5N38JKL5rk9mhhr', 30, 'achievement', NOW() - INTERVAL '25 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Xs9HfAyM5N38JKL5rk9mhhr', 50, 'social', NOW() - INTERVAL '21 days', NOW()),
+
+-- Victor Stone - 100 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Yt0IgBzN6O49KLM6sl0niis', 35, 'attendance', NOW() - INTERVAL '28 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Yt0IgBzN6O49KLM6sl0niis', 25, 'achievement', NOW() - INTERVAL '26 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Yt0IgBzN6O49KLM6sl0niis', 40, 'referral', NOW() - INTERVAL '22 days', NOW()),
+
+-- Wanda Maximoff - 150 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Zu1JhCaO7P50LMN7tm1ojjt', 50, 'attendance', NOW() - INTERVAL '29 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Zu1JhCaO7P50LMN7tm1ojjt', 30, 'achievement', NOW() - INTERVAL '27 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Zu1JhCaO7P50LMN7tm1ojjt', 70, 'bonus', NOW() - INTERVAL '23 days', NOW()),
+
+-- Xavier Charles - 90 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Av2KiDbP8Q61MNO8un2pkkv', 30, 'attendance', NOW() - INTERVAL '30 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Av2KiDbP8Q61MNO8un2pkkv', 20, 'achievement', NOW() - INTERVAL '28 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Av2KiDbP8Q61MNO8un2pkkv', 40, 'social', NOW() - INTERVAL '24 days', NOW()),
+
+-- Yoda Master - 120 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Bw3LjEcQ9R72NOP9vo3qllw', 45, 'attendance', NOW() - INTERVAL '31 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Bw3LjEcQ9R72NOP9vo3qllw', 25, 'achievement', NOW() - INTERVAL '29 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Bw3LjEcQ9R72NOP9vo3qllw', 50, 'referral', NOW() - INTERVAL '25 days', NOW()),
+
+-- Zoe Saldana - 160 points this month
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Cx4MkFdR0S83OPQ0wp4rmmx', 55, 'attendance', NOW() - INTERVAL '32 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Cx4MkFdR0S83OPQ0wp4rmmx', 35, 'achievement', NOW() - INTERVAL '30 days', NOW()),
+('acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'mbr_Cx4MkFdR0S83OPQ0wp4rmmx', 70, 'bonus', NOW() - INTERVAL '26 days', NOW())
+ON CONFLICT (id) DO NOTHING;
 
 -- =========================================
--- MEMBER CONTRACTS (Signed agreements)
+-- MEMBER SUBSCRIPTIONS (Recurring plans)
 -- =========================================
-INSERT INTO member_contracts (id, member_id, contract_id, location_id, signature, created_at, updated_at) VALUES
-('mc_john_gym_waiver', 'mbr_test_john', 'contract_gym_waiver', 'acc_test_gym', 'John Doe Signature', NOW(), NOW()),
-('mc_john_gym_membership', 'mbr_test_john', 'contract_gym_membership', 'acc_test_gym', 'John Doe Signature', NOW(), NOW()),
-('mc_jane_gym_waiver', 'mbr_test_jane', 'contract_gym_waiver', 'acc_test_gym', 'Jane Smith Signature', NOW(), NOW()),
-('mc_bob_dance_waiver', 'mbr_test_bob', 'contract_dance_waiver', 'acc_test_dance', 'Bob Johnson Signature', NOW(), NOW());
+INSERT INTO member_subscriptions (id, member_id, member_plan_id, location_id, status, start_date, current_period_start, current_period_end, payment_method, created_at, updated_at) VALUES
+('sub_01JDQR8XYZABCDEFGHIJKLMN', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'pln_01JDQR8XYZABCDEFGHIJKLMN', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'active', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days', NOW() + INTERVAL '1 day', 'card', NOW() - INTERVAL '30 days', NOW()),
+('sub_01JDQR8XYZABCDEFGHIJKLMO', 'mbr_Cx8mKfD4R27oPQ4wp8rmmx', 'pln_01JDQR8XYZABCDEFGHIJKLMN', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'active', NOW() - INTERVAL '45 days', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days', 'card', NOW() - INTERVAL '45 days', NOW()),
+('sub_01JDQR8XYZABCDEFGHIJKLMQ', 'mbr_Bw3LjEcQ9R72NOP9vo3qllw', 'pln_01JDQR8XYZABCDEFGHIJKLMN', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'active', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days', NOW() + INTERVAL '23 days', 'card', NOW() - INTERVAL '7 days', NOW());
 
 -- =========================================
--- INVOICES (Billing records)
+-- MEMBER PACKAGES (One-time plans)
 -- =========================================
-INSERT INTO member_invoices (id, currency, member_id, location_id, description, items, paid, tax, total, discount, subtotal, due_date, attempt_count, status, metadata, created_at, updated_at, for_period_start, for_period_end) VALUES
-('inv_john_monthly', 'USD', 'mbr_test_john', 'acc_test_gym', 'Monthly membership - January 2024', ARRAY['{"name": "Premium Membership", "amount": 9900, "quantity": 1}']::jsonb[], true, 792, 9900, 0, 9900, NOW() + INTERVAL '30 days', 0, 'paid', '{"period": "monthly"}', NOW(), NOW(), NOW() - INTERVAL '30 days', NOW()),
-('inv_jane_monthly', 'USD', 'mbr_test_jane', 'acc_test_gym', 'Monthly membership - January 2024', ARRAY['{"name": "Basic Membership", "amount": 7900, "quantity": 1}']::jsonb[], true, 632, 7900, 0, 7900, NOW() + INTERVAL '30 days', 0, 'paid', '{"period": "monthly"}', NOW(), NOW(), NOW() - INTERVAL '30 days', NOW()),
-('inv_bob_dance', 'USD', 'mbr_test_bob', 'acc_test_dance', 'Dance class package', ARRAY['{"name": "10-Class Package", "amount": 25000, "quantity": 1}']::jsonb[], false, 2000, 25000, 1000, 24000, NOW() + INTERVAL '15 days', 0, 'unpaid', '{"classes_remaining": 8}', NOW(), NOW(), NOW(), NOW() + INTERVAL '60 days');
+INSERT INTO member_packages (id, member_plan_id, member_id, location_id, status, start_date, payment_method, total_class_limit, expire_date, created_at, updated_at) VALUES
+('pkg_01JDQR8XYZABCDEFGHIJKLMN', 'pln_01JDQR8XYZABCDEFGHIJKLMO', 'mbr_Dy9nLgE5S38pQR5xq9snny', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'active', NOW() - INTERVAL '15 days', 'card', 50, NOW() + INTERVAL '1 year', NOW() - INTERVAL '15 days', NOW()),
+('pkg_01JDQR8XYZABCDEFGHIJKLMO', 'pln_01JDQR8XYZABCDEFGHIJKLMO', 'mbr_Ez0oMhF6T49qRS6yr0tooz', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'active', NOW() - INTERVAL '60 days', 'card', 50, NOW() + INTERVAL '1 year', NOW() - INTERVAL '60 days', NOW());
+
+
+
+-- =========================================
+-- MEMBER INVOICES (Billing records for members)
+-- =========================================
+
+-- John Doe - Monthly Subscription Invoices (12 months)
+INSERT INTO member_invoices (id, member_id, location_id, description, items, paid, tax, total, discount, subtotal, due_date, status, member_subscription_id, for_period_start, for_period_end, created_at, updated_at) VALUES
+('inv_01JDQR8XYZABCDEFGHIJKLMN', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '11 months' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '11 months', NOW() - INTERVAL '10 months', NOW() - INTERVAL '11 months', NOW() - INTERVAL '11 months'),
+('inv_01JDQR8XYZABCDEFGHIJKLM2', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '10 months' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '10 months', NOW() - INTERVAL '9 months', NOW() - INTERVAL '10 months', NOW() - INTERVAL '10 months'),
+('inv_01JDQR8XYZABCDEFGHIJKLM3', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '9 months' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '9 months', NOW() - INTERVAL '8 months', NOW() - INTERVAL '9 months', NOW() - INTERVAL '9 months'),
+('inv_01JDQR8XYZABCDEFGHIJKLM4', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '8 months' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '8 months', NOW() - INTERVAL '7 months', NOW() - INTERVAL '8 months', NOW() - INTERVAL '8 months'),
+('inv_01JDQR8XYZABCDEFGHIJKLM5', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '7 months' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '7 months', NOW() - INTERVAL '6 months', NOW() - INTERVAL '7 months', NOW() - INTERVAL '7 months'),
+('inv_01JDQR8XYZABCDEFGHIJKLM6', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '6 months' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '6 months', NOW() - INTERVAL '5 months', NOW() - INTERVAL '6 months', NOW() - INTERVAL '6 months'),
+('inv_01JDQR8XYZABCDEFGHIJKLM7', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '5 months' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '5 months', NOW() - INTERVAL '4 months', NOW() - INTERVAL '5 months', NOW() - INTERVAL '5 months'),
+('inv_01JDQR8XYZABCDEFGHIJKLM8', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '4 months' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '4 months', NOW() - INTERVAL '3 months', NOW() - INTERVAL '4 months', NOW() - INTERVAL '4 months'),
+('inv_01JDQR8XYZABCDEFGHIJKLM9', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '3 months' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '3 months', NOW() - INTERVAL '2 months', NOW() - INTERVAL '3 months', NOW() - INTERVAL '3 months'),
+('inv_01JDQR8XYZABCDEFGHIJKLMA', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '2 months' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '2 months', NOW() - INTERVAL '1 month', NOW() - INTERVAL '2 months', NOW() - INTERVAL '2 months'),
+('inv_01JDQR8XYZABCDEFGHIJKLMB', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '1 month' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '1 month', NOW(), NOW() - INTERVAL '1 month', NOW() - INTERVAL '1 month'),
+('inv_01JDQR8XYZABCDEFGHIJKLMQ', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW(), NOW() + INTERVAL '1 month', NOW(), NOW());
+
+-- Jane Smith - Monthly Subscription Invoices (2 months)
+INSERT INTO member_invoices (id, member_id, location_id, description, items, paid, tax, total, discount, subtotal, due_date, status, member_subscription_id, for_period_start, for_period_end, created_at, updated_at) VALUES
+('inv_01JDQR8XYZABCDEFGHIJKLMZ', 'mbr_Cx8mKfD4R27oPQ4wp8rmmx', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '45 days' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMO', NOW() - INTERVAL '45 days', NOW() - INTERVAL '45 days' + INTERVAL '1 month', NOW() - INTERVAL '45 days', NOW() - INTERVAL '45 days'),
+('inv_01JDQR8XYZABCDEFGHIJKLMY', 'mbr_Cx8mKfD4R27oPQ4wp8rmmx', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '15 days' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMO', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days');
+
+-- Bob Johnson - One-time Package Invoice
+INSERT INTO member_invoices (id, member_id, location_id, description, items, paid, tax, total, discount, subtotal, due_date, status, member_package_id, created_at, updated_at) VALUES
+('inv_01JDQR8XYZABCDEFGHIJKLMX', 'mbr_Dy9nLgE5S38pQR5xq9snny', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'All Programs Package - One-time Purchase', ARRAY['{"name": "All Programs Package", "description": "One-time access to all programs with 50 class limit", "amount": 100000, "quantity": 1}']::jsonb[], true, 8000, 108000, 0, 100000, NOW() - INTERVAL '15 days' + INTERVAL '30 days', 'paid', 'pkg_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days');
+
+-- Alice Williams - One-time Package Invoice
+INSERT INTO member_invoices (id, member_id, location_id, description, items, paid, tax, total, discount, subtotal, due_date, status, member_package_id, created_at, updated_at) VALUES
+('inv_01JDQR8XYZABCDEFGHIJKLMW', 'mbr_Ez0oMhF6T49qRS6yr0tooz', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'All Programs Package - One-time Purchase', ARRAY['{"name": "All Programs Package", "description": "One-time access to all programs with 50 class limit", "amount": 100000, "quantity": 1}']::jsonb[], true, 8000, 108000, 0, 100000, NOW() - INTERVAL '60 days' + INTERVAL '30 days', 'paid', 'pkg_01JDQR8XYZABCDEFGHIJKLMO', NOW() - INTERVAL '60 days', NOW() - INTERVAL '60 days');
+
+-- Yoda Master - Monthly Subscription Invoice
+INSERT INTO member_invoices (id, member_id, location_id, description, items, paid, tax, total, discount, subtotal, due_date, status, member_subscription_id, for_period_start, for_period_end, created_at, updated_at) VALUES
+('inv_01JDQR8XYZABCDEFGHIJKLMV', 'mbr_Bw3LjEcQ9R72NOP9vo3qllw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription - All Programs', ARRAY['{"name": "All Programs Monthly", "description": "Access to Personal Training, Group Fitness, Ballet, and Hip Hop", "amount": 19900, "quantity": 1}']::jsonb[], true, 1592, 21492, 0, 19900, NOW() - INTERVAL '7 days' + INTERVAL '15 days', 'paid', 'sub_01JDQR8XYZABCDEFGHIJKLMQ', NOW() - INTERVAL '7 days', NOW() + INTERVAL '23 days', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days');
 
 -- =========================================
 -- TRANSACTIONS (Payment records)
 -- =========================================
-INSERT INTO transactions (id, description, type, amount, tax_amount, status, location_id, member_id, payment_method, items, charge_date, currency, metadata, refunded, invoice_id, created_at, updated_at) VALUES
-('txn_john_payment', 'Monthly membership payment', 'inbound', 9900, 792, 'paid', 'acc_test_gym', 'mbr_test_john', 'card', ARRAY['{"name": "Premium Membership", "amount": 9900}']::jsonb[], NOW() - INTERVAL '5 days', 'USD', '{"stripe_payment_id": "pi_test_123"}', false, 'inv_john_monthly', NOW(), NOW()),
-('txn_jane_payment', 'Monthly membership payment', 'inbound', 7900, 632, 'paid', 'acc_test_gym', 'mbr_test_jane', 'card', ARRAY['{"name": "Basic Membership", "amount": 7900}']::jsonb[], NOW() - INTERVAL '3 days', 'USD', '{"stripe_payment_id": "pi_test_456"}', false, 'inv_jane_monthly', NOW(), NOW()),
-('txn_bob_payment', 'Dance class package payment', 'inbound', 25000, 2000, 'paid', 'acc_test_dance', 'mbr_test_bob', 'card', ARRAY['{"name": "10-Class Package", "amount": 25000}']::jsonb[], NOW() - INTERVAL '1 day', 'USD', '{"stripe_payment_id": "pi_test_789"}', false, 'inv_bob_dance', NOW(), NOW());
 
--- =========================================
--- MEMBER PLANS (Membership offerings by location)
--- =========================================
-INSERT INTO member_plans (id, name, description, family, interval, interval_threshold, type, currency, price, total_class_limit, class_limit_interval, class_limit_threshold, location_id, created_at, updated_at) VALUES
--- Admin location plans (for testing)
-('plan_admin_basic', 'Admin Basic Plan', 'Basic administrative access plan', false, 'month', 1, 'recurring', 'USD', 9900, NULL, NULL, NULL, 'acc_test_admin', NOW(), NOW()),
-('plan_admin_premium', 'Admin Premium Plan', 'Premium administrative access with extra features', false, 'month', 1, 'recurring', 'USD', 19900, NULL, NULL, NULL, 'acc_test_admin', NOW(), NOW()),
+-- John Doe Transactions (12 months)
+INSERT INTO transactions (id, member_id, location_id, description, type, amount, tax_amount, status, payment_method, invoice_id, subscription_id, charge_date, created_at, updated_at) VALUES
+('txn_01JDQR8XYZABCDEFGHIJKLMN', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLMN', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '11 months' + INTERVAL '2 days', NOW() - INTERVAL '11 months' + INTERVAL '2 days', NOW() - INTERVAL '11 months' + INTERVAL '2 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLT2', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLM2', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '10 months' + INTERVAL '2 days', NOW() - INTERVAL '10 months' + INTERVAL '2 days', NOW() - INTERVAL '10 months' + INTERVAL '2 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLT3', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLM3', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '9 months' + INTERVAL '2 days', NOW() - INTERVAL '9 months' + INTERVAL '2 days', NOW() - INTERVAL '9 months' + INTERVAL '2 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLT4', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLM4', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '8 months' + INTERVAL '2 days', NOW() - INTERVAL '8 months' + INTERVAL '2 days', NOW() - INTERVAL '8 months' + INTERVAL '2 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLT5', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLM5', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '7 months' + INTERVAL '2 days', NOW() - INTERVAL '7 months' + INTERVAL '2 days', NOW() - INTERVAL '7 months' + INTERVAL '2 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLT6', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLM6', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '6 months' + INTERVAL '2 days', NOW() - INTERVAL '6 months' + INTERVAL '2 days', NOW() - INTERVAL '6 months' + INTERVAL '2 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLT7', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLM7', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '5 months' + INTERVAL '2 days', NOW() - INTERVAL '5 months' + INTERVAL '2 days', NOW() - INTERVAL '5 months' + INTERVAL '2 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLT8', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLM8', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '4 months' + INTERVAL '2 days', NOW() - INTERVAL '4 months' + INTERVAL '2 days', NOW() - INTERVAL '4 months' + INTERVAL '2 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLT9', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLM9', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '3 months' + INTERVAL '2 days', NOW() - INTERVAL '3 months' + INTERVAL '2 days', NOW() - INTERVAL '3 months' + INTERVAL '2 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLTA', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLMA', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '2 months' + INTERVAL '2 days', NOW() - INTERVAL '2 months' + INTERVAL '2 days', NOW() - INTERVAL '2 months' + INTERVAL '2 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLTB', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLMB', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '1 month' + INTERVAL '2 days', NOW() - INTERVAL '1 month' + INTERVAL '2 days', NOW() - INTERVAL '1 month' + INTERVAL '2 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLMQ', 'mbr_BpT7jEb3Q16nOPL3vo7qlw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLMQ', 'sub_01JDQR8XYZABCDEFGHIJKLMN', NOW() + INTERVAL '1 day', NOW() + INTERVAL '1 day', NOW() + INTERVAL '1 day');
 
--- FitZone Gym plans
-('plan_gym_basic', 'Basic Membership', 'Access to gym equipment and basic facilities', false, 'month', 1, 'recurring', 'USD', 4900, NULL, NULL, NULL, 'acc_test_gym', NOW(), NOW()),
-('plan_gym_premium', 'Premium Membership', 'Full gym access including all classes and personal training sessions', false, 'month', 1, 'recurring', 'USD', 7900, NULL, NULL, NULL, 'acc_test_gym', NOW(), NOW()),
-('plan_gym_family', 'Family Membership', 'Premium membership for up to 4 family members', true, 'month', 1, 'recurring', 'USD', 12900, NULL, NULL, NULL, 'acc_test_gym', NOW(), NOW()),
-('plan_gym_annual', 'Annual Premium', 'Premium membership paid annually with discount', false, 'year', 1, 'recurring', 'USD', 79900, NULL, NULL, NULL, 'acc_test_gym', NOW(), NOW()),
-('plan_gym_10pack', '10-Class Package', 'Package of 10 group fitness classes', false, 'month', 1, 'one-time', 'USD', 18000, 10, 'month', 3, 'acc_test_gym', NOW(), NOW()),
-('plan_gym_5pack', '5-Session PT Package', 'Package of 5 personal training sessions', false, 'month', 1, 'one-time', 'USD', 35000, 5, 'month', 2, 'acc_test_gym', NOW(), NOW()),
+-- Jane Smith Transactions
+INSERT INTO transactions (id, member_id, location_id, description, type, amount, tax_amount, status, payment_method, invoice_id, subscription_id, charge_date, created_at, updated_at) VALUES
+('txn_01JDQR8XYZABCDEFGHIJKLMZ', 'mbr_Cx8mKfD4R27oPQ4wp8rmmx', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLMZ', 'sub_01JDQR8XYZABCDEFGHIJKLMO', NOW() - INTERVAL '45 days' + INTERVAL '3 days', NOW() - INTERVAL '45 days' + INTERVAL '3 days', NOW() - INTERVAL '45 days' + INTERVAL '3 days'),
+('txn_01JDQR8XYZABCDEFGHIJKLMY', 'mbr_Cx8mKfD4R27oPQ4wp8rmmx', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLMY', 'sub_01JDQR8XYZABCDEFGHIJKLMO', NOW() - INTERVAL '15 days' + INTERVAL '2 days', NOW() - INTERVAL '15 days' + INTERVAL '2 days', NOW() - INTERVAL '15 days' + INTERVAL '2 days');
 
--- Dance Academy plans
-('plan_dance_beginner', 'Beginner Monthly', 'Monthly unlimited beginner classes', false, 'month', 1, 'recurring', 'USD', 8900, NULL, NULL, NULL, 'acc_test_dance', NOW(), NOW()),
-('plan_dance_intermediate', 'Intermediate Monthly', 'Monthly unlimited intermediate classes', false, 'month', 1, 'recurring', 'USD', 10900, NULL, NULL, NULL, 'acc_test_dance', NOW(), NOW()),
-('plan_dance_advanced', 'Advanced Monthly', 'Monthly unlimited advanced classes including specialty workshops', false, 'month', 1, 'recurring', 'USD', 13900, NULL, NULL, NULL, 'acc_test_dance', NOW(), NOW()),
-('plan_dance_drop_in', 'Drop-in Classes', 'Single class drop-in rate', false, 'day', 1, 'one-time', 'USD', 2500, 1, 'week', 1, 'acc_test_dance', NOW(), NOW()),
-('plan_dance_8pack', '8-Class Package', 'Package of 8 classes, any level', false, 'month', 1, 'one-time', 'USD', 18000, 8, 'month', 3, 'acc_test_dance', NOW(), NOW()),
-('plan_dance_youth', 'Youth Monthly (Under 18)', 'Monthly unlimited classes for youth under 18', false, 'month', 1, 'recurring', 'USD', 6900, NULL, NULL, NULL, 'acc_test_dance', NOW(), NOW());
+-- Bob Johnson Transaction
+INSERT INTO transactions (id, member_id, location_id, description, type, amount, tax_amount, status, payment_method, invoice_id, package_id, charge_date, created_at, updated_at) VALUES
+('txn_01JDQR8XYZABCDEFGHIJKLMX', 'mbr_Dy9nLgE5S38pQR5xq9snny', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'All Programs Package Payment', 'inbound', 108000, 8000, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLMX', 'pkg_01JDQR8XYZABCDEFGHIJKLMN', NOW() - INTERVAL '15 days' + INTERVAL '5 days', NOW() - INTERVAL '15 days' + INTERVAL '5 days', NOW() - INTERVAL '15 days' + INTERVAL '5 days');
 
--- =========================================
--- MEMBER SUBSCRIPTIONS (Active recurring memberships)
--- =========================================
-INSERT INTO member_subscriptions (id, member_id, member_plan_id, location_id, status, start_date, current_period_start, current_period_end, payment_method, metadata, created_at, updated_at) VALUES
--- John's subscriptions
-('sub_john_gym', 'mbr_test_john', 'plan_gym_premium', 'acc_test_gym', 'active', NOW() - INTERVAL '2 months', NOW() - INTERVAL '1 month', NOW() + INTERVAL '1 month', 'card', '{"auto_renew": true, "preferred_billing_date": 15}', NOW(), NOW()),
-('sub_john_admin', 'mbr_test_john', 'plan_admin_premium', 'acc_test_admin', 'active', NOW() - INTERVAL '3 months', NOW() - INTERVAL '1 month', NOW() + INTERVAL '1 month', 'card', '{"auto_renew": true}', NOW(), NOW()),
+-- Alice Williams Transaction
+INSERT INTO transactions (id, member_id, location_id, description, type, amount, tax_amount, status, payment_method, invoice_id, package_id, charge_date, created_at, updated_at) VALUES
+('txn_01JDQR8XYZABCDEFGHIJKLMW', 'mbr_Ez0oMhF6T49qRS6yr0tooz', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'All Programs Package Payment', 'inbound', 108000, 8000, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLMW', 'pkg_01JDQR8XYZABCDEFGHIJKLMO', NOW() - INTERVAL '60 days' + INTERVAL '3 days', NOW() - INTERVAL '60 days' + INTERVAL '3 days', NOW() - INTERVAL '60 days' + INTERVAL '3 days');
 
--- Jane's subscriptions  
-('sub_jane_gym', 'mbr_test_jane', 'plan_gym_basic', 'acc_test_gym', 'active', NOW() - INTERVAL '1 month', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days', 'card', '{"auto_renew": true, "billing_day": 1}', NOW(), NOW()),
-
--- Bob's subscriptions
-('sub_bob_dance', 'mbr_test_bob', 'plan_dance_advanced', 'acc_test_dance', 'active', NOW() - INTERVAL '6 weeks', NOW() - INTERVAL '2 weeks', NOW() + INTERVAL '2 weeks', 'card', '{"auto_renew": true, "student_discount": true}', NOW(), NOW()),
-('sub_bob_admin', 'mbr_test_bob', 'plan_admin_basic', 'acc_test_admin', 'active', NOW() - INTERVAL '1 month', NOW() - INTERVAL '5 days', NOW() + INTERVAL '25 days', 'card', '{"auto_renew": false}', NOW(), NOW());
-
--- =========================================
--- MEMBER PACKAGES (Purchased class packages/credits)
--- =========================================
-INSERT INTO member_packages (id, member_plan_id, location_id, member_id, start_date, expire_date, status, payment_method, total_class_attended, total_class_limit, metadata, created_at, updated_at) VALUES
--- John's packages
-('pkg_john_gym_pt', 'plan_gym_5pack', 'acc_test_gym', 'mbr_test_john', NOW() - INTERVAL '3 weeks', NOW() + INTERVAL '5 weeks', 'active', 'card', 2, 5, '{"purchased_price": 35000, "trainer_preference": "Alex Rodriguez"}', NOW(), NOW()),
-
--- Jane's packages
-('pkg_jane_gym_classes', 'plan_gym_10pack', 'acc_test_gym', 'mbr_test_jane', NOW() - INTERVAL '1 month', NOW() + INTERVAL '2 months', 'active', 'card', 6, 10, '{"purchased_price": 18000, "class_preferences": ["Group Fitness", "Cardio"]}', NOW(), NOW()),
-
--- Bob's packages
-('pkg_bob_dance_extra', 'plan_dance_8pack', 'acc_test_dance', 'mbr_test_bob', NOW() - INTERVAL '2 weeks', NOW() + INTERVAL '10 weeks', 'active', 'card', 3, 8, '{"purchased_price": 18000, "class_level": "advanced", "workshop_access": true}', NOW(), NOW()),
-
--- Expired package example
-('pkg_john_dance_old', 'plan_dance_drop_in', 'acc_test_dance', 'mbr_test_john', NOW() - INTERVAL '2 months', NOW() - INTERVAL '1 month', 'expired', 'card', 1, 1, '{"purchased_price": 2500}', NOW() - INTERVAL '2 months', NOW());
-
--- =========================================
--- INTEGRATIONS (Third-party service integrations)
--- =========================================
-INSERT INTO integrations (id, service, api_key, secret_key, access_token, refresh_token, expires_at, account_id, metadata, created_at, updated_at, location_id) VALUES
--- Stripe integration for FitZone Gym (main payment processing location)
-('int_stripe_gym', 'stripe', 'pk_test_51RuSdMAPm3T5SOduzE6wrQnTP36xP1h6TQnoJyTLCzV9PxDVKCqUmJFoTkxbgkN3RibtWtgdfFU8jEbXSrjdkMGE00IZNWxqsT', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'rt_Sq8vjBpEN9SgvBAXIybF2qMEyG33EfdOQhvzpcbbA9rYEXrw', NULL, 'acct_1RuSdMAPm3T5SOdu', '{"scope": "read_write", "connected_at": "2024-08-10", "webhook_endpoint": "https://monstro.com/webhooks/stripe"}', NOW() - INTERVAL '2 months', NOW() - INTERVAL '1 week', 'acc_test_gym'),
-
--- Stripe integration for Dance Academy
-('int_stripe_dance', 'stripe', 'pk_test_51RuSdMAPm3T5SOduzE6wrQnTP36xP1h6TQnoJyTLCzV9PxDVKCqUmJFoTkxbgkN3RibtWtgdfFU8jEbXSrjdkMGE00IZNWxqsT', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'rt_Sq8vjBpEN9SgvBAXIybF2qMEyG33EfdOQhvzpcbbA9rYEXrw', NULL, 'acct_1RuSdMAPm3T5SOdu', '{"scope": "read_write", "connected_at": "2024-09-15", "webhook_endpoint": "https://monstro.com/webhooks/stripe"}', NOW() - INTERVAL '1 month', NOW() - INTERVAL '3 days', 'acc_test_dance'),
-
--- Admin location integration (for testing admin features)
-('int_stripe_admin', 'stripe', 'pk_test_51RuSdMAPm3T5SOduzE6wrQnTP36xP1h6TQnoJyTLCzV9PxDVKCqUmJFoTkxbgkN3RibtWtgdfFU8jEbXSrjdkMGE00IZNWxqsT', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'sk_test_51RuSdMAPm3T5SOdufDNNJUEQWhUWhAV5xVUNCktPYBP2dSQKveZpJrkuxToVqG0e4lpZwhkyUw1RIuRMej0N8rLP00lfwtsdx8', 'rt_Sq8vjBpEN9SgvBAXIybF2qMEyG33EfdOQhvzpcbbA9rYEXrw', NULL, 'acct_1RuSdMAPm3T5SOdu', '{"scope": "read_write", "connected_at": "2024-07-01", "webhook_endpoint": "https://monstro.com/webhooks/stripe", "admin_integration": true}', NOW() - INTERVAL '4 months', NOW() - INTERVAL '2 weeks', 'acc_test_admin');
-
--- =========================================
--- SESSIONS (User authentication sessions)
--- =========================================
-INSERT INTO sessions (id, session_token, user_id, expires, ip_address, browser_id, mac_address, created_at, updated_at) VALUES
-('ses_admin_1', 'session_token_admin_123', 'usr_test_admin', NOW() + INTERVAL '24 hours', '127.0.0.1', 'chrome_123', 'mac_123', NOW(), NOW()),
-('ses_vendor_1', 'session_token_vendor_456', 'usr_test_vendor', NOW() + INTERVAL '24 hours', '127.0.0.1', 'firefox_456', 'mac_456', NOW(), NOW()),
-('ses_member_1', 'session_token_member_789', 'usr_test_member1', NOW() + INTERVAL '24 hours', '127.0.0.1', 'safari_789', 'mac_789', NOW(), NOW());
-
--- =========================================
--- ACCOUNTS (OAuth provider accounts)
--- =========================================
-INSERT INTO account (user_id, type, provider, provider_account_id, refresh_token, access_token, expires_at, token_type, scope, id_token, session_state) VALUES
-('usr_test_admin', 'oauth', 'google', 'google_123', 'refresh_123', 'access_123', 1640995200, 'Bearer', 'email profile', 'id_token_123', NULL),
-('usr_test_vendor', 'oauth', 'github', 'github_456', 'refresh_456', 'access_456', 1640995200, 'Bearer', 'user:email', 'id_token_456', NULL);
-
--- =========================================
--- MEMBER TAGS (Tags for categorizing members)
--- =========================================
-INSERT INTO member_tags (id, name, location_id, created_at, updated_at) VALUES
-('tag_gym_vip', 'VIP Member', 'acc_test_gym', NOW(), NOW()),
-('tag_gym_new', 'New Member', 'acc_test_gym', NOW(), NOW()),
-('tag_gym_premium', 'Premium Member', 'acc_test_gym', NOW(), NOW()),
-('tag_dance_advanced', 'Advanced Dancer', 'acc_test_dance', NOW(), NOW()),
-('tag_dance_beginner', 'Beginner Dancer', 'acc_test_dance', NOW(), NOW());
-
--- =========================================
--- MEMBER HAS TAGS (Tag assignments to members)
--- =========================================
-INSERT INTO member_has_tags (member_id, tag_id, created_at) VALUES
-('mbr_test_john', 'tag_gym_vip', NOW()),
-('mbr_test_john', 'tag_gym_premium', NOW()),
-('mbr_test_jane', 'tag_gym_new', NOW()),
-('mbr_test_bob', 'tag_dance_advanced', NOW());
-
--- =========================================
--- MEMBER FIELDS (Custom field definitions)
--- =========================================
-INSERT INTO member_fields (id, name, type, location_id, placeholder, help_text, options, created_at, updated_at) VALUES
-('field_gym_emergency', 'Emergency Contact', 'text', 'acc_test_gym', 'Enter emergency contact name and phone', 'Who should we contact in case of emergency?', '[]'::jsonb, NOW(), NOW()),
-('field_gym_membership_type', 'Membership Type', 'select', 'acc_test_gym', 'Select membership type', 'Choose your preferred membership plan', '[{"value": "basic", "label": "Basic"}, {"value": "premium", "label": "Premium"}, {"value": "vip", "label": "VIP"}]'::jsonb, NOW(), NOW()),
-('field_dance_experience', 'Dance Experience', 'select', 'acc_test_dance', 'Select your experience level', 'How many years have you been dancing?', '[{"value": "beginner", "label": "Beginner (0-1 years)"}, {"value": "intermediate", "label": "Intermediate (1-3 years)"}, {"value": "advanced", "label": "Advanced (3+ years)"}]'::jsonb, NOW(), NOW()),
-('field_dance_allergies', 'Allergies/Medical Conditions', 'text', 'acc_test_dance', 'List any allergies or medical conditions', 'Important for safety during classes', '[]'::jsonb, NOW(), NOW()),
--- Additional custom fields for gym to stretch table width
-('field_gym_fitness_goals', 'Primary Fitness Goals and Objectives', 'select', 'acc_test_gym', 'Select your main fitness goals', 'What are your primary fitness objectives?', '[{"value": "weight_loss", "label": "Weight Loss and Fat Reduction"}, {"value": "muscle_gain", "label": "Muscle Building and Strength Training"}, {"value": "endurance", "label": "Cardiovascular Endurance and Stamina"}, {"value": "flexibility", "label": "Flexibility and Mobility Improvement"}, {"value": "general_health", "label": "General Health and Wellness"}]'::jsonb, NOW(), NOW()),
-('field_gym_workout_frequency', 'Preferred Workout Frequency Per Week', 'select', 'acc_test_gym', 'How many days per week do you plan to workout?', 'Your preferred training frequency', '[{"value": "1-2", "label": "1-2 days per week (Beginner)"}, {"value": "3-4", "label": "3-4 days per week (Intermediate)"}, {"value": "5-6", "label": "5-6 days per week (Advanced)"}, {"value": "7", "label": "7 days per week (Elite)"}]'::jsonb, NOW(), NOW()),
-('field_gym_equipment_experience', 'Experience Level with Gym Equipment', 'select', 'acc_test_gym', 'How familiar are you with gym equipment?', 'Your experience level with fitness equipment', '[{"value": "novice", "label": "Novice - Need guidance with all equipment"}, {"value": "beginner", "label": "Beginner - Familiar with basic machines"}, {"value": "intermediate", "label": "Intermediate - Comfortable with most equipment"}, {"value": "advanced", "label": "Advanced - Expert with all gym equipment"}]'::jsonb, NOW(), NOW()),
-('field_gym_referral_source', 'How Did You Hear About Our Gym?', 'select', 'acc_test_gym', 'Select how you found us', 'Marketing attribution and referral tracking', '[{"value": "google_search", "label": "Google Search"}, {"value": "social_media", "label": "Social Media (Facebook, Instagram, etc.)"}, {"value": "friend_family", "label": "Friend or Family Recommendation"}, {"value": "local_advertising", "label": "Local Advertising (Billboard, Newspaper)"}, {"value": "online_review", "label": "Online Review (Yelp, Google Reviews)"}, {"value": "walk_in", "label": "Walked In / Saw the Building"}, {"value": "other", "label": "Other"}]'::jsonb, NOW(), NOW()),
-('field_gym_previous_gym_experience', 'Previous Gym Membership Experience', 'text', 'acc_test_gym', 'List any previous gym memberships', 'Help us understand your fitness background', '[]'::jsonb, NOW(), NOW()),
-('field_gym_dietary_restrictions', 'Dietary Restrictions and Preferences', 'text', 'acc_test_gym', 'Any dietary restrictions or preferences?', 'Important for nutrition guidance and recommendations', '[]'::jsonb, NOW(), NOW()),
-('field_gym_availability_schedule', 'Preferred Workout Times and Schedule', 'text', 'acc_test_gym', 'What times work best for your workouts?', 'Your preferred training schedule and availability', '[]'::jsonb, NOW(), NOW()),
--- Additional custom fields for dance academy
-('field_dance_previous_training', 'Previous Dance Training and Experience', 'text', 'acc_test_dance', 'Describe any previous dance training', 'Help us place you in the appropriate class level', '[]'::jsonb, NOW(), NOW()),
-('field_dance_favorite_styles', 'Favorite Dance Styles and Genres', 'select', 'acc_test_dance', 'Select your favorite dance styles', 'What dance styles interest you most?', '[{"value": "ballet", "label": "Classical Ballet"}, {"value": "jazz", "label": "Jazz Dance"}, {"value": "hip_hop", "label": "Hip Hop and Street Dance"}, {"value": "contemporary", "label": "Contemporary and Modern Dance"}, {"value": "tap", "label": "Tap Dance"}, {"value": "musical_theater", "label": "Musical Theater"}, {"value": "folk_traditional", "label": "Folk and Traditional Dance"}, {"value": "other", "label": "Other"}]'::jsonb, NOW(), NOW()),
-('field_dance_performance_goals', 'Performance and Competition Goals', 'text', 'acc_test_dance', 'Any performance or competition aspirations?', 'Understanding your dance aspirations helps us guide you', '[]'::jsonb, NOW(), NOW()),
-('field_dance_costume_measurements', 'Costume Measurements and Sizing', 'text', 'acc_test_dance', 'Current measurements for costume fitting', 'Required for recital costumes and special performances', '[]'::jsonb, NOW(), NOW()),
-('field_dance_emergency_medical_info', 'Emergency Medical Information and Conditions', 'text', 'acc_test_dance', 'Any medical conditions we should be aware of?', 'Critical for safety during intense dance sessions', '[]'::jsonb, NOW(), NOW()),
-('field_dance_transportation_method', 'Transportation Method to Classes', 'select', 'acc_test_dance', 'How do you get to dance classes?', 'Help us understand transportation logistics', '[{"value": "parent_driven", "label": "Driven by Parent/Guardian"}, {"value": "public_transportation", "label": "Public Transportation (Bus, Train)"}, {"value": "walking_biking", "label": "Walking or Biking"}, {"value": "carpool", "label": "Carpool with Other Students"}, {"value": "school_bus", "label": "School Bus"}, {"value": "other", "label": "Other"}]'::jsonb, NOW(), NOW());
-
--- =========================================
--- MEMBER CUSTOM FIELDS (Custom field values for members)
--- =========================================
-INSERT INTO member_custom_fields (member_id, custom_field_id, value, created_at, updated_at) VALUES
-('mbr_test_john', 'field_gym_emergency', 'Jane Doe - 555-0101', NOW(), NOW()),
-('mbr_test_john', 'field_gym_membership_type', 'premium', NOW(), NOW()),
-('mbr_test_jane', 'field_gym_emergency', 'Bob Smith - 555-0102', NOW(), NOW()),
-('mbr_test_jane', 'field_gym_membership_type', 'basic', NOW(), NOW()),
-('mbr_test_bob', 'field_dance_experience', 'advanced', NOW(), NOW()),
-('mbr_test_bob', 'field_dance_allergies', 'None', NOW(), NOW()),
--- Additional custom field values for gym members
-('mbr_test_john', 'field_gym_fitness_goals', 'muscle_gain', NOW(), NOW()),
-('mbr_test_john', 'field_gym_workout_frequency', '5-6', NOW(), NOW()),
-('mbr_test_john', 'field_gym_equipment_experience', 'advanced', NOW(), NOW()),
-('mbr_test_john', 'field_gym_referral_source', 'friend_family', NOW(), NOW()),
-('mbr_test_john', 'field_gym_previous_gym_experience', 'FitZone Gym (2 years), Planet Fitness (1 year)', NOW(), NOW()),
-('mbr_test_john', 'field_gym_dietary_restrictions', 'None', NOW(), NOW()),
-('mbr_test_john', 'field_gym_availability_schedule', 'Evenings after work, weekends anytime', NOW(), NOW()),
-('mbr_test_jane', 'field_gym_fitness_goals', 'weight_loss', NOW(), NOW()),
-('mbr_test_jane', 'field_gym_workout_frequency', '3-4', NOW(), NOW()),
-('mbr_test_jane', 'field_gym_equipment_experience', 'intermediate', NOW(), NOW()),
-('mbr_test_jane', 'field_gym_referral_source', 'google_search', NOW(), NOW()),
-('mbr_test_jane', 'field_gym_previous_gym_experience', 'Local YMCA (6 months)', NOW(), NOW()),
-('mbr_test_jane', 'field_gym_dietary_restrictions', 'Vegetarian, no dairy', NOW(), NOW()),
-('mbr_test_jane', 'field_gym_availability_schedule', 'Mornings before work, some lunch breaks', NOW(), NOW()),
-('mbr_test_alice', 'field_gym_fitness_goals', 'general_health', NOW(), NOW()),
-('mbr_test_alice', 'field_gym_workout_frequency', '3-4', NOW(), NOW()),
-('mbr_test_alice', 'field_gym_equipment_experience', 'beginner', NOW(), NOW()),
-('mbr_test_alice', 'field_gym_referral_source', 'social_media', NOW(), NOW()),
-('mbr_test_alice', 'field_gym_previous_gym_experience', 'First gym membership', NOW(), NOW()),
-('mbr_test_alice', 'field_gym_dietary_restrictions', 'Gluten-free', NOW(), NOW()),
-('mbr_test_alice', 'field_gym_availability_schedule', 'Weekends and Wednesday evenings', NOW(), NOW()),
-('mbr_test_charlie', 'field_gym_fitness_goals', 'endurance', NOW(), NOW()),
-('mbr_test_charlie', 'field_gym_workout_frequency', '5-6', NOW(), NOW()),
-('mbr_test_charlie', 'field_gym_equipment_experience', 'intermediate', NOW(), NOW()),
-('mbr_test_charlie', 'field_gym_referral_source', 'online_review', NOW(), NOW()),
-('mbr_test_charlie', 'field_gym_previous_gym_experience', 'CrossFit gym (1 year)', NOW(), NOW()),
-('mbr_test_charlie', 'field_gym_dietary_restrictions', 'None', NOW(), NOW()),
-('mbr_test_charlie', 'field_gym_availability_schedule', 'Early mornings, lunch breaks', NOW(), NOW()),
-('mbr_test_diana', 'field_gym_fitness_goals', 'muscle_gain', NOW(), NOW()),
-('mbr_test_diana', 'field_gym_workout_frequency', '5-6', NOW(), NOW()),
-('mbr_test_diana', 'field_gym_equipment_experience', 'advanced', NOW(), NOW()),
-('mbr_test_diana', 'field_gym_referral_source', 'friend_family', NOW(), NOW()),
-('mbr_test_diana', 'field_gym_previous_gym_experience', 'Powerhouse Gym (3 years)', NOW(), NOW()),
-('mbr_test_diana', 'field_gym_dietary_restrictions', 'Keto diet', NOW(), NOW()),
-('mbr_test_diana', 'field_gym_availability_schedule', 'Evenings and weekends', NOW(), NOW()),
-('mbr_test_edward', 'field_gym_fitness_goals', 'flexibility', NOW(), NOW()),
-('mbr_test_edward', 'field_gym_workout_frequency', '3-4', NOW(), NOW()),
-('mbr_test_edward', 'field_gym_equipment_experience', 'intermediate', NOW(), NOW()),
-('mbr_test_edward', 'field_gym_referral_source', 'walk_in', NOW(), NOW()),
-('mbr_test_edward', 'field_gym_previous_gym_experience', 'Yoga studio (2 years)', NOW(), NOW()),
-('mbr_test_edward', 'field_gym_dietary_restrictions', 'Vegan', NOW(), NOW()),
-('mbr_test_edward', 'field_gym_availability_schedule', 'Mornings and early afternoons', NOW(), NOW()),
-('mbr_test_fiona', 'field_gym_fitness_goals', 'weight_loss', NOW(), NOW()),
-('mbr_test_fiona', 'field_gym_workout_frequency', '3-4', NOW(), NOW()),
-('mbr_test_fiona', 'field_gym_equipment_experience', 'beginner', NOW(), NOW()),
-('mbr_test_fiona', 'field_gym_referral_source', 'local_advertising', NOW(), NOW()),
-('mbr_test_fiona', 'field_gym_previous_gym_experience', 'None', NOW(), NOW()),
-('mbr_test_fiona', 'field_gym_dietary_restrictions', 'Low carb', NOW(), NOW()),
-('mbr_test_fiona', 'field_gym_availability_schedule', 'Evenings after 6pm', NOW(), NOW()),
-('mbr_test_george', 'field_gym_fitness_goals', 'muscle_gain', NOW(), NOW()),
-('mbr_test_george', 'field_gym_workout_frequency', '5-6', NOW(), NOW()),
-('mbr_test_george', 'field_gym_equipment_experience', 'advanced', NOW(), NOW()),
-('mbr_test_george', 'field_gym_referral_source', 'friend_family', NOW(), NOW()),
-('mbr_test_george', 'field_gym_previous_gym_experience', 'Gold''s Gym (5 years)', NOW(), NOW()),
-('mbr_test_george', 'field_gym_dietary_restrictions', 'High protein', NOW(), NOW()),
-('mbr_test_george', 'field_gym_availability_schedule', 'Early mornings before work', NOW(), NOW()),
-('mbr_test_helen', 'field_gym_fitness_goals', 'general_health', NOW(), NOW()),
-('mbr_test_helen', 'field_gym_workout_frequency', '3-4', NOW(), NOW()),
-('mbr_test_helen', 'field_gym_equipment_experience', 'intermediate', NOW(), NOW()),
-('mbr_test_helen', 'field_gym_referral_source', 'social_media', NOW(), NOW()),
-('mbr_test_helen', 'field_gym_previous_gym_experience', '24 Hour Fitness (1 year)', NOW(), NOW()),
-('mbr_test_helen', 'field_gym_dietary_restrictions', 'Mediterranean diet', NOW(), NOW()),
-('mbr_test_helen', 'field_gym_availability_schedule', 'Lunch breaks and evenings', NOW(), NOW()),
-('mbr_test_ian', 'field_gym_fitness_goals', 'endurance', NOW(), NOW()),
-('mbr_test_ian', 'field_gym_workout_frequency', '5-6', NOW(), NOW()),
-('mbr_test_ian', 'field_gym_equipment_experience', 'advanced', NOW(), NOW()),
-('mbr_test_ian', 'field_gym_referral_source', 'online_review', NOW(), NOW()),
-('mbr_test_ian', 'field_gym_previous_gym_experience', 'Running club (3 years)', NOW(), NOW()),
-('mbr_test_ian', 'field_gym_dietary_restrictions', 'None', NOW(), NOW()),
-('mbr_test_ian', 'field_gym_availability_schedule', 'Weekends and early mornings', NOW(), NOW()),
-('mbr_test_jessica', 'field_gym_fitness_goals', 'muscle_gain', NOW(), NOW()),
-('mbr_test_jessica', 'field_gym_workout_frequency', '5-6', NOW(), NOW()),
-('mbr_test_jessica', 'field_gym_equipment_experience', 'intermediate', NOW(), NOW()),
-('mbr_test_jessica', 'field_gym_referral_source', 'friend_family', NOW(), NOW()),
-('mbr_test_jessica', 'field_gym_previous_gym_experience', 'Home workouts (2 years)', NOW(), NOW()),
-('mbr_test_jessica', 'field_gym_dietary_restrictions', 'Paleo', NOW(), NOW()),
-('mbr_test_jessica', 'field_gym_availability_schedule', 'Evenings after work', NOW(), NOW()),
-('mbr_test_kevin', 'field_gym_fitness_goals', 'weight_loss', NOW(), NOW()),
-('mbr_test_kevin', 'field_gym_workout_frequency', '3-4', NOW(), NOW()),
-('mbr_test_kevin', 'field_gym_equipment_experience', 'beginner', NOW(), NOW()),
-('mbr_test_kevin', 'field_gym_referral_source', 'google_search', NOW(), NOW()),
-('mbr_test_kevin', 'field_gym_previous_gym_experience', 'None', NOW(), NOW()),
-('mbr_test_kevin', 'field_gym_dietary_restrictions', 'Diabetic - low sugar', NOW(), NOW()),
-('mbr_test_kevin', 'field_gym_availability_schedule', 'Weekends only', NOW(), NOW()),
-('mbr_test_laura', 'field_gym_fitness_goals', 'flexibility', NOW(), NOW()),
-('mbr_test_laura', 'field_gym_workout_frequency', '3-4', NOW(), NOW()),
-('mbr_test_laura', 'field_gym_equipment_experience', 'intermediate', NOW(), NOW()),
-('mbr_test_laura', 'field_gym_referral_source', 'social_media', NOW(), NOW()),
-('mbr_test_laura', 'field_gym_previous_gym_experience', 'Pilates studio (2 years)', NOW(), NOW()),
-('mbr_test_laura', 'field_gym_dietary_restrictions', 'None', NOW(), NOW()),
-('mbr_test_laura', 'field_gym_availability_schedule', 'Mornings and lunch breaks', NOW(), NOW()),
-('mbr_test_michael', 'field_gym_fitness_goals', 'general_health', NOW(), NOW()),
-('mbr_test_michael', 'field_gym_workout_frequency', '3-4', NOW(), NOW()),
-('mbr_test_michael', 'field_gym_equipment_experience', 'novice', NOW(), NOW()),
-('mbr_test_michael', 'field_gym_referral_source', 'friend_family', NOW(), NOW()),
-('mbr_test_michael', 'field_gym_previous_gym_experience', 'None', NOW(), NOW()),
-('mbr_test_michael', 'field_gym_dietary_restrictions', 'Heart healthy diet', NOW(), NOW()),
-('mbr_test_michael', 'field_gym_availability_schedule', 'Evenings and weekends', NOW(), NOW()),
-('mbr_test_nancy', 'field_gym_fitness_goals', 'endurance', NOW(), NOW()),
-('mbr_test_nancy', 'field_gym_workout_frequency', '5-6', NOW(), NOW()),
-('mbr_test_nancy', 'field_gym_equipment_experience', 'advanced', NOW(), NOW()),
-('mbr_test_nancy', 'field_gym_referral_source', 'online_review', NOW(), NOW()),
-('mbr_test_nancy', 'field_gym_previous_gym_experience', 'Marathon training (4 years)', NOW(), NOW()),
-('mbr_test_nancy', 'field_gym_dietary_restrictions', 'None', NOW(), NOW()),
-('mbr_test_nancy', 'field_gym_availability_schedule', 'Early mornings and evenings', NOW(), NOW()),
-('mbr_test_oliver', 'field_gym_fitness_goals', 'muscle_gain', NOW(), NOW()),
-('mbr_test_oliver', 'field_gym_workout_frequency', '5-6', NOW(), NOW()),
-('mbr_test_oliver', 'field_gym_equipment_experience', 'advanced', NOW(), NOW()),
-('mbr_test_oliver', 'field_gym_referral_source', 'walk_in', NOW(), NOW()),
-('mbr_test_oliver', 'field_gym_previous_gym_experience', 'Bodybuilding gym (6 years)', NOW(), NOW()),
-('mbr_test_oliver', 'field_gym_dietary_restrictions', 'High protein, low carb', NOW(), NOW()),
-('mbr_test_oliver', 'field_gym_availability_schedule', 'Evenings after 5pm', NOW(), NOW()),
-('mbr_test_pam', 'field_gym_fitness_goals', 'weight_loss', NOW(), NOW()),
-('mbr_test_pam', 'field_gym_workout_frequency', '3-4', NOW(), NOW()),
-('mbr_test_pam', 'field_gym_equipment_experience', 'intermediate', NOW(), NOW()),
-('mbr_test_pam', 'field_gym_referral_source', 'friend_family', NOW(), NOW()),
-('mbr_test_pam', 'field_gym_previous_gym_experience', 'Weight Watchers gym (1 year)', NOW(), NOW()),
-('mbr_test_pam', 'field_gym_dietary_restrictions', 'Calorie counting', NOW(), NOW()),
-('mbr_test_pam', 'field_gym_availability_schedule', 'Lunch breaks and evenings', NOW(), NOW()),
--- Additional custom field values for dance academy members
-('mbr_test_quincy', 'field_dance_previous_training', 'Community center jazz classes (2 years)', NOW(), NOW()),
-('mbr_test_quincy', 'field_dance_favorite_styles', 'jazz', NOW(), NOW()),
-('mbr_test_quincy', 'field_dance_performance_goals', 'Local talent shows and community performances', NOW(), NOW()),
-('mbr_test_quincy', 'field_dance_costume_measurements', 'Height: 5''8", Waist: 32", Chest: 38", Inseam: 30"', NOW(), NOW()),
-('mbr_test_quincy', 'field_dance_emergency_medical_info', 'Seasonal allergies', NOW(), NOW()),
-('mbr_test_quincy', 'field_dance_transportation_method', 'public_transportation', NOW(), NOW()),
-('mbr_test_rachel', 'field_dance_previous_training', 'Ballet school (4 years), private lessons (1 year)', NOW(), NOW()),
-('mbr_test_rachel', 'field_dance_favorite_styles', 'ballet', NOW(), NOW()),
-('mbr_test_rachel', 'field_dance_performance_goals', 'Professional ballet company, international competitions', NOW(), NOW()),
-('mbr_test_rachel', 'field_dance_costume_measurements', 'Height: 5''4", Waist: 24", Chest: 32", Inseam: 28"', NOW(), NOW()),
-('mbr_test_rachel', 'field_dance_emergency_medical_info', 'Asthma - carries inhaler', NOW(), NOW()),
-('mbr_test_rachel', 'field_dance_transportation_method', 'parent_driven', NOW(), NOW()),
-('mbr_test_steve', 'field_dance_previous_training', 'High school drama club (3 years)', NOW(), NOW()),
-('mbr_test_steve', 'field_dance_favorite_styles', 'musical_theater', NOW(), NOW()),
-('mbr_test_steve', 'field_dance_performance_goals', 'Broadway shows and musical theater productions', NOW(), NOW()),
-('mbr_test_steve', 'field_dance_costume_measurements', 'Height: 5''10", Waist: 34", Chest: 40", Inseam: 32"', NOW(), NOW()),
-('mbr_test_steve', 'field_dance_emergency_medical_info', 'None', NOW(), NOW()),
-('mbr_test_steve', 'field_dance_transportation_method', 'carpool', NOW(), NOW()),
-('mbr_test_tina', 'field_dance_previous_training', 'Hip hop dance crew (5 years), street dance workshops', NOW(), NOW()),
-('mbr_test_tina', 'field_dance_favorite_styles', 'hip_hop', NOW(), NOW()),
-('mbr_test_tina', 'field_dance_performance_goals', 'Dance competitions, music videos, professional choreography', NOW(), NOW()),
-('mbr_test_tina', 'field_dance_costume_measurements', 'Height: 5''6", Waist: 26", Chest: 34", Inseam: 29"', NOW(), NOW()),
-('mbr_test_tina', 'field_dance_emergency_medical_info', 'Mild scoliosis - monitored by physician', NOW(), NOW()),
-('mbr_test_tina', 'field_dance_transportation_method', 'public_transportation', NOW(), NOW()),
-('mbr_test_uma', 'field_dance_previous_training', 'Contemporary dance workshops (2 years)', NOW(), NOW()),
-('mbr_test_uma', 'field_dance_favorite_styles', 'contemporary', NOW(), NOW()),
-('mbr_test_uma', 'field_dance_performance_goals', 'Modern dance company, experimental performances', NOW(), NOW()),
-('mbr_test_uma', 'field_dance_costume_measurements', 'Height: 5''7", Waist: 25", Chest: 33", Inseam: 30"', NOW(), NOW()),
-('mbr_test_uma', 'field_dance_emergency_medical_info', 'None', NOW(), NOW()),
-('mbr_test_uma', 'field_dance_transportation_method', 'walking_biking', NOW(), NOW()),
-('mbr_test_victor', 'field_dance_previous_training', 'None - complete beginner excited to learn!', NOW(), NOW()),
-('mbr_test_victor', 'field_dance_favorite_styles', 'hip_hop', NOW(), NOW()),
-('mbr_test_victor', 'field_dance_performance_goals', 'School talent shows, dance battles with friends', NOW(), NOW()),
-('mbr_test_victor', 'field_dance_costume_measurements', 'Height: 5''2", Waist: 28", Chest: 36", Inseam: 26"', NOW(), NOW()),
-('mbr_test_victor', 'field_dance_emergency_medical_info', 'ADHD medication', NOW(), NOW()),
-('mbr_test_victor', 'field_dance_transportation_method', 'parent_driven', NOW(), NOW()),
-('mbr_test_wanda', 'field_dance_previous_training', 'Irish step dance (6 years), wants to try ballet', NOW(), NOW()),
-('mbr_test_wanda', 'field_dance_favorite_styles', 'ballet', NOW(), NOW()),
-('mbr_test_wanda', 'field_dance_performance_goals', 'Irish dancing competitions, ballet recitals', NOW(), NOW()),
-('mbr_test_wanda', 'field_dance_costume_measurements', 'Height: 5''3", Waist: 23", Chest: 31", Inseam: 27"', NOW(), NOW()),
-('mbr_test_wanda', 'field_dance_emergency_medical_info', 'None', NOW(), NOW()),
-('mbr_test_wanda', 'field_dance_transportation_method', 'school_bus', NOW(), NOW()),
-('mbr_test_xavier', 'field_dance_previous_training', 'Military precision marching band (4 years)', NOW(), NOW()),
-('mbr_test_xavier', 'field_dance_favorite_styles', 'tap', NOW(), NOW()),
-('mbr_test_xavier', 'field_dance_performance_goals', 'Military ceremonies, precision dance teams', NOW(), NOW()),
-('mbr_test_xavier', 'field_dance_costume_measurements', 'Height: 6''0", Waist: 36", Chest: 42", Inseam: 34"', NOW(), NOW()),
-('mbr_test_xavier', 'field_dance_emergency_medical_info', 'Knee surgery (2018) - full recovery', NOW(), NOW()),
-('mbr_test_xavier', 'field_dance_transportation_method', 'public_transportation', NOW(), NOW()),
-('mbr_test_yoda', 'field_dance_previous_training', 'Tai Chi and martial arts (20+ years)', NOW(), NOW()),
-('mbr_test_yoda', 'field_dance_favorite_styles', 'contemporary', NOW(), NOW()),
-('mbr_test_yoda', 'field_dance_performance_goals', 'Mind-body connection through movement, meditation through dance', NOW(), NOW()),
-('mbr_test_yoda', 'field_dance_costume_measurements', 'Height: 5''5", Waist: 30", Chest: 38", Inseam: 28"', NOW(), NOW()),
-('mbr_test_yoda', 'field_dance_emergency_medical_info', 'Arthritis in hands - gentle modifications needed', NOW(), NOW()),
-('mbr_test_yoda', 'field_dance_transportation_method', 'walking_biking', NOW(), NOW()),
-('mbr_test_zoe', 'field_dance_previous_training', 'Gymnastics (8 years), cheerleading (3 years)', NOW(), NOW()),
-('mbr_test_zoe', 'field_dance_favorite_styles', 'jazz', NOW(), NOW()),
-('mbr_test_zoe', 'field_dance_performance_goals', 'Cheer competitions, dance team captain', NOW(), NOW()),
-('mbr_test_zoe', 'field_dance_costume_measurements', 'Height: 5''1", Waist: 22", Chest: 30", Inseam: 25"', NOW(), NOW()),
-('mbr_test_zoe', 'field_dance_emergency_medical_info', 'None', NOW(), NOW()),
-('mbr_test_zoe', 'field_dance_transportation_method', 'parent_driven', NOW(), NOW());
-
--- =========================================
--- SUPPORT ASSISTANTS (AI support assistants)
--- =========================================
-INSERT INTO support_assistants (id, location_id, name, prompt, temperature, initial_message, model, status, available_tools, persona, created_at, updated_at) VALUES
-('sbot_admin', 'acc_test_admin', 'Admin Support Assistant', 'You are a helpful customer support assistant for Monstro Admin. You have access to member information tools to help with administrative tasks, billing queries, and general support. You can create support tickets and escalate to human agents when needed.', 20, 'Hi! I''m the Admin Support Assistant. I can help with administrative questions, account management, and technical support. What can I assist you with today?', 'gpt', 'Active', ARRAY[
-  '{"name": "get_member_status", "description": "Get member subscription and package status information", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The member ID to look up"}}, "required": ["memberId"]}}',
-  '{"name": "get_member_billing", "description": "Get member billing and payment information", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The member ID to look up"}}, "required": ["memberId"]}}',
-  '{"name": "create_support_ticket", "description": "Create a support ticket for tracking issues", "category": "support", "parameters": {"type": "object", "properties": {"title": {"type": "string", "description": "Brief title"}, "description": {"type": "string", "description": "Detailed description"}, "priority": {"type": "number", "minimum": 1, "maximum": 3, "description": "Priority level"}}, "required": ["title", "description"]}}',
-  '{"name": "escalate_to_human", "description": "Escalate to human agent", "category": "support", "parameters": {"type": "object", "properties": {"reason": {"type": "string", "description": "Reason for escalation"}, "urgency": {"type": "string", "enum": ["low", "medium", "high"], "description": "Urgency level"}}, "required": ["reason", "urgency"]}}'
-]::jsonb[], '{"name": "Admin Assistant", "responseStyle": "Professional and helpful", "personalityTraits": ["efficient", "knowledgeable", "supportive"]}'::jsonb, NOW(), NOW()),
-('sbot_gym', 'acc_test_gym', 'FitZone Support Assistant', 'You are a helpful customer support assistant for FitZone Gym. You can help members with their membership status, billing questions, class bookings, and gym-related inquiries. You can create support tickets and escalate complex issues to our staff.', 30, 'Hi! I''m the FitZone Support Assistant. I can help with your membership, class schedules, billing questions, and facility information. How can I assist you today?', 'gpt', 'Active', ARRAY[
-  '{"name": "get_member_status", "description": "Get member subscription and package status information", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The member ID to look up"}}, "required": ["memberId"]}}',
-  '{"name": "get_member_billing", "description": "Get member billing and payment information", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The member ID to look up"}}, "required": ["memberId"]}}',
-  '{"name": "get_member_bookable_sessions", "description": "Get available classes and sessions to book", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The member ID to look up"}}, "required": ["memberId"]}}',
-  '{"name": "search_knowledge_base", "description": "Search gym policies and information", "category": "knowledge", "parameters": {"type": "object", "properties": {"query": {"type": "string", "description": "Search query"}}, "required": ["query"]}}',
-  '{"name": "create_support_ticket", "description": "Create a support ticket", "category": "support", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "description": {"type": "string"}, "priority": {"type": "number", "minimum": 1, "maximum": 3}}, "required": ["title", "description"]}}',
-  '{"name": "escalate_to_human", "description": "Escalate to human trainer", "category": "support", "parameters": {"type": "object", "properties": {"reason": {"type": "string"}, "urgency": {"type": "string", "enum": ["low", "medium", "high"]}}, "required": ["reason", "urgency"]}}'
-]::jsonb[], '{"name": "FitZone Assistant", "responseStyle": "Energetic and motivational", "personalityTraits": ["encouraging", "fitness-focused", "friendly"]}'::jsonb, NOW(), NOW()),
-('sbot_dance', 'acc_test_dance', 'Dance Academy Support Assistant', 'You are a helpful customer support assistant for Dance Academy. You help students and parents with class information, billing, scheduling, and dance-related questions. You can escalate complex issues to our instructors.', 25, 'Hello! I''m the Dance Academy Support Assistant. I can help with class schedules, billing, registration, and dance program information. What would you like to know?', 'gpt', 'Active', ARRAY[
-  '{"name": "get_member_status", "description": "Get student enrollment and package status", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The student ID to look up"}}, "required": ["memberId"]}}',
-  '{"name": "get_member_billing", "description": "Get billing and payment information", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The student ID to look up"}}, "required": ["memberId"]}}',
-  '{"name": "get_member_bookable_sessions", "description": "Get available dance classes to book", "category": "member_info", "parameters": {"type": "object", "properties": {"memberId": {"type": "string", "description": "The student ID to look up"}}, "required": ["memberId"]}}',
-  '{"name": "search_knowledge_base", "description": "Search dance academy policies and info", "category": "knowledge", "parameters": {"type": "object", "properties": {"query": {"type": "string", "description": "Search query"}}, "required": ["query"]}}',
-  '{"name": "create_support_ticket", "description": "Create a support ticket", "category": "support", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "description": {"type": "string"}, "priority": {"type": "number", "minimum": 1, "maximum": 3}}, "required": ["title", "description"]}}',
-  '{"name": "escalate_to_human", "description": "Escalate to dance instructor", "category": "support", "parameters": {"type": "object", "properties": {"reason": {"type": "string"}, "urgency": {"type": "string", "enum": ["low", "medium", "high"]}}, "required": ["reason", "urgency"]}}'
-]::jsonb[], '{"name": "Dance Assistant", "responseStyle": "Graceful and encouraging", "personalityTraits": ["artistic", "patient", "inspiring"]}'::jsonb, NOW(), NOW());
-
--- =========================================
--- SUPPORT TRIGGERS (Automated escalation triggers)
--- =========================================
-INSERT INTO support_triggers (id, support_assistant_id, name, trigger_type, trigger_phrases, tool_call, examples, requirements, is_active, created_at, updated_at) VALUES
--- Admin triggers
-('strig_admin_escalate', 'sbot_admin', 'Human Agent Request', 'keyword', ARRAY['human agent', 'speak to someone', 'real person', 'staff member', 'escalate', 'manager'], '{"name": "escalate_to_human", "parameters": {"reason": "Customer requested human assistance", "urgency": "medium"}}'::jsonb, ARRAY['I need to speak to a human agent', 'Can I talk to a real person?', 'I want to speak to your manager'], ARRAY['Clear request for human assistance'], true, NOW(), NOW()),
-('strig_admin_billing', 'sbot_admin', 'Billing Issues', 'keyword', ARRAY['billing problem', 'payment failed', 'charge error', 'refund', 'billing dispute'], '{"name": "create_support_ticket", "parameters": {"title": "Billing Issue", "description": "Customer reported billing-related problem", "priority": 2}}'::jsonb, ARRAY['I have a billing problem', 'My payment failed', 'I need a refund'], ARRAY['Billing-related concern identified'], true, NOW(), NOW()),
-
--- Gym triggers  
-('strig_gym_injury', 'sbot_gym', 'Injury Report', 'keyword', ARRAY['injured', 'hurt', 'pain', 'accident', 'medical', 'emergency'], '{"name": "escalate_to_human", "parameters": {"reason": "Potential injury or medical concern reported", "urgency": "high"}}'::jsonb, ARRAY['I got injured during my workout', 'I''m experiencing pain', 'There was an accident'], ARRAY['Immediate staff attention required'], true, NOW(), NOW()),
-('strig_gym_equipment', 'sbot_gym', 'Equipment Issues', 'keyword', ARRAY['broken equipment', 'machine not working', 'equipment problem', 'out of order'], '{"name": "create_support_ticket", "parameters": {"title": "Equipment Issue", "description": "Equipment problem reported by member", "priority": 2}}'::jsonb, ARRAY['The treadmill is broken', 'This machine isn''t working', 'Equipment is out of order'], ARRAY['Equipment issue requires maintenance'], true, NOW(), NOW()),
-('strig_gym_membership', 'sbot_gym', 'Membership Cancellation', 'keyword', ARRAY['cancel membership', 'quit gym', 'stop membership', 'discontinue'], '{"name": "escalate_to_human", "parameters": {"reason": "Member wants to cancel membership", "urgency": "medium"}}'::jsonb, ARRAY['I want to cancel my membership', 'How do I quit the gym?'], ARRAY['Retention opportunity - human intervention needed'], true, NOW(), NOW()),
-
--- Dance academy triggers
-('strig_dance_recital', 'sbot_dance', 'Recital Questions', 'keyword', ARRAY['recital', 'performance', 'costume', 'rehearsal', 'show'], '{"name": "escalate_to_human", "parameters": {"reason": "Recital-related inquiry requiring instructor input", "urgency": "low"}}'::jsonb, ARRAY['When is the recital?', 'What costume does my child need?', 'Rehearsal schedule questions'], ARRAY['Instructor knowledge required for detailed recital info'], true, NOW(), NOW()),
-('strig_dance_skill', 'sbot_dance', 'Skill Assessment', 'keyword', ARRAY['skill level', 'class placement', 'advancement', 'level up', 'evaluation'], '{"name": "escalate_to_human", "parameters": {"reason": "Student skill assessment and class placement inquiry", "urgency": "low"}}'::jsonb, ARRAY['What class level should my child be in?', 'Can my daughter advance to the next level?'], ARRAY['Instructor evaluation needed'], true, NOW(), NOW());
-
--- =========================================
--- SUPPORT CONVERSATIONS (Sample chat sessions)
--- =========================================
-INSERT INTO support_conversations (id, support_assistant_id, location_id, member_id, category, is_vendor_active, taken_over_at, metadata, created_at, updated_at) VALUES
--- Active conversation with vendor takeover
-('sconv_john_gym', 'sbot_gym', 'acc_test_gym', 'mbr_test_john', 'Billing', true, NOW() - INTERVAL '15 minutes', ('{"takeoverReason": "Billing dispute requiring personal attention", "takeoverUrgency": "medium", "takeoverAt": "' || (NOW() - INTERVAL '15 minutes')::text || '", "createdBy": "sbot_gym", "memberImpact": "billing", "estimatedResolution": "24 hours"}')::jsonb, NOW() - INTERVAL '1 hour', NOW()),
--- Bot-only conversation (simple inquiry)
-('sconv_jane_gym', 'sbot_gym', 'acc_test_gym', 'mbr_test_jane', 'General', false, NULL, '{"resolutionType": "automated", "satisfactionRating": 5}'::jsonb, NOW() - INTERVAL '2 hours', NOW()),
--- Dance academy conversation with instructor takeover
-('sconv_bob_dance', 'sbot_dance', 'acc_test_dance', 'mbr_test_bob', 'Classes', true, NOW() - INTERVAL '30 minutes', '{"takeoverReason": "Class level assessment needed", "takeoverUrgency": "low", "instructorSpecialty": "ballet", "createdBy": "sbot_dance", "assessmentType": "skill_level", "currentClass": "Ballet Fundamentals"}'::jsonb, NOW() - INTERVAL '45 minutes', NOW()),
--- Recently resolved conversation that was handed back to bot
-('sconv_admin_resolved', 'sbot_admin', 'acc_test_admin', 'mbr_test_john', 'Enterprise', false, NULL, ('{"handedBackAt": "' || (NOW() - INTERVAL '10 minutes')::text || '", "handedBackBy": "usr_test_admin", "originalTakeoverReason": "Complex account setup", "createdBy": "sbot_admin", "resolutionTime": "2.5 hours", "complexity": "high", "leadType": "enterprise"}')::jsonb, NOW() - INTERVAL '3 hours', NOW());
-
--- =========================================
--- SUPPORT MESSAGES (Conversation history)
--- =========================================
-INSERT INTO support_messages (id, conversation_id, content, role, channel, metadata, created_at) VALUES
--- John's gym conversation with takeover scenario
-('smsg_john_1', 'sconv_john_gym', 'Hi, I have a problem with my billing. I was charged twice this month.', 'user', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '1 hour'),
-('smsg_john_2', 'sconv_john_gym', 'I''m sorry to hear about the billing issue. Let me check your account details and help resolve this for you.', 'assistant', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '59 minutes'),
-('smsg_john_3', 'sconv_john_gym', 'I''ve reviewed your account and I can see there may have been a processing error. This requires careful review of your payment history.', 'assistant', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '58 minutes'),
-('smsg_john_4', 'sconv_john_gym', 'I need to speak with someone about this. This is really frustrating.', 'user', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '20 minutes'),
-('smsg_john_5', 'sconv_john_gym', 'A support agent has joined the conversation to help with: Billing dispute requiring personal attention', 'system', 'System', '{"takeoverReason": "Billing dispute requiring personal attention", "takeoverUrgency": "medium", "vendorId": "usr_test_vendor"}'::jsonb, NOW() - INTERVAL '15 minutes'),
-('smsg_john_6', 'sconv_john_gym', 'Hi John! I''m Mike from FitZone. I can see you''ve been charged twice this month. Let me look into this right away and get this sorted out for you.', 'staff', 'WebChat', '{"vendorId": "usr_test_vendor", "agentName": "Mike Thompson"}'::jsonb, NOW() - INTERVAL '14 minutes'),
-('smsg_john_7', 'sconv_john_gym', 'Thank you! That would be great. I really appreciate the personal attention.', 'user', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '13 minutes'),
-
--- Jane's automated resolution
-('smsg_jane_1', 'sconv_jane_gym', 'What are your gym hours this week?', 'user', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '2 hours'),
-('smsg_jane_2', 'sconv_jane_gym', 'Our gym hours this week are Monday-Friday: 5:00 AM - 11:00 PM, Saturday-Sunday: 6:00 AM - 10:00 PM. Is there anything specific you''d like to know about our facilities or services?', 'assistant', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '2 hours' + INTERVAL '1 minute'),
-('smsg_jane_3', 'sconv_jane_gym', 'Perfect, thank you! That''s all I needed.', 'user', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '2 hours' + INTERVAL '2 minutes'),
-('smsg_jane_4', 'sconv_jane_gym', 'You''re welcome! Feel free to reach out if you have any other questions. Have a great workout!', 'assistant', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '2 hours' + INTERVAL '3 minutes'),
-
--- Bob's dance academy conversation with instructor takeover
-('smsg_bob_1', 'sconv_bob_dance', 'I think my skill level has improved. Can I move up to a more advanced ballet class?', 'user', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '45 minutes'),
-('smsg_bob_2', 'sconv_bob_dance', 'That''s wonderful to hear about your progress! Class advancement depends on several factors including technique, strength, and experience. Let me connect you with one of our instructors who can properly assess your readiness.', 'assistant', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '44 minutes'),
-('smsg_bob_3', 'sconv_bob_dance', 'A support agent has joined the conversation to help with: Class level assessment needed', 'system', 'System', '{"takeoverReason": "Class level assessment needed", "takeoverUrgency": "low", "vendorId": "usr_test_staff"}'::jsonb, NOW() - INTERVAL '30 minutes'),
-('smsg_bob_4', 'sconv_bob_dance', 'Hi Bob! I''m Carlos, one of the ballet instructors. I''d love to help assess your readiness for advancement. Can you tell me how long you''ve been in your current class and what techniques you''ve been working on?', 'staff', 'WebChat', '{"vendorId": "usr_test_staff", "agentName": "Carlos Martinez", "specialty": "ballet"}'::jsonb, NOW() - INTERVAL '29 minutes'),
-('smsg_bob_5', 'sconv_bob_dance', 'I''ve been in Ballet Fundamentals for about 6 months. I''ve been working on my positions, basic jumps, and we just started simple adagio combinations.', 'user', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '25 minutes'),
-
--- Admin conversation that was handed back (John contacting admin support)
-('smsg_admin_1', 'sconv_admin_resolved', 'Hi, I''m a business owner looking to understand your enterprise features. I might need multiple locations under one account.', 'user', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '3 hours'),
-('smsg_admin_2', 'sconv_admin_resolved', 'I''d be happy to help you understand our enterprise features and multi-location setup. This is a complex topic that would benefit from direct assistance. Let me connect you with our admin team.', 'assistant', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '3 hours' + INTERVAL '1 minute'),
-('smsg_admin_3', 'sconv_admin_resolved', 'A support agent has joined the conversation to help with: Complex account setup', 'system', 'System', '{"takeoverReason": "Complex account setup", "takeoverUrgency": "medium", "vendorId": "usr_test_admin"}'::jsonb, NOW() - INTERVAL '2 hours' + INTERVAL '30 minutes'),
-('smsg_admin_4', 'sconv_admin_resolved', 'Hi John! I''m here to help with your enterprise inquiry. I''ve reviewed your needs and can set up a multi-location account structure for you. Would you like me to prepare a demo?', 'staff', 'WebChat', '{"vendorId": "usr_test_admin", "agentName": "Admin User"}'::jsonb, NOW() - INTERVAL '1 hour'),
-('smsg_admin_5', 'sconv_admin_resolved', 'That would be fantastic! Thank you for the personalized assistance.', 'user', 'WebChat', '{}'::jsonb, NOW() - INTERVAL '20 minutes'),
-('smsg_admin_6', 'sconv_admin_resolved', 'The conversation has been handed back to the support bot.', 'system', 'System', ('{"handedBackBy": "usr_test_admin", "handedBackAt": "' || (NOW() - INTERVAL '10 minutes')::text || '"}')::jsonb, NOW() - INTERVAL '10 minutes');
-
--- =========================================
--- SUCCESS MESSAGE
--- =========================================
-DO $$
-BEGIN
-    RAISE NOTICE '=========================================';
-    RAISE NOTICE 'MONSTRO TEST DATA SEED COMPLETED';
-    RAISE NOTICE '=========================================';
-    RAISE NOTICE 'Created test data for:';
-    RAISE NOTICE '- 34 Users (admin, vendor, staff, 28 members)';
-    RAISE NOTICE '- 3 Vendors (admin, gym and dance studio)';
-    RAISE NOTICE '- 3 Locations (Admin HQ, FitZone Gym, Dance Academy)';
-    RAISE NOTICE '- 4 Staff members (trainers and dance instructors)';
-    RAISE NOTICE '- 28 Members (John, Jane, Bob + 25 additional diverse members)';
-    RAISE NOTICE '- 4 Programs (PT, Group Fitness, Ballet, Hip Hop)';
-    RAISE NOTICE '- 10 Program sessions (class schedules)';
-    RAISE NOTICE '- 4 Contracts (waivers and agreements)';
-    RAISE NOTICE '- 3 Invoices (billing records)';
-    RAISE NOTICE '- 3 Transactions (payment records)';
-    RAISE NOTICE '- 5 Member tags (VIP, New, Premium, Advanced, Beginner)';
-    RAISE NOTICE '- 14 Custom fields (Emergency Contact, Membership Type, Experience, Allergies + 10 additional fields for table width)';
-    RAISE NOTICE '- Member tag assignments and custom field values';
-    RAISE NOTICE '- Authentication sessions and OAuth accounts';
-    RAISE NOTICE '';
-    RAISE NOTICE 'SUPPORT ASSISTANT TEST DATA:';
-    RAISE NOTICE '- 3 Support assistants (Admin, FitZone Gym, Dance Academy)';
-    RAISE NOTICE '- 7 Support triggers (escalation, billing, injury, equipment, etc.)';
-    RAISE NOTICE '- 4 Support conversations (with integrated metadata)';
-    RAISE NOTICE '- 16 Support messages (realistic conversation flows)';
-    RAISE NOTICE '- Agent information tracking (agentId, agentName in messages)';
-    RAISE NOTICE '';
-    RAISE NOTICE 'TAKEOVER & HANDOFF SCENARIOS:';
-    RAISE NOTICE '- Active vendor takeover (John gym billing issue - ticket in progress)';
-    RAISE NOTICE '- Instructor takeover (Bob dance class assessment - ticket open)';
-    RAISE NOTICE '- Completed handoff cycle (admin multi-location setup - ticket resolved)';
-    RAISE NOTICE '- Automated resolution (Jane gym hours inquiry - simple resolution)';
-    RAISE NOTICE '';
-    RAISE NOTICE 'MEMBER PLANS & SUBSCRIPTIONS:';
-    RAISE NOTICE '- 12 Member plans (Basic/Premium memberships, class packages)';
-    RAISE NOTICE '- 5 Active member subscriptions (John, Jane, Bob across locations)';
-    RAISE NOTICE '- 4 Member packages (class credits, PT sessions, expired example)';
-    RAISE NOTICE '- Realistic pricing in cents (e.g. $79 = 7900 cents)';
-    RAISE NOTICE '- Mix of monthly/annual subscriptions and one-time packages';
-    RAISE NOTICE '';
-    RAISE NOTICE 'INTEGRATIONS:';
-    RAISE NOTICE '- 3 Stripe integrations (all locations with test keys)';
-    RAISE NOTICE '- Same Stripe test account for all locations';
-    RAISE NOTICE '- Webhook endpoints configured for payment processing';
-    RAISE NOTICE '- Ready for Stripe test mode functionality';
-    RAISE NOTICE '';
-    RAISE NOTICE 'SCHEMA UPDATES:';
-    RAISE NOTICE '- support_bots table renamed to support_assistants';
-    RAISE NOTICE '- Persona data moved to JSONB field in support_assistants';
-    RAISE NOTICE '- support_conversations simplified (removed vendor_id, title, status, priority)';
-    RAISE NOTICE '- Added location_id and category to conversations';
-    RAISE NOTICE '- Added agentId and agentName to messages';
-    RAISE NOTICE '- All locations owned by admin@test.com (vdr_test_admin)';
-    RAISE NOTICE '=========================================';
-    RAISE NOTICE 'You can now test your application locally!';
-    RAISE NOTICE '=========================================';
-END $$;
+-- Yoda Master Transaction
+INSERT INTO transactions (id, member_id, location_id, description, type, amount, tax_amount, status, payment_method, invoice_id, subscription_id, charge_date, created_at, updated_at) VALUES
+('txn_01JDQR8XYZABCDEFGHIJKLMV', 'mbr_Bw3LjEcQ9R72NOP9vo3qllw', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLMV', 'sub_01JDQR8XYZABCDEFGHIJKLMQ', NOW() - INTERVAL '7 days' + INTERVAL '1 day', NOW() - INTERVAL '7 days' + INTERVAL '1 day', NOW() - INTERVAL '7 days' + INTERVAL '1 day');

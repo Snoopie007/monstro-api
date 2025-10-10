@@ -15,7 +15,7 @@ import { toast } from 'react-toastify';
 import { TriggerSchema } from '../../schemas';
 import { Achievement, TriggeredAchievement } from '@/types';
 import { useState } from 'react';
-import { Loader2, Pencil } from 'lucide-react';
+import { CircleFadingArrowUp, Loader2 } from 'lucide-react';
 import { TriggerForm } from './TriggerForm';
 import { useAchievements } from '../../providers';
 
@@ -28,6 +28,7 @@ export function UpdateTrigger({ achievement, ta }: UpdateTriggerProps) {
 
     const { triggers } = useAchievements();
     const [open, setOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const form = useForm<z.infer<typeof TriggerSchema>>({
         resolver: zodResolver(TriggerSchema),
         defaultValues: {
@@ -40,21 +41,42 @@ export function UpdateTrigger({ achievement, ta }: UpdateTriggerProps) {
         mode: "onChange"
     })
     async function onSubmit(v: z.infer<typeof TriggerSchema>) {
-
+        setIsSaving(true);
         const lid = achievement.locationId;
         const aid = achievement.id;
+
+        const payload: any = {
+            triggerId: v.triggerId,
+            weight: v.weight,
+        };
+        
+        if (v.triggerId === '4' && v.memberPlanId) {
+            payload.memberPlanId = v.memberPlanId;
+        }
+        
+        if (['1', '2', '3'].includes(v.triggerId) && v.timePeriod && v.timePeriodUnit) {
+            payload.timePeriod = v.timePeriod;
+            payload.timePeriodUnit = v.timePeriodUnit;
+        }
+
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/achievements/${aid}/triggers`, {
+            fetch(`/api/protected/loc/${lid}/achievements/${aid}/trigger`, {
                 method: 'PATCH',
-                body: JSON.stringify(v),
+                body: JSON.stringify(payload),
             })
         );
+
+        if(result?.status === 403) {
+            toast.error("You are not authorized to edit this trigger");
+            return;
+        }
 
         if (error || !result || !result.ok) {
             toast.error("Something went wrong, please try again later");
             return;
         }
         handleOpenChange(false);
+        setIsSaving(false);
     }
 
     function handleOpenChange(open: boolean) {
@@ -68,13 +90,12 @@ export function UpdateTrigger({ achievement, ta }: UpdateTriggerProps) {
         <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetTrigger asChild>
                 <Button variant={"ghost"} size={"icon"} className='size-5'>
-                    <Pencil className='size-3' />
+                    <CircleFadingArrowUp className="size-3" />
                 </Button>
             </SheetTrigger>
             <SheetContent className="max-w-[40%] bg-background w-[40%] sm:max-w-[540px] sm:w-[540px] p-0 border-foreground/10">
                 <SheetHeader className="hidden">
                     <SheetTitle className='hidden'>
-
                     </SheetTitle>
                 </SheetHeader>
                 <TriggerForm lid={achievement.locationId} form={form} triggers={triggers} />
@@ -91,9 +112,9 @@ export function UpdateTrigger({ achievement, ta }: UpdateTriggerProps) {
                         <Button
                             onClick={form.handleSubmit(onSubmit)}
                             variant={"foreground"} size={"sm"}
-                            disabled={form.formState.isSubmitting}
+                            disabled={isSaving}
                         >
-                            {form.formState.isSubmitting ? <Loader2 className='size-3.5 animate-spin' /> : 'Update'}
+                            {isSaving ? <Loader2 className='size-3.5 animate-spin' /> : 'Update'}
                         </Button>
                     </SheetClose>
                 </SheetFooter>

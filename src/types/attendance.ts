@@ -39,12 +39,19 @@ export type RecurringReservationException =
   };
 
 export type CalendarEvent = {
-  id: string;
-  title: string;
-  end: Date;
-  duration: number;
-  start: Date;
-  data: CalendarEventData;
+    id: string;
+    title: string;
+    end: Date;
+    duration: number;
+    start: Date;
+    data: CalendarEventData;
+    staff: CalendarEventStaff;
+};
+
+export type CalendarEventStaff = {
+    id: string;
+    name: string;
+    avatar?: string | null;
 };
 
 export type CalendarEventData = {

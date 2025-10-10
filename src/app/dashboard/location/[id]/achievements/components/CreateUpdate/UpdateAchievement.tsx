@@ -69,6 +69,11 @@ export function UpdateAchievement({ achievement }: UpdateAchievementProps) {
       })
     );
 
+    if(result?.status === 403) {
+      toast.error("You are not authorized to edit this achievement");
+      return;
+    }
+
     if (error || !result || !result.ok) {
       toast.error("Something went wrong, please try again later");
       return;

@@ -9,35 +9,22 @@ const publicPaths = [
 	'/api/webhooks',
 ]
 
-async function verifyToken(token: string): Promise<boolean> {
-	try {
-		const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-		await jwtVerify(token, secret);
-		return true
-	} catch (error) {
-		console.log(error);
-		return false
-	}
-}
-
 export default auth(async (req) => {
 
 	try {
 		const { pathname, searchParams } = req.nextUrl
 		const isLoggedin = !!req.auth
 		const locations = req.auth?.user?.locations || []
-		console.log(pathname)
+
 		if (pathname.startsWith("/api/protected")) {
 			if (!isLoggedin) {
 				return NextResponse.json({ message: "Unauthorized" }, { status: 401 })
 			}
 		}
 
-		/* Handle authentication redirects */
 		if (!isLoggedin) {
 
 			if (pathname.startsWith("/api/auth") || publicPaths.some((path) => pathname.startsWith(path))) {
-
 				return NextResponse.next()
 			}
 
@@ -54,12 +41,10 @@ export default auth(async (req) => {
 				return NextResponse.next()
 			}
 
-			/* Redirect to Dashboard if no locations */
 			if (pathname === "/" || publicPaths.some((path) => pathname.startsWith(path))) {
 				return NextResponse.redirect(new URL(`/dashboard/locations`, req.nextUrl.origin))
 			}
 
-			/* No Locations Redirect to New Location */
 			if (locations.length === 0 && pathname !== "/dashboard/locations/new") {
 				return NextResponse.redirect(new URL("/dashboard/locations/new", req.nextUrl.origin))
 			}
@@ -67,13 +52,12 @@ export default auth(async (req) => {
 			const [_, locationId, path] = pathname.match(/^\/dashboard\/location\/([^/]+)(\/.*)?$/) || []
 
 			if (locationId) {
-				/* Check if locationId is a valid location */
+
 				const next = locations.find((loc: { id: string }) => loc.id === locationId)
 
 				if (!next) {
 					return NextResponse.redirect(new URL("/dashboard/locations", req.nextUrl.origin))
 				}
-
 
 				if (!["active", "incomplete"].includes(next.status) && pathname !== `/dashboard/location/${next.id}`) {
 					return NextResponse.redirect(new URL(`/dashboard/location/${next.id}`, req.nextUrl.origin))

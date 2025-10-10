@@ -5,6 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { MemberLocationProfile } from "@/types/member";
+import { hasPermission } from "@/libs/server/permissions";
 
 export async function POST(
 	req: Request,
@@ -15,8 +16,13 @@ export async function POST(
 
 	try {
 		const session = await auth();
-		if (!session?.user?.vendorId) {
+		if (!session?.user?.id) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
+
+		const canEditMember = await hasPermission("edit member", params.id);
+		if (!canEditMember) {
+			return NextResponse.json({ error: "Access denied" }, { status: 403 });
 		}
 
 		// Verify that the member belongs to a location owned by this vendor

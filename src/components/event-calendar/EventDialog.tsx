@@ -28,9 +28,16 @@ import {
   FormMessage,
   FormItem,
   FormLabel,
+  FormDescription,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from "@/components/forms";
 import { NewProgramSchema } from "@/app/dashboard/location/[id]/programs/schemas";
 import SessionComponent from "@/app/dashboard/location/[id]/programs/components/ProgramSessions";
+import { useStaffs } from "@/hooks/useStaffs";
 
 interface ProgramDialogProps {
   program: z.infer<typeof NewProgramSchema> | null;
@@ -52,6 +59,8 @@ export function EventDialog({
   initialDateTime,
 }: ProgramDialogProps) {
   const [loading, setLoading] = useState(false);
+  
+  const { staffs, error: staffsError, isLoading: staffsLoading } = useStaffs(lid);
 
   // Utility functions to convert Date to session format
   const getSessionDayFromDate = (date: Date): number => {
@@ -88,6 +97,7 @@ export function EventDialog({
       minAge: 0,
       maxAge: 0,
       sessions: [getInitialSession()],
+      instructorId: undefined,
     },
     mode: "onBlur", // Changed from "onChange" to reduce re-renders
   });
@@ -108,6 +118,7 @@ export function EventDialog({
             duration: 30,
           },
         ],
+        instructorId: program.instructorId || undefined,
       });
     } else {
       form.reset({
@@ -117,6 +128,7 @@ export function EventDialog({
         minAge: 0,
         maxAge: 0,
         sessions: [getInitialSession()],
+        instructorId: undefined,
       });
     }
   }, [program, getInitialSession]);
@@ -219,6 +231,33 @@ export function EventDialog({
               />
             </fieldset>
 
+            <fieldset>
+                <FormField
+                    control={form.control}
+                    name="instructorId"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel size={"tiny"}>Instructor</FormLabel>
+                            <FormDescription>Select a staff member that will be assigned to the program by default. Leave blank to not assign a staff.</FormDescription>
+                            <FormControl>
+                                <Select onValueChange={(v) => field.onChange(v)} value={field.value || "null"}>
+                                    <SelectTrigger className={cn("")}>
+                                        <SelectValue placeholder="Select a instructor" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {staffs.map((staff) => (
+                                            <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                                        ))}
+                                        <SelectItem value={"null"} key={"none"}>None</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </fieldset>
+
             <fieldset className="flex flex-row items-center gap-2 w-full">
               <FormField
                 control={form.control}
@@ -281,6 +320,7 @@ export function EventDialog({
             <div>
               <SessionComponent control={form.control} />
             </div>
+
           </form>
         </Form>
 

@@ -23,6 +23,8 @@ import { CustomFieldsSection } from "@/components/custom-fields";
 import { MemberTagSection } from "./components/MemberTags/MemberTagsSection";
 import { attendances, reservations, recurringReservations } from "@/db/schemas";
 import { format } from "date-fns";
+import { usePermission } from "@/hooks/usePermissions";
+import { hasPermission } from "@/libs/server/permissions";
 
 type PromiseReturnType = {
   member: Member | undefined;
@@ -174,6 +176,7 @@ export default async function MemberProfilePage(props: {
   params: Promise<{ id: string; mid: string }>;
 }) {
   const params = await props.params;
+  const canEditMember = await hasPermission("edit member", params.id)
 
   const res = await fetchStripeKeys(params.id, params.mid);
 
@@ -206,16 +209,17 @@ export default async function MemberProfilePage(props: {
             <CustomFieldsSection
               memberId={params.mid}
               locationId={params.id}
-              editable={true}
+              editable={canEditMember}
               variant="card"
               showEmptyFields={false}
             />
-            <PaymentMethods params={params} />
+            <PaymentMethods editable={canEditMember} params={params} />
             <MemberFamilies
               params={params}
               familyMembers={member.familyMembers}
+              editable={canEditMember}
             />
-            <MemberTagSection params={params} />
+            <MemberTagSection editable={canEditMember} params={params} />
           </div>
           <div className="col-span-8">
             <Tabs defaultValue="Subscriptions" className="w-full">

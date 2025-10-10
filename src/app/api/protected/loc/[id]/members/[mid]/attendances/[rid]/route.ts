@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { attendances } from '@/db/schemas';
+import { evaluateTriggers } from "@/libs/achievements";
 
 export async function POST(req: NextRequest, props: { params: Promise<{ mid: string, id: string, rid: string }> }) {
 	const params = await props.params;
@@ -33,6 +34,18 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: str
 			lng: lng || null,
 		}).returning()
 
+		// Evaluate attendance triggers after successful check-in
+		try {
+			await evaluateTriggers({
+				memberId: params.mid,
+				locationId: params.id,
+				triggerType: 'attendances_count',
+				data: { attendanceId: newAttendance[0].id }
+			});
+		} catch (error) {
+			console.error('Error evaluating attendance triggers:', error);
+			// Don't fail the request if trigger evaluation fails
+		}
 
 		return NextResponse.json(newAttendance, { status: 201 });
 	} catch (err) {

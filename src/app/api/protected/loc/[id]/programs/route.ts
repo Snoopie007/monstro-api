@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { programSessions, programs as program, programs } from '@/db/schemas';
 import { ProgramSession } from '@/types';
 import { format, addMinutes, setHours, setMinutes, setSeconds, startOfDay } from 'date-fns';
+import { hasPermission } from '@/libs/server/permissions';
 
 
 export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
@@ -49,9 +50,14 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 
 export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
 	const params = await props.params;
-	const timezoneOffset = req.headers.get('X-Timezone-Offset') || '+00:00';
 	const { sessions, ...data } = await req.json();
+	
 	try {
+
+		const canAddProgram = await hasPermission("add program", params.id);
+		if (!canAddProgram) {
+			return NextResponse.json({ error: "Access denied" }, { status: 403 });
+		}
 		await db.transaction(async (tx) => {
 			/** 
 			 * Create the main program record with location ID and other data

@@ -21,13 +21,16 @@ import { DialogDescription } from "@/components/ui/dialog";
 import SessionFields from "./SessionFields";
 import { Form } from "@/components/forms";
 import { Loader2, Plus } from "lucide-react";
+import { StaffRowData } from "@/hooks/useStaffs";
 interface CreateSessionProps {
     pid: string;
     lid: string
+    availableStaff: StaffRowData[]
+    programAssignedStaff: StaffRowData
 }
 
 
-export function CreateSession({ pid, lid }: CreateSessionProps) {
+export function CreateSession({ pid, lid, availableStaff, programAssignedStaff }: CreateSessionProps) {
     const { mutate } = useSWR(`/api/protected/${lid}/programs/${pid}/sessions`);
     const [loading, setLoading] = useState<boolean>(false);
     const [open, setOpen] = useState<boolean>(false);
@@ -39,6 +42,7 @@ export function CreateSession({ pid, lid }: CreateSessionProps) {
             day: 1,
             time: "12:00:00",
             duration: 30,
+            staffId: programAssignedStaff && programAssignedStaff.id ? programAssignedStaff.id : undefined
         },
         mode: "onSubmit",
     })
@@ -54,6 +58,11 @@ export function CreateSession({ pid, lid }: CreateSessionProps) {
             })
         )
         setLoading(false);
+        if(result?.status === 403) {
+            toast.error("You are not authorized to create a session");
+            return;
+        }
+
         if (error || !result || !result.ok) {
             toast.error(error?.message || "Something went wrong, please try again later")
             return
@@ -83,7 +92,7 @@ export function CreateSession({ pid, lid }: CreateSessionProps) {
                 <DialogBody>
                     <Form {...form}>
                         <form>
-                            <SessionFields control={form.control} />
+                            <SessionFields control={form.control} availableStaff={availableStaff}/>
                         </form>
                     </Form>
                 </DialogBody>

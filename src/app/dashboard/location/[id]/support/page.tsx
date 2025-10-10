@@ -7,7 +7,7 @@ import { SupportProvider } from './providers/SupportProvider'
 import CreateAssistant from './components/CreateAssistant'
 
 async function getAssistant(lid: string): Promise<SupportAssistant | null> {
-    // Get the support assistant with location
+
     try {
         const assistant = await db.query.supportAssistants.findFirst({
             where: eq(supportAssistants.locationId, lid),
@@ -57,7 +57,7 @@ export default async function SupportPage(props: {
                     </div>
                     <div className="flex-1 py-2">
                         <div className="bg-foreground/5 rounded-lg h-full">
-                            <ChatView lid={params.id}/>
+                            <ChatView lid={params.id} />
                         </div>
                     </div>
                     <div className="flex-none w-[25%] ">

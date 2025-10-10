@@ -14,9 +14,10 @@ import { useMemberStatus, useMemberPaymentMethods } from "../../providers"
 
 interface PaymentMethodsProps {
     params: { id: string, mid: string },
+    editable: boolean
 }
 
-export function PaymentMethods({ params }: PaymentMethodsProps) {
+export function PaymentMethods({ params, editable }: PaymentMethodsProps) {
     const { member } = useMemberStatus()
     const { paymentMethods } = useMemberPaymentMethods()
 
@@ -38,7 +39,7 @@ export function PaymentMethods({ params }: PaymentMethodsProps) {
                             },
                         }}
                     >
-                        <AddPaymentMethod member={member} locationId={params.id} />
+                        {editable && <AddPaymentMethod member={member} locationId={params.id} />}
                     </Elements>
 
 
