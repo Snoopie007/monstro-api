@@ -1,7 +1,11 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import {
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+} from '@/components/ui/chart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import { Transaction } from '@/types/transaction'
 import { Loader2 } from 'lucide-react'
@@ -10,13 +14,13 @@ import { cn } from '@/components/event-calendar'
 
 const chartConfig = {
     desktop: {
-        label: "Recurring Revenue",
-        color: "#f59e0b",
+        label: 'Recurring Revenue',
+        color: '#f59e0b',
     },
 }
 
 type Data = {
-    month: string,
+    month: string
     amount: number
 }
 
@@ -32,7 +36,7 @@ const DummyData: Data[] = [
     { month: 'September', amount: 3400 },
     { month: 'October', amount: 3750 },
     { month: 'November', amount: 3900 },
-    { month: 'December', amount: 4200 }
+    { month: 'December', amount: 4200 },
 ]
 
 interface RecurringRevenueChartProps {
@@ -40,46 +44,46 @@ interface RecurringRevenueChartProps {
     transactions: Transaction[]
 }
 
-export function RecurringRevenueChart({ transactions, lid }: RecurringRevenueChartProps) {
+export function RecurringRevenueChart({
+    transactions,
+    lid,
+}: RecurringRevenueChartProps) {
     const [range, setRange] = useState(12)
     const [loading, setLoading] = useState(true)
 
     const data = useMemo<Data[]>(() => {
-
-        if (lid === 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s') {
+        if (lid === 'acc_BpT7jEb3Q16nOPL3vo7qlw') {
             return DummyData
         }
         if (transactions) {
-
-
             const recurringRevenueByMonth = Object.fromEntries(
                 MONTHS.map((month) => [month, 0])
-            );
+            )
 
             transactions.forEach((transaction) => {
-                if (transaction.status === "paid" && !transaction.refunded) {
-                    const month = MONTHS[new Date(transaction.created as Date).getMonth()];
-                    recurringRevenueByMonth[month] += transaction.amount / 100;
+                if (transaction.status === 'paid' && !transaction.refunded) {
+                    const month =
+                        MONTHS[new Date(transaction.created as Date).getMonth()]
+                    recurringRevenueByMonth[month] += transaction.amount / 100
                 }
-            });
+            })
 
             const mappedData = MONTHS.map((month) => ({
                 month,
                 amount: recurringRevenueByMonth[month],
-            }));
+            }))
 
-            return mappedData;
+            return mappedData
         }
         return MONTHS.map((month) => ({
             month,
             amount: 0,
-        }));
-    }, [transactions]);
+        }))
+    }, [transactions])
 
     const filteredData = useMemo(() => {
-        return data.slice(-range);
-    }, [data, range]);
-
+        return data.slice(-range)
+    }, [data, range])
 
     useEffect(() => {
         if (transactions) {
@@ -88,12 +92,12 @@ export function RecurringRevenueChart({ transactions, lid }: RecurringRevenueCha
     }, [transactions])
 
     return (
-        <Card className='bg-foreground/5 rounded-lg border-foreground/10 p-0'>
-            <CardHeader className='flex flex-row justify-between items-center' >
-                <CardTitle className='text-lg font-semibold'>
+        <Card className="bg-foreground/5 rounded-lg border-foreground/10 p-0">
+            <CardHeader className="flex flex-row justify-between items-center">
+                <CardTitle className="text-lg font-semibold">
                     Recurring Revenue
                 </CardTitle>
-                <div className='flex flex-row gap-2 bg-foreground/10 rounded-lg px-2 py-1'>
+                <div className="flex flex-row gap-2 bg-foreground/10 rounded-lg px-2 py-1">
                     {[3, 6, 12].map((item) => (
                         <div
                             key={item}
@@ -107,20 +111,32 @@ export function RecurringRevenueChart({ transactions, lid }: RecurringRevenueCha
                         </div>
                     ))}
                 </div>
-            </CardHeader >
-            <CardContent className='space-y-2 relative'>
+            </CardHeader>
+            <CardContent className="space-y-2 relative">
                 {loading ? (
-                    <div className='flex flex-row items-center justify-center h-[300px] gap-2'>
-                        <Loader2 className='animate-spin' size={16} /> Loading data...
+                    <div className="flex flex-row items-center justify-center h-[300px] gap-2">
+                        <Loader2 className="animate-spin" size={16} /> Loading
+                        data...
                     </div>
                 ) : (
-                    <ChartContainer config={chartConfig} className='w-full h-[300px]' >
+                    <ChartContainer
+                        config={chartConfig}
+                        className="w-full h-[300px]"
+                    >
                         <LineChart
                             accessibilityLayer
                             data={filteredData}
-                            margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
+                            margin={{
+                                left: 20,
+                                right: 20,
+                                top: 20,
+                                bottom: 20,
+                            }}
                         >
-                            <CartesianGrid vertical={false} horizontal={false} />
+                            <CartesianGrid
+                                vertical={false}
+                                horizontal={false}
+                            />
                             <XAxis
                                 dataKey="month"
                                 tickLine={false}
@@ -131,7 +147,7 @@ export function RecurringRevenueChart({ transactions, lid }: RecurringRevenueCha
                             />
 
                             <ChartTooltip
-                                cursor={{ stroke: "#ccc", strokeDasharray: 6 }}
+                                cursor={{ stroke: '#ccc', strokeDasharray: 6 }}
                                 content={<ChartTooltipContent hideLabel />}
                             />
                             <Line
@@ -145,6 +161,6 @@ export function RecurringRevenueChart({ transactions, lid }: RecurringRevenueCha
                     </ChartContainer>
                 )}
             </CardContent>
-        </Card >
+        </Card>
     )
 }
