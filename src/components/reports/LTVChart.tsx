@@ -7,8 +7,6 @@ import { Transaction } from '@/types/transaction'
 import { MONTHS } from '@/libs/data'
 import { Loader2 } from 'lucide-react'
 
-
-
 const chartConfig = {
     desktop: {
         label: "LTV",
