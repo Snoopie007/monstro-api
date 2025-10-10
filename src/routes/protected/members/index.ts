@@ -6,4 +6,3 @@ export * from './payments';
 export * from './profile';
 export * from './avatar';
 export * from './plans';
-export * from './achievements';
