@@ -19,11 +19,32 @@ type Data = {
     count: number
 }
 
-export function NewCustomerChart({ mls }: { mls: MemberLocation[] }) {
+const DummyData: Data[] = [
+    { month: 'January', count: 12 },
+    { month: 'February', count: 18 },
+    { month: 'March', count: 25 },
+    { month: 'April', count: 22 },
+    { month: 'May', count: 30 },
+    { month: 'June', count: 28 },
+    { month: 'July', count: 35 },
+    { month: 'August', count: 32 },
+    { month: 'September', count: 27 },
+    { month: 'October', count: 40 },
+    { month: 'November', count: 38 },
+    { month: 'December', count: 45 }
+]
+
+
+export function NewCustomerChart({ mls, lid }: { mls: MemberLocation[], lid: string }) {
     const [isLoading, setIsLoading] = useState(true)
 
     const data = useMemo<Data[]>(() => {
+        if (lid === 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s') {
+            return DummyData
+        }
         if (mls) {
+
+
 
             const counts = Object.fromEntries(MONTHS.map((month) => [month, 0]));
 
@@ -40,7 +61,7 @@ export function NewCustomerChart({ mls }: { mls: MemberLocation[] }) {
         }
         return [];
     }, [mls])
-    console.log(data)
+
     useEffect(() => {
         if (mls) {
             setIsLoading(false)
@@ -77,7 +98,7 @@ export function NewCustomerChart({ mls }: { mls: MemberLocation[] }) {
                                 dataKey="month"
                                 tickLine={false}
                                 tickMargin={10}
-                                axisLine={false}
+                                axisLine={true}
                                 tickFormatter={(value) => value.slice(0, 3)}
                                 interval={0}
                             />

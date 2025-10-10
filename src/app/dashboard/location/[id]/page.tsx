@@ -25,30 +25,30 @@ export default function LocationDashboard(props: { params: Promise<{ id: string 
 
                 <div className=' col-span-3 space-y-4     '>
                     <div className="grid grid-cols-4 gap-4">
-                        <ActiveTrend mls={mls} />
-                        <NewMemberTrend mls={mls} />
-                        <RevenueTrent transactions={transactions} />
-                        <ReccuringTrend transactions={transactions} />
+                        <ActiveTrend mls={mls} lid={id} />
+                        <NewMemberTrend mls={mls} lid={id} />
+                        <RevenueTrent transactions={transactions} lid={id} />
+                        <ReccuringTrend transactions={transactions} lid={id} />
                     </div>
                     <div className='grid grid-cols-3 gap-4'>
                         <div className='col-span-2'>
-                            <RevenueChart transactions={transactions} />
+                            <RevenueChart transactions={transactions} lid={id} />
                         </div>
 
                         <div className='col-span-1'>
-                            <NewCustomerChart mls={mls} />
+                            <NewCustomerChart mls={mls} lid={id} />
                         </div>
 
 
                     </div>
                     <div className='col-span-2 grid grid-cols-2 gap-4'>
 
-                        <CustomerLTVChart transactions={transactions} />
-                        <RecurringRevenueChart transactions={transactions} />
+                        <CustomerLTVChart transactions={transactions} lid={id} />
+                        <RecurringRevenueChart transactions={transactions} lid={id} />
                     </div>
                 </div>
                 <div className='col-span-1 space-y-4'>
-                    <TopSpenders mls={mls} transactions={transactions} />
+                    <TopSpenders mls={mls} transactions={transactions} lid={id} />
                     <ChurnedMembers lid={id} />
                 </div>
             </div>

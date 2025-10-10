@@ -8,15 +8,66 @@ import { MemberSubscription } from '@/types'
 
 
 
+const DummyData: any[] = [
+    {
+        id: '1',
+        member: {
+            id: '1',
+            firstName: 'John',
+            lastName: 'Smith',
+            updated: new Date('2024-01-15')
+        } as any,
+        plan: {
+            id: '1',
+            name: 'Premium Membership'
+        } as any
+    },
+    {
+        id: '2',
+        member: {
+            id: '2',
+            firstName: 'Sarah',
+            lastName: 'Johnson',
+            updated: new Date('2024-01-10')
+        } as any,
+        plan: {
+            id: '2',
+            name: 'Basic Plan'
+        } as any
+    },
+    {
+        id: '3',
+        member: {
+            id: '3',
+            firstName: 'Mike',
+            lastName: 'Davis',
+            updated: new Date('2024-01-08')
+        } as any,
+        plan: {
+            id: '3',
+            name: 'Gold Membership'
+        } as any
+    }
+]
+
 export function ChurnedMembers({ lid }: { lid: string }) {
     const [loading, setLoading] = useState(false)
     const [list, setList] = useState<MemberSubscription[]>([])
-    useEffect(() => {
 
+    useEffect(() => {
         fetchData()
     }, [])
 
     async function fetchData() {
+        if (lid === 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s') {
+            setLoading(true)
+            // Simulate loading delay for dummy data
+            setTimeout(() => {
+                setList(DummyData as MemberSubscription[])
+                setLoading(false)
+            }, 500)
+            return
+        }
 
         setLoading(true)
         const { result, error } = await tryCatch(fetch(`/api/protected/loc/${lid}/reports/cancels`))

@@ -23,11 +23,30 @@ type Data = {
 }
 
 
+const DummyData = [
+    { month: 'January', amount: 100 },
+    { month: 'February', amount: 150 },
+    { month: 'March', amount: 200 },
+    { month: 'April', amount: 250 },
+    { month: 'May', amount: 300 },
+    { month: 'June', amount: 350 },
+    { month: 'July', amount: 400 },
+    { month: 'August', amount: 450 },
+    { month: 'September', amount: 500 },
+    { month: 'October', amount: 550 },
+    { month: 'November', amount: 600 },
+    { month: 'December', amount: 650 }
+]
 
-export function CustomerLTVChart({ transactions }: { transactions: Transaction[] | undefined }) {
 
-    const [loading, setLoading] = useState(false)
+export function CustomerLTVChart({ transactions, lid }: { transactions: Transaction[], lid?: string }) {
+
+    const [loading, setLoading] = useState(true)
     const data = useMemo<Data[]>(() => {
+        if (lid === 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s') {
+            return DummyData
+        }
+
         if (transactions && transactions.length > 0) {
             // Group transactions by member and month
             const memberMonthlyTotals = new Map<string, Map<string, number>>();
@@ -72,7 +91,7 @@ export function CustomerLTVChart({ transactions }: { transactions: Transaction[]
             month,
             amount: 0,
         }))
-    }, [transactions])
+    }, [transactions, lid])
 
 
     useEffect(() => {
@@ -113,7 +132,7 @@ export function CustomerLTVChart({ transactions }: { transactions: Transaction[]
                                 dataKey="month"
                                 tickLine={false}
                                 tickMargin={10}
-                                axisLine={false}
+                                axisLine={true}
                                 tickFormatter={(value) => value.slice(0, 3)}
                                 interval={0}
                             />

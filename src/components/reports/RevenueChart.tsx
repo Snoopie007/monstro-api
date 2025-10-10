@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Line, LineChart, XAxis } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
@@ -21,11 +21,30 @@ type Data = {
     amount: number
 }
 
-export function RevenueChart({ transactions }: { transactions: Transaction[] }) {
+const DummyData = [
+    { month: 'January', amount: 12500 },
+    { month: 'February', amount: 14200 },
+    { month: 'March', amount: 13800 },
+    { month: 'April', amount: 15600 },
+    { month: 'May', amount: 16900 },
+    { month: 'June', amount: 18200 },
+    { month: 'July', amount: 17500 },
+    { month: 'August', amount: 19800 },
+    { month: 'September', amount: 21300 },
+    { month: 'October', amount: 20100 },
+    { month: 'November', amount: 22500 },
+    { month: 'December', amount: 24800 },
+]
+
+export function RevenueChart({ transactions, lid }: { transactions: Transaction[], lid: string }) {
     const [range, setRange] = useState(12)
     const [loading, setLoading] = useState(true)
 
     const data = useMemo<Data[]>(() => {
+        if (lid === 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s') {
+            return DummyData
+        }
+
         if (transactions && transactions.length > 0) {
             const revenueByMonth = Object.fromEntries(MONTHS.map((month) => [month, 0]));
             transactions.forEach((transaction) => {
@@ -47,7 +66,7 @@ export function RevenueChart({ transactions }: { transactions: Transaction[] }) 
             month,
             amount: 0,
         }));
-    }, [transactions]);
+    }, [transactions, lid]);
 
     const filteredData = useMemo(() => {
         return data.slice(-range);
@@ -99,7 +118,7 @@ export function RevenueChart({ transactions }: { transactions: Transaction[] }) 
                                 dataKey="month"
                                 tickLine={false}
                                 tickMargin={10}
-                                axisLine={false}
+                                axisLine={true}
                                 tickFormatter={(value) => value.slice(0, 3)}
                                 interval={0}
                             />
