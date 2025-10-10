@@ -1,13 +1,29 @@
 import { db } from "@/db/db";
-import { startOfDay, endOfDay, startOfMonth, startOfYear } from "date-fns";
+import { endOfDay, startOfMonth, startOfYear } from "date-fns";
 import Elysia from "elysia";
+const DUMMY_DATA = [
+    { id: "1", firstName: "Michael", lastName: "Brown", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=michael", points: 2847 },
+    { id: "2", firstName: "Sarah", lastName: "Davis", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=sarah", points: 2156 },
+    { id: "3", firstName: "David", lastName: "Miller", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=david", points: 1923 },
+    { id: "4", firstName: "Jessica", lastName: "Wilson", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=jessica", points: 1678 },
+    { id: "5", firstName: "Michael", lastName: "Brown", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=michael", points: 1445 },
+    { id: "6", firstName: "Sarah", lastName: "Davis", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=sarah", points: 1289 },
+    { id: "7", firstName: "David", lastName: "Miller", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=david", points: 1067 },
+    { id: "8", firstName: "Jessica", lastName: "Wilson", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=jessica", points: 834 },
+    { id: "9", firstName: "Michael", lastName: "Brown", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=michael", points: 612 },
+    { id: "10", firstName: "Sarah", lastName: "Davis", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=sarah", points: 398 }
+];
 
 export async function locationLeaderboard(app: Elysia) {
     return app.get('/leaderboard', async ({ params, status, query }) => {
         const { lid } = await params as { lid: string };
         const { range } = await query as { range: string };
-        const now = new Date();
+        console.log(lid, range);
+        if (lid === 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s') {
+            return status(200, DUMMY_DATA);
+        }
 
+        const now = new Date();
         let startDate = null;
         let endDate = null;
         if (range === "YTD") {
@@ -17,6 +33,7 @@ export async function locationLeaderboard(app: Elysia) {
             startDate = startOfMonth(now);
             endDate = endOfDay(now);
         }
+
 
 
         try {
