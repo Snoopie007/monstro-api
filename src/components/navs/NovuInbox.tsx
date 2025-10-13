@@ -1,17 +1,24 @@
 import { Inbox } from '@novu/nextjs'
-
-import { Button } from '@/components/ui/button'
-import { Inbox as InboxIcon } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 export function NovuInbox() {
+    const { data: session } = useSession()
+    const user = session?.user
+    const appId = process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER
+
+    if (!process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER)
+        throw new Error('NEXT_PUBLIC_NOVU_APP_IDENTIFIER is not set')
+
+    if (!appId || !user?.id) return null
+
     return (
         <Inbox
-            applicationIdentifier="g62OC-iQ2LHU"
-            subscriberId="68ed218d387ecafce7c7861a"
+            applicationIdentifier={appId}
+            subscriberId={user?.id}
             appearance={{
                 variables: {
-                    colorPrimary: '#DD2450',
-                    colorForeground: '#0E121B',
+                    colorPrimary: '222.2 47.4% 11.2%',
+                    colorForeground: '210 40% 98%',
                 },
             }}
         />
