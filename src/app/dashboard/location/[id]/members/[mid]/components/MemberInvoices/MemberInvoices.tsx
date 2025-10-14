@@ -83,7 +83,7 @@ export function MemberInvoices({
                       <TableCell>
                         {formatAmountForDisplay(
                           invoice.total / 100,
-                          invoice.currency!
+                          invoice.currency
                         )}
                       </TableCell>
                       <TableCell>
