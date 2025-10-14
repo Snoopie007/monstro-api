@@ -6,6 +6,7 @@ import { and } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { EmailSender } from "@/libs/email";
 import { MonstroData } from "@/libs/data";
+import { evaluateTriggers } from "@/libs/achievements";
 
 
 const emailSender = new EmailSender();
@@ -119,6 +120,16 @@ export function memberPlansSubRoutes(app: Elysia) {
 
             if (!familySubscription) {
                 return status(500, { error: "Failed to create family subscription" });
+            }
+
+            try {
+                await evaluateTriggers({
+                    memberId: familySubscription.memberId,
+                    locationId: familySubscription.locationId,
+                    triggerType: 'plan_signup',
+                });
+            } catch (error) {
+                console.error('Error evaluating plan signup triggers:', error);
             }
 
             const emailUrl = `invite/${locationId}/sub/${familySubscription.id}`;
