@@ -18,8 +18,8 @@ export async function locationLeaderboard(app: Elysia) {
     return app.get('/leaderboard', async ({ params, status, query }) => {
         const { lid } = await params as { lid: string };
         const { range } = await query as { range: string };
-        console.log(lid, range);
-        if (lid === 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s') {
+
+        if (lid === 'acc_BpT7jEb3Q16nOPL3vo7qlw') {
             return status(200, DUMMY_DATA);
         }
 
