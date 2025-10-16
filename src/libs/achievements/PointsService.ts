@@ -28,7 +28,7 @@ export async function getMemberPointsHistory(memberId: string, locationId: strin
         eq(memberPointsHistory.memberId, memberId),
         eq(memberPointsHistory.locationId, locationId)
       ),
-      orderBy: [desc(memberPointsHistory.createdAt)],
+      orderBy: [desc(memberPointsHistory.created)],
       limit
     });
   } catch (error) {
@@ -56,8 +56,8 @@ export async function deductPoints(
       points: -points, // Negative for deduction
       type: 'spent',
       removed: false,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      created: new Date(),
+      updated: new Date()
     });
 
     return true;
@@ -82,8 +82,8 @@ export async function addPoints(
       type,
       achievementId,
       removed: false,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      created: new Date(),
+      updated: new Date()
     });
 
     return true;
