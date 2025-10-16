@@ -8,7 +8,9 @@ import {
     memberPayments,
     memberProfile,
     memberAvatar,
-    memberPlans
+    memberPlans,
+    memberFriends,
+    memberChats
 } from './members';
 import {
     locationAchievements,
@@ -31,7 +33,9 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(memberPayments);
         app.use(memberProfile);
         app.use(memberAvatar);
+        app.use(memberFriends);
         app.use(memberPlans);
+        app.use(memberChats);
         return app;
     })
     .group('/locations/:lid', (app) => {
