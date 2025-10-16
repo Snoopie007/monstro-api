@@ -111,7 +111,6 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 							<span className="text-xs"> {sub.status === "active" ? "Pause" : "Resume"}</span>
 							{sub.status === "active" ? <Pause className="size-3" /> : <Play className="size-3" />}
 						</DropdownMenuItem>
-
 						<DropdownMenuSeparator />
 						<DropdownMenuItem
 							className="cursor-pointer text-sm flex flex-row items-center justify-between gap-2"
@@ -121,7 +120,6 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 							<span className="text-xs"> Cancel</span>
 							<Trash2 className="size-3" />
 						</DropdownMenuItem>
-
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>

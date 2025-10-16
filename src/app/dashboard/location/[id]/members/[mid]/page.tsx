@@ -1,4 +1,4 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger, TooltipProvider } from "@/components/ui";
 
 import {
   MemberAchievements,
@@ -200,66 +200,68 @@ export default async function MemberProfilePage(props: {
 
   return (
     <div className="h-full flex flex-col">
-      <MemberProvider member={member} paymentMethods={paymentMethods} ml={ml}>
-        {/* Main content */}
-        <div className="grid grid-cols-12 flex-1">
-          <div className="col-span-4  border-r border-foreground/10   ">
-            <MemberProfile params={params} profileData={memberProfileData} />
-            {/* Custom Fields Section */}
-            <CustomFieldsSection
-              memberId={params.mid}
-              locationId={params.id}
-              editable={canEditMember}
-              variant="card"
-              showEmptyFields={false}
-            />
-            <PaymentMethods editable={canEditMember} params={params} />
-            <MemberFamilies
-              params={params}
-              familyMembers={member.familyMembers}
-              editable={canEditMember}
-            />
-            <MemberTagSection editable={canEditMember} params={params} />
-          </div>
-          <div className="col-span-8">
-            <Tabs defaultValue="Subscriptions" className="w-full">
-              <TabsList
-                className={cn(
-                  "bg-transparent p-2.5 border-b w-full border-foreground/10 justify-start",
-                )}
-              >
-                {MemberDetailsMenu.map((item, index) => (
-                  <TabsTrigger key={index} value={item} className="text-xs ">
-                    {item}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              <TabsContent value="Subscriptions" className="mt-0">
-                <MemberSubs params={params} />
-              </TabsContent>
-              <TabsContent value="Packages" className="mt-0">
-                <MemberPackages params={params} />
-              </TabsContent>
-              <TabsContent value="Achievements" className="mt-0">
-                <MemberAchievements params={params} />
-              </TabsContent>
-              <TabsContent value="Attendance" className="mt-0">
-                <MemberAttedance params={params} />
-              </TabsContent>
-              <TabsContent value="Invoices" className="mt-0">
-                <MemberInvoices params={params} />
-              </TabsContent>
-              <TabsContent value="Transactions" className="mt-0">
-                <MemberTransactions params={params} />
-              </TabsContent>
+      <TooltipProvider>
+        <MemberProvider member={member} paymentMethods={paymentMethods} ml={ml}>
+          {/* Main content */}
+          <div className="grid grid-cols-12 flex-1">
+            <div className="col-span-4  border-r border-foreground/10   ">
+              <MemberProfile params={params} profileData={memberProfileData} />
+              {/* Custom Fields Section */}
+              <CustomFieldsSection
+                memberId={params.mid}
+                locationId={params.id}
+                editable={canEditMember}
+                variant="card"
+                showEmptyFields={false}
+              />
+              <PaymentMethods editable={canEditMember} params={params} />
+              <MemberFamilies
+                params={params}
+                familyMembers={member.familyMembers}
+                editable={canEditMember}
+              />
+              <MemberTagSection editable={canEditMember} params={params} />
+            </div>
+            <div className="col-span-8">
+              <Tabs defaultValue="Subscriptions" className="w-full">
+                <TabsList
+                  className={cn(
+                    "bg-transparent p-2.5 border-b w-full border-foreground/10 justify-start",
+                  )}
+                >
+                  {MemberDetailsMenu.map((item, index) => (
+                    <TabsTrigger key={index} value={item} className="text-xs ">
+                      {item}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                <TabsContent value="Subscriptions" className="mt-0">
+                  <MemberSubs params={params} />
+                </TabsContent>
+                <TabsContent value="Packages" className="mt-0">
+                  <MemberPackages params={params} />
+                </TabsContent>
+                <TabsContent value="Achievements" className="mt-0">
+                  <MemberAchievements params={params} />
+                </TabsContent>
+                <TabsContent value="Attendance" className="mt-0">
+                  <MemberAttedance params={params} />
+                </TabsContent>
+                <TabsContent value="Invoices" className="mt-0">
+                  <MemberInvoices params={params} />
+                </TabsContent>
+                <TabsContent value="Transactions" className="mt-0">
+                  <MemberTransactions params={params} />
+                </TabsContent>
 
-              <TabsContent value="Rewards" className="mt-0">
-                <MemberRewards params={params} />
-              </TabsContent>
-            </Tabs>
+                <TabsContent value="Rewards" className="mt-0">
+                  <MemberRewards params={params} />
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
-        </div>
-      </MemberProvider>
+        </MemberProvider>
+      </TooltipProvider>
     </div>
   );
 }

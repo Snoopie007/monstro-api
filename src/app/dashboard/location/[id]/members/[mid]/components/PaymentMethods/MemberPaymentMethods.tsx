@@ -41,8 +41,6 @@ export function PaymentMethods({ params, editable }: PaymentMethodsProps) {
                     >
                         {editable && <AddPaymentMethod member={member} locationId={params.id} />}
                     </Elements>
-
-
                 </div>
 
             </CardHeader>
