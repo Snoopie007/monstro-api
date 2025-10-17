@@ -4,7 +4,6 @@ import {
     AvatarFallback,
     AvatarImage,
     Badge,
-    BadgeTooltip,
     Button,
     Card,
     CardContent,
@@ -18,7 +17,6 @@ import {
     CalendarCheck2,
     ChevronLeft,
     Ellipsis,
-    FileBadgeIcon,
     Mail,
     PhoneCall,
 } from 'lucide-react'
@@ -26,13 +24,7 @@ import { useMemberStatus } from '../../providers/MemberContext'
 import { useRouter } from 'next/navigation'
 import { MemberDeleteButton, MemberEditButton } from '../ContactInfo'
 import { usePermission } from '@/hooks/usePermissions'
-import {
-    Item,
-    ItemActions,
-    ItemTitle,
-    ItemContent,
-    ItemDescription,
-} from '@/components/ui/item'
+import { Item, ItemContent } from '@/components/ui/item'
 
 type MemberProfileData = {
     totalPointsEarned: number
@@ -101,7 +93,7 @@ export function MemberProfile({ params, profileData }: MemberProfileProps) {
                                     size="icon"
                                     className="size-7 bg-transparent text-foreground hover:bg-foreground/5 group-hover:bg-foreground/5 group-hover:dark:bg-foreground/5 flex-1 rounded-r-none"
                                 >
-                                    <Ellipsis className="size-4 dark:text-background text-foreground" />
+                                    <Ellipsis className="size-4 dark:text-foreground text-foreground" />
                                 </Button>
                                 {canEditMember && (
                                     <MemberEditButton
