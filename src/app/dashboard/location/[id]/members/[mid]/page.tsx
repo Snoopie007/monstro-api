@@ -231,10 +231,15 @@ export default async function MemberProfilePage(props: {
                 >
                     {/* Main content */}
                     <div className="grid grid-cols-12 flex-1">
-                        <div className="col-span-4  border-r border-foreground/10   ">
+                        <div className="col-span-4 border-r border-foreground/10">
                             <MemberProfile
                                 params={params}
                                 profileData={memberProfileData}
+                            />
+                            <MemberFamilies
+                                params={params}
+                                familyMembers={member.familyMembers}
+                                editable={canEditMember}
                             />
                             <PaymentMethods
                                 editable={canEditMember}
@@ -247,11 +252,6 @@ export default async function MemberProfilePage(props: {
                                 editable={canEditMember}
                                 variant="card"
                                 showEmptyFields={true}
-                            />
-                            <MemberFamilies
-                                params={params}
-                                familyMembers={member.familyMembers}
-                                editable={canEditMember}
                             />
                             <MemberTagSection
                                 editable={canEditMember}
