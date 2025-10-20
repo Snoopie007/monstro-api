@@ -30,7 +30,7 @@ export default function Invoices({ invoices }: { invoices: Stripe.Invoice[] }) {
 
                             <TableCell className="py-3">{formatAmountForDisplay(invoice.total / 100, 'usd', true)}</TableCell>
                             <TableCell className="py-3">
-                                <Badge variant={invoice.status === 'paid' ? 'active' : 'inactive'}>{invoice.status}</Badge>
+                                <Badge member={invoice.status === 'paid' ? 'active' : 'inactive'}>{invoice.status}</Badge>
                             </TableCell>
                             <TableCell className="text-center py-3">
                                 <Button variant="foreground" size="icon" className="size-6">

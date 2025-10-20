@@ -53,7 +53,7 @@ export const LocationsList = ({ locations }: { locations: Location[] }) => {
                                     <p >{l.address}</p>
                                     <p >{l.city}, {l.state} {l.postalCode}</p>
                                 </div>
-                                <Badge variant={l.locationState?.status === 'active' ? 'active' : 'inactive'} className='text-[0.65rem]'>
+                                <Badge member={l.locationState?.status === 'active' ? 'active' : 'inactive'} className='text-[0.65rem]'>
                                     {l.locationState?.status}
                                 </Badge>
                             </div>

@@ -29,6 +29,7 @@ const badgeVariants = cva(
                 active: 'bg-green-300 text-green-800',
                 canceled: 'bg-red-300 text-red-800',
                 paused: 'bg-gray-300 text-gray-800',
+                inactive: 'bg-gray-300 text-gray-800',
                 past_due: 'bg-orange-300 text-orange-800',
                 incomplete_expired: 'bg-red-300 text-red-800',
                 unpaid: 'bg-red-300 text-red-800',
@@ -52,6 +53,7 @@ const badgeVariants = cva(
             sub: {
                 active: 'bg-green-300 text-green-800',
                 incomplete: 'bg-yellow-300 text-yellow-800',
+                inactive: 'bg-yellow-300 text-yellow-800',
                 trialing: 'bg-blue-300 text-blue-800',
                 past_due: 'bg-orange-300 text-orange-800',
                 paused: 'bg-gray-300 text-gray-800',
@@ -71,6 +73,7 @@ const badgeVariants = cva(
                 active: 'bg-green-300 text-green-800',
                 expired: 'bg-red-300 text-red-800',
                 incomplete: 'bg-yellow-300 text-yellow-800',
+                inactive: 'bg-yellow-300 text-yellow-800',
                 completed: 'bg-blue-300 text-blue-800',
             },
             transaction: {
