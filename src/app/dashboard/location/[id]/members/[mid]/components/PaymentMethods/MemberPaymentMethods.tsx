@@ -8,6 +8,7 @@ import PaymentMethodsActions from './actions'
 import { useMemberStatus, useMemberPaymentMethods } from '../../providers'
 import { Item, ItemActions, ItemContent, ItemMedia } from '@/components/ui/item'
 import { CreditCard } from 'lucide-react'
+import { Badge } from '@/components/ui'
 
 interface PaymentMethodsProps {
     params: { id: string; mid: string }
@@ -37,7 +38,12 @@ export function PaymentMethods({ params, editable }: PaymentMethodsProps) {
                                 </span>
                                 <span className="text-sm text-muted-foreground">
                                     {method.card?.funding} ••••{' '}
-                                    {method.card?.last4}
+                                    {method.card?.last4}{' '}
+                                    {method.allow_redisplay === 'always' && (
+                                        <Badge roles="blue" size="tiny">
+                                            Default
+                                        </Badge>
+                                    )}
                                 </span>
                             </div>
                             <div className="flex flex-row items-center gap-2">

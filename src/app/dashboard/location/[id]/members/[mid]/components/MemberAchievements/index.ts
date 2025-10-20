@@ -1,1 +1,1 @@
-export * from './MemberAchievements';
+export * from './MemberAchievementItems'

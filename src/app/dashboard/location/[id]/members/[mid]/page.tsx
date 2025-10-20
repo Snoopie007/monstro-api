@@ -1,4 +1,5 @@
 import {
+    ScrollArea,
     Tabs,
     TabsContent,
     TabsList,
@@ -7,13 +8,15 @@ import {
 } from '@/components/ui'
 
 import {
-    MemberAchievements,
+    MemberChatView,
+    MemberInvoiceItems,
+    MemberAchievementItems,
+    MemberRewardItems,
+    MemberAttendanceItems,
     MemberSubs,
-    MemberTransactions,
-    MemberRewards,
-    MemberAttedance,
     MemberFamilies,
     MemberTransactionItems,
+    MemberPackages,
 } from './components'
 
 import { PaymentMethods, MemberProfile } from './components'
@@ -28,9 +31,6 @@ import { MemberTagSection } from './components/MemberTags/MemberTagsSection'
 import { attendances, reservations, recurringReservations } from '@/db/schemas'
 import { format } from 'date-fns'
 import { hasPermission } from '@/libs/server/permissions'
-import { MemberChatView } from './components/MemberChat/MemberChatView'
-import { MemberInvoiceItems } from './components/MemberInvoices/MemberInvoiceItems'
-import { MemberAchievementItems } from './components/MemberAchievements/MemberAchievementItems'
 
 type PromiseReturnType = {
     member: Member | undefined
@@ -235,41 +235,45 @@ export default async function MemberProfilePage(props: {
                     {/* Main content */}
                     <div className="grid grid-cols-12 flex-1 gap-2">
                         <div className="col-span-4 border-foreground/10">
-                            <MemberProfile
-                                params={params}
-                                profileData={memberProfileData}
-                            />
-                            <MemberFamilies
-                                params={params}
-                                familyMembers={member.familyMembers}
-                                editable={canEditMember}
-                            />
-                            <MemberTagSection
-                                editable={canEditMember}
-                                params={params}
-                            />
-                            <PaymentMethods
-                                editable={canEditMember}
-                                params={params}
-                            />
-                            <CustomFieldsSection
-                                memberId={params.mid}
-                                locationId={params.id}
-                                editable={canEditMember}
-                                variant="card"
-                                showEmptyFields={true}
-                            />
+                            <ScrollArea className="h-[calc(100vh-90px)]">
+                                <MemberProfile
+                                    params={params}
+                                    profileData={memberProfileData}
+                                />
+                                <MemberFamilies
+                                    params={params}
+                                    familyMembers={member.familyMembers}
+                                    editable={canEditMember}
+                                />
+                                <MemberTagSection
+                                    editable={canEditMember}
+                                    params={params}
+                                />
+                                <PaymentMethods
+                                    editable={canEditMember}
+                                    params={params}
+                                />
+                                <CustomFieldsSection
+                                    memberId={params.mid}
+                                    locationId={params.id}
+                                    editable={canEditMember}
+                                    variant="card"
+                                    showEmptyFields={true}
+                                />
+                                <MemberPackages params={params} />
+                                <MemberSubs params={params} />
+                            </ScrollArea>
                         </div>
-                        <div className="col-span-4 py-4">
+                        <div className="col-span-5 py-4">
                             <div className="bg-foreground/5 rounded-lg h-full">
                                 <MemberChatView />
                             </div>
                         </div>
 
-                        <div className="col-span-4 py-4 pr-4">
+                        <div className="col-span-3 py-4 pr-4">
                             <div className="rounded-lg h-full p-4">
                                 <Tabs defaultValue="invoices-transactions">
-                                    <TabsList className="bg-background rounded-none border-b p-0">
+                                    <TabsList className="bg-background rounded-none border-b p-0 w-full items-start justify-start overflow-x-scroll">
                                         <TabsTrigger
                                             value="invoices-transactions"
                                             className={triggerTabsClassName}
@@ -296,77 +300,19 @@ export default async function MemberProfilePage(props: {
                                         />
                                     </TabsContent>
                                     <TabsContent value="achievements-rewards">
-                                        {/* Achievements and Rewards New UI */}
-                                        {/* <h2>Achievements</h2> */}
                                         <MemberAchievementItems
                                             params={params}
                                         />
-                                        <h2>Rewards</h2>
+                                        <MemberRewardItems params={params} />
                                     </TabsContent>
                                     <TabsContent value="attendance">
-                                        {/* Attendance New UI */}
-                                        <h2>Attendance</h2>
+                                        <MemberAttendanceItems
+                                            params={params}
+                                        />
                                     </TabsContent>
                                 </Tabs>
                             </div>
                         </div>
-
-                        {/* <div className="col-span-4">
-                            <Tabs
-                                defaultValue="Subscriptions"
-                                className="w-full"
-                            >
-                                <TabsList
-                                    className={cn(
-                                        'bg-transparent p-2.5 border-b w-full border-foreground/10 justify-start'
-                                    )}
-                                >
-                                    {MemberDetailsMenu.map((item, index) => (
-                                        <TabsTrigger
-                                            key={index}
-                                            value={item}
-                                            className="text-xs "
-                                        >
-                                            {item}
-                                        </TabsTrigger>
-                                    ))}
-                                </TabsList>
-                                <TabsContent
-                                    value="Subscriptions"
-                                    className="mt-0"
-                                >
-                                    <MemberSubs params={params} />
-                                </TabsContent>
-                                <TabsContent value="Packages" className="mt-0">
-                                    <MemberPackages params={params} />
-                                </TabsContent>
-                                <TabsContent
-                                    value="Achievements"
-                                    className="mt-0"
-                                >
-                                    <MemberAchievements params={params} />
-                                </TabsContent>
-                                <TabsContent
-                                    value="Attendance"
-                                    className="mt-0"
-                                >
-                                    <MemberAttedance params={params} />
-                                </TabsContent>
-                                <TabsContent value="Invoices" className="mt-0">
-                                    <MemberInvoices params={params} />
-                                </TabsContent>
-                                <TabsContent
-                                    value="Transactions"
-                                    className="mt-0"
-                                >
-                                    <MemberTransactions params={params} />
-                                </TabsContent>
-
-                                <TabsContent value="Rewards" className="mt-0">
-                                    <MemberRewards params={params} />
-                                </TabsContent>
-                            </Tabs>
-                        </div> */}
                     </div>
                 </MemberProvider>
             </TooltipProvider>

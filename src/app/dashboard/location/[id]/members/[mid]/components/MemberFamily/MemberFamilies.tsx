@@ -1,18 +1,8 @@
 'use client'
-import {
-    Card,
-    CardHeader,
-    CardContent,
-    CardTitle,
-    Avatar,
-    AvatarImage,
-    AvatarFallback,
-    Badge,
-} from '@/components/ui'
+import { Avatar, AvatarImage, AvatarFallback, Badge } from '@/components/ui'
 import { useMemberStatus } from '../../providers/MemberContext'
 import { FamilyMember } from '@/types/FamilyMember'
 import AddChildMember from './AddMember'
-import { Item, ItemContent } from '@/components/ui/item'
 import {
     HoverCard,
     HoverCardContent,

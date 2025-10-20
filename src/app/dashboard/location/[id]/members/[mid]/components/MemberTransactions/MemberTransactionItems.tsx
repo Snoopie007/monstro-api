@@ -1,20 +1,9 @@
 'use client'
 
-import { Badge, Button } from '@/components/ui'
-import {
-    Item,
-    ItemActions,
-    ItemContent,
-    ItemDescription,
-    ItemMedia,
-    ItemTitle,
-} from '@/components/ui/item'
 import { ScrollArea } from '@/components/ui/ScrollArea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useMemberTransactions } from '@/hooks/hooks'
-import { formatAmountForDisplay } from '@/libs/utils'
 import { Transaction } from '@/types'
-import { CircleDollarSign, FileIcon } from 'lucide-react'
 import { TransactionItem } from './TransactionItem'
 
 export const MemberTransactionItems = ({

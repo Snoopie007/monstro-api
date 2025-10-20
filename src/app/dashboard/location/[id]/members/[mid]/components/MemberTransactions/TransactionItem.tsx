@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui'
 import {
     Item,
-    ItemMedia,
     ItemDescription,
     ItemTitle,
     ItemContent,
@@ -9,7 +8,6 @@ import {
 } from '@/components/ui/item'
 import { formatAmountForDisplay } from '@/libs/utils'
 import { Transaction } from '@/types/transaction'
-import { CircleDollarSign } from 'lucide-react'
 import MemberPaymentActions from './actions'
 
 export const TransactionItem = ({
