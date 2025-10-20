@@ -35,7 +35,9 @@ export function MemberFamilies({
     return (
         <div className="px-4 mb-4">
             <div className="flex flex-row items-center gap-2 mb-2">
-                <h2 className="text-md font-normal">Family</h2>
+                <h2 className="text-sm text-muted-foreground font-normal">
+                    Family
+                </h2>
                 {editable && <AddChildMember parent={member} lid={params.id} />}
             </div>
             <ul className="flex flex-row gap-2 flex-wrap">

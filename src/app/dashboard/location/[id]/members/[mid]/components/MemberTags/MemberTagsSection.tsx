@@ -1,26 +1,22 @@
-
 'use client'
+import { Button } from '@/components/ui'
+import { useMemberTags, useTags } from '@/hooks/useTags'
+import { useEffect, useState } from 'react'
+
+import { toast } from 'react-toastify'
+import { Badge } from '@/components/ui/badge'
+import { ManageTagsDialog } from './ManageTagsDialog'
+import { PlusIcon } from 'lucide-react'
 import {
-    Card,
-    CardHeader,
-    CardContent,
-    CardTitle,
-    Avatar,
-    AvatarImage,
-    AvatarFallback,
-    Button,
-} from "@/components/ui"
-import { useMemberTags, useTags } from "@/hooks/useTags"
-import { useEffect, useState } from "react";
-
-import { toast } from "react-toastify";
-import { Badge } from "@/components/ui/badge";
-import { ManageTagsDialog } from "./ManageTagsDialog";
-import { PlusIcon } from "lucide-react";
-
+    Item,
+    ItemActions,
+    ItemContent,
+    ItemDescription,
+    ItemTitle,
+} from '@/components/ui/item'
 
 interface MemberTagSectionProps {
-    params: { id: string, mid: string }
+    params: { id: string; mid: string }
     editable: boolean
 }
 
@@ -29,85 +25,84 @@ export function MemberTagSection({ params, editable }: MemberTagSectionProps) {
         tags: allTags,
         isLoading: isLoadingAllTags,
         createTag,
-    } = useTags(params.id);
+    } = useTags(params.id)
     const {
         tags: memberTags,
         isLoading: isLoadingMemberTags,
         updateMemberTags,
-    } = useMemberTags(params.id, params.mid);
+    } = useMemberTags(params.id, params.mid)
 
-    const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
-    const [isUpdatingTags, setIsUpdatingTags] = useState(false);
-    const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
-    const [newTag, setNewTag] = useState("");
-
+    const [isManageDialogOpen, setIsManageDialogOpen] = useState(false)
+    const [isUpdatingTags, setIsUpdatingTags] = useState(false)
+    const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+    const [newTag, setNewTag] = useState('')
 
     // Initialize selected tags when member tags load or dialog opens
     useEffect(() => {
         if (isManageDialogOpen) {
-            setSelectedTagIds(memberTags.map((tag) => tag.id));
+            setSelectedTagIds(memberTags.map((tag) => tag.id))
         }
-    }, [memberTags, isManageDialogOpen]);
+    }, [memberTags, isManageDialogOpen])
 
     const handleRemove = (tagId: string) => {
-        const newSelectedTags = selectedTagIds.filter((id) => id !== tagId);
-        setSelectedTagIds(newSelectedTags);
-    };
+        const newSelectedTags = selectedTagIds.filter((id) => id !== tagId)
+        setSelectedTagIds(newSelectedTags)
+    }
 
     const handleSelect = (value: string) => {
-        let newSelectedTags;
+        let newSelectedTags
         if (selectedTagIds.includes(value)) {
-            newSelectedTags = selectedTagIds.filter((id) => id !== value);
+            newSelectedTags = selectedTagIds.filter((id) => id !== value)
         } else {
-            newSelectedTags = [...selectedTagIds, value];
+            newSelectedTags = [...selectedTagIds, value]
         }
-        setSelectedTagIds(newSelectedTags);
-    };
+        setSelectedTagIds(newSelectedTags)
+    }
 
     const handleCreateTag = async () => {
-        if (!newTag.trim()) return;
+        if (!newTag.trim()) return
 
         try {
-            const createdTag = await createTag({ name: newTag.trim() });
+            const createdTag = await createTag({ name: newTag.trim() })
             // Add the new tag to selected tags
-            const newSelectedTags = [...selectedTagIds, createdTag.id];
-            setSelectedTagIds(newSelectedTags);
-            setNewTag("");
-            toast.success(`Tag "${newTag.trim()}" created`);
+            const newSelectedTags = [...selectedTagIds, createdTag.id]
+            setSelectedTagIds(newSelectedTags)
+            setNewTag('')
+            toast.success(`Tag "${newTag.trim()}" created`)
         } catch (error) {
             // Show user-friendly error message
             if (error instanceof Error) {
-                if (error.message.includes("already exists")) {
-                    toast.error("A tag with this name already exists");
+                if (error.message.includes('already exists')) {
+                    toast.error('A tag with this name already exists')
                 } else {
-                    toast.error("Failed to create tag. Please try again.");
+                    toast.error('Failed to create tag. Please try again.')
                 }
             } else {
-                toast.error("Failed to create tag. Please try again.");
+                toast.error('Failed to create tag. Please try again.')
             }
-            console.error("Failed to create tag:", error);
+            console.error('Failed to create tag:', error)
         }
-    };
+    }
 
     const handleSaveTags = async () => {
-        setIsUpdatingTags(true);
+        setIsUpdatingTags(true)
         try {
-            await updateMemberTags(selectedTagIds);
-            setIsManageDialogOpen(false);
-            toast.success("Member tags updated successfully");
+            await updateMemberTags(selectedTagIds)
+            setIsManageDialogOpen(false)
+            toast.success('Member tags updated successfully')
         } catch (error) {
-            toast.error("Failed to update tags. Please try again.");
-            console.error("Failed to update tags:", error);
+            toast.error('Failed to update tags. Please try again.')
+            console.error('Failed to update tags:', error)
         } finally {
-            setIsUpdatingTags(false);
+            setIsUpdatingTags(false)
         }
-    };
+    }
 
     const openManageDialog = () => {
-        setSelectedTagIds(memberTags.map((tag) => tag.id));
-        setNewTag("");
-        setIsManageDialogOpen(true);
-    };
+        setSelectedTagIds(memberTags.map((tag) => tag.id))
+        setNewTag('')
+        setIsManageDialogOpen(true)
+    }
 
     if (isLoadingMemberTags || isLoadingAllTags) {
         return (
@@ -117,36 +112,62 @@ export function MemberTagSection({ params, editable }: MemberTagSectionProps) {
                 <div className="h-5 w-20 bg-muted animate-pulse rounded"></div>
                 <div className="h-5 w-20 bg-muted animate-pulse rounded"></div>
             </div>
-        );
+        )
     }
 
-
-
     return (
-        <Card className='border-foreground/10 border-x-0 border-y'>
-            <CardHeader className='border-none px-4 py-2 bg-foreground/5' >
-                <div className='flex flex-row items-center justify-between'>
-                    <CardTitle className="text-sm  ">
-                        Member Tags
-                    </CardTitle>
-                    {editable && <Button variant="ghost" size="sm" onClick={openManageDialog}>
-                        <PlusIcon className="h-3 w-3" />
-                    </Button>}
-                </div>
-            </CardHeader>
-            <CardContent className='px-4 py-2' >
-                <ul className="space-x-2 space-y-2">
-                    {memberTags.length === 0 && (
-                        <span className="text-xs text-muted-foreground">No tags</span>
+        <div className="px-4 mb-2">
+            <p className="text-xs font-medium text-muted-foreground mb-2">
+                Tags
+            </p>
+            <Item variant="muted" className="px-3 py-2">
+                <ItemContent>
+                    <ItemTitle className="flex flex-row gap-2 items-center">
+                        <ul className="gap-1 flex flex-row flex-wrap">
+                            {memberTags.length === 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                    No tags
+                                </span>
+                            )}
+                            {memberTags.map((tag) => (
+                                <Badge
+                                    key={tag.id}
+                                    variant="outline"
+                                    className="text-xs cursor-pointer rounded-full mb-0"
+                                >
+                                    {tag.name}
+                                </Badge>
+                            ))}
+                        </ul>
+                    </ItemTitle>
+                </ItemContent>
+                <ItemActions>
+                    {editable && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={openManageDialog}
+                            className="w-6 h-6"
+                        >
+                            <PlusIcon className="size-4" />
+                        </Button>
                     )}
-                    {memberTags.map((tag) => (
-                        <Badge key={tag.id} variant="secondary" className="text-xs cursor-pointer">
-                            {tag.name}
-                        </Badge>
-                    ))}
-                </ul>
-                <ManageTagsDialog isManageDialogOpen={isManageDialogOpen} setIsManageDialogOpen={setIsManageDialogOpen} openManageDialog={openManageDialog} selectedTagIds={selectedTagIds} allTags={allTags} handleRemove={handleRemove} newTag={newTag} setNewTag={setNewTag} handleCreateTag={handleCreateTag} handleSaveTags={handleSaveTags} isUpdatingTags={isUpdatingTags} handleSelect={handleSelect} />
-            </CardContent>
-        </Card >
+                </ItemActions>
+            </Item>
+            <ManageTagsDialog
+                isManageDialogOpen={isManageDialogOpen}
+                setIsManageDialogOpen={setIsManageDialogOpen}
+                openManageDialog={openManageDialog}
+                selectedTagIds={selectedTagIds}
+                allTags={allTags}
+                handleRemove={handleRemove}
+                newTag={newTag}
+                setNewTag={setNewTag}
+                handleCreateTag={handleCreateTag}
+                handleSaveTags={handleSaveTags}
+                isUpdatingTags={isUpdatingTags}
+                handleSelect={handleSelect}
+            />
+        </div>
     )
 }

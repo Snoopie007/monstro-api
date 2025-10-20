@@ -13,7 +13,6 @@ import {
 } from '@/components/ui'
 
 import {
-    Award,
     CalendarCheck2,
     ChevronLeft,
     Ellipsis,
@@ -110,7 +109,7 @@ export function MemberProfile({ params, profileData }: MemberProfileProps) {
                             </div>
                         </div>
 
-                        <div className="flex flex-row gap-2">
+                        <div className="flex flex-row gap-2 flex-wrap">
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Badge

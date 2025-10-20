@@ -13,24 +13,24 @@ import {
     MemberRewards,
     MemberAttedance,
     MemberFamilies,
+    MemberTransactionItems,
 } from './components'
 
-import { cn } from '@/libs/utils'
-import { PaymentMethods, MemberProfile, MemberEditButton } from './components'
+import { PaymentMethods, MemberProfile } from './components'
 import { db } from '@/db/db'
 import { and, eq, or, desc } from 'drizzle-orm'
 import { MemberProvider } from './providers/MemberContext'
 import { Member, MemberLocation } from '@/types'
 import Stripe from 'stripe'
 import { MemberStripePayments } from '@/libs/server/stripe'
-import { MemberPackages } from './components/MemberPackages/MemberPackages'
-import { MemberInvoices } from './components/MemberInvoices/MemberInvoices'
 import { CustomFieldsSection } from '@/components/custom-fields'
 import { MemberTagSection } from './components/MemberTags/MemberTagsSection'
 import { attendances, reservations, recurringReservations } from '@/db/schemas'
 import { format } from 'date-fns'
-import { usePermission } from '@/hooks/usePermissions'
 import { hasPermission } from '@/libs/server/permissions'
+import { MemberChatView } from './components/MemberChat/MemberChatView'
+import { MemberInvoiceItems } from './components/MemberInvoices/MemberInvoiceItems'
+import { MemberAchievementItems } from './components/MemberAchievements/MemberAchievementItems'
 
 type PromiseReturnType = {
     member: Member | undefined
@@ -170,7 +170,7 @@ async function fetchMemberProfileData(
     }
 }
 
-async function fetchStripePyamentMethods(
+async function fetchStripePaymentMethods(
     customerId: string
 ): Promise<Stripe.PaymentMethod[]> {
     try {
@@ -192,6 +192,9 @@ const MemberDetailsMenu = [
     'Rewards',
     'Attendance',
 ]
+
+const triggerTabsClassName =
+    'bg-background data-[state=active]:text-foreground data-[state=active]:bg-foreground/10 data-[state=active]:border-primary dark:data-[state=active]:border-primary h-full rounded-none border-0 border-b-2 border-transparent data-[state=active]:shadow-none'
 
 export default async function MemberProfilePage(props: {
     params: Promise<{ id: string; mid: string }>
@@ -216,7 +219,7 @@ export default async function MemberProfilePage(props: {
     )
 
     if (member.stripeCustomerId) {
-        paymentMethods = await fetchStripePyamentMethods(
+        paymentMethods = await fetchStripePaymentMethods(
             member.stripeCustomerId
         )
     }
@@ -230,8 +233,8 @@ export default async function MemberProfilePage(props: {
                     ml={ml}
                 >
                     {/* Main content */}
-                    <div className="grid grid-cols-12 flex-1">
-                        <div className="col-span-4 border-r border-foreground/10">
+                    <div className="grid grid-cols-12 flex-1 gap-2">
+                        <div className="col-span-4 border-foreground/10">
                             <MemberProfile
                                 params={params}
                                 profileData={memberProfileData}
@@ -241,11 +244,14 @@ export default async function MemberProfilePage(props: {
                                 familyMembers={member.familyMembers}
                                 editable={canEditMember}
                             />
+                            <MemberTagSection
+                                editable={canEditMember}
+                                params={params}
+                            />
                             <PaymentMethods
                                 editable={canEditMember}
                                 params={params}
                             />
-                            {/* Custom Fields Section */}
                             <CustomFieldsSection
                                 memberId={params.mid}
                                 locationId={params.id}
@@ -253,12 +259,59 @@ export default async function MemberProfilePage(props: {
                                 variant="card"
                                 showEmptyFields={true}
                             />
-                            <MemberTagSection
-                                editable={canEditMember}
-                                params={params}
-                            />
                         </div>
-                        <div className="col-span-8">
+                        <div className="col-span-4 py-4">
+                            <div className="bg-foreground/5 rounded-lg h-full">
+                                <MemberChatView />
+                            </div>
+                        </div>
+
+                        <div className="col-span-4 py-4 pr-4">
+                            <div className="rounded-lg h-full p-4">
+                                <Tabs defaultValue="invoices-transactions">
+                                    <TabsList className="bg-background rounded-none border-b p-0">
+                                        <TabsTrigger
+                                            value="invoices-transactions"
+                                            className={triggerTabsClassName}
+                                        >
+                                            Invoices & Transactions
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="achievements-rewards"
+                                            className={triggerTabsClassName}
+                                        >
+                                            Achievements & Rewards
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="attendance"
+                                            className={triggerTabsClassName}
+                                        >
+                                            Attendance
+                                        </TabsTrigger>
+                                    </TabsList>
+                                    <TabsContent value="invoices-transactions">
+                                        <MemberInvoiceItems params={params} />
+                                        <MemberTransactionItems
+                                            params={params}
+                                        />
+                                    </TabsContent>
+                                    <TabsContent value="achievements-rewards">
+                                        {/* Achievements and Rewards New UI */}
+                                        {/* <h2>Achievements</h2> */}
+                                        <MemberAchievementItems
+                                            params={params}
+                                        />
+                                        <h2>Rewards</h2>
+                                    </TabsContent>
+                                    <TabsContent value="attendance">
+                                        {/* Attendance New UI */}
+                                        <h2>Attendance</h2>
+                                    </TabsContent>
+                                </Tabs>
+                            </div>
+                        </div>
+
+                        {/* <div className="col-span-4">
                             <Tabs
                                 defaultValue="Subscriptions"
                                 className="w-full"
@@ -313,7 +366,7 @@ export default async function MemberProfilePage(props: {
                                     <MemberRewards params={params} />
                                 </TabsContent>
                             </Tabs>
-                        </div>
+                        </div> */}
                     </div>
                 </MemberProvider>
             </TooltipProvider>
