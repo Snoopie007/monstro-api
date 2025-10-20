@@ -8,11 +8,14 @@ import {
 } from "@/components/ui";
 import { Trash2 } from "lucide-react";
 import { DeleteMemberDialog } from "./DeleteMemberDialog";
+import { cn } from "@/libs/utils";
 
 export function MemberDeleteButton({
   params,
+  className
 }: {
   params: { id: string; mid: string };
+  className?: string
 }) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
@@ -23,7 +26,7 @@ export function MemberDeleteButton({
           <Button
             variant="ghost"
             size="icon"
-            className="bg-foreground/5 size-6 hover:bg-destructive/10"
+            className={cn("bg-foreground/5 size-7 hover:bg-destructive/10 rounded-l-none flex-1", className)}
             onClick={() => setIsDeleteOpen(true)}
           >
             <Trash2 className="size-3 text-destructive" />
