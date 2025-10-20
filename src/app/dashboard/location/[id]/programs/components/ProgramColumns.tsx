@@ -35,7 +35,7 @@ export const ProgramColumns = (locationId: string): ColumnDef<Program, any>[] =>
         header: "Status",
         cell: ({ row }) => {
             const program = row.original
-            return <Badge variant={program.status} size="tiny">{program.status}</Badge>
+            return <Badge sub={program.status} size="tiny">{program.status}</Badge>
         }
     }
 
