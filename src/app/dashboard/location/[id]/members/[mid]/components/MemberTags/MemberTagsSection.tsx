@@ -7,13 +7,7 @@ import { toast } from 'react-toastify'
 import { Badge } from '@/components/ui/badge'
 import { ManageTagsDialog } from './ManageTagsDialog'
 import { PlusIcon } from 'lucide-react'
-import {
-    Item,
-    ItemActions,
-    ItemContent,
-    ItemDescription,
-    ItemTitle,
-} from '@/components/ui/item'
+import { Item, ItemActions, ItemContent, ItemTitle } from '@/components/ui/item'
 
 interface MemberTagSectionProps {
     params: { id: string; mid: string }
