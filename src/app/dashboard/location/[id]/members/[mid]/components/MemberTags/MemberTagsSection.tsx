@@ -11,7 +11,7 @@ import {
     Item,
     ItemActions,
     ItemContent,
-    ItemDescription,
+    ItemHeader,
     ItemTitle,
 } from '@/components/ui/item'
 
@@ -116,11 +116,12 @@ export function MemberTagSection({ params, editable }: MemberTagSectionProps) {
     }
 
     return (
-        <div className="px-4 mb-2">
-            <p className="text-xs font-medium text-muted-foreground mb-2">
-                Tags
-            </p>
+        <>
+
             <Item variant="muted" className="px-3 py-2">
+                <ItemHeader>
+                    <ItemTitle>Tags</ItemTitle>
+                </ItemHeader>
                 <ItemContent>
                     <ItemTitle className="flex flex-row gap-2 items-center">
                         <ul className="gap-1 flex flex-row flex-wrap">
@@ -168,6 +169,6 @@ export function MemberTagSection({ params, editable }: MemberTagSectionProps) {
                 isUpdatingTags={isUpdatingTags}
                 handleSelect={handleSelect}
             />
-        </div>
+        </>
     )
 }

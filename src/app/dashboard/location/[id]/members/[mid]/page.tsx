@@ -232,39 +232,41 @@ export default async function MemberProfilePage(props: {
                     paymentMethods={paymentMethods}
                     ml={ml}
                 >
-                    {/* Main content */}
-                    <div className="grid grid-cols-12 flex-1 gap-2">
+                    <div className="grid grid-cols-12 flex-1 gap-2 py-2">
                         <div className="col-span-4 border-foreground/10">
+                            <MemberProfile
+                                params={params}
+                                profileData={memberProfileData}
+                            />
                             <ScrollArea className="h-[calc(100vh-90px)]">
-                                <MemberProfile
-                                    params={params}
-                                    profileData={memberProfileData}
-                                />
-                                <MemberFamilies
-                                    params={params}
-                                    familyMembers={member.familyMembers}
-                                    editable={canEditMember}
-                                />
-                                <MemberTagSection
-                                    editable={canEditMember}
-                                    params={params}
-                                />
-                                <PaymentMethods
-                                    editable={canEditMember}
-                                    params={params}
-                                />
-                                <CustomFieldsSection
-                                    memberId={params.mid}
-                                    locationId={params.id}
-                                    editable={canEditMember}
-                                    variant="card"
-                                    showEmptyFields={true}
-                                />
-                                <MemberPackages params={params} />
-                                <MemberSubs params={params} />
+
+                                <div className='p-4 space-y-2'>
+                                    <MemberFamilies
+                                        params={params}
+                                        familyMembers={member.familyMembers}
+                                        editable={canEditMember}
+                                    />
+                                    <MemberTagSection
+                                        editable={canEditMember}
+                                        params={params}
+                                    />
+                                    <PaymentMethods
+                                        editable={canEditMember}
+                                        params={params}
+                                    />
+                                    <CustomFieldsSection
+                                        memberId={params.mid}
+                                        locationId={params.id}
+                                        editable={canEditMember}
+                                        variant="card"
+                                        showEmptyFields={true}
+                                    />
+                                    <MemberPackages params={params} />
+                                    <MemberSubs params={params} />
+                                </div>
                             </ScrollArea>
                         </div>
-                        <div className="col-span-5 py-4">
+                        <div className="col-span-5">
                             <div className="bg-foreground/5 rounded-lg h-full">
                                 <MemberChatView />
                             </div>

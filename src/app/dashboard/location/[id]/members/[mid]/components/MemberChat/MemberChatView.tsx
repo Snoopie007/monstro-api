@@ -1,4 +1,6 @@
-import { Button, ScrollArea, Textarea } from '@/components/ui'
+'use client'
+import { Button, ScrollArea } from '@/components/ui'
+import { Textarea } from '@/components/forms'
 import { MemberChatMessage } from './MemberChatMessage'
 import { Send } from 'lucide-react'
 
