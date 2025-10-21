@@ -43,7 +43,7 @@ export const MemberRewardItems = ({
     }
 
     const renderRewards = () => {
-        console.log(rewards)
+
         return rewards && rewards.length > 0 ? (
             rewards.map((reward) => (
                 <li key={reward.id}>

@@ -56,8 +56,7 @@ export const MemberAttendanceItems = ({
                                         )}
                                     </span>
                                 </ItemTitle>
-                                <ItemDescription>
-                                    <div className="flex items-center justify-between gap-2">
+                                <ItemDescription className="flex items-center justify-between gap-2">
                                         <span>
                                             {format(
                                                 attendance.startTime,
@@ -88,7 +87,6 @@ export const MemberAttendanceItems = ({
                                         >
                                             {isLate ? 'Late' : 'On Time'}
                                         </Badge>
-                                    </div>
                                 </ItemDescription>
                             </ItemContent>
                         </Item>

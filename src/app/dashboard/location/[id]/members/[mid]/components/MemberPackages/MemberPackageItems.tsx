@@ -51,27 +51,21 @@ export const MemberPackageItems = ({
                                         )}
                                     </span>
                                 </ItemTitle>
-                                <ItemDescription>
-                                    <div className="flex items-center justify-between gap-2">
-                                        <span>
-                                            {format(
-                                                pkg.startDate,
-                                                'MMM d, yyyy'
-                                            )}{' '}
-                                            -{' '}
-                                            {pkg.expireDate
-                                                ? format(
-                                                      pkg.expireDate,
-                                                      'MMM d, yyyy'
-                                                  )
-                                                : 'N/A'}{' '}
-                                            • {attended} / {pkg.totalClassLimit}{' '}
-                                            classes
-                                        </span>
-                                        <Badge pkg={pkg.status} size={'tiny'}>
-                                            {pkg.status}
-                                        </Badge>
-                                    </div>
+                                <ItemDescription className="flex items-center justify-between gap-2">
+                                    <span>
+                                        {format(pkg.startDate, 'MMM d, yyyy')} -{' '}
+                                        {pkg.expireDate
+                                            ? format(
+                                                  pkg.expireDate,
+                                                  'MMM d, yyyy'
+                                              )
+                                            : 'N/A'}{' '}
+                                        • {attended} / {pkg.totalClassLimit}{' '}
+                                        classes
+                                    </span>
+                                    <Badge pkg={pkg.status} size={'tiny'}>
+                                        {pkg.status}
+                                    </Badge>
                                 </ItemDescription>
                             </ItemContent>
                         </Item>
