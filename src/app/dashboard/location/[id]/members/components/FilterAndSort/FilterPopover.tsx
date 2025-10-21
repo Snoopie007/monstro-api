@@ -5,7 +5,7 @@ import { FilterIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MemberWithCustomFieldsColumns } from "../MemberColumns";
 import { FilterInputType, memberColumnMetadata, getCustomFieldConfig } from "./ColumnTypes";
-import { CustomFieldDefinition } from "@/components/custom-fields";
+import { CustomFieldDefinition } from "@/app/dashboard/location/[id]/members/[mid]/components/CustomFields";
 import { FilterInput } from "./FilterInput";
 
 interface FilterPopoverProps {

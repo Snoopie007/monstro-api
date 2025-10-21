@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   CustomFieldDisplay,
   type CustomFieldDefinition,
-} from "@/components/custom-fields";
+} from "@/app/dashboard/location/[id]/members/[mid]/components/CustomFields";
 
 export interface MemberWithCustomFieldsColumns extends Member {
   customFields?: Array<{
@@ -132,8 +132,8 @@ export const MemberColumns = (
     },
   ];
 
-    // Generate custom field columns
-    const customFieldColumns: ColumnDef<MemberWithCustomFieldsColumns, any>[] =
+  // Generate custom field columns
+  const customFieldColumns: ColumnDef<MemberWithCustomFieldsColumns, any>[] =
     customFields?.map((field) => ({
       accessorKey: `custom-field-${field.id}`,
       id: `custom-field-${field.id}`,

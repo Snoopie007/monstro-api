@@ -7,15 +7,15 @@ import {
     Tooltip,
 } from '@/components/ui'
 import { Edit } from 'lucide-react'
-import { EditMemberInfoDialog } from './EditMemberInfoDialog'
+import { EditMemberInfoDialog } from './EditMemberDialog'
 import { cn } from '@/libs/utils'
 
 export function MemberEditButton({
     params,
-	className
+    className
 }: {
     params: { id: string; mid: string }
-	className?: string
+    className?: string
 }) {
     const [isEditOpen, setIsEditOpen] = useState(false)
 

@@ -25,7 +25,6 @@ import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
 import { useMemberStatus } from "../../providers";
-import { CustomFieldsSection } from "@/components/custom-fields";
 import { MemberLocationProfile } from "@/types";
 
 const MemberInfoSchema = z.object({
@@ -90,8 +89,8 @@ export function EditMemberInfoDialog({
     );
 
     setLoading(false);
-    
-    if(result?.status === 403) {
+
+    if (result?.status === 403) {
       toast.error("You are not authorized to edit this member");
       return;
     }
@@ -201,16 +200,7 @@ export function EditMemberInfoDialog({
             </form>
           </Form>
 
-          {/* Custom Fields Section */}
-          <div className="mt-6 pt-6 border-t border-foreground/10">
-            <CustomFieldsSection
-              memberId={params.mid}
-              locationId={params.id}
-              editable={true}
-              variant="section"
-              showEmptyFields={true}
-            />
-          </div>
+
         </DialogBody>
 
         <DialogFooter>

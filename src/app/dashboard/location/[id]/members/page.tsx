@@ -31,6 +31,5 @@ export default async function Members(props: {
 
     return (
         <MembersPage id={params.id} stripeKey={stripeKey} />
-        // <MemberList params={params} stripeKey={stripeKey} />
     )
 }

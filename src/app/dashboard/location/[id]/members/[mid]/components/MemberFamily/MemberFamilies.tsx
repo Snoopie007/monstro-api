@@ -4,9 +4,6 @@ import { useMemberStatus } from '../../providers/MemberContext'
 import { FamilyMember } from '@/types/FamilyMember'
 import AddChildMember from './AddMember'
 import {
-    Card,
-    CardContent,
-    CardHeader,
     CardTitle,
     Collapsible,
     CollapsibleContent,
@@ -27,48 +24,40 @@ export function MemberFamilies({
     familyMembers,
     editable,
 }: MemberFamiliesProps) {
-    const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState<boolean>(true)
     const { member } = useMemberStatus()
 
     return (
         <Collapsible open={open} onOpenChange={setOpen}>
-            <Card className='bg-muted/50 rounded-lg  border-transparent'>
+            <div className=' space-y-0 flex flex-row justify-between items-center'>
+                <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="hover:bg-transparent gap-1 px-0">
+                        <CardTitle className='text-sm font-medium mb-0'>Family Members</CardTitle>
+                        <ChevronsUpDown className="size-4" />
+                        <span className="sr-only">Toggle</span>
+                    </Button>
+                </CollapsibleTrigger>
+                {editable && (
+                    <AddChildMember parent={member} lid={params.id} />
+                )}
+            </div>
 
-
-                <CardHeader className='px-4 py-2 space-y-0 flex flex-row justify-between items-center'>
-                    <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="sm" className="hover:bg-transparent gap-1 px-0">
-                            <CardTitle className='text-sm font-medium mb-0'>Family Members</CardTitle>
-                            <ChevronsUpDown className="size-4" />
-                            <span className="sr-only">Toggle</span>
-                        </Button>
-                    </CollapsibleTrigger>
-                    {editable && (
-                        <AddChildMember parent={member} lid={params.id} />
-                    )}
-                </CardHeader>
-
-                <CollapsibleContent >
-                    <CardContent className='px-4 pb-6 pt-1' >
-                        {familyMembers && familyMembers.length > 0 ? (
-                            <ul className="space-y-6">
-                                {familyMembers.map((fm) => (
-                                    <FamilyMemberItem key={fm.id} familyMember={fm} />
-                                ))}
-                            </ul>
-                        ) : (
-                            <div className='flex flex-col items-center justify-center'>
-                                <p className=" text-center text-muted-foreground">No family members found</p>
-                                {editable && (
-                                    <AddChildMember parent={member} lid={params.id} />
-                                )}
-                            </div>
+            <CollapsibleContent className='bg-muted/50 rounded-lg p-4' >
+                {familyMembers && familyMembers.length > 0 ? (
+                    <ul className="space-y-6">
+                        {familyMembers.map((fm) => (
+                            <FamilyMemberItem key={fm.id} familyMember={fm} />
+                        ))}
+                    </ul>
+                ) : (
+                    <div className='flex flex-col items-center justify-center'>
+                        <p className=" text-center text-muted-foreground">No family members found</p>
+                        {editable && (
+                            <AddChildMember parent={member} lid={params.id} />
                         )}
-
-                    </CardContent>
-                </CollapsibleContent>
-
-            </Card>
+                    </div>
+                )}
+            </CollapsibleContent>
         </Collapsible >
     )
 }

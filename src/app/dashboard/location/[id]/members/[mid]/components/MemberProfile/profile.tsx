@@ -1,31 +1,25 @@
 'use client'
 import {
     Avatar,
-    AvatarFallback,
     AvatarImage,
-    Badge,
     Button,
     Card,
     CardContent,
+    CardDescription,
     CardHeader,
     CardTitle,
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
 } from '@/components/ui'
 
 import {
-    CalendarCheck2,
     ChevronLeft,
-    Ellipsis,
-    Mail,
-    PhoneCall,
+    EllipsisVertical,
 } from 'lucide-react'
 import { useMemberStatus } from '../../providers/MemberContext'
 import { useRouter } from 'next/navigation'
 import { MemberDeleteButton, MemberEditButton } from '../ContactInfo'
 import { usePermission } from '@/hooks/usePermissions'
 import { Item, ItemContent } from '@/components/ui/item'
+import { VisuallyHidden } from 'react-aria'
 
 type MemberProfileData = {
     totalPointsEarned: number
@@ -49,10 +43,15 @@ export function MemberProfile({ params, profileData }: MemberProfileProps) {
 
 
     return (
-        <Card className="border-none">
-            <CardHeader className="p-0">
-                <CardTitle></CardTitle>
-                <div className="flex justify-between flex-row items-center ">
+        <Card className="border-none bg-muted/50 rounded-lg p-3">
+            <VisuallyHidden className="p-0">
+                <CardTitle ></CardTitle>
+                <CardDescription ></CardDescription>
+            </VisuallyHidden>
+
+
+            <CardContent className="space-y-4 px-0">
+                <div className="flex justify-between flex-row items-center">
                     <Button
                         variant="ghost"
                         size="icon"
@@ -69,22 +68,11 @@ export function MemberProfile({ params, profileData }: MemberProfileProps) {
                             size="icon"
                             className="bg-foreground/5 size-6"
                         >
-                            <Ellipsis className="size-4 dark:text-foreground text-foreground" />
+                            <EllipsisVertical className="size-4 dark:text-foreground text-foreground" />
                         </Button>
-                        {canEditMember && (
-                            <MemberEditButton
-                                params={params}
-                            />
-                        )}
-                        {canDeleteMember && (
-                            <MemberDeleteButton
-                                params={params}
-                            />
-                        )}
+
                     </div>
                 </div>
-            </CardHeader>
-            <CardContent className="pt-6 pb-6 px-0">
                 <div className="flex flex-row gap-4">
                     <Avatar className="size-20 rounded-full">
                         <AvatarImage src={memberProfile?.avatar || '/images/default-avatar.png'} />
@@ -129,6 +117,6 @@ export function MemberProfile({ params, profileData }: MemberProfileProps) {
 
 
             </CardContent>
-        </Card>
+        </Card >
     )
 }

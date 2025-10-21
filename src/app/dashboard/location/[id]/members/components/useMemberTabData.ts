@@ -1,7 +1,7 @@
 import { ColumnFiltersState } from '@tanstack/react-table'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { toast } from 'react-toastify'
-import { CustomFieldDefinition } from '@/components/custom-fields'
+import { CustomFieldDefinition } from '@/app/dashboard/location/[id]/members/[mid]/components/CustomFields'
 import { ApiClient, createMonstroApiClient } from '@/libs/api'
 
 interface TableState {
@@ -110,19 +110,19 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                 v.map((tab) =>
                     tab.id === newTabId
                         ? {
-                              ...tab,
-                              state: {
-                                  ...tab.state,
-                                  isLoading: false,
-                                  data: {
-                                      error: null,
-                                      members: members,
-                                      count: count,
-                                      customFields:
-                                          response?.customFields || [],
-                                  },
-                              },
-                          }
+                            ...tab,
+                            state: {
+                                ...tab.state,
+                                isLoading: false,
+                                data: {
+                                    error: null,
+                                    members: members,
+                                    count: count,
+                                    customFields:
+                                        response?.customFields || [],
+                                },
+                            },
+                        }
                         : tab
                 )
             )
@@ -135,16 +135,16 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                 v.map((tab) =>
                     tab.id === newTabId
                         ? {
-                              ...tab,
-                              state: {
-                                  ...tab.state,
-                                  isLoading: false,
-                                  data: {
-                                      ...tab.state.data,
-                                      error: 'Failed to fetch members',
-                                  },
-                              },
-                          }
+                            ...tab,
+                            state: {
+                                ...tab.state,
+                                isLoading: false,
+                                data: {
+                                    ...tab.state.data,
+                                    error: 'Failed to fetch members',
+                                },
+                            },
+                        }
                         : tab
                 )
             )
@@ -198,18 +198,18 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                 v.map((tab) =>
                     tab.id === id
                         ? {
-                              ...tab,
-                              state: {
-                                  ...tab.state,
-                                  page,
-                                  pageSize,
-                                  searchQuery,
-                                  selectedTags,
-                                  columnFilters,
-                                  tagOperator,
-                                  sorting,
-                              },
-                          }
+                            ...tab,
+                            state: {
+                                ...tab.state,
+                                page,
+                                pageSize,
+                                searchQuery,
+                                selectedTags,
+                                columnFilters,
+                                tagOperator,
+                                sorting,
+                            },
+                        }
                         : tab
                 )
             )
@@ -224,12 +224,12 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                 v.map((tab) =>
                     tab.id === id
                         ? {
-                              ...tab,
-                              state: {
-                                  ...tab.state,
-                                  isLoading: true,
-                              },
-                          }
+                            ...tab,
+                            state: {
+                                ...tab.state,
+                                isLoading: true,
+                            },
+                        }
                         : tab
                 )
             )
@@ -283,19 +283,19 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                     v.map((tab) =>
                         tab.id === id
                             ? {
-                                  ...tab,
-                                  state: {
-                                      ...tab.state,
-                                      isLoading: false,
-                                      data: {
-                                          members: response?.members || [],
-                                          customFields:
-                                              response?.customFields || [],
-                                          count: response?.count || 0,
-                                          error: response?.error || null,
-                                      },
-                                  },
-                              }
+                                ...tab,
+                                state: {
+                                    ...tab.state,
+                                    isLoading: false,
+                                    data: {
+                                        members: response?.members || [],
+                                        customFields:
+                                            response?.customFields || [],
+                                        count: response?.count || 0,
+                                        error: response?.error || null,
+                                    },
+                                },
+                            }
                             : tab
                     )
                 )
@@ -307,16 +307,16 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                     v.map((tab) =>
                         tab.id === id
                             ? {
-                                  ...tab,
-                                  state: {
-                                      ...tab.state,
-                                      isLoading: false,
-                                      data: {
-                                          ...tab.state.data,
-                                          error: 'Failed to fetch members',
-                                      },
-                                  },
-                              }
+                                ...tab,
+                                state: {
+                                    ...tab.state,
+                                    isLoading: false,
+                                    data: {
+                                        ...tab.state.data,
+                                        error: 'Failed to fetch members',
+                                    },
+                                },
+                            }
                             : tab
                     )
                 )
@@ -340,12 +340,12 @@ export function useMemberTabData(locationId: string, memberId?: string) {
             handleFetchForCurrentTab(currentTab.id)
         }
     }, [membersTabs.find((tab) => tab.active)?.state.page,
-        membersTabs.find((tab) => tab.active)?.state.pageSize,
-        membersTabs.find((tab) => tab.active)?.state.searchQuery,
-        membersTabs.find((tab) => tab.active)?.state.selectedTags,
-        membersTabs.find((tab) => tab.active)?.state.columnFilters,
-        membersTabs.find((tab) => tab.active)?.state.tagOperator,
-        membersTabs.find((tab) => tab.active)?.state.sorting,
+    membersTabs.find((tab) => tab.active)?.state.pageSize,
+    membersTabs.find((tab) => tab.active)?.state.searchQuery,
+    membersTabs.find((tab) => tab.active)?.state.selectedTags,
+    membersTabs.find((tab) => tab.active)?.state.columnFilters,
+    membersTabs.find((tab) => tab.active)?.state.tagOperator,
+    membersTabs.find((tab) => tab.active)?.state.sorting,
     ])
 
     return {

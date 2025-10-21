@@ -16,7 +16,8 @@ import {
     MemberSubs,
     MemberFamilies,
     MemberTransactionItems,
-    MemberPackages,
+    MemberPkg,
+    CustomFieldsBox,
 } from './components'
 
 import { PaymentMethods, MemberProfile } from './components'
@@ -26,7 +27,6 @@ import { MemberProvider } from './providers/MemberContext'
 import { Member, MemberLocation } from '@/types'
 import Stripe from 'stripe'
 import { MemberStripePayments } from '@/libs/server/stripe'
-import { CustomFieldsSection } from '@/components/custom-fields'
 import { MemberTagSection } from './components/MemberTagsSection'
 import { attendances, reservations, recurringReservations } from '@/db/schemas'
 import { format } from 'date-fns'
@@ -225,7 +225,7 @@ export default async function MemberProfilePage(props: {
                     ml={ml}
                 >
                     <div className="grid grid-cols-12 flex-1 gap-4 px-3 py-2 min-h-0">
-                        <div className="col-span-4 border-foreground/10 flex flex-col">
+                        <div className="col-span-4 space-y-4">
                             <MemberProfile
                                 params={params}
                                 profileData={memberProfileData}
@@ -238,23 +238,27 @@ export default async function MemberProfilePage(props: {
                                         familyMembers={member.familyMembers}
                                         editable={canEditMember}
                                     />
-                                    <MemberTagSection
-                                        editable={canEditMember}
-                                        params={params}
-                                    />
+
                                     <PaymentMethods
                                         editable={canEditMember}
                                         params={params}
                                     />
-                                    <CustomFieldsSection
+                                    <MemberSubs params={params} />
+                                    <MemberPkg params={params} />
+
+
+                                    <CustomFieldsBox
                                         memberId={params.mid}
                                         locationId={params.id}
                                         editable={canEditMember}
                                         variant="card"
                                         showEmptyFields={true}
                                     />
-                                    <MemberPackages params={params} />
-                                    <MemberSubs params={params} />
+                                    <MemberTagSection
+                                        editable={canEditMember}
+                                        params={params}
+                                    />
+
                                 </div>
                             </ScrollArea>
                         </div>

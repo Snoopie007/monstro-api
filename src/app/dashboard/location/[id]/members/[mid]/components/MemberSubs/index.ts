@@ -1,5 +1,5 @@
 export * from './MemberSubs'
-export * from './MemberSubscriptionItems'
+export * from './MemberSubItem'
 export * from './SubStatus'
 export * from './SubActions'
 export * from './CreateSub'

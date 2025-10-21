@@ -38,7 +38,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BirthdayField } from "./DOBField";
 import { Loader2 } from "lucide-react";
-import { CustomFieldInput } from "@/components/custom-fields";
+import { CustomFieldInput } from "@/app/dashboard/location/[id]/members/[mid]/components/CustomFields";
 import { useCustomFields } from "@/hooks";
 
 export function CreateMemberForm({ lid }: { lid: string }) {

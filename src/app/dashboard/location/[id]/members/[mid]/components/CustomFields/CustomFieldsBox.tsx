@@ -7,12 +7,10 @@ import {
 } from './CustomFieldInput'
 import { CustomFieldDisplay } from './CustomFieldDisplay'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Edit3, Save, X, Loader2, PlusIcon, SettingsIcon } from 'lucide-react'
+import { ChevronsUpDown, FileText } from 'lucide-react'
 import { toast } from 'react-toastify'
-import { Skeleton } from '../ui'
-import { Item, ItemContent } from '../ui/item'
+import { Skeleton, CardTitle, Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../../../../../../components/ui'
+import { Item, ItemContent } from '../../../../../../../../components/ui/item'
 import { usePermission } from '@/hooks/usePermissions'
 
 interface CustomFieldValue {
@@ -33,7 +31,7 @@ interface CustomFieldsSectionProps {
     showEmptyFields?: boolean
 }
 
-export function CustomFieldsSection({
+export function CustomFieldsBox({
     memberId,
     locationId,
     editable = false,
@@ -42,10 +40,10 @@ export function CustomFieldsSection({
 }: CustomFieldsSectionProps) {
     const [fields, setFields] = useState<CustomFieldsWithValues[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [isEditing, setIsEditing] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [editValues, setEditValues] = useState<Record<string, string>>({})
     const [errors, setErrors] = useState<Record<string, string>>({})
+    const [open, setOpen] = useState(false)
     const canEditMember = usePermission('edit member', locationId)
 
     // Fetch custom fields and values
@@ -59,7 +57,6 @@ export function CustomFieldsSection({
 
             if (data.success) {
                 setFields(data.data || [])
-                // Initialize edit values
                 const initialValues: Record<string, string> = {}
                 data.data?.forEach((field: CustomFieldsWithValues) => {
                     initialValues[field.id] = field.value || ''
@@ -105,7 +102,6 @@ export function CustomFieldsSection({
 
             if (data.success) {
                 toast.success('Custom fields updated successfully')
-                setIsEditing(false)
                 await fetchCustomFields() // Refresh data
             } else {
                 toast.error(data.message || 'Failed to save custom fields')
@@ -134,18 +130,6 @@ export function CustomFieldsSection({
         }
     }
 
-    // Cancel editing
-    const cancelEditing = () => {
-        setIsEditing(false)
-        setErrors({})
-        // Reset edit values to current field values
-        const resetValues: Record<string, string> = {}
-        fields.forEach((field) => {
-            resetValues[field.id] = field.value || ''
-        })
-        setEditValues(resetValues)
-    }
-
     useEffect(() => {
         fetchCustomFields()
     }, [memberId, locationId])
@@ -155,57 +139,23 @@ export function CustomFieldsSection({
         ? fields
         : fields.filter((field) => field.value && field.value.trim() !== '')
 
-    if (isLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center p-4 gap-2">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-            </div>
-        )
-    }
-
-    if (displayFields.length === 0 && !isEditing) {
-        if (showEmptyFields) {
-            return (
-                <div className="text-center p-4">
-                    <p className="text-sm text-muted-foreground">
-                        No custom fields configured
-                    </p>
-                </div>
-            )
-        }
-        return null // Don't show anything if no fields with values
-    }
-
-    const renderEditButton = () => {
-        if (editable && canEditMember) {
-            return (
-                <Button
-                    onClick={() => setIsEditing(true)}
-                    variant={'ghost'}
-                    size={'icon'}
-                    className="size-6 rounded-sm"
-                >
-                    {isSaving ? null : <SettingsIcon className="size-4" />}
-                </Button>
-            )
-        }
-        return null
-    }
-
     return (
-        <div className="flex flex-col gap-2 px-4 mb-4">
-            <div className="flex flex-row gap-2">
-                <h2 className="text-md font-medium">{title}</h2>
-                {renderEditButton()}
+        <Collapsible open={open} onOpenChange={setOpen}>
+            <div className='space-y-0 flex flex-row justify-between items-center'>
+                <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="hover:bg-transparent gap-1 px-0">
+                        <CardTitle className='text-sm font-medium mb-0'>{title}</CardTitle>
+                        <ChevronsUpDown className="size-4" />
+                        <span className="sr-only">Toggle</span>
+                    </Button>
+                </CollapsibleTrigger>
             </div>
-            <Item variant="muted">
-                <ItemContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {(isEditing ? fields : displayFields).map((field) => (
+            <CollapsibleContent className='bg-muted/50 rounded-lg p-4' >
+                {displayFields.length > 0 ? (
+                    <div className="space-y-2">
+                        {displayFields.map((field) => (
                             <div key={field.id}>
-                                {isEditing ? (
+                                {editable ? (
                                     <CustomFieldInput
                                         field={field}
                                         value={editValues[field.id]}
@@ -225,40 +175,24 @@ export function CustomFieldsSection({
                             </div>
                         ))}
                     </div>
-                    {editable && (
-                        <div className="flex items-center gap-2 mt-2 justify-end">
-                            {isEditing && (
-                                <>
-                                    <Button
-                                        onClick={saveCustomFields}
-                                        variant="default"
-                                        disabled={isSaving}
-                                        size="xs"
-                                        className="text-xs"
-                                    >
-                                        {isSaving ? (
-                                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                        ) : (
-                                            <Save className="h-3 w-3 mr-1" />
-                                        )}
-                                        {isSaving ? 'Saving...' : 'Save'}
-                                    </Button>
-                                    <Button
-                                        onClick={cancelEditing}
-                                        variant="outline"
-                                        size="xs"
-                                        disabled={isSaving}
-                                        className="text-xs"
-                                    >
-                                        <X className="h-3 w-3 mr-1" />
-                                        Cancel
-                                    </Button>
-                                </>
-                            )}
+                ) : (
+                    <div className="text-center py-4">
+                        <div className="flex flex-col items-center justify-center">
+                            <FileText
+                                size={40}
+                                className="text-muted-foreground mb-3"
+                            />
+                            <p className="text-md mb-1">No custom fields found</p>
+                            <p className="text-sm text-muted-foreground">
+                                {showEmptyFields
+                                    ? "No custom fields are configured for this location"
+                                    : "No custom fields have been filled out yet"
+                                }
+                            </p>
                         </div>
-                    )}
-                </ItemContent>
-            </Item>
-        </div>
+                    </div>
+                )}
+            </CollapsibleContent>
+        </Collapsible>
     )
 }
