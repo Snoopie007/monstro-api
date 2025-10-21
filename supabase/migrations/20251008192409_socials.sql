@@ -20,6 +20,8 @@ CREATE INDEX IF NOT EXISTS idx_friends_status ON friends (status);
 -- ========================
 CREATE TABLE IF NOT EXISTS chats (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('cht_'),
+  -- type chat_type NOT NULL DEFAULT 'private',
+  name text,
   started_by text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
@@ -54,8 +56,6 @@ CREATE TABLE IF NOT EXISTS messages (
   updated_at timestamp with time zone
 );
 
-CREATE INDEX IF NOT EXISTS idx_messages_chat_created_at
-  ON messages (chat_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages (sender_id);
   
 -- ========================
@@ -65,27 +65,26 @@ CREATE TABLE IF NOT EXISTS groups (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('grp_'),
   name text NOT NULL,
   description text,
-  owner_id text REFERENCES vendors (id) ON DELETE CASCADE NOT NULL,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
+  icon text,
   cover_image text,
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
 
-CREATE INDEX IF NOT EXISTS idx_groups_owner_id ON groups (owner_id);
-
 -- ========================
 -- GROUP MEMBERS (many-to-many)
 -- ========================
 CREATE TABLE IF NOT EXISTS group_members (
   group_id text REFERENCES groups (id) ON DELETE CASCADE NOT NULL,
-  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
   role text CHECK (role IN ('owner', 'admin', 'member')) DEFAULT 'member',
   joined_at timestamp with time zone NOT NULL DEFAULT now(),
-  PRIMARY KEY (group_id, member_id)
+  PRIMARY KEY (group_id, user_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_group_members_member_id ON group_members (member_id);
+CREATE INDEX IF NOT EXISTS idx_group_members_user_id ON group_members (user_id);
 CREATE INDEX IF NOT EXISTS idx_group_members_role ON group_members (role);
 
 -- ========================
@@ -94,7 +93,9 @@ CREATE INDEX IF NOT EXISTS idx_group_members_role ON group_members (role);
 CREATE TABLE IF NOT EXISTS group_posts (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('pst_'),
   group_id text REFERENCES groups (id) ON DELETE CASCADE NOT NULL,
-  author_id text REFERENCES members (id) ON DELETE SET NULL,
+  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
+  pinned boolean NOT NULL DEFAULT false,
+  status text CHECK (status IN ('draft', 'published', 'archived')) NOT NULL DEFAULT 'draft',
   content text NOT NULL,
   attachments jsonb DEFAULT '[]'::jsonb,
   metadata jsonb DEFAULT '{}'::jsonb,
@@ -102,36 +103,28 @@ CREATE TABLE IF NOT EXISTS group_posts (
   updated_at timestamp with time zone
 );
 
-CREATE INDEX IF NOT EXISTS idx_group_posts_group_created_at
-  ON group_posts (group_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_group_posts_author_id ON group_posts (author_id);
-
 -- ========================
 -- POST COMMENTS
 -- ========================
 CREATE TABLE IF NOT EXISTS post_comments (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('cmt_'),
   post_id text REFERENCES group_posts (id) ON DELETE CASCADE NOT NULL,
-  author_id text REFERENCES members (id) ON DELETE SET NULL,
+  user_id text REFERENCES users (id) ON DELETE SET NULL,
   content text NOT NULL,
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
 
-CREATE INDEX IF NOT EXISTS idx_post_comments_post_created_at
-  ON post_comments (post_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_post_comments_author_id ON post_comments (author_id);
 
 -- ========================
--- MEMORIES (social moments)
+-- MEMORIES (social moments) Later
 -- ========================
 CREATE TABLE IF NOT EXISTS memories (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('mem_'),
   title text NOT NULL,
   description text,
-  author_id text REFERENCES members (id) ON DELETE SET NULL,
-  location_id text REFERENCES locations (id) ON DELETE SET NULL,
+  member_id text REFERENCES members (id) ON DELETE SET NULL,
   attachments jsonb DEFAULT '[]'::jsonb,
   tags text[] DEFAULT '{}',
   is_public boolean NOT NULL DEFAULT true,
@@ -140,12 +133,6 @@ CREATE TABLE IF NOT EXISTS memories (
   updated_at timestamp with time zone
 );
 
-CREATE INDEX IF NOT EXISTS idx_memories_author_created_at
-  ON memories (author_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_memories_location_created_at
-  ON memories (location_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_memories_is_public ON memories (is_public);
-CREATE INDEX IF NOT EXISTS idx_memories_tags ON memories USING GIN (tags);
 
 -- ========================
 -- MEMORY COMMENTS
@@ -153,16 +140,12 @@ CREATE INDEX IF NOT EXISTS idx_memories_tags ON memories USING GIN (tags);
 CREATE TABLE IF NOT EXISTS memory_comments (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('mcm_'),
   memory_id text REFERENCES memories (id) ON DELETE CASCADE NOT NULL,
-  author_id text REFERENCES members (id) ON DELETE SET NULL,
+  member_id text REFERENCES members (id) ON DELETE SET NULL,
   content text NOT NULL,
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
-
-CREATE INDEX IF NOT EXISTS idx_memory_comments_memory_created_at
-  ON memory_comments (memory_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_memory_comments_author_id ON memory_comments (author_id);
 
 -- ========================
 -- MEMORY LIKES
@@ -174,7 +157,4 @@ CREATE TABLE IF NOT EXISTS memory_likes (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   UNIQUE (memory_id, member_id)
 );
-
-CREATE INDEX IF NOT EXISTS idx_memory_likes_memory_id ON memory_likes (memory_id);
-CREATE INDEX IF NOT EXISTS idx_memory_likes_member_id ON memory_likes (member_id);
 

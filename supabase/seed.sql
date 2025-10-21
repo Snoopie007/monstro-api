@@ -457,3 +457,140 @@ INSERT INTO transactions (id, member_id, location_id, description, type, amount,
 -- Yoda Master Transaction
 INSERT INTO transactions (id, member_id, location_id, description, type, amount, tax_amount, status, payment_method, invoice_id, subscription_id, charge_date, created_at, updated_at) VALUES
 ('txn_01JDQR8XYZABCDEFGHIJKLMV', 'mbr_Bw3LjEcQ9R72NOP9vo3qllw', 'acc_BpT7jEb3Q16nOPL3vo7qlw', 'Monthly Subscription Payment - All Programs', 'inbound', 21492, 1592, 'paid', 'card', 'inv_01JDQR8XYZABCDEFGHIJKLMV', 'sub_01JDQR8XYZABCDEFGHIJKLMQ', NOW() - INTERVAL '7 days' + INTERVAL '1 day', NOW() - INTERVAL '7 days' + INTERVAL '1 day', NOW() - INTERVAL '7 days' + INTERVAL '1 day');
+
+
+-- =========================================
+-- GROUPS FOR NEW LOCATION
+-- =========================================
+
+-- Create 2 groups for the new location
+INSERT INTO groups (id, name, description, location_id, icon, cover_image, metadata, created_at, updated_at) VALUES
+('grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'Community Group 1', 'A general community group for members to connect and share', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', '👥', 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800', '{"category": "general", "privacy": "public", "max_members": 100}'::jsonb, NOW() - INTERVAL '30 days', NOW()),
+('grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'Community Group 2', 'Another community group for discussions and activities', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', '🌟', 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800', '{"category": "general", "privacy": "public", "max_members": 150}'::jsonb, NOW() - INTERVAL '25 days', NOW())
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================================
+-- GROUP MEMBERS
+-- =========================================
+
+-- Add members to Group 1
+INSERT INTO group_members (group_id, user_id, role, joined_at) VALUES
+('grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'usr_BpT7jEb3Q16nOPL3vo7qlw', 'owner', NOW() - INTERVAL '30 days'),
+('grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'usr_Cx8mKfD4R27oPQ4wp8rmmx', 'admin', NOW() - INTERVAL '28 days'),
+('grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'usr_Bw3LjEcQ9R72NOP9vo3qllw', 'member', NOW() - INTERVAL '25 days'),
+('grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'usr_Ez0oMhF6T49qRS6yr0tooz', 'member', NOW() - INTERVAL '22 days'),
+('grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'usr_Fa1pNiG7U50rST7zs1uppa', 'member', NOW() - INTERVAL '20 days')
+ON CONFLICT (group_id, user_id) DO NOTHING;
+
+-- Add members to Group 2
+INSERT INTO group_members (group_id, user_id, role, joined_at) VALUES
+('grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'usr_Gb2qOjH8V61sTU8at2vqqb', 'owner', NOW() - INTERVAL '25 days'),
+('grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'usr_Hc3rPkI9W72tUV9bu3wrrc', 'admin', NOW() - INTERVAL '23 days'),
+('grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'usr_Bw3LjEcQ9R72NOP9vo3qllw', 'member', NOW() - INTERVAL '20 days'),
+('grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'usr_Je5tRmK1Y94vWX1dw5ytte', 'member', NOW() - INTERVAL '18 days'),
+('grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'usr_Kf6uSnL2Z05wXY2ex6zuuf', 'admin', NOW() - INTERVAL '15 days')
+ON CONFLICT (group_id, user_id) DO NOTHING;
+
+-- =========================================
+-- GROUP POSTS
+-- =========================================
+
+-- Posts for Group 1
+INSERT INTO group_posts (id, group_id, user_id, pinned, status, content, attachments, metadata, created_at, updated_at) VALUES
+('QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'usr_BpT7jEb3Q16nOPL3vo7qlw', true, 'published', 'Welcome to our community! 🎉 
+
+This is a space where we can connect and share experiences. Everyone is welcome here.
+
+Let''s build a supportive community together! 
+
+What would you like to discuss today?', '[]'::jsonb, '{"likes": 12, "comments": 8}'::jsonb, NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
+
+('RGVmR2hpS2xtTm9wUXJzdFV2d1h5emFiY2Rl', 'grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'usr_Cx8mKfD4R27oPQ4wp8rmmx', false, 'published', 'Just wanted to share something exciting! 
+
+I''ve been working on a new project and wanted to get some feedback from the community.
+
+Anyone else working on interesting projects?', '[]'::jsonb, '{"likes": 18, "comments": 15}'::jsonb, NOW() - INTERVAL '25 days', NOW() - INTERVAL '25 days'),
+
+('R2hpS2xtTm9wUXJzdFV2d1h5emFiY2RlZmdo', 'grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'usr_Ez0oMhF6T49qRS6yr0tooz', false, 'published', 'Morning update! 
+
+Today I''m focusing on some new goals and wanted to share with everyone.
+
+What are you working on today?', '[]'::jsonb, '{"likes": 9, "comments": 6}'::jsonb, NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
+
+('S2xtTm9wUXJzdFV2d1h5emFiY2RlZmdoaWpr', 'grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'usr_Bw3LjEcQ9R72NOP9vo3qllw', false, 'published', 'Wisdom I share with you today. 
+
+Patience and persistence, important they are. Quick results, you seek not. Long-term success, your goal should be.
+
+Work hard, rest well, think clearly. The force of good decisions, may it be with you all.', '[]'::jsonb, '{"likes": 25, "comments": 12}'::jsonb, NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days'),
+
+('Tm9wUXJzdFV2d1h5emFiY2RlZmdoaWprbG1u', 'grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'usr_Fa1pNiG7U50rST7zs1uppa', false, 'published', 'Weekend check-in! 
+
+Just finished working on something interesting. The energy today is great.
+
+Pro tip: Find someone to collaborate with! Having a partner makes all the difference. 
+
+Anyone want to work together on something?', '[]'::jsonb, '{"likes": 14, "comments": 9}'::jsonb, NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days');
+
+-- Posts for Group 2
+INSERT INTO group_posts (id, group_id, user_id, pinned, status, content, attachments, metadata, created_at, updated_at) VALUES
+('UXJzdFV2d1h5emFiY2RlZmdoaWprbG1ub3Bx', 'grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'usr_Gb2qOjH8V61sTU8at2vqqb', true, 'published', 'Welcome to our second community! 🌱
+
+Here we focus on general discussions and activities. 
+
+Let''s share ideas and support each other in our endeavors.
+
+Remember: Small steps lead to big results. What''s one thing you want to focus on this week?', '[]'::jsonb, '{"likes": 16, "comments": 11}'::jsonb, NOW() - INTERVAL '25 days', NOW() - INTERVAL '25 days'),
+
+('cnN0VXZ3WHl6YWJjZGVmaGlqa2xtbm9wcXJz', 'grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'usr_Hc3rPkI9W72tUV9bu3wrrc', false, 'published', 'Planning session! 🥗
+
+Working on some new ideas for the week:
+- Project planning
+- Goal setting
+- Resource organization
+
+Planning ahead makes everything so much easier. What are your planning strategies?', '[]'::jsonb, '{"likes": 22, "comments": 18}'::jsonb, NOW() - INTERVAL '22 days', NOW() - INTERVAL '22 days'),
+
+('dXZ3WHl6YWJjZGVmaGlqa2xtbm9wcXJzdHV2', 'grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'usr_Je5tRmK1Y94vWX1dw5ytte', false, 'published', 'Mindful Monday! 🧘‍♀️
+
+Started my day with some quiet time and it made such a difference. Taking time to center yourself is so important.
+
+I''ve been using a simple technique:
+- 4 counts in
+- Hold for 4 counts  
+- 4 counts out
+- Hold for 4 counts
+
+Anyone else practicing mindfulness? Would love to hear your techniques!', '[]'::jsonb, '{"likes": 19, "comments": 13}'::jsonb, NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
+
+('d1h5emFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3', 'grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'usr_Bw3LjEcQ9R72NOP9vo3qllw', false, 'published', 'Balance in all things, there must be. 🧘‍♂️
+
+Mind, body, and spirit - connected they are. Work well, rest often, think clearly.
+
+Ancient wisdom, I share with you:
+- Listen to yourself, you must
+- Nourish with good choices, you should  
+- Move with purpose, not haste
+- Rest as important as action is
+
+The path to success, a journey it is, not a destination. Patience and kindness to yourself, show.', '[]'::jsonb, '{"likes": 28, "comments": 16}'::jsonb, NOW() - INTERVAL '17 days', NOW() - INTERVAL '17 days'),
+
+('eXl6YWJjZGVmaGlqa2xtbm9wcXJzdHV2d3h5', 'grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'usr_Kf6uSnL2Z05wXY2ex6zuuf', false, 'published', 'Organization tips! 😴
+
+I''ve been working on improving my daily routine and it''s made such a difference in my productivity and overall mood.
+
+My morning routine:
+- No distractions for 1 hour
+- Planning and journaling instead
+- Clean workspace
+- Consistent schedule
+
+Getting organized has been a game changer. What are your best organization tips?', '[]'::jsonb, '{"likes": 17, "comments": 14}'::jsonb, NOW() - INTERVAL '14 days', NOW() - INTERVAL '14 days'),
+
+('emFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6', 'grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'usr_Hc3rPkI9W72tUV9bu3wrrc', false, 'published', 'Learning challenge! 💧
+
+I''m challenging myself to learn something new every day. I''ve been using a learning app and it''s been eye-opening to see how much I can absorb.
+
+Goal: 30 minutes of learning per day
+Current streak: 5 days! 
+
+Anyone want to join me in this learning challenge? We can keep each other accountable!', '[]'::jsonb, '{"likes": 13, "comments": 10}'::jsonb, NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days');

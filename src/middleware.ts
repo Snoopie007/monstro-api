@@ -12,7 +12,7 @@ const publicPaths = [
 export default auth(async (req) => {
 
 	try {
-		const { pathname, searchParams } = req.nextUrl
+		const { pathname } = req.nextUrl
 		const isLoggedin = !!req.auth
 		const locations = req.auth?.user?.locations || []
 
