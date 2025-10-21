@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge, Button, Separator } from '@/components/ui'
-import { ExternalLink, Download } from 'lucide-react'
+import { Download } from 'lucide-react'
 
 interface InvoiceDetailDialogProps {
     invoice: MemberInvoice | null
@@ -51,8 +51,6 @@ export function InvoiceDetailDialog({
     //     // Implementation would depend on your backend setup
     //     console.log('Mark invoice as paid:', invoice.id)
     // }
-
-    console.log(invoice)
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

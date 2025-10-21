@@ -80,8 +80,8 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size={"icon"} className='size-6'>
-                    <Plus className='size-4' />
+                <Button variant="ghost" size={"icon"} className='size-6 text-lg'>
+                    +
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[450px] rounded-sm border-foreground/10">

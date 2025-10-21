@@ -32,7 +32,7 @@ export const MemberAchievementItems = ({
             </div>
         )
     }
-    console.log(achievements)
+
     const renderAchievements = () => {
         return achievements && achievements.length > 0 ? (
             achievements.map((achievement) => (

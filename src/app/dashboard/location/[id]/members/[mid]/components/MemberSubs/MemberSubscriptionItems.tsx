@@ -74,18 +74,16 @@ export const MemberSubscriptionItems = ({
                                         : 'Never'}
                                 </span>
                             </ItemTitle>
-                            <ItemDescription>
-                                <div className="flex items-center justify-between gap-2">
-                                    <span>
-                                        {formatAmountForDisplay(
-                                            sub.plan?.price! / 100,
-                                            'USD',
-                                            true
-                                        )}{' '}
-                                        / {sub.plan?.interval} •{' '}
-                                        {sub.paymentMethod.toUpperCase()}
-                                    </span>
-                                </div>
+                            <ItemDescription className="flex items-center justify-between gap-2">
+                                <span>
+                                    {formatAmountForDisplay(
+                                        sub.plan?.price! / 100,
+                                        'USD',
+                                        true
+                                    )}{' '}
+                                    / {sub.plan?.interval} •{' '}
+                                    {sub.paymentMethod.toUpperCase()}
+                                </span>
                             </ItemDescription>
                         </ItemContent>
                         <ItemActions>

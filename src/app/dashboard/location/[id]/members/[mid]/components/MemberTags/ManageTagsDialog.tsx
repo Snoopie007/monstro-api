@@ -17,10 +17,10 @@ interface ManageTagsDialogProps {
     handleSelect: (tagId: string) => void,
 }
 
-export function ManageTagsDialog({ isManageDialogOpen, setIsManageDialogOpen, openManageDialog,selectedTagIds, allTags, handleRemove, newTag, setNewTag, handleCreateTag, handleSaveTags, isUpdatingTags, handleSelect }: ManageTagsDialogProps) {
+export function ManageTagsDialog({ isManageDialogOpen, setIsManageDialogOpen, openManageDialog, selectedTagIds, allTags, handleRemove, newTag, setNewTag, handleCreateTag, handleSaveTags, isUpdatingTags, handleSelect }: ManageTagsDialogProps) {
     return (
         <div>
-            {/* Dialog with TagsFilter component inside */}
+
             <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
                 <DialogContent className="max-w-md border-foreground/10">
                     <DialogHeader>

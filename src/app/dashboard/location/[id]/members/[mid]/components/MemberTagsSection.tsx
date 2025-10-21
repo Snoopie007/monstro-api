@@ -5,15 +5,18 @@ import { useEffect, useState } from 'react'
 
 import { toast } from 'react-toastify'
 import { Badge } from '@/components/ui/badge'
-import { ManageTagsDialog } from './ManageTagsDialog'
-import { PlusIcon } from 'lucide-react'
+import { ManageTagsDialog } from './MemberTags/ManageTagsDialog'
+import { PlusIcon, ChevronsUpDown } from 'lucide-react'
 import {
-    Item,
-    ItemActions,
-    ItemContent,
-    ItemHeader,
-    ItemTitle,
-} from '@/components/ui/item'
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui'
+import { tr } from 'date-fns/locale'
 
 interface MemberTagSectionProps {
     params: { id: string; mid: string }
@@ -32,6 +35,7 @@ export function MemberTagSection({ params, editable }: MemberTagSectionProps) {
         updateMemberTags,
     } = useMemberTags(params.id, params.mid)
 
+    const [open, setOpen] = useState(true)
     const [isManageDialogOpen, setIsManageDialogOpen] = useState(false)
     const [isUpdatingTags, setIsUpdatingTags] = useState(false)
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
@@ -104,58 +108,42 @@ export function MemberTagSection({ params, editable }: MemberTagSectionProps) {
         setIsManageDialogOpen(true)
     }
 
-    if (isLoadingMemberTags || isLoadingAllTags) {
-        return (
-            <div className="flex flex-row gap-2 p-4">
-                <div className="h-5 w-20 bg-muted animate-pulse rounded"></div>
-                <div className="h-5 w-20 bg-muted animate-pulse rounded"></div>
-                <div className="h-5 w-20 bg-muted animate-pulse rounded"></div>
-                <div className="h-5 w-20 bg-muted animate-pulse rounded"></div>
-            </div>
-        )
-    }
+
 
     return (
         <>
+            <Collapsible open={open} onOpenChange={setOpen}>
+                <Card className=' rounded-lg border-muted/50'>
+                    <CardHeader className='px-4 py-2 space-y-0 flex flex-row justify-between items-center'>
+                        <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="hover:bg-transparent gap-1 px-0">
+                                <CardTitle className='text-sm font-medium mb-0'>Tags</CardTitle>
+                                <ChevronsUpDown className="size-4" />
+                                <span className="sr-only">Toggle</span>
+                            </Button>
+                        </CollapsibleTrigger>
 
-            <Item variant="muted" className="px-3 py-2">
-                <ItemHeader>
-                    <ItemTitle>Tags</ItemTitle>
-                </ItemHeader>
-                <ItemContent>
-                    <ItemTitle className="flex flex-row gap-2 items-center">
-                        <ul className="gap-1 flex flex-row flex-wrap">
-                            {memberTags.length === 0 && (
-                                <span className="text-xs text-muted-foreground">
-                                    No tags
-                                </span>
+                    </CardHeader>
+
+                    <CollapsibleContent>
+                        <CardContent className='px-4 pb-6 pt-1'>
+                            {memberTags && memberTags.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {memberTags.map((tag) => (
+                                        <TagItem key={tag.id} tag={tag} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className='flex flex-col items-center justify-center'>
+                                    <p className="text-center text-muted-foreground">No tags found</p>
+
+                                </div>
                             )}
-                            {memberTags.map((tag) => (
-                                <Badge
-                                    key={tag.id}
-                                    variant="outline"
-                                    className="text-xs cursor-pointer rounded-full mb-0"
-                                >
-                                    {tag.name}
-                                </Badge>
-                            ))}
-                        </ul>
-                    </ItemTitle>
-                </ItemContent>
-                <ItemActions>
-                    {editable && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={openManageDialog}
-                            className="w-6 h-6"
-                        >
-                            <PlusIcon className="size-4" />
-                        </Button>
-                    )}
-                </ItemActions>
-            </Item>
-            <ManageTagsDialog
+                        </CardContent>
+                    </CollapsibleContent>
+                </Card>
+            </Collapsible>
+            {/* <ManageTagsDialog
                 isManageDialogOpen={isManageDialogOpen}
                 setIsManageDialogOpen={setIsManageDialogOpen}
                 openManageDialog={openManageDialog}
@@ -168,7 +156,23 @@ export function MemberTagSection({ params, editable }: MemberTagSectionProps) {
                 handleSaveTags={handleSaveTags}
                 isUpdatingTags={isUpdatingTags}
                 handleSelect={handleSelect}
-            />
+            /> */}
         </>
+    )
+}
+
+
+
+function TagItem({ tag }: { tag: { id: string; name: string } }) {
+
+    async function handleRemove() {
+
+    }
+    return (
+        <Badge variant="secondary" className=" cursor-pointer px-2 "
+        >
+            {tag.name}
+            <span className="text-muted-foreground" onClick={handleRemove}>x</span>
+        </Badge>
     )
 }

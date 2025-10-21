@@ -1,9 +1,10 @@
-import { Popover, PopoverTrigger, PopoverContent, Button, Input, SelectValue, SelectTrigger, Select, SelectItem, SelectContent, Separator } from "@/components/ui";
+import { Popover, PopoverTrigger, PopoverContent, Button, Separator } from "@/components/ui";
 import { ColumnDef } from "@/libs/table-utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Input } from "@/components/forms";
 import { FilterIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MemberWithCustomFieldsColumns } from "../MemberColumns";
-import { FilterInputType, ColumnFilterConfig, memberColumnMetadata, getCustomFieldConfig } from "./ColumnTypes";
+import { FilterInputType, memberColumnMetadata, getCustomFieldConfig } from "./ColumnTypes";
 import { CustomFieldDefinition } from "@/components/custom-fields";
 import { FilterInput } from "./FilterInput";
 
@@ -18,17 +19,17 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
 
     // Generate column options with metadata
     const columnOptions = columns
-        .filter((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => 
+        .filter((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) =>
             column.id !== 'select' && column.accessorKey !== 'tags')
         .map((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => {
-            const {accessorKey, id, header} = column;
+            const { accessorKey, id, header } = column;
             const columnId = accessorKey ?? id ?? 'name';
-            
+
             // Check if this is a custom field column
             if (columnId.startsWith('custom-field-')) {
                 const fieldId = columnId.replace('custom-field-', '');
                 const customFieldConfig = getCustomFieldConfig(fieldId, customFields);
-                
+
                 if (customFieldConfig) {
                     return {
                         id: columnId,
@@ -39,7 +40,7 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
                     };
                 }
             }
-            
+
             // Handle regular columns
             const metadata = memberColumnMetadata[columnId];
             return {
@@ -78,8 +79,8 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
         }
     }, [filters])
 
-	return (
-		<Popover>
+    return (
+        <Popover>
             <PopoverTrigger asChild>
                 <Button variant="ghost" size="sm" className="hover:bg-foreground/10">
                     <FilterIcon size={14} className="mr-2" />
@@ -126,14 +127,14 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
                 {filterKv.length > 0 && <Separator className="my-2" />}
                 <div className="flex flex-row justify-between">
                     <Button variant="create" size="sm" onClick={() => {
-                        const firstAvailableColumn = allColumnOptions.find(option => 
+                        const firstAvailableColumn = allColumnOptions.find(option =>
                             option && !filterKv.some(filter => filter.id === option.id)
                         );
-                        
+
                         if (firstAvailableColumn) {
-                            setFilterKv([...filterKv, { 
-                                id: firstAvailableColumn.id, 
-                                value: "" 
+                            setFilterKv([...filterKv, {
+                                id: firstAvailableColumn.id,
+                                value: ""
                             }]);
                         }
                     }}>
@@ -143,5 +144,5 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
                 </div>
             </PopoverContent>
         </Popover>
-	);
+    );
 }

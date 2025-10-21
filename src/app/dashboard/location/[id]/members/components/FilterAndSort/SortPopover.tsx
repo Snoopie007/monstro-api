@@ -1,31 +1,33 @@
-import { Popover, PopoverTrigger, Button, PopoverContent, Separator, SelectContent, SelectTrigger, SelectItem, SelectValue, Select, Switch } from "@/components/ui"
-import { ListOrderedIcon, SortAscIcon, TextAlignJustify, XIcon } from "lucide-react";
+import { Popover, PopoverTrigger, Button, PopoverContent, Separator } from "@/components/ui"
+import { ListOrderedIcon, TextAlignJustify, XIcon } from "lucide-react";
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@/components/forms";
 import { useEffect, useState } from "react";
 import { MemberWithCustomFieldsColumns } from "../MemberColumns";
 import { ColumnDef } from "@/libs/table-utils";
 
 interface SortPopoverProps {
     columns: ColumnDef<MemberWithCustomFieldsColumns, any>[];
-    onSortChange: (sort: {id: string, direction: 'asc' | 'desc'}[]) => void;
+    onSortChange: (sort: { id: string, direction: 'asc' | 'desc' }[]) => void;
 }
 
 export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
-    const [sort, setSort] = useState<{id: string, direction: 'asc' | 'desc'}[]>([]);
+    const [sort, setSort] = useState<{ id: string, direction: 'asc' | 'desc' }[]>([]);
 
     const columnOptions = columns
-    .filter((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => column.id !== 'select' && column.accessorKey !== 'tags')
-    .map((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => {
-        const {accessorKey, id, header} = column;
-        return {
-            id: accessorKey ?? id ?? 'name',
-            label: header
-        }
-    })
+        .filter((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => column.id !== 'select' && column.accessorKey !== 'tags')
+        .map((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => {
+            const { accessorKey, id, header } = column;
+            return {
+                id: accessorKey ?? id ?? 'name',
+                label: header
+            }
+        })
 
     const handleColumnSelect = (id: string) => {
         console.log("id", id)
         // add to sort array with direction asc
-        setSort(v =>[...v, { id, direction: 'asc' }])
+        setSort(v => [...v, { id, direction: 'asc' }])
     }
 
     const handleDirectionChange = (id: string) => {
@@ -36,7 +38,7 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
         setSort(v => v.filter(s => s.id !== id))
     }
 
-    const handleApplySort = (sort: {id: string, direction: 'asc' | 'desc'}[]) => {
+    const handleApplySort = (sort: { id: string, direction: 'asc' | 'desc' }[]) => {
         console.log("sort", sort)
         onSortChange(sort)
     }
@@ -61,8 +63,8 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
                         </span>
                         {/* Switch for toggling direction */}
                         <div className="flex flex-row items-center gap-2">
-                        <span className="text-sm">ascending: <Switch id={`sort-${s.id}`} checked={s.direction === 'asc'} onCheckedChange={() => handleDirectionChange(s.id)} /></span>
-                        <Button variant="ghost" size="icon" className="hover:bg-foreground/10 size-5 p-1" onClick={() => handleRemoveSort(s.id)}><XIcon size={12} /></Button>
+                            <span className="text-sm">ascending: <Switch id={`sort-${s.id}`} checked={s.direction === 'asc'} onCheckedChange={() => handleDirectionChange(s.id)} /></span>
+                            <Button variant="ghost" size="icon" className="hover:bg-foreground/10 size-5 p-1" onClick={() => handleRemoveSort(s.id)}><XIcon size={12} /></Button>
                         </div>
                     </div>
                 ))}
@@ -98,7 +100,7 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
                         Apply Sorting
                     </Button>
                 </div>
-                
+
             </PopoverContent>
         </Popover>
     )

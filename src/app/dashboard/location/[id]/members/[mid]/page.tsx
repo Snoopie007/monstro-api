@@ -27,7 +27,7 @@ import { Member, MemberLocation } from '@/types'
 import Stripe from 'stripe'
 import { MemberStripePayments } from '@/libs/server/stripe'
 import { CustomFieldsSection } from '@/components/custom-fields'
-import { MemberTagSection } from './components/MemberTags/MemberTagsSection'
+import { MemberTagSection } from './components/MemberTagsSection'
 import { attendances, reservations, recurringReservations } from '@/db/schemas'
 import { format } from 'date-fns'
 import { hasPermission } from '@/libs/server/permissions'
@@ -183,15 +183,7 @@ async function fetchStripePaymentMethods(
     }
 }
 
-const MemberDetailsMenu = [
-    'Subscriptions',
-    'Packages',
-    'Invoices',
-    'Transactions',
-    'Achievements',
-    'Rewards',
-    'Attendance',
-]
+
 
 const triggerTabsClassName =
     'bg-background data-[state=active]:text-foreground data-[state=active]:bg-foreground/10 data-[state=active]:border-primary dark:data-[state=active]:border-primary h-full rounded-none border-0 border-b-2 border-transparent data-[state=active]:shadow-none'
@@ -232,15 +224,15 @@ export default async function MemberProfilePage(props: {
                     paymentMethods={paymentMethods}
                     ml={ml}
                 >
-                    <div className="grid grid-cols-12 flex-1 gap-2 py-2">
-                        <div className="col-span-4 border-foreground/10">
+                    <div className="grid grid-cols-12 flex-1 gap-4 px-3 py-2 min-h-0">
+                        <div className="col-span-4 border-foreground/10 flex flex-col">
                             <MemberProfile
                                 params={params}
                                 profileData={memberProfileData}
                             />
-                            <ScrollArea className="h-[calc(100vh-90px)]">
+                            <ScrollArea className="flex-1 min-h-0">
 
-                                <div className='p-4 space-y-2'>
+                                <div className='space-y-2'>
                                     <MemberFamilies
                                         params={params}
                                         familyMembers={member.familyMembers}
@@ -266,54 +258,58 @@ export default async function MemberProfilePage(props: {
                                 </div>
                             </ScrollArea>
                         </div>
-                        <div className="col-span-5">
-                            <div className="bg-foreground/5 rounded-lg h-full">
+                        <div className="col-span-5 flex flex-col">
+                            <div className="bg-foreground/5 rounded-lg flex-1 min-h-0">
                                 <MemberChatView />
                             </div>
                         </div>
 
-                        <div className="col-span-3 py-4 pr-4">
-                            <div className="rounded-lg h-full p-4">
-                                <Tabs defaultValue="invoices-transactions">
-                                    <TabsList className="bg-background rounded-none border-b p-0 w-full items-start justify-start overflow-x-scroll">
-                                        <TabsTrigger
-                                            value="invoices-transactions"
-                                            className={triggerTabsClassName}
-                                        >
-                                            Invoices & Transactions
-                                        </TabsTrigger>
-                                        <TabsTrigger
-                                            value="achievements-rewards"
-                                            className={triggerTabsClassName}
-                                        >
-                                            Achievements & Rewards
-                                        </TabsTrigger>
-                                        <TabsTrigger
-                                            value="attendance"
-                                            className={triggerTabsClassName}
-                                        >
-                                            Attendance
-                                        </TabsTrigger>
-                                    </TabsList>
-                                    <TabsContent value="invoices-transactions">
+                        <div className="col-span-3 py-4 pr-4 flex flex-col">
+                            <Tabs defaultValue="invoices-transactions" className="h-full flex flex-col">
+                                <TabsList className="bg-background rounded-none border-b p-0 w-full items-start justify-start overflow-x-scroll">
+                                    <TabsTrigger
+                                        value="invoices-transactions"
+                                        className={triggerTabsClassName}
+                                    >
+                                        Invoices & Transactions
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                        value="achievements-rewards"
+                                        className={triggerTabsClassName}
+                                    >
+                                        Achievements & Rewards
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                        value="attendance"
+                                        className={triggerTabsClassName}
+                                    >
+                                        Attendance
+                                    </TabsTrigger>
+                                </TabsList>
+                                <TabsContent value="invoices-transactions" className="flex-1 min-h-0 overflow-hidden">
+                                    <div className="h-full overflow-y-auto space-y-4">
                                         <MemberInvoiceItems params={params} />
                                         <MemberTransactionItems
                                             params={params}
                                         />
-                                    </TabsContent>
-                                    <TabsContent value="achievements-rewards">
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="achievements-rewards" className="flex-1 min-h-0 overflow-hidden">
+                                    <div className="h-full overflow-y-auto space-y-4">
                                         <MemberAchievementItems
                                             params={params}
                                         />
                                         <MemberRewardItems params={params} />
-                                    </TabsContent>
-                                    <TabsContent value="attendance">
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="attendance" className="flex-1 min-h-0 overflow-hidden">
+                                    <div className="h-full overflow-y-auto">
                                         <MemberAttendanceItems
                                             params={params}
                                         />
-                                    </TabsContent>
-                                </Tabs>
-                            </div>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
                         </div>
                     </div>
                 </MemberProvider>
