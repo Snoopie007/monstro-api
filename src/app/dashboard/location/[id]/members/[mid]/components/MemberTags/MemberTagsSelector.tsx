@@ -1,5 +1,6 @@
 "use client";
 
+import { Skeleton } from "@/components/ui";
 import {
 	Tags,
 	TagsContent,
@@ -13,30 +14,25 @@ import {
 } from "@/components/ui/kibo-ui/tags";
 import { useTags } from "@/hooks/useTags";
 import { cn } from "@/libs/utils";
-import { CheckIcon, Loader2, PlusIcon } from "lucide-react";
+import { CheckIcon, PlusIcon, SquarePen } from "lucide-react";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
-interface TagsFilterProps {
+interface MemberTagsSelectorProps {
 	locationId: string;
 	selectedTags: string[];
 	onTagsChange: (tagIds: string[]) => void;
 	canCreateTags?: boolean; // For admin permission control
-	fullWidth?: boolean;
-	tagsValueClassName?: string;
 }
 
-const TagsFilter = ({
+export const MemberTagsSelector = ({
 	locationId,
 	selectedTags,
 	onTagsChange,
-	fullWidth = false,
 	canCreateTags = false,
-	tagsValueClassName = "",
-}: TagsFilterProps) => {
+}: MemberTagsSelectorProps) => {
 	const [newTag, setNewTag] = useState<string>("");
 	const { tags, isLoading, createTag } = useTags(locationId);
-
 	const handleRemove = (value: string) => {
 		if (!selectedTags.includes(value)) {
 			return;
@@ -90,33 +86,25 @@ const TagsFilter = ({
 	};
 
 	if (isLoading) {
-		return (
-			<div className="flex items-center gap-2 h-8 px-3 py-1 bg-foreground/10 rounded-md">
-				<Loader2 className="h-4 w-4 animate-spin" />
-				<span className="text-sm">Loading tags...</span>
-			</div>
-		);
+		return <Skeleton className="h-8 w-full" />;
 	}
 
 	return (
-		<Tags className={cn("max-w-[500px]", fullWidth ? "w-full" : undefined)}>
+		<Tags>
 			<TagsTrigger
-				className={`border-none bg-foreground/10 hover:bg-foreground/20 hover:text-background shadow-sm ${
-					selectedTags.length === 0 ? "h-8" : undefined
-				}`}
+				className={cn(
+					"group border-none p-0 hover:p-1 hover:bg-muted/50 transition-all duration-100",
+				)}
+				enableTriggerString={false}
 			>
 				{selectedTags.map((tagId) => (
-					<TagsValue
-						className={cn(
-							"bg-foreground/50 hover:bg-foreground/40 dark:bg-background/60 dark:hover:bg-background/80",
-							tagsValueClassName,
-						)}
-						key={tagId}
-						onRemove={() => handleRemove(tagId)}
-					>
+					<TagsValue key={tagId} onRemove={() => handleRemove(tagId)}>
 						{tags.find((t) => t.id === tagId)?.name}
 					</TagsValue>
 				))}
+				<span className="text-muted-foreground ml-1 invisible group-hover:visible transition-all duration-100 ease-in-out float-right justify-end">
+					<SquarePen size={14} />
+				</span>
 			</TagsTrigger>
 			<TagsContent className="border-foreground/10 min-w-48">
 				<TagsInput onValueChange={setNewTag} placeholder="Search tag..." />
@@ -148,5 +136,3 @@ const TagsFilter = ({
 		</Tags>
 	);
 };
-
-export default TagsFilter;
