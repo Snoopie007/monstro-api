@@ -1,5 +1,5 @@
 'use client'
-import { ItemContent, Item, ItemMedia, ItemTitle, ItemDescription, ItemActions } from '@/components/ui'
+import { ItemContent, Item, ItemMedia, ItemTitle, ItemDescription, ItemActions, Empty, EmptyHeader, EmptyDescription, EmptyTitle, EmptyMedia } from '@/components/ui'
 import { useMemberStatus } from '../../providers/MemberContext'
 import { FamilyMember } from '@/types/FamilyMember'
 import AddChildMember from './AddMember'
@@ -11,7 +11,7 @@ import {
     Button,
 } from '@/components/ui'
 import { useState } from 'react'
-import { ChevronsUpDown, X } from 'lucide-react'
+import { ChevronsUpDown, User, X } from 'lucide-react'
 import Image from 'next/image'
 
 interface MemberFamiliesProps {
@@ -38,12 +38,11 @@ export function MemberFamilies({
                         <span className="sr-only">Toggle</span>
                     </Button>
                 </CollapsibleTrigger>
-                {editable && (
-                    <AddChildMember parent={member} lid={params.id} />
-                )}
+                <AddChildMember parent={member} lid={params.id} />
             </div>
 
             <CollapsibleContent  >
+
                 {familyMembers && familyMembers.length > 0 ? (
                     <div className="space-y-2">
                         {familyMembers.map((fm) => (
@@ -51,12 +50,15 @@ export function MemberFamilies({
                         ))}
                     </div>
                 ) : (
-                    <div className='flex flex-col items-center justify-center'>
-                        <p className=" text-center text-muted-foreground">No family members found</p>
-                        {editable && (
-                            <AddChildMember parent={member} lid={params.id} />
-                        )}
-                    </div>
+                    <Empty variant="border">
+                        <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                                <User className="size-5" />
+                            </EmptyMedia>
+                            <EmptyTitle>No family members found</EmptyTitle>
+                            <EmptyDescription>Add a family member to the member.</EmptyDescription>
+                        </EmptyHeader>
+                    </Empty>
                 )}
             </CollapsibleContent>
         </Collapsible >
