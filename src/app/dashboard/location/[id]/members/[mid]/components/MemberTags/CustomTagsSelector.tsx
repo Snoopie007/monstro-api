@@ -31,6 +31,7 @@ export const CustomTagsSelector = ({
         tags: memberTags,
         isLoading: isMemberTagsLoading,
         updateMemberTags,
+        removeMemberTags,
     } = useMemberTags(locationId, memberId)
 
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
@@ -51,6 +52,10 @@ export const CustomTagsSelector = ({
     }
 
     const handleUpdateTags = async () => {
+        if (selectedTagIds.length === 0) {
+            await removeMemberTags()
+            return
+        }
         await updateMemberTags(selectedTagIds)
     }
 
@@ -92,11 +97,11 @@ export const CustomTagsSelector = ({
                 <PopoverTrigger asChild>
                     <CustomCommandInput
                         placeholder="Search tag..."
-                        className="mb-3 w-full"
+                        className="mb-2 w-full"
                         disabled={isMemberTagsLoading || isLoading}
                     />
                 </PopoverTrigger>
-                <div className="flex flex-row gap-3 flex-wrap">
+                <div className="flex flex-row gap-2 flex-wrap">
                     {selectedTags.map((tag) => (
                         <Badge
                             className="bg-muted text-muted-foreground"
