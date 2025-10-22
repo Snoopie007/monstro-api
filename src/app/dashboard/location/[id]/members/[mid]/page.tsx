@@ -219,17 +219,13 @@ export default async function MemberProfilePage(props: {
                     paymentMethods={paymentMethods}
                     ml={ml}
                 >
-                    <div className="grid grid-cols-7 flex-1 gap-4 px-3 py-2 min-h-0">
-                        <div className="col-span-2 flex flex-col space-y-4 min-h-0">
-                            <div className="flex-shrink-0">
-                                <MemberProfile
-                                    params={params}
-                                    pd={memberProfileData}
-                                />
-                            </div>
-                            <div className="flex-shrink-0">
-                                <PointsProfile profileData={memberProfileData} />
-                            </div>
+                    <div className="grid grid-cols-7 flex-1 gap-2 px-3 py-2">
+                        <div className="col-span-2 flex flex-col space-y-2">
+                            <MemberProfile
+                                params={params}
+                                pd={memberProfileData}
+                            />
+                            <PointsProfile profileData={memberProfileData} />
                             <ScrollArea className="flex-1 min-h-0">
                                 <div className='space-y-2 pb-10'>
                                     <MemberFamilies

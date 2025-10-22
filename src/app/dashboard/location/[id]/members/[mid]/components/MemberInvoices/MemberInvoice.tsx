@@ -29,7 +29,7 @@ export function MemberInvoice({ params }: MemberInvoiceItemsProps) {
 
 
     const handleCreateInvoice = () => {
-        router.push(`/dashboard/location/${params.id}/members/${params.mid}/invoices/create`)
+        router.push(`/dashboard/location/${params.id}/members/${params.mid}/invoices/new`)
     }
 
     return (
