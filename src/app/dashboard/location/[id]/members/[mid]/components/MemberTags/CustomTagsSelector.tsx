@@ -28,6 +28,7 @@ export const CustomTagsSelector = ({
         tags: memberTags,
         isLoading: isMemberTagsLoading,
         updateMemberTags,
+        removeMemberTags,
     } = useMemberTags(locationId, memberId)
 
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
@@ -48,6 +49,10 @@ export const CustomTagsSelector = ({
     }
 
     const handleUpdateTags = async () => {
+        if (selectedTagIds.length === 0) {
+            await removeMemberTags()
+            return
+        }
         await updateMemberTags(selectedTagIds)
     }
 

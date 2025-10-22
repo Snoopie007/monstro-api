@@ -1,9 +1,6 @@
 'use client'
 import {
     Button,
-    Card,
-    CardContent,
-    CardHeader,
     CardTitle,
     Collapsible,
     CollapsibleContent,
@@ -45,7 +42,7 @@ export function MemberTagsBox({ params, editable }: MemberTagsBoxProps) {
     }
 
     return (
-        <Collapsible open={open} onOpenChange={setOpen}>
+        <Collapsible open={open} onOpenChange={setOpen} className="mb-4">
             <CollapsibleTrigger asChild>
                 <Button
                     variant="ghost"
