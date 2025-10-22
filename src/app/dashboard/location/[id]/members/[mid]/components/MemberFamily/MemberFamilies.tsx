@@ -1,5 +1,5 @@
 'use client'
-import { ItemContent, Item, ItemMedia, ItemTitle, ItemDescription } from '@/components/ui'
+import { ItemContent, Item, ItemMedia, ItemTitle, ItemDescription, ItemActions } from '@/components/ui'
 import { useMemberStatus } from '../../providers/MemberContext'
 import { FamilyMember } from '@/types/FamilyMember'
 import AddChildMember from './AddMember'
@@ -11,7 +11,7 @@ import {
     Button,
 } from '@/components/ui'
 import { useState } from 'react'
-import { ChevronsUpDown } from 'lucide-react'
+import { ChevronsUpDown, X } from 'lucide-react'
 import Image from 'next/image'
 
 interface MemberFamiliesProps {
@@ -84,6 +84,11 @@ function FamilyMemberItem({ familyMember }: { familyMember: FamilyMember }) {
 
                 </ItemTitle>
             </ItemContent>
+            <ItemActions>
+                <Button variant="ghost" size="icon" className="size-6 text-red-500 hover:bg-foreground/5 hover:text-red-500">
+                    <X className="size-4" />
+                </Button>
+            </ItemActions>
         </Item>
     )
 }

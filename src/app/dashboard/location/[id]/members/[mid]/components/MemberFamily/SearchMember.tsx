@@ -71,11 +71,8 @@ export function SearchMember({
             <div className="flex flex-row bg-indigo-500 text-white gap-4 items-center border border-indigo-500 rounded-sm px-4 py-3">
               <div>
                 <Avatar className="w-[35px] h-[35px] rounded-full mx-auto">
-                  <AvatarImage src={familyMember?.avatar || ""} />
-                  <AvatarFallback className="text-sm uppercase text-muted bg-foreground font-medium ">
-                    {familyMember?.firstName?.charAt(0)}
-                    {familyMember?.lastName?.charAt(0)}
-                  </AvatarFallback>
+                  <AvatarImage src={familyMember?.avatar || "/images/default-avatar.png"} />
+
                 </Avatar>
               </div>
               <div className="flex flex-col ">
