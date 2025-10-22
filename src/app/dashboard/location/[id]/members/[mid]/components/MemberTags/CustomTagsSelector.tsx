@@ -11,9 +11,10 @@ import {
     Badge,
     CustomCommandInput,
     Skeleton,
+    Button,
 } from '@/components/ui'
 import { useMemberTags, useTags } from '@/hooks/useTags'
-import { CheckIcon, XIcon } from 'lucide-react'
+import { CheckIcon, PlusIcon, XIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 export const CustomTagsSelector = ({
@@ -33,6 +34,7 @@ export const CustomTagsSelector = ({
 
     const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
     const [open, setOpen] = useState<boolean>(false)
+    const [newTagName, setNewTagName] = useState<string>('')
 
     const selectedTags = tags.filter((t) => selectedTagIds.includes(t.id))
 
@@ -46,6 +48,12 @@ export const CustomTagsSelector = ({
             return
         }
         setSelectedTagIds((prev) => prev.concat(tagId))
+    }
+
+    const handleCreateTag = async () => {
+        const newTag = await createTag({ name: newTagName })
+        setSelectedTagIds((prev) => prev.concat(newTag.id))
+        setNewTagName('')
     }
 
     const handleUpdateTags = async () => {
@@ -116,7 +124,12 @@ export const CustomTagsSelector = ({
                     onOpenAutoFocus={(e) => e.preventDefault()}
                 >
                     <CommandList>
-                        <CommandEmpty>it's empty</CommandEmpty>
+                        <CommandEmpty>
+                            <Button variant="link" size="sm" className="w-full" onClick={handleCreateTag}>
+                                <PlusIcon className="size-4" />
+                                Create Tag: {newTagName}
+                            </Button>
+                        </CommandEmpty>
                         <CommandGroup>
                             {tags.map((tag) => (
                                 <CommandItem
