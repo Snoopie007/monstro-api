@@ -1,4 +1,3 @@
-
 import {
     ScrollArea,
     Tabs,
@@ -30,6 +29,7 @@ import { MemberStripePayments } from '@/libs/server/stripe'
 import { attendances, reservations, recurringReservations } from '@/db/schemas'
 import { format } from 'date-fns'
 import { hasPermission } from '@/libs/server/permissions'
+import { MemberAttendanceGraph } from './components/MemberAttendance/MemberAttendanceGraph'
 
 type PromiseReturnType = {
     member: Member | undefined
@@ -41,7 +41,10 @@ type MemberProfileData = {
     lastSeenFormatted: string
 }
 
-async function fetchStripeKeys(id: string, mid: string): Promise<PromiseReturnType | null> {
+async function fetchStripeKeys(
+    id: string,
+    mid: string
+): Promise<PromiseReturnType | null> {
     if (!id || !mid) {
         return null
     }
@@ -59,12 +62,13 @@ async function fetchStripeKeys(id: string, mid: string): Promise<PromiseReturnTy
                             },
                         },
                         subscriptions: {
-                            where: (ms, { eq, and }) => and(
-                                eq(ms.memberId, mid),
-                                eq(ms.locationId, id)
-                            ),
+                            where: (ms, { eq, and }) =>
+                                and(
+                                    eq(ms.memberId, mid),
+                                    eq(ms.locationId, id)
+                                ),
                             with: {
-                                plan: true
+                                plan: true,
                             },
                         },
                     },
@@ -170,7 +174,6 @@ async function fetchStripePaymentMethods(
     }
 }
 
-
 export default async function MemberProfilePage(props: {
     params: Promise<{ id: string; mid: string }>
 }) {
@@ -201,16 +204,18 @@ export default async function MemberProfilePage(props: {
 
     return (
         <TooltipProvider>
-            <MemberProvider member={member} ml={ml} paymentMethods={paymentMethods}>
+            <MemberProvider
+                member={member}
+                ml={ml}
+                paymentMethods={paymentMethods}
+            >
                 <div className="grid grid-cols-7 flex-1 gap-2 p-2 h-full">
                     <div className="col-span-2 flex flex-col space-y-2 h-full">
-                        <MemberProfile
-                            params={params}
-                            pd={memberProfileData}
-                        />
+                        <MemberProfile params={params} pd={memberProfileData} />
                         <PointsProfile profileData={memberProfileData} />
                         <ScrollArea className="h-[calc(100vh-318px)] overflow-hidden">
-                            <div className='space-y-2 '>
+                            <div className="space-y-2 ">
+                                <MemberAttendanceGraph params={params} />
                                 <MemberFamilies
                                     params={params}
                                     familyMembers={member.familyMembers}
@@ -237,40 +242,60 @@ export default async function MemberProfilePage(props: {
                     <div className="col-span-2 h-full">
                         <ScrollArea className="flex-1 h-full  overflow-hidden">
                             <div className="space-y-4 pb-10">
-                                <Tabs defaultValue="subscriptions" className="flex-1 flex flex-col min-h-0">
+                                <Tabs
+                                    defaultValue="subscriptions"
+                                    className="flex-1 flex flex-col min-h-0"
+                                >
                                     <TabsList className="bg-transparent rounded-none p-0 justify-start gap-1 flex-shrink-0">
-                                        {['subscriptions', 'packages'].map((tab) => (
-                                            <TabsTrigger key={tab} value={tab} className='bg-foreground/5 text-xs capitalize rounded-full'>
-                                                {tab}
-                                            </TabsTrigger>
-                                        ))}
+                                        {['subscriptions', 'packages'].map(
+                                            (tab) => (
+                                                <TabsTrigger
+                                                    key={tab}
+                                                    value={tab}
+                                                    className="bg-foreground/5 text-xs capitalize rounded-full"
+                                                >
+                                                    {tab}
+                                                </TabsTrigger>
+                                            )
+                                        )}
                                     </TabsList>
-                                    <TabsContent value="subscriptions" >
+                                    <TabsContent value="subscriptions">
                                         <MemberSubs params={params} />
                                     </TabsContent>
-                                    <TabsContent value="packages" >
+                                    <TabsContent value="packages">
                                         <MemberPkg params={params} />
                                     </TabsContent>
                                 </Tabs>
 
-                                <Tabs defaultValue="payments methods" className="flex-1 flex flex-col min-h-0">
+                                <Tabs
+                                    defaultValue="payments methods"
+                                    className="flex-1 flex flex-col min-h-0"
+                                >
                                     <TabsList className="bg-transparent rounded-none p-0 justify-start gap-1 flex-shrink-0">
-                                        {['payments methods', 'invoices', 'transactions'].map((tab) => (
-                                            <TabsTrigger key={tab} value={tab} className='bg-foreground/5 text-xs capitalize rounded-full'>
+                                        {[
+                                            'payments methods',
+                                            'invoices',
+                                            'transactions',
+                                        ].map((tab) => (
+                                            <TabsTrigger
+                                                key={tab}
+                                                value={tab}
+                                                className="bg-foreground/5 text-xs capitalize rounded-full"
+                                            >
                                                 {tab}
                                             </TabsTrigger>
                                         ))}
                                     </TabsList>
-                                    <TabsContent value="payments methods" >
+                                    <TabsContent value="payments methods">
                                         <PaymentMethods
                                             editable={canEditMember}
                                             params={params}
                                         />
                                     </TabsContent>
-                                    <TabsContent value="invoices" >
+                                    <TabsContent value="invoices">
                                         <MemberInvoice params={params} />
                                     </TabsContent>
-                                    <TabsContent value="transactions" >
+                                    <TabsContent value="transactions">
                                         <MemberTransactions params={params} />
                                     </TabsContent>
                                 </Tabs>
