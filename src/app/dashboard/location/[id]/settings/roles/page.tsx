@@ -14,8 +14,8 @@ import {
   TableHead,
   TableBody,
   TableCell,
-  Input,
 } from "@/components/ui";
+import {Input} from "@/components/forms";
 import { Role } from "@/types";
 import useSWR from "swr";
 import { UpsertRole } from "./components";
