@@ -8,145 +8,121 @@ import {
     CommandList,
     CommandGroup,
     PopoverContent,
-    Badge,
     CustomCommandInput,
-    Skeleton,
     Button,
 } from '@/components/ui'
-import { useMemberTags, useTags } from '@/hooks/useTags'
-import { CheckIcon, PlusIcon, XIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { tryCatch } from '@/libs/utils'
+import { MemberTag } from '@/types'
+import { CheckIcon, Loader2, PlusCircle, PlusIcon } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'react-toastify'
 
-export const CustomTagsSelector = ({
-    locationId,
-    memberId,
-}: {
-    locationId: string
-    memberId: string
-}) => {
-    const { tags, isLoading, createTag } = useTags(locationId)
-    const {
-        tags: memberTags,
-        isLoading: isMemberTagsLoading,
-        updateMemberTags,
-        removeMemberTags,
-    } = useMemberTags(locationId, memberId)
+interface Props {
+    params: { id: string, mid: string }
+    selectedTag: MemberTag[]
+    onUpdate: (tagId: string) => Promise<void>
+}
 
-    const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+
+export function CustomTagsSelector({ params, selectedTag, onUpdate }: Props) {
+    const [tags, setTags] = useState<MemberTag[]>([])
     const [open, setOpen] = useState<boolean>(false)
+    const [loading, setLoading] = useState<boolean>(false)
+    const [isLoading, setIsLoading] = useState<boolean>(false)
     const [newTagName, setNewTagName] = useState<string>('')
 
-    const selectedTags = tags.filter((t) => selectedTagIds.includes(t.id))
 
-    const handleRemove = (tagId: string) => {
-        setSelectedTagIds((prev) => prev.filter((t) => t !== tagId))
+
+    async function handleOpenChange(open: boolean) {
+        setOpen(open)
+        if (open && tags.length === 0) {
+            setLoading(true)
+            const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/tags`))
+            setLoading(false)
+            if (error || !result || !result.ok) return
+            const data = await result.json()
+            setTags(data)
+        }
     }
 
-    const handleSelect = (tagId: string) => {
-        if (selectedTagIds.includes(tagId)) {
-            handleRemove(tagId)
+    async function handleSelect(tagId: string) {
+        if (selectedTag.some(tag => tag.id === tagId)) return
+        const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/members/${params.mid}/tags`, {
+            method: 'POST',
+            body: JSON.stringify({ tagIds: [...selectedTag.map(tag => tag.id), tagId] })
+        }))
+        if (error || !result || !result.ok) {
+            setOpen(false)
+            toast.error(error?.message || 'Failed to select tag')
             return
         }
-        setSelectedTagIds((prev) => prev.concat(tagId))
+        setOpen(false)
+        await onUpdate(tagId)
     }
 
-    const handleCreateTag = async () => {
-        const newTag = await createTag({ name: newTagName })
-        setSelectedTagIds((prev) => prev.concat(newTag.id))
-        setNewTagName('')
-    }
+    async function handleCreateTag() {
 
-    const handleUpdateTags = async () => {
-        if (selectedTagIds.length === 0) {
-            await removeMemberTags()
+        if (!newTagName.trim()) return
+        setIsLoading(true)
+        const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/tags`, {
+            method: 'POST',
+            body: JSON.stringify({ name: newTagName.trim() })
+        }))
+        if (error || !result || !result.ok) {
+            setIsLoading(false)
+            toast.error(error?.message || 'Failed to create tag')
             return
         }
-        await updateMemberTags(selectedTagIds)
+        setIsLoading(false)
+        const data = await result.json()
+        setTags([...tags, data])
+        await onUpdate(data.id)
     }
 
-    useEffect(() => {
-        if (
-            !isMemberTagsLoading &&
-            !isLoading &&
-            memberTags &&
-            memberTags.length > 0
-        ) {
-            setSelectedTagIds(memberTags.map((t) => t.id))
-        }
-    }, [memberTags])
-
-    useEffect(() => {
-        const debounceTimer = setTimeout(() => {
-            handleUpdateTags()
-        }, 500) // 500ms debounce delay
-
-        return () => clearTimeout(debounceTimer)
-    }, [selectedTagIds])
-
-    if (isMemberTagsLoading || isLoading) {
-        return (
-            <div>
-                <Skeleton className="h-10 w-full mb-2" />
-                <div className="flex flex-row gap-2 flex-wrap">
-                    <Skeleton className="h-5 w-12" />
-                    <Skeleton className="h-5 w-12" />
-                    <Skeleton className="h-5 w-12" />
-                </div>
-            </div>
-        )
-    }
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={handleOpenChange}>
             <Command>
                 <PopoverTrigger asChild>
                     <CustomCommandInput
                         placeholder="Search tag..."
                         className="mb-3 w-full text-sm h-10 bg-muted/50 "
-                        disabled={isMemberTagsLoading || isLoading}
+                        value={newTagName}
+                        onValueChange={(value) => setNewTagName(value)}
+                        disabled={loading}
                     />
                 </PopoverTrigger>
-                <div className="flex flex-row gap-2 flex-wrap">
-                    {selectedTags.map((tag) => (
-                        <Badge className="bg-indigo-500 py-1 px-3 rounded-sm  text-white" key={tag.id}>
-                            {tag.name}
-                            <div
-                                className="size-auto cursor-pointer hover:text-white"
-                                onClick={() => handleRemove(tag.id)}
-                            >
-                                <XIcon size={12} className="text-white hover:text-red-500" />
-                            </div>
-                        </Badge>
-                    ))}
-                </div>
+
                 <PopoverContent
                     className="w-[var(--radix-popover-trigger-width)] px-1 py-1 border-foreground/10"
                     onOpenAutoFocus={(e) => e.preventDefault()}
                 >
                     <CommandList>
-                        <CommandEmpty>
-                            <Button variant="link" size="sm" className="w-full" onClick={handleCreateTag}>
-                                <PlusIcon className="size-4" />
-                                Create Tag: {newTagName}
-                            </Button>
+                        <CommandEmpty className='py-2'>
+                            <div className="flex items-center gap-1 px-2 text-foreground cursor-pointer" onClick={handleCreateTag} >
+                                {isLoading ? <Loader2 className="size-4 animate-spin" /> : <PlusCircle className="size-4 " />}
+                                <span className='text-sm font-medium'>No tag found create one: <span className='text-indigo-500 font-bold'>{newTagName}</span></span>
+                            </div>
                         </CommandEmpty>
                         <CommandGroup>
-                            {tags.map((tag) => (
-                                <CommandItem
-                                    className="flex items-center justify-between"
-                                    key={tag.id}
-                                    value={tag.id}
-                                    onSelect={handleSelect}
-                                >
-                                    {tag.name}
-                                    {selectedTagIds.includes(tag.id) && (
-                                        <CheckIcon
-                                            className="text-muted-foreground"
-                                            size={14}
-                                        />
-                                    )}
-                                </CommandItem>
-                            ))}
+                            {loading ? (
+                                <CommandItem className='text-sm' >Loading...</CommandItem>
+                            ) : (
+                                tags.map((tag) => (
+                                    <CommandItem className="flex items-center justify-between" key={tag.id}
+                                        value={tag.id}
+                                        onSelect={() => handleSelect(tag.id)}
+                                    >
+                                        {tag.name}
+                                        {selectedTag.some(t => t.id === tag.id) && (
+                                            <CheckIcon
+                                                className="text-muted-foreground"
+                                                size={14}
+                                            />
+                                        )}
+                                    </CommandItem>
+                                ))
+                            )}
                         </CommandGroup>
                     </CommandList>
                 </PopoverContent>

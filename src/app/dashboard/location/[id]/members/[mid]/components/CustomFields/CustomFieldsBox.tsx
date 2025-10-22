@@ -7,16 +7,12 @@ import {
 } from './CustomFieldInput'
 import { CustomFieldDisplay } from './CustomFieldDisplay'
 import { Button } from '@/components/ui/button'
-import { ChevronsUpDown, FileText } from 'lucide-react'
+import { ChevronsUpDown, CircleFadingPlusIcon } from 'lucide-react'
 import { toast } from 'react-toastify'
-import { Skeleton, CardTitle, Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../../../../../../../components/ui'
-import { Item, ItemContent } from '../../../../../../../../components/ui/item'
-import { usePermission } from '@/hooks/usePermissions'
-
-interface CustomFieldValue {
-    fieldId: string
-    value: string
-}
+import {
+    CardTitle, Collapsible, CollapsibleContent, CollapsibleTrigger, EmptyHeader,
+    EmptyMedia, EmptyTitle, EmptyDescription, Empty
+} from '@/components/ui'
 
 interface CustomFieldsWithValues extends CustomFieldDefinition {
     value: string
@@ -39,16 +35,15 @@ export function CustomFieldsBox({
     showEmptyFields = false,
 }: CustomFieldsSectionProps) {
     const [fields, setFields] = useState<CustomFieldsWithValues[]>([])
-    const [isLoading, setIsLoading] = useState(true)
+    const [loading, setLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
     const [editValues, setEditValues] = useState<Record<string, string>>({})
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [open, setOpen] = useState(false)
-    const canEditMember = usePermission('edit member', locationId)
 
     // Fetch custom fields and values
     const fetchCustomFields = async () => {
-        setIsLoading(true)
+        setLoading(true)
         try {
             const response = await fetch(
                 `/api/protected/loc/${locationId}/members/${memberId}/custom-fields`
@@ -70,7 +65,7 @@ export function CustomFieldsBox({
             console.error('Error fetching custom fields:', error)
             toast.error('Error loading custom fields')
         } finally {
-            setIsLoading(false)
+            setLoading(false)
         }
     }
 
@@ -176,21 +171,15 @@ export function CustomFieldsBox({
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-4">
-                        <div className="flex flex-col items-center justify-center">
-                            <FileText
-                                size={40}
-                                className="text-muted-foreground mb-3"
-                            />
-                            <p className="text-md mb-1">No custom fields found</p>
-                            <p className="text-sm text-muted-foreground">
-                                {showEmptyFields
-                                    ? "No custom fields are configured for this location"
-                                    : "No custom fields have been filled out yet"
-                                }
-                            </p>
-                        </div>
-                    </div>
+                    <Empty variant="border">
+                        <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                                <CircleFadingPlusIcon className="size-5" />
+                            </EmptyMedia>
+                            <EmptyTitle>No custom fields found</EmptyTitle>
+                            <EmptyDescription>Custom fields will appear here when they are created</EmptyDescription>
+                        </EmptyHeader>
+                    </Empty>
                 )}
             </CollapsibleContent>
         </Collapsible>
