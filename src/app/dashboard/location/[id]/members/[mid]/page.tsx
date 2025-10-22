@@ -200,79 +200,85 @@ export default async function MemberProfilePage(props: {
     }
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
-            <TooltipProvider>
-                <MemberProvider
-                    member={member}
-                    paymentMethods={paymentMethods}
-                    ml={ml}
-                >
-                    <div className="grid grid-cols-7 flex-1 gap-2 px-3 py-2">
-                        <div className="col-span-2 flex flex-col space-y-2">
-                            <MemberProfile
-                                params={params}
-                                pd={memberProfileData}
-                            />
-                            <PointsProfile profileData={memberProfileData} />
-                            <ScrollArea className="flex-1 h-[calc(100vh-300px)]">
-                                <div className='space-y-2 pb-10'>
-                                    <MemberFamilies
-                                        params={params}
-                                        familyMembers={member.familyMembers}
-                                        editable={canEditMember}
-                                    />
-                                    <MemberTagsBox
-                                        editable={canEditMember}
-                                        params={params}
-                                    />
-                                    <CustomFieldsBox
-                                        memberId={params.mid}
-                                        locationId={params.id}
-                                        editable={canEditMember}
-                                        variant="card"
-                                        showEmptyFields={true}
-                                    />
-                                </div>
-                            </ScrollArea>
-                        </div>
-                        <div className="col-span-3 flex flex-col ">
-                            <MemberChatView />
-                        </div>
-
-                        <div className="col-span-2 pr-4">
-                            <ScrollArea className="flex-1 h-full ">
-                                <div className="space-y-4 pb-10">
-
-                                    <MemberSubs params={params} />
-                                    <MemberPkg params={params} />
-
-                                    <Tabs defaultValue="payments methods" className="flex-1 flex flex-col min-h-0">
-                                        <TabsList className="bg-transparent rounded-none p-0 justify-start gap-1 flex-shrink-0">
-                                            {['payments methods', 'invoices', 'transactions'].map((tab) => (
-                                                <TabsTrigger key={tab} value={tab} className='bg-foreground/5 text-xs capitalize rounded-full'>
-                                                    {tab}
-                                                </TabsTrigger>
-                                            ))}
-                                        </TabsList>
-                                        <TabsContent value="payments methods" >
-                                            <PaymentMethods
-                                                editable={canEditMember}
-                                                params={params}
-                                            />
-                                        </TabsContent>
-                                        <TabsContent value="invoices" >
-                                            <MemberInvoice params={params} />
-                                        </TabsContent>
-                                        <TabsContent value="transactions" >
-                                            <MemberTransactions params={params} />
-                                        </TabsContent>
-                                    </Tabs>
-                                </div>
-                            </ScrollArea>
-                        </div>
+        <TooltipProvider>
+            <MemberProvider member={member} ml={ml} paymentMethods={paymentMethods}>
+                <div className="grid grid-cols-7 flex-1 gap-2 p-2 h-full">
+                    <div className="col-span-2 flex flex-col space-y-2 h-full">
+                        <MemberProfile
+                            params={params}
+                            pd={memberProfileData}
+                        />
+                        <PointsProfile profileData={memberProfileData} />
+                        <ScrollArea className="h-full overflow-hidden">
+                            <div className='space-y-2 pb-4'>
+                                <MemberFamilies
+                                    params={params}
+                                    familyMembers={member.familyMembers}
+                                    editable={canEditMember}
+                                />
+                                <MemberTagsBox
+                                    editable={canEditMember}
+                                    params={params}
+                                />
+                                <CustomFieldsBox
+                                    memberId={params.mid}
+                                    locationId={params.id}
+                                    editable={canEditMember}
+                                    variant="card"
+                                    showEmptyFields={true}
+                                />
+                            </div>
+                        </ScrollArea>
                     </div>
-                </MemberProvider>
-            </TooltipProvider>
-        </div>
+                    <div className="col-span-3 flex flex-col h-full">
+                        <MemberChatView />
+                    </div>
+
+                    <div className="col-span-2 h-full">
+                        <ScrollArea className="flex-1 h-full  overflow-hidden">
+                            <div className="space-y-4 pb-10">
+                                <Tabs defaultValue="subscriptions" className="flex-1 flex flex-col min-h-0">
+                                    <TabsList className="bg-transparent rounded-none p-0 justify-start gap-1 flex-shrink-0">
+                                        {['subscriptions', 'packages'].map((tab) => (
+                                            <TabsTrigger key={tab} value={tab} className='bg-foreground/5 text-xs capitalize rounded-full'>
+                                                {tab}
+                                            </TabsTrigger>
+                                        ))}
+                                    </TabsList>
+                                    <TabsContent value="subscriptions" >
+                                        <MemberSubs params={params} />
+                                    </TabsContent>
+                                    <TabsContent value="packages" >
+                                        <MemberPkg params={params} />
+                                    </TabsContent>
+                                </Tabs>
+
+                                <Tabs defaultValue="payments methods" className="flex-1 flex flex-col min-h-0">
+                                    <TabsList className="bg-transparent rounded-none p-0 justify-start gap-1 flex-shrink-0">
+                                        {['payments methods', 'invoices', 'transactions'].map((tab) => (
+                                            <TabsTrigger key={tab} value={tab} className='bg-foreground/5 text-xs capitalize rounded-full'>
+                                                {tab}
+                                            </TabsTrigger>
+                                        ))}
+                                    </TabsList>
+                                    <TabsContent value="payments methods" >
+                                        <PaymentMethods
+                                            editable={canEditMember}
+                                            params={params}
+                                        />
+                                    </TabsContent>
+                                    <TabsContent value="invoices" >
+                                        <MemberInvoice params={params} />
+                                    </TabsContent>
+                                    <TabsContent value="transactions" >
+                                        <MemberTransactions params={params} />
+                                    </TabsContent>
+                                </Tabs>
+                            </div>
+                        </ScrollArea>
+                    </div>
+                </div>
+            </MemberProvider>
+        </TooltipProvider>
     )
 }

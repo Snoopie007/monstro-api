@@ -6,11 +6,16 @@ import { Elements } from '@stripe/react-stripe-js'
 import { getStripe } from '@/libs/client/stripe'
 import PaymentMethodsActions from './actions'
 import { useMemberStatus, useMemberPaymentMethods } from '../../providers'
-import { ChevronsUpDown, CreditCard } from 'lucide-react'
+import { CreditCardIcon } from 'lucide-react'
 import {
-    Badge, CardTitle,
-    Button, Collapsible, CollapsibleContent, CollapsibleTrigger, Item, ItemContent,
-    ItemActions
+    Badge,
+    Item, ItemContent,
+    ItemActions,
+    EmptyTitle,
+    EmptyDescription,
+    EmptyHeader,
+    EmptyMedia,
+    Empty
 } from '@/components/ui'
 import { useState } from 'react'
 
@@ -22,69 +27,48 @@ interface PaymentMethodsProps {
 export function PaymentMethods({ params, editable }: PaymentMethodsProps) {
     const { member } = useMemberStatus()
     const { paymentMethods } = useMemberPaymentMethods()
-    const [open, setOpen] = useState<boolean>(true)
+
 
 
     return (
-        <Collapsible open={open} onOpenChange={setOpen}>
-            <div className=' space-y-0 flex flex-row justify-between items-center'>
-                <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="hover:bg-transparent gap-1 px-0">
-                        <CardTitle className='text-sm font-medium mb-0'>Payment Methods</CardTitle>
-
-                        <ChevronsUpDown className="size-4" />
-                        <span className="sr-only">Toggle</span>
-
-                    </Button>
-                </CollapsibleTrigger>
-                <Elements
-                    stripe={getStripe(
-                        process.env.NEXT_PUBLIC_MEMBER_STRIPE_PUBLIC_KEY!
-                    )}
-                    options={{
-                        appearance: {
-                            variables: {
-                                colorIcon: '#6772e5',
-                                fontFamily:
-                                    'Roboto, Open Sans, Segoe UI, sans-serif',
-                            },
-                        },
-                    }}
-                >
-                    {editable && (
-                        <AddPaymentMethod
-                            member={member}
-                            locationId={params.id}
-                        />
-                    )}
-                </Elements>
-            </div>
-            <CollapsibleContent >
-                {paymentMethods.length > 0 ? (
-
-                    <div className=" space-y-2">
-                        {paymentMethods.map((method, i) => (
-                            <PaymentMethodItem key={i} method={method} params={params} member={member} />
-                        ))}
-                    </div>
-                ) : (
-
-                    <div className="text-center py-4">
-                        <div className="flex flex-col items-center justify-center">
-                            <CreditCard
-                                size={40}
-                                className="text-muted-foreground mb-3"
-                            />
-                            <p className="text-md mb-1">No payment methods found</p>
-                            <p className="text-sm text-muted-foreground">
-                                Please add a payment method to get started
-                            </p>
-                        </div>
-                    </div>
+        <div className="space-y-2">
+            <Elements
+                stripe={getStripe(
+                    process.env.NEXT_PUBLIC_MEMBER_STRIPE_PUBLIC_KEY!
                 )}
-            </CollapsibleContent>
+                options={{
+                    appearance: {
+                        variables: {
+                            colorIcon: '#6772e5',
+                            fontFamily:
+                                'Roboto, Open Sans, Segoe UI, sans-serif',
+                        },
+                    },
+                }}
+            >
+                <AddPaymentMethod member={member} locationId={params.id} />
+            </Elements>
+            {paymentMethods.length > 0 ? (
 
-        </Collapsible >
+                <div className=" space-y-2">
+                    {paymentMethods.map((method, i) => (
+                        <PaymentMethodItem key={i} method={method} params={params} member={member} />
+                    ))}
+                </div>
+            ) : (
+
+                <Empty variant="border">
+                    <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                            <CreditCardIcon className="size-5" />
+                        </EmptyMedia>
+                        <EmptyTitle>No payment methods found</EmptyTitle>
+                        <EmptyDescription>Add a payment method to get started</EmptyDescription>
+                    </EmptyHeader>
+                </Empty>
+            )}
+
+        </div >
     )
 }
 

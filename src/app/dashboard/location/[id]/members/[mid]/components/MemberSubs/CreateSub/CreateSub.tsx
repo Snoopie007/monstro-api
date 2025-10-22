@@ -1,10 +1,13 @@
 'use client'
 import {
-    Button,
     Dialog,
     DialogContent,
     DialogTitle,
     DialogTrigger,
+    Item,
+    ItemMedia,
+    ItemContent,
+    ItemTitle
 } from '@/components/ui'
 import { useState } from 'react'
 import React from 'react'
@@ -12,7 +15,7 @@ import { SubForm } from './SubForm'
 import { VisuallyHidden } from 'react-aria'
 import { useSubscriptions } from '@/hooks'
 import { MemberSubscription } from '@/types'
-import { PlusIcon } from 'lucide-react'
+import { CircleFadingPlusIcon } from 'lucide-react'
 
 export function CreateSubscription({
     params,
@@ -32,13 +35,15 @@ export function CreateSubscription({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button
-                    variant={'ghost'}
-                    size={'icon'}
-                    className="size-6 rounded-sm"
-                >
-                    <PlusIcon className="size-4" />
-                </Button>
+                <Item variant="outline" size="sm" className="border-foreground/10 border-dashed cursor-pointer" >
+                    <ItemMedia>
+                        <CircleFadingPlusIcon className="size-5" />
+                    </ItemMedia>
+                    <ItemContent>
+                        <ItemTitle>Add subscription</ItemTitle>
+                    </ItemContent>
+
+                </Item>
             </DialogTrigger>
             <DialogContent className="max-w-[500px] border-foreground/10">
                 <VisuallyHidden>

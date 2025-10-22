@@ -1,9 +1,12 @@
 import {
-    Button,
     Dialog,
     DialogContent,
     DialogTitle,
     DialogTrigger,
+    Item,
+    ItemMedia,
+    ItemContent,
+    ItemTitle
 } from '@/components/ui'
 import { useState } from 'react'
 import React from 'react'
@@ -12,7 +15,7 @@ import { VisuallyHidden } from 'react-aria'
 import { usePackages } from '@/hooks'
 import { useMemberStatus } from '../../../providers'
 import { MemberPackage } from '@/types'
-import { PlusIcon } from 'lucide-react'
+import { CircleFadingPlusIcon } from 'lucide-react'
 
 export function CreatePackage({
     params,
@@ -34,13 +37,15 @@ export function CreatePackage({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button
-                    variant={'ghost'}
-                    size={'icon'}
-                    className="size-6 rounded-sm"
-                >
-                    <PlusIcon className="size-4" />
-                </Button>
+                <Item variant="outline" size="sm" className="border-foreground/10 border-dashed cursor-pointer" >
+                    <ItemMedia>
+                        <CircleFadingPlusIcon className="size-5" />
+                    </ItemMedia>
+                    <ItemContent>
+                        <ItemTitle>Add a new package</ItemTitle>
+                    </ItemContent>
+
+                </Item>
             </DialogTrigger>
             <DialogContent className="max-w-[450px] border-foreground/10">
                 <VisuallyHidden>

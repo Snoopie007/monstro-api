@@ -1,11 +1,12 @@
 'use client'
 
 import { CircleProgress } from '@/components/ui'
-import { useState } from 'react'
 import { formatAmountForDisplay } from '@/libs/utils'
 import { MemberSubscription } from '@/types'
 import { format } from 'date-fns'
 import { SubActions } from './SubActions'
+import { Clock4Icon } from 'lucide-react'
+import { InfoField } from '../InfoField'
 
 function calculateProgress(start: Date, end: Date) {
     const now = Date.now()
@@ -17,6 +18,8 @@ function calculateProgress(start: Date, end: Date) {
 
     return Math.min(Math.max(Number(progress.toFixed(2)), 10), 100)
 }
+
+
 
 export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
 
@@ -41,56 +44,48 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                     <SubActions sub={sub} refetch={() => { }} />
                 </div>
             </div>
-            <div className="space-y-4 py-2">
-                <div className="flex flex-row justify-between items-center">
-                    <div className="space-y-1">
-                        <div className="text-xs font-medium text-muted-foreground">Duration</div>
-                        <span className="text-sm font-medium">
-                            {format(sub.startDate, 'MMM d, yyyy')} {' - '}
-                            {sub.endedAt ? format(sub.endedAt, 'MMM d, yyyy')
-                                : 'n/a'}
-                        </span>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="text-xs font-medium text-muted-foreground">Price</div>
-                        <span className="text-sm font-medium">
-                            {formatAmountForDisplay(sub.plan?.price! / 100, 'usd', true)}
-                            / {sub.plan?.interval}
-
-                        </span>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="text-xs font-medium text-muted-foreground">Total Collected</div>
-                        <span className="text-sm font-medium">
-
-                        </span>
-                    </div>
+            <div className="space-y-8 py-2">
+                <div className="grid grid-cols-3 justify-between items-center">
+                    <InfoField label="Duration">
+                        {`${format(sub.startDate, 'MMM d, yyyy')} - ${sub.endedAt ? format(sub.endedAt, 'MMM d, yyyy') : 'n/a'}`}
+                    </InfoField>
+                    <InfoField label="Price">
+                        {`${formatAmountForDisplay(sub.plan?.price! / 100, 'usd', true)} / ${sub.plan?.interval}`}
+                    </InfoField>
+                    <InfoField label="Payment Method">
+                        {sub.paymentMethod}
+                    </InfoField>
                 </div>
-                <div className="flex flex-row justify-between items-center">
-                    <div className="space-y-1">
-                        <div className="text-xs font-medium text-muted-foreground">Payment Method</div>
-                        <span className="text-sm font-medium">
-                            {sub.paymentMethod}
-                        </span>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="text-xs font-medium text-muted-foreground">Next Billing Date</div>
-                        <span className="text-sm font-medium">
-                            {format(sub.currentPeriodEnd, 'MMM d, yyyy')}
-                        </span>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="text-xs font-medium text-muted-foreground">Status</div>
-                        <span className="text-sm font-medium flex items-center gap-2 capitalize">
+                <div className="grid grid-cols-3 items-center">
+                    <InfoField label="Next Billing Date">
+                        {format(sub.currentPeriodEnd, 'MMM d, yyyy')}
+                    </InfoField>
+                    <InfoField label="Status">
+                        <span className="flex items-center gap-2">
                             <StatusDot status={sub.status} /> {sub.status}
                         </span>
-                    </div>
-
+                    </InfoField>
+                    <InfoField label="Trial Ends">
+                        {sub.trialEnd ? format(sub.trialEnd!, 'MMM d, yyyy') : 'n/a'}
+                    </InfoField>
                 </div>
+
+                {sub.cancelAt && sub.cancelAtPeriodEnd && (
+                    <div className="grid grid-cols-3 items-center">
+                        <InfoField label="Cancels at">
+                            <span className="flex items-center gap-1">
+                                <Clock4Icon size={14} /> {format(sub.cancelAt, "MMM d, yyyy")}
+                            </span>
+                        </InfoField>
+                    </div>
+                )}
             </div>
         </div>
     )
 }
+
+
+
 function StatusDot({ status }: { status: string }) {
     const getStatusColor = (status: string) => {
         switch (status) {

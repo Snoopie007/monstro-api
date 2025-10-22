@@ -1,56 +1,44 @@
 'use client'
-
-import { Badge, Button, Collapsible, CollapsibleContent, CollapsibleTrigger, CardTitle } from '@/components/ui'
 import {
     Item,
+    Badge,
     ItemActions,
     ItemContent,
     ItemMedia,
-} from '@/components/ui/item'
+    ItemTitle,
+    Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent,
+    Button
+} from '@/components/ui'
 import { useMemberInvoices } from '@/hooks'
 import { formatAmountForDisplay } from '@/libs/utils'
 import type { MemberInvoice } from '@/types'
 import { format } from 'date-fns'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { ChevronsUpDown, FileText, EllipsisVerticalIcon } from 'lucide-react'
+import { EllipsisVerticalIcon, CircleFadingPlusIcon } from 'lucide-react'
+import Link from 'next/link'
 
 
 interface MemberInvoiceProps {
     params: { id: string; mid: string }
 }
 export function MemberInvoice({ params }: MemberInvoiceProps) {
-    const [open, setOpen] = useState<boolean>(true)
-    const router = useRouter()
-
     const { invoices } = useMemberInvoices(params.id, params.mid)
 
-
-    const handleCreateInvoice = () => {
-        router.push(`/dashboard/location/${params.id}/invoices/new`)
-    }
-
     return (
-        <Collapsible open={open} onOpenChange={setOpen}>
-            <div className='space-y-0 flex flex-row justify-between items-center'>
-                <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="hover:bg-transparent gap-1 px-0">
-                        <CardTitle className='text-sm font-medium mb-0'>Invoices</CardTitle>
-                        <ChevronsUpDown className="size-4" />
-                        <span className="sr-only">Toggle</span>
-                    </Button>
-                </CollapsibleTrigger>
-                <Button
-                    onClick={handleCreateInvoice}
-                    size={'icon'}
-                    variant={'ghost'}
-                    className="size-6  text-lg"
-                >
-                    +
-                </Button>
-            </div>
-            <CollapsibleContent>
-                {invoices && invoices.length > 0 ? (
+        <div className="space-y-2">
+
+            <Item variant="outline" size="sm" className="border-foreground/10 border-dashed cursor-pointer" asChild>
+                <a href={`/dashboard/location/${params.id}/invoices/new`}>
+                    <ItemMedia>
+                        <CircleFadingPlusIcon className="size-5" />
+                    </ItemMedia>
+                    <ItemContent>
+                        <ItemTitle>Create an Invoice</ItemTitle>
+                    </ItemContent>
+
+                </a>
+            </Item>
+            {
+                invoices && invoices.length > 0 ? (
                     <div className="space-y-2">
                         {invoices.map((invoice: MemberInvoice) => (
                             <InvoiceItem
@@ -60,22 +48,19 @@ export function MemberInvoice({ params }: MemberInvoiceProps) {
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-4">
-                        <div className="flex flex-col items-center justify-center">
-                            <FileText
-                                size={20}
-                                className="text-muted-foreground mb-3"
-                            />
-                            <p className="text-md mb-1">No invoices found</p>
-                            <p className="text-sm text-muted-foreground">
-                                Create an invoice to get started
-                            </p>
-                        </div>
-                    </div>
-                )}
-            </CollapsibleContent>
-        </Collapsible>
+                    <Empty variant="border">
+                        <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                                <CircleFadingPlusIcon className="size-5" />
+                            </EmptyMedia>
+                            <EmptyTitle>No invoices found</EmptyTitle>
+                            <EmptyDescription>Create an invoice to get started</EmptyDescription>
+                        </EmptyHeader>
 
+                    </Empty>
+                )
+            }
+        </div>
     )
 }
 

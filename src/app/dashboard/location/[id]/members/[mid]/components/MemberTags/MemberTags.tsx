@@ -42,13 +42,9 @@ export function MemberTagsBox({ params, editable }: MemberTagsBoxProps) {
     }
 
     return (
-        <Collapsible open={open} onOpenChange={setOpen} className="mb-4">
+        <Collapsible open={open} onOpenChange={setOpen}>
             <CollapsibleTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="hover:bg-transparent gap-1 px-0"
-                >
+                <Button variant="ghost" size="sm" className="hover:bg-transparent gap-1 px-0">
                     <CardTitle className="text-sm font-medium mb-0">
                         Tags
                     </CardTitle>
