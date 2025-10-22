@@ -42,7 +42,7 @@ interface Props {
 	className?: string;
 }
 
-export function EditMemberInfoDialog({ params, className }: Props) {
+export function EditMemberDialog({ params, className }: Props) {
 	const [open, setOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const { member, ml, updateMemberLocation } = useMemberStatus();
@@ -111,10 +111,9 @@ export function EditMemberInfoDialog({ params, className }: Props) {
 				<Button
 					variant="ghost"
 					size="icon"
-
-					onClick={() => setOpen(true)}
+					className="size-6 bg-foreground/5"
 				>
-					<Edit className="size-3" />
+					<Edit className="size-3 " />
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="max-w-2xl rounded-sm border-foreground/10 max-h-[90vh] overflow-y-auto">
@@ -183,22 +182,7 @@ export function EditMemberInfoDialog({ params, className }: Props) {
 								/>
 							</div>
 
-							<FormField
-								control={form.control}
-								name="avatar"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Avatar URL</FormLabel>
-										<FormControl>
-											<Input
-												{...field}
-												placeholder="https://example.com/avatar.jpg"
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
+
 						</form>
 					</Form>
 

@@ -1,3 +1,4 @@
+'use client'
 import {
     Button,
     Dialog,
@@ -14,7 +15,7 @@ import {
     Calendar
 } from "@/components/ui";
 import {
-    Form, FormField, FormLabel, FormMessage, FormItem, FormControl,
+    Form, FormField, FormLabel, FormMessage, FormItem,
     Select,
     SelectTrigger,
     SelectContent,
@@ -144,7 +145,7 @@ export default function ChargeItem({ params }: { params: { id: string, mid: numb
                                                     selected={field.value}
                                                     onSelect={field.onChange}
                                                     disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                                                    initialFocus
+
                                                 />
                                             </PopoverContent>
                                         </Popover>

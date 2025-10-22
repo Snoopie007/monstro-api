@@ -5,9 +5,7 @@ import {
     Item,
     ItemActions,
     ItemContent,
-    ItemDescription,
     ItemMedia,
-    ItemTitle,
 } from '@/components/ui/item'
 import { useMemberInvoices } from '@/hooks'
 import { formatAmountForDisplay } from '@/libs/utils'
@@ -15,13 +13,13 @@ import type { MemberInvoice } from '@/types'
 import { format } from 'date-fns'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronsUpDown, FileText } from 'lucide-react'
+import { ChevronsUpDown, FileText, EllipsisVerticalIcon } from 'lucide-react'
 
 
-interface MemberInvoiceItemsProps {
+interface MemberInvoiceProps {
     params: { id: string; mid: string }
 }
-export function MemberInvoice({ params }: MemberInvoiceItemsProps) {
+export function MemberInvoice({ params }: MemberInvoiceProps) {
     const [open, setOpen] = useState<boolean>(true)
     const router = useRouter()
 
@@ -29,7 +27,7 @@ export function MemberInvoice({ params }: MemberInvoiceItemsProps) {
 
 
     const handleCreateInvoice = () => {
-        router.push(`/dashboard/location/${params.id}/members/${params.mid}/invoices/new`)
+        router.push(`/dashboard/location/${params.id}/invoices/new`)
     }
 
     return (
@@ -96,7 +94,7 @@ function InvoiceItem({ invoice }: { invoice: MemberInvoice }) {
             <ItemContent className='flex flex-row justify-between gap-2 items-center'>
 
                 <span>
-                    {invoice.id}
+                    {invoice.description?.substring(0, 30)}
                 </span>
                 <span className='font-medium'>
                     {formatAmountForDisplay(invoice.total / 100, invoice.currency || 'usd', true)}
@@ -106,7 +104,9 @@ function InvoiceItem({ invoice }: { invoice: MemberInvoice }) {
                 </span>
             </ItemContent>
             <ItemActions>
-
+                <Button variant="ghost" size="icon" className="size-6 ">
+                    <EllipsisVerticalIcon className="size-4" />
+                </Button>
             </ItemActions>
         </Item>
     )

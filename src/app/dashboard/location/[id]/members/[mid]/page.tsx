@@ -41,10 +41,7 @@ type MemberProfileData = {
     lastSeenFormatted: string
 }
 
-async function fetchStripeKeys(
-    id: string,
-    mid: string
-): Promise<PromiseReturnType | null> {
+async function fetchStripeKeys(id: string, mid: string): Promise<PromiseReturnType | null> {
     if (!id || !mid) {
         return null
     }
@@ -62,21 +59,12 @@ async function fetchStripeKeys(
                             },
                         },
                         subscriptions: {
-                            where: (ms, { eq, and }) =>
-                                and(
-                                    eq(ms.memberId, mid),
-                                    eq(ms.locationId, id)
-                                ),
+                            where: (ms, { eq, and }) => and(
+                                eq(ms.memberId, mid),
+                                eq(ms.locationId, id)
+                            ),
                             with: {
-                                plan: {
-                                    with: {
-                                        planPrograms: {
-                                            with: {
-                                                program: true,
-                                            },
-                                        },
-                                    },
-                                },
+                                plan: true
                             },
                         },
                     },

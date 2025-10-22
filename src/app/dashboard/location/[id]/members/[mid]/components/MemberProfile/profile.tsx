@@ -11,15 +11,12 @@ import {
 
 import {
     ChevronLeft,
-    EllipsisVertical,
-    Mail,
-    Phone,
-    Clock,
 } from 'lucide-react'
 import { useMemberStatus } from '../../providers/MemberContext'
 import { useRouter } from 'next/navigation'
 import { usePermission } from '@/hooks/usePermissions'
 import { VisuallyHidden } from 'react-aria'
+import { DeleteMemberDialog, EditMemberDialog } from '.'
 
 type MemberProfileData = {
     totalPointsEarned: number
@@ -61,14 +58,12 @@ export function MemberProfile({ params, pd }: MemberProfileProps) {
                         <ChevronLeft className="size-4" />
                     </Button>
                     <div className="flex flex-row group">
-                        <Button
-                            variant="default"
-                            size="icon"
-                            className="bg-foreground/5 size-6"
-                        >
-                            <EllipsisVertical className="size-4 dark:text-foreground text-foreground" />
-                        </Button>
-
+                        <DeleteMemberDialog
+                            params={params}
+                        />
+                        <EditMemberDialog
+                            params={params}
+                        />
                     </div>
                 </div>
                 <div className="flex flex-row gap-4 items-center">

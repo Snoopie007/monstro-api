@@ -8,15 +8,12 @@ import {
 	DialogBody,
 	DialogTrigger,
 	Button,
-	Tooltip,
-	TooltipTrigger,
-	TooltipContent,
 	DialogClose,
 } from "@/components/ui";
 import { useState } from "react";
-import { tryCatch, cn } from "@/libs/utils";
+import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
-import { Loader2, AlertTriangle, Trash2 } from "lucide-react";
+import { Loader2, AlertTriangle, Trash } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Props {
@@ -61,12 +58,8 @@ export function DeleteMemberDialog({ params, className }: Props) {
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button
-					variant="ghost"
-					size="icon"
-					onClick={() => setOpen(true)}
-				>
-					<Trash2 className="size-3 text-destructive" />
+				<Button variant="ghost" size="icon" className="size-6 bg-foreground/5"			>
+					<Trash className="size-3 text-red-500" />
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="max-w-md rounded-sm border-foreground/10">
