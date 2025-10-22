@@ -30,7 +30,6 @@ export function MemberTagsBox({ params, editable }: MemberTagsBoxProps) {
     const { memberTags, mutate } = useMemberTags(params.id, params.mid)
 
     async function handleUpdate(tagId: string) {
-
         await mutate()
     }
 
@@ -52,7 +51,7 @@ export function MemberTagsBox({ params, editable }: MemberTagsBoxProps) {
                 </Button>
             </CollapsibleTrigger>
             <CollapsibleContent>
-                <CustomTagsSelector params={params} selectedTag={memberTags} onUpdate={handleUpdate} />
+                <CustomTagsSelector params={params} selectedTag={memberTags} onUpdate={handleUpdate} editable={editable} />
 
                 {memberTags.length === 0 ? (
                     <Empty variant="border">
@@ -67,7 +66,7 @@ export function MemberTagsBox({ params, editable }: MemberTagsBoxProps) {
                 ) : (
                     <div className="flex flex-row gap-2 flex-wrap">
                         {memberTags.map((tag) => (
-                            <MemberTagItem key={tag.id} tag={tag} params={params} onUpdate={handleUpdate} />
+                            <MemberTagItem key={tag.id} tag={tag} params={params} editable={editable} onUpdate={handleUpdate} />
                         ))}
                     </div>
                 )}
@@ -79,13 +78,15 @@ export function MemberTagsBox({ params, editable }: MemberTagsBoxProps) {
 interface MemberTagItemProps {
     tag: MemberTag
     params: { id: string, mid: string }
+    editable: boolean
     onUpdate: (tagId: string) => void
 }
 
-function MemberTagItem({ tag, params, onUpdate }: MemberTagItemProps) {
+function MemberTagItem({ tag, params, editable, onUpdate }: MemberTagItemProps) {
     const [loading, setLoading] = useState<boolean>(false)
 
     async function handleRemove(tagId: string) {
+        if (!editable || loading || !tagId) return
         setLoading(true)
         const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/members/${params.mid}/tags`, {
             method: 'DELETE'

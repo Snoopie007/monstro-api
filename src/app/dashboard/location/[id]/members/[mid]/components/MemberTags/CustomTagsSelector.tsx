@@ -9,11 +9,10 @@ import {
     CommandGroup,
     PopoverContent,
     CustomCommandInput,
-    Button,
 } from '@/components/ui'
 import { tryCatch } from '@/libs/utils'
 import { MemberTag } from '@/types'
-import { CheckIcon, Loader2, PlusCircle, PlusIcon } from 'lucide-react'
+import { CheckIcon, Loader2, PlusCircle } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'react-toastify'
 
@@ -21,31 +20,35 @@ interface Props {
     params: { id: string, mid: string }
     selectedTag: MemberTag[]
     onUpdate: (tagId: string) => Promise<void>
+    editable: boolean
 }
 
 
-export function CustomTagsSelector({ params, selectedTag, onUpdate }: Props) {
+export function CustomTagsSelector({ params, selectedTag, onUpdate, editable }: Props) {
     const [tags, setTags] = useState<MemberTag[]>([])
     const [open, setOpen] = useState<boolean>(false)
     const [loading, setLoading] = useState<boolean>(false)
     const [isLoading, setIsLoading] = useState<boolean>(false)
+    const [hasFetchedTags, setHasFetchedTags] = useState<boolean>(false)
     const [newTagName, setNewTagName] = useState<string>('')
 
 
 
     async function handleOpenChange(open: boolean) {
         setOpen(open)
-        if (open && tags.length === 0) {
+        if (open && tags.length === 0 && !hasFetchedTags) {
             setLoading(true)
             const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/tags`))
             setLoading(false)
             if (error || !result || !result.ok) return
+            setHasFetchedTags(true)
             const data = await result.json()
             setTags(data)
         }
     }
 
     async function handleSelect(tagId: string) {
+        if (!editable || loading || !tagId) return
         if (selectedTag.some(tag => tag.id === tagId)) return
         const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/members/${params.mid}/tags`, {
             method: 'POST',
@@ -61,8 +64,8 @@ export function CustomTagsSelector({ params, selectedTag, onUpdate }: Props) {
     }
 
     async function handleCreateTag() {
+        if (!editable || loading || !newTagName.trim()) return
 
-        if (!newTagName.trim()) return
         setIsLoading(true)
         const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/tags`, {
             method: 'POST',
