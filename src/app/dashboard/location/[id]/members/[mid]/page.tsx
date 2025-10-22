@@ -210,7 +210,7 @@ export default async function MemberProfilePage(props: {
                 paymentMethods={paymentMethods}
             >
                 <div className="grid grid-cols-7 flex-1 gap-2 p-2 h-full">
-                    <div className="col-span-2 flex flex-col space-y-4 h-full">
+                    <div className="col-span-2 flex flex-col space-y-2 h-full">
                         <MemberProfile params={params} pd={memberProfileData} />
                         <PointsProfile profileData={memberProfileData} />
                         <ScrollArea className="h-[calc(100vh-318px)] overflow-hidden">
