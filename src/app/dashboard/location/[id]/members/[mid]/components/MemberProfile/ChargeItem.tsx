@@ -6,7 +6,6 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
     DialogFooter,
     DialogClose,
     Popover,
@@ -15,7 +14,11 @@ import {
     Calendar
 } from "@/components/ui";
 import {
-    Form, FormField, FormLabel, FormMessage, FormItem,
+    Form,
+    FormField,
+    FormLabel,
+    FormMessage,
+    FormItem,
     Select,
     SelectTrigger,
     SelectContent,
@@ -24,22 +27,25 @@ import {
     Input,
     Textarea,
 } from "@/components/forms";
-import { useState } from "react";
+import { SetStateAction, Dispatch, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn, tryCatch } from "@/libs/utils";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
-import { useMemberStatus } from "../../providers/MemberContext";
 import { format } from "date-fns"
 import { ChargeItemSchema } from "../../schema";
 
 
-export default function ChargeItem({ params }: { params: { id: string, mid: number } }) {
-    const [open, setOpen] = useState<boolean>(false);
+interface Props {
+    params: { id: string, mid: string };
+    open: boolean;
+    setOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+export default function ChargeItem({ params, open, setOpen }: Props) {
     const [loading, setLoading] = useState(false);
-    const { member } = useMemberStatus();
 
 
     const form = useForm<z.infer<typeof ChargeItemSchema>>({
@@ -85,9 +91,7 @@ export default function ChargeItem({ params }: { params: { id: string, mid: numb
 
     return (
         <Dialog open={open} onOpenChange={handleDialogChange}>
-            <DialogTrigger asChild>
-                <Button variant="foreground" size="xs" className="border">Charge</Button>
-            </DialogTrigger>
+
             <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle>Charge for an item </DialogTitle>

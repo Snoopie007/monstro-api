@@ -6,7 +6,6 @@ import {
 	DialogTitle,
 	DialogFooter,
 	DialogBody,
-	DialogTrigger,
 	Button,
 	DialogClose,
 } from "@/components/ui";
@@ -22,28 +21,23 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Dispatch, SetStateAction } from "react";
 import { tryCatch, cn } from "@/libs/utils";
 import { toast } from "react-toastify";
-import { Loader2, Edit } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useMemberStatus } from "../../providers";
 import { MemberLocationProfile } from "@/types";
+import { MemberInfoSchema } from "../../schema";
 
-const MemberInfoSchema = z.object({
-	firstName: z.string().min(1, "First name is required"),
-	lastName: z.string().optional(),
-	email: z.string().email("Please enter a valid email address"),
-	phone: z.string().optional(),
-	avatar: z.string().url().optional().or(z.literal("")),
-});
 
 interface Props {
 	params: { id: string; mid: string };
-	className?: string;
+	open: boolean;
+	setOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-export function EditMemberDialog({ params, className }: Props) {
-	const [open, setOpen] = useState(false);
+export default function EditMemberDialog({ params, open, setOpen }: Props) {
+
 	const [loading, setLoading] = useState(false);
 	const { member, ml, updateMemberLocation } = useMemberStatus();
 
@@ -107,18 +101,10 @@ export function EditMemberDialog({ params, className }: Props) {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button
-					variant="ghost"
-					size="icon"
-					className="size-6 bg-foreground/5"
-				>
-					<Edit className="size-3 " />
-				</Button>
-			</DialogTrigger>
-			<DialogContent className="max-w-2xl rounded-sm border-foreground/10 max-h-[90vh] overflow-y-auto">
+
+			<DialogContent className="max-w-md rounded-sm border-foreground/10">
 				<DialogHeader>
-					<DialogTitle>Edit Member Information</DialogTitle>
+					<DialogTitle>Edit Member</DialogTitle>
 				</DialogHeader>
 
 				<DialogBody>

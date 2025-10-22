@@ -9,8 +9,9 @@ import {
 	DialogTrigger,
 	Button,
 	DialogClose,
+	DropdownMenuItem,
 } from "@/components/ui";
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Loader2, AlertTriangle, Trash } from "lucide-react";
@@ -18,12 +19,12 @@ import { useRouter } from "next/navigation";
 
 interface Props {
 	params: { id: string; mid: string };
-	className?: string;
+	open: boolean;
+	setOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-export function DeleteMemberDialog({ params, className }: Props) {
+export default function DeleteMemberDialog({ params, open, setOpen }: Props) {
 	const [loading, setLoading] = useState(false);
-	const [open, setOpen] = useState(false);
 	const router = useRouter();
 
 	async function onConfirm() {
@@ -57,11 +58,7 @@ export function DeleteMemberDialog({ params, className }: Props) {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button variant="ghost" size="icon" className="size-6 bg-foreground/5"			>
-					<Trash className="size-3 text-red-500" />
-				</Button>
-			</DialogTrigger>
+
 			<DialogContent className="max-w-md rounded-sm border-foreground/10">
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
@@ -76,7 +73,7 @@ export function DeleteMemberDialog({ params, className }: Props) {
 							Are you sure you want to delete this member from this location?
 						</p>
 						<div className="bg-destructive/10 border border-destructive/20 rounded-sm p-3">
-							<p className="text-sm text-destructive">
+							<p className="text-sm text-white">
 								<strong>Warning:</strong> This action cannot be undone. The
 								member will be deleted and will no longer be able to access
 								this location.

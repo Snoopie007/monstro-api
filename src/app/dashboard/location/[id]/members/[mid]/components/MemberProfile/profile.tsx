@@ -16,7 +16,7 @@ import { useMemberStatus } from '../../providers/MemberContext'
 import { useRouter } from 'next/navigation'
 import { usePermission } from '@/hooks/usePermissions'
 import { VisuallyHidden } from 'react-aria'
-import { DeleteMemberDialog, EditMemberDialog } from '.'
+import { ProfileActions } from './ProfileActions'
 
 type MemberProfileData = {
     totalPointsEarned: number
@@ -58,12 +58,7 @@ export function MemberProfile({ params, pd }: MemberProfileProps) {
                         <ChevronLeft className="size-4" />
                     </Button>
                     <div className="flex flex-row group">
-                        <DeleteMemberDialog
-                            params={params}
-                        />
-                        <EditMemberDialog
-                            params={params}
-                        />
+                        <ProfileActions params={params} />
                     </div>
                 </div>
                 <div className="flex flex-row gap-4 items-center">
