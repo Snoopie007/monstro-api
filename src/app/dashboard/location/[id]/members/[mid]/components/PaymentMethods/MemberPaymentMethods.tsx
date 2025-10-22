@@ -92,29 +92,23 @@ export function PaymentMethods({ params, editable }: PaymentMethodsProps) {
 function PaymentMethodItem({ method, params, member }: { method: any, params: { id: string; mid: string }, member: any }) {
     return (
         <Item variant="muted" className='px-4 py-3 hover:bg-muted-foreground/5'>
-            <ItemContent>
-                <div className="flex flex-row items-center gap-2">
-                    <span  >
-                        {method.card?.brand}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                        {method.card?.funding} ••••{' '}
-                        {method.card?.last4}{' '}
-                        {method.allow_redisplay === 'always' && (
-                            <Badge roles="blue" size="tiny">
-                                Default
-                            </Badge>
-                        )}
-                    </span>
-                    <div className="flex flex-row items-center gap-2">
-                        <span className="text-sm text-muted-foreground">
-                            expires on {method.card?.exp_month}/
-                            {method.card?.exp_year}
-                        </span>
-                    </div>
-
-                </div>
-
+            <ItemContent className='flex flex-row justify-between items-center gap-2'>
+                <span  >
+                    {method.card?.brand}
+                </span>
+                <span >
+                    {method.card?.funding} ••••{' '}
+                    {method.card?.last4}{' '}
+                    {method.allow_redisplay === 'always' && (
+                        <Badge roles="blue" size="tiny">
+                            Default
+                        </Badge>
+                    )}
+                </span>
+                <span >
+                    expires on {method.card?.exp_month}/
+                    {method.card?.exp_year}
+                </span>
 
             </ItemContent>
             <ItemActions>

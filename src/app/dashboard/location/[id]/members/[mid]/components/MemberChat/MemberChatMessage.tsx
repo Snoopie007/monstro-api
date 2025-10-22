@@ -24,7 +24,7 @@ export function MemberChatMessage({
                         {userName}
                     </span>
                     <span className="text-sm text-muted-foreground">
-                        {format(message.created || new Date(), 'HH:mm a')}
+                        {format(message.created, 'HH:mm a')}
                     </span>
                 </div>
                 <div className="leading-relaxed">

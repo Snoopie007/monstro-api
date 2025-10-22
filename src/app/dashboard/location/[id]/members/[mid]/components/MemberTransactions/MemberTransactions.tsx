@@ -6,33 +6,16 @@ import { useMemberTransactions } from '@/hooks/hooks'
 import { Transaction } from '@/types'
 import { TransactionItem } from './TransactionItem'
 
-export const MemberTransactionItems = ({
-    params,
-}: {
+interface MemberTransactionsProps {
     params: { id: string; mid: string }
-}) => {
+}
+export function MemberTransactions({ params }: MemberTransactionsProps) {
     const { transactions, isLoading, error, mutate } = useMemberTransactions(
         params.id,
         params.mid
     )
 
-    if (isLoading) {
-        return (
-            <div className="flex flex-col gap-2">
-                <Skeleton className="w-full h-24 " />
-                <Skeleton className="w-full h-16 " />
-                <Skeleton className="w-full h-16 " />
-            </div>
-        )
-    }
 
-    const renderTransactions = () => {
-        return transactions.map((transaction: Transaction) => (
-            <li key={transaction.id}>
-                <TransactionItem transaction={transaction} params={params} />
-            </li>
-        ))
-    }
 
     return (
         <div>
@@ -42,10 +25,16 @@ export const MemberTransactionItems = ({
                 </h2>
             </div>
             <ScrollArea className="max-h-[350px] w-full">
-                {transactions && transactions.length > 0 && (
-                    <ul className="flex flex-col gap-2">
-                        {renderTransactions()}
-                    </ul>
+                {transactions && transactions.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                        {transactions.map((transaction: Transaction) => (
+                            <TransactionItem key={transaction.id} transaction={transaction} params={params} />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-4">
+                        <p className="text-muted-foreground">No transactions found</p>
+                    </div>
                 )}
             </ScrollArea>
         </div>

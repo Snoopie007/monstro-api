@@ -1,5 +1,5 @@
 'use client'
-import { Avatar, AvatarImage } from '@/components/ui'
+import { ItemContent, Item, ItemMedia, ItemTitle, ItemDescription } from '@/components/ui'
 import { useMemberStatus } from '../../providers/MemberContext'
 import { FamilyMember } from '@/types/FamilyMember'
 import AddChildMember from './AddMember'
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui'
 import { useState } from 'react'
 import { ChevronsUpDown } from 'lucide-react'
+import Image from 'next/image'
 
 interface MemberFamiliesProps {
     params: { id: string; mid: string }
@@ -42,13 +43,13 @@ export function MemberFamilies({
                 )}
             </div>
 
-            <CollapsibleContent className='bg-muted/50 rounded-lg p-4' >
+            <CollapsibleContent  >
                 {familyMembers && familyMembers.length > 0 ? (
-                    <ul className="space-y-6">
+                    <div className="space-y-2">
                         {familyMembers.map((fm) => (
                             <FamilyMemberItem key={fm.id} familyMember={fm} />
                         ))}
-                    </ul>
+                    </div>
                 ) : (
                     <div className='flex flex-col items-center justify-center'>
                         <p className=" text-center text-muted-foreground">No family members found</p>
@@ -64,26 +65,25 @@ export function MemberFamilies({
 
 function FamilyMemberItem({ familyMember }: { familyMember: FamilyMember }) {
     const avatar = familyMember.relatedMember?.avatar || '/images/default-avatar.png'
+    const relatedMember = familyMember.relatedMember;
     return (
-        <li key={familyMember.id} className="flex flex-row gap-4 items-center">
-            <Avatar className="size-8 flex-initial">
-                <AvatarImage src={avatar} />
-            </Avatar>
-            <div className="space-y-0 flex-1">
-                <div className="font-medium text-sm">
-                    {familyMember.relatedMember?.firstName}{' '}
-                    {familyMember.relatedMember?.lastName}
-                </div>
-                <div className='text-xs leading-none'>
+        <Item variant="muted" className="p-3 gap-2">
+            <ItemMedia>
+                <Image src={avatar} alt={relatedMember?.firstName || ''} width={28} height={28}
+                    className='rounded-full object-cover' />
+            </ItemMedia>
+            <ItemContent className=" flex-1 gap-0">
+                <ItemTitle className="flex flex-row items-center gap-2">
+                    {relatedMember?.firstName}{' '}
+                    {relatedMember?.lastName}
                     <span className=" text-muted-foreground">
                         {familyMember.relationship}
 
 
                     </span>
 
-                </div>
-            </div>
-
-        </li>
+                </ItemTitle>
+            </ItemContent>
+        </Item>
     )
 }

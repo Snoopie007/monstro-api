@@ -1,42 +1,36 @@
 import { Badge } from '@/components/ui'
 import {
     Item,
-    ItemDescription,
-    ItemTitle,
+    ItemMedia,
     ItemContent,
     ItemActions,
-} from '@/components/ui/item'
+} from '@/components/ui'
 import { formatAmountForDisplay } from '@/libs/utils'
-import { Transaction } from '@/types/transaction'
+import { Transaction } from '@/types'
+import { format } from 'date-fns'
 import MemberPaymentActions from './actions'
 
-export const TransactionItem = ({
-    transaction,
-    params,
-}: {
+interface TransactionItemProps {
     transaction: Transaction
     params: { id: string; mid: string }
-}) => {
+}
+
+export function TransactionItem({ transaction, params }: TransactionItemProps) {
     return (
-        <Item variant="muted" className="hover:bg-muted-foreground/5">
-            <ItemContent>
-                <ItemTitle>
-                    {formatAmountForDisplay(
-                        transaction.amount / 100,
-                        transaction.currency,
-                        true
-                    )}
-                </ItemTitle>
-                <ItemDescription className="text-muted-foreground text-sm">
-                    <Badge
-                        transaction={transaction.status}
-                        className="capitalize"
-                    >
-                        {transaction.status}
-                    </Badge>
-                    {' • '}{' '}
+        <Item variant="muted" className='p-3'>
+            <ItemMedia>
+                <Badge transaction={transaction.status} className="capitalize">
+                    {transaction.status}
+                </Badge>
+            </ItemMedia>
+            <ItemContent className='flex flex-row justify-between gap-2 items-center'>
+
+                <span className='font-medium'>
+                    {formatAmountForDisplay(transaction.amount / 100, transaction.currency || 'usd', true)}
+                </span>
+                <span>
                     {transaction.paymentMethod === 'card' &&
-                    transaction.metadata?.card ? (
+                        transaction.metadata?.card ? (
                         <div className="flex flex-row items-center gap-1">
                             <span className="capitalize">
                                 {transaction.metadata?.card?.brand}
@@ -52,7 +46,10 @@ export const TransactionItem = ({
                             {transaction.paymentMethod}
                         </span>
                     )}
-                </ItemDescription>
+                </span>
+                <span className='font-medium'>
+                    {format(transaction.created, 'MMM d, yyyy')}
+                </span>
             </ItemContent>
             <ItemActions>
                 <MemberPaymentActions

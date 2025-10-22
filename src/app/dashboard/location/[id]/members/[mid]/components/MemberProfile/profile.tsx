@@ -6,19 +6,19 @@ import {
     Card,
     CardContent,
     CardDescription,
-    CardHeader,
     CardTitle,
 } from '@/components/ui'
 
 import {
     ChevronLeft,
     EllipsisVertical,
+    Mail,
+    Phone,
+    Clock,
 } from 'lucide-react'
 import { useMemberStatus } from '../../providers/MemberContext'
 import { useRouter } from 'next/navigation'
-import { MemberDeleteButton, MemberEditButton } from '../ContactInfo'
 import { usePermission } from '@/hooks/usePermissions'
-import { Item, ItemContent } from '@/components/ui/item'
 import { VisuallyHidden } from 'react-aria'
 
 type MemberProfileData = {
@@ -28,11 +28,11 @@ type MemberProfileData = {
 
 interface MemberProfileProps {
     params: { id: string; mid: string }
-    profileData: MemberProfileData
+    pd: MemberProfileData
 }
 
 
-export function MemberProfile({ params, profileData }: MemberProfileProps) {
+export function MemberProfile({ params, pd }: MemberProfileProps) {
     const canDeleteMember = usePermission('delete member', params.id)
     const canEditMember = usePermission('edit member', params.id)
 
@@ -52,9 +52,7 @@ export function MemberProfile({ params, profileData }: MemberProfileProps) {
 
             <CardContent className="space-y-4 px-0">
                 <div className="flex justify-between flex-row items-center">
-                    <Button
-                        variant="ghost"
-                        size="icon"
+                    <Button variant="ghost" size="icon"
                         onClick={() => {
                             router.back()
                         }}
@@ -73,45 +71,28 @@ export function MemberProfile({ params, profileData }: MemberProfileProps) {
 
                     </div>
                 </div>
-                <div className="flex flex-row gap-4">
-                    <Avatar className="size-20 rounded-full">
+                <div className="flex flex-row gap-4 items-center">
+                    <Avatar className="size-20 rounded-full bg-foreground/5">
                         <AvatarImage src={memberProfile?.avatar || '/images/default-avatar.png'} />
                     </Avatar>
 
                     <div className="flex flex-col gap-4 flex-1">
-                        <div className="space-y-0.5 pt-2">
+                        <div className="space-y-1">
                             <div className="font-bold text-lg leading-5">
                                 {memberProfile?.firstName} {memberProfile?.lastName}
                             </div>
-                            <span className="text-sm text-muted-foreground">{memberProfile?.email}</span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            <div className="flex flex-col  space-y-1">
-                                <span className=" text-muted-foreground  text-sm">
-                                    Total Points Earned
-                                </span>
-                                <span className="font-bold  text-sm">
-                                    {profileData.totalPointsEarned} points
-                                </span>
-                            </div>
+                            <div className="flex flex-row gap-1 text-sm text-muted-foreground">
+                                <span>{memberProfile?.email}</span>
+                                <span>/</span>
+                                <span>{memberProfile?.phone}</span>
 
-                            <div className="flex flex-col space-y-1">
-                                <span className=" text-muted-foreground  text-sm">
-                                    Current Points
-                                </span>
-                                <span className="font-bold">
-                                    {ml?.points || 0}
-                                </span>
                             </div>
-                            <div className="flex flex-col space-y-1">
-                                <span className=" text-muted-foreground  text-sm">
-                                    Last seen
-                                </span>
-                                <span className="font-bold text-sm ">
-                                    {profileData.lastSeenFormatted}
-                                </span>
+                            <div className="text-sm text-muted-foreground">
+
+                                <span> Last seen: {pd.lastSeenFormatted}</span>
                             </div>
                         </div>
+
                     </div>
                 </div>
 
