@@ -1,8 +1,8 @@
 'use client'
-import { Button, ScrollArea } from '@/components/ui'
-import { Textarea } from '@/components/forms'
+import { ScrollArea } from '@/components/ui'
 import { MemberChatMessage } from './MemberChatMessage'
-import { Send } from 'lucide-react'
+import { MemberChatInput } from './MemberChatInput'
+import { PulsingStatus } from '@/components/ui/PulsingStatus'
 
 const dummyMessages = [
     {
@@ -24,10 +24,9 @@ export function MemberChatView() {
         <div className="bg-muted/50 rounded-lg flex-1 h-full flex flex-col min-h-0">
             <div className="flex flex-row gap-2 items-center justify-between border-b border-foreground/5 p-4 flex-shrink-0">
                 <div className="flex flex-row items-center gap-2">
-                    <span className=" font-bold">Member Chat</span>
-                    <div className="text-sm text-muted-foreground">
-                        Active now
-                    </div>
+                    <PulsingStatus live={false} />
+                    <span className="text-sm font-bold">Member Chat</span>
+
                 </div>
             </div>
 
@@ -50,26 +49,7 @@ export function MemberChatView() {
                     </div>
                 </ScrollArea>
                 <div className="flex-shrink-0 p-4">
-                    <div className="flex gap-2 bg-background rounded-lg overflow-hidden flex-col pb-2">
-                        <Textarea
-                            placeholder="Your message... (Ctrl+Enter to send)"
-                            className="border-none resize-none p-4 focus-visible:ring-0 focus-visible:outline-hidden"
-                            style={{
-                                minHeight: '80px',
-                                maxHeight: '250px',
-                            }}
-                        />
-                        <div className="px-2 justify-end flex gap-2">
-                            <Button
-                                variant="foreground"
-                                size="sm"
-                                className="gap-1"
-                            >
-                                <Send size={14} />
-                                <span>Send</span>
-                            </Button>
-                        </div>
-                    </div>
+                    <MemberChatInput />
                 </div>
             </div>
         </div>
