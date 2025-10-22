@@ -17,14 +17,18 @@ import { useState } from 'react'
 import { toast } from 'react-toastify'
 
 interface Props {
-    params: { id: string, mid: string }
+    params: { id: string; mid: string }
     selectedTag: MemberTag[]
     onUpdate: (tagId: string) => Promise<void>
     editable: boolean
 }
 
-
-export function CustomTagsSelector({ params, selectedTag, onUpdate, editable }: Props) {
+export function CustomTagsSelector({
+    params,
+    selectedTag,
+    onUpdate,
+    editable,
+}: Props) {
     const [tags, setTags] = useState<MemberTag[]>([])
     const [open, setOpen] = useState<boolean>(false)
     const [loading, setLoading] = useState<boolean>(false)
@@ -32,13 +36,13 @@ export function CustomTagsSelector({ params, selectedTag, onUpdate, editable }: 
     const [hasFetchedTags, setHasFetchedTags] = useState<boolean>(false)
     const [newTagName, setNewTagName] = useState<string>('')
 
-
-
     async function handleOpenChange(open: boolean) {
         setOpen(open)
         if (open && tags.length === 0 && !hasFetchedTags) {
             setLoading(true)
-            const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/tags`))
+            const { error, result } = await tryCatch(
+                fetch(`/api/protected/loc/${params.id}/tags`)
+            )
             setLoading(false)
             if (error || !result || !result.ok) return
             setHasFetchedTags(true)
@@ -49,11 +53,18 @@ export function CustomTagsSelector({ params, selectedTag, onUpdate, editable }: 
 
     async function handleSelect(tagId: string) {
         if (!editable || loading || !tagId) return
-        if (selectedTag.some(tag => tag.id === tagId)) return
-        const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/members/${params.mid}/tags`, {
-            method: 'POST',
-            body: JSON.stringify({ tagIds: [...selectedTag.map(tag => tag.id), tagId] })
-        }))
+        if (selectedTag.some((tag) => tag.id === tagId)) return
+        const { error, result } = await tryCatch(
+            fetch(
+                `/api/protected/loc/${params.id}/members/${params.mid}/tags`,
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        tagId: tagId,
+                    }),
+                }
+            )
+        )
         if (error || !result || !result.ok) {
             setOpen(false)
             toast.error(error?.message || 'Failed to select tag')
@@ -67,21 +78,42 @@ export function CustomTagsSelector({ params, selectedTag, onUpdate, editable }: 
         if (!editable || loading || !newTagName.trim()) return
 
         setIsLoading(true)
-        const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/tags`, {
-            method: 'POST',
-            body: JSON.stringify({ name: newTagName.trim() })
-        }))
+        const { error, result } = await tryCatch(
+            fetch(`/api/protected/loc/${params.id}/tags`, {
+                method: 'POST',
+                body: JSON.stringify({ name: newTagName.trim() }),
+            })
+        )
         if (error || !result || !result.ok) {
             setIsLoading(false)
             toast.error(error?.message || 'Failed to create tag')
             return
         }
-        setIsLoading(false)
         const data = await result.json()
+
+        const { error: addTagError, result: addTagResult } = await tryCatch(
+            fetch(
+                `/api/protected/loc/${params.id}/members/${params.mid}/tags`,
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        tagId: data.id,
+                    }),
+                }
+            )
+        )
+
+        if (addTagError || !addTagResult || !addTagResult.ok) {
+            setIsLoading(false)
+            toast.error(addTagError?.message || 'Failed to add tag to member')
+            return
+        }
+        setIsLoading(false)
         setTags([...tags, data])
+        setNewTagName('')
+        setOpen(false)
         await onUpdate(data.id)
     }
-
 
     return (
         <Popover open={open} onOpenChange={handleOpenChange}>
@@ -101,23 +133,41 @@ export function CustomTagsSelector({ params, selectedTag, onUpdate, editable }: 
                     onOpenAutoFocus={(e) => e.preventDefault()}
                 >
                     <CommandList>
-                        <CommandEmpty className='py-2'>
-                            <div className="flex items-center gap-1 px-2 text-foreground cursor-pointer" onClick={handleCreateTag} >
-                                {isLoading ? <Loader2 className="size-4 animate-spin" /> : <PlusCircle className="size-4 " />}
-                                <span className='text-sm font-medium'>No tag found create one: <span className='text-indigo-500 font-bold'>{newTagName}</span></span>
+                        <CommandEmpty className="py-2">
+                            <div
+                                className="flex items-center gap-1 px-2 text-foreground cursor-pointer"
+                                onClick={handleCreateTag}
+                            >
+                                {isLoading ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                ) : (
+                                    <PlusCircle className="size-4 " />
+                                )}
+                                <span className="text-sm font-medium">
+                                    No tag found create one:{' '}
+                                    <span className="text-indigo-500 font-bold">
+                                        {newTagName}
+                                    </span>
+                                </span>
                             </div>
                         </CommandEmpty>
                         <CommandGroup>
                             {loading ? (
-                                <CommandItem className='text-sm' >Loading...</CommandItem>
+                                <CommandItem className="text-sm">
+                                    Loading...
+                                </CommandItem>
                             ) : (
                                 tags.map((tag) => (
-                                    <CommandItem className="flex items-center justify-between" key={tag.id}
+                                    <CommandItem
+                                        className="flex items-center justify-between"
+                                        key={tag.id}
                                         value={tag.id}
                                         onSelect={() => handleSelect(tag.id)}
                                     >
                                         {tag.name}
-                                        {selectedTag.some(t => t.id === tag.id) && (
+                                        {selectedTag.some(
+                                            (t) => t.id === tag.id
+                                        ) && (
                                             <CheckIcon
                                                 className="text-muted-foreground"
                                                 size={14}

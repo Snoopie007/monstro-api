@@ -59,8 +59,7 @@ export async function GET(
     );
   }
 }
-
-// POST /api/protected/loc/[id]/members/[mid]/tags - Assign tags to a member
+// POST /api/protected/loc/[id]/members/[mid]/tags - Add a tag to a member
 export async function POST(
   req: Request,
   props: { params: Promise<{ id: string; mid: string }> }
@@ -74,11 +73,11 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { tagIds } = body;
+    const { tagId } = body;
 
-    if (!Array.isArray(tagIds) || tagIds.length === 0) {
+    if (!tagId || typeof tagId !== 'string') {
       return NextResponse.json(
-        { error: "tagIds must be a non-empty array" },
+        { error: "tagId must be a non-empty string" },
         { status: 400 }
       );
     }
@@ -97,57 +96,35 @@ export async function POST(
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
-    // Verify all tags exist and belong to this location
-    const existingTags = await db.query.memberTags.findMany({
+    // Verify tag exists and belongs to this location
+    const existingTag = await db.query.memberTags.findFirst({
       where: and(
-        inArray(memberTags.id, tagIds),
+        eq(memberTags.id, tagId),
         eq(memberTags.locationId, params.id)
       ),
     });
 
-    if (existingTags.length !== tagIds.length) {
-      return NextResponse.json(
-        { error: "One or more tags not found" },
-        { status: 404 }
-      );
+    if (!existingTag) {
+      return NextResponse.json({ error: "Tag not found" }, { status: 404 });
     }
 
-    // Get current tag assignments for this member
-    const currentAssignments = await db.query.memberHasTags.findMany({
-      where: eq(memberHasTags.memberId, params.mid),
+    // Check if tag is already assigned to this member
+    const existingAssignment = await db.query.memberHasTags.findFirst({
+      where: and(
+        eq(memberHasTags.memberId, params.mid),
+        eq(memberHasTags.tagId, tagId)
+      ),
     });
 
-    const currentTagIds = currentAssignments.map((a) => a.tagId);
-
-    // Find tags to add and remove
-    const tagsToAdd = tagIds.filter((tagId) => !currentTagIds.includes(tagId));
-    const tagsToRemove = currentTagIds.filter(
-      (tagId) => !tagIds.includes(tagId)
-    );
-
-    // Remove tags that are no longer assigned
-    if (tagsToRemove.length > 0) {
-      await db
-        .delete(memberHasTags)
-        .where(
-          and(
-            eq(memberHasTags.memberId, params.mid),
-            inArray(memberHasTags.tagId, tagsToRemove)
-          )
-        );
-    }
-
-    // Add new tag assignments
-    if (tagsToAdd.length > 0) {
-      const newAssignments: MemberHasTagInsert[] = tagsToAdd.map((tagId) => ({
+    // Only add if not already assigned
+    if (!existingAssignment) {
+      await db.insert(memberHasTags).values({
         memberId: params.mid,
         tagId,
-      }));
-
-      await db.insert(memberHasTags).values(newAssignments);
+      });
     }
 
-    // Return updated tags
+    // Return updated tags for this member
     const updatedTags = await db
       .select({
         id: memberTags.id,
@@ -167,54 +144,7 @@ export async function POST(
 
     return NextResponse.json(updatedTags);
   } catch (error) {
-    console.error("Error updating member tags:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE /api/protected/loc/[id]/members/[mid]/tags - Remove all tags from a member
-export async function DELETE(
-  req: Request,
-  props: { params: Promise<{ id: string; mid: string }> }
-) {
-  const params = await props.params;
-
-  try {
-    const session = await auth();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // TODO: Add admin permission check
-    // if (!userHasPermission(session.user, 'manage_member_tags')) {
-    //   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    // }
-
-    // Verify member exists and belongs to this location
-    const member = await db.query.members.findFirst({
-      where: eq(members.id, params.mid),
-      with: {
-        memberLocations: {
-          where: (ml, { eq }) => eq(ml.locationId, params.id),
-        },
-      },
-    });
-
-    if (!member || !member.memberLocations?.length) {
-      return NextResponse.json({ error: "Member not found" }, { status: 404 });
-    }
-
-    // Remove all tag assignments for this member
-    await db
-      .delete(memberHasTags)
-      .where(eq(memberHasTags.memberId, params.mid));
-
-    return NextResponse.json({ message: "All tags removed successfully" });
-  } catch (error) {
-    console.error("Error removing member tags:", error);
+    console.error("Error adding tag to member:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

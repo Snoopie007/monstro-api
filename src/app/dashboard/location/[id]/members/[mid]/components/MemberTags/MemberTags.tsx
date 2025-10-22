@@ -88,7 +88,7 @@ function MemberTagItem({ tag, params, editable, onUpdate }: MemberTagItemProps) 
     async function handleRemove(tagId: string) {
         if (!editable || loading || !tagId) return
         setLoading(true)
-        const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/members/${params.mid}/tags`, {
+        const { error, result } = await tryCatch(fetch(`/api/protected/loc/${params.id}/members/${params.mid}/tags/${tagId}`, {
             method: 'DELETE'
         }))
         if (error || !result || !result.ok) {
