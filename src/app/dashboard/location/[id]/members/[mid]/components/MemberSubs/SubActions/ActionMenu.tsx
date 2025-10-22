@@ -65,7 +65,7 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 				<Button
 					variant="ghost"
 					size="icon"
-					className={cn("size-7 flex-1  rounded-r-none", HoverTransition)}
+					className={cn("size-6 flex-1  rounded-r-none", HoverTransition)}
 					onClick={() => setAction("update")}
 				>
 					<Pencil className="size-3" />
@@ -73,7 +73,7 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 				<Button
 					variant="ghost"
 					size="icon"
-					className={cn("size-7 border-x rounded-none border-foreground/5 flex-1", HoverTransition)}
+					className={cn("size-6 border-x rounded-none border-foreground/5 flex-1", HoverTransition)}
 					disabled={!sub}
 					onClick={() => {
 						if (sub.status === "canceled") return

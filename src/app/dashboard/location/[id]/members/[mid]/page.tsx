@@ -209,7 +209,7 @@ export default async function MemberProfilePage(props: {
                             pd={memberProfileData}
                         />
                         <PointsProfile profileData={memberProfileData} />
-                        <ScrollArea className="h-[calc(100vh-316px)] overflow-hidden">
+                        <ScrollArea className="h-[calc(100vh-318px)] overflow-hidden">
                             <div className='space-y-2 '>
                                 <MemberFamilies
                                     params={params}
