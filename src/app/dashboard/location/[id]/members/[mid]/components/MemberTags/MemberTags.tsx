@@ -59,7 +59,7 @@ export function MemberTagsBox({ params, editable }: MemberTagsBoxProps) {
                     <span className="sr-only">Toggle</span>
                 </Button>
             </CollapsibleTrigger>
-            <CollapsibleContent>
+            <CollapsibleContent className='pt-1 pb-6'>
                 <CustomTagsSelector
                     locationId={params.id}
                     memberId={params.mid}

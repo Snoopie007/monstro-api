@@ -72,18 +72,18 @@ export function MemberProfile({ params, pd }: MemberProfileProps) {
                     </Avatar>
 
                     <div className="flex flex-col gap-4 flex-1">
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                             <div className="font-bold text-lg leading-5">
                                 {memberProfile?.firstName} {memberProfile?.lastName}
                             </div>
                             <div className="flex flex-row gap-1 text-sm text-muted-foreground">
                                 <span>{memberProfile?.email}</span>
-                                <span>/</span>
-                                <span>{memberProfile?.phone}</span>
+
+
 
                             </div>
-                            <div className="text-sm text-muted-foreground">
-
+                            <div className="text-sm text-muted-foreground flex flex-row gap-4">
+                                <span>{memberProfile?.phone}</span>
                                 <span> Last seen: {pd.lastSeenFormatted}</span>
                             </div>
                         </div>

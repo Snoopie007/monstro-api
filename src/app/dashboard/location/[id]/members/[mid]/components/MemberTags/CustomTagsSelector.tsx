@@ -5,17 +5,14 @@ import {
     Command,
     PopoverTrigger,
     Popover,
-    CommandInput,
     CommandList,
     CommandGroup,
     PopoverContent,
-    Button,
     Badge,
     CustomCommandInput,
     Skeleton,
 } from '@/components/ui'
 import { useMemberTags, useTags } from '@/hooks/useTags'
-import { MemberTag } from '@/types/tag'
 import { CheckIcon, XIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -92,22 +89,19 @@ export const CustomTagsSelector = ({
                 <PopoverTrigger asChild>
                     <CustomCommandInput
                         placeholder="Search tag..."
-                        className="mb-3 w-full"
+                        className="mb-3 w-full text-sm h-10 bg-muted/50 "
                         disabled={isMemberTagsLoading || isLoading}
                     />
                 </PopoverTrigger>
-                <div className="flex flex-row gap-3 flex-wrap">
+                <div className="flex flex-row gap-2 flex-wrap">
                     {selectedTags.map((tag) => (
-                        <Badge
-                            className="bg-muted text-muted-foreground"
-                            key={tag.id}
-                        >
+                        <Badge className="bg-indigo-500 py-1 px-3 rounded-sm  text-white" key={tag.id}>
                             {tag.name}
                             <div
-                                className="size-auto cursor-pointer hover:text-muted-foreground"
+                                className="size-auto cursor-pointer hover:text-white"
                                 onClick={() => handleRemove(tag.id)}
                             >
-                                <XIcon size={12} />
+                                <XIcon size={12} className="text-white hover:text-red-500" />
                             </div>
                         </Badge>
                     ))}
