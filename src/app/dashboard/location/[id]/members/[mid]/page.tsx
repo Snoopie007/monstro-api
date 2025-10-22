@@ -214,7 +214,7 @@ export default async function MemberProfilePage(props: {
                                 pd={memberProfileData}
                             />
                             <PointsProfile profileData={memberProfileData} />
-                            <ScrollArea className="flex-1 min-h-0">
+                            <ScrollArea className="flex-1 h-[calc(100vh-300px)]">
                                 <div className='space-y-2 pb-10'>
                                     <MemberFamilies
                                         params={params}
@@ -235,33 +235,40 @@ export default async function MemberProfilePage(props: {
                                 </div>
                             </ScrollArea>
                         </div>
-                        <div className="col-span-3 flex flex-col min-h-0">
+                        <div className="col-span-3 flex flex-col ">
                             <MemberChatView />
                         </div>
 
-                        <div className="col-span-2 pr-4 flex flex-col space-y-2 min-h-0">
-                            <PaymentMethods
-                                editable={canEditMember}
-                                params={params}
-                            />
-                            <MemberSubs params={params} />
-                            <MemberPkg params={params} />
+                        <div className="col-span-2 pr-4">
+                            <ScrollArea className="flex-1 h-full ">
+                                <div className="space-y-4 pb-10">
 
-                            <Tabs defaultValue="invoices" className="flex-1 flex flex-col min-h-0">
-                                <TabsList className="bg-transparent rounded-none p-0 justify-start gap-1 flex-shrink-0">
-                                    {['invoices', 'transactions'].map((tab) => (
-                                        <TabsTrigger key={tab} value={tab} className='bg-foreground/5 text-xs capitalize rounded-full'>
-                                            {tab}
-                                        </TabsTrigger>
-                                    ))}
-                                </TabsList>
-                                <TabsContent value="invoices" className="flex-1 min-h-0 overflow-hidden">
-                                    <MemberInvoice params={params} />
-                                </TabsContent>
-                                <TabsContent value="transactions" className="flex-1 min-h-0 overflow-hidden">
-                                    <MemberTransactions params={params} />
-                                </TabsContent>
-                            </Tabs>
+                                    <MemberSubs params={params} />
+                                    <MemberPkg params={params} />
+
+                                    <Tabs defaultValue="payments methods" className="flex-1 flex flex-col min-h-0">
+                                        <TabsList className="bg-transparent rounded-none p-0 justify-start gap-1 flex-shrink-0">
+                                            {['payments methods', 'invoices', 'transactions'].map((tab) => (
+                                                <TabsTrigger key={tab} value={tab} className='bg-foreground/5 text-xs capitalize rounded-full'>
+                                                    {tab}
+                                                </TabsTrigger>
+                                            ))}
+                                        </TabsList>
+                                        <TabsContent value="payments methods" >
+                                            <PaymentMethods
+                                                editable={canEditMember}
+                                                params={params}
+                                            />
+                                        </TabsContent>
+                                        <TabsContent value="invoices" >
+                                            <MemberInvoice params={params} />
+                                        </TabsContent>
+                                        <TabsContent value="transactions" >
+                                            <MemberTransactions params={params} />
+                                        </TabsContent>
+                                    </Tabs>
+                                </div>
+                            </ScrollArea>
                         </div>
                     </div>
                 </MemberProvider>

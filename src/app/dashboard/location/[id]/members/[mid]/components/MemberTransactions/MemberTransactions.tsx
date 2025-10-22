@@ -1,42 +1,55 @@
 'use client'
 
-import { ScrollArea } from '@/components/ui/ScrollArea'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger, CardTitle } from '@/components/ui'
 import { useMemberTransactions } from '@/hooks/hooks'
 import { Transaction } from '@/types'
 import { TransactionItem } from './TransactionItem'
+import { useState } from 'react'
+import { ChevronsUpDown, CreditCard } from 'lucide-react'
 
 interface MemberTransactionsProps {
     params: { id: string; mid: string }
 }
 export function MemberTransactions({ params }: MemberTransactionsProps) {
+    const [open, setOpen] = useState<boolean>(true)
     const { transactions, isLoading, error, mutate } = useMemberTransactions(
         params.id,
         params.mid
     )
 
-
-
     return (
-        <div>
-            <div className="flex flex-row items-center justify-between gap-2 mb-2">
-                <h2 className="text-md text-muted-foreground font-medium">
-                    Transactions
-                </h2>
+        <Collapsible open={open} onOpenChange={setOpen}>
+            <div className='space-y-0 flex flex-row justify-between items-center'>
+                <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="hover:bg-transparent gap-1 px-0">
+                        <CardTitle className='text-sm font-medium mb-0'>Transactions</CardTitle>
+                        <ChevronsUpDown className="size-4" />
+                        <span className="sr-only">Toggle</span>
+                    </Button>
+                </CollapsibleTrigger>
             </div>
-            <ScrollArea className="max-h-[350px] w-full">
+            <CollapsibleContent>
                 {transactions && transactions.length > 0 ? (
-                    <div className="flex flex-col gap-2">
+                    <div className="space-y-2">
                         {transactions.map((transaction: Transaction) => (
                             <TransactionItem key={transaction.id} transaction={transaction} params={params} />
                         ))}
                     </div>
                 ) : (
                     <div className="text-center py-4">
-                        <p className="text-muted-foreground">No transactions found</p>
+                        <div className="flex flex-col items-center justify-center">
+                            <CreditCard
+                                size={20}
+                                className="text-muted-foreground mb-3"
+                            />
+                            <p className="text-md mb-1">No transactions found</p>
+                            <p className="text-sm text-muted-foreground">
+                                Transactions will appear here when they occur
+                            </p>
+                        </div>
                     </div>
                 )}
-            </ScrollArea>
-        </div>
+            </CollapsibleContent>
+        </Collapsible>
     )
 }

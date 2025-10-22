@@ -63,7 +63,7 @@ export function MemberInvoice({ params }: MemberInvoiceProps) {
                     <div className="text-center py-4">
                         <div className="flex flex-col items-center justify-center">
                             <FileText
-                                size={40}
+                                size={20}
                                 className="text-muted-foreground mb-3"
                             />
                             <p className="text-md mb-1">No invoices found</p>

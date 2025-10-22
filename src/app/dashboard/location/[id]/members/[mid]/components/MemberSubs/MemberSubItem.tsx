@@ -1,19 +1,10 @@
 'use client'
 
-import { ScrollArea, Skeleton, CircleProgress } from '@/components/ui'
-import {
-    Item,
-    ItemActions,
-    ItemContent,
-    ItemDescription,
-    ItemMedia,
-    ItemTitle,
-} from '@/components/ui/item'
-import { useMemberExistingSubscriptions } from '@/hooks'
+import { CircleProgress } from '@/components/ui'
+import { useState } from 'react'
 import { formatAmountForDisplay } from '@/libs/utils'
 import { MemberSubscription } from '@/types'
 import { format } from 'date-fns'
-import { useState } from 'react'
 import { SubActions } from './SubActions'
 
 function calculateProgress(start: Date, end: Date) {
@@ -27,87 +18,96 @@ function calculateProgress(start: Date, end: Date) {
     return Math.min(Math.max(Number(progress.toFixed(2)), 10), 100)
 }
 
-export const MemberSubscriptionItems = ({
-    params,
-}: {
-    params: { id: string; mid: string }
-}) => {
-    const { existingSubscriptions, isLoading, fetchSubs } =
-        useMemberExistingSubscriptions(params.id, params.mid)
+export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
 
-    if (isLoading) {
-        return (
-            <div className="flex flex-col gap-2">
-                <Skeleton className="w-full h-24 " />
-                <Skeleton className="w-full h-24 " />
-                <Skeleton className="w-full h-24 " />
+    return (
+        <div className="bg-muted/50 rounded-lg px-4 py-3 space-y-2">
+            <div className="flex flex-row justify-between items-center">
+                <div className="font-medium flex items-center gap-1.5">
+                    <div className="relative size-5">
+                        <CircleProgress
+                            progress={calculateProgress(
+                                sub.currentPeriodStart,
+                                sub.currentPeriodEnd
+                            )}
+                        />
+                    </div>
+                    <span className="font-bold text-sm">
+                        {sub.plan?.name}
+                    </span>
+
+                </div>
+                <div>
+                    <SubActions sub={sub} refetch={() => { }} />
+                </div>
             </div>
-        )
-    }
+            <div className="space-y-4 py-2">
+                <div className="flex flex-row justify-between items-center">
+                    <div className="space-y-1">
+                        <div className="text-xs font-medium text-muted-foreground">Duration</div>
+                        <span className="text-sm font-medium">
+                            {format(sub.startDate, 'MMM d, yyyy')} {' - '}
+                            {sub.endedAt ? format(sub.endedAt, 'MMM d, yyyy')
+                                : 'n/a'}
+                        </span>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-xs font-medium text-muted-foreground">Price</div>
+                        <span className="text-sm font-medium">
+                            {formatAmountForDisplay(sub.plan?.price! / 100, 'usd', true)}
+                            / {sub.plan?.interval}
 
-    const renderSubscriptions = () => {
-        return existingSubscriptions && existingSubscriptions.length > 0 ? (
-            existingSubscriptions.map((sub: MemberSubscription) => (
-                <li key={sub.id}>
-                    <Item
-                        variant="muted"
-                        className="hover:bg-muted-foreground/5"
-                    >
-                        <ItemMedia>
-                            <div className="relative flex items-center justify-center w-6 h-6">
-                                <CircleProgress
-                                    progress={calculateProgress(
-                                        sub.currentPeriodStart,
-                                        sub.currentPeriodEnd
-                                    )}
-                                />
-                            </div>
-                        </ItemMedia>
-                        <ItemContent>
-                            <ItemTitle>
-                                {sub.plan?.name}
-                                {' • '}
-                                <span className="text-muted-foreground text-xs">
-                                    {format(sub.startDate, 'MMM d, yyyy')} -{' '}
-                                    {sub.endedAt
-                                        ? format(sub.endedAt, 'MMM d, yyyy')
-                                        : 'Never'}
-                                </span>
-                            </ItemTitle>
-                            <ItemDescription className="flex items-center justify-between gap-2">
-                                <span>
-                                    {formatAmountForDisplay(
-                                        sub.plan?.price! / 100,
-                                        'USD',
-                                        true
-                                    )}{' '}
-                                    / {sub.plan?.interval} •{' '}
-                                    {sub.paymentMethod.toUpperCase()}
-                                </span>
-                            </ItemDescription>
-                        </ItemContent>
-                        <ItemActions>
-                            <SubActions sub={sub} refetch={fetchSubs} />
-                        </ItemActions>
-                    </Item>
-                </li>
-            ))
-        ) : (
-            <li>
-                <Item variant="muted" className="hover:bg-muted-foreground/5">
-                    <ItemContent>
-                        <ItemTitle>No subscriptions found</ItemTitle>
-                    </ItemContent>
-                </Item>
-            </li>
-        )
+                        </span>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-xs font-medium text-muted-foreground">Total Collected</div>
+                        <span className="text-sm font-medium">
+
+                        </span>
+                    </div>
+                </div>
+                <div className="flex flex-row justify-between items-center">
+                    <div className="space-y-1">
+                        <div className="text-xs font-medium text-muted-foreground">Payment Method</div>
+                        <span className="text-sm font-medium">
+                            {sub.paymentMethod}
+                        </span>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-xs font-medium text-muted-foreground">Next Billing Date</div>
+                        <span className="text-sm font-medium">
+                            {format(sub.currentPeriodEnd, 'MMM d, yyyy')}
+                        </span>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-xs font-medium text-muted-foreground">Status</div>
+                        <span className="text-sm font-medium flex items-center gap-2 capitalize">
+                            <StatusDot status={sub.status} /> {sub.status}
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    )
+}
+function StatusDot({ status }: { status: string }) {
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'active':
+                return 'bg-green-500'
+            case 'paused':
+                return 'bg-yellow-500'
+            case 'canceled':
+                return 'bg-red-500'
+            case 'incomplete':
+                return 'bg-orange-500'
+            default:
+                return 'bg-gray-500'
+        }
     }
 
     return (
-        <div className="mb-4">
-            <ScrollArea className="max-h-[350px] w-full">
-                <ul className="flex flex-col gap-2">{renderSubscriptions()}</ul>
-            </ScrollArea>
-        </div>
+        <div className={`size-2.5 rounded-full ${getStatusColor(status)}`} />
     )
 }

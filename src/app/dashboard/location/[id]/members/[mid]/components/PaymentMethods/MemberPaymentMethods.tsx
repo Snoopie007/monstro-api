@@ -91,7 +91,7 @@ export function PaymentMethods({ params, editable }: PaymentMethodsProps) {
 
 function PaymentMethodItem({ method, params, member }: { method: any, params: { id: string; mid: string }, member: any }) {
     return (
-        <Item variant="muted" className='px-4 py-3 hover:bg-muted-foreground/5'>
+        <Item variant="muted" className='px-4 py-2 hover:bg-muted-foreground/5'>
             <ItemContent className='flex flex-row justify-between items-center gap-2'>
                 <span  >
                     {method.card?.brand}
