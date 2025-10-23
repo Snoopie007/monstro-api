@@ -1,31 +1,33 @@
-import { Popover, PopoverTrigger, Button, PopoverContent, Separator, SelectContent, SelectTrigger, SelectItem, SelectValue, Select, Switch } from "@/components/ui"
-import { ListOrderedIcon, SortAscIcon, TextAlignJustify, XIcon } from "lucide-react";
+import { Popover, PopoverTrigger, Button, PopoverContent, Separator } from "@/components/ui"
+import { ListOrderedIcon, TextAlignJustify, XIcon } from "lucide-react";
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@/components/forms";
 import { useEffect, useState } from "react";
 import { MemberWithCustomFieldsColumns } from "../MemberColumns";
 import { ColumnDef } from "@/libs/table-utils";
 
 interface SortPopoverProps {
     columns: ColumnDef<MemberWithCustomFieldsColumns, any>[];
-    onSortChange: (sort: {id: string, direction: 'asc' | 'desc'}[]) => void;
+    onSortChange: (sort: { id: string, direction: 'asc' | 'desc' }[]) => void;
 }
 
 export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
-    const [sort, setSort] = useState<{id: string, direction: 'asc' | 'desc'}[]>([]);
+    const [sort, setSort] = useState<{ id: string, direction: 'asc' | 'desc' }[]>([]);
 
     const columnOptions = columns
-    .filter((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => column.id !== 'select' && column.accessorKey !== 'tags')
-    .map((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => {
-        const {accessorKey, id, header} = column;
-        return {
-            id: accessorKey ?? id ?? 'name',
-            label: header
-        }
-    })
+        .filter((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => column.id !== 'select' && column.accessorKey !== 'tags')
+        .map((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => {
+            const { accessorKey, id, header } = column;
+            return {
+                id: accessorKey ?? id ?? 'name',
+                label: header
+            }
+        })
 
     const handleColumnSelect = (id: string) => {
         console.log("id", id)
         // add to sort array with direction asc
-        setSort(v =>[...v, { id, direction: 'asc' }])
+        setSort(v => [...v, { id, direction: 'asc' }])
     }
 
     const handleDirectionChange = (id: string) => {
@@ -36,7 +38,7 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
         setSort(v => v.filter(s => s.id !== id))
     }
 
-    const handleApplySort = (sort: {id: string, direction: 'asc' | 'desc'}[]) => {
+    const handleApplySort = (sort: { id: string, direction: 'asc' | 'desc' }[]) => {
         console.log("sort", sort)
         onSortChange(sort)
     }
@@ -55,14 +57,14 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
             <div className="flex flex-col space-y-2">
                 {sort.map((s, index) => (
                     <div key={index} className="flex flex-row justify-between items-center">
-                        <span className="text-sm text-sm truncate flex flex-row items-center gap-2 max-w-[150px]">
+                        <span className="text-xs text-muted-foreground truncate flex flex-row items-center gap-2 max-w-[150px]">
                             <TextAlignJustify size={12} />
                             {columnOptions.find(c => c.id === s.id)?.label as string}
                         </span>
                         {/* Switch for toggling direction */}
                         <div className="flex flex-row items-center gap-2">
-                        <span className="text-sm">ascending: <Switch id={`sort-${s.id}`} checked={s.direction === 'asc'} onCheckedChange={() => handleDirectionChange(s.id)} /></span>
-                        <Button variant="ghost" size="icon" className="hover:bg-foreground/10 size-5 p-1" onClick={() => handleRemoveSort(s.id)}><XIcon size={12} /></Button>
+                            <span className="text-sm">ascending: <Switch id={`sort-${s.id}`} checked={s.direction === 'asc'} onCheckedChange={() => handleDirectionChange(s.id)} /></span>
+                            <Button variant="ghost" size="icon" className="hover:bg-foreground/10 size-5 p-1" onClick={() => handleRemoveSort(s.id)}><XIcon size={12} /></Button>
                         </div>
                     </div>
                 ))}
@@ -79,13 +81,15 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
                     {sort.length > 0 && <span className="text-sm text-foreground/80 ml-2 px-2 py-0.5 bg-foreground/10 rounded-full">{sort.length}</span>}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="min-w-96 max-w-96 p-2 border-foreground/10 overflow-hidden space-y-2" align="start">
-                {sort.length === 0 && renderNoSorts()}
-                {sort.length > 0 && renderSortItems()}
-                <Separator className="my-2" />
+            <PopoverContent className="min-w-96 max-w-96 space-y-4 p-3 border-foreground/10 overflow-hidden " align="start">
+                <div className="space-y-2">
+                    {sort.length === 0 && renderNoSorts()}
+                    {sort.length > 0 && renderSortItems()}
+
+                </div>
                 <div className="flex flex-row justify-between gap-2">
                     <Select onValueChange={handleColumnSelect}>
-                        <SelectTrigger className="w-full h-8 text-sm w-48">
+                        <SelectTrigger className="w-fit h-8 text-xs">
                             <SelectValue placeholder="Pick a column to sort by" />
                         </SelectTrigger>
                         <SelectContent>
@@ -98,7 +102,7 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
                         Apply Sorting
                     </Button>
                 </div>
-                
+
             </PopoverContent>
         </Popover>
     )

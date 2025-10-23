@@ -1,19 +1,26 @@
 'use client'
-import {
-    Card,
-    CardHeader,
-    CardContent,
-    CardTitle,
-} from "@/components/ui"
-import AddPaymentMethod from "./AddMethod"
 
-import { Elements } from "@stripe/react-stripe-js"
-import { getStripe } from "@/libs/client/stripe"
-import PaymentMethodsActions from "./actions"
-import { useMemberStatus, useMemberPaymentMethods } from "../../providers"
+import AddPaymentMethod from './AddMethod'
+
+import { Elements } from '@stripe/react-stripe-js'
+import { getStripe } from '@/libs/client/stripe'
+import PaymentMethodsActions from './actions'
+import { useMemberStatus, useMemberPaymentMethods } from '../../providers'
+import { CreditCardIcon } from 'lucide-react'
+import {
+    Badge,
+    Item, ItemContent,
+    ItemActions,
+    EmptyTitle,
+    EmptyDescription,
+    EmptyHeader,
+    EmptyMedia,
+    Empty
+} from '@/components/ui'
+import { useState } from 'react'
 
 interface PaymentMethodsProps {
-    params: { id: string, mid: string },
+    params: { id: string; mid: string }
     editable: boolean
 }
 
@@ -21,58 +28,82 @@ export function PaymentMethods({ params, editable }: PaymentMethodsProps) {
     const { member } = useMemberStatus()
     const { paymentMethods } = useMemberPaymentMethods()
 
+
+
     return (
-        <Card className='border-x-0 border-t border-b-0 border-foreground/10'>
-            <CardHeader className="px-4 py-2  bg-foreground/5 ">
-                <div className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-sm  ">
-                        Payment Methods
-                    </CardTitle>
-                    <Elements
-                        stripe={getStripe(process.env.NEXT_PUBLIC_MEMBER_STRIPE_PUBLIC_KEY!)}
-                        options={{
-                            appearance: {
-                                variables: {
-                                    colorIcon: "#6772e5",
-                                    fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
-                                },
-                            },
-                        }}
-                    >
-                        {editable && <AddPaymentMethod member={member} locationId={params.id} />}
-                    </Elements>
+        <div className="space-y-2">
+            <Elements
+                stripe={getStripe(
+                    process.env.NEXT_PUBLIC_MEMBER_STRIPE_PUBLIC_KEY!
+                )}
+                options={{
+                    appearance: {
+                        variables: {
+                            colorIcon: '#6772e5',
+                            fontFamily:
+                                'Roboto, Open Sans, Segoe UI, sans-serif',
+                        },
+                    },
+                }}
+            >
+                <AddPaymentMethod member={member} locationId={params.id} />
+            </Elements>
+            {paymentMethods.length > 0 ? (
 
-
+                <div className=" space-y-2">
+                    {paymentMethods.map((method, i) => (
+                        <PaymentMethodItem key={i} method={method} params={params} member={member} />
+                    ))}
                 </div>
+            ) : (
 
-            </CardHeader>
-            <CardContent className='p-0' >
+                <Empty variant="border">
+                    <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                            <CreditCardIcon className="size-5" />
+                        </EmptyMedia>
+                        <EmptyTitle>No payment methods found</EmptyTitle>
+                        <EmptyDescription>Add a payment method to get started</EmptyDescription>
+                    </EmptyHeader>
+                </Empty>
+            )}
 
-                {paymentMethods.length === 0 && (
-                    <div className='text-center py-4'>
-                        <p className='text-sm text-muted-foreground'>No payment methods found</p>
-                    </div>
-                )}
-                {paymentMethods.length > 0 && (
-                    <ul>
-                        {paymentMethods.map((method, i) => (
-                            <li key={i} className='border-b border-foreground/10 last-of-type:border-b-0 flex flex-row gap-4   py-3 px-4 items-center'>
-                                <div className='text-sm flex-1 items-center'>
-                                    <span className='capitalize'>{method.card?.brand} {" "}</span>
-                                    {method.card?.funding} •••• {method.card?.last4}
-                                    {/* {method.id && (
-                                     <span className='bg-indigo-400 text-indigo-800  rounded-full text-xs  font-medium px-2 py-0.5  ml-2'>Default</span>
-                                 )} */}
-                                </div>
-                                <div className='text-sm flex-1 text-right'>
-                                    <p>expires on {method.card?.exp_month}/{method.card?.exp_year}</p>
-                                </div>
-                                <PaymentMethodsActions mid={params.mid} paymentMethod={method} lid={params.id} customerId={member.stripeCustomerId || ""} />
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </CardContent>
-        </Card >
+        </div >
+    )
+}
+
+
+function PaymentMethodItem({ method, params, member }: { method: any, params: { id: string; mid: string }, member: any }) {
+    return (
+        <Item variant="muted" className='px-4 py-2 hover:bg-muted-foreground/5'>
+            <ItemContent className='flex flex-row justify-between items-center gap-2'>
+                <span  >
+                    {method.card?.brand}
+                </span>
+                <span >
+                    {method.card?.funding} ••••{' '}
+                    {method.card?.last4}{' '}
+                    {method.allow_redisplay === 'always' && (
+                        <Badge roles="blue" size="tiny">
+                            Default
+                        </Badge>
+                    )}
+                </span>
+                <span >
+                    expires on {method.card?.exp_month}/
+                    {method.card?.exp_year}
+                </span>
+
+            </ItemContent>
+            <ItemActions>
+                <PaymentMethodsActions
+                    mid={params.mid}
+                    paymentMethod={method}
+                    lid={params.id}
+                    customerId={member.stripeCustomerId || ''}
+                />
+            </ItemActions>
+        </Item >
+
     )
 }

@@ -7,9 +7,9 @@ export interface PulsingStatusProps extends React.HTMLAttributes<HTMLDivElement>
 
 const PulsingStatus = React.forwardRef<HTMLDivElement, PulsingStatusProps>(
     ({ className, live = true, ...props }, ref) => {
-        const baseClasses = "relative flex size-2 group";
+        const baseClasses = "relative flex size-2.5 group";
         const animationClasses = "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75";
-        const dotClasses = "relative inline-flex size-2 rounded-full";
+        const dotClasses = "relative inline-flex size-2.5 rounded-full";
 
         return (
             <span ref={ref} className={cn(baseClasses, className)} data-live={live} {...props}>

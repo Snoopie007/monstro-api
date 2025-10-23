@@ -55,7 +55,13 @@ export const NewPackageSchema = z.object({
         })
     }
 });
-
+export const MemberInfoSchema = z.object({
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().optional(),
+    email: z.string().email("Please enter a valid email address"),
+    phone: z.string().optional(),
+    avatar: z.string().url().optional().or(z.literal("")),
+});
 export const AddFamilyMemberSchema = z.object({
     firstName: z.string(),
     lastName: z.string(),

@@ -1,1 +1,1 @@
-export * from "./MemberPackages"
+export * from "./MemberPkgs"

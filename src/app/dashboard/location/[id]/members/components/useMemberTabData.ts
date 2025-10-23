@@ -1,7 +1,7 @@
 import { ColumnFiltersState } from '@tanstack/react-table'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { toast } from 'react-toastify'
-import { CustomFieldDefinition } from '@/components/custom-fields'
+import { CustomFieldDefinition } from '@/app/dashboard/location/[id]/members/[mid]/components/CustomFields'
 import { ApiClient, createMonstroApiClient } from '@/libs/api'
 
 interface TableState {
@@ -32,15 +32,39 @@ export interface MembersTabState {
 export function useMemberTabData(locationId: string, memberId?: string) {
     const apiRef = useRef<ApiClient | null>(null)
 
-    const [pageState, setPageState] = useState<{
-        isActiveTabFetching: boolean
-    }>({
+    const [pageState, setPageState] = useState<{ isActiveTabFetching: boolean }>({
         isActiveTabFetching: true,
     })
-    const [membersTabs, setMembersTabs] = useState<MembersTabState[]>([
-        {
-            id: Math.floor(1000 + Math.random() * 9000),
-            name: 'All Members',
+
+    const [membersTabs, setMembersTabs] = useState<MembersTabState[]>([{
+        id: 0,
+        name: 'All Members',
+        active: true,
+        locationId,
+        state: {
+            page: 0,
+            pageSize: 25,
+            columnFilters: [],
+            searchQuery: '',
+            selectedTags: [],
+            tagOperator: 'AND',
+            sorting: [],
+            isLoading: true,
+            data: {
+                error: null,
+                members: [],
+                count: 0,
+                customFields: [],
+            },
+        },
+    }])
+
+    const handleNewTab = useCallback(async () => {
+        const newTabId = Math.floor(1000 + Math.random() * 9000)
+
+        setMembersTabs((v) => [...v, {
+            id: newTabId,
+            name: `All Members`,
             active: true,
             locationId,
             state: {
@@ -60,48 +84,15 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                 },
             },
         },
-    ])
-
-    const handleNewTab = useCallback(async () => {
-        const newTabId = Math.floor(1000 + Math.random() * 9000)
-
-        // Create tab immediately with loading state
-        setMembersTabs((v) => [
-            ...v,
-            {
-                id: newTabId,
-                name: `All Members`,
-                active: true,
-                locationId,
-                state: {
-                    page: 0,
-                    pageSize: 25,
-                    columnFilters: [],
-                    searchQuery: '',
-                    selectedTags: [],
-                    tagOperator: 'AND',
-                    sorting: [],
-                    isLoading: true,
-                    data: {
-                        error: null,
-                        members: [],
-                        count: 0,
-                        customFields: [],
-                    },
-                },
-            },
         ])
 
         // Fetch data asynchronously
         try {
             // Fetch all members for this location
-            const response = await apiRef.current?.get(
-                `/protected/loc/${locationId}/members`,
-                {
-                    size: 25,
-                    page: 1,
-                }
-            )
+            const response = await apiRef.current?.get(`/protected/loc/${locationId}/members`, {
+                size: 25,
+                page: 1,
+            })
             const members = response?.members || []
             const count = response?.count || 0
 
@@ -110,19 +101,19 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                 v.map((tab) =>
                     tab.id === newTabId
                         ? {
-                              ...tab,
-                              state: {
-                                  ...tab.state,
-                                  isLoading: false,
-                                  data: {
-                                      error: null,
-                                      members: members,
-                                      count: count,
-                                      customFields:
-                                          response?.customFields || [],
-                                  },
-                              },
-                          }
+                            ...tab,
+                            state: {
+                                ...tab.state,
+                                isLoading: false,
+                                data: {
+                                    error: null,
+                                    members: members,
+                                    count: count,
+                                    customFields:
+                                        response?.customFields || [],
+                                },
+                            },
+                        }
                         : tab
                 )
             )
@@ -135,16 +126,16 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                 v.map((tab) =>
                     tab.id === newTabId
                         ? {
-                              ...tab,
-                              state: {
-                                  ...tab.state,
-                                  isLoading: false,
-                                  data: {
-                                      ...tab.state.data,
-                                      error: 'Failed to fetch members',
-                                  },
-                              },
-                          }
+                            ...tab,
+                            state: {
+                                ...tab.state,
+                                isLoading: false,
+                                data: {
+                                    ...tab.state.data,
+                                    error: 'Failed to fetch members',
+                                },
+                            },
+                        }
                         : tab
                 )
             )
@@ -198,18 +189,18 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                 v.map((tab) =>
                     tab.id === id
                         ? {
-                              ...tab,
-                              state: {
-                                  ...tab.state,
-                                  page,
-                                  pageSize,
-                                  searchQuery,
-                                  selectedTags,
-                                  columnFilters,
-                                  tagOperator,
-                                  sorting,
-                              },
-                          }
+                            ...tab,
+                            state: {
+                                ...tab.state,
+                                page,
+                                pageSize,
+                                searchQuery,
+                                selectedTags,
+                                columnFilters,
+                                tagOperator,
+                                sorting,
+                            },
+                        }
                         : tab
                 )
             )
@@ -224,12 +215,12 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                 v.map((tab) =>
                     tab.id === id
                         ? {
-                              ...tab,
-                              state: {
-                                  ...tab.state,
-                                  isLoading: true,
-                              },
-                          }
+                            ...tab,
+                            state: {
+                                ...tab.state,
+                                isLoading: true,
+                            },
+                        }
                         : tab
                 )
             )
@@ -283,19 +274,19 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                     v.map((tab) =>
                         tab.id === id
                             ? {
-                                  ...tab,
-                                  state: {
-                                      ...tab.state,
-                                      isLoading: false,
-                                      data: {
-                                          members: response?.members || [],
-                                          customFields:
-                                              response?.customFields || [],
-                                          count: response?.count || 0,
-                                          error: response?.error || null,
-                                      },
-                                  },
-                              }
+                                ...tab,
+                                state: {
+                                    ...tab.state,
+                                    isLoading: false,
+                                    data: {
+                                        members: response?.members || [],
+                                        customFields:
+                                            response?.customFields || [],
+                                        count: response?.count || 0,
+                                        error: response?.error || null,
+                                    },
+                                },
+                            }
                             : tab
                     )
                 )
@@ -307,16 +298,16 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                     v.map((tab) =>
                         tab.id === id
                             ? {
-                                  ...tab,
-                                  state: {
-                                      ...tab.state,
-                                      isLoading: false,
-                                      data: {
-                                          ...tab.state.data,
-                                          error: 'Failed to fetch members',
-                                      },
-                                  },
-                              }
+                                ...tab,
+                                state: {
+                                    ...tab.state,
+                                    isLoading: false,
+                                    data: {
+                                        ...tab.state.data,
+                                        error: 'Failed to fetch members',
+                                    },
+                                },
+                            }
                             : tab
                     )
                 )
@@ -340,12 +331,12 @@ export function useMemberTabData(locationId: string, memberId?: string) {
             handleFetchForCurrentTab(currentTab.id)
         }
     }, [membersTabs.find((tab) => tab.active)?.state.page,
-        membersTabs.find((tab) => tab.active)?.state.pageSize,
-        membersTabs.find((tab) => tab.active)?.state.searchQuery,
-        membersTabs.find((tab) => tab.active)?.state.selectedTags,
-        membersTabs.find((tab) => tab.active)?.state.columnFilters,
-        membersTabs.find((tab) => tab.active)?.state.tagOperator,
-        membersTabs.find((tab) => tab.active)?.state.sorting,
+    membersTabs.find((tab) => tab.active)?.state.pageSize,
+    membersTabs.find((tab) => tab.active)?.state.searchQuery,
+    membersTabs.find((tab) => tab.active)?.state.selectedTags,
+    membersTabs.find((tab) => tab.active)?.state.columnFilters,
+    membersTabs.find((tab) => tab.active)?.state.tagOperator,
+    membersTabs.find((tab) => tab.active)?.state.sorting,
     ])
 
     return {

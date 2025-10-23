@@ -80,11 +80,11 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size={"icon"} className='size-6'>
-                    <Plus className='size-4' />
+                <Button variant="ghost" size={"icon"} className='size-6 text-lg'>
+                    +
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[450px] rounded-sm border-foreground/10">
+            <DialogContent className="sm:max-w-[600px] rounded-sm border-foreground/10">
                 <VisuallyHidden>
                     <DialogTitle></DialogTitle>
                 </VisuallyHidden>
@@ -103,16 +103,25 @@ export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
                         {step === 1 && (
                             <DialogBody>
                                 <div className='space-y-2' >
-                                    {TYPES.map((t, i) => (
-                                        <div key={i} className={cn(
-                                            "border group rounded-sm p-4 bg-background hover:bg-indigo-500 hover:text-white cursor-pointer",
-                                        )}
-                                            onClick={() => setStep(t.name === 'New Member' ? 3 : 2)}
-                                        >
-                                            <div className='text-sm font-medium'>{t.name}</div>
-                                            <p className='text-xs group-hover:text-white text-muted-foreground'>{t.description}</p>
-                                        </div>
-                                    ))}
+                                    <p className='text-muted-foreground'>
+                                        Select the type of member you want to add:
+                                    </p>
+                                    <div className='grid grid-cols-2 gap-2'>
+                                        {TYPES.map((t, i) => (
+                                            <div key={i} className={cn(
+                                                "border  rounded-lg p-4 border-foreground/10 h-[100px] space-y-1 hover:text-indigo-500 cursor-pointer",
+                                            )}
+                                                onClick={() => setStep(t.name === 'New Member' ? 3 : 2)}
+                                            >
+                                                <div className='font-bold'>
+                                                    {t.name}
+                                                </div>
+                                                <p className='text-sm text-muted-foreground'>
+                                                    {t.description}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </DialogBody>
                         )}

@@ -1,4 +1,4 @@
-import { CustomFieldDefinition } from "@/components/custom-fields";
+import { CustomFieldDefinition } from "@/app/dashboard/location/[id]/members/[mid]/components/CustomFields";
 
 export enum FilterInputType {
   TEXT = 'text',
@@ -81,51 +81,51 @@ export const memberColumnMetadata: ColumnMetadata = {
 export const getCustomFieldConfig = (fieldId: string, customFields?: CustomFieldDefinition[]): ColumnFilterConfig | null => {
   const field = customFields?.find(cf => cf.id === fieldId);
   if (!field) return null;
-  
+
   switch (field.type) {
-      case 'select':
-          return {
-              id: `custom-field-${fieldId}`,
-              label: field.name,
-              inputType: FilterInputType.SELECT,
-              options: field.options || [],
-              placeholder: `Select ${field.name}`
-          };
-      
-      case 'boolean':
-          return {
-              id: `custom-field-${fieldId}`,
-              label: field.name,
-              inputType: FilterInputType.SELECT,
-              options: [
-                  { value: 'true', label: 'Yes' },
-                  { value: 'false', label: 'No' }
-              ],
-              placeholder: `Select ${field.name}`
-          };
-      
-      case 'number':
-          return {
-              id: `custom-field-${fieldId}`,
-              label: field.name,
-              inputType: FilterInputType.NUMBER,
-              placeholder: `Enter ${field.name}`
-          };
-      
-      case 'date':
-          return {
-              id: `custom-field-${fieldId}`,
-              label: field.name,
-              inputType: FilterInputType.DATE,
-              placeholder: `Select ${field.name}`
-          };
-      
-      default:
-          return {
-              id: `custom-field-${fieldId}`,
-              label: field.name,
-              inputType: FilterInputType.TEXT,
-              placeholder: `Enter ${field.name}`
-          };
+    case 'select':
+      return {
+        id: `custom-field-${fieldId}`,
+        label: field.name,
+        inputType: FilterInputType.SELECT,
+        options: field.options || [],
+        placeholder: `Select ${field.name}`
+      };
+
+    case 'boolean':
+      return {
+        id: `custom-field-${fieldId}`,
+        label: field.name,
+        inputType: FilterInputType.SELECT,
+        options: [
+          { value: 'true', label: 'Yes' },
+          { value: 'false', label: 'No' }
+        ],
+        placeholder: `Select ${field.name}`
+      };
+
+    case 'number':
+      return {
+        id: `custom-field-${fieldId}`,
+        label: field.name,
+        inputType: FilterInputType.NUMBER,
+        placeholder: `Enter ${field.name}`
+      };
+
+    case 'date':
+      return {
+        id: `custom-field-${fieldId}`,
+        label: field.name,
+        inputType: FilterInputType.DATE,
+        placeholder: `Select ${field.name}`
+      };
+
+    default:
+      return {
+        id: `custom-field-${fieldId}`,
+        label: field.name,
+        inputType: FilterInputType.TEXT,
+        placeholder: `Enter ${field.name}`
+      };
   }
 };

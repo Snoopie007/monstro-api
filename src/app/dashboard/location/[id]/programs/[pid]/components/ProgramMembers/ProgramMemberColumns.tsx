@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   CustomFieldDisplay,
   type CustomFieldDefinition,
-} from "@/components/custom-fields";
+} from "@/app/dashboard/location/[id]/members/[mid]/components/CustomFields";
 
 interface MemberWithCustomFields extends Member {
   customFields?: Array<{

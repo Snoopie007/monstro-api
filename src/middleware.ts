@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { auth } from "./auth"
-import { jwtVerify } from "jose";
 
 const publicPaths = [
 	"/login",
@@ -12,7 +11,7 @@ const publicPaths = [
 export default auth(async (req) => {
 
 	try {
-		const { pathname, searchParams } = req.nextUrl
+		const { pathname } = req.nextUrl
 		const isLoggedin = !!req.auth
 		const locations = req.auth?.user?.locations || []
 

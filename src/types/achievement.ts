@@ -23,6 +23,7 @@ export type MemberPointsHistory = typeof memberPointsHistory.$inferSelect & {
 
 export type MemberAchievement = typeof memberAchievements.$inferSelect & {
     member?: Member,
+    location?: Location,
     achievement?: Achievement,
     trigger?: AchievementTrigger,
 }

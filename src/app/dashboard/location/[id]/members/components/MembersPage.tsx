@@ -9,12 +9,7 @@ import {
     TabsList,
     TabsTrigger,
 } from '@/components/ui'
-import {
-    Tooltip,
-    TooltipTrigger,
-    TooltipContent,
-} from '@/components/ui/ToolTip'
-import { Plus, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { MemberList } from './MemberList'
 import { MembersTabState, useMemberTabData } from './useMemberTabData'
 
@@ -64,55 +59,36 @@ export default function MembersPage({ id, stripeKey }: MembersPageProps) {
     }, [membersTabs, id, stripeKey])
 
     return (
-        <Tabs
-            activationMode="manual"
-            defaultValue={String(membersTabs[0].id)}
-            className="w-full"
-        >
-            <TabsList className="w-full p-0 bg-background justify-start border-b rounded-none gap-1">
+        <Tabs activationMode="manual" defaultValue={String(membersTabs[0].id)} className="w-full">
+            <TabsList className="w-full bg-transparent  justify-start border-none  rounded-none gap-1">
                 {membersTabs.map((tab) => (
                     <TabsTrigger
                         key={tab.id}
                         value={String(tab.id)}
-                        className="min-w-38 gap-1 group rounded-none bg-background h-full data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary relative"
+                        className=" gap-1 group rounded bg-foreground/5 h-full data-[state=active]:shadow-none  relative"
+                        asChild
                     >
-                        <span className="text-[13px]">
-                            {tab.name.length > 11
-                                ? `${tab.name.slice(0, 11)}...`
-                                : tab.name}
-                        </span>{' '}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-3 rounded-sm size-[12px] hover:bg-foreground/5 hidden group-hover:block"
-                            onClick={() => handleRemoveTab(tab.id)}
-                        >
-                            <X className="size-[12px]" />
-                        </Button>
+                        <div className="flex flex-row items-center gap-1">
+                            <span > {tab.name.length > 11 ? `${tab.name.slice(0, 11)}...` : tab.name} </span>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className=" rounded-sm size-[12px] hover:bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                onClick={() => handleRemoveTab(tab.id)}
+                            >
+                                <X className="size-[12px]" />
+                            </Button>
+                        </div>
                     </TabsTrigger>
                 ))}
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            className="size-11 text-foreground hover:text-foreground hover:bg-foreground/5 rounded-none bg-background h-full data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary"
-                            onClick={handleNewTab}
-                        >
-                            {' '}
-                            <Plus />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Open another list</p>
-                    </TooltipContent>
-                </Tooltip>
+
             </TabsList>
             {renderTabs}
         </Tabs>
     )
 }
 
-const MemberTabContent = memo(function MemberTabContent({
-    tab,
+const MemberTabContent = memo(function MemberTabContent({ tab,
     tabName,
     id,
     stripeKey,

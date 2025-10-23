@@ -1,9 +1,9 @@
-'use client';;
-import { use, useState } from "react";
-import { CreateContract } from './components';
-import { useContracts } from '@/hooks/useContracts';
-import SectionLoading from '@/components/SectionLoading';
-import Link from 'next/link';
+'use client'
+import { use, useState } from 'react'
+import { CreateContract } from './components'
+import { useContracts } from '@/hooks/useContracts'
+import SectionLoading from '@/components/SectionLoading'
+import Link from 'next/link'
 import {
     Table,
     TableBody,
@@ -11,42 +11,58 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-    TablePage, TablePageContent, TablePageFooter,
-    TablePageHeader, TablePageHeaderSection,
-    Badge, Button
-} from "@/components/ui/";
-import { format } from "date-fns";
-import { tryCatch } from "@/libs/utils";
-import { toast } from "react-toastify";
-import { Loader2Icon, PencilIcon, Trash2Icon } from "lucide-react";
-import { Contract } from "@/types";
-import { Input } from "@/components/forms/input";
-import { usePermission } from "@/hooks/usePermissions";
+    TablePage,
+    TablePageContent,
+    TablePageFooter,
+    TablePageHeader,
+    TablePageHeaderSection,
+    Badge,
+    Button,
+} from '@/components/ui/'
+import { format } from 'date-fns'
+import { tryCatch } from '@/libs/utils'
+import { toast } from 'react-toastify'
+import { Loader2Icon, PencilIcon, Trash2Icon } from 'lucide-react'
+import { Contract } from '@/types'
+import { Input } from '@/components/forms/input'
+import { usePermission } from '@/hooks/usePermissions'
 
-export default function ContractTemplatesPage(props: { params: Promise<{ id: string }> }) {
-    const params = use(props.params);
-    const canAddContract = usePermission("add contract", params.id);
-    const canEditContract = usePermission("edit contract", params.id);
-    const canDeleteContract = usePermission("delete contract", params.id);
-    const { contracts, isLoading, error } = useContracts(params.id);
+export default function ContractTemplatesPage(props: {
+    params: Promise<{ id: string }>
+}) {
+    const params = use(props.params)
+    const canAddContract = usePermission('add contract', params.id)
+    const canEditContract = usePermission('edit contract', params.id)
+    const canDeleteContract = usePermission('delete contract', params.id)
+    const { contracts, isLoading, error } = useContracts(params.id)
 
     return (
         <TablePage>
             <TablePageHeader>
                 <TablePageHeaderSection>
-                    <Input
-                        placeholder="Find a contract..."
-                        variant="search"
-                    />
-                    {canAddContract && <CreateContract locationId={params.id} />}
+                    <Input placeholder="Find a contract..." variant="search" />
+                    {canAddContract && (
+                        <CreateContract locationId={params.id} />
+                    )}
                 </TablePageHeaderSection>
             </TablePageHeader>
             <TablePageContent>
                 <Table className=" w-auto border-r border-b border-foreground/5 ">
                     <TableHeader>
-                        <TableRow className="border-b border-foreground/5" >
-                            {["Title", "Created", "Type", "Status", "Editable", 'Require Signature', ""].map((title) => (
-                                <TableHead key={title} className="font-semibold h-auto py-2 bg-foreground/5  text-xs" >
+                        <TableRow className="border-b border-foreground/5">
+                            {[
+                                'Title',
+                                'Created',
+                                'Type',
+                                'Status',
+                                'Editable',
+                                'Require Signature',
+                                '',
+                            ].map((title) => (
+                                <TableHead
+                                    key={title}
+                                    className="font-semibold h-auto py-2 bg-foreground/5  text-xs"
+                                >
                                     {title}
                                 </TableHead>
                             ))}
@@ -55,96 +71,163 @@ export default function ContractTemplatesPage(props: { params: Promise<{ id: str
                     <TableBody>
                         {!isLoading && contracts.length ? (
                             <>
-                                {contracts.map((contract: Contract, index: number) => (
-                                    <TableRow key={index} className='cursor-pointer'>
-                                        <TableCell className="text-sm h-auto py-1 flex flex-row items-center justify-between w-[200px]">
-                                            <span className="truncate">  {contract.title ? contract.title : "No Title"}</span>
-                                            {contract.editable && canEditContract && (
-                                                <Button variant={"ghost"} asChild size={"icon"}
-                                                    className="size-6 hover:bg-foreground/5 text-foreground/50 rounded-sm">
-                                                    <Link href={`/builder/${params.id}/contract/${contract.id}`}>
-                                                        <PencilIcon className="size-3.5" />
-                                                    </Link>
-                                                </Button>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-sm h-auto py-1">
-                                            {format(contract.created, "MM/dd/yyyy")}
-                                        </TableCell>
-                                        <TableCell className="text-sm capitalize h-auto py-1">
-                                            {contract.type}
-                                        </TableCell>
-                                        <TableCell className="text-sm h-auto py-1">
-                                            <Badge size={"tiny"} variant={contract.isDraft ? "destructive" : "active"} className="rounded-sm">
-                                                {contract.isDraft ? "Draft" : "Active"}
-                                            </Badge>
-                                        </TableCell>
+                                {contracts.map(
+                                    (contract: Contract, index: number) => (
+                                        <TableRow
+                                            key={index}
+                                            className="cursor-pointer"
+                                        >
+                                            <TableCell className="text-sm h-auto py-1 flex flex-row items-center justify-between w-[200px]">
+                                                <span className="truncate">
+                                                    {' '}
+                                                    {contract.title
+                                                        ? contract.title
+                                                        : 'No Title'}
+                                                </span>
+                                                {contract.editable &&
+                                                    canEditContract && (
+                                                        <Button
+                                                            variant={'ghost'}
+                                                            asChild
+                                                            size={'icon'}
+                                                            className="size-6 hover:bg-foreground/5 text-foreground/50 rounded-sm"
+                                                        >
+                                                            <Link
+                                                                href={`/builder/${params.id}/contract/${contract.id}`}
+                                                            >
+                                                                <PencilIcon className="size-3.5" />
+                                                            </Link>
+                                                        </Button>
+                                                    )}
+                                            </TableCell>
+                                            <TableCell className="text-sm h-auto py-1">
+                                                {format(
+                                                    contract.created,
+                                                    'MM/dd/yyyy'
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-sm capitalize h-auto py-1">
+                                                {contract.type}
+                                            </TableCell>
+                                            <TableCell className="text-sm h-auto py-1">
+                                                <Badge
+                                                    size={'tiny'}
+                                                    variant={
+                                                        contract.isDraft
+                                                            ? 'destructive'
+                                                            : 'default'
+                                                    }
+                                                    className="rounded-sm"
+                                                >
+                                                    {contract.isDraft
+                                                        ? 'Draft'
+                                                        : 'Active'}
+                                                </Badge>
+                                            </TableCell>
 
-                                        <TableCell className="text-sm h-auto py-1">
-                                            <Badge size={"tiny"} variant={'default'} className="rounded-sm">
-                                                {contract.editable ? "Editable" : "Not Editable"}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-sm h-auto py-1">
-                                            <Badge size={"tiny"} variant={contract.requireSignature ? "default" : "destructive"} className="rounded-sm">
-                                                {contract.requireSignature ? "Yes" : "No"}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-sm h-auto py-1">
-                                            <RemoveContract id={contract.id} editable={contract.editable && canDeleteContract} lid={params.id} />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                            <TableCell className="text-sm h-auto py-1">
+                                                <Badge
+                                                    size={'tiny'}
+                                                    variant={'default'}
+                                                    className="rounded-sm"
+                                                >
+                                                    {contract.editable
+                                                        ? 'Editable'
+                                                        : 'Not Editable'}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-sm h-auto py-1">
+                                                <Badge
+                                                    size={'tiny'}
+                                                    variant={
+                                                        contract.requireSignature
+                                                            ? 'default'
+                                                            : 'destructive'
+                                                    }
+                                                    className="rounded-sm"
+                                                >
+                                                    {contract.requireSignature
+                                                        ? 'Yes'
+                                                        : 'No'}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-sm h-auto py-1">
+                                                <RemoveContract
+                                                    id={contract.id}
+                                                    editable={
+                                                        contract.editable &&
+                                                        canDeleteContract
+                                                    }
+                                                    lid={params.id}
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                )}
                             </>
                         ) : (
-
-                            <TableRow >
+                            <TableRow>
                                 <TableCell colSpan={7} className="text-sm">
-                                    <p className=' text-center'>No Templates Found. Create One.</p>
+                                    <p className=" text-center">
+                                        No Templates Found. Create One.
+                                    </p>
                                 </TableCell>
                             </TableRow>
-
                         )}
-
                     </TableBody>
                 </Table>
             </TablePageContent>
             <TablePageFooter>
-                <div className="p-2">   </div>
+                <div className="p-2"> </div>
             </TablePageFooter>
         </TablePage>
-
     )
 }
 
-function RemoveContract({ id, editable, lid }: { id: string, editable: boolean, lid: string }) {
-    const [loading, setLoading] = useState(false);
+function RemoveContract({
+    id,
+    editable,
+    lid,
+}: {
+    id: string
+    editable: boolean
+    lid: string
+}) {
+    const [loading, setLoading] = useState(false)
     async function onDelete(id: string) {
-        if (!id) return;
-        setLoading(true);
+        if (!id) return
+        setLoading(true)
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/contracts/${id}`, {
-                method: "DELETE",
+                method: 'DELETE',
             })
         )
-        setLoading(false);
-        if(result?.status === 403) {
-            toast.error("You are not authorized to delete this contract");
-            return;
+        setLoading(false)
+        if (result?.status === 403) {
+            toast.error('You are not authorized to delete this contract')
+            return
         }
-        
+
         if (error && !result) {
-            toast.error(error.message);
+            toast.error(error.message)
         }
     }
 
     return (
-        <Button variant={"ghost"} size={"icon"}
+        <Button
+            variant={'ghost'}
+            size={'icon'}
             className="size-6 hover:bg-foreground/5 text-foreground/50 rounded-sm"
             disabled={!editable}
-            onClick={(e) => { onDelete(id) }}
+            onClick={(e) => {
+                onDelete(id)
+            }}
         >
-            {loading ? <Loader2Icon className="size-3 animate-spin" /> : <Trash2Icon className="size-3" />}
+            {loading ? (
+                <Loader2Icon className="size-3 animate-spin" />
+            ) : (
+                <Trash2Icon className="size-3" />
+            )}
         </Button>
     )
 }

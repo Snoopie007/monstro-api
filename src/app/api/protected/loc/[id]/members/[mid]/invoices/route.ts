@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db/db";
 import { memberInvoices, members } from "@/db/schemas";
 import { eq } from "drizzle-orm";
-import { MemberStripePayments, getStripeCustomer } from "@/libs/server/stripe";
+import { getStripeCustomer } from "@/libs/server/stripe";
 
 type InvoiceProps = {
   mid: string;

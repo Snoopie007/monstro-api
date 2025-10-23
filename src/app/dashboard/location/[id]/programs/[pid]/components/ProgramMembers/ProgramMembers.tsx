@@ -14,7 +14,7 @@ import { ProgramMemberTable } from "./ProgramMemberTable";
 
 import { Member } from "@/types";
 import { useProgramMembers } from "@/hooks/usePrograms";
-import { CustomFieldDefinition } from "@/components/custom-fields";
+import { CustomFieldDefinition } from "@/app/dashboard/location/[id]/members/[mid]/components/CustomFields";
 
 export function ProgramMembers({
   programId,

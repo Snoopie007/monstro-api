@@ -146,8 +146,8 @@ export function ImportMembers({ lid }: { lid: string }) {
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="create" size="sm">
-                    <FileDown className="size-4" /> Import Members
+                <Button variant="create" size="sm" className='rounded-lg'>
+                    <FileDown className='size-4' /> Import Members
                 </Button>
             </DialogTrigger>
             <DialogContent className="w-full max-w-lg md:rounded-lg p-0 gap-0 border-foreground/10">

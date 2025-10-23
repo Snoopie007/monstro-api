@@ -36,7 +36,7 @@ export function AddMember({ lid, stripeKey }: CreateMemberProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size={"sm"} variant={"create"}>
+                <Button size={"sm"} variant={"create"} className='rounded-lg'>
                     + Member
                 </Button>
             </DialogTrigger>

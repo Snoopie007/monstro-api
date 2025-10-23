@@ -11,3 +11,4 @@ export * from "./OTPInput";
 export * from "./PriceInput";
 export * from "./switch";
 export * from "./slider";
+export * from "./InputGroup";

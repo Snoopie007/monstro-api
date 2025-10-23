@@ -10,15 +10,14 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui";
-import { Pencil, Trash2, X, Ellipsis, Pause, Play } from "lucide-react";
+import { Pencil, Trash2, X, Pause, Play, EllipsisVertical } from "lucide-react";
 import { MemberSubscription } from "@/types";
 import { CancelSub, UpdateSub, PauseSub, ResumeSub } from ".";
 import { useState } from "react";
 import { cn } from "@/libs/utils";
 import { VisuallyHidden } from "react-aria";
 
-const HoverTransition =
-	"group-hover:bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300";
+const HoverTransition = "group-hover:bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300";
 
 export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch: () => void }) {
 	const [action, setAction] = useState<"cancel" | "update" | "pause" | "resume" | undefined>(
@@ -62,11 +61,11 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 					/>
 				</DialogContent>
 			</Dialog>
-			<div className="flex flex-row items-center ">
+			<div className="flex flex-row items-center group">
 				<Button
 					variant="ghost"
 					size="icon"
-					className={cn("size-7 flex-1  rounded-r-none", HoverTransition)}
+					className={cn("size-6 flex-1  rounded-r-none", HoverTransition)}
 					onClick={() => setAction("update")}
 				>
 					<Pencil className="size-3" />
@@ -74,7 +73,7 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 				<Button
 					variant="ghost"
 					size="icon"
-					className={cn("size-7 border-x rounded-none border-foreground/5 flex-1", HoverTransition)}
+					className={cn("size-6 border-x rounded-none border-foreground/5 flex-1", HoverTransition)}
 					disabled={!sub}
 					onClick={() => {
 						if (sub.status === "canceled") return
@@ -89,18 +88,18 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 						<Button
 							variant="ghost"
 							size="icon"
-							className="size-7 group-hover:bg-foreground/5 flex-1 rounded-l-none"
+							className="size-6 group-hover:bg-foreground/5 flex-1 rounded-l-none"
 						>
-							<Ellipsis className="size-4" />
+							<EllipsisVertical className="size-4" />
 						</Button>
 					</DropdownMenuTrigger>
-					<DropdownMenuContent className="border-foreground/10 ">
+					<DropdownMenuContent align="end" className="border-foreground/10 ">
 						<DropdownMenuItem
 							className="cursor-pointer text-sm flex flex-row items-center justify-between gap-2"
 							onClick={() => setAction("update")}
 							disabled={!sub}
 						>
-							<span className="text-xs"> Update</span>
+							<span > Update</span>
 							<Pencil className="size-3" />
 						</DropdownMenuItem>
 						<DropdownMenuItem
@@ -108,20 +107,17 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 							onClick={() => setAction(sub.status === "active" ? "pause" : "resume")}
 							disabled={!sub || !['active', 'paused'].includes(sub.status)}
 						>
-							<span className="text-xs"> {sub.status === "active" ? "Pause" : "Resume"}</span>
+							<span > {sub.status === "active" ? "Pause" : "Resume"}</span>
 							{sub.status === "active" ? <Pause className="size-3" /> : <Play className="size-3" />}
 						</DropdownMenuItem>
-
-						<DropdownMenuSeparator />
 						<DropdownMenuItem
 							className="cursor-pointer text-sm flex flex-row items-center justify-between gap-2"
 							onClick={() => setAction("cancel")}
 							disabled={!sub}
 						>
-							<span className="text-xs"> Cancel</span>
+							<span > Cancel</span>
 							<Trash2 className="size-3" />
 						</DropdownMenuItem>
-
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>
