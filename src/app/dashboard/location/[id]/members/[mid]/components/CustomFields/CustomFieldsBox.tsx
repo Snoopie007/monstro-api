@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
     CustomFieldInput,
     type CustomFieldDefinition,
 } from './CustomFieldInput'
 import { CustomFieldDisplay } from './CustomFieldDisplay'
 import { Button } from '@/components/ui/button'
-import { ChevronsUpDown, CircleFadingPlusIcon } from 'lucide-react'
+import { ChevronsUpDown, CircleFadingPlusIcon, Loader2, SaveIcon } from 'lucide-react'
 import { toast } from 'react-toastify'
 import {
     CardTitle, Collapsible, CollapsibleContent, CollapsibleTrigger, EmptyHeader,
@@ -147,9 +147,9 @@ export function CustomFieldsBox({
             </div>
             <CollapsibleContent className='bg-muted/50 rounded-lg p-4' >
                 {displayFields.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2 items-end">
                         {displayFields.map((field) => (
-                            <div key={field.id}>
+                            <div key={field.id} className="w-full">
                                 {editable ? (
                                     <CustomFieldInput
                                         field={field}
@@ -169,6 +169,10 @@ export function CustomFieldsBox({
                                 )}
                             </div>
                         ))}
+                        <Button variant="create" size="xs" className="flex flex-row gap-2" onClick={saveCustomFields}>
+                            {isSaving? <Loader2 className="size-4 animate-spin" /> : <SaveIcon className="size-4" />}
+                            {isSaving? 'Saving...' : 'Save Changes'}
+                        </Button>
                     </div>
                 ) : (
                     <Empty variant="border">

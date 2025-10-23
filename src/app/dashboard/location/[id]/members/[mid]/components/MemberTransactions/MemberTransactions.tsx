@@ -22,14 +22,14 @@ export function MemberTransactions({ params }: MemberTransactionsProps) {
     return (
         <div className="space-y-2">
 
-            <Item variant="outline" size="sm" className="border-foreground/10 border-dashed cursor-pointer" >
+            {/* <Item variant="outline" size="sm" className="border-foreground/10 border-dashed cursor-pointer" >
                 <ItemMedia>
                     <CircleFadingPlusIcon className="size-5" />
                 </ItemMedia>
                 <ItemContent>
                     <ItemTitle> Create a transaction</ItemTitle>
                 </ItemContent>
-            </Item>
+            </Item> */}
             {transactions && transactions.length > 0 ? (
                 <div className="space-y-2">
                     {transactions.map((transaction: Transaction) => (

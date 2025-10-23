@@ -19,7 +19,7 @@ import {
 	MemberAchievements,
 	MemberChatView,
 	MemberFamilies,
-	MemberInvoice,
+	MemberInvoices,
 	MemberPkg,
 	MemberProfile,
 	MemberRewards,
@@ -264,7 +264,7 @@ export default async function MemberProfilePage(props: {
 										<PaymentMethods editable={canEditMember} params={params} />
 									</TabsContent>
 									<TabsContent value="invoices">
-										<MemberInvoice params={params} />
+										<MemberInvoices params={params} />
 									</TabsContent>
 									<TabsContent value="transactions">
 										<MemberTransactions params={params} />
