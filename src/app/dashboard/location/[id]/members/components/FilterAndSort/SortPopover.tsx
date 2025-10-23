@@ -57,7 +57,7 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
             <div className="flex flex-col space-y-2">
                 {sort.map((s, index) => (
                     <div key={index} className="flex flex-row justify-between items-center">
-                        <span className="text-sm text-sm truncate flex flex-row items-center gap-2 max-w-[150px]">
+                        <span className="text-xs text-muted-foreground truncate flex flex-row items-center gap-2 max-w-[150px]">
                             <TextAlignJustify size={12} />
                             {columnOptions.find(c => c.id === s.id)?.label as string}
                         </span>
@@ -87,7 +87,7 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
                 <Separator className="my-2" />
                 <div className="flex flex-row justify-between gap-2">
                     <Select onValueChange={handleColumnSelect}>
-                        <SelectTrigger className="w-full h-8 text-sm w-48">
+                        <SelectTrigger className="w-fit h-8 text-xs">
                             <SelectValue placeholder="Pick a column to sort by" />
                         </SelectTrigger>
                         <SelectContent>
