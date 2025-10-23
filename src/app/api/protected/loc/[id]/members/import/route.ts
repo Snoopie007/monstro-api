@@ -86,7 +86,7 @@ export async function POST(
 
 		if (insertMembers.length === 0) {
 			return NextResponse.json(
-				{ message: "No valid members to insert" },
+				{ message: "No valid members to insert. Please check the format of the file and try again." },
 				{ status: 400 }
 			);
 		}

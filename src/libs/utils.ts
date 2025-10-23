@@ -29,13 +29,13 @@ export const StripeCardOptions = {
 
  const formatAmountForDisplay = (
 	amount: number,
-	currency: string,
+	currency: string | null,
 	withSymbol = true,
 	minimumFractionDigits = 0
 ): string => {
 	const formatter = new Intl.NumberFormat('en-US', {
 		style: withSymbol ? 'currency' : 'decimal',
-		currency,
+		currency: currency ?? 'USD',
 		minimumFractionDigits,
 	});
 	
