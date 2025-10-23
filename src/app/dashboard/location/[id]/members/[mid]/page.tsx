@@ -24,8 +24,8 @@ import { PaymentMethods, MemberProfile, PointsProfile } from './components'
 import { db } from '@/db/db'
 import { and, eq, or, desc } from 'drizzle-orm'
 import { MemberProvider } from './providers/MemberContext'
-import { Member, MemberLocation } from '@/types'
-import Stripe from 'stripe'
+import type { Member, MemberLocation } from '@/types'
+import type Stripe from 'stripe'
 import { MemberStripePayments } from '@/libs/server/stripe'
 
 import { attendances, reservations, recurringReservations } from '@/db/schemas'
@@ -123,22 +123,15 @@ async function fetchMemberProfileData(
             .orderBy(desc(attendances.checkInTime))
             .limit(1)
 
-        // Fetch reward claims for points calculation
-        const rewardClaims = await db.query.memberRewards.findMany({
-            where: (memberRewards, { eq }) => eq(memberRewards.memberId, mid),
-        })
-
-        // Calculate total points earned
-        const pointsSpent = rewardClaims.reduce((total, claim) => {
-            return (
-                total +
-                (claim.previousPoints
-                    ? claim.previousPoints - currentPoints
-                    : 0)
-            )
-        }, 0)
-
-        const totalPointsEarned = currentPoints + Math.abs(pointsSpent)
+            const pointsHistory = await db.query.memberPointsHistory.findMany({
+                where: (mph, { eq, and }) =>
+                    and(eq(mph.memberId, mid), eq(mph.locationId, id)),
+                columns: {
+                    points: true,
+                },
+            })
+    
+            const totalPointsEarned = pointsHistory.reduce((acc, curr) => acc + curr.points, 0)
 
         // Format last seen date
         const latestCheckInDate = latestCheckIn[0]?.checkInTime
