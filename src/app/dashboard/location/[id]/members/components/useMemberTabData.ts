@@ -32,15 +32,39 @@ export interface MembersTabState {
 export function useMemberTabData(locationId: string, memberId?: string) {
     const apiRef = useRef<ApiClient | null>(null)
 
-    const [pageState, setPageState] = useState<{
-        isActiveTabFetching: boolean
-    }>({
+    const [pageState, setPageState] = useState<{ isActiveTabFetching: boolean }>({
         isActiveTabFetching: true,
     })
-    const [membersTabs, setMembersTabs] = useState<MembersTabState[]>([
-        {
-            id: Math.floor(1000 + Math.random() * 9000),
-            name: 'All Members',
+
+    const [membersTabs, setMembersTabs] = useState<MembersTabState[]>([{
+        id: 0,
+        name: 'All Members',
+        active: true,
+        locationId,
+        state: {
+            page: 0,
+            pageSize: 25,
+            columnFilters: [],
+            searchQuery: '',
+            selectedTags: [],
+            tagOperator: 'AND',
+            sorting: [],
+            isLoading: true,
+            data: {
+                error: null,
+                members: [],
+                count: 0,
+                customFields: [],
+            },
+        },
+    }])
+
+    const handleNewTab = useCallback(async () => {
+        const newTabId = Math.floor(1000 + Math.random() * 9000)
+
+        setMembersTabs((v) => [...v, {
+            id: newTabId,
+            name: `All Members`,
             active: true,
             locationId,
             state: {
@@ -60,48 +84,15 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                 },
             },
         },
-    ])
-
-    const handleNewTab = useCallback(async () => {
-        const newTabId = Math.floor(1000 + Math.random() * 9000)
-
-        // Create tab immediately with loading state
-        setMembersTabs((v) => [
-            ...v,
-            {
-                id: newTabId,
-                name: `All Members`,
-                active: true,
-                locationId,
-                state: {
-                    page: 0,
-                    pageSize: 25,
-                    columnFilters: [],
-                    searchQuery: '',
-                    selectedTags: [],
-                    tagOperator: 'AND',
-                    sorting: [],
-                    isLoading: true,
-                    data: {
-                        error: null,
-                        members: [],
-                        count: 0,
-                        customFields: [],
-                    },
-                },
-            },
         ])
 
         // Fetch data asynchronously
         try {
             // Fetch all members for this location
-            const response = await apiRef.current?.get(
-                `/protected/loc/${locationId}/members`,
-                {
-                    size: 25,
-                    page: 1,
-                }
-            )
+            const response = await apiRef.current?.get(`/protected/loc/${locationId}/members`, {
+                size: 25,
+                page: 1,
+            })
             const members = response?.members || []
             const count = response?.count || 0
 

@@ -53,8 +53,7 @@ async function fetchStripeKeys(
 
     try {
         const ml = await db.query.memberLocations.findFirst({
-            where: (ml, { eq }) =>
-                and(eq(ml.memberId, mid), eq(ml.locationId, id)),
+            where: (ml, { eq }) => and(eq(ml.memberId, mid), eq(ml.locationId, id)),
             with: {
                 member: {
                     with: {
@@ -64,11 +63,7 @@ async function fetchStripeKeys(
                             },
                         },
                         subscriptions: {
-                            where: (ms, { eq, and }) =>
-                                and(
-                                    eq(ms.memberId, mid),
-                                    eq(ms.locationId, id)
-                                ),
+                            where: (ms, { eq }) => eq(ms.locationId, id),
                             with: {
                                 plan: true,
                             },
@@ -76,6 +71,7 @@ async function fetchStripeKeys(
                     },
                 },
             },
+
         })
 
         if (!ml) {

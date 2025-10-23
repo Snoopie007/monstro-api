@@ -9,12 +9,7 @@ import {
     TabsList,
     TabsTrigger,
 } from '@/components/ui'
-import {
-    Tooltip,
-    TooltipTrigger,
-    TooltipContent,
-} from '@/components/ui/ToolTip'
-import { Plus, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { MemberList } from './MemberList'
 import { MembersTabState, useMemberTabData } from './useMemberTabData'
 
@@ -64,24 +59,17 @@ export default function MembersPage({ id, stripeKey }: MembersPageProps) {
     }, [membersTabs, id, stripeKey])
 
     return (
-        <Tabs
-            activationMode="manual"
-            defaultValue={String(membersTabs[0].id)}
-            className="w-full"
-        >
+        <Tabs activationMode="manual" defaultValue={String(membersTabs[0].id)} className="w-full">
             <TabsList className="w-full bg-transparent  justify-start border-none  rounded-none gap-1">
                 {membersTabs.map((tab) => (
                     <TabsTrigger
                         key={tab.id}
                         value={String(tab.id)}
-                        className=" gap-1 group  rounded bg-background h-full data-[state=active]:shadow-none  relative"
+                        className=" gap-1 group rounded bg-foreground/5 h-full data-[state=active]:shadow-none  relative"
                         asChild
                     >
                         <div className="flex flex-row items-center gap-1">
-                            <span >
-                                {tab.name.length > 11 ? `${tab.name.slice(0, 11)}...`
-                                    : tab.name}
-                            </span>{' '}
+                            <span > {tab.name.length > 11 ? `${tab.name.slice(0, 11)}...` : tab.name} </span>
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -93,29 +81,14 @@ export default function MembersPage({ id, stripeKey }: MembersPageProps) {
                         </div>
                     </TabsTrigger>
                 ))}
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            className="size-8 "
-                            onClick={handleNewTab}
-                        >
 
-                            +
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Open another list</p>
-                    </TooltipContent>
-                </Tooltip>
             </TabsList>
             {renderTabs}
         </Tabs>
     )
 }
 
-const MemberTabContent = memo(function MemberTabContent({
-    tab,
+const MemberTabContent = memo(function MemberTabContent({ tab,
     tabName,
     id,
     stripeKey,

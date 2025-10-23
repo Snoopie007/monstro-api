@@ -92,45 +92,46 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
                     }
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="min-w-96 max-w-96 p-2 border-foreground/10 overflow-hidden space-y-2" align="start">
-                {filterKv.map((kv, index) => {
-                    const selectedColumn = allColumnOptions.find(option => option?.id === kv.id);
-                    const inputType = selectedColumn?.inputType || FilterInputType.TEXT;
-                    const options = selectedColumn?.options;
-                    const placeholder = selectedColumn?.placeholder;
-                    return (
-                        <div className="flex flex-row items-center gap-2" key={index}>
-                            <Select value={kv.id} onValueChange={(value) => handleColumnChange(kv.id, value)}>
-                                <SelectTrigger className="w-full h-7 text-sm">
-                                    <SelectValue placeholder="Select Column" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {allColumnOptions.filter((option): option is NonNullable<typeof option> => Boolean(option)).map((option, index) => (
-                                        <SelectItem value={option.id} key={index}>
-                                            {option.label as string}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <span>is </span>
-                            <FilterInput
-                                columnId={kv.id}
-                                value={String(kv.value || "")}
-                                onChange={(value) => handleValueChange(kv.id, value)}
-                                inputType={inputType}
-                                options={options}
-                                placeholder={placeholder}
-                            />
-                            <Button variant="ghost" size="icon" className="size-5 p-1" onClick={() => handleRemoveFilter(kv.id)}>
-                                <XIcon size={14} />
-                            </Button>
-                        </div>
-                    );
-                })}
+            <PopoverContent className="min-w-96 max-w-96 space-y-4 p-3 border-foreground/10 overflow-hidden " align="start">
+                <div className="space-y-2">
+                    {filterKv.map((kv, index) => {
+                        const selectedColumn = allColumnOptions.find(option => option?.id === kv.id);
+                        const inputType = selectedColumn?.inputType || FilterInputType.TEXT;
+                        const options = selectedColumn?.options;
+                        const placeholder = selectedColumn?.placeholder;
+                        return (
+                            <div className="flex flex-row items-center gap-2" key={index}>
+                                <Select value={kv.id} onValueChange={(value) => handleColumnChange(kv.id, value)}>
+                                    <SelectTrigger className="w-full h-7 text-sm">
+                                        <SelectValue placeholder="Select Column" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {allColumnOptions.filter((option): option is NonNullable<typeof option> => Boolean(option)).map((option, index) => (
+                                            <SelectItem value={option.id} key={index}>
+                                                {option.label as string}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <span className="text-sm">is</span>
+                                <FilterInput
+                                    columnId={kv.id}
+                                    value={String(kv.value || "")}
+                                    onChange={(value) => handleValueChange(kv.id, value)}
+                                    inputType={inputType}
+                                    options={options}
+                                    placeholder={placeholder}
+                                />
+                                <Button variant="ghost" size="icon" className="size-5 p-1" onClick={() => handleRemoveFilter(kv.id)}>
+                                    <XIcon size={14} />
+                                </Button>
+                            </div>
+                        );
+                    })}
+                </div>
 
-                {filterKv.length > 0 && <Separator className="my-2" />}
                 <div className="flex flex-row justify-between">
-                    <Button variant="create" size="sm" onClick={() => {
+                    <Button variant="create" size="xs" onClick={() => {
                         const firstAvailableColumn = allColumnOptions.find(option =>
                             option && !filterKv.some(filter => filter.id === option.id)
                         );
@@ -144,7 +145,7 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
                     }}>
                         Add Filter
                     </Button>
-                    <Button variant="clear" size="sm" onClick={() => handleApplyFilters(filterKv)}>Apply Filters</Button>
+                    <Button variant="clear" size="xs" onClick={() => handleApplyFilters(filterKv)}>Apply Filters</Button>
                 </div>
             </PopoverContent>
         </Popover>

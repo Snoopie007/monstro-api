@@ -81,10 +81,12 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
                     {sort.length > 0 && <span className="text-sm text-foreground/80 ml-2 px-2 py-0.5 bg-foreground/10 rounded-full">{sort.length}</span>}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="min-w-96 max-w-96 p-2 border-foreground/10 overflow-hidden space-y-2" align="start">
-                {sort.length === 0 && renderNoSorts()}
-                {sort.length > 0 && renderSortItems()}
-                <Separator className="my-2" />
+            <PopoverContent className="min-w-96 max-w-96 space-y-4 p-3 border-foreground/10 overflow-hidden " align="start">
+                <div className="space-y-2">
+                    {sort.length === 0 && renderNoSorts()}
+                    {sort.length > 0 && renderSortItems()}
+
+                </div>
                 <div className="flex flex-row justify-between gap-2">
                     <Select onValueChange={handleColumnSelect}>
                         <SelectTrigger className="w-fit h-8 text-xs">
