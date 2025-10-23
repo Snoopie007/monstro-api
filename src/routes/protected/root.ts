@@ -10,6 +10,7 @@ import {
     memberAvatar,
     memberPlans,
     memberFriends,
+    memberGroups,
     memberChats
 } from './members';
 import {
@@ -22,9 +23,16 @@ import {
     locationSessions,
     locationSupport
 } from './locations';
+import {
+    groupRoutes
+} from './groups';
 
 export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(AuthMiddleware)
+    .group('/groups/:gid', (app) => {
+        app.use(groupRoutes);
+        return app;
+    })
     .group('/member/:mid', (app) => {
         app.use(membersLocations);
         app.use(memberAccounts);
@@ -34,6 +42,7 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(memberProfile);
         app.use(memberAvatar);
         app.use(memberFriends);
+        app.use(memberGroups);
         app.use(memberPlans);
         app.use(memberChats);
         return app;

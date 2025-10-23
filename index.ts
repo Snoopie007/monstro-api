@@ -19,12 +19,8 @@ app.use(cors(CORS_CONFIG))
 
   .onRequest(({ request }) => {
     // Check if request came through HTTPS proxy
-    const headers = request.headers;
-    const protocol = headers.get('x-forwarded-proto') || (request.url.startsWith('https') ? 'https' : 'http');
-    const host = headers.get('x-forwarded-host') || headers.get('host') || 'localhost';
-    const originalUrl = `${protocol}://${host}${request.url}`;
 
-    console.log(`🔍 ${originalUrl}`);
+    console.log(`🔍 ${request.url}`);
   })
   // Dedicated health check endpoint
   .get("/healthcheck", () => {

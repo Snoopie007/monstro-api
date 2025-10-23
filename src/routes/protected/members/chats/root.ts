@@ -9,46 +9,36 @@ type Props = {
     status: any
 }
 
-const DummyChats = [
-    {
-        id: '1',
-        name: 'Chat 1',
-        chatMembers: [{
-            member: {
-                id: '234234234234234234',
-                firstName: 'Member 1',
-                lastName: 'Member 1',
-                avatar: 'https://via.placeholder.com/150',
-            },
-        }],
-        startedBy: {
-            id: '1',
-            firstName: 'Member 1',
-            lastName: 'Member 1',
-            avatar: 'https://via.placeholder.com/150',
-        },
-        created: new Date(),
-    }
-]
+
 
 export const memberChats = new Elysia({ prefix: '/chats' })
     .get('/', async ({ params, status }: Props) => {
 
         try {
+
+            const cms = await db.query.chatMembers.findMany({
+                where: (chatMembers, { eq }) => eq(chatMembers.memberId, params.mid!),
+            })
+
+            const chatIds = [...new Set(cms.map((cm) => cm.chatId))];
             const chats = await db.query.chats.findMany({
-                where: (chats, { eq }) => eq(chats.startedBy, params.mid!),
+                where: (chats, { inArray }) => inArray(chats.id, chatIds),
                 with: {
-                    started: true,
                     chatMembers: {
                         with: {
                             member: true,
                         },
                     },
+                    messages: {
+                        orderBy: (messages, { desc }) => desc(messages.created),
+                        limit: 1,
+                        with: {
+                            sender: true,
+                        },
+                    },
                 },
             })
-            if (chats.length === 0) {
-                return status(200, DummyChats);
-            }
+
 
             return status(200, chats);
         } catch (error) {

@@ -19,6 +19,7 @@ export function memberFriends(app: Elysia) {
             });
 
 
+
             return status(200, friends);
         } catch (error) {
             console.error(error);
