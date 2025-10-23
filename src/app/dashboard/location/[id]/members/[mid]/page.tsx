@@ -16,6 +16,8 @@ import {
     MemberPkg,
     CustomFieldsBox,
     MemberTagsBox,
+    MemberRewards,
+    MemberAchievements,
 } from './components'
 
 import { PaymentMethods, MemberProfile, PointsProfile } from './components'
@@ -276,6 +278,8 @@ export default async function MemberProfilePage(props: {
                                             'payments methods',
                                             'invoices',
                                             'transactions',
+                                            'rewards',
+                                            'achievements',
                                         ].map((tab) => (
                                             <TabsTrigger
                                                 key={tab}
@@ -297,6 +301,12 @@ export default async function MemberProfilePage(props: {
                                     </TabsContent>
                                     <TabsContent value="transactions">
                                         <MemberTransactions params={params} />
+                                    </TabsContent>
+                                    <TabsContent value="rewards">
+                                        <MemberRewards params={params} />
+                                    </TabsContent>
+                                    <TabsContent value="achievements">
+                                        <MemberAchievements params={params} />
                                     </TabsContent>
                                 </Tabs>
                             </div>

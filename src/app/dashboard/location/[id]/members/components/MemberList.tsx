@@ -18,7 +18,7 @@ import { AddMember } from './CreateMember'
 import { Member } from '@/types/member'
 
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
-import { Separator } from '@/components/ui'
+import { ScrollArea, Separator } from '@/components/ui'
 import {
     TablePage,
     TablePageContent,
@@ -208,7 +208,7 @@ export function MemberList({
         )
     }
 
-    
+
 
     const renderAddMember = useMemo(() => {
         if (canAddMember) {
@@ -240,8 +240,7 @@ export function MemberList({
                             onSortChange={handleSortChange}
                         />
 
-                        <Input
-                            placeholder="Find a member..."
+                        <Input placeholder="Find a member..."
                             onChange={(event) => {
                                 handleSearch(event.target.value)
                             }}
@@ -259,11 +258,13 @@ export function MemberList({
                 </TablePageHeaderSection>
             </TablePageHeader>
             <TablePageContent>
-                <MemberTable
-                    table={table}
-                    isLoading={isLoading}
-                    columns={columns.length}
-                />
+                <ScrollArea className="h-[calc(100vh-190px)] overflow-hidden">
+                    <MemberTable
+                        table={table}
+                        isLoading={isLoading}
+                        columns={columns.length}
+                    />
+                </ScrollArea>
             </TablePageContent>
             <TablePageFooter>
                 <div className="flex gap-2 items-center p-2">

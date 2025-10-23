@@ -69,24 +69,23 @@ export default function MembersPage({ id, stripeKey }: MembersPageProps) {
             defaultValue={String(membersTabs[0].id)}
             className="w-full"
         >
-            <TabsList className="w-full p-0 bg-background justify-start border-b rounded-none gap-1">
+            <TabsList className="w-full bg-transparent  justify-start border-none  rounded-none gap-1">
                 {membersTabs.map((tab) => (
                     <TabsTrigger
                         key={tab.id}
                         value={String(tab.id)}
-                        className="min-w-38 gap-1 group rounded-none bg-background h-full data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary relative"
+                        className=" gap-1 group  rounded bg-background h-full data-[state=active]:shadow-none  relative"
                         asChild
                     >
-                        <div>
-                            <span className="text-[13px]">
-                                {tab.name.length > 11
-                                    ? `${tab.name.slice(0, 11)}...`
+                        <div className="flex flex-row items-center gap-1">
+                            <span >
+                                {tab.name.length > 11 ? `${tab.name.slice(0, 11)}...`
                                     : tab.name}
                             </span>{' '}
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="absolute right-3 rounded-sm size-[12px] hover:bg-foreground/5 hidden group-hover:block"
+                                className=" rounded-sm size-[12px] hover:bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                                 onClick={() => handleRemoveTab(tab.id)}
                             >
                                 <X className="size-[12px]" />
@@ -97,11 +96,12 @@ export default function MembersPage({ id, stripeKey }: MembersPageProps) {
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button
-                            className="size-11 text-foreground hover:text-foreground hover:bg-foreground/5 rounded-none bg-background h-full data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary"
+                            variant="ghost"
+                            className="size-8 "
                             onClick={handleNewTab}
                         >
-                            {' '}
-                            <Plus />
+
+                            +
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>

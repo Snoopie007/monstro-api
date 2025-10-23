@@ -85,7 +85,11 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
                 <Button variant="ghost" size="sm" className="hover:bg-foreground/10">
                     <FilterIcon size={14} className="mr-2" />
                     Filter
-                    {filterKv.length > 0 && <span className="text-sm text-foreground/80 ml-2 px-2 py-0.5 bg-foreground/10 rounded-full">{filterKv.length}</span>}
+                    {filterKv.length > 0 &&
+                        <span className="text-xs text-foreground/80 ml-2 size-5 flex items-center justify-center bg-foreground/10 rounded-full">
+                            {filterKv.length}
+                        </span>
+                    }
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="min-w-96 max-w-96 p-2 border-foreground/10 overflow-hidden space-y-2" align="start">
