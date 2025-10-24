@@ -20,45 +20,45 @@ export function InvoiceConfirmStep({
   memberName,
 }: InvoiceConfirmStepProps) {
   return (
-    <div className="space-y-6">
+    <div className="bg-muted/50 rounded-lg p-6 space-y-6">
       <div className="text-center">
-        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-green-900 mb-2">
+        <CheckCircle className="w-16 h-16 text-indigo-500 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-muted-foreground mb-2">
           Invoice Created Successfully!
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           Your invoice for {memberName} has been created and is ready to send.
         </p>
       </div>
 
-      <Card className="bg-green-50 border-green-200">
-        <CardContent className="pt-6">
-          <div className="space-y-3">
+      <div className="p-4 rounded-lg border border-foreground/10">
+        <div>
+          <div className="space-y-1">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-green-800">
+              <span className="text-sm font-medium text-foreground">
                 Invoice ID:
               </span>
-              <span className="text-sm text-green-700 font-mono">
+              <span className="text-sm text-foreground font-mono">
                 {invoice?.invoice?.id || "N/A"}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-green-800">
+              <span className="text-sm font-medium text-foreground">
                 Status:
               </span>
-              <span className="text-sm text-green-700 capitalize">
+              <span className="text-sm text-foreground capitalize">
                 {invoice?.invoice?.status || "Draft"}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-green-800">Total:</span>
-              <span className="text-sm text-green-700 font-semibold">
+              <span className="text-sm font-medium text-foreground">Total:</span>
+              <span className="text-sm text-foreground font-semibold">
                 ${((invoice?.invoice?.total || 0) / 100).toFixed(2)}
               </span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <div className="bg-blue-50 p-4 rounded-lg">
         <h4 className="font-medium text-blue-900 mb-2">What happens next?</h4>
@@ -79,7 +79,7 @@ export function InvoiceConfirmStep({
         <Button
           onClick={onSend}
           disabled={isSending}
-          className="bg-green-600 hover:bg-green-700"
+          className="bg-indigo-600 hover:bg-indigo-700"
         >
           <Send className="w-4 h-4 mr-2" />
           {isSending ? "Sending..." : "Send Invoice"}

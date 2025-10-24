@@ -67,7 +67,7 @@ export function InvoiceItemsStep({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="bg-muted/50 rounded-lg p-6 space-y-6">
       <div>
         <h3 className="text-lg font-semibold">Invoice Items</h3>
         <p className="text-sm text-muted-foreground mb-6">
@@ -81,7 +81,7 @@ export function InvoiceItemsStep({
           {fields.map((field, index) => (
             <Card
               key={field.id}
-              className="relative border-foreground/10 shadow-md rounded-md bg-foreground/15"
+              className="relative border-foreground/10 shadow-md rounded-md"
             >
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">

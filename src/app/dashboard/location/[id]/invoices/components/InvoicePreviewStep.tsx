@@ -55,7 +55,7 @@ export function InvoicePreviewStep({
 	};
 
 	return (
-		<div className="space-y-6">
+		<div className="bg-muted/50 rounded-lg p-6 space-y-6">
 			<div>
 				<h3 className="text-lg font-semibold mb-2">Invoice Preview</h3>
 				<p className="text-sm text-gray-600">
@@ -78,7 +78,7 @@ export function InvoicePreviewStep({
 			</div>
 
 			{/* Invoice Summary */}
-			<Card className="border-foreground/10 bg-foreground/10 rounded-md">
+			<Card className="border-foreground/10 rounded-md">
 				<CardHeader>
 					<CardTitle className="text-base flex items-center justify-between">
 						<span>Invoice Summary</span>
@@ -219,7 +219,7 @@ export function InvoicePreviewStep({
 
 			{/* Stripe Preview Data */}
 			{previewData && (
-				<Card className="border-foreground/10 bg-foreground/10 rounded-md">
+				<Card className="border-foreground/10 rounded-md">
 					<CardHeader>
 						<CardTitle className="text-base flex items-center">
 							<FileText className="w-4 h-4 mr-2" />
