@@ -75,7 +75,7 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
     // Show loading state while fetching member data
     if (isLoadingMember) {
         return (
-            <div className="container mx-auto p-6 max-w-6xl">
+            <div className="container mx-auto p-6 max-w-4xl">
                 <div className="animate-pulse">
                     <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
                     <div className="h-64 bg-gray-200 rounded"></div>
@@ -87,7 +87,7 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
     // Show error state if member fetch failed
     if (memberError) {
         return (
-            <div className="container mx-auto p-6 max-w-6xl">
+            <div className="container mx-auto p-6 max-w-4xl">
                 <div className="text-center py-12">
                     <h2 className="text-xl font-semibold text-red-600 mb-2">
                         Error Loading Member
@@ -115,7 +115,7 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
     const hasStripeCustomer = member?.stripeCustomerId
     if (member && !hasStripeCustomer) {
         return (
-            <div className="container mx-auto p-6 max-w-6xl">
+            <div className="container mx-auto p-6 max-w-4xl">
                 <div className="text-center py-12">
                     <h2 className="text-xl font-semibold text-yellow-600 mb-2">
                         Setup Required
@@ -162,7 +162,7 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
             </div>
 
             <InteractiveStepper ref={stepperRef}>
-                <InteractiveStepperItem>
+                <InteractiveStepperItem key={1}>
                     <InteractiveStepperIndicator />
                     <div>
                         <InteractiveStepperTitle>
@@ -172,14 +172,14 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
                     <InteractiveStepperSeparator />
                 </InteractiveStepperItem>
 
-                <InteractiveStepperItem>
+                <InteractiveStepperItem key={2}>
                     <InteractiveStepperIndicator />
                     <div>
                         <InteractiveStepperTitle>Items</InteractiveStepperTitle>
                     </div>
                 </InteractiveStepperItem>
 
-                <InteractiveStepperItem>
+                <InteractiveStepperItem key={3}>
                     <InteractiveStepperIndicator />
                     <div>
                         <InteractiveStepperTitle>
@@ -188,7 +188,7 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
                     </div>
                 </InteractiveStepperItem>
 
-                <InteractiveStepperItem>
+                <InteractiveStepperItem key={4}>
 					<InteractiveStepperTrigger>
                     <InteractiveStepperIndicator />
                     <div>
