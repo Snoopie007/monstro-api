@@ -10,7 +10,7 @@ import { db } from "@/db/db";
 import { attendances, recurringReservations, reservations } from "@/db/schemas";
 import { hasPermission } from "@/libs/server/permissions";
 import { MemberStripePayments } from "@/libs/server/stripe";
-import type { Member, MemberLocation } from "@/types";
+import type { Attendance, Member, MemberLocation } from "@/types";
 import { format } from "date-fns";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import type Stripe from "stripe";
@@ -37,9 +37,6 @@ type PromiseReturnType = {
 	ml: (MemberLocation & { totalPointsEarned: number }) | undefined;
 };
 
-type MemberProfileData = {
-	lastSeenFormatted: string;
-};
 
 async function fetchMemberLocationData(
 	id: string,
@@ -96,55 +93,46 @@ async function fetchMemberLocationData(
 	}
 }
 
-async function fetchMemberProfileData(
-	id: string,
-	mid: string,
-): Promise<MemberProfileData> {
-	try {
-		// Fetch latest check-in
-		const latestCheckIn = await db
-			.select({
-				checkInTime: attendances.checkInTime,
-			})
-			.from(attendances)
-			.leftJoin(reservations, eq(attendances.reservationId, reservations.id))
-			.leftJoin(
-				recurringReservations,
-				eq(attendances.recurringId, recurringReservations.id),
-			)
-			.where(
-				and(
-					or(
-						and(
-							eq(reservations.memberId, mid),
-							eq(reservations.locationId, id),
-						),
-						and(
-							eq(recurringReservations.memberId, mid),
-							eq(recurringReservations.locationId, id),
-						),
-					),
-				),
-			)
-			.orderBy(desc(attendances.checkInTime))
-			.limit(1);
+// async function fetchMemberProfileData(
+// 	id: string,
+// 	mid: string,
+// ): Promise<Attendance | null> {
+// 	try {
+// 		// Fetch latest check-in
+// 		const checkins = await db
+// 			.select({
+// 				checkInTime: attendances.checkInTime,
+// 			}).from(attendances)
+// 			.leftJoin(reservations, eq(attendances.reservationId, reservations.id))
+// 			.leftJoin(
+// 				recurringReservations,
+// 				eq(attendances.recurringId, recurringReservations.id),
+// 			)
+// 			.where(
+// 				and(
+// 					or(
+// 						and(
+// 							eq(reservations.memberId, mid),
+// 							eq(reservations.locationId, id),
+// 						),
+// 						and(
+// 							eq(recurringReservations.memberId, mid),
+// 							eq(recurringReservations.locationId, id),
+// 						),
+// 					),
+// 				),
+// 			)
+// 			.orderBy(desc(attendances.checkInTime))
+// 			.limit(1);
 
-		// Format last seen date
-		const latestCheckInDate = latestCheckIn[0]?.checkInTime;
-		const lastSeenFormatted = latestCheckInDate
-			? format(new Date(latestCheckInDate), "MMM d, yyyy 'at' h:mm a")
-			: "Never";
 
-		return {
-			lastSeenFormatted,
-		};
-	} catch (error) {
-		console.error("Error fetching member profile data:", error);
-		return {
-			lastSeenFormatted: "Never",
-		};
-	}
-}
+
+// 		return checkins[0];
+// 	} catch (error) {
+// 		console.error("Error fetching member profile data:", error);
+// 		return null;
+// 	}
+// }
 
 async function fetchStripePaymentMethods(
 	customerId: string,
@@ -176,7 +164,7 @@ export default async function MemberProfilePage(props: {
 	const { member, ml } = res;
 
 	// Fetch member profile data (check-ins and reward claims)
-	const memberProfileData = await fetchMemberProfileData(params.id, params.mid);
+	// const memberProfileData = await fetchMemberProfileData(params.id, params.mid);
 	if (member.stripeCustomerId) {
 		paymentMethods = await fetchStripePaymentMethods(member.stripeCustomerId);
 	}
@@ -186,18 +174,14 @@ export default async function MemberProfilePage(props: {
 			<MemberProvider member={member} ml={ml} paymentMethods={paymentMethods}>
 				<div className="grid grid-cols-7 flex-1 gap-2 p-2 h-full">
 					<div className="col-span-2 flex flex-col space-y-2 h-full">
-						<MemberProfile params={params} pd={memberProfileData} />
+						<MemberProfile params={params} pd={{ lastSeenFormatted: "Never" }} />
 						<PointsProfile
 							profileData={{ totalPointsEarned: ml.totalPointsEarned }}
 						/>
 						<ScrollArea className="h-[calc(100vh-318px)] overflow-hidden">
 							<div className="space-y-4 ">
 								<MemberAttendanceGraph params={params} />
-								<MemberFamilies
-									params={params}
-									familyMembers={member.familyMembers}
-									editable={canEditMember}
-								/>
+
 								<MemberTagsBox editable={canEditMember} params={params} />
 								<CustomFieldsBox
 									memberId={params.mid}

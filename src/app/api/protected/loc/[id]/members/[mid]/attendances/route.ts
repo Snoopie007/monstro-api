@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/db'
 import { ExtendedAttendance } from '@/types/attendance'
-import { attendances } from '@/db/schemas'
 
 /**
  * Retrieves attendance records for a specific member at a location,
