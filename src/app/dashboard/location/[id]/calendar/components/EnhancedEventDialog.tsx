@@ -219,7 +219,7 @@ export function EnhancedEventDialog({
     try {
       const { result, error } = await tryCatch(
         fetch(
-          `/api/protected/loc/${lid}/members/${memberId}/validate-session?sessionId=${sessionId}`
+          `/api/protected/loc/${lid}/members/${memberId}/session/validate?sessionId=${sessionId}`
         )
       );
 
