@@ -218,7 +218,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                                         <SelectValue placeholder="Select your industry" />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent className={InputStyle}>
+                                                <SelectContent >
                                                     {Industries.map((industry, index) => (
                                                         <SelectItem key={index} value={industry} className="cursor-pointer">
                                                             {industry}
