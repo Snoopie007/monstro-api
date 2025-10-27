@@ -42,11 +42,11 @@ export function ChatView({ lid }: { lid: string }) {
         },
         onConversationInsert: async (conversation) => {
             const member = await tryCatch(
-                fetch(`/api/protected/loc/${lid}/member/${conversation.memberId}/info`)
+                fetch(`/api/protected/loc/${lid}/members/${conversation.memberId}/info`)
             )
             if (member.error || !member.result || !member.result.ok) {
                 toast.error('Failed to get member')
-                return
+                return 
             }
             const memberData = await member.result.json()
             setConversations([...conversations, {...conversation, member: memberData.member}])
