@@ -22,7 +22,6 @@ import { z } from "zod";
 import { CountryCode } from "@/types/other";
 import { CountryCodes } from "@/libs/data";
 import PhoneInput from "react-phone-number-input/input";
-import { FamilyPlan, Member } from "@/types/member";
 import { Button, DialogBody, DialogFooter } from "@/components/ui";
 import { MemberRelationship } from "@/types/DatabaseEnums";
 import { cn } from "@/libs/utils";
@@ -30,12 +29,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
+import { MemberPackage, MemberSubscription } from "@/types";
 
 interface FamilyMemberFormProps {
-	familyMember: Member | null;
-	planId: string;
-	parent: Member;
-	lid: string;
+	parentPlan: MemberSubscription | MemberPackage;
 	reset: () => void;
 }
 const RelationshipOptions: MemberRelationship[] = [
@@ -46,26 +43,13 @@ const RelationshipOptions: MemberRelationship[] = [
 	"other",
 ];
 
-export function FamilyMemberForm({ familyMember,
-	parent,
-	planId,
-	lid,
+export function FamilyMemberForm({
+	parentPlan,
 	reset,
 }: FamilyMemberFormProps) {
 	const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
 	const [loading, setLoading] = useState(false);
 
-	useEffect(() => {
-		if (familyMember) {
-			form.reset({
-				firstName: familyMember.firstName,
-				lastName: familyMember.lastName || "",
-				email: familyMember.email,
-				phone: familyMember.phone || "",
-				familyMemberId: parent.id,
-			});
-		}
-	}, [familyMember]);
 
 	const form = useForm<z.infer<typeof AddFamilyMemberSchema>>({
 		resolver: zodResolver(AddFamilyMemberSchema),
@@ -75,8 +59,7 @@ export function FamilyMemberForm({ familyMember,
 			email: "",
 			phone: "",
 			relationship: "",
-			familyPlanId: "",
-			familyMemberId: parent.id,
+			parentPlanId: parentPlan.id,
 		},
 		mode: "onChange",
 	});
@@ -90,18 +73,13 @@ export function FamilyMemberForm({ familyMember,
 				lastName: v.lastName,
 				email: v.email,
 				phone: v.phone,
-				familyMemberId: parent.id,
 				relationship: v.relationship,
-				familyPlanId: v.familyPlanId,
 			};
 
-			const response = await fetch(
-				`/api/protected/loc/${lid}/members/${parent.id}/family`,
-				{
-					method: "POST",
-					body: JSON.stringify(payload),
-				}
-			);
+			const response = await fetch(`/api/protected/loc/${parentPlan.locationId}/members/${parentPlan.memberId}/family`, {
+				method: "POST",
+				body: JSON.stringify(payload),
+			});
 
 			if (!response.ok) {
 				const errorData = await response.json();
@@ -121,7 +99,7 @@ export function FamilyMemberForm({ familyMember,
 			toast.error("First name is required");
 			return "";
 		}
-		const [localPart, domain] = parent.email.split("@");
+		const [localPart, domain] = parentPlan.member?.email?.split("@") || [];
 		const aliasEmail = `${localPart}+${firstName.toLowerCase()}@${domain}`;
 		return aliasEmail;
 	}
@@ -132,7 +110,6 @@ export function FamilyMemberForm({ familyMember,
 				<div className="flex flex-col gap-2">
 					<Form {...form}>
 						<form className={cn("space-y-1   rounded-sm ")}>
-							<input type="hidden" value={parent.id} name="familyMemberId" />
 
 							<fieldset>
 								<FormField

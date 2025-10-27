@@ -69,7 +69,7 @@ export const AddFamilyMemberSchema = z.object({
     phone: z.string(),
     familyMemberId: z.string(),
     relationship: z.string(),
-    familyPlanId: z.string()
+    parentPlanId: z.string()
 })
 export const DAYS = [
     { label: "MON", value: 1 },

@@ -1,4 +1,4 @@
-export * from './MemberFamilies'
+// export * from './MemberFamilies'
 export * from './SearchMember'
-export * from './AddMember'
-export * from './FamilyMemberForm'
+export * from './FamilyDialog'
+export * from './NewFamilyForm'

@@ -1,14 +1,16 @@
 'use client'
 
-import { Avatar, Button, CircleProgress, Skeleton, TooltipContent, TooltipTrigger, Tooltip, AvatarImage } from '@/components/ui'
+import { Avatar, CircleProgress, Skeleton, TooltipContent, TooltipTrigger, Tooltip, AvatarImage } from '@/components/ui'
 import { cn, formatAmountForDisplay, tryCatch } from '@/libs/utils'
 import { MemberSubscription } from '@/types'
 import { format } from 'date-fns'
 import { SubActions } from './SubActions'
-import { PlusIcon, Clock4Icon } from 'lucide-react'
+import { Clock4Icon } from 'lucide-react'
 import { InfoField } from '../InfoField'
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
+import { useEffect, useMemo, useState } from 'react'
+
+import { FamilyDialog } from '../FamilyPlan'
+import { toast } from 'react-toastify'
 
 function calculateProgress(start: Date, end: Date) {
     const now = Date.now()
@@ -29,8 +31,13 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
     const [parentPlan, setParentPlan] = useState<MemberSubscription | null>(null)
     const [loading, setLoading] = useState(false)
     const { locationId, memberId, plan, parentId } = sub
+
     const isFamilyPlan = plan?.family
     const isPayer = parentId === null
+    const canAddFamilyMember = useMemo(() => {
+        if (!familyPlans || !sub.plan?.familyMemberLimit) return false
+        return sub.plan?.familyMemberLimit > familyPlans?.length
+    }, [familyPlans])
 
     useEffect(() => {
         if (!isFamilyPlan) return
@@ -42,6 +49,9 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
             fetchParentPlan()
         }
     }, [isFamilyPlan, isPayer])
+
+
+
 
     async function fetchParentPlan() {
         setLoading(true)
@@ -132,9 +142,7 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                             ) : (familyPlans && familyPlans.length > 0 && familyPlans.map((plan) => (
                                 <FamilyPlanMember key={plan.id} plan={plan} />
                             )))}
-                            <Button variant="ghost" size="icon" className="size-6 bg-foreground/10 rounded-lg">
-                                <PlusIcon size={14} className="text-foreground/50" />
-                            </Button>
+                            {canAddFamilyMember && <FamilyDialog parentPlan={sub} type="sub" />}
                         </div>
                     </div>
                 )}
@@ -154,6 +162,10 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
 
 function FamilyPlanMember({ plan }: { plan: MemberSubscription }) {
     const fm = plan.member
+
+    async function removeFamilyPlant(planId: string) {
+
+    }
     return (
         <Tooltip>
             <TooltipTrigger asChild>
