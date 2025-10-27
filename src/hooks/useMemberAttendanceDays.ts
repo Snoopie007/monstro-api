@@ -2,8 +2,9 @@
 import { useMemo, useState } from 'react'
 import { useAttedance } from './hooks'
 import { formatDate, subDays } from 'date-fns'
-import { DateRange } from 'react-day-picker'
-import { ExtendedAttendance } from '@/types/attendance'
+import type { DateRange } from 'react-day-picker'
+import type { ExtendedAttendance } from '@/types/attendance'
+import { generateTestAttendanceData } from '@/libs/utils'
 
 export const useMemberAttendanceDays = (id: string, mid: string) => {
     const now = new Date()
@@ -13,16 +14,21 @@ export const useMemberAttendanceDays = (id: string, mid: string) => {
         to: now,
     })
 
-    const { attendances, isLoading, error } = useAttedance(id, mid)
+    // Use hard-coded data for test member, otherwise fetch real data
+    const isTestMember = mid === 'mbr_E9kMCO1HQQm4J3G7TFj0Zw'
+    const testAttendances = isTestMember ? generateTestAttendanceData() : undefined
+    const { attendances: fetchedAttendances, isLoading, error } = useAttedance(id, mid)
+    const attendances = isTestMember ? testAttendances : fetchedAttendances
 
     const formattedAttendancesDays = useMemo(() => {
+        
         if (!attendances || attendances.length === 0) {
             return {}
         }
 
         const attendanceMap: Record<string, number> = {}
 
-        attendances.forEach((attendance: any) => {
+        attendances.forEach((attendance: ExtendedAttendance) => {
             const checkInDate = new Date(attendance.checkInTime)
             const dateStr = formatDate(checkInDate, 'yyyy-MM-dd')
             if (
@@ -43,7 +49,19 @@ export const useMemberAttendanceDays = (id: string, mid: string) => {
         const firstDayOfMonth = new Date(year, month, 1)
         const startingDayOfWeek = firstDayOfMonth.getDay()
         const lastDayOfMonth = new Date(year, month + 1, 0).getDate()
-        const allDates: any[] = []
+        const allDates: Array<{
+            date: string | null
+            count: number
+            isCurrentMonth: boolean
+            isEmpty: boolean
+            attendances?: Array<{
+                programName: string
+                startTime: Date
+                endTime: Date
+                checkInTime: Date
+                checkOutTime: Date | null
+            }>
+        }> = []
         // Add empty placeholders for days before month starts
         for (let i = 0; i < startingDayOfWeek; i++) {
             allDates.push({

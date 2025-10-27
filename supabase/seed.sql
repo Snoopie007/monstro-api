@@ -1,10 +1,20 @@
--- Create the demo location
--- INSERT INTO locations (id, name, address, about, city, state, country, postal_code, website, email, phone, timezone, vendor_id, slug, industry, legal_name, created_at, updated_at)
--- VALUES ('acc_BpT7jEb3Q16nOPL3vo7qlw', 'Demo', ' 76 River St', 'This is a demo location for testing purposes', 'Pittsburgh', 'PA', 'United States', '15212', 'https://demo.example.com', 'demo@example.com', '+1-555-0123', 'America/New_York', 'vdr_tJE2cshbSh20XuuZqWl7A', 'demo', 'Fitness & Recreation', 'Demo Location LLC', now(), now()) ON CONFLICT (id) DO NOTHING;
+-- Create a vendor user first
+INSERT INTO users (id, name, email, email_verified_at, image, password, created_at, updated_at) 
+VALUES ('usr_vendor_demo', 'Demo Vendor', 'vendor@demo.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()) 
+ON CONFLICT (id) DO NOTHING;
 
--- -- Create the location state
--- INSERT INTO location_state (location_id, status, agree_to_terms, last_renewal_date, start_date, settings, usage_percent, tax_rate, created_at, updated_at)
--- VALUES ('acc_BpT7jEb3Q16nOPL3vo7qlw', 'active', true, now(), now(), '{"theme": "default", "features": ["membership", "classes", "events"]}'::jsonb, 25, 8, now(), now()) ON CONFLICT (location_id) DO NOTHING;
+-- Create the demo vendor
+INSERT INTO vendors (id, first_name, last_name, user_id, email, created_at, updated_at) 
+VALUES ('vdr_tJE2cshbSh20XuuZqWl7A', 'Demo', 'Vendor', 'usr_vendor_demo', 'vendor@demo.com', NOW(), NOW()) 
+ON CONFLICT (id) DO NOTHING;
+
+-- Create the demo location
+INSERT INTO locations (id, name, address, about, city, state, country, postal_code, website, email, phone, timezone, vendor_id, slug, industry, legal_name, created_at, updated_at)
+VALUES ('acc_BpT7jEb3Q16nOPL3vo7qlw', 'Demo', '76 River St', 'This is a demo location for testing purposes', 'Pittsburgh', 'PA', 'United States', '15212', 'https://demo.example.com', 'demo@example.com', '+1-555-0123', 'America/New_York', 'vdr_tJE2cshbSh20XuuZqWl7A', 'demo', 'Fitness & Recreation', 'Demo Location LLC', NOW(), NOW()) ON CONFLICT (id) DO NOTHING;
+
+-- Create the location state
+INSERT INTO location_state (location_id, status, agree_to_terms, last_renewal_date, start_date, settings, usage_percent, tax_rate, created_at, updated_at)
+VALUES ('acc_BpT7jEb3Q16nOPL3vo7qlw', 'active', true, NOW(), NOW(), '{"theme": "default", "features": ["membership", "classes", "events"]}'::jsonb, 25, 8, NOW(), NOW()) ON CONFLICT (location_id) DO NOTHING;
 
 -- =========================================
 -- USERS (Base authentication users)
@@ -465,8 +475,8 @@ INSERT INTO transactions (id, member_id, location_id, description, type, amount,
 
 -- Create 2 groups for the new location
 INSERT INTO groups (id, name, description, location_id, icon, cover_image, metadata, created_at, updated_at) VALUES
-('grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'Community Group 1', 'A general community group for members to connect and share', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', '👥', 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800', '{"category": "general", "privacy": "public", "max_members": 100}'::jsonb, NOW() - INTERVAL '30 days', NOW()),
-('grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'Community Group 2', 'Another community group for discussions and activities', 'acc_Kx9mN2pQ8vR4tL6wE3yZ5s', '🌟', 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800', '{"category": "general", "privacy": "public", "max_members": 150}'::jsonb, NOW() - INTERVAL '25 days', NOW())
+('grp_QWJjRGVmR2hpS2xtTm9wUXJzdFV2d1h5eg', 'Community Group 1', 'A general community group for members to connect and share', 'acc_BpT7jEb3Q16nOPL3vo7qlw', '👥', 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800', '{"category": "general", "privacy": "public", "max_members": 100}'::jsonb, NOW() - INTERVAL '30 days', NOW()),
+('grp_WFlaW1xdXl9gYWNkZWZnaGlqa2xtbm9wcQ', 'Community Group 2', 'Another community group for discussions and activities', 'acc_BpT7jEb3Q16nOPL3vo7qlw', '🌟', 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800', '{"category": "general", "privacy": "public", "max_members": 150}'::jsonb, NOW() - INTERVAL '25 days', NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================================

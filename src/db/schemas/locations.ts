@@ -22,6 +22,7 @@ import { vendors } from "./vendors";
 import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import { MemberLocationProfile } from "@/types/member";
+import { attendances } from "./attendances";
 
 export const locations = pgTable("locations", {
   id: uuid("id")
@@ -193,6 +194,7 @@ export const memberLocationsRelations = relations(
       references: [locations.id],
     }),
     transactions: many(transactions),
+    attendances: many(attendances),
   })
 );
 

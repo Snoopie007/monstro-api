@@ -11,9 +11,6 @@ import {
     Tooltip,
     TooltipTrigger,
     TooltipContent,
-    ItemContent,
-    ItemTitle,
-    Item,
 } from '@/components/ui'
 import { ChevronDownIcon, InfoIcon } from 'lucide-react'
 import { useMemberAttendanceDays } from '@/hooks/useMemberAttendanceDays'
