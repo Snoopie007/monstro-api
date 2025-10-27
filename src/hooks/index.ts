@@ -5,3 +5,4 @@ export * from "./useVPMs";
 export * from "./usePrograms";
 export * from "./useCustomFields";
 export * from "./useDebounce";
+export * from "./useMemberAttendance";

@@ -33,7 +33,7 @@ import { toast } from "react-toastify";
 
 interface FamilyMemberFormProps {
 	familyMember: Member | null;
-	familyPlans: FamilyPlan[];
+	planId: string;
 	parent: Member;
 	lid: string;
 	reset: () => void;
@@ -46,10 +46,9 @@ const RelationshipOptions: MemberRelationship[] = [
 	"other",
 ];
 
-export function FamilyMemberForm({
-	familyMember,
-	familyPlans,
+export function FamilyMemberForm({ familyMember,
 	parent,
+	planId,
 	lid,
 	reset,
 }: FamilyMemberFormProps) {
@@ -135,35 +134,6 @@ export function FamilyMemberForm({
 						<form className={cn("space-y-1   rounded-sm ")}>
 							<input type="hidden" value={parent.id} name="familyMemberId" />
 
-							<fieldset>
-								<FormField
-									control={form.control}
-									name="familyPlanId"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel size="tiny">Select a Family Plan</FormLabel>
-											<Select onValueChange={(value) => field.onChange(value)}>
-												<FormControl>
-													<SelectTrigger className="rounded-xs">
-														<SelectValue placeholder="Select a family plan" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													{familyPlans.map((plan: FamilyPlan) => (
-														<SelectItem
-															key={plan.planId}
-															value={plan.planId.toString()}
-														>
-															{plan.planName} {plan.planId}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</fieldset>
 							<fieldset>
 								<FormField
 									control={form.control}
@@ -307,8 +277,7 @@ export function FamilyMemberForm({
 					Cancel
 				</Button>
 
-				<Button
-					className={cn("children:hidden", { "children:inline-flex": loading })}
+				<Button className={cn("children:hidden", { "children:inline-flex": loading })}
 					variant={"foreground"}
 
 					type="submit"

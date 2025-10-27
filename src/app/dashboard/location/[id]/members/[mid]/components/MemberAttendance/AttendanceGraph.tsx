@@ -1,6 +1,6 @@
 'use client'
 
-import { MonthView } from './'
+import { MonthView } from '.'
 import { formatDate } from 'date-fns'
 import {
     Calendar,
@@ -11,12 +11,9 @@ import {
     Tooltip,
     TooltipTrigger,
     TooltipContent,
-    ItemContent,
-    ItemTitle,
-    Item,
 } from '@/components/ui'
 import { ChevronDownIcon, InfoIcon } from 'lucide-react'
-import { useMemberAttendanceDays } from '@/hooks/useMemberAttendanceDays'
+import { useMemberAttendance } from '@/hooks'
 
 export const MemberAttendanceGraph = ({
     params,
@@ -29,7 +26,7 @@ export const MemberAttendanceGraph = ({
         previousMonthWeeks,
         secondPreviousMonthWeeks,
         formatDateToThreeMonths,
-    } = useMemberAttendanceDays(params.id, params.mid)
+    } = useMemberAttendance(params.id, params.mid)
 
     return (
         <div className='bg-muted/50 rounded-lg px-4 py-2'>

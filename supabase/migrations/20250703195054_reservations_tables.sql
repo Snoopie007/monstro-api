@@ -54,6 +54,8 @@ CREATE TABLE IF NOT EXISTS check_ins (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('chk_'),
   reservation_id text REFERENCES reservations (id) ON DELETE CASCADE NOT NULL,
   recurring_id text REFERENCES recurring_reservations (id) ON DELETE CASCADE,
+  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+  location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
   start_time timestamp with time zone NOT NULL,
   end_time timestamp with time zone NOT NULL,
   check_in_time timestamp with time zone NOT NULL,

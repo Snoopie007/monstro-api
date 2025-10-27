@@ -2,13 +2,15 @@
 
 import {
 	Avatar,
-	AvatarFallback,
 	AvatarImage,
 	Button,
 	Card,
 	CardContent,
 	CardDescription,
 	CardTitle,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
 } from "@/components/ui";
 import { usePermission } from "@/hooks/usePermissions";
 import { ChevronLeft } from "lucide-react";
@@ -16,19 +18,14 @@ import { useRouter } from "next/navigation";
 import { VisuallyHidden } from "react-aria";
 import { useMemberStatus } from "../../providers/MemberContext";
 import { ProfileActions } from "./ProfileActions";
+import { format } from "date-fns";
+import { FamilyMember } from "@/types/FamilyMember";
+import { cn } from "@/components/event-calendar";
 
-type MemberProfileData = {
-	lastSeenFormatted: string;
-};
 
-interface MemberProfileProps {
-	params: { id: string; mid: string };
-	pd: MemberProfileData;
-}
 
-export function MemberProfile({ params, pd }: MemberProfileProps) {
-	const canDeleteMember = usePermission("delete member", params.id);
-	const canEditMember = usePermission("edit member", params.id);
+
+export function MemberProfile({ params }: { params: { id: string; mid: string } }) {
 
 	const { member, ml } = useMemberStatus();
 	const router = useRouter();
@@ -58,32 +55,89 @@ export function MemberProfile({ params, pd }: MemberProfileProps) {
 						<ProfileActions params={params} />
 					</div>
 				</div>
-				<div className="flex flex-row gap-4 items-center">
-					<Avatar className="size-20 rounded-full bg-foreground/5">
-						<AvatarFallback>
-							{memberProfile?.firstName?.charAt(0) || ""}
-						</AvatarFallback>
-						{memberProfile?.avatar && (
-							<AvatarImage src={memberProfile.avatar} />
-						)}
+				<div className="flex flex-row gap-4 ">
+					<Avatar className="size-18 rounded-full bg-foreground/5">
+						<AvatarImage src={memberProfile.avatar || '/images/default-avatar.png'} />
 					</Avatar>
-
 					<div className="flex flex-col gap-4 flex-1">
-						<div className="space-y-0.5">
-							<div className="font-bold text-lg leading-5">
-								{memberProfile?.firstName} {memberProfile?.lastName}
+						<div className="flex flex-row gap-10 items-center ">
+							<div className="space-y-1">
+								<div className="text-xs text-muted-foreground">
+									Name
+								</div>
+								<div className="text-sm font-medium">
+									{memberProfile?.firstName} {memberProfile?.lastName}
+								</div>
+
 							</div>
-							<div className="flex flex-row gap-1 text-sm text-muted-foreground">
-								<span>{memberProfile?.email}</span>
+							<div className="space-y-1">
+								<div className="text-xs text-muted-foreground">Birthday</div>
+								<div className="text-sm font-medium">{member.dob ? format(member.dob, 'MMM d, yyyy') : 'Unknown'}</div>
 							</div>
-							<div className="text-sm text-muted-foreground flex flex-row gap-4">
-								<span>{memberProfile?.phone}</span>
-								<span> Last seen: {pd.lastSeenFormatted}</span>
+							<div className="space-y-1">
+								<div className="text-xs text-muted-foreground">
+									Last seen
+								</div>
+								<div className="text-sm font-medium">
+									{ml.lastCheckInTime ? format(ml.lastCheckInTime, 'MMM d, yyyy hh:mm a') : 'n/a'}
+								</div>
 							</div>
 						</div>
+						<div className="flex flex-row gap-10 items-center ">
+							<div className="space-y-1">
+								<div className="text-xs text-muted-foreground">
+									Email
+								</div>
+								<div className="text-sm font-medium">
+									{memberProfile?.email}
+								</div>
+
+							</div>
+							<div className="space-y-1">
+								<div className="text-xs text-muted-foreground">
+									Phone
+								</div>
+								<div className="text-sm font-medium">{memberProfile?.phone}</div>
+							</div>
+						</div>
+						{member.familyMembers && member.familyMembers.length > 0 && (
+							<div className="flex flex-row gap-10 items-center ">
+								<div className="space-y-1">
+									<div className="text-xs text-muted-foreground">
+										Know Family Members
+									</div>
+									<div className="flex flex-row relative">
+										{member.familyMembers.map((familyMember, index) => (
+											<FamilyMembers key={familyMember.id} familyMember={familyMember} index={index} />
+										))}
+									</div>
+								</div>
+							</div>
+						)}
 					</div>
 				</div>
 			</CardContent>
 		</Card>
 	);
+}
+
+
+function FamilyMembers({ familyMember, index }: { familyMember: FamilyMember, index: number }) {
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+
+				<Avatar className={cn("size-6 rounded-full bg-foreground/5 absolute")} style={{ left: `${index * 20}px` }}>
+					<AvatarImage src={familyMember.relatedMember?.avatar || '/images/default-avatar.png'} />
+				</Avatar>
+			</TooltipTrigger>
+			<TooltipContent>
+				<div>
+					<div className="text-sm font-medium">{familyMember.relatedMember?.firstName} {familyMember.relatedMember?.lastName}</div>
+					<div className="text-xs text-muted-foreground">{familyMember.relationship}</div>
+				</div>
+			</TooltipContent>
+		</Tooltip>
+
+	)
 }

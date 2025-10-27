@@ -65,7 +65,7 @@ export default function EditMemberDialog({ params, open, setOpen }: Props) {
 		setLoading(true);
 
 		const { result, error } = await tryCatch(
-			fetch(`/api/protected/loc/${params.id}/member/${params.mid}/info`, {
+			fetch(`/api/protected/loc/${params.id}/members/${params.mid}/info`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

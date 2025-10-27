@@ -1,2 +1,2 @@
-export * from './MemberAttendanceGraph'
+export * from './AttendanceGraph'
 export * from './MonthView'

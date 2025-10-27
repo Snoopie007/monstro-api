@@ -2,19 +2,12 @@
 import { useMemo } from "react";
 import { useMemberStatus } from "../../providers/MemberContext";
 
-type MemberProfileData = {
-	totalPointsEarned: number;
-};
-export function PointsProfile({
-	profileData,
-}: {
-	profileData: MemberProfileData;
-}) {
+export function PointsProfile() {
 	const { ml } = useMemberStatus();
 
 	const spentPoints = useMemo(() => {
-		return ml.points - profileData.totalPointsEarned;
-	}, [ml?.points, profileData.totalPointsEarned]);
+		return (ml.totalPointsEarned || 0) - (ml.points || 0);
+	}, [ml?.points, ml.totalPointsEarned]);
 	return (
 		<div className="grid grid-cols-3 gap-2">
 			<div className="bg-muted/50 rounded-lg p-3 flex flex-col gap-1">
@@ -22,7 +15,7 @@ export function PointsProfile({
 					Total Points Earned
 				</div>
 				<div className="text-xl font-bold">
-					<span>{profileData.totalPointsEarned}</span>
+					<span>{ml.totalPointsEarned || 0}</span>
 				</div>
 			</div>
 			<div className="bg-muted/50 rounded-lg p-3 flex flex-col gap-1">
