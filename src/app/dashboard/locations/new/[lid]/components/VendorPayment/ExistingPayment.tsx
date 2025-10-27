@@ -142,7 +142,7 @@ function MethodItem({
 	return (
 		<li
 			className={cn(
-				"flex items-center justify-between py-2 px-3 gap-4 cursor-pointer",
+				"flex items-center justify-between p-3 gap-4 cursor-pointer",
 				"rounded-lg hover:bg-indigo-500",
 				{ "bg-indigo-500 text-white": paymentMethod?.id === method.id }
 			)}

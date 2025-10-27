@@ -14,9 +14,9 @@ export function stringToTime(time: string) {
 export const StripeCardOptions = {
   style: {
       base: {
-          fontWeight: "500",
+          fontWeight: "600",
           fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
-          fontSize: "14px",
+          fontSize: "16px",
           fontSmoothing: "antialiased",
       },
       invalid: {

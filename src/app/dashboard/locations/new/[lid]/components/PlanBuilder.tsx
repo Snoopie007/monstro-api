@@ -66,7 +66,7 @@ export function VendorPlanBuilder({ lid }: { lid: string }) {
                                 <div key={tabItem.name}
                                     onClick={(e) => handleTabChange(tabItem.value)}
                                     className={cn(
-                                        "border-2 border-foreground/20  space-y-4 rounded-lg p-8 opacity-80 cursor-pointer",
+                                        "border-2 border-foreground/20  space-y-4 rounded-lg p-4 opacity-80 cursor-pointer",
                                         "hover:border-indigo-500 hover:opacity-100 hover:text-indigo-500",
                                         {
                                             "opacity-100 border-indigo-500 text-indigo-500": tabItem.value === tab,

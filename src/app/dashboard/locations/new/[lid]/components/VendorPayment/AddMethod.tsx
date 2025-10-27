@@ -85,16 +85,16 @@ export default function AddPaymentMethod() {
             >
                 + Payment Method
             </Button>
-            <div className="hidden bg-foreground/5 border border-foreground/10 pt-2 px-4 pb-4 rounded-lg group-data-[open=true]:block">
+            <div className="hidden  group-data-[open=true]:block">
                 <Form {...form} >
-                    <form>
+                    <form className="space-y-2">
                         <fieldset>
                             <FormItem className=" ">
-                                <FormLabel className="text-[0.58rem] uppercase font-semibold">
+                                <FormLabel size="tiny">
                                     Card details
                                 </FormLabel>
                                 <CardElement
-                                    className={cn("border bg-background  rounded-sm border-foreground/10 py-2.5 w-full px-4")}
+                                    className={'bg-foreground/5 h-12 text-base p-4 rounded-lg border border-foreground/10 '}
                                     options={{
                                         ...StripeCardOptions,
                                         hidePostalCode: true,
@@ -122,12 +122,12 @@ export default function AddPaymentMethod() {
                         </fieldset>
                         <BillingFields form={form} />
                     </form>
-                    <div className="flex justify-start mt-2">
+                    <div className="flex justify-start mt-4">
                         <Button
                             className={cn("children:hidden  ", { "children:inline-flex": loading })}
                             variant={"foreground"}
                             onClick={form.handleSubmit(onSubmit)}
-                            size={"sm"}
+
                             type="submit"
                             disabled={!stripe || loading}
                         >
