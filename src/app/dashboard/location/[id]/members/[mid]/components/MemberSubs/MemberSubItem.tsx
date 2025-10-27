@@ -1,13 +1,14 @@
 'use client'
 
-import { CircleProgress } from '@/components/ui'
-import { formatAmountForDisplay } from '@/libs/utils'
+import { Avatar, Button, CircleProgress, Skeleton, TooltipContent, TooltipTrigger, Tooltip, AvatarImage } from '@/components/ui'
+import { cn, formatAmountForDisplay, tryCatch } from '@/libs/utils'
 import { MemberSubscription } from '@/types'
 import { format } from 'date-fns'
 import { SubActions } from './SubActions'
-import { Clock4Icon } from 'lucide-react'
+import { PlusIcon, Clock4Icon } from 'lucide-react'
 import { InfoField } from '../InfoField'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 function calculateProgress(start: Date, end: Date) {
     const now = Date.now()
@@ -24,20 +25,47 @@ function calculateProgress(start: Date, end: Date) {
 
 export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
 
-    const [familyPlans, setFamilyPlans] = useState<MemberSubscription[] | undefined>(undefined)
-    const [parentPlan, setParentPlan] = useState<MemberSubscription | undefined>(undefined)
+    const [familyPlans, setFamilyPlans] = useState<MemberSubscription[] | null>(null)
+    const [parentPlan, setParentPlan] = useState<MemberSubscription | null>(null)
+    const [loading, setLoading] = useState(false)
+    const { locationId, memberId, plan, parentId } = sub
+    const isFamilyPlan = plan?.family
+    const isPayer = parentId === null
 
-    const isFamilyPlan = sub.plan?.family
-    const isPayer = sub.parentId === null
     useEffect(() => {
-        if (isFamilyPlan) {
-            if (isPayer) {
-                //fetch parent plan
-            } else {
-                //fetch child plans
-            }
+        if (!isFamilyPlan) return
+        if (isPayer) {
+            fetchParentPlan()
+        } else {
+            fetchFamilyPlans()
         }
-    }, [sub])
+    }, [isFamilyPlan, isPayer])
+
+    async function fetchParentPlan() {
+        setLoading(true)
+        const url = `/api/protected/loc/${locationId}/members/${memberId}/subs/${sub.id}/parent`
+        const { error, result } = await tryCatch(fetch(url))
+        if (error || !result || !result.ok) {
+            setLoading(false)
+            return toast.error(error?.message || 'Failed to fetch parent plan')
+        }
+        const data = await result?.json()
+        setParentPlan(data)
+        setLoading(false)
+    }
+
+    async function fetchFamilyPlans() {
+        setLoading(true)
+        const url = `/api/protected/loc/${locationId}/members/${memberId}/subs/${sub.id}/childs`
+        const { error, result } = await tryCatch(fetch(url))
+        if (error || !result || !result.ok) {
+            setLoading(false)
+            return toast.error(error?.message || 'Failed to fetch family plans')
+        }
+        const data = await result?.json()
+        setFamilyPlans(data)
+        setLoading(false)
+    }
     return (
         <div className="bg-muted/50 rounded-lg px-4 py-3 space-y-2">
             <div className="flex flex-row justify-between items-center">
@@ -93,25 +121,52 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                     </div>
                 )}
 
-                {isFamilyPlan && (
-                    isPayer ? (
-                        <div className={`space-y-1  col-span-1 `}>
-                            <div className="text-xs font-medium text-muted-foreground">Child Plans</div>
-                            <div className="text-sm font-medium">
-
+                {isFamilyPlan && isPayer && (
+                    <div className={`space-y-1  col-span-1 `}>
+                        <div className="text-xs font-medium text-muted-foreground">Family Plan Members</div>
+                        {loading ? (
+                            <Skeleton className="size-6 rounded-full" />
+                        ) : (
+                            <div className="flex flex-row">
+                                {familyPlans && familyPlans.length > 0 && familyPlans.map((plan, index) => (
+                                    <FamilyPlanMember key={plan.id} plan={plan} index={index} />
+                                ))}
+                                <Button variant="ghost" size="icon" className="size-6 bg-foreground/10">
+                                    <PlusIcon size={14} />
+                                </Button>
                             </div>
-                        </div>
-                    ) : (
-                        <div className={`space-y-1  col-span-1 `}>
-                            <div className="text-xs font-medium text-muted-foreground">Parent Plan </div>
-                            <div className="text-sm font-medium">
+                        )}
+                    </div>
+                )}
 
-                            </div>
+                {parentPlan && (
+                    <div className={`space-y-1  col-span-1 `}>
+                        <div className="text-xs font-medium text-muted-foreground">Parent Plan Owner </div>
+                        <div className="text-sm font-medium">
+                            {parentPlan?.member?.firstName} {parentPlan?.member?.lastName}
                         </div>
-                    )
+                    </div>
                 )}
             </div>
-        </div>
+        </div >
+    )
+}
+
+function FamilyPlanMember({ plan, index }: { plan: MemberSubscription, index: number }) {
+    const fm = plan.member
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+
+                <Avatar className={cn("size-6 rounded-full bg-foreground/5 absolute")} style={{ left: `${index * 20}px` }}>
+                    <AvatarImage src={fm?.avatar || '/images/default-avatar.png'} />
+                </Avatar>
+            </TooltipTrigger>
+            <TooltipContent>
+                <div className="text-sm font-medium">{fm?.firstName} {fm?.lastName}</div>
+            </TooltipContent>
+        </Tooltip>
+
     )
 }
 

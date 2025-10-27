@@ -39,7 +39,7 @@ export function CustomFieldsBox({
     const [isSaving, setIsSaving] = useState(false)
     const [editValues, setEditValues] = useState<Record<string, string>>({})
     const [errors, setErrors] = useState<Record<string, string>>({})
-    const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState(true)
 
     // Fetch custom fields and values
     const fetchCustomFields = async () => {
@@ -145,33 +145,25 @@ export function CustomFieldsBox({
                     </Button>
                 </CollapsibleTrigger>
             </div>
-            <CollapsibleContent className='bg-muted/50 rounded-lg p-4' >
+            <CollapsibleContent className='bg-muted/50 rounded-lg p-3' >
                 {displayFields.length > 0 ? (
                     <div className="flex flex-col gap-2 items-end">
                         {displayFields.map((field) => (
                             <div key={field.id} className="w-full">
-                                {editable ? (
-                                    <CustomFieldInput
-                                        field={field}
-                                        value={editValues[field.id]}
-                                        onChange={(value) =>
-                                            handleFieldChange(field.id, value)
-                                        }
-                                        error={errors[field.id]}
-                                        disabled={isSaving}
-                                    />
-                                ) : (
-                                    <CustomFieldDisplay
-                                        field={field}
-                                        value={field.value}
-                                        variant={'default'}
-                                    />
-                                )}
+                                <CustomFieldInput
+                                    field={field}
+                                    value={editValues[field.id]}
+                                    onChange={(value) =>
+                                        handleFieldChange(field.id, value)
+                                    }
+                                    error={errors[field.id]}
+                                    disabled={isSaving || !editable}
+                                />
                             </div>
                         ))}
                         <Button variant="create" size="xs" className="flex flex-row gap-2" onClick={saveCustomFields}>
-                            {isSaving? <Loader2 className="size-4 animate-spin" /> : <SaveIcon className="size-4" />}
-                            {isSaving? 'Saving...' : 'Save Changes'}
+                            {isSaving ? <Loader2 className="size-4 animate-spin" /> : <SaveIcon className="size-4" />}
+                            {isSaving ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>
                 ) : (

@@ -16,7 +16,6 @@ import {
 import { MonstroData } from "@/libs/data";
 import { EmailSender } from "@/libs/server/emails";
 import { MemberRelationship } from "@/types/DatabaseEnums";
-import { evaluateTriggers } from "@/libs/achievements";
 
 type Props = {
 	mid: string;
@@ -24,13 +23,6 @@ type Props = {
 };
 const emailSender = new EmailSender();
 
-export async function GET(req: Request, props: { params: Promise<Props> }) {
-	try {
-	} catch (err) {
-		console.error(err);
-		return NextResponse.json({ error: err }, { status: 500 });
-	}
-}
 
 function getInverseRelationship(
 	relationship: MemberRelationship
