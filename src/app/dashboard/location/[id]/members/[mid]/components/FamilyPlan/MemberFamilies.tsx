@@ -38,7 +38,7 @@ export function MemberFamilies({
                         <span className="sr-only">Toggle</span>
                     </Button>
                 </CollapsibleTrigger>
-                <AddChildMember parent={member} lid={params.id} />
+                <AddChildMember type="sub" lid={params.id} />
             </div>
 
             <CollapsibleContent  >
