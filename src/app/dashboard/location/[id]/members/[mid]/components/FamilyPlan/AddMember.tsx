@@ -20,14 +20,14 @@ import { VisuallyHidden } from 'react-aria';
 
 
 interface AddChildMemberProps {
-    parent: Member;
+    type: 'sub' | 'pkg'
     lid: string;
 }
 
 
 
 
-export default function AddChildMember({ parent, lid }: AddChildMemberProps) {
+export default function AddChildMember({ type, lid }: AddChildMemberProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [step, setStep] = useState<number>(1);
