@@ -25,7 +25,6 @@ export async function evaluateTriggers({
     memberId,
     locationId,
     triggerType,
-    data,
 }: TriggerEvaluation) {
     const triggerMap = {
         attendances_count: 2,

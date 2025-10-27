@@ -24,6 +24,8 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: str
 
 		const newAttendance = await db.insert(attendances).values({
 			reservationId: params.rid,
+			memberId: params.mid,
+			locationId: params.id,
 			startTime: parsedStartTime,
 			endTime: parsedEndTime,
 			checkInTime: parsedCheckInTime,

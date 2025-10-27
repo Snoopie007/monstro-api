@@ -26,6 +26,7 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
 
     const [familyPlans, setFamilyPlans] = useState<MemberSubscription[] | undefined>(undefined)
     const [parentPlan, setParentPlan] = useState<MemberSubscription | undefined>(undefined)
+
     const isFamilyPlan = sub.plan?.family
     const isPayer = sub.parentId === null
     useEffect(() => {

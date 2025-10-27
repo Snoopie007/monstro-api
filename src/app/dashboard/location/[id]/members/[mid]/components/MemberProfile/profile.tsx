@@ -22,18 +22,10 @@ import { format } from "date-fns";
 import { FamilyMember } from "@/types/FamilyMember";
 import { cn } from "@/components/event-calendar";
 
-type MemberProfileData = {
-	lastSeenFormatted: string;
-};
 
-interface MemberProfileProps {
-	params: { id: string; mid: string };
-	pd: MemberProfileData;
-}
 
-export function MemberProfile({ params, pd }: MemberProfileProps) {
-	const canDeleteMember = usePermission("delete member", params.id);
-	const canEditMember = usePermission("edit member", params.id);
+
+export function MemberProfile({ params }: { params: { id: string; mid: string } }) {
 
 	const { member, ml } = useMemberStatus();
 	const router = useRouter();
@@ -86,7 +78,9 @@ export function MemberProfile({ params, pd }: MemberProfileProps) {
 								<div className="text-xs text-muted-foreground">
 									Last seen
 								</div>
-								<div className="text-sm font-medium">{pd.lastSeenFormatted}</div>
+								<div className="text-sm font-medium">
+									{ml.lastCheckInTime ? format(ml.lastCheckInTime, 'MMM d, yyyy hh:mm a') : 'n/a'}
+								</div>
 							</div>
 						</div>
 						<div className="flex flex-row gap-10 items-center ">

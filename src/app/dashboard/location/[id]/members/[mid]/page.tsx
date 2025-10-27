@@ -7,18 +7,16 @@ import {
 	TooltipProvider,
 } from "@/components/ui";
 import { db } from "@/db/db";
-import { attendances, recurringReservations, reservations } from "@/db/schemas";
 import { hasPermission } from "@/libs/server/permissions";
 import { MemberStripePayments } from "@/libs/server/stripe";
-import type { Attendance, Member, MemberLocation } from "@/types";
+import type { Member, MemberLocation } from "@/types";
 import { format } from "date-fns";
-import { and, desc, eq, or, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import {
 	CustomFieldsBox,
 	MemberAchievements,
 	MemberChatView,
-	MemberFamilies,
 	MemberInvoices,
 	MemberPkg,
 	MemberProfile,
@@ -28,35 +26,31 @@ import {
 	MemberTransactions,
 	PaymentMethods,
 	PointsProfile,
+	MemberAttendanceGraph
 } from "./components";
-import { MemberAttendanceGraph } from "./components/MemberAttendance/MemberAttendanceGraph";
 import { MemberProvider } from "./providers/MemberContext";
+import { FamilyMember } from "@/types";
+
+
 
 type PromiseReturnType = {
-	member: Member | undefined;
-	ml: (MemberLocation & { totalPointsEarned: number }) | undefined;
+	member: Member;
+	ml: MemberLocation;
 };
 
 
-async function fetchMemberLocationData(
-	id: string,
-	mid: string,
-): Promise<PromiseReturnType | null> {
+async function fetchMemberLocationData(id: string, mid: string): Promise<PromiseReturnType | null> {
 	if (!id || !mid) {
 		return null;
 	}
 
 	try {
 		const ml = await db.query.memberLocations.findFirst({
-			where: (ml, { eq }) => and(eq(ml.memberId, mid), eq(ml.locationId, id)),
+			where: (ml, { eq, and }) => and(eq(ml.memberId, mid), eq(ml.locationId, id)),
 			with: {
 				member: {
 					with: {
-						familyMembers: {
-							with: {
-								relatedMember: true,
-							},
-						},
+						familyMembers: true,
 						subscriptions: {
 							where: (ms, { eq }) => eq(ms.locationId, id),
 							with: {
@@ -66,6 +60,10 @@ async function fetchMemberLocationData(
 						},
 					},
 				},
+				attendances: {
+					orderBy: (attendances, { desc }) => desc(attendances.checkInTime),
+					limit: 1,
+				}
 			},
 			extras: {
 				totalPointsEarned: sql<number>`
@@ -81,59 +79,47 @@ async function fetchMemberLocationData(
 			},
 		});
 
+		const familyMemberIds = ml?.member?.familyMembers?.map((fm) => fm.relatedMemberId) || [];
+		const knownFamilyMembers = await db.query.memberLocations.findMany({
+			where: (ml, { inArray, eq, and }) => and(inArray(ml.memberId, familyMemberIds), eq(ml.locationId, id)),
+			with: {
+				member: true,
+			},
+		});
+
+		const filteredFamilyMembers: FamilyMember[] = ml?.member?.familyMembers?.map((fm) => {
+			const kmnl = knownFamilyMembers.find((kmnl) => kmnl.memberId === fm.relatedMemberId);
+			if (kmnl) {
+				return {
+					...fm,
+					relatedMember: kmnl.member
+				};
+			}
+			return fm;
+		}) || [];
+
+
 		if (!ml) {
 			throw new Error("Member not found");
 		}
 
 		const { member, ...rest } = ml;
 
-		return { member, ml: rest };
+		return {
+			member: {
+				...member,
+				familyMembers: filteredFamilyMembers,
+			},
+			ml: {
+				...rest,
+				lastCheckInTime: ml.attendances?.[0]?.checkInTime || null,
+			}
+		};
 	} catch (error) {
 		console.log("error", error);
 		return null;
 	}
 }
-
-// async function fetchMemberProfileData(
-// 	id: string,
-// 	mid: string,
-// ): Promise<Attendance | null> {
-// 	try {
-// 		// Fetch latest check-in
-// 		const checkins = await db
-// 			.select({
-// 				checkInTime: attendances.checkInTime,
-// 			}).from(attendances)
-// 			.leftJoin(reservations, eq(attendances.reservationId, reservations.id))
-// 			.leftJoin(
-// 				recurringReservations,
-// 				eq(attendances.recurringId, recurringReservations.id),
-// 			)
-// 			.where(
-// 				and(
-// 					or(
-// 						and(
-// 							eq(reservations.memberId, mid),
-// 							eq(reservations.locationId, id),
-// 						),
-// 						and(
-// 							eq(recurringReservations.memberId, mid),
-// 							eq(recurringReservations.locationId, id),
-// 						),
-// 					),
-// 				),
-// 			)
-// 			.orderBy(desc(attendances.checkInTime))
-// 			.limit(1);
-
-
-
-// 		return checkins[0];
-// 	} catch (error) {
-// 		console.error("Error fetching member profile data:", error);
-// 		return null;
-// 	}
-// }
 
 async function fetchStripePaymentMethods(
 	customerId: string,
@@ -155,15 +141,12 @@ export default async function MemberProfilePage(props: {
 	const canEditMember = await hasPermission("edit member", params.id);
 
 	const res = await fetchMemberLocationData(params.id, params.mid);
-
 	let paymentMethods: Stripe.PaymentMethod[] = [];
-
 	if (!res || !res.member || !res.ml) {
 		return <div>Member not found</div>;
 	}
 
 	const { member, ml } = res;
-
 	if (member.stripeCustomerId) {
 		paymentMethods = await fetchStripePaymentMethods(member.stripeCustomerId);
 	}
@@ -173,10 +156,8 @@ export default async function MemberProfilePage(props: {
 			<MemberProvider member={member} ml={ml} paymentMethods={paymentMethods}>
 				<div className="grid grid-cols-7 flex-1 gap-2 p-2 h-full">
 					<div className="col-span-2 flex flex-col space-y-2 h-full">
-						<MemberProfile params={params} pd={{ lastSeenFormatted: "Never" }} />
-						<PointsProfile
-							profileData={{ totalPointsEarned: ml.totalPointsEarned }}
-						/>
+						<MemberProfile params={params} />
+						<PointsProfile />
 						<ScrollArea className="h-[calc(100vh-318px)] overflow-hidden">
 							<div className="space-y-4 ">
 								<MemberAttendanceGraph params={params} />
