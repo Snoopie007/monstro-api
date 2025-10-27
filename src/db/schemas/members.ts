@@ -293,21 +293,19 @@ export const memberFields = pgTable('member_fields', {
     updated: timestamp('updated_at', { withTimezone: true }),
 })
 
-export const memberCustomFields = pgTable(
-    'member_custom_fields',
-    {
-        memberId: text('member_id')
-            .notNull()
-            .references(() => members.id, { onDelete: 'cascade' }),
-        customFieldId: text('custom_field_id')
-            .notNull()
-            .references(() => memberFields.id, { onDelete: 'cascade' }),
-        value: text('value').notNull(),
-        created: timestamp('created_at', { withTimezone: true })
-            .notNull()
-            .defaultNow(),
-        updated: timestamp('updated_at', { withTimezone: true }),
-    },
+export const memberCustomFields = pgTable('member_custom_fields', {
+    memberId: text('member_id')
+        .notNull()
+        .references(() => members.id, { onDelete: 'cascade' }),
+    customFieldId: text('custom_field_id')
+        .notNull()
+        .references(() => memberFields.id, { onDelete: 'cascade' }),
+    value: text('value').notNull(),
+    created: timestamp('created_at', { withTimezone: true })
+        .notNull()
+        .defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
+},
     (t) => [
         primaryKey({ columns: [t.memberId, t.customFieldId] }),
         unique('mcf_member_field_unique').on(t.memberId, t.customFieldId),

@@ -61,6 +61,7 @@ async function fetchMemberLocationData(
 							where: (ms, { eq }) => eq(ms.locationId, id),
 							with: {
 								plan: true,
+
 							},
 						},
 					},
@@ -84,9 +85,9 @@ async function fetchMemberLocationData(
 			throw new Error("Member not found");
 		}
 
-		const { member, totalPointsEarned, ...rest } = ml;
+		const { member, ...rest } = ml;
 
-		return { member, ml: { ...rest, totalPointsEarned } };
+		return { member, ml: rest };
 	} catch (error) {
 		console.log("error", error);
 		return null;
@@ -163,8 +164,6 @@ export default async function MemberProfilePage(props: {
 
 	const { member, ml } = res;
 
-	// Fetch member profile data (check-ins and reward claims)
-	// const memberProfileData = await fetchMemberProfileData(params.id, params.mid);
 	if (member.stripeCustomerId) {
 		paymentMethods = await fetchStripePaymentMethods(member.stripeCustomerId);
 	}

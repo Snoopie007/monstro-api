@@ -4,7 +4,6 @@ import {
   text,
   timestamp,
   pgTable,
-  serial,
   jsonb,
   foreignKey,
   uuid,
@@ -119,37 +118,33 @@ export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
   subscriptions: many(memberSubscriptions),
 }));
 
-export const memberSubscriptionRelations = relations(
-  memberSubscriptions,
-  ({ one, many }) => ({
-    member: one(members, {
-      fields: [memberSubscriptions.memberId],
-      references: [members.id],
-      relationName: "payer",
-    }),
-    parent: one(memberSubscriptions, {
-      fields: [memberSubscriptions.parentId],
-      references: [memberSubscriptions.id],
-    }),
-    plan: one(memberPlans, {
-      fields: [memberSubscriptions.memberPlanId],
-      references: [memberPlans.id],
-    }),
-    location: one(locations, {
-      fields: [memberSubscriptions.locationId],
-      references: [locations.id],
-    }),
-    contract: one(memberContracts, {
-      fields: [memberSubscriptions.memberContractId],
-      references: [memberContracts.id],
-    }),
-    transactions: many(transactions),
-    invoices: many(memberInvoices),
-    reservations: many(reservations),
-    recurrings: many(recurringReservations),
-    child: many(memberSubscriptions),
-  })
-);
+export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one, many }) => ({
+  member: one(members, {
+    fields: [memberSubscriptions.memberId],
+    references: [members.id],
+    relationName: "payer",
+  }),
+  parent: one(memberSubscriptions, {
+    fields: [memberSubscriptions.parentId],
+    references: [memberSubscriptions.id],
+  }),
+  plan: one(memberPlans, {
+    fields: [memberSubscriptions.memberPlanId],
+    references: [memberPlans.id],
+  }),
+  location: one(locations, {
+    fields: [memberSubscriptions.locationId],
+    references: [locations.id],
+  }),
+  contract: one(memberContracts, {
+    fields: [memberSubscriptions.memberContractId],
+    references: [memberContracts.id],
+  }),
+  transactions: many(transactions),
+  invoices: many(memberInvoices),
+  reservations: many(reservations),
+  recurrings: many(recurringReservations),
+}));
 
 export const memberPackagesRelations = relations(
   memberPackages,
@@ -178,6 +173,8 @@ export const memberPackagesRelations = relations(
     invoices: many(memberInvoices),
     reservations: many(reservations),
     recurrings: many(recurringReservations),
-    child: many(memberPackages),
+    childs: many(memberPackages, {
+      relationName: "children",
+    }),
   })
 );

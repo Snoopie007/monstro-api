@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { SubActions } from './SubActions'
 import { Clock4Icon } from 'lucide-react'
 import { InfoField } from '../InfoField'
+import { useEffect, useState } from 'react'
 
 function calculateProgress(start: Date, end: Date) {
     const now = Date.now()
@@ -23,6 +24,19 @@ function calculateProgress(start: Date, end: Date) {
 
 export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
 
+    const [familyPlans, setFamilyPlans] = useState<MemberSubscription[] | undefined>(undefined)
+    const [parentPlan, setParentPlan] = useState<MemberSubscription | undefined>(undefined)
+    const isFamilyPlan = sub.plan?.family
+    const isPayer = sub.parentId === null
+    useEffect(() => {
+        if (isFamilyPlan) {
+            if (isPayer) {
+                //fetch parent plan
+            } else {
+                //fetch child plans
+            }
+        }
+    }, [sub])
     return (
         <div className="bg-muted/50 rounded-lg px-4 py-3 space-y-2">
             <div className="flex flex-row justify-between items-center">
@@ -40,11 +54,9 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                     </span>
 
                 </div>
-                <div>
-                    <SubActions sub={sub} refetch={() => { }} />
-                </div>
+                <SubActions sub={sub} />
             </div>
-            <div className="space-y-8 py-2">
+            <div className="space-y-5 py-2">
                 <div className="grid grid-cols-3 justify-between items-center">
                     <InfoField label="Duration">
                         {`${format(sub.startDate, 'MMM d, yyyy')} - ${sub.endedAt ? format(sub.endedAt, 'MMM d, yyyy') : 'n/a'}`}
@@ -78,6 +90,24 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                             </span>
                         </InfoField>
                     </div>
+                )}
+
+                {isFamilyPlan && (
+                    isPayer ? (
+                        <div className={`space-y-1  col-span-1 `}>
+                            <div className="text-xs font-medium text-muted-foreground">Child Plans</div>
+                            <div className="text-sm font-medium">
+
+                            </div>
+                        </div>
+                    ) : (
+                        <div className={`space-y-1  col-span-1 `}>
+                            <div className="text-xs font-medium text-muted-foreground">Parent Plan </div>
+                            <div className="text-sm font-medium">
+
+                            </div>
+                        </div>
+                    )
                 )}
             </div>
         </div>
