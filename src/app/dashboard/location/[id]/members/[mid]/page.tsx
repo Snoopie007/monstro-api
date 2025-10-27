@@ -7,18 +7,16 @@ import {
 	TooltipProvider,
 } from "@/components/ui";
 import { db } from "@/db/db";
-import { attendances, recurringReservations, reservations } from "@/db/schemas";
 import { hasPermission } from "@/libs/server/permissions";
 import { MemberStripePayments } from "@/libs/server/stripe";
-import type { Attendance, Member, MemberLocation } from "@/types";
+import type {  Member, MemberLocation } from "@/types";
 import { format } from "date-fns";
-import { and, desc, eq, or, sql } from "drizzle-orm";
+import { and, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import {
 	CustomFieldsBox,
 	MemberAchievements,
 	MemberChatView,
-	MemberFamilies,
 	MemberInvoices,
 	MemberPkg,
 	MemberProfile,
@@ -34,7 +32,7 @@ import { MemberProvider } from "./providers/MemberContext";
 
 type PromiseReturnType = {
 	member: Member | undefined;
-	ml: (MemberLocation & { totalPointsEarned: number }) | undefined;
+	ml: (MemberLocation & { totalPointsEarned: number, lastCheckInTime: Date | null }) | undefined;
 };
 
 
@@ -65,6 +63,10 @@ async function fetchMemberLocationData(
 						},
 					},
 				},
+				attendances: {
+					orderBy: (attendances, { desc }) => desc(attendances.checkInTime),
+					limit: 1,
+				}
 			},
 			extras: {
 				totalPointsEarned: sql<number>`
@@ -86,53 +88,12 @@ async function fetchMemberLocationData(
 
 		const { member, totalPointsEarned, ...rest } = ml;
 
-		return { member, ml: { ...rest, totalPointsEarned } };
+		return { member, ml: { ...rest, totalPointsEarned, lastCheckInTime: ml.attendances?.[0]?.checkInTime || null } };
 	} catch (error) {
 		console.log("error", error);
 		return null;
 	}
 }
-
-// async function fetchMemberProfileData(
-// 	id: string,
-// 	mid: string,
-// ): Promise<Attendance | null> {
-// 	try {
-// 		// Fetch latest check-in
-// 		const checkins = await db
-// 			.select({
-// 				checkInTime: attendances.checkInTime,
-// 			}).from(attendances)
-// 			.leftJoin(reservations, eq(attendances.reservationId, reservations.id))
-// 			.leftJoin(
-// 				recurringReservations,
-// 				eq(attendances.recurringId, recurringReservations.id),
-// 			)
-// 			.where(
-// 				and(
-// 					or(
-// 						and(
-// 							eq(reservations.memberId, mid),
-// 							eq(reservations.locationId, id),
-// 						),
-// 						and(
-// 							eq(recurringReservations.memberId, mid),
-// 							eq(recurringReservations.locationId, id),
-// 						),
-// 					),
-// 				),
-// 			)
-// 			.orderBy(desc(attendances.checkInTime))
-// 			.limit(1);
-
-
-
-// 		return checkins[0];
-// 	} catch (error) {
-// 		console.error("Error fetching member profile data:", error);
-// 		return null;
-// 	}
-// }
 
 async function fetchStripePaymentMethods(
 	customerId: string,
@@ -154,17 +115,12 @@ export default async function MemberProfilePage(props: {
 	const canEditMember = await hasPermission("edit member", params.id);
 
 	const res = await fetchMemberLocationData(params.id, params.mid);
-
 	let paymentMethods: Stripe.PaymentMethod[] = [];
-
 	if (!res || !res.member || !res.ml) {
 		return <div>Member not found</div>;
 	}
 
 	const { member, ml } = res;
-
-	// Fetch member profile data (check-ins and reward claims)
-	// const memberProfileData = await fetchMemberProfileData(params.id, params.mid);
 	if (member.stripeCustomerId) {
 		paymentMethods = await fetchStripePaymentMethods(member.stripeCustomerId);
 	}
@@ -174,7 +130,7 @@ export default async function MemberProfilePage(props: {
 			<MemberProvider member={member} ml={ml} paymentMethods={paymentMethods}>
 				<div className="grid grid-cols-7 flex-1 gap-2 p-2 h-full">
 					<div className="col-span-2 flex flex-col space-y-2 h-full">
-						<MemberProfile params={params} pd={{ lastSeenFormatted: "Never" }} />
+						<MemberProfile params={params} pd={ml.lastCheckInTime ? { lastSeenFormatted: format(ml.lastCheckInTime, 'MMM d, yyyy hh:mm a') } : { lastSeenFormatted: "Never" }} />
 						<PointsProfile
 							profileData={{ totalPointsEarned: ml.totalPointsEarned }}
 						/>
