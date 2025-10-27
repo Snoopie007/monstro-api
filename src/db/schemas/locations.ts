@@ -25,6 +25,7 @@ import { vendors } from "./vendors";
 import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import type { LocationSettings } from "@/types";
+import { attendances } from "./attendances";
 
 export const locations = pgTable("locations", {
 	id: uuid("id")
@@ -165,6 +166,7 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 		fields: [locations.id],
 		references: [wallets.locationId],
 	}),
+	attendances: many(attendances),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -188,8 +190,8 @@ export const memberLocationsRelations = relations(memberLocations, ({ one, many 
 	rewards: many(memberRewards),
 	referrals: many(memberReferrals),
 	pointsHistory: many(memberPointsHistory),
-})
-);
+	attendances: many(attendances),
+}));
 
 export const walletRelations = relations(wallets, ({ one, many }) => ({
 	location: one(locations, {

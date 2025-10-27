@@ -87,6 +87,8 @@ export async function locationCheckin(app: Elysia) {
             const checkin = await db.insert(attendances).values({
                 reservationId: !reservation.isRecurring ? reservation.id : null,
                 recurringId: reservation.isRecurring ? reservation.recurringId : null,
+                locationId: reservation.locationId,
+                memberId: reservation.memberId,
                 checkInTime: new Date(),
                 startTime: startOn,
                 endTime: endOn,

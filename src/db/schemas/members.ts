@@ -23,6 +23,7 @@ import {
 	MemberRelationshipEnum,
 	CustomFieldTypeEnum,
 } from "./DatabaseEnums";
+import { attendances } from "./attendances";
 
 export const members = pgTable("members", {
 	id: uuid("id")
@@ -326,6 +327,7 @@ export const membersRelations = relations(members, ({ many, one }) => ({
 	}),
 	memberTags: many(memberHasTags),
 	customFields: many(memberCustomFields),
+	attendances: many(attendances),
 }));
 
 export const familyMemberRelations = relations(familyMembers, ({ one, many }) => ({
