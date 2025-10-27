@@ -35,15 +35,17 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
     useEffect(() => {
         if (!isFamilyPlan) return
         if (isPayer) {
-            fetchParentPlan()
-        } else {
+            if (familyPlans && familyPlans.length > 0) return
             fetchFamilyPlans()
+        } else {
+            if (parentPlan) return
+            fetchParentPlan()
         }
     }, [isFamilyPlan, isPayer])
 
     async function fetchParentPlan() {
         setLoading(true)
-        const url = `/api/protected/loc/${locationId}/members/${memberId}/subs/${sub.id}/parent`
+        const url = `/api/protected/loc/${locationId}/members/${memberId}/subs/${sub.id}/parent?parentId=${sub.id}`
         const { error, result } = await tryCatch(fetch(url))
         if (error || !result || !result.ok) {
             setLoading(false)
@@ -124,18 +126,16 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                 {isFamilyPlan && isPayer && (
                     <div className={`space-y-1  col-span-1 `}>
                         <div className="text-xs font-medium text-muted-foreground">Family Plan Members</div>
-                        {loading ? (
-                            <Skeleton className="size-6 rounded-full" />
-                        ) : (
-                            <div className="flex flex-row">
-                                {familyPlans && familyPlans.length > 0 && familyPlans.map((plan, index) => (
-                                    <FamilyPlanMember key={plan.id} plan={plan} index={index} />
-                                ))}
-                                <Button variant="ghost" size="icon" className="size-6 bg-foreground/10">
-                                    <PlusIcon size={14} />
-                                </Button>
-                            </div>
-                        )}
+                        <div className="flex flex-row items-center relative gap-2">
+                            {loading ? (
+                                <Skeleton className="size-6 rounded-lg" />
+                            ) : (familyPlans && familyPlans.length > 0 && familyPlans.map((plan) => (
+                                <FamilyPlanMember key={plan.id} plan={plan} />
+                            )))}
+                            <Button variant="ghost" size="icon" className="size-6 bg-foreground/10 rounded-lg">
+                                <PlusIcon size={14} className="text-foreground/50" />
+                            </Button>
+                        </div>
                     </div>
                 )}
 
@@ -152,13 +152,13 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
     )
 }
 
-function FamilyPlanMember({ plan, index }: { plan: MemberSubscription, index: number }) {
+function FamilyPlanMember({ plan }: { plan: MemberSubscription }) {
     const fm = plan.member
     return (
         <Tooltip>
             <TooltipTrigger asChild>
 
-                <Avatar className={cn("size-6 rounded-full bg-foreground/5 absolute")} style={{ left: `${index * 20}px` }}>
+                <Avatar className={cn("size-6 rounded-lg bg-foreground/5 ")} >
                     <AvatarImage src={fm?.avatar || '/images/default-avatar.png'} />
                 </Avatar>
             </TooltipTrigger>

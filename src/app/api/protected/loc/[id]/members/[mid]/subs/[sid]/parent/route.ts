@@ -10,13 +10,14 @@ type Params = {
 
 export async function GET(req: Request, props: { params: Promise<Params> }) {
     const params = await props.params;
-    const data = await req.json();
+    const { searchParams } = new URL(req.url);
+    const parentId = searchParams.get('parentId');
     try {
 
         const parentSubscription = await db.query.memberSubscriptions.findFirst({
             where: (memberSubscriptions, { eq, and }) => and(
                 eq(memberSubscriptions.locationId, params.id),
-                eq(memberSubscriptions.id, data.parentId),
+                eq(memberSubscriptions.id, parentId as string),
             ),
             with: {
                 member: true,
