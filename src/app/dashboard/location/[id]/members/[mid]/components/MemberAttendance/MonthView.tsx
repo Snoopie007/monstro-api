@@ -7,10 +7,11 @@ import {
 import { cn } from '@/libs/utils'
 import { formatDate } from 'date-fns'
 
-export const MonthView = ({ weeks }: { weeks: any[] }) => {
+export const MonthView = ({ weeks, month }: { weeks: any[], month: string }) => {
     return (
         <div className="flex-1">
             <div className="flex flex-col gap-1 w-full">
+            <span className='text-sm font-medium w-full text-left uppercase text-muted-foreground/80'>{month}</span>
                 {weeks.map((week, weekIndex) => (
                     <div key={weekIndex} className="flex flex-row gap-1 w-full">
                         {week.map((day: any, dayIndex: number) => (
