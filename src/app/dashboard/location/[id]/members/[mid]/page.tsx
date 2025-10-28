@@ -10,7 +10,6 @@ import { db } from "@/db/db";
 import { hasPermission } from "@/libs/server/permissions";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import type { Member, MemberLocation } from "@/types";
-import { format } from "date-fns";
 import { sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import {
@@ -92,7 +91,7 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 			if (kmnl) {
 				return {
 					...fm,
-					relatedMember: kmnl.member
+					member: kmnl.member
 				};
 			}
 			return fm;
@@ -106,12 +105,10 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 		const { member, ...rest } = ml;
 
 		return {
-			member: {
-				...member,
-				familyMembers: filteredFamilyMembers,
-			},
+			member,
 			ml: {
 				...rest,
+				knownFamilyMembers: filteredFamilyMembers,
 				lastCheckInTime: ml.attendances?.[0]?.checkInTime || null,
 			}
 		};

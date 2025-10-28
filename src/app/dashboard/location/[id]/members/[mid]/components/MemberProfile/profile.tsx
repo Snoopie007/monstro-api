@@ -12,7 +12,6 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui";
-import { usePermission } from "@/hooks/usePermissions";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { VisuallyHidden } from "react-aria";
@@ -100,14 +99,14 @@ export function MemberProfile({ params }: { params: { id: string; mid: string } 
 								<div className="text-sm font-medium">{memberProfile?.phone}</div>
 							</div>
 						</div>
-						{member.familyMembers && member.familyMembers.length > 0 && (
+						{ml.knownFamilyMembers && ml.knownFamilyMembers.length > 0 && (
 							<div className="flex flex-row gap-10 items-center ">
 								<div className="space-y-1">
 									<div className="text-xs text-muted-foreground">
 										Know Family Members
 									</div>
 									<div className="flex flex-row relative">
-										{member.familyMembers.map((familyMember, index) => (
+										{ml.knownFamilyMembers.map((familyMember, index) => (
 											<FamilyMembers key={familyMember.id} familyMember={familyMember} index={index} />
 										))}
 									</div>
@@ -122,18 +121,25 @@ export function MemberProfile({ params }: { params: { id: string; mid: string } 
 }
 
 
-function FamilyMembers({ familyMember, index }: { familyMember: FamilyMember, index: number }) {
+interface FamilyMembersProps {
+	familyMember: FamilyMember;
+	index: number;
+}
+
+function FamilyMembers({ familyMember, index }: FamilyMembersProps) {
+
+	const m = familyMember.member;
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
 
 				<Avatar className={cn("size-6 rounded-full bg-foreground/5 absolute")} style={{ left: `${index * 20}px` }}>
-					<AvatarImage src={familyMember.relatedMember?.avatar || '/images/default-avatar.png'} />
+					<AvatarImage src={m?.avatar || '/images/default-avatar.png'} />
 				</Avatar>
 			</TooltipTrigger>
 			<TooltipContent>
 				<div>
-					<div className="text-sm font-medium">{familyMember.relatedMember?.firstName} {familyMember.relatedMember?.lastName}</div>
+					<div className="text-sm font-medium">{m?.firstName} {m?.lastName}</div>
 					<div className="text-xs text-muted-foreground">{familyMember.relationship}</div>
 				</div>
 			</TooltipContent>

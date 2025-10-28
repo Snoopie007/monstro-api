@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { FamilyDialog } from '../FamilyPlan'
 import { toast } from 'react-toastify'
+import { useMemberStatus } from '../../providers/MemberContext'
 
 function calculateProgress(start: Date, end: Date) {
     const now = Date.now()
@@ -52,11 +53,11 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
 
 
 
+    const url = `/api/protected/loc/${locationId}/members/${memberId}/subs/${sub.id}`
 
     async function fetchParentPlan() {
         setLoading(true)
-        const url = `/api/protected/loc/${locationId}/members/${memberId}/subs/${sub.id}/parent?parentId=${sub.id}`
-        const { error, result } = await tryCatch(fetch(url))
+        const { error, result } = await tryCatch(fetch(`${url}/parent?parentId=${sub.id}`))
         if (error || !result || !result.ok) {
             setLoading(false)
             return toast.error(error?.message || 'Failed to fetch parent plan')
@@ -68,8 +69,7 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
 
     async function fetchFamilyPlans() {
         setLoading(true)
-        const url = `/api/protected/loc/${locationId}/members/${memberId}/subs/${sub.id}/childs`
-        const { error, result } = await tryCatch(fetch(url))
+        const { error, result } = await tryCatch(fetch(`${url}/childs`))
         if (error || !result || !result.ok) {
             setLoading(false)
             return toast.error(error?.message || 'Failed to fetch family plans')
@@ -142,7 +142,7 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                             ) : (familyPlans && familyPlans.length > 0 && familyPlans.map((plan) => (
                                 <FamilyPlanMember key={plan.id} plan={plan} />
                             )))}
-                            {canAddFamilyMember && <FamilyDialog parentPlan={sub} type="sub" />}
+                            {canAddFamilyMember && <FamilyDialog familyPlans={familyPlans || []} parentPlan={sub} type="sub" />}
                         </div>
                     </div>
                 )}

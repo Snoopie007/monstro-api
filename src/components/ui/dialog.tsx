@@ -153,10 +153,10 @@ const DialogSlide = React.forwardRef<
 >(({ className, children, show = false, ...props }, ref) => (
   <div
     className={cn(
-      `border bg-background shadow-lg w-full transition-all duration-300 ease-out absolute top-0
+      `border border-foreground/10 bg-background shadow-lg w-full transition-all duration-300 ease-out absolute top-0
 			data-[state=open]:translate-y-[-50%] data-[state=closed]:translate-y-[200%]
 			data-[state=open]:opacity-100 data-[state=closed]:opacity-0
-			sm:rounded-sm
+			sm:rounded-lg
 			`,
       className
     )}

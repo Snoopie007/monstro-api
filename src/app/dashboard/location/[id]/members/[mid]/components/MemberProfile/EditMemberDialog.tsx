@@ -116,7 +116,7 @@ export default function EditMemberDialog({ params, open, setOpen }: Props) {
 									name="firstName"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>First Name</FormLabel>
+											<FormLabel size="tiny"> First Name</FormLabel>
 											<FormControl>
 												<Input {...field} />
 											</FormControl>
@@ -129,7 +129,7 @@ export default function EditMemberDialog({ params, open, setOpen }: Props) {
 									name="lastName"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Last Name</FormLabel>
+											<FormLabel size="tiny">Last Name</FormLabel>
 											<FormControl>
 												<Input {...field} />
 											</FormControl>
@@ -145,7 +145,7 @@ export default function EditMemberDialog({ params, open, setOpen }: Props) {
 									name="email"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Email</FormLabel>
+											<FormLabel size="tiny">Email</FormLabel>
 											<FormControl>
 												<Input type="email" {...field} />
 											</FormControl>
@@ -158,7 +158,7 @@ export default function EditMemberDialog({ params, open, setOpen }: Props) {
 									name="phone"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Phone</FormLabel>
+											<FormLabel size="tiny">Phone</FormLabel>
 											<FormControl>
 												<Input {...field} />
 											</FormControl>
@@ -177,16 +177,18 @@ export default function EditMemberDialog({ params, open, setOpen }: Props) {
 
 				<DialogFooter>
 					<DialogClose asChild>
-						<Button variant="outline">
+						<Button variant="outline" size="sm">
 							Cancel
 						</Button>
 					</DialogClose>
 					<Button
+						size="sm"
 						disabled={loading}
 						onClick={form.handleSubmit(onSubmit)}
+						variant="foreground"
 					>
 						{loading && <Loader2 className="mr-2 size-4 animate-spin" />}
-						Save Changes
+						Save
 					</Button>
 				</DialogFooter>
 			</DialogContent>

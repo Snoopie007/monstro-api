@@ -70,6 +70,7 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
 export type MemberLocation = typeof memberLocations.$inferSelect & {
     location?: Location
     member?: Member,
+    knownFamilyMembers?: FamilyMember[],
     lastCheckInTime?: Date | null
     totalPointsEarned?: number
 }

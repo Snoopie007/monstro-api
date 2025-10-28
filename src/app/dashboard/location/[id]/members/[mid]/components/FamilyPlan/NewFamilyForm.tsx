@@ -22,7 +22,7 @@ import { z } from "zod";
 import { CountryCode } from "@/types/other";
 import { CountryCodes } from "@/libs/data";
 import PhoneInput from "react-phone-number-input/input";
-import { Button, DialogBody, DialogFooter } from "@/components/ui";
+import { Button, DialogClose } from "@/components/ui";
 import { MemberRelationship } from "@/types/DatabaseEnums";
 import { cn } from "@/libs/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -105,166 +105,152 @@ export function FamilyMemberForm({
 	}
 
 	return (
-		<>
-			<DialogBody>
-				<div className="flex flex-col gap-2">
-					<Form {...form}>
-						<form className={cn("space-y-1   rounded-sm ")}>
+		<Form {...form}>
+			<form className={cn("space-y-1   ")}>
 
-							<fieldset>
-								<FormField
-									control={form.control}
-									name="relationship"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel size="tiny">Select a relationship</FormLabel>
-											<Select onValueChange={(value) => field.onChange(value)}>
-												<FormControl>
-													<SelectTrigger className="rounded-xs">
-														<SelectValue placeholder="Select a relationship" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													{RelationshipOptions.map(
-														(relation: MemberRelationship, i) => (
-															<SelectItem key={i} value={relation}>
-																{relation}
-															</SelectItem>
-														)
-													)}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</fieldset>
+				<fieldset>
+					<FormField
+						control={form.control}
+						name="relationship"
+						render={({ field }) => (
+							<FormItem>
 
-							<fieldset className="grid grid-cols-2 gap-4">
-								<FormField
-									control={form.control}
-									name="firstName"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel size="tiny">First Name</FormLabel>
-											<FormControl>
-												<Input {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="lastName"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel size="tiny">Last Name</FormLabel>
-											<FormControl>
-												<Input {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</fieldset>
-							<fieldset className="space-y-1">
-								<FormField
-									control={form.control}
-									name="email"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel size="tiny">Email </FormLabel>
-											<FormDescription className="text-xs text-muted-foreground">
-												No email? We can create a proxy email that forwards
-												messages to you. Click the button below to generate one.
-											</FormDescription>
-											<FormControl>
-												<Input {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<div
-									className="text-red-500 text-xs  font-medium cursor-pointer"
-									onClick={() => {
-										form.setValue("email", useAliasEmail());
-									}}
-								>
-									(Generate Proxy Email)
-								</div>
-							</fieldset>
-							<fieldset>
-								<div className="flex-1 justify-center space-y-2">
-									<FormLabel size="tiny">Phone</FormLabel>
-									<div className="flex flex-row gap-1">
-										<Select
-											onValueChange={(value: string) =>
-												setPhoneRegion(value as CountryCode)
-											}
-											defaultValue={phoneRegion}
-										>
-											<SelectTrigger className="rounded-sm w-[22%] h-auto">
-												<SelectValue defaultValue={"US"} />
-											</SelectTrigger>
-											<SelectContent>
-												{CountryCodes.map((country, index) => (
-													<SelectItem key={index} value={country.code}>
-														{country.shortName}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-										<FormField
-											control={form.control}
-											name="phone"
-											render={({ field: { onChange, value } }) => (
-												<FormItem className="flex-1">
-													<FormControl>
-														<PhoneInput
-															type="tel"
-															className="rounded-sm bg-background inline-block w-full border py-1.5 px-4"
-															value={value}
-															withCountryCallingCode={true}
-															international={true}
-															country={phoneRegion}
-															onChange={onChange}
-														/>
-													</FormControl>
-													<FormMessage />
-												</FormItem>
-											)}
+								<Select onValueChange={(value) => field.onChange(value)}>
+									<FormControl>
+										<SelectTrigger >
+											<SelectValue placeholder="Select a relationship" />
+										</SelectTrigger>
+									</FormControl>
+									<SelectContent>
+										{RelationshipOptions.map(
+											(relation: MemberRelationship, i) => (
+												<SelectItem key={i} value={relation}>
+													{relation}
+												</SelectItem>
+											)
+										)}
+									</SelectContent>
+								</Select>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+				</fieldset>
+
+				<fieldset className="grid grid-cols-2 gap-4">
+					<FormField
+						control={form.control}
+						name="firstName"
+						render={({ field }) => (
+							<FormItem>
+								<FormControl>
+									<Input {...field} placeholder="First Name" />
+								</FormControl>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+					<FormField
+						control={form.control}
+						name="lastName"
+						render={({ field }) => (
+							<FormItem>
+								<FormControl>
+									<Input {...field} placeholder="Last Name" />
+								</FormControl>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+				</fieldset>
+				<fieldset className="space-y-1">
+					<FormField
+						control={form.control}
+						name="email"
+						render={({ field }) => (
+							<FormItem>
+
+								<FormDescription className="text-xs text-muted-foreground">
+									No email? We can create a proxy email that forwards
+									messages to you. Click the button below to generate one.
+								</FormDescription>
+								<FormControl>
+									<Input {...field} type="email" placeholder="Email" />
+								</FormControl>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+					<div
+						className="text-red-500 text-xs  font-medium cursor-pointer"
+						onClick={() => {
+							form.setValue("email", useAliasEmail());
+						}}
+					>
+						(Generate Proxy Email)
+					</div>
+				</fieldset>
+				<fieldset>
+					<div className="flex flex-row gap-1">
+						<Select
+							onValueChange={(value: string) =>
+								setPhoneRegion(value as CountryCode)
+							}
+							defaultValue={phoneRegion}
+						>
+							<SelectTrigger className=" w-[22%]">
+								<SelectValue defaultValue={"US"} />
+							</SelectTrigger>
+							<SelectContent>
+								{CountryCodes.map((country, index) => (
+									<SelectItem key={index} value={country.code}>
+										{country.shortName}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<FormField
+							control={form.control}
+							name="phone"
+							render={({ field: { onChange, value } }) => (
+								<FormItem className="flex-1">
+									<FormControl>
+										<PhoneInput
+											type="tel"
+											className="rounded-lg bg-background inline-block w-full border h-12 p-3 text-sm border-foreground/10"
+											value={value}
+											withCountryCallingCode={true}
+											international={true}
+											country={phoneRegion}
+											onChange={onChange}
 										/>
-									</div>
-								</div>
-							</fieldset>
-						</form>
-					</Form>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</div>
+				</fieldset>
+				<div className="flex flex-row gap-2 mt-4" >
+					<DialogClose asChild>
+						<Button variant="outline" type="button" size="sm">
+							Cancel
+						</Button>
+					</DialogClose>
+
+					<Button className={cn("children:hidden", { "children:inline-flex": loading })}
+						type="submit"
+						variant={"foreground"}
+						size="sm"
+						disabled={loading}
+						onClick={form.handleSubmit(onSubmit)}
+					>
+						<Loader2 className="mr-2 size-4 hidden animate-spin" />
+						Add Family
+					</Button>
 				</div>
-			</DialogBody>
-			<DialogFooter>
-				<Button
-					variant="outline"
-					onClick={() => {
-						form.reset();
-						reset();
-					}}
-				>
-					Cancel
-				</Button>
+			</form>
 
-				<Button className={cn("children:hidden", { "children:inline-flex": loading })}
-					variant={"foreground"}
-
-					type="submit"
-					disabled={loading}
-					onClick={form.handleSubmit(onSubmit)}
-				>
-					<Loader2 className="mr-2 size-4 hidden animate-spin" />
-					Add Family
-				</Button>
-			</DialogFooter>
-		</>
+		</Form>
 	);
 }
