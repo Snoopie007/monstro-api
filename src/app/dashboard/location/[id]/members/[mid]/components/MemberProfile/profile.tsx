@@ -128,7 +128,7 @@ interface FamilyMembersProps {
 
 function FamilyMembers({ familyMember, index }: FamilyMembersProps) {
 
-	const m = familyMember.member;
+	const m = familyMember.relatedMember;
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>

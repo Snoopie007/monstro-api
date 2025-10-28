@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
 	Form,
 	FormField,
 	FormItem,
-	FormLabel,
 	FormControl,
 	FormMessage,
 	Select,
@@ -30,10 +29,11 @@ import { useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { MemberPackage, MemberSubscription } from "@/types";
+import { Dispatch, SetStateAction } from "react";
 
 interface FamilyMemberFormProps {
 	parentPlan: MemberSubscription | MemberPackage;
-	reset: () => void;
+	setSlide: Dispatch<SetStateAction<'existing' | 'new'>>;
 }
 const RelationshipOptions: MemberRelationship[] = [
 	"parent",
@@ -45,7 +45,7 @@ const RelationshipOptions: MemberRelationship[] = [
 
 export function FamilyMemberForm({
 	parentPlan,
-	reset,
+	setSlide,
 }: FamilyMemberFormProps) {
 	const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
 	const [loading, setLoading] = useState(false);
@@ -85,7 +85,7 @@ export function FamilyMemberForm({
 				const errorData = await response.json();
 				throw new Error(errorData.error || "Failed to add child member");
 			}
-			reset();
+			setSlide('existing');
 		} catch (error) {
 			console.error("Error adding child member:", error);
 		} finally {
@@ -106,36 +106,9 @@ export function FamilyMemberForm({
 
 	return (
 		<Form {...form}>
-			<form className={cn("space-y-1   ")}>
+			<form className={cn("space-y-3 bg-foreground/5 rounded-b-lg p-3 ")}>
 
-				<fieldset>
-					<FormField
-						control={form.control}
-						name="relationship"
-						render={({ field }) => (
-							<FormItem>
 
-								<Select onValueChange={(value) => field.onChange(value)}>
-									<FormControl>
-										<SelectTrigger >
-											<SelectValue placeholder="Select a relationship" />
-										</SelectTrigger>
-									</FormControl>
-									<SelectContent>
-										{RelationshipOptions.map(
-											(relation: MemberRelationship, i) => (
-												<SelectItem key={i} value={relation}>
-													{relation}
-												</SelectItem>
-											)
-										)}
-									</SelectContent>
-								</Select>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-				</fieldset>
 
 				<fieldset className="grid grid-cols-2 gap-4">
 					<FormField
@@ -170,9 +143,9 @@ export function FamilyMemberForm({
 						render={({ field }) => (
 							<FormItem>
 
-								<FormDescription className="text-xs text-muted-foreground">
+								<FormDescription className="text-sm text-muted-foreground">
 									No email? We can create a proxy email that forwards
-									messages to you. Click the button below to generate one.
+									messages to you. Click the "Generate Proxy Email" below to generate one.
 								</FormDescription>
 								<FormControl>
 									<Input {...field} type="email" placeholder="Email" />
@@ -182,12 +155,12 @@ export function FamilyMemberForm({
 						)}
 					/>
 					<div
-						className="text-red-500 text-xs  font-medium cursor-pointer"
+						className="text-indigo-500 text-sm  font-medium cursor-pointer"
 						onClick={() => {
 							form.setValue("email", useAliasEmail());
 						}}
 					>
-						(Generate Proxy Email)
+						Generate Proxy Email
 					</div>
 				</fieldset>
 				<fieldset>
@@ -231,23 +204,30 @@ export function FamilyMemberForm({
 						/>
 					</div>
 				</fieldset>
-				<div className="flex flex-row gap-2 mt-4" >
-					<DialogClose asChild>
-						<Button variant="outline" type="button" size="sm">
-							Cancel
-						</Button>
-					</DialogClose>
+				<div className="flex flex-row gap-2 mt-4 justify-between" >
 
-					<Button className={cn("children:hidden", { "children:inline-flex": loading })}
-						type="submit"
-						variant={"foreground"}
-						size="sm"
-						disabled={loading}
-						onClick={form.handleSubmit(onSubmit)}
-					>
-						<Loader2 className="mr-2 size-4 hidden animate-spin" />
-						Add Family
+					<Button variant="foreground" type="button" size="sm" onClick={() => setSlide('existing')}>
+						Back
 					</Button>
+
+					<div className="flex flex-row gap-2">
+						<DialogClose asChild>
+							<Button variant="outline" type="button" size="sm">
+								Cancel
+							</Button>
+						</DialogClose>
+
+						<Button className={cn("children:hidden", { "children:inline-flex": loading })}
+							type="submit"
+							variant={"foreground"}
+							size="sm"
+							disabled={loading}
+							onClick={form.handleSubmit(onSubmit)}
+						>
+							<Loader2 className="mr-2 size-4 hidden animate-spin" />
+							Create Account
+						</Button>
+					</div>
 				</div>
 			</form>
 

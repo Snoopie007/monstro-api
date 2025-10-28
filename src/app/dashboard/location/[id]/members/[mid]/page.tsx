@@ -28,7 +28,7 @@ import {
 	MemberAttendanceGraph
 } from "./components";
 import { MemberProvider } from "./providers/MemberContext";
-import { FamilyMember } from "@/types";
+import { notFound } from "next/navigation";
 
 
 
@@ -49,7 +49,11 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 			with: {
 				member: {
 					with: {
-						familyMembers: true,
+						familyMembers: {
+							with: {
+								relatedMember: true,
+							},
+						},
 						subscriptions: {
 							where: (ms, { eq }) => eq(ms.locationId, id),
 							with: {
@@ -78,39 +82,29 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 			},
 		});
 
-		const familyMemberIds = ml?.member?.familyMembers?.map((fm) => fm.relatedMemberId) || [];
-		const knownFamilyMembers = await db.query.memberLocations.findMany({
-			where: (ml, { inArray, eq, and }) => and(inArray(ml.memberId, familyMemberIds), eq(ml.locationId, id)),
-			with: {
-				member: true,
+		if (!ml) {
+			return null;
+		}
+
+		const fmids = ml.member.familyMembers?.map((fm) => fm.relatedMemberId) || [];
+
+		const knownFamilyMemberIds = await db.query.memberLocations.findMany({
+			where: (ml, { inArray, eq, and }) => and(inArray(ml.memberId, fmids), eq(ml.locationId, id)),
+			columns: {
+				memberId: true,
 			},
 		});
 
-		const filteredFamilyMembers: FamilyMember[] = ml?.member?.familyMembers?.map((fm) => {
-			const kmnl = knownFamilyMembers.find((kmnl) => kmnl.memberId === fm.relatedMemberId);
-			if (kmnl) {
-				return {
-					...fm,
-					member: kmnl.member
-				};
-			}
-			return fm;
-		}) || [];
 
 
-		if (!ml) {
-			throw new Error("Member not found");
-		}
+		const filteredFamilyMembers = ml.member.familyMembers?.filter((fm) => {
+			return !knownFamilyMemberIds.find((kmnl) => kmnl.memberId === fm.memberId);
+		});
 
 		const { member, ...rest } = ml;
-
 		return {
 			member,
-			ml: {
-				...rest,
-				knownFamilyMembers: filteredFamilyMembers,
-				lastCheckInTime: ml.attendances?.[0]?.checkInTime || null,
-			}
+			ml: { ...rest, knownFamilyMembers: filteredFamilyMembers },
 		};
 	} catch (error) {
 		console.log("error", error);
@@ -131,6 +125,8 @@ async function fetchStripePaymentMethods(
 	}
 }
 
+
+
 export default async function MemberProfilePage(props: {
 	params: Promise<{ id: string; mid: string }>;
 }) {
@@ -138,12 +134,14 @@ export default async function MemberProfilePage(props: {
 	const canEditMember = await hasPermission("edit member", params.id);
 
 	const res = await fetchMemberLocationData(params.id, params.mid);
-	let paymentMethods: Stripe.PaymentMethod[] = [];
+
 	if (!res || !res.member || !res.ml) {
-		return <div>Member not found</div>;
+		return notFound();
 	}
 
 	const { member, ml } = res;
+
+	let paymentMethods: Stripe.PaymentMethod[] = [];
 	if (member.stripeCustomerId) {
 		paymentMethods = await fetchStripePaymentMethods(member.stripeCustomerId);
 	}
@@ -155,7 +153,7 @@ export default async function MemberProfilePage(props: {
 					<div className="col-span-2 flex flex-col space-y-2 h-full">
 						<MemberProfile params={params} />
 						<PointsProfile />
-						<ScrollArea className="h-[calc(100vh-318px)] overflow-hidden">
+						<ScrollArea className="h-[calc(100vh-333px)] overflow-hidden">
 							<div className="space-y-4 ">
 								<MemberAttendanceGraph params={params} />
 
