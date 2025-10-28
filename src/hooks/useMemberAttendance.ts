@@ -5,6 +5,7 @@ import { formatDate, subDays } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import type { ExtendedAttendance } from '@/types/attendance'
 import { generateTestAttendanceData } from '@/libs/utils'
+import { format } from 'date-fns-tz'
 
 export const useMemberAttendance = (id: string, mid: string) => {
     const now = new Date()
@@ -21,13 +22,10 @@ export const useMemberAttendance = (id: string, mid: string) => {
     const attendances = isTestMember ? testAttendances : fetchedAttendances
 
     const formattedAttendancesDays = useMemo(() => {
-
         if (!attendances || attendances.length === 0) {
             return {}
         }
-
         const attendanceMap: Record<string, number> = {}
-
         attendances.forEach((attendance: ExtendedAttendance) => {
             const checkInDate = new Date(attendance.checkInTime)
             const dateStr = formatDate(checkInDate, 'yyyy-MM-dd')
@@ -43,6 +41,10 @@ export const useMemberAttendance = (id: string, mid: string) => {
 
         return attendanceMap
     }, [attendances, range, now, fromFallback])
+
+    const totalAttendances = useMemo(() => {
+        return Object.values(formattedAttendancesDays).reduce((acc, curr) => acc + curr, 0)
+    }, [formattedAttendancesDays])
 
     // Helper function to generate weeks for a specific month
     const generateWeeksForMonth = (year: number, month: number) => {
@@ -131,15 +133,17 @@ export const useMemberAttendance = (id: string, mid: string) => {
         previousMonth === 0 ? previousYear - 1 : previousYear
 
     const currentMonthWeeks = generateWeeksForMonth(currentYear, currentMonth)
+    const currentMonthName = format(new Date(currentYear, currentMonth, 1), 'MMM')
     const previousMonthWeeks = generateWeeksForMonth(
         previousYear,
         previousMonth
     )
+    const previousMonthName = format(new Date(previousYear, previousMonth, 1), 'MMM')
     const secondPreviousMonthWeeks = generateWeeksForMonth(
         secondPreviousYear,
         secondPreviousMonth
     )
-
+    const secondPreviousMonthName = format(new Date(secondPreviousYear, secondPreviousMonth, 1), 'MMM')
     const formatDateToThreeMonths = (day: Date) => {
         const threeMonthsAgo = subDays(day, 90)
         const to = new Date(day)
@@ -154,8 +158,12 @@ export const useMemberAttendance = (id: string, mid: string) => {
         range,
         formatDateToThreeMonths,
         currentMonthWeeks,
+        currentMonthName,
         previousMonthWeeks,
+        previousMonthName,
         secondPreviousMonthWeeks,
+        secondPreviousMonthName,
+        totalAttendances,
         isLoading,
         error,
     }

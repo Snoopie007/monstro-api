@@ -26,6 +26,10 @@ export const MemberAttendanceGraph = ({
         previousMonthWeeks,
         secondPreviousMonthWeeks,
         formatDateToThreeMonths,
+        secondPreviousMonthName,
+        previousMonthName,
+        currentMonthName,
+        totalAttendances
     } = useMemberAttendance(params.id, params.mid)
 
     return (
@@ -76,12 +80,12 @@ export const MemberAttendanceGraph = ({
             </div>
             <div className='space-y-6 '>
                 <div className="flex flex-row gap-3 w-full">
-                    <MonthView weeks={secondPreviousMonthWeeks} />
-                    <MonthView weeks={previousMonthWeeks} />
-                    <MonthView weeks={currentMonthWeeks} />
+                    <MonthView weeks={secondPreviousMonthWeeks} month={secondPreviousMonthName} />
+                    <MonthView weeks={previousMonthWeeks} month={previousMonthName} />
+                    <MonthView weeks={currentMonthWeeks} month={currentMonthName} />
                 </div>
                 <p className='text-xs font-medium'>
-                    <span >Total Attendance 100</span>
+                    <span >Total Attendance {totalAttendances}</span>
 
                 </p>
             </div>

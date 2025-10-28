@@ -7,6 +7,7 @@ import {
   Receipt,
   Settings,
   BookText,
+  Home,
 } from "lucide-react";
 
 type SidebarMenuItem = {
@@ -22,6 +23,11 @@ type SubMenuItem = {
 };
 
 export const SidebarMenuItems: SidebarMenuItem[] = [
+  {
+    name: "Dashboard",
+    path: "",
+    icon: <Home size={16} />,
+  },
   {
     name: "Members",
     path: "members",
