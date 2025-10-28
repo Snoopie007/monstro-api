@@ -1,13 +1,12 @@
 'use client'
 import {
-    CardTitle,
-    Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent,
+    Empty, EmptyHeader, EmptyMedia,
+    EmptyTitle, EmptyDescription,
+    Skeleton,
 } from '@/components/ui'
 import { CreateSubscription } from '.'
 import { MemberSubItem } from './MemberSubItem'
-import { Button } from '@/components/ui'
-import { ChevronsUpDown, CircleFadingPlusIcon } from 'lucide-react'
-import { useState } from 'react'
+import { CircleFadingPlusIcon } from 'lucide-react'
 import { useMemberSubscriptions } from '@/hooks/hooks'
 import { MemberSubscription } from '@/types'
 
@@ -15,12 +14,18 @@ interface MemberSubsProps {
     params: { id: string; mid: string }
 }
 export function MemberSubs({ params }: MemberSubsProps) {
-    const [open, setOpen] = useState<boolean>(true)
-    const { subs, isLoading, fetchSubs } = useMemberSubscriptions(params.id, params.mid)
+    const { subs, isLoading } = useMemberSubscriptions(params.id, params.mid)
 
+    if (isLoading) {
+        return (
+            <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+            </div>
+        )
+    }
     return (
         <div className='space-y-2'>
-            <CreateSubscription params={params} refetch={() => { }} />
+            <CreateSubscription params={params} />
             <div>
                 {subs && subs.length > 0 ? (
                     <div className="space-y-2">

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { and, eq } from "drizzle-orm";
 
+
+
+// Validates whether a member has access to a session
 export async function GET(
   req: Request,
   props: { params: Promise<{ id: string; mid: string }> }

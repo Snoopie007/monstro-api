@@ -138,7 +138,7 @@ export default function ChargeItem({ params, open, setOpen }: Props) {
                                         <FormLabel size="tiny">Charge Date</FormLabel>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                <Button variant="outline" className={cn("w-full pl-4 text-left border-foreground/10 h-12 font-normal", !field.value && "text-muted-foreground")}>
                                                     {field.value ? format(field.value, "PPP") : "Pick a date"}
                                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                                 </Button>

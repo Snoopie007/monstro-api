@@ -91,7 +91,7 @@ export async function POST(
 			);
 		}
 
-		await db.insert(importMembers).values(insertMembers);
+		const [{ id }] = await db.insert(importMembers).values(insertMembers).returning({ id: importMembers.id });
 
 		await Promise.all(
 			insertMembers.map((m) => {
@@ -109,7 +109,7 @@ export async function POST(
 						member: m,
 						ui: {
 							btnText: "Accept Invite",
-							btnUrl: `https://m.monstro-x.com/invite/${params.id}?email=${m.email}`,
+							btnUrl: `https://m.monstro-x.com/invite/import/${id}`,
 						},
 						monstro: MonstroData,
 					},

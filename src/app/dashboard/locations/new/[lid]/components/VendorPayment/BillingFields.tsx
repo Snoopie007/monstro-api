@@ -14,7 +14,7 @@ import { VendorBillingSchema } from "@/libs/FormSchemas/schemas";
 import { z } from "zod";
 
 
-const INPUT_STYLES = "bg-background rounded-lg text-foreground border-foreground/10"
+const INPUT_STYLES = "bg-foreground/5 h-12 text-base px-4 py-2 rounded-lg  "
 
 interface BillingFieldsProps {
     form: UseFormReturn<z.infer<typeof VendorBillingSchema>>
@@ -26,7 +26,7 @@ export default function BillingFields({ form }: BillingFieldsProps) {
             <fieldset >
                 <FormField control={form.control} name="name" render={({ field }) => (
                     <FormItem >
-                        <FormLabel className="text-[0.65rem] uppercase font-semibold">
+                        <FormLabel size="tiny">
                             Name on card
                         </FormLabel>
                         <FormControl>

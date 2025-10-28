@@ -2,8 +2,9 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Time } from '@internationalized/date';
 import { NextRequest } from "next/server";
-import { Member } from "@/types";
+import { ExtendedAttendance, Member } from "@/types";
 import { decodeJwt } from "jose";
+import { addDays, subDays } from "date-fns";
 
 export function stringToTime(time: string) {
     return new Time(parseInt(time.split(":")[0]), parseInt(time.split(":")[1]));
@@ -13,9 +14,9 @@ export function stringToTime(time: string) {
 export const StripeCardOptions = {
   style: {
       base: {
-          fontWeight: "500",
+          fontWeight: "600",
           fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
-          fontSize: "14px",
+          fontSize: "16px",
           fontSmoothing: "antialiased",
       },
       invalid: {
@@ -60,7 +61,7 @@ function ErrorHandler<T, E extends new (message?: string) => Error>(
 		return promise
 			.then((data) => [data, undefined] as [T, undefined])
 			.catch((error) => {
-				if (errorFilters == undefined) {
+				if (errorFilters === undefined) {
 				return [error]
 			}
 			if (errorFilters.some((filter) => error instanceof filter)) {
@@ -204,6 +205,91 @@ function getTimezoneOffset() {
 	return offsetString;
 }
 
+
+// Seeded random number generator for deterministic results
+const seededRandom = (seed: number): number => {
+    const x = Math.sin(seed) * 10000
+    return x - Math.floor(x)
+}
+
+// Generate hard-coded test attendance data for demo member
+const generateTestAttendanceData = (): ExtendedAttendance[] => {
+    const now = new Date()
+    const ninetyDaysAgo = subDays(now, 90)
+    const attendances: ExtendedAttendance[] = []
+    let seed = 12345 // Fixed seed for consistent results
+    
+    // Generate 3-4 random attendances per week for the past 90 days
+    let currentDate = new Date(ninetyDaysAgo)
+    let weekIndex = 0
+    
+    while (currentDate <= now) {
+        // Deterministically decide if this week should have 3 or 4 attendances
+        seed = (seed * 9301 + 49297) % 233280
+        const attendancesThisWeek = seededRandom(seed) > 0.5 ? 3 : 4
+        
+        // Generate random days within this week (Monday-Friday mostly)
+        const possibleDays = [1, 2, 3, 4, 5] // Mon-Fri
+        const selectedDays: number[] = []
+        
+        for (let i = 0; i < attendancesThisWeek; i++) {
+            let randomDay: number
+            do {
+                seed = (seed * 9301 + 49297) % 233280
+                randomDay = possibleDays[Math.floor(seededRandom(seed) * possibleDays.length)]
+            } while (selectedDays.includes(randomDay))
+            selectedDays.push(randomDay)
+        }
+        
+        selectedDays.forEach((dayOffset, dayIndex) => {
+            const attendanceDate = addDays(currentDate, dayOffset)
+            if (attendanceDate <= now) {
+                seed = (seed * 9301 + 49297) % 233280
+                const checkInTime = new Date(attendanceDate)
+                checkInTime.setHours(Math.floor(seededRandom(seed) * 3) + 16) // 4pm-7pm
+                
+                seed = (seed * 9301 + 49297) % 233280
+                checkInTime.setMinutes(Math.floor(seededRandom(seed) * 60))
+                
+                const checkOutTime = new Date(checkInTime)
+                seed = (seed * 9301 + 49297) % 233280
+                checkOutTime.setHours(checkOutTime.getHours() + 1)
+                checkOutTime.setMinutes(checkOutTime.getMinutes() + Math.floor(seededRandom(seed) * 30))
+                
+                const startTime = new Date(checkInTime)
+                startTime.setHours(checkInTime.getHours() - 1) // Program starts 1 hour before check-in
+                
+                seed = (seed * 9301 + 49297) % 233280
+                const programs = ['Boxing', 'Muay Thai', 'CrossFit', 'Yoga']
+                
+                attendances.push({
+                    id: `test-att-${weekIndex}-${dayIndex}`,
+                    memberId: 'mbr_BpT7jEb3Q16nOPL3vo7qlw',
+                    locationId: '',
+                    reservationId: null,
+                    recurringId: null,
+                    programName: programs[Math.floor(seededRandom(seed) * programs.length)],
+                    checkInTime,
+                    checkOutTime,
+                    startTime,
+                    endTime: checkOutTime,
+                    ipAddress: null,
+                    macAddress: null,
+                    lat: null,
+                    lng: null,
+                    created: new Date(),
+                } as ExtendedAttendance)
+            }
+        })
+        
+        // Move to next week (7 days)
+        currentDate = addDays(currentDate, 7)
+        weekIndex++
+    }
+    
+    return attendances
+}
+
 export {
 	sleep,
 	tryCatch,
@@ -215,7 +301,8 @@ export {
 	interEmailsAndText,
 	authenticateMember,
 	interpolate,
-	getTimezoneOffset
+	getTimezoneOffset,
+    generateTestAttendanceData
 }
 
 

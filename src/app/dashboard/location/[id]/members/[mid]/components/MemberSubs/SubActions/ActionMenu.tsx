@@ -7,7 +7,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui";
 import { Pencil, Trash2, X, Pause, Play, EllipsisVertical } from "lucide-react";
@@ -16,19 +15,20 @@ import { CancelSub, UpdateSub, PauseSub, ResumeSub } from ".";
 import { useState } from "react";
 import { cn } from "@/libs/utils";
 import { VisuallyHidden } from "react-aria";
+import { useMemberSubscriptions } from "@/hooks";
 
 const HoverTransition = "group-hover:bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300";
 
-export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch: () => void }) {
+export function SubActions({ sub }: { sub: MemberSubscription }) {
 	const [action, setAction] = useState<"cancel" | "update" | "pause" | "resume" | undefined>(
 		undefined
 	);
-
+	const { fetchSubs } = useMemberSubscriptions(sub.locationId, sub.memberId)
 	function handleClose(open: boolean) {
 		if (!open) {
 			setAction(undefined);
+			fetchSubs()
 		}
-		refetch()
 	}
 
 
@@ -73,7 +73,7 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 				<Button
 					variant="ghost"
 					size="icon"
-					className={cn("size-6 border-x rounded-none border-foreground/5 flex-1", HoverTransition)}
+					className={cn("size-6 border-foreground/5 flex-1", HoverTransition)}
 					disabled={!sub}
 					onClick={() => {
 						if (sub.status === "canceled") return
@@ -95,7 +95,7 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end" className="border-foreground/10 ">
 						<DropdownMenuItem
-							className="cursor-pointer text-sm flex flex-row items-center justify-between gap-2"
+							className="cursor-pointer text-xs flex flex-row items-center justify-between gap-2"
 							onClick={() => setAction("update")}
 							disabled={!sub}
 						>
@@ -103,7 +103,7 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 							<Pencil className="size-3" />
 						</DropdownMenuItem>
 						<DropdownMenuItem
-							className="cursor-pointer text-sm flex flex-row items-center justify-between gap-2"
+							className="cursor-pointer text-xs flex flex-row items-center justify-between gap-2"
 							onClick={() => setAction(sub.status === "active" ? "pause" : "resume")}
 							disabled={!sub || !['active', 'paused'].includes(sub.status)}
 						>
@@ -111,7 +111,7 @@ export function SubActions({ sub, refetch }: { sub: MemberSubscription, refetch:
 							{sub.status === "active" ? <Pause className="size-3" /> : <Play className="size-3" />}
 						</DropdownMenuItem>
 						<DropdownMenuItem
-							className="cursor-pointer text-sm flex flex-row items-center justify-between gap-2"
+							className="cursor-pointer text-xs flex flex-row items-center justify-between gap-2"
 							onClick={() => setAction("cancel")}
 							disabled={!sub}
 						>

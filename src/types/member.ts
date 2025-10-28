@@ -69,7 +69,10 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
 
 export type MemberLocation = typeof memberLocations.$inferSelect & {
     location?: Location
-    member?: Member
+    member?: Member,
+    knownFamilyMembers?: FamilyMember[],
+    lastCheckInTime?: Date | null
+    totalPointsEarned?: number
 }
 
 export type MemberLocationProfile = {
@@ -148,10 +151,10 @@ export const MEMBER_SORTABLE_FIELDS: MemberSortableField[] = [
 
 // Determine sort order - type-safe mapping of sortable fields
 export const sortColumnMap: Record<MemberSortableField, any> = {
-  created: members.created,
-  updated: members.updated,
-  firstName: members.firstName,
-  lastName: members.lastName,
-  email: members.email,
-  dob: members.dob,
+    created: members.created,
+    updated: members.updated,
+    firstName: members.firstName,
+    lastName: members.lastName,
+    email: members.email,
+    dob: members.dob,
 }

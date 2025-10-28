@@ -28,6 +28,7 @@ function handlePaymentError(toastRef: string | number, message: string) {
 	});
 }
 
+
 export default function NewVendorPayment({ lid }: { lid: string }) {
 	const { locationState, updateLocationState, tos } = useNewLocation();
 	const [errorMessage, setErrorMessage] = useState("");
@@ -63,17 +64,14 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
 			const tokenRef = await stripe.createToken(cardElement!, { ...v });
 
 			if (tokenRef.token) {
-				const res = await fetch(
-					`/api/protected/vendor/locations/${lid}/checkout`,
-					{
-						method: "POST",
-						body: JSON.stringify({
-							vendorId: session?.user.vendorId,
-							token: tokenRef.token,
-							state: locationState,
-						}),
-					}
-				);
+				const res = await fetch(`/api/protected/vendor/locations/${lid}/checkout`, {
+					method: "POST",
+					body: JSON.stringify({
+						vendorId: session?.user.vendorId,
+						token: tokenRef.token,
+						state: locationState,
+					}),
+				});
 				setLoading(false);
 				if (!res.ok) {
 					return handlePaymentError(
@@ -115,19 +113,17 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
 
 	return (
 		<div className="space-y-3 pb-3 ">
-			<div className="flex flex-col gap-2  border border-foreground/10 rounded-sm p-4 pb-6 space-y-3 shadow-xs">
+			<div className="flex flex-col gap-2   space-y-3 ">
 				<Form {...form}>
-					<form>
+					<form className="space-y-2">
 						<BillingFields form={form} />
-						<fieldset>
-							<FormItem className=" ">
-								<FormLabel className="text-[0.58rem] uppercase font-semibold">
+						<fieldset >
+							<FormItem className="space-y-2 ">
+								<FormLabel size="tiny">
 									Card details
 								</FormLabel>
 								<CardElement
-									className={cn(
-										"border border-foreground/10  py-2.5 h-auto rounded-lg   w-full px-4"
-									)}
+									className={'bg-foreground/5 h-12 text-base p-4 rounded-lg border border-foreground/10 '}
 									options={{
 										...StripeCardOptions,
 										hidePostalCode: true,

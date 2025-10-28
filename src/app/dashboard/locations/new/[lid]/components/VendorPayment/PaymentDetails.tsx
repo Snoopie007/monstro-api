@@ -34,8 +34,10 @@ export default function PaymentDetails({ userSelection }: { userSelection: any }
             <div className='grid grid-cols-6 gap-2'>
                 <div className='col-span-3 grid grid-cols-2   text-foreground'>
                     <div className='space-y-0 flex flex-col'>
-                        <span className='text-[0.65rem] uppercase  text-muted-foreground'>{userSelection.pkg ? "Package" : "Plan"}</span>
-                        <span className='text-sm font-semibold '>
+                        <span className='text-tiny uppercase text-muted-foreground'>
+                            {userSelection.pkg ? "Package" : "Plan"} Name
+                        </span>
+                        <span className='font-semibold '>
                             {userSelection.pkg ? `${userSelection.pkg.name}` : userSelection.plan?.name}
                         </span>
                     </div>
@@ -43,25 +45,25 @@ export default function PaymentDetails({ userSelection }: { userSelection: any }
 
                         <>
                             <div className='space-y-0 flex flex-col '>
-                                <span className='text-[0.65rem] uppercase text-muted-foreground'>Payment Plan</span>
+                                <span className='text-tiny uppercase text-muted-foreground'>Payment Plan</span>
                                 <span className='text-sm font-bold '>
                                     {userSelection.paymentPlan?.name}
                                 </span>
                             </div>
                             <div className='space-y-0 flex flex-col '>
-                                <span className='text-[0.65rem] uppercase text-muted-foreground'>Terms Starts on</span>
+                                <span className='text-tiny uppercase text-muted-foreground'>Terms Starts on</span>
                                 <span className='text-sm font-bold '>
                                     {termsStart}
                                 </span>
                             </div>
                             <div className='space-y-0 flex flex-col '>
-                                <span className='text-[0.65rem] uppercase text-muted-foreground'>Number of Terms</span>
-                                <span className='text-sm font-bold '>
+                                <span className='text-tiny uppercase text-muted-foreground'>Number of Terms</span>
+                                <span className='text-smsm font-bold '>
                                     {userSelection.paymentPlan?.length} {userSelection.paymentPlan?.interval}
                                 </span>
                             </div>
                             <div className='space-y-0 flex flex-col '>
-                                <span className='text-[0.65rem] uppercase text-muted-foreground'>Recurring Starts on</span>
+                                <span className='text-tiny uppercase text-muted-foreground'>Recurring Starts on</span>
                                 <span className='text-sm font-bold '>
                                     {recurringStart}
                                 </span>
@@ -72,7 +74,7 @@ export default function PaymentDetails({ userSelection }: { userSelection: any }
 
 
                 </div>
-                <div className="flex flex-col gap-2 text-sm col-span-3 text-foreground">
+                <div className="flex flex-col gap-2  col-span-3 text-foreground">
 
 
                     {!userSelection.pkg && userSelection.plan

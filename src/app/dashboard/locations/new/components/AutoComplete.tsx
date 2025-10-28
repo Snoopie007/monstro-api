@@ -90,7 +90,7 @@ export function AutoComplete({ onSelect }: { onSelect: (place: google.maps.place
                     value={input}
                     onChange={handleInput}
                     placeholder="Search your business"
-                    className="w-full border border-foreground/10 text-sm h-10 px-3 py-2 rounded-sm"
+                    className="w-full  bg-foreground/5  h-12 text-base px-4 py-2 rounded-lg"
                 />
             </div>
 

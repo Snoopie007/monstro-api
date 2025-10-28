@@ -13,23 +13,22 @@ import { useState } from 'react'
 import React from 'react'
 import { SubForm } from './SubForm'
 import { VisuallyHidden } from 'react-aria'
-import { useSubscriptions } from '@/hooks'
+import { useMemberSubscriptions, useSubscriptions } from '@/hooks'
 import { MemberSubscription } from '@/types'
 import { CircleFadingPlusIcon } from 'lucide-react'
 
-export function CreateSubscription({
-    params,
-    refetch,
-}: {
+interface CreateSubscriptionProps {
     params: { id: string; mid: string }
-    refetch: () => void
-}) {
+}
+
+export function CreateSubscription({ params }: CreateSubscriptionProps) {
     const [open, setOpen] = useState<boolean>(false)
     const { subscriptions } = useSubscriptions(params.id)
+    const { fetchSubs } = useMemberSubscriptions(params.id, params.mid)
 
     async function handleFinish(data: MemberSubscription) {
         setOpen(false)
-        refetch()
+        fetchSubs()
     }
 
     return (
