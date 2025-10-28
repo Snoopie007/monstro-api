@@ -6,15 +6,13 @@ import {
 	DialogTitle,
 	DialogFooter,
 	DialogBody,
-	DialogTrigger,
 	Button,
 	DialogClose,
-	DropdownMenuItem,
 } from "@/components/ui";
 import { Dispatch, SetStateAction, useState } from "react";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
-import { Loader2, AlertTriangle, Trash } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Props {

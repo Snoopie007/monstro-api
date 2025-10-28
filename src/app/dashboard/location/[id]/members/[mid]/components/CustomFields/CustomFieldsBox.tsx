@@ -147,7 +147,7 @@ export function CustomFieldsBox({
             </div>
             <CollapsibleContent className='bg-muted/50 rounded-lg p-3' >
                 {displayFields.length > 0 ? (
-                    <div className="flex flex-col gap-2 items-end">
+                    <div className="flex flex-col gap-4 items-end">
                         {displayFields.map((field) => (
                             <div key={field.id} className="w-full">
                                 <CustomFieldInput
@@ -161,9 +161,9 @@ export function CustomFieldsBox({
                                 />
                             </div>
                         ))}
-                        <Button variant="create" size="xs" className="flex flex-row gap-2" onClick={saveCustomFields}>
-                            {isSaving ? <Loader2 className="size-4 animate-spin" /> : <SaveIcon className="size-4" />}
-                            {isSaving ? 'Saving...' : 'Save Changes'}
+                        <Button variant="foreground" size="sm" className="flex flex-row gap-2" onClick={saveCustomFields}>
+                            {isSaving ? <Loader2 className="size-4 animate-spin" /> : 'Save Changes'}
+
                         </Button>
                     </div>
                 ) : (

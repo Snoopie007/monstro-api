@@ -1,14 +1,15 @@
 import {
-    Users,
-    Medal,
-    MessageSquare,
-    AtSign,
-    CalendarClock,
-    Receipt,
-    Settings,
-    BookText,
-    FileText,
-} from 'lucide-react'
+  Users,
+  Medal,
+  MessageSquare,
+  AtSign,
+  CalendarClock,
+  Receipt,
+  Settings,
+  BookText,
+  Home,
+  FileText,
+} from "lucide-react";
 
 type SidebarMenuItem = {
     name: string
@@ -23,11 +24,16 @@ type SubMenuItem = {
 }
 
 export const SidebarMenuItems: SidebarMenuItem[] = [
-    {
-        name: 'Members',
-        path: 'members',
-        icon: <Users size={16} />,
-    },
+  {
+    name: "Dashboard",
+    path: "",
+    icon: <Home size={16} />,
+  },
+  {
+    name: "Members",
+    path: "members",
+    icon: <Users size={16} />,
+  },
 
     {
         name: 'Programs & Plans',

@@ -142,7 +142,7 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                             ) : (familyPlans && familyPlans.length > 0 && familyPlans.map((plan) => (
                                 <FamilyPlanMember key={plan.id} plan={plan} />
                             )))}
-                            {canAddFamilyMember && <FamilyDialog familyPlans={familyPlans || []} parentPlan={sub} type="sub" />}
+                            {canAddFamilyMember && <FamilyDialog familyPlans={familyPlans || []} parentPlan={sub} />}
                         </div>
                     </div>
                 )}

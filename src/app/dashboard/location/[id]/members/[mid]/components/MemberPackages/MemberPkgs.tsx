@@ -14,7 +14,6 @@ interface MemberPkgProps {
     params: { id: string; mid: string }
 }
 export function MemberPkg({ params }: MemberPkgProps) {
-    const [open, setOpen] = useState<boolean>(true)
     const { packages, isLoading } = useMemberPackages(params.id, params.mid)
     return (
         <div className='space-y-2'>

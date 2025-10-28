@@ -17,7 +17,6 @@ import {
     EmptyMedia,
     Empty
 } from '@/components/ui'
-import { useState } from 'react'
 
 interface PaymentMethodsProps {
     params: { id: string; mid: string }
