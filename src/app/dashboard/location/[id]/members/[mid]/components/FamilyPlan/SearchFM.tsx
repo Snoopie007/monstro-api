@@ -92,7 +92,7 @@ export function SearchFM({ setSlide, parentPlan, fms, familyPlans }: SearchFMPro
                         the first and last name or email address.
 
                     </p>
-                    <p>
+                    <p className='text-sm' >
                         You may search below by first and last name or email address to find the family member you're looking for.
                     </p>
                 </div>
@@ -159,7 +159,7 @@ export function SearchFM({ setSlide, parentPlan, fms, familyPlans }: SearchFMPro
 
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 

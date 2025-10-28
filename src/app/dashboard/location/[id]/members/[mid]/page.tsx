@@ -95,8 +95,6 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 			},
 		});
 
-
-
 		const filteredFamilyMembers = ml.member.familyMembers?.filter((fm) => {
 			return !knownFamilyMemberIds.find((kmnl) => kmnl.memberId === fm.memberId);
 		});
@@ -153,7 +151,7 @@ export default async function MemberProfilePage(props: {
 					<div className="col-span-2 flex flex-col space-y-2 h-full">
 						<MemberProfile params={params} />
 						<PointsProfile />
-						<ScrollArea className="h-[calc(100vh-333px)] overflow-hidden">
+						<ScrollArea className="h-[calc(100vh-370px)] overflow-hidden">
 							<div className="space-y-4 ">
 								<MemberAttendanceGraph params={params} />
 
