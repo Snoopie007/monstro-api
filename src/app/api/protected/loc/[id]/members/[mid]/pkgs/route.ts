@@ -115,6 +115,25 @@ export async function POST(
 					card: { brand: cardInfo.brand, last4: cardInfo.last4 },
 				};
 			}
+		} else if (data.paymentMethod === "cash") {
+			// Manual payment - package active immediately
+			newPkg.status = "active";
+			
+			// Invoice starts as DRAFT (staff must mark as sent)
+			newInvoice.status = "draft";
+			newInvoice.paymentMethod = "manual";
+			newInvoice.invoiceType = "one-off";
+			// NO sentAt - set when staff marks as "sent"
+			
+			// Transaction created as incomplete
+			newTransaction.status = "incomplete";
+			newTransaction.paymentMethod = "cash";
+			newTransaction.type = "inbound";
+			
+			md = {
+				paymentMethod: "cash",
+				createdAt: new Date().toISOString(),
+			};
 		}
 
 		const newPackage = await db.transaction(async (tx) => {

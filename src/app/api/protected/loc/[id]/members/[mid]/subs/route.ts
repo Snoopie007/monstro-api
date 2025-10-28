@@ -50,8 +50,12 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
             where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
         })
 
-        if (!plan || !plan.stripePriceId) {
-            return NextResponse.json({ error: "No valid plan not found" }, { status: 404 })
+        if (!plan) {
+            return NextResponse.json({ error: "Plan not found" }, { status: 404 })
+        }
+
+        if (data.paymentMethod === "card" && !plan.stripePriceId) {
+            return NextResponse.json({ error: "This plan cannot be purchased with card payment. Please contact the location to set up Stripe integration or use a different payment method" }, { status: 400 })
         }
 
         const locationState = await db.query.locationState.findFirst({
@@ -106,17 +110,22 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
 
 
             if (data.paymentMethod === "cash") {
-
+                // Invoice starts as DRAFT
                 const [{ invoiceId }] = await tx.insert(memberInvoices).values({
                     ...newInvoice,
                     status: "draft",
+                    paymentMethod: "manual",
+                    invoiceType: "recurring",
                     memberSubscriptionId: sub.id
                 }).returning({ invoiceId: memberInvoices.id });
+                
+                // Transaction created as incomplete
                 await tx.insert(transactions).values({
                     ...newTransaction,
                     invoiceId,
                     subscriptionId: sub.id,
-                    status: "paid",
+                    status: "incomplete",
+                    paymentMethod: "cash",
                 });
             }
             return sub

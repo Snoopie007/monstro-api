@@ -49,13 +49,10 @@ export async function POST(
         ),
     });
 
-    if (!integration) {
-      return NextResponse.json(
-        { error: "Stripe integration not found" },
-        { status: 400 }
-      );
-    }
-    const stripe = new MemberStripePayments(String(integration.id));
+    let stripePriceId: string | null = null;
+    // Only create Stripe product if integration exits
+    if (integration) {
+      const stripe = new MemberStripePayments(String(integration.id));
 
     const stripePrice = await stripe.createStripeProduct(
       { ...data, price: amount, programId: params.id },
@@ -73,6 +70,9 @@ export async function POST(
       );
     }
 
+    stripePriceId = stripePrice.id;
+    }
+
     const plan = await db.transaction(async (tx) => {
       const [plan] = await tx
         .insert(memberPlans)
@@ -81,7 +81,7 @@ export async function POST(
           locationId: params.id,
           price: amount,
           programId: params.id,
-          stripePriceId: stripePrice.id || "",
+          stripePriceId: stripePriceId || "",
         })
         .returning({ id: memberPlans.id });
 

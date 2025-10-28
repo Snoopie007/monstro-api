@@ -288,9 +288,8 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
 
 
 function DatePicker({ value, onChange }: { value: Date | undefined, onChange: (date: Date) => void }) {
-    const [open, setOpen] = useState(false)
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover>
             <PopoverTrigger asChild>
                 <Button variant="outline"
                     className={cn("w-full pl-3 text-left font-normal bg-background border-foreground/10 rounded-sm", !value && "text-muted-foreground")}>
@@ -305,7 +304,6 @@ function DatePicker({ value, onChange }: { value: Date | undefined, onChange: (d
                     selected={value}
                     onSelect={(d) => {
                         onChange(d || new Date())
-                        setOpen(false)
                     }}
 
                 />
