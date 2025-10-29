@@ -5,10 +5,10 @@ import {
     DialogTrigger, Separator, Skeleton
 } from '@/components/ui'
 import { Wallet as WalletType } from '@/types'
-import { Loader2 } from 'lucide-react'
+import { InfoIcon, Loader2 } from 'lucide-react'
 import React, { useState, useCallback, useMemo } from 'react'
 import { cn, formatAmountForDisplay, tryCatch } from '@/libs/utils'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/forms'
+import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/forms'
 import { useWallet } from '@/hooks'
 import { toast } from 'react-toastify'
 
@@ -19,8 +19,12 @@ export function Wallet({ lid }: { lid: string }) {
     const [rechargeAmount, setRechargeAmount] = useState(25)
     const [loading, setLoading] = useState(false)
 
-    const handleRecharge = useCallback(async () => {
+    async function handleRecharge() {
         if (!wallet || !rechargeAmount) return;
+        if (rechargeAmount < 15) {
+            toast.error('Amount must be greater than $15')
+            return;
+        }
         setLoading(true)
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/vendor/wallet/recharge`, {
@@ -30,6 +34,7 @@ export function Wallet({ lid }: { lid: string }) {
         )
 
         if (error || !result || !result.ok) {
+            setLoading(false)
             toast.error('Oops, something went wrong while trying to recharge your balance...')
             return;
         }
@@ -37,7 +42,7 @@ export function Wallet({ lid }: { lid: string }) {
         setOpen(false)
         setLoading(false)
         toast.success('Recharged your balance successfully!')
-    }, [wallet, rechargeAmount, lid, mutate])
+    }
 
     const rechargeOptions = useMemo(() => [10, 15, 25, 50, 100, 250, 500, 1000], [])
     const thresholdOptions = useMemo(() => [10, 25, 50, 75, 100, 250, 500], [])
@@ -45,18 +50,20 @@ export function Wallet({ lid }: { lid: string }) {
     if (error) {
         return (
             <div className='border rounded-xs p-4 flex flex-col items-center justify-center'>
-                <p className='text-sm text-center text-red-500'>Oops, something went wrong while trying to fetch your balance...</p>
+                <p className='text-sm text-center text-red-500'>
+                    Oops, something went wrong while trying to fetch your balance...
+                </p>
             </div>
         )
     }
 
     return (
-        <Card className=''>
-            <CardHeader className='border-b p-0 space-y-0 flex flex-row justify-between'>
-                <CardTitle className='text-sm py-2 px-4'>Your Credit Balance</CardTitle>
+        <div className='border rounded-lg border-foreground/10 p-4'>
+            <div className='flex flex-row justify-between items-center mb-6'>
+                <div className='font-medium'>Wallet Balance</div>
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
-                        <Button variant={"ghost"} size={"sm"} className="border-l rounded-none cursor-pointer">
+                        <Button variant={"primary"} size={"xs"}>
                             + Funds
                         </Button>
                     </DialogTrigger>
@@ -67,42 +74,42 @@ export function Wallet({ lid }: { lid: string }) {
                                 Please select the amount you would like to recharge your balance with.
                             </DialogDescription>
                         </DialogHeader>
-                        <DialogBody>
-                            <div className='flex flex-col gap-2'>
-                                <div className="grid grid-cols-4 gap-2 w-full">
-                                    {rechargeOptions.map((amount) => (
-                                        <div key={amount}
-                                            className={cn(
-                                                "flex items-center justify-center px-2 py-1.5 text-sm border rounded-xs cursor-pointer hover:bg-indigo-500 hover:text-white",
-                                                amount === rechargeAmount && "border-indigo-500 bg-indigo-500 text-white"
-                                            )}
-                                            onClick={() => setRechargeAmount(amount)}
-                                        >
-                                            ${amount}
-                                        </div>
-                                    ))}
-                                </div>
+                        <div className='px-4 py-2 space-y-6'>
+                            <Input type="number"
+                                value={rechargeAmount}
+                                placeholder='Enter amount greater than $15'
+                                onChange={(e) => setRechargeAmount(parseInt(e.target.value))}
+                                min={25}
+                                max={1000000}
+                                step={1}
+                                className='w-full bg-foreground/5'
+                            />
+                            <div className='bg-foreground/5 p-2 rounded-lg flex flex-row  gap-2 text-sm text-foreground/50'>
+                                <InfoIcon className='size-4 text-yellow-500 flex-shrink-0 mt-0.5' />
+                                <p className='flex-1 leading-tight'>
+                                    The amount you enter above will be charged on your default payment method
+                                    . The minimum recharge amount is <span className='font-bold'>$15</span>
+                                </p>
                             </div>
-                        </DialogBody>
+                        </div>
                         <DialogFooter>
                             <Button variant={"clear"} size={"sm"} onClick={() => setOpen(false)}>Cancel</Button>
-                            <Button variant={"continue"} size={"sm"} onClick={handleRecharge} className={cn('children:hidden', loading && 'children:inline-block')} disabled={loading}>
-                                <Loader2 className='w-4 h-4 mr-2 animate-spin' />
-                                Recharge
+                            <Button variant={"primary"} size={"sm"} onClick={handleRecharge} className={cn('children:hidden', loading && 'children:inline-block')} disabled={loading}>
+                                {loading ? <Loader2 className='size-4 animate-spin' /> : 'Recharge'}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
-            </CardHeader>
-            <CardContent className=' p-2 space-y-2'>
-                <div className='space-y-2 p-2'>
-                    <div className="flex text-xs flex-row justify-between">
+            </div>
+            <div className=' space-y-4'>
+                <div className='space-y-2'>
+                    <div className="flex  flex-row justify-between">
                         <div className=''>Balance</div>
                         <div className=' font-bold'>
                             {isLoading ? <Skeleton className='h-4' /> : formatAmountForDisplay(wallet?.balance || 0, 'USD', true, 2)}
                         </div>
                     </div>
-                    <div className="flex text-xs flex-row justify-between">
+                    <div className="flex  flex-row justify-between">
                         <div className=''>Credits</div>
                         <div className=' font-bold'>
                             {isLoading ? <Skeleton className='h-4' /> : formatAmountForDisplay(wallet?.credits || 0, 'USD', true, 2)}
@@ -111,7 +118,7 @@ export function Wallet({ lid }: { lid: string }) {
 
                     <Separator className='my-2 bg-foreground/10' />
 
-                    <div className='flex flex-row justify-between text-sm'  >
+                    <div className='flex flex-row justify-between'  >
                         <div> Total </div>
                         <div className='font-bold text-indigo-500'>
                             {isLoading ? <Skeleton className='h-4' /> : formatAmountForDisplay(wallet?.balance + (wallet?.credits || 0), 'USD', true, 2)}
@@ -119,8 +126,8 @@ export function Wallet({ lid }: { lid: string }) {
                     </div>
                 </div>
                 <AutoRecharge wallet={wallet} lid={lid} mutate={mutate} rechargeOptions={rechargeOptions} thresholdOptions={thresholdOptions} />
-            </CardContent>
-        </Card>
+            </div>
+        </div>
     )
 }
 
@@ -153,44 +160,37 @@ const AutoRecharge = React.memo(({ wallet, lid, mutate, rechargeOptions, thresho
     }, [wallet, lid, mutate])
 
     return (
-        <div className='text-sm space-y-2 bg-foreground/10 py-3 px-2 rounded-xs'>
-            <div className='text-xs font-medium border-b pb-2 border-foreground/10'>Auto Recharge Settings</div>
-            <div className='grid grid-cols-2 gap-4 text-xs'>
-                <div className='flex flex-col gap-1'>
-                    <span className='text-[0.65rem] uppercase font-bold '>Amount</span>
-                    <Select value={`${wallet?.rechargeAmount / 100}`} defaultValue={"25"} onValueChange={(value) => {
-                        updateWalletSettings(parseInt(value) * 100, wallet.rechargeThreshold)
-                    }}>
-                        <SelectTrigger className=' w-full h-auto border-none bg-indigo-500 text-white text-xs py-1 px-2 rounded-xs'>
-                            <SelectValue className='text-sm' />
-                        </SelectTrigger>
-                        <SelectContent >
-                            {rechargeOptions.map((amount) => (
-                                <SelectItem key={amount} value={amount.toString()} className='text-sm'>
-                                    ${amount}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className='flex flex-col gap-1'>
-                    <span className='text-[0.65rem] uppercase font-bold '>Threshold</span>
-                    <Select value={`${wallet?.rechargeThreshold / 100}`} defaultValue={"25"} onValueChange={(value) => {
-                        updateWalletSettings(wallet.rechargeAmount, parseInt(value) * 100)
-                    }}>
-                        <SelectTrigger className='w-full h-auto border-none py-1 px-2 bg-indigo-500 text-white text-xs rounded-xs'>
-                            <SelectValue className='text-sm' />
-                        </SelectTrigger>
-                        <SelectContent >
-                            {thresholdOptions.map((amount) => (
-                                <SelectItem key={amount} value={amount.toString()} className='text-sm'>
-                                    ${amount}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
+        <div className='flex flex-row items-center gap-2 bg-foreground/10 p-3 rounded-lg'>
+            <span>Auto recharge with</span>
+            <Select value={`${wallet?.rechargeAmount / 100}`} defaultValue={"25"} onValueChange={(value) => {
+                updateWalletSettings(parseInt(value) * 100, wallet.rechargeThreshold)
+            }}>
+                <SelectTrigger className='w-[100px]'>
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent >
+                    {rechargeOptions.map((amount) => (
+                        <SelectItem key={amount} value={amount.toString()}>
+                            ${amount}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            <span>when balance is below</span>
+            <Select value={`${wallet?.rechargeThreshold / 100}`} defaultValue={"25"} onValueChange={(value) => {
+                updateWalletSettings(wallet.rechargeAmount, parseInt(value) * 100)
+            }}>
+                <SelectTrigger className='w-[100px]'>
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent >
+                    {thresholdOptions.map((amount) => (
+                        <SelectItem key={amount} value={amount.toString()}>
+                            ${amount}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
         </div>
     )
 })

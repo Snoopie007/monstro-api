@@ -1,8 +1,16 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+
+import {
+  Card, CardContent,
+  Button,
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui";
 import {
   Plus,
   Edit3,
@@ -11,6 +19,7 @@ import {
   AlertCircle,
   RefreshCw,
   Loader2,
+  Tag,
 } from "lucide-react";
 import { useCustomFields } from "./useCustomFields";
 import { Form } from "@/components/forms/form";
@@ -102,7 +111,7 @@ export default function CustomFieldsPageClient({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-row items-start justify-between">
         <div>
           <h1 className="text-xl font-semibold">Custom Fields</h1>
           <p className="text-sm text-muted-foreground">
@@ -122,65 +131,47 @@ export default function CustomFieldsPageClient({
           )}
           <Button
             onClick={toggleEditMode}
-            className="bg-foreground/10 text-foreground/80 hover:bg-foreground/20 hover:text-foreground"
+            variant="outline"
             size="sm"
           >
-            {isEditing ? (
-              <>
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </>
-            ) : (
-              <>
-                <Edit3 className="h-4 w-4 mr-2" />
-                Edit
-              </>
-            )}
+            {isEditing ? 'Cancel' : 'Edit'}
           </Button>
           {isEditing && (
             <Button
               onClick={onSubmit}
               disabled={isSaving}
-              className="bg-foreground/10 text-foreground/80 hover:bg-foreground/20 hover:text-foreground"
+              variant="foreground"
               size="sm"
             >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              {isSaving ? "Saving..." : "Save Changes"}
+              {isSaving ? <Loader2 className="size-4 animate-spin" /> : 'Save Changes'}
+
             </Button>
           )}
         </div>
       </div>
 
-      {/* Custom Fields List */}
+
       <Form {...form}>
         <form onSubmit={onSubmit} className="space-y-4">
           {fields.length === 0 ? (
-            <Card className="border-foreground/10">
-              <CardContent className="flex flex-col items-center justify-center py-8">
-                <div className="text-center">
-                  <h3 className="text-lg font-medium mb-2">
-                    No custom fields yet
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Get started by creating your first custom field for member
-                    data
-                  </p>
-                  {isEditing && (
-                    <Button
-                      onClick={addField}
-                      className="bg-foreground/10 text-foreground/80 hover:bg-foreground/20 hover:text-foreground"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Field
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <Empty variant="border">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Tag className="size-4" />
+                </EmptyMedia>
+                <EmptyTitle>No custom fields found</EmptyTitle>
+                <EmptyDescription>Add a custom field to the member.</EmptyDescription>
+              </EmptyHeader>
+              {isEditing && (
+                <Button
+                  onClick={addField}
+                  className="bg-foreground/10 text-foreground/80 hover:bg-foreground/20 hover:text-foreground"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Field
+                </Button>
+              )}
+            </Empty>
           ) : (
             <div className="space-y-4">
               {fields.map((field, index) => (

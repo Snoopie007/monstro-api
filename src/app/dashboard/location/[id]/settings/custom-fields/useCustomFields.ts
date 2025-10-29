@@ -7,7 +7,6 @@ import {
   type CustomFieldsFormData,
   type CustomFieldFormData,
 } from "./schemas";
-import type { MemberField } from "@/types/member";
 
 interface UseCustomFieldsProps {
   locationId: string;
@@ -32,25 +31,25 @@ export function useCustomFields({
 
   const { fields, append, remove, update } = form.watch("fields")
     ? {
-        fields: form.watch("fields"),
-        append: (field: CustomFieldFormData) => {
-          const currentFields = form.getValues("fields");
-          form.setValue("fields", [...currentFields, field]);
-        },
-        remove: (index: number) => {
-          const currentFields = form.getValues("fields");
-          form.setValue(
-            "fields",
-            currentFields.filter((_, i) => i !== index)
-          );
-        },
-        update: (index: number, field: CustomFieldFormData) => {
-          const currentFields = form.getValues("fields");
-          currentFields[index] = field;
-          form.setValue("fields", currentFields);
-        },
-      }
-    : { fields: [], append: () => {}, remove: () => {}, update: () => {} };
+      fields: form.watch("fields"),
+      append: (field: CustomFieldFormData) => {
+        const currentFields = form.getValues("fields");
+        form.setValue("fields", [...currentFields, field]);
+      },
+      remove: (index: number) => {
+        const currentFields = form.getValues("fields");
+        form.setValue(
+          "fields",
+          currentFields.filter((_, i) => i !== index)
+        );
+      },
+      update: (index: number, field: CustomFieldFormData) => {
+        const currentFields = form.getValues("fields");
+        currentFields[index] = field;
+        form.setValue("fields", currentFields);
+      },
+    }
+    : { fields: [], append: () => { }, remove: () => { }, update: () => { } };
 
   // Fetch existing custom fields for this location
   const fetchCustomFields = async () => {
