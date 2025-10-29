@@ -81,7 +81,7 @@ export default function AddPaymentMethod() {
 
         <div className="relative group" data-open={open}>
             <Button variant={"outline"} onClick={() => setOpen(true)}
-                className=" group-data-[open=true]:hidden w-full border-dashed border-foreground/40 "
+                className=" group-data-[open=true]:hidden w-full border-dashed h-12 border-foreground/40 "
             >
                 + Payment Method
             </Button>
@@ -127,7 +127,7 @@ export default function AddPaymentMethod() {
                             className={cn("children:hidden  ", { "children:inline-flex": loading })}
                             variant={"foreground"}
                             onClick={form.handleSubmit(onSubmit)}
-
+                            size="sm"
                             type="submit"
                             disabled={!stripe || loading}
                         >

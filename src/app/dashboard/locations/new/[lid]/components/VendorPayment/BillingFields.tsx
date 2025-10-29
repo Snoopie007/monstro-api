@@ -12,9 +12,10 @@ import {
 import { UseFormReturn } from "react-hook-form";
 import { VendorBillingSchema } from "@/libs/FormSchemas/schemas";
 import { z } from "zod";
+import { cn } from "@/libs/utils";
 
 
-const INPUT_STYLES = "bg-foreground/5 h-12 text-base px-4 py-2 rounded-lg  "
+const INPUT_STYLES = "bg-foreground/5 text-base px-4 py-2  "
 
 interface BillingFieldsProps {
     form: UseFormReturn<z.infer<typeof VendorBillingSchema>>
@@ -60,7 +61,7 @@ export default function BillingFields({ form }: BillingFieldsProps) {
                         </FormLabel>
 
                         <FormControl>
-                            <RegionSelect value={field.value} onChange={field.onChange} className={INPUT_STYLES} />
+                            <RegionSelect value={field.value} onChange={field.onChange} className={cn(INPUT_STYLES, "h-12 rounded-lg")} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>

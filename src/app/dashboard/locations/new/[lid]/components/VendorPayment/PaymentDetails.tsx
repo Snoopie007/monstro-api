@@ -33,13 +33,8 @@ export default function PaymentDetails({ userSelection }: { userSelection: any }
         <div className=" border border-foreground/10 rounded-lg p-4">
             <div className='grid grid-cols-6 gap-2'>
                 <div className='col-span-3 grid grid-cols-2   text-foreground'>
-                    <div className='space-y-0 flex flex-col'>
-                        <span className='text-tiny uppercase text-muted-foreground'>
-                            {userSelection.pkg ? "Package" : "Plan"} Name
-                        </span>
-                        <span className='font-semibold '>
-                            {userSelection.pkg ? `${userSelection.pkg.name}` : userSelection.plan?.name}
-                        </span>
+                    <div className='font-semibold '>
+                        {userSelection.pkg ? `${userSelection.pkg.name}` : userSelection.plan?.name}
                     </div>
                     {userSelection.pkg && (
 

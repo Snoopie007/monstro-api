@@ -226,7 +226,6 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -294,54 +293,46 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
 
                             </fieldset>
                             <fieldset className={"grid grid-cols-8 gap-4"}>
-                                <div className="col-span-3">
-                                    <FormField
-                                        control={form.control}
-                                        name="city"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel size="tiny">City</FormLabel>
-                                                <FormControl>
-                                                    <Input type="text" className={InputStyle} placeholder="City" {...field} />
-                                                </FormControl>
+                                <FormField
+                                    control={form.control}
+                                    name="city"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-3">
+                                            <FormLabel size="tiny">City</FormLabel>
+                                            <FormControl>
+                                                <Input type="text" className={InputStyle} placeholder="City" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="state"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-3">
+                                            <FormLabel size="tiny">State</FormLabel>
+                                            <FormControl>
+                                                <Input type="text" className={InputStyle} placeholder="State" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                                <div className="col-span-3">
-                                    <FormField
-                                        control={form.control}
-                                        name="state"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel size="tiny">State</FormLabel>
-                                                <FormControl>
-                                                    <Input type="text" className={InputStyle} placeholder="State" {...field} />
-                                                </FormControl>
-
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                <div className="col-span-2">
-                                    <FormField
-                                        control={form.control}
-                                        name="postalCode"
-                                        render={({ field }) => (
-                                            <FormItem >
-                                                <FormLabel size="tiny">Postal Code</FormLabel>
-                                                <FormControl>
-                                                    <Input type="text" className={InputStyle} placeholder="Postal code" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="postalCode"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                            <FormLabel size="tiny">Postal Code</FormLabel>
+                                            <FormControl>
+                                                <Input type="text" className={InputStyle} placeholder="Postal code" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </fieldset>
 
                         </form>
@@ -355,13 +346,10 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                     variant={"continue"}
 
                     onClick={form.handleSubmit(submit)}
-                    className={cn(" children:hidden ", {
-                        "children:inline-flex": loading
-                    })}
+
                     disabled={loading || form.formState.isSubmitting}
                 >
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Continue
+                    {loading ? <Loader2 className="size-4 animate-spin" /> : "Add Location"}
                 </Button>
 
             </div>

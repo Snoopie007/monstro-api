@@ -71,16 +71,19 @@ export function MemberProfile({ params }: { params: { id: string; mid: string } 
 							</div>
 							<div className="space-y-1">
 								<div className="text-xs text-muted-foreground">Birthday</div>
-								<div className="text-sm font-medium">{member.dob ? format(member.dob, 'MMM d, yyyy') : 'Unknown'}</div>
+								<div className="text-sm font-medium">
+									{member.dob ? format(member.dob, 'MMM d, yyyy') : 'Unknown'}
+								</div>
 							</div>
 							<div className="space-y-1">
 								<div className="text-xs text-muted-foreground">
-									Last seen
+									Gender
 								</div>
 								<div className="text-sm font-medium">
-									{ml.lastCheckInTime ? format(ml.lastCheckInTime, 'MMM d, yyyy hh:mm a') : 'n/a'}
+									{member.gender}
 								</div>
 							</div>
+
 						</div>
 						<div className="flex flex-row gap-10 items-center ">
 							<div className="space-y-1">
@@ -99,15 +102,24 @@ export function MemberProfile({ params }: { params: { id: string; mid: string } 
 								<div className="text-sm font-medium">{memberProfile?.phone}</div>
 							</div>
 						</div>
+
 						{ml.knownFamilyMembers && ml.knownFamilyMembers.length > 0 && (
 							<div className="flex flex-row gap-10 items-center ">
 								<div className="space-y-1">
 									<div className="text-xs text-muted-foreground">
+										Last seen
+									</div>
+									<div className="text-sm font-medium">
+										{ml.lastCheckInTime ? format(ml.lastCheckInTime, 'MMM d, yyyy hh:mm a') : 'n/a'}
+									</div>
+								</div>
+								<div className="space-y-1">
+									<div className="text-xs text-muted-foreground">
 										Know Family Members
 									</div>
-									<div className="flex flex-row relative">
+									<div className="flex flex-row gap-1 relative">
 										{ml.knownFamilyMembers.map((familyMember, index) => (
-											<FamilyMembers key={familyMember.id} familyMember={familyMember} index={index} />
+											<FamilyMembers key={familyMember.id} familyMember={familyMember} />
 										))}
 									</div>
 								</div>
@@ -123,17 +135,16 @@ export function MemberProfile({ params }: { params: { id: string; mid: string } 
 
 interface FamilyMembersProps {
 	familyMember: FamilyMember;
-	index: number;
 }
 
-function FamilyMembers({ familyMember, index }: FamilyMembersProps) {
+function FamilyMembers({ familyMember, }: FamilyMembersProps) {
 
 	const m = familyMember.relatedMember;
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
 
-				<Avatar className={cn("size-6 rounded-full bg-foreground/5 absolute")} style={{ left: `${index * 20}px` }}>
+				<Avatar className={cn("size-6 rounded-lg bg-foreground/5 ")}>
 					<AvatarImage src={m?.avatar || '/images/default-avatar.png'} />
 				</Avatar>
 			</TooltipTrigger>
