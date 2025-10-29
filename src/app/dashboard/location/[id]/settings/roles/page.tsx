@@ -14,20 +14,25 @@ import {
   TableHead,
   TableBody,
   TableCell,
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
 } from "@/components/ui";
-import {Input} from "@/components/forms";
+import { Input } from "@/components/forms";
 import { Role } from "@/types";
 import useSWR from "swr";
 import { UpsertRole } from "./components";
 import RoleListActions from "./components/actions";
-import { SearchIcon, UserIcon, ShieldIcon } from "lucide-react";
+import { UserIcon, ShieldIcon } from "lucide-react";
 import { useDebounce } from "@/hooks";
 
 export default function RolesPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 500);
-  
+
   const { permissions, isLoading: isLoadingPermissions } = usePermissions(
     params.id
   );
@@ -47,7 +52,7 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
     setQuery(value);
   }
 
-  
+
   async function removeRole(roleId: number) {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this role?"
@@ -90,12 +95,14 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
         />
       )}
       <div className="mb-3">
-        <div className="flex flex-row  justify-between items-center py-3">
-          <Input value={query} onChange={(e) => handleSearchRoles(e.target.value)} placeholder="Search Roles" className="rounded-sm text-xs bg-transparent w-48" />
+        <div className="flex flex-row  justify-between items-center gap-2 py-3">
+          <Input value={query} onChange={(e) => handleSearchRoles(e.target.value)} placeholder="Search Roles"
+            className="h-9"
+          />
           <div className="flex-initial">
             <Button
               size={"sm"}
-              variant={"foreground"}
+              variant={"primary"}
               onClick={handleCreateRole}
             >
               Create
@@ -103,7 +110,7 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
           </div>
         </div>
       </div>
-      <Card className="rounded-xs">
+      <Card className="border-foreground/10 rounded-lg">
         <CardContent className="p-0">
           <Table className=" w-full ">
             <TableHeader>
@@ -121,21 +128,21 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
             <TableBody>
               {isLoadingRoles && (
                 <>
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center py-4">
-                    <Skeleton className="w-full h-4" />
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center py-4">
-                    <Skeleton className="w-full h-4" />
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center py-4">
-                    <Skeleton className="w-full h-4" />
-                  </TableCell>
-                </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4">
+                      <Skeleton className="w-full h-4" />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4">
+                      <Skeleton className="w-full h-4" />
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4">
+                      <Skeleton className="w-full h-4" />
+                    </TableCell>
+                  </TableRow>
                 </>
               )}
               {roles &&
@@ -182,25 +189,21 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
                     </TableCell>
                   </TableRow>
                 ))}
-              {roles && roles.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center py-4">
-                    <div className="flex flex-col items-center gap-2">
-                      <p className="text-sm text-muted-foreground">
-                        No roles found
-                        <span
-                          className="text-white underline cursor-pointer ml-1"
-                          onClick={handleCreateRole}
-                        >
-                          create one
-                        </span>
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
+
             </TableBody>
           </Table>
+          {roles && roles.length === 0 && (
+            <Empty variant="border">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <ShieldIcon className="size-4" />
+                </EmptyMedia>
+                <EmptyTitle>No roles found</EmptyTitle>
+                <EmptyDescription>Add a role to the location to manage your staffs permissions.</EmptyDescription>
+              </EmptyHeader>
+
+            </Empty>
+          )}
         </CardContent>
       </Card>
     </div>
