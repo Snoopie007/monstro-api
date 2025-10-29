@@ -36,13 +36,13 @@ export function IntegrationItem({ integration, lid }: IntegrationItemProps) {
         }
     };
     return (
-        <li className="bg-background flex flex-row gap-2 items-center w-full min-h-4 p-3 rounded-[4px] border ">
-            <div className='flex-1 flex flex-row gap-4 items-center'>
+        <li className="bg-foreground/5 flex flex-row gap-2 items-center w-full min-h-4 p-3 rounded-lg ">
+            <div className='flex-1 flex flex-row gap-2 items-center'>
                 <div className="rounded-sm overflow-hidden">
-                    <Image src={`/images/partners/${integration.service.toLowerCase()}-logo.webp`} alt={integration.service} width={30} height={30} />
+                    <Image src={`/images/partners/${integration.service.toLowerCase()}-logo.webp`} alt={integration.service} width={34} height={34} />
                 </div>
                 <div>
-                    <div className="font-medium text-sm">{integration.service}</div>
+                    <div className="font-medium ">{integration.service}</div>
                 </div>
             </div>
             <div>
@@ -53,7 +53,7 @@ export function IntegrationItem({ integration, lid }: IntegrationItemProps) {
                     className='size-6 text-red-500 hover:bg-foreground/5 hover:text-red-500'
                 >
                     {loading ? <Loader2 size={"16"} className={cn('animate-spin size-3.5 ')} /> :
-                        <Trash2 className='size-3.5' />}
+                        <Trash2 className='size-4' />}
                 </Button>
             </div>
         </li>

@@ -20,7 +20,7 @@ import { CountryCodes } from "@/libs/data";
 import { CountryCode } from "@/types";
 import { useJoin } from "../providers/JoinProvider";
 
-const InputStyle = "bg-white border border-gray-200  rounded-lg h-12 text-base ";
+const InputStyle = "bg-white border border-gray-200 text-base ";
 
 export function RegisterForm() {
     const searchParams = useSearchParams();
@@ -209,7 +209,7 @@ export function RegisterForm() {
                                                     type="tel"
                                                     className={cn(
                                                         InputStyle,
-                                                        "bg-transparent inline-block w-full border py-1.5 px-4"
+                                                        "inline-block w-full  h-12 rounded-lg border  px-4"
                                                     )}
                                                     value={value}
                                                     withCountryCallingCode={true}

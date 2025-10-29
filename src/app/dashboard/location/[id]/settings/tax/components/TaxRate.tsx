@@ -73,7 +73,7 @@ export function TaxRate({ lid, location }: StripeTaxProps) {
                         Enter the tax rate for your location. This will be used to calculate the tax for all your products, services, and subscriptions.
                     </CardDescription>
                 </CardHeader>
-                <div className='inline-flex flex-row items-center border border-foreground/10 rounded-sm overflow-hidden'>
+                <div className='inline-flex flex-row items-center border border-foreground/10 rounded-lg overflow-hidden'>
                     <Input
                         type="number"
                         className="border-none focus:ring-0 focus:ring-offset-0 w-25 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -84,7 +84,7 @@ export function TaxRate({ lid, location }: StripeTaxProps) {
                         max="99.99"
                         step="0.01"
                     />
-                    <div className='flex h-10 items-center justify-center px-4 bg-foreground/10  '>
+                    <div className='flex h-12 items-center justify-center px-4  '>
                         <span className='text-sm'>%</span>
                     </div>
                 </div>

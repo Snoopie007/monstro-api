@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form"
 import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js"
 import { useTheme } from "next-themes"
 import { cn, StripeCardOptions } from "@/libs/utils"
-import { ChevronRight, Loader2 } from "lucide-react"
+import { ChevronRight, CircleFadingPlusIcon, Loader2 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible"
 import { RegionSelect } from "@/components/forms"
 import { AddCreditCardSchema } from "@/libs/FormSchemas/schemas"
@@ -93,7 +93,10 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant={"ghost"} size={"sm"} className="border-l rounded-none">+ Add Card</Button>
+                <div className="flex flex-row items-center gap-2 cursor-pointer border rounded-lg border-foreground/10 p-3 border-dashed">
+                    <CircleFadingPlusIcon className="size-5" />
+                    <span className="text-foreground">Add Payment Method</span>
+                </div>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] rounded-sm">
                 <DialogHeader>

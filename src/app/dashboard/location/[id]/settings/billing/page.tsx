@@ -1,9 +1,6 @@
 import {
   Card,
   CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
   Table,
   TableBody,
   TableHeader,
@@ -11,6 +8,11 @@ import {
   TableHead,
   TableRow,
   Badge,
+  Button,
+  DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
 } from "@/components/ui";
 
 import Link from "next/link";
@@ -23,7 +25,7 @@ import { LocationState } from "@/types";
 import { Stripe } from "stripe";
 import { RetryPayment, CardList, Wallet } from "./components";
 import { db } from "@/db/db";
-import { AlertCircleIcon } from "lucide-react";
+import { AlertCircleIcon, EllipsisVertical } from "lucide-react";
 import { format } from "date-fns";
 
 type Subscription = {
@@ -34,15 +36,15 @@ type Subscription = {
   endDate: string;
   currency: string;
   status:
-    | "active"
-    | "incomplete"
-    | "past_due"
-    | "paused"
-    | "canceled"
-    | "unpaid"
-    | "incomplete_expired"
-    | "trialing"
-    | null;
+  | "active"
+  | "incomplete"
+  | "past_due"
+  | "paused"
+  | "canceled"
+  | "unpaid"
+  | "incomplete_expired"
+  | "trialing"
+  | null;
   invoiceId: string | Stripe.Invoice | null;
 };
 async function fetchClientStripe(
@@ -145,100 +147,100 @@ export default async function BillingPage(props: {
           </p>
         </div>
       )}
-      <Card>
-        <CardHeader className="border-b p-0 space-y-0  justify-between flex flex-row items-center">
-          <CardTitle className="text-base py-2 px-4 ">
-            Your Monstro Subscriptions
-          </CardTitle>
-          <Link
-            href={"#"}
-            className="text-sm bg-transparent hover:bg-accent inline-flex p-2.5 font-medium  h-full border-l"
-          >
-            Change Plan
-          </Link>
-        </CardHeader>
-        <CardContent className="py-6 px-5">
-          <Table className="w-full border-b mb-4">
-            <TableHeader>
-              <TableRow>
-                {["Plan", "Amount", "Next Invoice", "End Date", ""].map(
-                  (header, i) => (
-                    <TableHead
-                      key={header}
-                      className={cn(
-                        "h-auto font-normal  py-2",
-                        i === 0 && "pl-0"
-                      )}
-                    >
-                      {header}
-                    </TableHead>
-                  )
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {subscriptions.length > 0 ? (
-                subscriptions.map((sub, i) => (
-                  <TableRow key={i}>
-                    <TableCell className="pl-0">
-                      {sub.name}
-                      <Badge sub={sub.status} className="ml-2 rounded-xs">
-                        {sub.status?.replace("_", " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {formatAmountForDisplay(
-                        sub.amount / 100,
-                        sub.currency,
-                        true
-                      )}
-                    </TableCell>
-                    <TableCell>{sub.nextInvoice}</TableCell>
-                    <TableCell>{sub.endDate}</TableCell>
-                    <TableCell className="text-right">
-                      {["past_due", "unpaid"].includes(sub.status || "") && (
-                        <RetryPayment
-                          subscription={sub}
-                          invoiceId={sub.invoiceId}
-                          paymentMethods={paymentMethods}
-                          lid={params.id}
-                        />
-                      )}
+      <Card className="border-foreground/10 bg-foreground/5 rounded-lg">
+
+        <CardContent className="py-6 px-5 space-y-4">
+          <div className="flex flex-row items-center justify-between">
+            <div className="font-medium ">
+              Monstro-X Subscriptions
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8">
+                  <EllipsisVertical className="size-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="border-foreground/5">
+                <DropdownMenuItem>
+                  <Link href={`/dashboard/locations/${params.id}/upgrade`}>
+                    Change Plan
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <div>
+            <Table className="w-full border-b border-foreground/10 mb-4">
+              <TableHeader>
+                <TableRow>
+                  {["Plan", "Amount", "Next Invoice", "End Date", ""].map(
+                    (header, i) => (
+                      <TableHead
+                        key={header}
+                        className={cn(
+                          "h-auto font-normal  py-2",
+                          i === 0 && "pl-0"
+                        )}
+                      >
+                        {header}
+                      </TableHead>
+                    )
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {subscriptions.length > 0 ? (
+                  subscriptions.map((sub, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="pl-0">
+                        {sub.name}
+                        <Badge sub={sub.status} className="ml-2">
+                          {sub.status?.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {formatAmountForDisplay(
+                          sub.amount / 100,
+                          sub.currency,
+                          true
+                        )}
+                      </TableCell>
+                      <TableCell>{sub.nextInvoice}</TableCell>
+                      <TableCell>{sub.endDate}</TableCell>
+                      <TableCell className="text-right">
+                        {["past_due", "unpaid"].includes(sub.status || "") && (
+                          <RetryPayment
+                            subscription={sub}
+                            invoiceId={sub.invoiceId}
+                            paymentMethods={paymentMethods}
+                            lid={params.id}
+                          />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">
+                      No subscriptions found
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center">
-                    No subscriptions found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          <div>
+                )}
+              </TableBody>
+            </Table>
             <p className="font-medium">Total: {calculateMonthlyTotal()}</p>
+
           </div>
+
         </CardContent>
-        <CardFooter className=" border-t text-foreground py-2 text-sm ">
-          Have a Question?{" "}
-          <Link
-            href={`/dashboard/${params.id}/support`}
-            className="ml-1 text-indigo-500"
-          >
-            Contact Support
-          </Link>
-        </CardFooter>
+
       </Card>
-      <div className="grid grid-cols-2 gap-4">
-        <Wallet lid={params.id} />
-        <CardList
-          paymentMethods={paymentMethods}
-          customerId={sesson?.user.stripeCustomerId}
-          locationId={params.id}
-        />
-      </div>
+      <Wallet lid={params.id} />
+      <CardList
+        paymentMethods={paymentMethods}
+        customerId={sesson?.user.stripeCustomerId}
+        locationId={params.id}
+      />
     </div>
   );
 }

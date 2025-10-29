@@ -4,7 +4,6 @@ import React, { useState } from 'react'
 import { Button, Card, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui";
 import { CountryCode, Location } from "@/types";
 import { cn, tryCatch } from "@/libs/utils";
-import { z } from "zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
 import { toast } from "react-toastify";
 import PhoneInput from 'react-phone-number-input/input'
