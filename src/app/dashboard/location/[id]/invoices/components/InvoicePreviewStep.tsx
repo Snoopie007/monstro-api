@@ -223,7 +223,7 @@ export function InvoicePreviewStep({
 					<CardHeader>
 						<CardTitle className="text-base flex items-center">
 							<FileText className="w-4 h-4 mr-2" />
-							Stripe Preview Data
+							Invoice Preview
 							{previewData.hosted_invoice_url && (
 								<Button
 									variant="outline"
@@ -250,7 +250,7 @@ export function InvoicePreviewStep({
 										<p className="font-mono text-xs">{previewData.id}</p>
 									</div>
 								)}
-								<div>
+								<div className="space-x-2">
 									<span className="font-medium text-muted-foreground">
 										Status:
 									</span>
@@ -348,26 +348,46 @@ export function InvoicePreviewStep({
 				</Card>
 			)}
 
-			{/* Info Notice */}
+			{/* Info Notice - Different for manual vs Stripe */}
+			{formData.paymentMethod === 'manual' ? (
 			<div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
 				<InfoIcon className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
 				<div className="text-sm text-blue-800">
-					<p className="font-medium mb-1">What happens next?</p>
-					<ul className="space-y-1 text-xs">
-						<li>• Your invoice will be created in Stripe</li>
-						<li>
-							• {memberName} will receive an email with payment instructions
-						</li>
-						<li>• You can track payment status in the invoices list</li>
-						{formData.type === "recurring" && (
-							<li>
-								• Recurring invoices will be automatically generated according
-								to your schedule
-							</li>
-						)}
-					</ul>
+				<p className="font-medium mb-1">What happens next?</p>
+				<ul className="space-y-1 text-xs">
+					<li>• Your invoice will be created as DRAFT</li>
+					<li>• Mark it as "Sent" when ready to collect payment</li>
+					<li>• Mark it as "Paid" when payment is received</li>
+					{formData.type === "recurring" && (
+					<li>
+						• You'll need to manually create invoices for future billing periods
+					</li>
+					)}
+				</ul>
 				</div>
 			</div>
+			) : (
+			// Original Stripe flow
+			<div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+				<InfoIcon className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+				<div className="text-sm text-blue-800">
+				<p className="font-medium mb-1">What happens next?</p>
+				<ul className="space-y-1 text-xs">
+					<li>• Your invoice will be created in Stripe</li>
+					<li>
+					• {memberName} will receive an email with payment instructions
+					</li>
+					<li>• You can track payment status in the invoices list</li>
+					{formData.type === "recurring" && (
+					<li>
+						• Recurring invoices will be automatically generated according
+						to your schedule
+					</li>
+					)}
+				</ul>
+				</div>
+			</div>
+			)}
 
 			{/* Action Buttons */}
 			<div className="flex justify-between pt-6">
@@ -375,12 +395,17 @@ export function InvoicePreviewStep({
 					Back
 				</Button>
 				<Button
-					onClick={handleCreateInvoice}
-					disabled={isCreating || isGeneratingPreview}
-					className="bg-blue-600 hover:bg-blue-700"
+				onClick={handleCreateInvoice}
+				disabled={isCreating || isGeneratingPreview}
+				className="bg-blue-600 hover:bg-blue-700"
 				>
-					<Send className="w-4 h-4 mr-2" />
-					{isCreating ? "Creating Invoice..." : "Create & Send Invoice"}
+				<Send className="w-4 h-4 mr-2" />
+				{isCreating 
+					? "Creating Invoice..." 
+					: formData.paymentMethod === 'cash' || formData.paymentMethod === 'manual'
+					? "Create Invoice"
+					: "Create & Send Invoice"
+				}
 				</Button>
 			</div>
 		</div>

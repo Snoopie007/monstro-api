@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { memberInvoices, transactions } from "@/db/schemas";
 import { eq, and } from "drizzle-orm";
@@ -39,10 +40,10 @@ export async function POST(
 			);
 		}
 
-		// Only allow manual invoices
-		if (invoice.paymentMethod !== "manual") {
+		// Only allow manual or cash invoices (both require manual payment confirmation)
+		if (invoice.paymentMethod !== "manual" && invoice.paymentMethod !== "cash") {
 			return NextResponse.json(
-				{ error: "Only manual invoices can be marked paid via this endpoint" },
+				{ error: "Only manual or cash invoices can be marked paid via this endpoint" },
 				{ status: 400 }
 			);
 		}

@@ -1,8 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui";
-import { CheckCircle, ExternalLink, Send } from "lucide-react";
-import { Card, CardContent } from "@/components/ui";
+import { CheckCircle, Send } from "lucide-react";
 
 interface InvoiceConfirmStepProps {
   invoice: any;

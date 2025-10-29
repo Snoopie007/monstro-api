@@ -37,14 +37,52 @@ export async function POST(
     const member = await db.query.members.findFirst({
       where: eq(members.id, params.mid),
     });
-
+    
     if (!member?.stripeCustomerId) {
-      return NextResponse.json(
-        {
-          error: "Member does not have a Stripe customer ID",
+      
+      // Calculate totals
+      const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const tax = body.tax || 0;
+      const discount = body.discount || 0;
+      const amountDue = subtotal + tax - discount;
+      
+      // Format line items
+      const formatted_lines = items.map(item => ({
+        description: `${item.name}${item.description ? ` - ${item.description}` : ''}`,
+        amount: item.price * item.quantity,
+        quantity: item.quantity,
+        currency: "usd"
+      }));
+      
+      // Build response matching Stripe structure
+      return NextResponse.json({
+        success: true,
+        preview: {
+          subtotal,
+          tax_total: tax,
+          amount_due: amountDue,
+          currency: "usd",
+          formatted_lines,
+          customer_info: {
+            name: `${member?.firstName} ${member?.lastName}`,
+            email: member?.email
+          },
+          preview_metadata: {
+            generated_at: new Date().toISOString(),
+            items_count: items.length,
+            type: "manual",
+            payment_method: body.paymentMethod || "cash"
+          }
         },
-        { status: 400 }
-      );
+        summary: {
+          total_items: items.length,
+          subtotal_cents: subtotal,
+          tax_cents: tax,
+          discount_cents: discount,
+          total_cents: amountDue,
+          currency: "usd"
+        }
+      });
     }
 
     // Get Stripe customer instance

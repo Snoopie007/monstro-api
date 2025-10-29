@@ -33,9 +33,10 @@ import {
 interface InvoiceDetailsStepProps {
     form: UseFormReturn<CreateInvoiceFormData>
     onNext: () => void
+    hasStripeCustomer: boolean
 }
 
-export function InvoiceDetailsStep({ form, onNext }: InvoiceDetailsStepProps) {
+export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer }: InvoiceDetailsStepProps) {
     const watchedType = form.watch('type')
     const watchedCollectionMethod = form.watch('collectionMethod')
     const watchedStartDate = form.watch('recurringSettings.startDate')
@@ -85,9 +86,9 @@ export function InvoiceDetailsStep({ form, onNext }: InvoiceDetailsStepProps) {
                                         <SelectItem value="one-off">
                                             One-time Invoice
                                         </SelectItem>
-                                        <SelectItem value="recurring">
+                                        {hasStripeCustomer && <SelectItem value="recurring">
                                             Recurring Invoice
-                                        </SelectItem>
+                                        </SelectItem>}
                                     </SelectContent>
                                 </Select>
                                 <FormDescription>
@@ -120,9 +121,9 @@ export function InvoiceDetailsStep({ form, onNext }: InvoiceDetailsStepProps) {
                                         <SelectItem value="send_invoice">
                                             Send for Payment
                                         </SelectItem>
-                                        <SelectItem value="charge_automatically">
+                                        {hasStripeCustomer && <SelectItem value="charge_automatically">
                                             Charge Automatically
-                                        </SelectItem>
+                                        </SelectItem>}
                                     </SelectContent>
                                 </Select>
                                 <FormDescription>
@@ -133,6 +134,33 @@ export function InvoiceDetailsStep({ form, onNext }: InvoiceDetailsStepProps) {
                                 <FormMessage />
                             </FormItem>
                         )}
+                    />
+
+                    <FormField
+                    control={form.control}
+                    name="paymentMethod"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Payment Method</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger className="border-none rounded-lg">
+                                <SelectValue placeholder="Select payment method" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            <SelectItem value={hasStripeCustomer ? 'cash' : 'manual'}>Cash (Cash/Check)</SelectItem>
+                            {hasStripeCustomer && <SelectItem value="stripe">Card (Stripe)</SelectItem>}
+                            </SelectContent>
+                        </Select>
+                        <FormDescription>
+                            {field.value === 'manual'
+                            ? 'Invoice will be created as draft. You can mark it as sent and collect payment manually.'
+                            : 'Invoice will be processed through Stripe'}
+                        </FormDescription>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                     />
 
                     {/* Due Date (only for send_invoice) */}

@@ -59,6 +59,7 @@ export const CreateInvoiceSchema = z
       .max(20, "Cannot exceed 20 items"),
     isRecurring: z.boolean().default(false),
     recurringSettings: RecurringSettingsSchema.optional(),
+    paymentMethod: z.enum(['stripe', 'cash', 'manual']).default('cash'),
   })
   .refine(
     (data) => {
@@ -111,6 +112,7 @@ export const defaultInvoiceFormValues: Partial<CreateInvoiceFormData> = {
       price: 0,
     },
   ],
+  paymentMethod: 'manual',
   isRecurring: false,
 };
 

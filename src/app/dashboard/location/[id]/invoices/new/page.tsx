@@ -31,8 +31,6 @@ import {
 } from '../components'
 import { useInvoiceCreation } from '@/hooks/useInvoiceCreation'
 
-type StepType = 'details' | 'items' | 'preview' | 'confirm'
-
 interface CreateInvoicePageProps {
     params: Promise<{
         id: string
@@ -64,7 +62,6 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
 		isGeneratingPreview,
 		member,
 		memberName,
-		router
 	} = useInvoiceCreation({id: resolvedParams.id, mid: memberId, ref: stepperRef as React.RefObject<HTMLDivElement & IStepperMethods>});
 
     const form = useForm<CreateInvoiceFormData>({
@@ -112,38 +109,7 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
     }
 
     // Check if member has Stripe customer ID for invoice creation
-    const hasStripeCustomer = member?.stripeCustomerId
-    if (member && !hasStripeCustomer) {
-        return (
-            <div className="container mx-auto p-6 max-w-4xl">
-                <div className="text-center py-12">
-                    <h2 className="text-xl font-semibold text-yellow-600 mb-2">
-                        Setup Required
-                    </h2>
-                    <p className="text-gray-600 mb-4">
-                        This member needs to be set up with billing information
-                        before invoices can be created.
-                    </p>
-                    <div className="space-x-2">
-                        <Button onClick={handleGoBack} variant="outline">
-                            Go Back
-                        </Button>
-                        <Button
-                            onClick={() =>
-                                router.push(
-                                    `/dashboard/location/${resolvedParams.id}/members/${memberId}`
-                                )
-                            }
-                            variant="default"
-                        >
-                            Setup Billing
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
+    const hasStripeCustomer = member?.stripeCustomerId;
     return (
         <div className="flex flex-col container mx-auto p-6 max-w-4xl">
             {/* Header */}
@@ -202,6 +168,7 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
                 <InteractiveStepperContent step={1}>
                     <InvoiceDetailsStep
                         form={form}
+                        hasStripeCustomer={hasStripeCustomer}
                         onNext={() => stepperRef.current?.nextStep()}
                     />
                 </InteractiveStepperContent>

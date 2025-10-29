@@ -3,9 +3,9 @@
 import { useState } from "react"
 import useSWR from "swr"
 import { useRouter } from "next/navigation"
-import { CreateInvoiceFormData } from "@/libs/FormSchemas/CreateInvoiceSchema"
+import type { CreateInvoiceFormData } from "@/libs/FormSchemas/CreateInvoiceSchema"
 import { toast } from "sonner"
-import { IStepperMethods } from "@/components/ui"
+import type { IStepperMethods } from "@/components/ui"
 
 // Fetcher function for SWR
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
@@ -86,69 +86,59 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
         }
     }
 
-    // Create invoice
     const handleCreateInvoice = async (data: CreateInvoiceFormData) => {
-        setIsCreating(true)
+        setIsCreating(true);
         try {
-            // Convert form data for API
-            const apiData = {
-                ...data,
-                items: data.items.map((item) => ({
-                    ...item,
-                    price: Math.round(item.price * 100), // Convert to cents
-                })),
-                dueDate: data.dueDate?.toISOString(),
-                recurringSettings: data.recurringSettings
-                    ? {
-                          ...data.recurringSettings,
-                          startDate:
-                              data.recurringSettings.startDate.toISOString(),
-                          endDate:
-                              data.recurringSettings.endDate?.toISOString(),
-                      }
-                    : undefined,
-            }
-
+            // Convert prices from dollars to cents for API (like preview does)
+        const itemsInCents = data.items.map((item) => ({
+            ...item,
+            price: Math.round(item.price * 100),
+        }))
             const response = await fetch(
-                `/api/protected/loc/${id}/members/${mid}/invoices`,
+                `/api/protected/loc/${id}/members/${mid}/invoices/create`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(apiData),
+                    body: JSON.stringify({
+                        ...data,
+                        items: itemsInCents,
+                        paymentMethod: data.paymentMethod, // Pass manual or stripe
+                    }),
                 }
-            )
-
+            );
+    
             if (!response.ok) {
-                const error = await response.json()
-                throw new Error(error.error || 'Failed to create invoice')
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create invoice');
             }
-
-            const result = await response.json()
-            setCreatedInvoice(result)
-            ref?.current?.goToStep(4)
-            // setStep('confirm')
-            toast.success('Invoice created successfully!')
+    
+            const invoice = await response.json();
+            setCreatedInvoice(invoice);
+            toast.success(
+                data.paymentMethod === 'cash'
+                    ? 'Invoice created as draft'
+                    : 'Invoice created and sent'
+            );
+            ref?.current?.nextStep?.();
         } catch (error) {
-            console.error('Create invoice error:', error)
-            toast.error(
-                error instanceof Error
-                    ? error.message
-                    : 'Failed to create invoice'
-            )
+            toast.error(error instanceof Error ? error.message : 'Failed to create invoice');
         } finally {
-            setIsCreating(false)
+            setIsCreating(false);
         }
-    }
+    };
 
     // Send invoice
     const handleSendInvoice = async () => {
+        if (createdInvoice?.paymentMethod === 'manual') {
+            handleComplete();            
+        }
         if (!createdInvoice?.invoice?.id) return
 
         setIsSending(true)
         try {
             const response = await fetch(
                 `/api/protected/loc/${id}/members/${mid}/invoices/${createdInvoice.invoice.id}/send`,
-                { method: 'POST' }
+                { method: 'PATCH' }
             )
 
             if (!response.ok) {
