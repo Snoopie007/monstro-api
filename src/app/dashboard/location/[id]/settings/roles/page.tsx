@@ -97,115 +97,55 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
       <div className="mb-3">
         <div className="flex flex-row  justify-between items-center gap-2 py-3">
           <Input value={query} onChange={(e) => handleSearchRoles(e.target.value)} placeholder="Search Roles"
-            className="h-9"
+            className="h-10"
           />
           <div className="flex-initial">
             <Button
-              size={"sm"}
               variant={"primary"}
               onClick={handleCreateRole}
             >
-              Create
+              Add Role
             </Button>
           </div>
         </div>
       </div>
-      <Card className="border-foreground/10 rounded-lg">
-        <CardContent className="p-0">
-          <Table className=" w-full ">
-            <TableHeader>
-              <TableRow className=" bg-transparent  border-foreground/20">
-                {["Roles", "Staffs", ""].map((title) => (
-                  <TableHead
-                    key={title}
-                    className="font-semibold  dark:text-white h-auto py-2.5 "
-                  >
-                    {title}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoadingRoles && (
-                <>
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-4">
-                      <Skeleton className="w-full h-4" />
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-4">
-                      <Skeleton className="w-full h-4" />
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-4">
-                      <Skeleton className="w-full h-4" />
-                    </TableCell>
-                  </TableRow>
-                </>
-              )}
-              {roles &&
-                !isLoadingRoles &&
-                roles.map((role: Role, index: number) => (
-                  <TableRow
-                    key={index}
-                    className="cursor-pointer border-foreground/20 text-sm"
-                  >
-                    <TableCell
-                      className="py-2 "
-                      onClick={() => {
-                        setCurrentRole(role);
-                      }}
-                    >
-                      <div className="flex flex-row  gap-1 items-center text-sm">
-                        <ShieldIcon className="text-indigo-600" />
-                        <span>
-                          {isLoadingRoles ? (
-                            <Skeleton className="w-20 h-4" />
-                          ) : (
-                            role.name
-                          )}
-                        </span>
-                      </div>
-                    </TableCell>
+      <div className="flex flex-col gap-2">
+        {isLoadingRoles && (<></>)}
+        {roles && !isLoadingRoles &&
+          roles.map((role: Role, index: number) => (
+            <div key={index} className="grid grid-cols-3 justify-between items-center gap-2 p-3 bg-foreground/5 rounded-lg">
+              <div className="flex flex-row  gap-1 items-center ">
+                <ShieldIcon size={20} className="text-indigo-600" />
+                <span className="font-medium text-sm"> {role.name}</span>
+              </div>
+              <div className="flex flex-row  gap-1  items-center ">
+                <span className="mt-0.5 font-medium text-lg"> {role.staffsCount || 0}</span>
+                <UserIcon size={20} />
 
-                    <TableCell className="py-2 ">
-                      <div className="flex flex-row  gap-1 items-center text-sm">
-                        <span className=""> {role.staffsCount}</span>
-                        <UserIcon className="size-4" />
-                      </div>
-                    </TableCell>
-                    <TableCell
-                      className="py-2 "
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex justify-end">
-                        <RoleListActions
-                          role={role}
-                          deleteFunction={removeRole}
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+              </div>
+              <div className="flex justify-end">
+                <RoleListActions
+                  role={role}
+                  deleteFunction={removeRole}
+                />
+              </div>
+            </div>
+          ))}
 
-            </TableBody>
-          </Table>
-          {roles && roles.length === 0 && (
-            <Empty variant="border">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <ShieldIcon className="size-4" />
-                </EmptyMedia>
-                <EmptyTitle>No roles found</EmptyTitle>
-                <EmptyDescription>Add a role to the location to manage your staffs permissions.</EmptyDescription>
-              </EmptyHeader>
 
-            </Empty>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        {roles && roles.length === 0 && (
+          <Empty variant="border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <ShieldIcon className="size-4" />
+              </EmptyMedia>
+              <EmptyTitle>No roles found</EmptyTitle>
+              <EmptyDescription>Add a role to the location to manage your staffs permissions.</EmptyDescription>
+            </EmptyHeader>
+
+          </Empty>
+        )}
+      </div >
+    </div >
   );
 }

@@ -11,12 +11,11 @@ import {
 } from '@/components/ui'
 import { formatAmountForDisplay } from '@/libs/utils'
 import { format } from 'date-fns'
-import { DownloadCloudIcon } from 'lucide-react'
 import Stripe from 'stripe'
 
 export default function Charges({ charges }: { charges: Stripe.Charge[] }) {
     return (
-        <div className="border rounded-sm">
+        <div className="bg-foreground/5 rounded-lg">
             <Table>
                 <TableHeader>
                     <TableRow>

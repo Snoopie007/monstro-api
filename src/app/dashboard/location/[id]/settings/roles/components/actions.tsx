@@ -8,8 +8,8 @@ export default function RoleListActions({ role, deleteFunction }: { role: Role, 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant={"ghost"} className='h-auto px-0 hover:bg-transparent'>
-                    <EllipsisVerticalIcon className='size-4' />
+                <Button variant={"ghost"} size="icon" className='size-8 '>
+                    <EllipsisVerticalIcon className='size-5' />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className='w-[150px]'>
