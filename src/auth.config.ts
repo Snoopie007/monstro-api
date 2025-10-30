@@ -1,11 +1,12 @@
 import { CredentialsSignin, type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { SignJWT } from "jose";
+
 import bcrypt from "bcryptjs";
 import { getRedisClient } from "./libs/server/redis";
 import { isAfter } from "date-fns";
 import { signSupabaseJWT } from "./libs/server/supabase-jwt";
 import { db } from "./db/db";
+
 class CustomLoginError extends CredentialsSignin {
 	constructor(code: string) {
 		super();
@@ -128,15 +129,7 @@ export default {
 						user.password
 					);
 					if (!match) throw new CustomLoginError("Invalid password or email.");
-					// if (credentials.token && credentials.type) {
-					// 	await validateToken(
-					// 		credentials.token.toString(),
-					// 		user.id,
-					// 		credentials.type.toString()
-					// 	);
-					// }
 
-					// Determine user type and build appropriate payload
 					let userPayload;
 
 					if (user.vendor) {
@@ -146,11 +139,12 @@ export default {
 							...rest
 						} = user;
 
-						const transformedLocations = locations.map((location: any) => {
+						const filteredLocations = locations.filter((location) => {
 							const { locationState, ...restData } = location;
+							if (!locationState || !['active'].includes(locationState.status)) return null;
 							return {
 								...restData,
-								status: locationState ? locationState.status : "incomplete",
+								status: locationState.status
 							};
 						});
 
@@ -163,7 +157,7 @@ export default {
 							vendorId: vendor?.id,
 							stripeCustomerId: vendor?.stripeCustomerId,
 							role: "vendor",
-							locations: transformedLocations,
+							locations: filteredLocations,
 						};
 					} else if (user.staff) {
 						// User is a staff member

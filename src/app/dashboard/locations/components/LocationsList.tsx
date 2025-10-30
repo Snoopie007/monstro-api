@@ -28,8 +28,9 @@ export const LocationsList = ({ locations }: { locations: Location[] }) => {
     return (
         <div className='flex flex-col gap-4'>
             <div className='flex flex-row gap-2 items-center justify-start'>
-                <Input placeholder='Search' className='w-[400px] h-9 rounded-lg border-foreground/10' value={search} onChange={(e) => setSearch(e.target.value)} />
-                <Button variant='foreground' size='sm' asChild>
+                <Input placeholder='Search for location...' className='w-[400px] h-11 rounded-lg border-foreground/10'
+                    value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Button variant='foreground' asChild>
                     <Link href='/dashboard/locations/new'>
                         Add Location
                     </Link>
@@ -38,7 +39,7 @@ export const LocationsList = ({ locations }: { locations: Location[] }) => {
             <div className='grid grid-cols-4 gap-4'>
                 {filteredLocations.map((l) => (
                     <Link href={url(l)} key={l.id}>
-                        <Card key={l.id} className='p-4 rounded-sm min-h-40  space-y-3 bg-foreground/5 border-foreground/10'>
+                        <Card key={l.id} className='p-4 rounded-lg min-h-40  space-y-3 bg-foreground/5 border-foreground/10'>
                             <div className='flex flex-row items-start gap-2 justify-between'>
                                 <h3 className=' font-bold'>{l.name}</h3>
 
@@ -49,7 +50,7 @@ export const LocationsList = ({ locations }: { locations: Location[] }) => {
                                     <p >{l.address}</p>
                                     <p >{l.city}, {l.state} {l.postalCode}</p>
                                 </div>
-                                <Badge member={l.locationState?.status === 'active' ? 'active' : 'inactive'} className='text-xs'>
+                                <Badge member={l.locationState?.status === 'active' ? 'active' : 'inactive'} >
                                     {l.locationState?.status}
                                 </Badge>
                             </div>

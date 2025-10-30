@@ -3,9 +3,7 @@ import { NextResponse } from "next/server";
 import { VendorStripePayments } from "@/libs/server/stripe";
 
 import { eq } from "drizzle-orm";
-import { MonstroPlan } from "@/types/admin";
-import { PackagePaymentPlan } from "@/types/admin";
-import { chargeWallet, getPlan, getPaymentPlan } from "../../../utils";
+import { getPlan } from "../../../utils";
 import { auth } from "@/auth";
 import { locations, locationState } from "@/db/schemas/locations";
 import { db } from "@/db/db";
@@ -27,71 +25,42 @@ export async function POST(
 	const vendorId = session.user.vendorId;
 
 	try {
-		let paymentPlan: PackagePaymentPlan | null = null;
 
-		if (state.pkgId) {
-			paymentPlan = await getPaymentPlan(state.paymentPlanId, state.pkgId);
+		const plan = await getPlan(state.planId);
+		if (!plan) {
+			return NextResponse.json({ error: "Plan not found" }, { status: 404 });
 		}
-
-		let plan: MonstroPlan | null = null;
-		if (state.planId) {
-			plan = await getPlan(state.planId);
-		}
-
 		const stripe = new VendorStripePayments();
 		stripe.setCustomer(session.user.stripeCustomerId);
 
-		await chargeWallet(stripe, lid, paymentMethodId);
-
 		const metadata = { vendorId, locationId: lid };
 
-		if (paymentPlan) {
-			const downPayment = Number(paymentPlan.downPayment - paymentPlan.discount) * 100;
-			if (paymentPlan.downPayment > 0) {
-				console.log("downPayment", downPayment);
-				await stripe.createPaymentIntent(downPayment, paymentMethodId, {
-					metadata,
-				});
-			}
-			if (paymentPlan.monthlyPayment > 0 && paymentPlan.priceId) {
-				await stripe.createPaymentPlan(
-					paymentPlan,
-					undefined,
-					metadata,
-					paymentMethodId
-				);
-			}
-			await Promise.all([
-				stripe.createPackageSubscriptions(metadata, paymentMethodId),
-				stripe.createGHLSubscription(metadata),
-			]);
-		}
 
-		if (plan && plan.id !== 1) {
-			await stripe.createSubscription(plan, metadata, 0);
+		if (plan.id === 1) {
+			await stripe.createPaymentIntent(100, paymentMethodId, {
+				authorizeOnly: true,
+				metadata
+			})
+		} else {
+			await Promise.all([
+				stripe.createSubscription(plan, metadata, 0, paymentMethodId),
+				stripe.createGHLSubscription(metadata, paymentMethodId),
+			]);
 		}
 
 		const today = new Date();
 		await db.transaction(async (tx) => {
-			await tx
-				.update(locations)
-				.set({
-					updated: today,
-				})
-				.where(eq(locations.id, lid));
+			await tx.update(locations).set({ updated: today }).where(eq(locations.id, lid));
 
 			const { created, ...rest } = state;
-			await tx
-				.update(locationState)
-				.set({
-					...rest,
-					status: "active",
-					usagePercent: plan?.usagePercent,
-					startDate: today,
-					lastRenewalDate: today,
-					updated: today,
-				})
-				.where(eq(locationState.locationId, lid));
+			await tx.update(locationState).set({
+				...rest,
+				status: "active",
+				usagePercent: plan?.usagePercent,
+				startDate: today,
+				lastRenewalDate: today,
+				updated: today,
+			}).where(eq(locationState.locationId, lid));
 		});
 
 		return NextResponse.json({ success: true }, { status: 200 });

@@ -5,45 +5,19 @@ import { VendorPayment } from './VendorPayment'
 import { useState } from 'react'
 import { cn, sleep } from '@/libs/utils'
 import PlanList from './PlanList'
-import PackageList from './PackageList'
 import { Button } from '@/components/ui'
 import { Loader2 } from 'lucide-react'
 import { useNewLocation } from '../provider/NewLocationContext'
 
 
-const TABS = [
-    {
-        name: "Plans",
-        desc: "Plans are Monstro-X monthly subscriptions that provides access to all Monstro-X features.",
-        value: "plan",
-    },
-    {
-        name: "Packages",
-        desc: "Packages includes Monstro-X monthly subscriptions but bundles in a proven system to help you grow your business.",
-        value: "package",
-    }
-]
-
-
 
 export function VendorPlanBuilder({ lid }: { lid: string }) {
     const [step, setStep] = useState(1)
-    const [tab, setTab] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
-    const { locationState, updateLocationState } = useNewLocation()
+    const { locationState } = useNewLocation()
 
 
 
-    function handleTabChange(tab: string) {
-        console.log("handleTabChange", tab);
-        setTab(tab);
-        updateLocationState({
-            ...locationState,
-            planId: null,
-            pkgId: null,
-            paymentPlanId: null
-        });
-    }
 
     async function handleNext() {
         setLoading(true);
@@ -54,62 +28,28 @@ export function VendorPlanBuilder({ lid }: { lid: string }) {
     }
 
     return (
-        <div className="space-y-4 py-4">
+        <div className="py-4">
 
-            <div className={cn("space-y-2", { hidden: step === 2 })} >
-                <div className='text-lg font-semibold'>Choose between plans and packages</div>
-                <AnimatedSection>
-                    <div className="space-y-4">
+            <AnimatedSection className={cn("space-y-2", { hidden: step !== 1 })}>
+                <div className="text-lg font-semibold">Select your plan</div>
+                <PlanList />
 
-                        <div className='grid grid-cols-2 gap-2'>
-                            {TABS.map((tabItem) => (
-                                <div key={tabItem.name}
-                                    onClick={(e) => handleTabChange(tabItem.value)}
-                                    className={cn(
-                                        "border-2 border-foreground/20  space-y-4 rounded-lg p-4 opacity-80 cursor-pointer",
-                                        "hover:border-indigo-500 hover:opacity-100 hover:text-indigo-500",
-                                        {
-                                            "opacity-100 border-indigo-500 text-indigo-500": tabItem.value === tab,
-                                        }
-                                    )}
-                                >
-                                    <div className='text-lg font-semibold'>{tabItem.name}</div>
-                                    <p className='text-sm text-muted-foreground'>{tabItem.desc}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </AnimatedSection>
-            </div>
-            <div className={cn("space-y-2", { hidden: step === 2 || !tab })}>
+                <div className="flex flex-row justify-end">
 
-                <AnimatedSection>
-                    <div className='space-y-4'>
+                    <Button variant={"primary"}
+                        size="lg"
+                        onClick={handleNext}
+                        disabled={!locationState.planId}
+                    >
+                        {loading ? <Loader2 className="size-4 animate-spin " /> : "Next"}
 
-                        {tab === "plan" && <PlanList />}
-                        {tab === "package" && <PackageList />}
-                        <div className="flex flex-row gap-2 ">
-
-                            <Button
-                                variant={"continue"} className={cn("children:hidden", {
-                                    "children:inline-block": loading,
-                                })}
-                                onClick={handleNext}
-                                disabled={!locationState.planId && !locationState.paymentPlanId}
-                            >
-                                <Loader2 className="size-4 animate-spin mr-1" />
-                                Next
-                            </Button>
-                        </div>
-                    </div>
-                </AnimatedSection>
-            </div>
-            <div className={cn("space-y-2", { hidden: step !== 2 })}>
+                    </Button>
+                </div>
+            </AnimatedSection>
+            <AnimatedSection className={cn("space-y-4", { hidden: step !== 2 })}>
                 <div className='text-lg font-semibold'>Payment details</div>
-                <AnimatedSection>
-                    <VendorPayment lid={lid} />
-                </AnimatedSection>
-            </div>
+                <VendorPayment lid={lid} />
+            </AnimatedSection>
         </div>
     )
 }

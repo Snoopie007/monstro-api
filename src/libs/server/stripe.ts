@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
 import { MemberPlan } from "@/types";
-import { MonstroPlan, PackagePaymentPlan } from "@/types/admin";
+import { MonstroPlan } from "@/types/admin";
 import { AddressParam } from "@stripe/stripe-js";
-import { isAfter, addDays, addWeeks, isSameDay } from "date-fns";
+import { isSameDay, addMonths, isAfter } from "date-fns";
 import Stripe from "stripe";
 
 type Customer = {
@@ -334,7 +334,8 @@ class VendorStripePayments extends BaseStripePayments {
 	async createSubscription(
 		plan: MonstroPlan,
 		metadata: Record<string, any>,
-		trial?: number
+		trial?: number,
+		paymentMethodId?: string | undefined
 	) {
 		if (!this._customer) {
 			throw new Error("Customer not set");
@@ -343,7 +344,8 @@ class VendorStripePayments extends BaseStripePayments {
 		const options: Stripe.SubscriptionCreateParams = {
 			customer: this._customer,
 			description: `Monstro ${plan.name} Subscription`,
-			items: [{ price: plan.priceId! }],
+			...(paymentMethodId && { default_payment_method: paymentMethodId }),
+			items: [{ price: isProd ? plan.priceId! : plan.testPriceId! }],
 			metadata,
 		};
 		if (trial) {
@@ -352,9 +354,7 @@ class VendorStripePayments extends BaseStripePayments {
 		return this._stripe.subscriptions.create(options);
 	}
 
-	async createPaymentPlan(
-		plan: PackagePaymentPlan,
-		coupon: string | undefined,
+	async createScaleUpgrade(
 		metadata: Record<string, any>,
 		paymentMethodId?: string | undefined
 	) {
@@ -362,13 +362,12 @@ class VendorStripePayments extends BaseStripePayments {
 			throw new Error("Customer not set");
 		}
 		const today = new Date();
-		const startDate = addDays(today, plan.trial || 0);
-		const endDate = addWeeks(startDate, plan.length * 4);
+		const endDate = addMonths(today, 12);
 
 		const options: Stripe.SubscriptionCreateParams = {
 			customer: this._customer,
 			items: [{
-				price: isProd ? plan.priceId! : plan.testPriceId!,
+				price: isProd ? '#' : 'price_1SNgjhDePDUzIffADGAKBvN3',
 			}],
 			cancel_at: Math.floor(endDate.getTime() / 1000),
 			metadata,
@@ -378,70 +377,62 @@ class VendorStripePayments extends BaseStripePayments {
 			options.default_payment_method = paymentMethodId;
 		}
 
-		if (coupon) {
-			options.discounts = [{ coupon }];
-		}
-
-		if (plan.trial) {
-			options.trial_end = Math.floor(startDate.getTime() / 1000);
-		}
-
 		return this._stripe.subscriptions.create(options);
 	}
 
-	async createPackageSubscriptions(
-		metadata: Record<string, any>,
-		paymentMethodId?: string | undefined
-	) {
-		if (!this._customer) {
-			throw new Error("Customer not set");
-		}
-		const phaseOneCoupon = isProd ? "qHgZNW46" : "QuJSpLOZ";
-		const phaseOnePrice = isProd
-			? "price_1R9XXWDePDUzIffAbDo18Rtf"
-			: "price_1R4UUNDePDUzIffArAlN6mq6";
-		const phaseTwoPrice = isProd
-			? "price_1R4WeVDePDUzIffAZQPObJhE"
-			: "price_1R4SG5DePDUzIffAz3GU05uZ";
+	// async createPackageSubscriptions(
+	// 	metadata: Record<string, any>,
+	// 	paymentMethodId?: string | undefined
+	// ) {
+	// 	if (!this._customer) {
+	// 		throw new Error("Customer not set");
+	// 	}
+	// 	const phaseOneCoupon = isProd ? "qHgZNW46" : "QuJSpLOZ";
+	// 	const phaseOnePrice = isProd
+	// 		? "price_1R9XXWDePDUzIffAbDo18Rtf"
+	// 		: "price_1R4UUNDePDUzIffArAlN6mq6";
+	// 	const phaseTwoPrice = isProd
+	// 		? "price_1R4WeVDePDUzIffAZQPObJhE"
+	// 		: "price_1R4SG5DePDUzIffAz3GU05uZ";
 
-		const commonPhaseOptions = {
-			billing_cycle_anchor: "automatic" as const,
-			currency: "usd",
-			...(paymentMethodId && { default_payment_method: paymentMethodId }),
-			collection_method: "charge_automatically" as const,
-			metadata,
-		};
+	// 	const commonPhaseOptions = {
+	// 		billing_cycle_anchor: "automatic" as const,
+	// 		currency: "usd",
+	// 		...(paymentMethodId && { default_payment_method: paymentMethodId }),
+	// 		collection_method: "charge_automatically" as const,
+	// 		metadata,
+	// 	};
 
-		const options: Stripe.SubscriptionScheduleCreateParams = {
-			customer: this._customer,
-			start_date: "now",
-			end_behavior: "release",
-			phases: [
-				{
-					items: [
-						{ price: phaseOnePrice, discounts: [{ coupon: phaseOneCoupon }] },
-					],
-					iterations: 12,
-					...commonPhaseOptions,
-				},
-				{
-					items: [{ price: phaseTwoPrice }],
-					...commonPhaseOptions,
-				},
-			],
-			metadata,
-			expand: ["subscription"],
-		};
-		const schedule = await this._stripe.subscriptionSchedules.create(options);
+	// 	const options: Stripe.SubscriptionScheduleCreateParams = {
+	// 		customer: this._customer,
+	// 		start_date: "now",
+	// 		end_behavior: "release",
+	// 		phases: [
+	// 			{
+	// 				items: [
+	// 					{ price: phaseOnePrice, discounts: [{ coupon: phaseOneCoupon }] },
+	// 				],
+	// 				iterations: 12,
+	// 				...commonPhaseOptions,
+	// 			},
+	// 			{
+	// 				items: [{ price: phaseTwoPrice }],
+	// 				...commonPhaseOptions,
+	// 			},
+	// 		],
+	// 		metadata,
+	// 		expand: ["subscription"],
+	// 	};
+	// 	const schedule = await this._stripe.subscriptionSchedules.create(options);
 
-		return schedule;
-	}
+	// 	return schedule;
+	// }
 
-	async updateSchedule(scheduleId: string, updates: Stripe.SubscriptionScheduleUpdateParams) {
-		return await this._stripe.subscriptionSchedules.update(scheduleId, updates);
-	}
+	// async updateSchedule(scheduleId: string, updates: Stripe.SubscriptionScheduleUpdateParams) {
+	// 	return await this._stripe.subscriptionSchedules.update(scheduleId, updates);
+	// }
 
-	async createGHLSubscription(metadata: Record<string, any>) {
+	async createGHLSubscription(metadata: Record<string, any>, paymentMethodId?: string | undefined) {
 		const price = isProd ? "price_1R4WblDePDUzIffAvMQrZRFE" : "price_1R4S9xDePDUzIffAFUKu0ROH";
 		if (!this._customer) {
 			throw new Error("Customer not set");
@@ -451,6 +442,7 @@ class VendorStripePayments extends BaseStripePayments {
 			description: `Monstro Marketing Suite Subscription`,
 			items: [{ price }],
 			metadata,
+			...(paymentMethodId && { default_payment_method: paymentMethodId }),
 		};
 		return this._stripe.subscriptions.create(options);
 	}

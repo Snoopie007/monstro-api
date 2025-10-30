@@ -124,15 +124,14 @@ export default function AddPaymentMethod() {
                     </form>
                     <div className="flex justify-start mt-4">
                         <Button
-                            className={cn("children:hidden  ", { "children:inline-flex": loading })}
+
                             variant={"foreground"}
                             onClick={form.handleSubmit(onSubmit)}
                             size="sm"
                             type="submit"
                             disabled={!stripe || loading}
                         >
-                            <Loader2 className="mr-2 h-4 w-4 hidden animate-spin" />
-                            Add Card
+                            {loading ? <Loader2 className=" size-4 animate-spin" /> : 'Add Card'}
                         </Button>
                     </div>
                 </Form>

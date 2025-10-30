@@ -6,7 +6,7 @@ import { VendorStripePayments } from '@/libs/server/stripe';
 
 const stripe = new VendorStripePayments()
 export async function POST(req: Request) {
-    const session = await auth();
+
     const data = await req.json()
 
     try {
