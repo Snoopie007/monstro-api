@@ -29,21 +29,7 @@ async function chargeWallet(
     .onConflictDoNothing({ target: [wallets.locationId] });
 }
 
-async function getPaymentPlan(paymentId: number, pkgId: number) {
-  const pkg = await admindb.query.monstroPackages.findFirst({
-    where: (pkg, { eq }) => eq(pkg.id, pkgId),
-    with: {
-      paymentPlans: {
-        where: (plan, { eq }) => eq(plan.id, paymentId),
-      },
-    },
-  });
 
-  if (!pkg) {
-    throw new Error("Package not found");
-  }
-  return pkg.paymentPlans[0];
-}
 
 async function getPlan(planId: number) {
   const p = await admindb.query.monstroPlans.findFirst({
@@ -57,4 +43,4 @@ async function getPlan(planId: number) {
   return p;
 }
 
-export { chargeWallet, getPaymentPlan, getPlan };
+export { chargeWallet, getPlan };

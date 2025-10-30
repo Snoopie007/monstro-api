@@ -1,100 +1,102 @@
 
 import { cn } from "@/libs/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui";
-import { useNewLocation } from "../provider/NewLocationContext";
-import { useState } from "react";
+import { useNewLocation } from "../provider";
 import { MonstroPlan } from "@/types/admin";
-import { InfoIcon } from "./InfoIcon";
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead, TooltipTrigger, Tooltip, TooltipContent } from "@/components/ui";
+import { InfoIcon } from "./Compare";
 
+
+const FeesData = [
+    {
+        label: "Transaction Fee",
+        description: "Tranfer fees are applied only when you use our online payment processor to manage your subscriptions and product purchases.",
+        values: ["2% + Stripe Fees", "2% + Stripe Fees", "Stripe Fees"]
+    },
+    {
+        label: "Email Usage",
+        description: "Email usage is charged based on the number of emails sent to your members.",
+        values: ["$0.01/email", "$0.01/email", "$0.01/email"]
+    },
+    {
+        label: "AI Token Usage",
+        description: "AI usage is calculated per 1 million tokens used. On average each AI message would be around 300 to 1000 tokens.",
+        values: ["~$5/1M tokens", "~$5/1M tokens", "~$5/1M tokens"]
+    }
+];
+
+const AdditionalFeesPlanNames = ["Free", " Start-up", "Growth"];
 
 
 export default function PlanList() {
     const { locationState, updateLocationState, plans } = useNewLocation();
-    const [expandedPlanId, setExpandedPlanId] = useState<number | null>(null);
 
     function isSelected(plan: MonstroPlan) {
         return locationState.planId === plan.id;
     }
 
-    function toggleExpanded(e: React.MouseEvent<HTMLButtonElement, MouseEvent>, plan: MonstroPlan) {
-        e.stopPropagation();
-        setExpandedPlanId(isExpanded(plan) ? null : plan.id);
-    }
 
-    const handlePlanSelect = (plan: MonstroPlan) => {
+
+    function handlePlanSelect(id: number) {
         updateLocationState({
             ...locationState,
-            planId: plan.id
+            planId: id
         });
-        setExpandedPlanId(plan.id);
     };
 
-    function isExpanded(plan: MonstroPlan) {
-        return expandedPlanId === plan.id;
-    }
 
     return (
-        <div className="flex flex-col gap-2">
-            {plans.map((plan, i) => (
-                <div key={i} onClick={() => handlePlanSelect(plan)} data-selected={isSelected(plan)}
-                    data-expanded={isExpanded(plan)}
-                    className={cn(
-                        "flex flex-col gap-2 text-foreground group cursor-pointer opacity-70",
-                        " hover:border-indigo-500 border border-foreground/10 p-4 rounded-lg",
-                        "data-[selected=true]:border-indigo-500 data-[selected=true]:opacity-100",
-
-                    )}
-                >
-                    <div className="space-y-3">
-                        <div className="flex flex-row  items-center justify-between">
-                            <h2 className="text-lg font-bold flex flex-row gap-1 items-center">
-                                {plan.name}
-                            </h2>
-                            <span className="text-sm font-semibold bg-indigo-500 text-white px-2 py-1 rounded-sm">
-                                ${plan.price}{plan.id !== 1 && `/${plan.threshold} ${plan.interval}`}
-                            </span>
+        <>
+            <div className="grid grid-cols-3 gap-2">
+                {plans.map((plan, i) => (
+                    <div key={i}
+                        onClick={() => handlePlanSelect(plan.id)}
+                        className={cn("space-y-4 border border-foreground/10 p-4 rounded-lg cursor-pointer", { "border-indigo-500 border-2": isSelected(plan) })}>
+                        <div className="space-y-2">
+                            <div className="  font-semibold">{plan.name}</div>
+                            <p className="text-muted-foreground text-sm" dangerouslySetInnerHTML={{ __html: plan.description }} />
                         </div>
-                        <p className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: plan.description }} />
+                        <div className="flex flex-col">
+                            <span className=" text-sm font-semibold">Price</span>
+                            <span className="">${plan.price}{plan.id !== 1 && `/${plan.interval}`}</span>
+                        </div>
                     </div>
-
-                    <button
-                        onClick={(e) => toggleExpanded(e, plan)}
-                        className="text-sm text-indigo-500 hover:text-indigo-600 font-medium text-left cursor-pointer"
-                    >
-                        <span className="group-data-[expanded=true]:hidden">See Details</span>
-                        <span className="group-data-[expanded=false]:hidden">Hide Details</span>
-                    </button>
-
-                    <div className="space-y-4 border-t border-foreground/10 pt-4 group-data-[expanded=true]:block hidden">
-                        <ul className="text-sm grid grid-cols-2 gap-4">
-                            {plan.benefits.map((benefit, index) => (
-                                <li key={index} className="flex flex-row gap-2 items-center font-medium">
-                                    <span>{benefit.name}</span>
-                                    {benefit.description && (
-                                        <Tooltip>
-                                            <TooltipTrigger className="cursor-pointer">
-                                                <InfoIcon />
-                                            </TooltipTrigger>
-                                            <TooltipContent className="max-w-[200px] border-foreground/10 border">
-                                                <span className="text-xs">{benefit.description}</span>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
-                        {plan.note && (
-                            <p className="text-sm  items-start">
-                                <span className="text-red-500">*</span>
-                                <span className=" text-muted-foreground">{" "}
-                                    Stripe transaction fees (2.9% + $0.30) apply.
-                                </span>
-                            </p>
-                        )}
-                    </div>
+                ))}
+            </div>
+            <div className=" border border-foreground/10 p-4 rounded-lg space-y-4 ">
+                <div className="space-y-1">
+                    <div className="font-semibold">Additional Fees</div>
+                    <p className="text-muted-foreground text-sm">Additional fees will vary depending on your plan and usage.</p>
                 </div>
-            ))}
-        </div>
+                <Table className="min-w-full bg-background">
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[160px] h-8"></TableHead>
+                            {AdditionalFeesPlanNames.map((plan) => (
+                                <TableHead key={plan} className="h-8">{plan}</TableHead>
+                            ))}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {FeesData.map((row, i) => (
+                            <TableRow key={row.label} className="border-b border-foreground/10">
+                                <TableCell className="text-left px-0 font-semibold">
+                                    <Tooltip>
+                                        <TooltipTrigger className="flex items-center gap-1" >
+                                            {row.label}
+                                            <InfoIcon className="size-4 -mt-0.5 " />
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-[150px] text-sm">{row.description}</TooltipContent>
+                                    </Tooltip>
+                                </TableCell>
+                                {FeesData[i].values.map((value, cIdx) => (
+                                    <TableCell key={cIdx}>{value}</TableCell>
+                                ))}
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+        </>
     );
 }
 

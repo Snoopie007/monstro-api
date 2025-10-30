@@ -59,8 +59,6 @@ export const locationState = pgTable("location_state", {
     .primaryKey()
     .references(() => locations.id, { onDelete: "cascade" }),
   planId: integer("plan_id"),
-  pkgId: integer("pkg_id"),
-  paymentPlanId: integer("payment_plan_id"),
   waiverId: text("waiver_id").references(() => locations.id, {
     onDelete: "set null",
   }),
@@ -76,9 +74,7 @@ export const locationState = pgTable("location_state", {
   usagePercent: integer("usage_percent").notNull().default(0),
   taxRate: integer("tax_rate").notNull().default(0),
   status: LocationStatusEnum("status").notNull().default("incomplete"),
-  created: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 

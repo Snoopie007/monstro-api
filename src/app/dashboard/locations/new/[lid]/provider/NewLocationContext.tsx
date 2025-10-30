@@ -4,14 +4,12 @@ import { createContext, useReducer, ReactElement, useCallback, useContext, React
 
 import { LocationState } from "@/types/location";
 import { MonstroLegal } from "@/libs/server/MDXParse";
-import { MonstroPackage } from "@/types/admin";
 import { MonstroPlan } from "@/types/admin";
 
 type StateType = {
     locationState: LocationState;
     tos: MonstroLegal | undefined;
     plans: MonstroPlan[];
-    packages: MonstroPackage[];
 }
 
 const enum REDUCER_ACTION_TYPE {
@@ -54,16 +52,18 @@ interface NewLocationProviderProps {
     tos: MonstroLegal | undefined;
     children: ReactNode;
     plans: MonstroPlan[];
-    packages: MonstroPackage[];
 }
 
-export const NewLocationProvider = ({ children, state, tos, plans, packages }: NewLocationProviderProps): ReactElement => {
+export const NewLocationProvider = ({ children, state, tos, plans }: NewLocationProviderProps): ReactElement => {
     return (
         <NewLocationContext.Provider value={useNewLocationContext({
-            locationState: state,
+            locationState: {
+                ...state,
+                planId: plans[0].id,
+            },
             tos: tos,
+
             plans: plans,
-            packages: packages
         })}>
             {children}
         </NewLocationContext.Provider>
@@ -75,7 +75,6 @@ type UseNewLocationHookType = {
     updateLocationState: (locationState: LocationState) => void;
     tos: MonstroLegal | undefined;
     plans: MonstroPlan[];
-    packages: MonstroPackage[];
 }
 
 export const useNewLocation = (): UseNewLocationHookType => {
@@ -90,6 +89,5 @@ export const useNewLocation = (): UseNewLocationHookType => {
         updateLocationState,
         tos: state.tos,
         plans: state.plans,
-        packages: state.packages
     };
 }

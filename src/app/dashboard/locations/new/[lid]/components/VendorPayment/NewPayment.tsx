@@ -169,11 +169,8 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
 			</div>
 			<div className="flex justify-end">
 				<Button
-					variant={"continue"}
-					className={cn("cursor-pointer", {
-						"children:inline-block": loading,
-						"children:hidden": !loading,
-					})}
+					variant={"primary"}
+					size="lg"
 					onClick={form.handleSubmit(onSubmit)}
 					disabled={
 						loading ||
@@ -182,8 +179,8 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
 						!validCard
 					}
 				>
-					<Loader2 className="mr-2 size-4 animate-spin" />
-					Register
+					{loading ? <Loader2 className=" size-4 animate-spin" /> : 'Register'}
+
 				</Button>
 			</div>
 		</div>

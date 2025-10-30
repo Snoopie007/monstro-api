@@ -3,11 +3,9 @@ import { NextResponse } from 'next/server';
 import { admindb, db } from '@/db/db';
 import { locations, locationState, wallets } from '@/db/schemas';
 import { MonstroPlan } from '@/types/admin';
-import { PackagePaymentPlan } from '@/types/admin';
 import { VendorStripePayments } from '@/libs/server/stripe';
 import { getPlan } from '../utils';
 import { eq } from 'drizzle-orm';
-import { getPaymentPlan } from '../utils';
 import { sales } from '@/db/admin/sales';
 import { Location } from '@/types';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
@@ -16,7 +14,7 @@ const stripe = new VendorStripePayments();
 
 export async function POST(req: Request) {
     const { saleId, vendorId, ...data } = await req.json();
-    console.log(saleId, vendorId)
+
     try {
 
         const sale = await admindb.query.sales.findFirst({
@@ -58,63 +56,39 @@ export async function POST(req: Request) {
             throw new Error("Failed to create location")
         }
 
-        let paymentPlan: PackagePaymentPlan | null = null;
         let plan: MonstroPlan | null = null;
         if (sale.planId) {
-            plan = await getPlan(sale.planId)
+            plan = await getPlan(3)
         }
-
-        if (sale.paymentId && sale.packageId) {
-            paymentPlan = await getPaymentPlan(sale.paymentId, sale.packageId)
-        }
-
-
 
         const metadata = { vendorId, locationId: location.id }
 
         stripe.setCustomer(sale.stripeCustomerId)
-        if (paymentPlan) {
-            const downPayment = Number(paymentPlan.downPayment - paymentPlan.discount) * 100;
 
-            const promises = [];
-            if (paymentPlan.downPayment > 0) {
-                promises.push(stripe.createPaymentIntent(downPayment, undefined, {
-                    metadata
-                }));
-            }
-            promises.push(
+        if (plan) {
+            await Promise.all([
+                stripe.createSubscription(plan, metadata, 0),
                 stripe.createGHLSubscription(metadata),
-                stripe.createPackageSubscriptions(metadata)
-            );
+            ]);
 
-            if (paymentPlan.monthlyPayment > 0 && paymentPlan.priceId) {
-                promises.push(stripe.createPaymentPlan(paymentPlan, sale.coupon || undefined, metadata));
+            if (sale.packageId === 6) {
+                await stripe.createScaleUpgrade(metadata)
             }
-
-            await Promise.all(promises);
-        }
-
-        if (plan && ![1, 4].includes(plan.id)) {
-            await stripe.createSubscription(plan, metadata, 0);
         }
 
         await db.transaction(async (tx) => {
             await tx.insert(locationState).values({
-                paymentPlanId: sale.paymentId,
                 planId: sale.planId,
-                pkgId: sale.packageId,
                 agreeToTerms: sale.agreedToTerms,
                 locationId: location.id,
                 status: "active",
-                usagePercent: plan?.usagePercent,
+                usagePercent: 0,
                 startDate: today,
                 lastRenewalDate: today,
             })
 
             await tx.insert(wallets).values({
                 locationId: location.id,
-                balance: 0,
-                credits: 0,
                 lastCharged: today
             })
         });
@@ -130,7 +104,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ ...location, id: location.id, status: "active" }, { status: 200 })
     } catch (err) {
         console.log(err)
-        return NextResponse.json({ error: err instanceof Error ? err.message : "An unknown error occurred" }, { status: 500 })
+        const error = err instanceof Error ? err.message : "An unknown error occurred"
+        return NextResponse.json({ error }, { status: 500 })
     }
 }
 

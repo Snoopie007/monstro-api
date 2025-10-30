@@ -85,17 +85,18 @@ export default function ExistingVendorPayment({ lid }: { lid: string }) {
 
 	return (
 		<div className="flex flex-col gap-2">
-			<div className="text-sm font-medium text-foreground">
+			<div className=" font-medium text-foreground">
 				Select a payment method
 			</div>
+			{isLoading && (
+				<div className="flex flex-col gap-2">
+					{[...Array(3)].map((_, i) => (
+						<Skeleton key={i} className="w-full h-10" />
+					))}
+				</div>
+			)}
 			<ul className="flex flex-col gap-2">
-				{isLoading && (
-					<div className="flex flex-col gap-2">
-						{[...Array(3)].map((_, i) => (
-							<Skeleton key={i} className="w-full h-10" />
-						))}
-					</div>
-				)}
+
 				{filteredMethods?.map((method, index) => (
 					<MethodItem
 						key={index}
@@ -110,16 +111,13 @@ export default function ExistingVendorPayment({ lid }: { lid: string }) {
 
 			<div className="flex justify-end">
 				<Button
-					variant="continue"
-					className={cn("cursor-pointer", {
-						"children:inline-block": loading,
-						"children:hidden": !loading,
-					})}
+					variant="primary"
+					size="lg"
 					onClick={handleSubmit}
 					disabled={loading}
 				>
-					<Loader2 className="mr-2 size-4 animate-spin" />
-					Complete
+					{loading ? <Loader2 className=" size-4 animate-spin" /> : 'Complete'}
+
 				</Button>
 			</div>
 		</div>
