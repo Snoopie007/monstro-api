@@ -10,7 +10,7 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui"
 import React from 'react';
-import { useAccountStatus } from '../providers/AccountStatusProvider';
+import { useAccountStatus } from '../providers/';
 import { ChevronsUpDown } from 'lucide-react';
 
 

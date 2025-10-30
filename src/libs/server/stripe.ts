@@ -367,7 +367,7 @@ class VendorStripePayments extends BaseStripePayments {
 		const options: Stripe.SubscriptionCreateParams = {
 			customer: this._customer,
 			items: [{
-				price: isProd ? '#' : 'price_1SNgjhDePDUzIffADGAKBvN3',
+				price: isProd ? 'price_1SO0hRDePDUzIffAeVml2g3g' : 'price_1SNgjhDePDUzIffADGAKBvN3',
 			}],
 			cancel_at: Math.floor(endDate.getTime() / 1000),
 			metadata,

@@ -48,7 +48,7 @@ export default auth(async (req) => {
 				return NextResponse.redirect(new URL("/dashboard/locations/new", req.nextUrl.origin))
 			}
 
-			const [_, locationId, path] = pathname.match(/^\/dashboard\/location\/([^/]+)(\/.*)?$/) || []
+			const [_, locationId] = pathname.match(/^\/dashboard\/location\/([^/]+)(\/.*)?$/) || []
 
 			if (locationId) {
 
@@ -58,20 +58,11 @@ export default auth(async (req) => {
 					return NextResponse.redirect(new URL("/dashboard/locations", req.nextUrl.origin))
 				}
 
-				if (!["active", "incomplete"].includes(next.status) && pathname !== `/dashboard/location/${next.id}`) {
+				if (!["active", "incomplete"].includes(next.status) && !pathname.startsWith(`/dashboard/location/${next.id}`)) {
 					return NextResponse.redirect(new URL(`/dashboard/location/${next.id}`, req.nextUrl.origin))
 				}
-
-				return NextResponse.next()
 			}
 		}
-
-		/* Set cache headers for API and dashboard routes */
-		const response = NextResponse.next()
-		if (pathname.startsWith("/api/") || pathname.startsWith("/dashboard/")) {
-			response.headers.set("Cache-Control", "no-store, max-age=0")
-		}
-		return response
 	} catch (error) {
 		console.error("Middleware error:", error)
 		return NextResponse.json({ message: "Internal Server Error" }, { status: 500 })

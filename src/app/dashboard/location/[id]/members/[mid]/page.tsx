@@ -147,11 +147,11 @@ export default async function MemberProfilePage(props: {
 	return (
 		<TooltipProvider>
 			<MemberProvider member={member} ml={ml} paymentMethods={paymentMethods}>
-				<div className="grid grid-cols-7 flex-1 gap-2 p-2 h-full">
-					<div className="col-span-2 flex flex-col space-y-2 h-full">
+				<div className="flex flex-row gap-2 p-2 h-[calc(100vh-45px)] overflow-hidden">
+					<div className="w-1/3 space-y-2 min-w-0 flex flex-col h-full">
 						<MemberProfile params={params} />
 						<PointsProfile />
-						<ScrollArea className="h-[calc(100vh-400px)] overflow-hidden">
+						<ScrollArea className="h-full overflow-hidden">
 							<div className="space-y-4 ">
 								<MemberAttendanceGraph params={params} />
 
@@ -166,12 +166,12 @@ export default async function MemberProfilePage(props: {
 							</div>
 						</ScrollArea>
 					</div>
-					<div className="col-span-3 flex flex-col h-full">
+					<div className="w-2/4 min-w-0 flex flex-col h-full">
 						<MemberChatView />
 					</div>
 
-					<div className="col-span-2 h-full">
-						<ScrollArea className="flex-1 h-full  overflow-hidden">
+					<div className="w-1/3  min-w-0 h-full">
+						<ScrollArea className="h-full overflow-hidden">
 							<div className="space-y-4 pb-10">
 								<Tabs
 									defaultValue="subscriptions"
