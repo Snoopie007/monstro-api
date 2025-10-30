@@ -51,18 +51,29 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
     const handlePreview = async (data: CreateInvoiceFormData) => {
         setIsGeneratingPreview(true)
         try {
-            // Convert prices from dollars to cents for API
-            const itemsInCents = data.items.map((item) => ({
-                ...item,
-                price: Math.round(item.price * 100),
-            }))
+            let requestBody: any;
+
+            // Handle from-subscription type
+            if (data.type === 'from-subscription' && data.selectedSubscriptionId) {
+                requestBody = {
+                    type: 'from-subscription',
+                    selectedSubscriptionId: data.selectedSubscriptionId,
+                };
+            } else {
+                // Convert prices from dollars to cents for API
+                const itemsInCents = data.items.map((item) => ({
+                    ...item,
+                    price: Math.round(item.price * 100),
+                }))
+                requestBody = { items: itemsInCents };
+            }
 
             const response = await fetch(
                 `/api/protected/loc/${id}/members/${mid}/invoices/preview`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: itemsInCents }),
+                    body: JSON.stringify(requestBody),
                 }
             )
 
@@ -89,21 +100,34 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
     const handleCreateInvoice = async (data: CreateInvoiceFormData) => {
         setIsCreating(true);
         try {
-            // Convert prices from dollars to cents for API (like preview does)
-        const itemsInCents = data.items.map((item) => ({
-            ...item,
-            price: Math.round(item.price * 100),
-        }))
+            let requestData = { ...data };
+
+            // Handle from-subscription type
+            if (data.type === 'from-subscription' && data.selectedSubscriptionId) {
+                // API will handle item population from subscription
+                requestData = {
+                    ...data,
+                    // Items will be populated by API, but we still pass them for validation
+                    items: data.items,
+                };
+            } else {
+                // Convert prices from dollars to cents for API (for manual entry)
+                const itemsInCents = data.items.map((item) => ({
+                    ...item,
+                    price: Math.round(item.price * 100),
+                }));
+                requestData = {
+                    ...data,
+                    items: itemsInCents,
+                };
+            }
+
             const response = await fetch(
                 `/api/protected/loc/${id}/members/${mid}/invoices/create`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ...data,
-                        items: itemsInCents,
-                        paymentMethod: data.paymentMethod, // Pass manual or stripe
-                    }),
+                    body: JSON.stringify(requestData),
                 }
             );
     
@@ -115,7 +139,7 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
             const invoice = await response.json();
             setCreatedInvoice(invoice);
             toast.success(
-                data.paymentMethod === 'cash'
+                data.type === 'from-subscription' || data.paymentMethod === 'manual'
                     ? 'Invoice created as draft'
                     : 'Invoice created and sent'
             );
@@ -129,11 +153,16 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
 
     // Send invoice
     const handleSendInvoice = async () => {
-        if (createdInvoice?.paymentMethod === 'manual') {
-            handleComplete();            
+        // For manual or cash payment methods, or if it's a simple invoice object (from-subscription)
+        // Just complete and navigate to member page
+        if (createdInvoice?.paymentMethod === 'manual' || 
+            createdInvoice?.paymentMethod === 'cash' ||
+            !createdInvoice?.invoice?.id) {
+            handleComplete();
+            return;
         }
-        if (!createdInvoice?.invoice?.id) return
 
+        // For Stripe invoices, send them
         setIsSending(true)
         try {
             const response = await fetch(

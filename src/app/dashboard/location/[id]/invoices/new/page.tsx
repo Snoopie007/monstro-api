@@ -169,6 +169,8 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
                     <InvoiceDetailsStep
                         form={form}
                         hasStripeCustomer={hasStripeCustomer}
+                        locationId={resolvedParams.id}
+                        memberId={memberId}
                         onNext={() => stepperRef.current?.nextStep()}
                     />
                 </InteractiveStepperContent>
@@ -176,6 +178,8 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
                 <InteractiveStepperContent step={2}>
                     <InvoiceItemsStep
                         form={form}
+                        locationId={resolvedParams.id}
+                        memberId={memberId}
                         onNext={() => {
                             // Trigger preview generation when moving to preview step
                             const formData = form.getValues()

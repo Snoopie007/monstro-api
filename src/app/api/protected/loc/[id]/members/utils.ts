@@ -6,7 +6,10 @@ import {
   MemberSubscription,
 } from "@/types";
 import { isAfter } from "date-fns";
-
+import {db} from "@/db/db";
+import { memberSubscriptions } from "@/db/schemas";
+import { eq, and, lt } from "drizzle-orm";
+ 
 type BaseData = {
   memberPlanId: string;
   locationId: string;
@@ -330,6 +333,43 @@ function createSubscription(
   };
 
   return { newSubscription, newTransaction, newInvoice };
+}
+// Updates subscriptions to past_due if their billing period has ended
+export async function updatePastDueSubscriptions(
+  locationId: string,
+  memberId: string
+) {
+  const now = new Date();
+
+  // Find all active subscriptions where currentPeriodEnd is in the past
+  const pastDueSubscriptions = await db.query.memberSubscriptions.findMany({
+    where: and(
+      eq(memberSubscriptions.locationId, locationId),
+      eq(memberSubscriptions.memberId, memberId),
+      eq(memberSubscriptions.status, "active"),
+      lt(memberSubscriptions.currentPeriodEnd, now)
+    ),
+  });
+
+  // Update them to past_due
+  if (pastDueSubscriptions.length > 0) {
+    await db
+      .update(memberSubscriptions)
+      .set({
+        status: "past_due",
+        updated: new Date(),
+      })
+      .where(
+        and(
+          eq(memberSubscriptions.locationId, locationId),
+          eq(memberSubscriptions.memberId, memberId),
+          eq(memberSubscriptions.status, "active"),
+          lt(memberSubscriptions.currentPeriodEnd, now)
+        )
+      );
+  }
+
+  return pastDueSubscriptions.length;
 }
 
 export {

@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
-import { createSubscription } from "../../utils";
+import { createSubscription, updatePastDueSubscriptions } from "../../utils";
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { MemberSubscription } from "@/types";
@@ -14,6 +14,9 @@ export async function GET(req: Request, props: { params: Promise<{ id: string, m
     const params = await props.params;
 
     try {
+        // Update any subscriptions that have passed their billing date to past_due
+        await updatePastDueSubscriptions(params.id, params.mid);
+
         const subscriptions = await db.query.memberSubscriptions.findMany({
             where: (memberSubscriptions, { eq, and }) => and(
                 eq(memberSubscriptions.memberId, params.mid),

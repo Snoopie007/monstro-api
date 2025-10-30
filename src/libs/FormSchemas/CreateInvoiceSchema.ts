@@ -40,7 +40,7 @@ export const RecurringSettingsSchema = z.object({
 
 export const CreateInvoiceSchema = z
   .object({
-    type: z.enum(["one-off", "recurring"], {
+    type: z.enum(["one-off", "recurring", "from-subscription"], {
       required_error: "Please select an invoice type",
     }),
     description: z
@@ -55,11 +55,11 @@ export const CreateInvoiceSchema = z
       .default("send_invoice"),
     items: z
       .array(InvoiceItemSchema)
-      .min(1, "At least one item is required")
       .max(20, "Cannot exceed 20 items"),
     isRecurring: z.boolean().default(false),
     recurringSettings: RecurringSettingsSchema.optional(),
     paymentMethod: z.enum(['stripe', 'cash', 'manual']).default('cash'),
+    selectedSubscriptionId: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -72,7 +72,34 @@ export const CreateInvoiceSchema = z
       message: "Recurring settings are required for recurring invoices",
       path: ["recurringSettings"],
     }
-  ).refine((data) => {
+  )
+  .refine(
+    (data) => {
+      if (data.type === "from-subscription" && !data.selectedSubscriptionId) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Please select a subscription",
+      path: ["selectedSubscriptionId"],
+    }
+  )
+  .refine(
+    (data) => {
+      // Skip items validation for from-subscription type (items auto-populated by API)
+      if (data.type === "from-subscription") {
+        return true;
+      }
+      // For other types, validate items
+      return data.items.length > 0 && data.items.every(item => item.name && item.price >= 0);
+    },
+    {
+      message: "At least one valid item is required",
+      path: ["items"],
+    }
+  )
+  .refine((data) => {
     if (data.dueDate && data.dueDate < new Date()) {
       return false;
     }
@@ -114,6 +141,7 @@ export const defaultInvoiceFormValues: Partial<CreateInvoiceFormData> = {
   ],
   paymentMethod: 'manual',
   isRecurring: false,
+  selectedSubscriptionId: undefined,
 };
 
 // Validation for specific use cases

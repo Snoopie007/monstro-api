@@ -41,10 +41,12 @@ export function InvoicePreviewStep({
 	memberName,
 }: InvoicePreviewStepProps) {
 	const formData = form.getValues();
-	const total = formData.items.reduce(
-		(sum, item) => sum + item.price * item.quantity,
-		0
-	);
+	
+	// For from-subscription type, use preview data totals (already in cents)
+	// For manual entry, calculate from items (in dollars, need to convert to cents)
+	const total = formData.type === 'from-subscription' && previewData
+		? previewData.amount_due / 100 // Convert from cents to dollars for display
+		: formData.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
 	const handleRefreshPreview = () => {
 		onPreview(formData);
@@ -139,28 +141,50 @@ export function InvoicePreviewStep({
 							Line Items
 						</h4>
 						<div className="space-y-2">
-							{formData.items.map((item, index) => (
-								<div
-									key={item.id || index}
-									className="flex justify-between items-center p-3 bg-muted-foreground/10 rounded-lg"
-								>
-									<div className="flex-1">
-										<div className="font-medium">{item.name}</div>
-										{item.description && (
+							{formData.type === 'from-subscription' && previewData?.formatted_lines ? (
+								// Show items from preview data (already formatted, in cents)
+								previewData.formatted_lines.map((line: any, index: number) => (
+									<div
+										key={index}
+										className="flex justify-between items-center p-3 bg-muted-foreground/10 rounded-lg"
+									>
+										<div className="flex-1">
+											<div className="font-medium">{line.description}</div>
 											<div className="text-sm text-muted-foreground">
-												{item.description}
+												Qty: {line.quantity} ×{" "}
+												{formatInvoiceAmount(line.amount / line.quantity)}
 											</div>
-										)}
-										<div className="text-sm text-muted-foreground">
-											Qty: {item.quantity} ×{" "}
-											{formatInvoiceAmount(item.price * 100)}
+										</div>
+										<div className="font-medium">
+											{formatInvoiceAmount(line.amount)}
 										</div>
 									</div>
-									<div className="font-medium">
-										{formatInvoiceAmount(item.price * item.quantity * 100)}
+								))
+							) : (
+								// Show items from form (in dollars, convert to cents for display)
+								formData.items.map((item, index) => (
+									<div
+										key={item.id || index}
+										className="flex justify-between items-center p-3 bg-muted-foreground/10 rounded-lg"
+									>
+										<div className="flex-1">
+											<div className="font-medium">{item.name}</div>
+											{item.description && (
+												<div className="text-sm text-muted-foreground">
+													{item.description}
+												</div>
+											)}
+											<div className="text-sm text-muted-foreground">
+												Qty: {item.quantity} ×{" "}
+												{formatInvoiceAmount(item.price * 100)}
+											</div>
+										</div>
+										<div className="font-medium">
+											{formatInvoiceAmount(item.price * item.quantity * 100)}
+										</div>
 									</div>
-								</div>
-							))}
+								))
+							)}
 						</div>
 					</div>
 

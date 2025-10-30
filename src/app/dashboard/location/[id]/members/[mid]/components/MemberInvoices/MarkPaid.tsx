@@ -34,11 +34,11 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
-import { MemberInvoice } from '@/types'
+import type { MemberInvoice } from '@/types'
 import { toast } from 'react-toastify'
 import { Calendar } from '@/components/ui/calendar'
 import { ChevronDownIcon } from 'lucide-react'
-import { Label } from '@/components/forms/label'
+import { mutate } from 'swr'
 
 const MarkPaidSchema = z.object({
     paidAmount: z.string().min(1, 'Amount is required'),
@@ -100,6 +100,9 @@ export const MarkPaid = ({
             toast.success('Invoice marked as paid')
             setIsOpen(false)
             onPaid()
+            
+            // Also revalidate subscriptions to update status (if invoice is linked to subscription)
+            mutate({ url: `members/${params.mid}/subs`, id: params.id })
         } catch (error) {
             toast.error(
                 error instanceof Error

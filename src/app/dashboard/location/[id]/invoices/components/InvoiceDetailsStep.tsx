@@ -22,24 +22,34 @@ import {
 import { CreateInvoiceFormData } from '@/libs/FormSchemas/CreateInvoiceSchema'
 import { CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
-import { cn } from '@/libs/utils'
+import { cn, formatAmountForDisplay } from '@/libs/utils'
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
     Calendar,
 } from '@/components/ui'
+import { usePastDueSubscriptions } from '@/hooks/usePastDueSubscriptions'
 
 interface InvoiceDetailsStepProps {
     form: UseFormReturn<CreateInvoiceFormData>
     onNext: () => void
     hasStripeCustomer: boolean
+    locationId: string
+    memberId: string | null
 }
 
-export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer }: InvoiceDetailsStepProps) {
+export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId, memberId }: InvoiceDetailsStepProps) {
     const watchedType = form.watch('type')
     const watchedCollectionMethod = form.watch('collectionMethod')
     const watchedStartDate = form.watch('recurringSettings.startDate')
+    const watchedSelectedSubscriptionId = form.watch('selectedSubscriptionId')
+
+    // Fetch past due subscriptions
+    const { pastDueSubscriptions, isLoading: isLoadingSubscriptions } = usePastDueSubscriptions({
+        locationId,
+        memberId,
+    })
 
     const handleNext = () => {
         // Validate current step fields
@@ -48,9 +58,14 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer }: InvoiceD
             'collectionMethod',
         ]
 
+        // Add selectedSubscriptionId validation if from-subscription type
+        if (watchedType === 'from-subscription') {
+            fieldsToValidate.push('selectedSubscriptionId')
+        }
+
         form.trigger(fieldsToValidate).then((isValid) => {
             if (isValid) {
-                onNext()
+                onNext();
             }
         })
     }
@@ -89,17 +104,63 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer }: InvoiceD
                                         {hasStripeCustomer && <SelectItem value="recurring">
                                             Recurring Invoice
                                         </SelectItem>}
+                                        {!hasStripeCustomer && pastDueSubscriptions.length > 0 && (
+                                            <SelectItem value="from-subscription">
+                                                From Past Due Subscription
+                                            </SelectItem>
+                                        )}
                                     </SelectContent>
                                 </Select>
                                 <FormDescription>
                                     {watchedType === 'one-off'
                                         ? 'A single invoice that will be sent once'
-                                        : 'A recurring invoice based on a schedule'}
+                                        : watchedType === 'recurring'
+                                        ? 'A recurring invoice based on a schedule'
+                                        : 'Generate an invoice for a past due subscription'}
                                 </FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
+
+                    {/* Subscription Selector (only for from-subscription type) */}
+                    {watchedType === 'from-subscription' && (
+                        <FormField
+                            control={form.control}
+                            name="selectedSubscriptionId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Select Subscription</FormLabel>
+                                    <Select 
+                                        onValueChange={field.onChange} 
+                                        defaultValue={field.value}
+                                        disabled={isLoadingSubscriptions}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className="border-none rounded-lg">
+                                                <SelectValue placeholder={
+                                                    isLoadingSubscriptions 
+                                                        ? "Loading subscriptions..." 
+                                                        : "Choose a past due subscription"
+                                                } />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {pastDueSubscriptions.map((sub) => (
+                                                <SelectItem key={sub.id} value={sub.id}>
+                                                    {sub.plan?.name} - {formatAmountForDisplay((sub.plan?.price ?? 0) / 100, 'usd', true)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormDescription>
+                                        Select a subscription to generate an invoice for this billing period
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
 
                     {/* Collection Method */}
                     <FormField
@@ -163,8 +224,8 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer }: InvoiceD
                     )}
                     />
 
-                    {/* Due Date (only for send_invoice) */}
-                    {watchedCollectionMethod === 'send_invoice' && (
+                    {/* Due Date (only for send_invoice and not from-subscription) */}
+                    {watchedCollectionMethod === 'send_invoice' && watchedType !== 'from-subscription' && (
                         <FormField
                             control={form.control}
                             name="dueDate"

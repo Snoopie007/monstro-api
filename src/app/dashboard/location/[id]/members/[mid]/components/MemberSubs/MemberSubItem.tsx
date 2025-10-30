@@ -2,7 +2,7 @@
 
 import { Avatar, CircleProgress, Skeleton, TooltipContent, TooltipTrigger, Tooltip, AvatarImage } from '@/components/ui'
 import { cn, formatAmountForDisplay, tryCatch } from '@/libs/utils'
-import { MemberSubscription } from '@/types'
+import type { MemberSubscription } from '@/types'
 import { format } from 'date-fns'
 import { SubActions } from './SubActions'
 import { Clock4Icon } from 'lucide-react'
@@ -11,7 +11,6 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { FamilyDialog } from '../FamilyPlan'
 import { toast } from 'react-toastify'
-import { useMemberStatus } from '../../providers/MemberContext'
 
 function calculateProgress(start: Date, end: Date) {
     const now = Date.now()
@@ -22,6 +21,18 @@ function calculateProgress(start: Date, end: Date) {
     const progress = (elapsed / total) * 100
 
     return Math.min(Math.max(Number(progress.toFixed(2)), 10), 100)
+}
+
+const StatusStringMap = {
+    active: 'Active',
+    past_due: 'Past Due',
+    canceled: 'Canceled',
+    incomplete: 'Incomplete',
+    paused: 'Paused',
+    expired: 'Expired',
+    trial: 'Trial',
+    trial_ended: 'Trial Ended',
+    trial_expired: 'Trial Expired',
 }
 
 
@@ -97,6 +108,7 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                 </div>
                 <SubActions sub={sub} />
             </div>
+
             <div className="space-y-5 py-2">
                 <div className="grid grid-cols-3 justify-between items-center">
                     <InfoField label="Duration">
@@ -115,7 +127,7 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                     </InfoField>
                     <InfoField label="Status">
                         <span className="flex items-center gap-2">
-                            <StatusDot status={sub.status} /> {sub.status}
+                            <StatusDot status={sub.status} /> {StatusStringMap[sub.status as keyof typeof StatusStringMap]}
                         </span>
                     </InfoField>
                     <InfoField label="Trial Ends">

@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberInvoices, transactions } from "@/db/schemas";
+import { memberInvoices, transactions, memberSubscriptions } from "@/db/schemas";
 import { eq, and } from "drizzle-orm";
+import { addMonths, addWeeks, addDays, addYears } from "date-fns";
 
 type MarkPaidProps = {
 	id: string;
@@ -60,7 +61,7 @@ export async function POST(
 		// TODO: Get actual user ID from auth session
 		const currentUserId = "system"; // Placeholder - implement proper auth
 
-		// Transaction: update invoice + UPDATE existing incomplete transaction
+		// Transaction: update invoice + UPDATE existing incomplete transaction + update subscription
 		await db.transaction(async (tx) => {
 			// Update invoice status to "paid"
 			await tx
@@ -92,6 +93,61 @@ export async function POST(
 						eq(transactions.status, "incomplete")
 					)
 				);
+
+			// If invoice is linked to a subscription, mark subscription as active AND move billing period forward
+			if (invoice.memberSubscriptionId) {
+				// Fetch the subscription to get plan details
+				const subscription = await tx.query.memberSubscriptions.findFirst({
+					where: eq(memberSubscriptions.id, invoice.memberSubscriptionId),
+					with: { plan: true },
+				});
+				
+				if (subscription && subscription.plan) {
+					// Calculate next billing period based on plan interval
+					const currentPeriodEnd = new Date(subscription.currentPeriodEnd);
+					let nextPeriodEnd: Date;
+					
+					const interval = subscription.plan.interval || 'month';
+					const intervalThreshold = subscription.plan.intervalThreshold || 1;
+					
+					switch (interval) {
+						case 'day':
+							nextPeriodEnd = addDays(currentPeriodEnd, intervalThreshold);
+							break;
+						case 'week':
+							nextPeriodEnd = addWeeks(currentPeriodEnd, intervalThreshold);
+							break;
+						case 'month':
+							nextPeriodEnd = addMonths(currentPeriodEnd, intervalThreshold);
+							break;
+						case 'year':
+							nextPeriodEnd = addYears(currentPeriodEnd, intervalThreshold);
+							break;
+						default:
+							nextPeriodEnd = addMonths(currentPeriodEnd, 1);
+					}
+					
+					// Update subscription: set to active AND move billing period forward
+					await tx
+						.update(memberSubscriptions)
+						.set({
+							status: "active",
+							currentPeriodStart: currentPeriodEnd, // Next period starts where current ended
+							currentPeriodEnd: nextPeriodEnd, // Move to next billing date
+							updated: new Date(),
+						})
+						.where(eq(memberSubscriptions.id, invoice.memberSubscriptionId));
+				} else {
+					// Fallback: just set to active if we can't calculate next period
+					await tx
+						.update(memberSubscriptions)
+						.set({
+							status: "active",
+							updated: new Date(),
+						})
+						.where(eq(memberSubscriptions.id, invoice.memberSubscriptionId));
+				}
+			}
 		});
 
 		return NextResponse.json(
@@ -117,4 +173,3 @@ export async function POST(
 		);
 	}
 }
-

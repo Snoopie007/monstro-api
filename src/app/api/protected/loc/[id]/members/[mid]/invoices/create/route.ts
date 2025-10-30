@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberInvoices, members, transactions } from "@/db/schemas";
+import { memberInvoices, members, transactions, memberSubscriptions } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { getStripeCustomer } from "@/libs/server/stripe";
 import type Stripe from "stripe";
@@ -27,6 +27,7 @@ export async function POST(
       paymentMethod,
       tax,
       discount,
+      selectedSubscriptionId,
     } = body;
 
     // Get member
@@ -39,6 +40,86 @@ export async function POST(
         { error: "Member not found" },
         { status: 404 }
       );
+    }
+
+    // Handle from-subscription invoice creation
+    if (type === "from-subscription" && selectedSubscriptionId) {
+      const subscription = await db.query.memberSubscriptions.findFirst({
+        where: eq(memberSubscriptions.id, selectedSubscriptionId),
+        with: { plan: true },
+      });
+
+      if (!subscription) {
+        return NextResponse.json(
+          { error: "Subscription not found" },
+          { status: 404 }
+        );
+      }
+
+      if (subscription.status !== "past_due") {
+        return NextResponse.json(
+          { error: "Subscription must be past due to generate invoice" },
+          { status: 400 }
+        );
+      }
+
+      // Create invoice with subscription details
+      const subscriptionInvoiceData = {
+        memberId: params.mid,
+        locationId: params.id,
+        memberSubscriptionId: subscription.id,
+        description: `${subscription.plan.name} - Billing Period`,
+        items: [{
+          name: subscription.plan.name,
+          description: subscription.plan.description || "",
+          quantity: 1,
+          price: subscription.plan.price, // Already in cents
+        }],
+        total: subscription.plan.price,
+        subtotal: subscription.plan.price,
+        tax: 0, // TODO: Implement add tax
+        discount: 0,
+        currency: subscription.plan.currency || "usd",
+        status: "draft" as const,
+        dueDate: new Date(subscription.currentPeriodEnd),
+        paymentMethod: subscription.paymentMethod as "manual" | "cash",
+        invoiceType: "recurring" as const,
+        forPeriodStart: new Date(subscription.currentPeriodStart),
+        forPeriodEnd: new Date(subscription.currentPeriodEnd),
+        metadata: {
+          type: "from-subscription",
+          subscriptionId: subscription.id,
+        },
+      };
+
+      const invoice = await db.transaction(async (tx) => {
+        // Create invoice as draft
+        const [newInvoice] = await tx
+          .insert(memberInvoices)
+          .values(subscriptionInvoiceData)
+          .returning();
+
+        // Create incomplete transaction
+        await tx
+          .insert(transactions)
+          .values({
+            memberId: params.mid,
+            locationId: params.id,
+            invoiceId: newInvoice.id,
+            subscriptionId: subscription.id,
+            description: `${subscription.plan.name} - Recurring Payment`,
+            type: "inbound",
+            status: "incomplete",
+            paymentMethod: subscription.paymentMethod,
+            amount: subscription.plan.price,
+            currency: subscription.plan.currency || "usd",
+            created: new Date(),
+          });
+
+        return newInvoice;
+      });
+
+      return NextResponse.json(invoice, { status: 201 });
     }
 
     // Manual payment flow - fully manual, no Stripe
