@@ -1,20 +1,24 @@
--- Create a vendor user first
-INSERT INTO users (id, name, email, email_verified_at, image, password, created_at, updated_at) 
-VALUES ('usr_vendor_demo', 'Demo Vendor', 'vendor@demo.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW()) 
+-- =========================================
+-- VENDOR USERS (Users for vendors)
+-- =========================================
+INSERT INTO users (id, name, email, email_verified_at, image, password, created_at, updated_at) VALUES
+('usr_vendor_demo', 'Demo Vendor', 'vendor@demo.com', NOW(), NULL, '$2b$10$tXgr7ASWD5QzLczEmrN7huzvO9OjayHyxrS6Shys01Eo.DQ1WNdku', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- Create the demo vendor
-INSERT INTO vendors (id, first_name, last_name, user_id, email, created_at, updated_at) 
-VALUES ('vdr_tJE2cshbSh20XuuZqWl7A', 'Demo', 'Vendor', 'usr_vendor_demo', 'vendor@demo.com', NOW(), NOW()) 
+-- =========================================
+-- VENDORS (Must come first - referenced by locations)
+-- =========================================
+INSERT INTO vendors (id, first_name, last_name, email, phone, user_id, created_at, updated_at) VALUES
+('vdr_tJE2cshbSh20XuuZqWl7A', 'Demo', 'Vendor', 'vendor@demo.com', '+1-555-0000', 'usr_vendor_demo', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Create the demo location
 INSERT INTO locations (id, name, address, about, city, state, country, postal_code, website, email, phone, timezone, vendor_id, slug, industry, legal_name, created_at, updated_at)
-VALUES ('acc_BpT7jEb3Q16nOPL3vo7qlw', 'Demo', '76 River St', 'This is a demo location for testing purposes', 'Pittsburgh', 'PA', 'United States', '15212', 'https://demo.example.com', 'demo@example.com', '+1-555-0123', 'America/New_York', 'vdr_tJE2cshbSh20XuuZqWl7A', 'demo', 'Fitness & Recreation', 'Demo Location LLC', NOW(), NOW()) ON CONFLICT (id) DO NOTHING;
+VALUES ('acc_BpT7jEb3Q16nOPL3vo7qlw', 'Demo', ' 76 River St', 'This is a demo location for testing purposes', 'Pittsburgh', 'PA', 'United States', '15212', 'https://demo.example.com', 'demo@example.com', '+1-555-0123', 'America/New_York', 'vdr_tJE2cshbSh20XuuZqWl7A', 'demo', 'Fitness & Recreation', 'Demo Location LLC', now(), now()) ON CONFLICT (id) DO NOTHING;
 
--- Create the location state
+-- -- Create the location state
 INSERT INTO location_state (location_id, status, agree_to_terms, last_renewal_date, start_date, settings, usage_percent, tax_rate, created_at, updated_at)
-VALUES ('acc_BpT7jEb3Q16nOPL3vo7qlw', 'active', true, NOW(), NOW(), '{"theme": "default", "features": ["membership", "classes", "events"]}'::jsonb, 25, 8, NOW(), NOW()) ON CONFLICT (location_id) DO NOTHING;
+VALUES ('acc_BpT7jEb3Q16nOPL3vo7qlw', 'active', true, now(), now(), '{"theme": "default", "features": ["membership", "classes", "events"]}'::jsonb, 25, 8, now(), now()) ON CONFLICT (location_id) DO NOTHING;
 
 -- =========================================
 -- USERS (Base authentication users)

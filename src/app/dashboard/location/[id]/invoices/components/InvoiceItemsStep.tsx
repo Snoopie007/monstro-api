@@ -19,12 +19,16 @@ import {
 } from "@/libs/FormSchemas/CreateInvoiceSchema";
 import { PlusIcon, Trash2Icon, DollarSignIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import { usePastDueSubscriptions } from "@/hooks/usePastDueSubscriptions";
+import { formatAmountForDisplay } from "@/libs/utils";
 
 interface InvoiceItemsStepProps {
   form: UseFormReturn<CreateInvoiceFormData>;
   onNext: () => void;
   onBack: () => void;
   isLoading?: boolean;
+  locationId: string;
+  memberId: string | null;
 }
 
 export function InvoiceItemsStep({
@@ -32,6 +36,8 @@ export function InvoiceItemsStep({
   onNext,
   onBack,
   isLoading,
+  locationId,
+  memberId,
 }: InvoiceItemsStepProps) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -39,7 +45,20 @@ export function InvoiceItemsStep({
   });
 
   const watchedItems = form.watch("items");
+  const watchedType = form.watch("type");
+  const selectedSubscriptionId = form.watch("selectedSubscriptionId");
   const totalAmount = validateInvoiceTotal(watchedItems);
+
+  // Fetch past due subscriptions
+  const { pastDueSubscriptions } = usePastDueSubscriptions({
+    locationId,
+    memberId,
+  });
+
+  // Get the selected subscription if from-subscription type
+  const selectedSubscription = pastDueSubscriptions.find(
+    (sub) => sub.id === selectedSubscriptionId
+  );
 
   const addItem = () => {
     append({
@@ -58,7 +77,13 @@ export function InvoiceItemsStep({
   };
 
   const handleNext = () => {
-    // Validate current step fields
+    // Skip items validation for from-subscription type (items auto-populated by API)
+    if (watchedType === 'from-subscription') {
+      onNext();
+      return;
+    }
+
+    // Validate current step fields for other types
     form.trigger("items").then((isValid) => {
       if (isValid) {
         onNext();
@@ -66,8 +91,59 @@ export function InvoiceItemsStep({
     });
   };
 
+  // Show subscription details if from-subscription type
+  if (watchedType === "from-subscription" && selectedSubscription) {
+    return (
+      <div className="bg-muted/50 rounded-lg p-6 space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold">Subscription Details</h3>
+          <p className="text-sm text-muted-foreground mb-6">
+            Invoice items will be automatically generated from the selected subscription.
+          </p>
+        </div>
+
+        <Card className="border-foreground/10">
+          <CardHeader>
+            <CardTitle className="text-base">{selectedSubscription.plan?.name}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {selectedSubscription.plan?.description && (
+              <p className="text-sm text-muted-foreground">
+                {selectedSubscription.plan.description}
+              </p>
+            )}
+            <div className="flex justify-between items-center pt-3 border-t">
+              <span className="text-sm font-medium">Price:</span>
+              <span className="text-lg font-semibold">
+                {formatAmountForDisplay((selectedSubscription.plan?.price ?? 0) / 100, 'usd', true)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-sm text-muted-foreground">
+              <span>Billing Interval:</span>
+              <span>{selectedSubscription.plan?.interval}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-between pt-6">
+          <Button type="button" onClick={onBack}>
+            Back
+          </Button>
+          <Button
+            type="button"
+            onClick={handleNext}
+            disabled={isLoading}
+          >
+            {isLoading ? "Generating Preview..." : "Next: Preview Invoice"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show regular item entry for one-off and recurring invoices
   return (
-    <div className="space-y-6">
+    <div className="bg-muted/50 rounded-lg p-6 space-y-6">
       <div>
         <h3 className="text-lg font-semibold">Invoice Items</h3>
         <p className="text-sm text-muted-foreground mb-6">
@@ -81,7 +157,7 @@ export function InvoiceItemsStep({
           {fields.map((field, index) => (
             <Card
               key={field.id}
-              className="relative border-foreground/10 shadow-md rounded-md bg-foreground/15"
+              className="relative border-foreground/10 shadow-md rounded-md"
             >
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">

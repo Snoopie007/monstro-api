@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db/db";
-import { members } from "@/db/schemas";
+import { members, memberSubscriptions } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { getStripeCustomer } from "@/libs/server/stripe";
 
@@ -24,6 +24,12 @@ const PreviewInvoiceSchema = z.object({
     .min(1, "At least one item is required"),
 });
 
+// From-subscription preview schema
+const FromSubscriptionPreviewSchema = z.object({
+  type: z.literal('from-subscription'),
+  selectedSubscriptionId: z.string(),
+});
+
 export async function POST(
   req: NextRequest,
   props: { params: Promise<InvoiceProps> }
@@ -32,19 +38,125 @@ export async function POST(
 
   try {
     const body = await req.json();
+
+    // Handle from-subscription type
+    if (body.type === 'from-subscription') {
+      const { selectedSubscriptionId } = FromSubscriptionPreviewSchema.parse(body);
+      
+      // Fetch subscription with plan details
+      const subscription = await db.query.memberSubscriptions.findFirst({
+        where: eq(memberSubscriptions.id, selectedSubscriptionId),
+        with: { plan: true },
+      });
+
+      if (!subscription) {
+        return NextResponse.json(
+          { error: "Subscription not found" },
+          { status: 404 }
+        );
+      }
+
+      // Get member
+      const member = await db.query.members.findFirst({
+        where: eq(members.id, params.mid),
+      });
+
+      // Build preview from subscription plan
+      const subtotal = subscription.plan.price; // Already in cents
+      const tax = 0; // Can be calculated if needed
+      const discount = 0;
+      const amountDue = subtotal + tax - discount;
+
+      const formatted_lines = [{
+        description: `${subscription.plan.name}${subscription.plan.description ? ` - ${subscription.plan.description}` : ''}`,
+        amount: subscription.plan.price,
+        quantity: 1,
+        currency: subscription.plan.currency || "usd"
+      }];
+
+      return NextResponse.json({
+        success: true,
+        preview: {
+          subtotal,
+          tax_total: tax,
+          amount_due: amountDue,
+          currency: subscription.plan.currency || "usd",
+          formatted_lines,
+          customer_info: {
+            name: `${member?.firstName} ${member?.lastName}`,
+            email: member?.email
+          },
+          preview_metadata: {
+            generated_at: new Date().toISOString(),
+            items_count: 1,
+            type: "from-subscription",
+            subscription_id: subscription.id,
+            payment_method: subscription.paymentMethod
+          }
+        },
+        summary: {
+          total_items: 1,
+          subtotal_cents: subtotal,
+          tax_cents: tax,
+          discount_cents: discount,
+          total_cents: amountDue,
+          currency: subscription.plan.currency || "usd"
+        }
+      });
+    }
+
+    // Regular items-based preview
     const { items } = PreviewInvoiceSchema.parse(body);
     // Get member and validate Stripe customer
     const member = await db.query.members.findFirst({
       where: eq(members.id, params.mid),
     });
-
+    
     if (!member?.stripeCustomerId) {
-      return NextResponse.json(
-        {
-          error: "Member does not have a Stripe customer ID",
+      
+      // Calculate totals
+      const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const tax = body.tax || 0;
+      const discount = body.discount || 0;
+      const amountDue = subtotal + tax - discount;
+      
+      // Format line items
+      const formatted_lines = items.map(item => ({
+        description: `${item.name}${item.description ? ` - ${item.description}` : ''}`,
+        amount: item.price * item.quantity,
+        quantity: item.quantity,
+        currency: "usd"
+      }));
+      
+      // Build response matching Stripe structure
+      return NextResponse.json({
+        success: true,
+        preview: {
+          subtotal,
+          tax_total: tax,
+          amount_due: amountDue,
+          currency: "usd",
+          formatted_lines,
+          customer_info: {
+            name: `${member?.firstName} ${member?.lastName}`,
+            email: member?.email
+          },
+          preview_metadata: {
+            generated_at: new Date().toISOString(),
+            items_count: items.length,
+            type: "manual",
+            payment_method: body.paymentMethod || "cash"
+          }
         },
-        { status: 400 }
-      );
+        summary: {
+          total_items: items.length,
+          subtotal_cents: subtotal,
+          tax_cents: tax,
+          discount_cents: discount,
+          total_cents: amountDue,
+          currency: "usd"
+        }
+      });
     }
 
     // Get Stripe customer instance

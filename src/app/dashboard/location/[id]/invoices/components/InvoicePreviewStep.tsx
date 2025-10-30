@@ -41,10 +41,12 @@ export function InvoicePreviewStep({
 	memberName,
 }: InvoicePreviewStepProps) {
 	const formData = form.getValues();
-	const total = formData.items.reduce(
-		(sum, item) => sum + item.price * item.quantity,
-		0
-	);
+	
+	// For from-subscription type, use preview data totals (already in cents)
+	// For manual entry, calculate from items (in dollars, need to convert to cents)
+	const total = formData.type === 'from-subscription' && previewData
+		? previewData.amount_due / 100 // Convert from cents to dollars for display
+		: formData.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
 	const handleRefreshPreview = () => {
 		onPreview(formData);
@@ -55,7 +57,7 @@ export function InvoicePreviewStep({
 	};
 
 	return (
-		<div className="space-y-6">
+		<div className="bg-muted/50 rounded-lg p-6 space-y-6">
 			<div>
 				<h3 className="text-lg font-semibold mb-2">Invoice Preview</h3>
 				<p className="text-sm text-gray-600">
@@ -78,7 +80,7 @@ export function InvoicePreviewStep({
 			</div>
 
 			{/* Invoice Summary */}
-			<Card className="border-foreground/10 bg-foreground/10 rounded-md">
+			<Card className="border-foreground/10 rounded-md">
 				<CardHeader>
 					<CardTitle className="text-base flex items-center justify-between">
 						<span>Invoice Summary</span>
@@ -139,28 +141,50 @@ export function InvoicePreviewStep({
 							Line Items
 						</h4>
 						<div className="space-y-2">
-							{formData.items.map((item, index) => (
-								<div
-									key={item.id || index}
-									className="flex justify-between items-center p-3 bg-muted-foreground/10 rounded-lg"
-								>
-									<div className="flex-1">
-										<div className="font-medium">{item.name}</div>
-										{item.description && (
+							{formData.type === 'from-subscription' && previewData?.formatted_lines ? (
+								// Show items from preview data (already formatted, in cents)
+								previewData.formatted_lines.map((line: any, index: number) => (
+									<div
+										key={index}
+										className="flex justify-between items-center p-3 bg-muted-foreground/10 rounded-lg"
+									>
+										<div className="flex-1">
+											<div className="font-medium">{line.description}</div>
 											<div className="text-sm text-muted-foreground">
-												{item.description}
+												Qty: {line.quantity} ×{" "}
+												{formatInvoiceAmount(line.amount / line.quantity)}
 											</div>
-										)}
-										<div className="text-sm text-muted-foreground">
-											Qty: {item.quantity} ×{" "}
-											{formatInvoiceAmount(item.price * 100)}
+										</div>
+										<div className="font-medium">
+											{formatInvoiceAmount(line.amount)}
 										</div>
 									</div>
-									<div className="font-medium">
-										{formatInvoiceAmount(item.price * item.quantity * 100)}
+								))
+							) : (
+								// Show items from form (in dollars, convert to cents for display)
+								formData.items.map((item, index) => (
+									<div
+										key={item.id || index}
+										className="flex justify-between items-center p-3 bg-muted-foreground/10 rounded-lg"
+									>
+										<div className="flex-1">
+											<div className="font-medium">{item.name}</div>
+											{item.description && (
+												<div className="text-sm text-muted-foreground">
+													{item.description}
+												</div>
+											)}
+											<div className="text-sm text-muted-foreground">
+												Qty: {item.quantity} ×{" "}
+												{formatInvoiceAmount(item.price * 100)}
+											</div>
+										</div>
+										<div className="font-medium">
+											{formatInvoiceAmount(item.price * item.quantity * 100)}
+										</div>
 									</div>
-								</div>
-							))}
+								))
+							)}
 						</div>
 					</div>
 
@@ -219,11 +243,11 @@ export function InvoicePreviewStep({
 
 			{/* Stripe Preview Data */}
 			{previewData && (
-				<Card className="border-foreground/10 bg-foreground/10 rounded-md">
+				<Card className="border-foreground/10 rounded-md">
 					<CardHeader>
 						<CardTitle className="text-base flex items-center">
 							<FileText className="w-4 h-4 mr-2" />
-							Stripe Preview Data
+							Invoice Preview
 							{previewData.hosted_invoice_url && (
 								<Button
 									variant="outline"
@@ -250,7 +274,7 @@ export function InvoicePreviewStep({
 										<p className="font-mono text-xs">{previewData.id}</p>
 									</div>
 								)}
-								<div>
+								<div className="space-x-2">
 									<span className="font-medium text-muted-foreground">
 										Status:
 									</span>
@@ -348,26 +372,46 @@ export function InvoicePreviewStep({
 				</Card>
 			)}
 
-			{/* Info Notice */}
+			{/* Info Notice - Different for manual vs Stripe */}
+			{formData.paymentMethod === 'manual' ? (
 			<div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
 				<InfoIcon className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
 				<div className="text-sm text-blue-800">
-					<p className="font-medium mb-1">What happens next?</p>
-					<ul className="space-y-1 text-xs">
-						<li>• Your invoice will be created in Stripe</li>
-						<li>
-							• {memberName} will receive an email with payment instructions
-						</li>
-						<li>• You can track payment status in the invoices list</li>
-						{formData.type === "recurring" && (
-							<li>
-								• Recurring invoices will be automatically generated according
-								to your schedule
-							</li>
-						)}
-					</ul>
+				<p className="font-medium mb-1">What happens next?</p>
+				<ul className="space-y-1 text-xs">
+					<li>• Your invoice will be created as DRAFT</li>
+					<li>• Mark it as "Sent" when ready to collect payment</li>
+					<li>• Mark it as "Paid" when payment is received</li>
+					{formData.type === "recurring" && (
+					<li>
+						• You'll need to manually create invoices for future billing periods
+					</li>
+					)}
+				</ul>
 				</div>
 			</div>
+			) : (
+			// Original Stripe flow
+			<div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+				<InfoIcon className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+				<div className="text-sm text-blue-800">
+				<p className="font-medium mb-1">What happens next?</p>
+				<ul className="space-y-1 text-xs">
+					<li>• Your invoice will be created in Stripe</li>
+					<li>
+					• {memberName} will receive an email with payment instructions
+					</li>
+					<li>• You can track payment status in the invoices list</li>
+					{formData.type === "recurring" && (
+					<li>
+						• Recurring invoices will be automatically generated according
+						to your schedule
+					</li>
+					)}
+				</ul>
+				</div>
+			</div>
+			)}
 
 			{/* Action Buttons */}
 			<div className="flex justify-between pt-6">
@@ -375,12 +419,17 @@ export function InvoicePreviewStep({
 					Back
 				</Button>
 				<Button
-					onClick={handleCreateInvoice}
-					disabled={isCreating || isGeneratingPreview}
-					className="bg-blue-600 hover:bg-blue-700"
+				onClick={handleCreateInvoice}
+				disabled={isCreating || isGeneratingPreview}
+				className="bg-blue-600 hover:bg-blue-700"
 				>
-					<Send className="w-4 h-4 mr-2" />
-					{isCreating ? "Creating Invoice..." : "Create & Send Invoice"}
+				<Send className="w-4 h-4 mr-2" />
+				{isCreating 
+					? "Creating Invoice..." 
+					: formData.paymentMethod === 'cash' || formData.paymentMethod === 'manual'
+					? "Create Invoice"
+					: "Create & Send Invoice"
+				}
 				</Button>
 			</div>
 		</div>

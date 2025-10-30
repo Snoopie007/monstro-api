@@ -23,9 +23,6 @@ export const attendances = pgTable('check_ins', {
     macAddress: text('mac_address'),
     lat: integer('lat'),
     lng: integer('lng'),
-    
-    //     location_id text not null,
-    //   member_id text not null,
     locationId: text('location_id').references(() => locations.id),
     memberId: text('member_id').references(() => members.id),
     created: timestamp('created_at', { withTimezone: true })

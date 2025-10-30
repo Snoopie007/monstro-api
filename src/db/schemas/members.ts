@@ -215,6 +215,10 @@ export const memberInvoices = pgTable('member_invoices', {
     attemptCount: integer('attempt_count').notNull().default(0),
     invoicePdf: text('invoice_pdf'),
     status: InvoiceStatusEnum('status').notNull().default('draft'),
+    // Manual invoicing fields
+    paymentMethod: text('payment_method').notNull().default('stripe'),
+    invoiceType: text('invoice_type').notNull().default('one-off'),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
     created: timestamp('created_at', { withTimezone: true })
         .notNull()
         .defaultNow(),
@@ -293,19 +297,21 @@ export const memberFields = pgTable('member_fields', {
     updated: timestamp('updated_at', { withTimezone: true }),
 })
 
-export const memberCustomFields = pgTable('member_custom_fields', {
-    memberId: text('member_id')
-        .notNull()
-        .references(() => members.id, { onDelete: 'cascade' }),
-    customFieldId: text('custom_field_id')
-        .notNull()
-        .references(() => memberFields.id, { onDelete: 'cascade' }),
-    value: text('value').notNull(),
-    created: timestamp('created_at', { withTimezone: true })
-        .notNull()
-        .defaultNow(),
-    updated: timestamp('updated_at', { withTimezone: true }),
-},
+export const memberCustomFields = pgTable(
+    'member_custom_fields',
+    {
+        memberId: text('member_id')
+            .notNull()
+            .references(() => members.id, { onDelete: 'cascade' }),
+        customFieldId: text('custom_field_id')
+            .notNull()
+            .references(() => memberFields.id, { onDelete: 'cascade' }),
+        value: text('value').notNull(),
+        created: timestamp('created_at', { withTimezone: true })
+            .notNull()
+            .defaultNow(),
+        updated: timestamp('updated_at', { withTimezone: true }),
+    },
     (t) => [
         primaryKey({ columns: [t.memberId, t.customFieldId] }),
         unique('mcf_member_field_unique').on(t.memberId, t.customFieldId),
