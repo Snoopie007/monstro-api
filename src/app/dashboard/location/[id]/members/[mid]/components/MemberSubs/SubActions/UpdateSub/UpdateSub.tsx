@@ -32,6 +32,7 @@ const UpdateSubSchema = z.object({
 		"paypal",
 		"apple",
 		"google",
+		"manual",
 	]),
 	endAt: z.date().optional(),
 	paymentMethodId: z.string().optional(),
