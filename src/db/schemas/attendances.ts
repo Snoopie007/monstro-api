@@ -9,10 +9,7 @@ export const attendances = pgTable('check_ins', {
     reservationId: text('reservation_id').references(() => reservations.id, {
         onDelete: 'cascade',
     }),
-    recurringId: text('recurring_id').references(
-        () => recurringReservations.id,
-        { onDelete: 'cascade' }
-    ),
+    recurringId: text('recurring_id').references(() => recurringReservations.id, { onDelete: 'cascade' }),
     startTime: timestamp('start_time', { withTimezone: true }).notNull(),
     endTime: timestamp('end_time', { withTimezone: true }).notNull(),
     checkInTime: timestamp('check_in_time', { withTimezone: true })

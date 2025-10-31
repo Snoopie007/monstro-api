@@ -158,7 +158,7 @@ export default async function BillingPage(props: {
 							</DropdownMenuTrigger>
 							<DropdownMenuContent className="border-foreground/5">
 								<DropdownMenuItem>
-									<Link href={`/dashboard/locations/${params.id}/upgrade`}>
+									<Link href={`/dashboard/locations/upgrade/${params.id}/plans`}>
 										Change Plan
 									</Link>
 								</DropdownMenuItem>

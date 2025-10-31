@@ -2,15 +2,14 @@ import React from "react";
 import { auth } from "@/auth";
 import { VendorPlanBuilder } from "./components";
 import { redirect } from "next/navigation";
-import { NewLocationProvider } from "./provider/NewLocationContext";
+import { NewLocationProvider } from "./provider";
 import { admindb, db } from "@/db/db";
 import { getTOS } from "@/libs/server/MDXParse";
 import {
 	ScrollArea,
 } from "@/components/ui";
 import { MonstroPlan } from "@/types/admin";
-import { CompareTable } from "./components/Compare";
-import { FAQs } from "./components/FAQs";
+import { CompareTable, FAQs } from "../../components";
 
 
 async function getLocationState(lid: string) {

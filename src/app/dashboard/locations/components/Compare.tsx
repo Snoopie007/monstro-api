@@ -86,9 +86,7 @@ const Benefits = [
 export function CompareTable({ plans }: { plans: MonstroPlan[] }) {
     return (
         <div >
-            <div className=" font-semibold mb-2">Compare Features
-
-            </div>
+            <div className=" font-semibold mb-2">Compare Features </div>
             <div className="border border-foreground/10 rounded-lg overflow-hidden">
                 <Table className="min-w-full bg-background">
                     <TableHeader>

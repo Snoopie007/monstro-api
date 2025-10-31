@@ -19,7 +19,6 @@ export function LocationsNav() {
             </div>
             <div className="flex flex-row items-center gap-2">
                 <NovuInbox />
-                <SupportMenu />
                 <UserMenu />
             </div>
         </div>

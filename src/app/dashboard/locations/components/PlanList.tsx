@@ -1,8 +1,10 @@
 
 import { cn } from "@/libs/utils";
-import { useNewLocation } from "../provider";
 import { MonstroPlan } from "@/types/admin";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead, TooltipTrigger, Tooltip, TooltipContent } from "@/components/ui";
+import {
+    Table, TableHeader, TableBody, TableRow,
+    TableCell, TableHead, TooltipTrigger, Tooltip, TooltipContent
+} from "@/components/ui";
 import { InfoIcon } from "./Compare";
 
 
@@ -26,21 +28,23 @@ const FeesData = [
 
 const AdditionalFeesPlanNames = ["Free", " Start-up", "Growth"];
 
+interface PlanSelectorProps {
+    onSelect: (id: number) => void;
+    value: number | null;
+    plans: MonstroPlan[];
+    currentPlanId?: number | null;
+}
 
-export default function PlanList() {
-    const { locationState, updateLocationState, plans } = useNewLocation();
+export function PlanSelector({ onSelect, value, plans, currentPlanId }: PlanSelectorProps) {
 
     function isSelected(plan: MonstroPlan) {
-        return locationState.planId === plan.id;
+        return value === plan.id;
     }
 
 
 
     function handlePlanSelect(id: number) {
-        updateLocationState({
-            ...locationState,
-            planId: id
-        });
+        onSelect(id);
     };
 
 

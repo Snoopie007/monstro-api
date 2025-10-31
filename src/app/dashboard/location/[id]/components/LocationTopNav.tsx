@@ -4,14 +4,12 @@ import Image from 'next/image'
 
 import LocationSelect from './SelectLocation'
 import { NovuInbox, SupportMenu, UserMenu } from '@/components/navs'
-
+import { useAccountStatus } from '../providers'
 import React from 'react'
-import { usePathname } from 'next/navigation'
 
 export function LocationTopNav({ lid }: { lid?: string }) {
-    const pathname = usePathname()
-    const pathSegments = pathname.split('/').filter(Boolean)
 
+    const { locationState } = useAccountStatus()
     return (
         <div className=" w-full border-b border-foreground/10 py-2 px-3 flex flex-initial justify-between">
             <div className="flex flex-row items-center gap-2">
@@ -27,7 +25,7 @@ export function LocationTopNav({ lid }: { lid?: string }) {
             </div>
             <div className="flex flex-row items-center gap-2">
                 <NovuInbox />
-                <SupportMenu />
+                <SupportMenu locationState={locationState} />
                 <UserMenu />
             </div>
         </div>

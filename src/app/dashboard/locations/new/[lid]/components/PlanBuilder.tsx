@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { VendorPayment } from './VendorPayment'
 import { useState } from 'react'
 import { cn, sleep } from '@/libs/utils'
-import PlanList from './PlanList'
+import { PlanSelector } from '../../../components'
 import { Button } from '@/components/ui'
 import { Loader2 } from 'lucide-react'
 import { useNewLocation } from '../provider/NewLocationContext'
@@ -14,7 +14,7 @@ import { useNewLocation } from '../provider/NewLocationContext'
 export function VendorPlanBuilder({ lid }: { lid: string }) {
     const [step, setStep] = useState(1)
     const [loading, setLoading] = useState(false);
-    const { locationState } = useNewLocation()
+    const { locationState, updateLocationState, plans } = useNewLocation()
 
 
 
@@ -27,12 +27,19 @@ export function VendorPlanBuilder({ lid }: { lid: string }) {
 
     }
 
+    function handlePlanSelect(id: number) {
+        updateLocationState({
+            ...locationState,
+            planId: id
+        });
+    }
+
     return (
         <div className="py-4">
 
             <AnimatedSection className={cn("space-y-2", { hidden: step !== 1 })}>
                 <div className="text-lg font-semibold">Select your plan</div>
-                <PlanList />
+                <PlanSelector onSelect={handlePlanSelect} value={locationState.planId} plans={plans} />
 
                 <div className="flex flex-row justify-end">
 

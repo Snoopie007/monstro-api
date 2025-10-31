@@ -53,7 +53,7 @@ export function NovuInbox() {
                     },
                 },
                 icons: {
-                    bell: () => <InboxIcon size={14} />,
+                    bell: () => <InboxIcon size={16} />,
                 },
                 ...(theme === 'dark' ? darkAppearance : lightAppearance),
             }}
