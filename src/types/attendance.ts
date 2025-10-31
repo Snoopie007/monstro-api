@@ -10,6 +10,7 @@ import { Member, MemberPackage } from "./member";
 export type Attendance = typeof attendances.$inferSelect & {
   recurring?: RecurringReservation;
   reservation?: Reservation;
+  programName?: string;
 };
 
 export type ExtendedAttendance = Attendance & {
@@ -39,19 +40,19 @@ export type RecurringReservationException =
   };
 
 export type CalendarEvent = {
-    id: string;
-    title: string;
-    end: Date;
-    duration: number;
-    start: Date;
-    data: CalendarEventData;
-    staff: CalendarEventStaff;
+  id: string;
+  title: string;
+  end: Date;
+  duration: number;
+  start: Date;
+  data: CalendarEventData;
+  staff: CalendarEventStaff;
 };
 
 export type CalendarEventStaff = {
-    id: string;
-    name: string;
-    avatar?: string | null;
+  id: string;
+  name: string;
+  avatar?: string | null;
 };
 
 export type CalendarEventData = {
