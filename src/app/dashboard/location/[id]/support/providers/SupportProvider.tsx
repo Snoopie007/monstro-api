@@ -19,7 +19,7 @@ enum ActionType {
 type StateType = {
     current: SupportConversation | null
     conversations: SupportConversation[]
-    assistant: SupportAssistant
+    assistant: SupportAssistant | null
 }
 
 const initState: StateType = {
@@ -106,15 +106,15 @@ export const SupportContext = createContext<SupportContextType>({
 
 interface SupportProviderProps {
     children: ReactNode
-    assistant: SupportAssistant
+    assistant: SupportAssistant | null
 }
 
 export function SupportProvider({ children, assistant }: SupportProviderProps) {
-
-    const currentConversation = assistant.conversations && assistant.conversations ? assistant.conversations[0] : null;
+    const conversations = assistant && assistant.conversations || [];
+    const currentConversation = conversations && conversations.length > 0 ? conversations[0] : null;
     const context = SupportContextReturns({
         current: currentConversation,
-        conversations: assistant.conversations || [],
+        conversations: conversations,
         assistant: assistant
     });
 

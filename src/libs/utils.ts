@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 import { ExtendedAttendance, Member } from "@/types";
 import { decodeJwt } from "jose";
 import { addDays, subDays } from "date-fns";
+import { DEFAULT_SUPPORT_TOOLS } from "./SupportDefaults";
 
 export function stringToTime(time: string) {
     return new Time(parseInt(time.split(":")[0]), parseInt(time.split(":")[1]));
@@ -328,3 +329,24 @@ export {
 //   });
 //   return z.NEVER;
 // });
+
+
+export function getDefaultAssistantSettings() {
+    return {
+        prompt: 'You are a helpful customer support assistant for our fitness center. friendly and professional.',
+        initialMessage: "Hi! 👋 I'm your support assistant. How can I help you today.",
+        temperature: '0.7',
+        model: 'gpt' as const,
+        persona: {
+            avatar: 'https://randomuser.me/api/portraits/lego/4.jpg',
+            responseStyle: 'Respond in a friendly manner',
+            personality: ['friendly', 'informative', 'professional'],
+        },
+        triggers: [],
+        knowledgeBase: {
+            qa_entries: [],
+            document: null,
+        },
+        availableTools: DEFAULT_SUPPORT_TOOLS,
+    }
+}

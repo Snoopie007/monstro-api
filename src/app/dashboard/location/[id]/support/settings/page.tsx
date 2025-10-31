@@ -1,10 +1,7 @@
 import { db } from "@/db/db";
-import { BotSettings, TestChatBox } from "./components";
-import {  redirect } from "next/navigation.js";
-import { BotSettingProvider } from "./provider";
+import { SupportBotSettingsClient } from "./client";
 
 async function getAssistant(lid: string) {
-
 	try {
 		const assistant = await db.query.supportAssistants.findFirst({
 			where: (assistant, { eq }) => eq(assistant.locationId, lid),
@@ -24,20 +21,8 @@ export default async function SupportBotSettingsPage(props: {
 }) {
 	const params = await props.params;
 	const assistant = await getAssistant(params.id);
-
-	if (!assistant) {
-		redirect(`/dashboard/location/${params.id}/support`);
-	}
+	
 	return (
-		<div className="flex flex-row h-[calc(100vh-58px)] p-2 gap-2 overflow-hidden">
-			<BotSettingProvider assistant={assistant}>
-				<div className="w-1/3 min-w-0">
-					<BotSettings lid={params.id} />
-				</div>
-				<div className="w-2/3 min-w-0">
-					<TestChatBox lid={params.id} />
-				</div>
-			</BotSettingProvider>
-		</div>
+		<SupportBotSettingsClient lid={params.id} assistant={assistant} />
 	);
 }

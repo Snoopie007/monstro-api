@@ -19,15 +19,19 @@ import {
     DropdownMenuItem,
 } from '@/components/ui'
 import { Input } from '@/components/forms'
-import { RefreshCw, MoreHorizontal, Settings } from 'lucide-react'
+import { RefreshCw, Settings } from 'lucide-react'
 import { SupportConversation, SupportConversationStatus } from '@/types/'
 import { formatDistance } from 'date-fns'
 import { useSupport } from '../providers'
 import { cn } from '@/libs/utils'
 import Link from 'next/link'
+import { useAccountStatus } from '../../providers'
+import { EmptySupportAssistant } from './EmptyAssistant'
 
 export function SupportList({ lid }: { lid: string }) {
-    const { conversations, current } = useSupport()
+    const { conversations, current, assistant } = useSupport()
+    const { locationState } = useAccountStatus()
+    const isFreePlan = locationState?.planId === 1;
     const [status, setStatus] = useState<SupportConversationStatus>('open')
     const [search, setSearch] = useState<string>('')
 
@@ -175,7 +179,7 @@ export function SupportList({ lid }: { lid: string }) {
                 {!isLoading && (
                     <ScrollArea className="px-2">
                         {filteredConversations.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
+                            <div className="text-center pt-8 text-muted-foreground">
                                 <p>No conversations yet</p>
                             </div>
                         ) : (
@@ -190,6 +194,9 @@ export function SupportList({ lid }: { lid: string }) {
                             </div>
                         )}
                     </ScrollArea>
+                )}
+                {!assistant && !isFreePlan && (
+                    <EmptySupportAssistant lid={lid} />
                 )}
             </div>
         </div>
