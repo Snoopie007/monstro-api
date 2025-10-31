@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid'
 import React, { FormEvent, useRef, useState } from 'react'
 import { useBotSettingContext } from '../../provider'
 import { useSession } from 'next-auth/react'
+import { useAccountStatus } from '../../../../providers'
 
 interface TestChatInputProps {
     lid: string
@@ -16,6 +17,8 @@ export function TestChatInput({ lid }: TestChatInputProps) {
 
     const btnRef = useRef<HTMLButtonElement>(null)
     const [input, setInput] = useState('')
+    const { locationState } = useAccountStatus();
+    const isFreePlan = locationState?.planId === 1;
     const { messages, setMessage, assistant, member } = useBotSettingContext()
     const [isStreaming, setIsStreaming] = useState(false)
 
@@ -180,7 +183,7 @@ export function TestChatInput({ lid }: TestChatInputProps) {
                         placeholder={!member || isStreaming ? "Select a member to start chatting" : "Type your message here..."}
                         onChange={(e) => setInput(e.target.value)}
                         className="w-full  resize-none  focus-visible:outline-none p-4"
-                        disabled={!member || isStreaming}
+                        disabled={!member || isStreaming || isFreePlan}
                     />
                     <div className=" flex flex-row gap-2 justify-end p-2">
                         <Button
@@ -188,7 +191,7 @@ export function TestChatInput({ lid }: TestChatInputProps) {
                             ref={btnRef}
                             variant="foreground"
                             size="sm"
-                            disabled={!member || isStreaming}
+                            disabled={!member || isStreaming || isFreePlan}
                         >
                             <span>{isStreaming ? 'Sending...' : 'Send'}</span>
                         </Button>

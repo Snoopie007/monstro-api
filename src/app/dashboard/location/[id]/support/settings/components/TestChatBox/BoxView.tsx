@@ -6,12 +6,16 @@ import { Brush, Loader2, BrushCleaning } from "lucide-react";
 import { TestChatMessages, TestChatInput } from "."
 import { useBotSettingContext } from "../../provider";
 import { MemberSelect } from "./MemberSelect";
+import { useAccountStatus } from "../../../../providers";
 
 
 
 export function TestChatBox({ lid }: { lid: string }) {
     const { assistant, member, setMessage } = useBotSettingContext();
     const [loading, setLoading] = useState(false);
+    const { locationState } = useAccountStatus();
+    const isFreePlan = locationState?.planId === 1;
+
     useEffect(() => {
         if (!assistant?.initialMessage) return;
 
@@ -59,7 +63,7 @@ export function TestChatBox({ lid }: { lid: string }) {
                 </div>
                 <div className="flex flex-row gap-2">
                     <MemberSelect lid={lid} />
-                    <Button variant={'ghost'} size={'icon'} className='size-6 hover:bg-foreground/10'
+                    <Button variant={'ghost'} size={'icon'} className='size-6 hover:bg-foreground/10' disabled={isFreePlan}
                         onClick={resetChat}
                     >
 

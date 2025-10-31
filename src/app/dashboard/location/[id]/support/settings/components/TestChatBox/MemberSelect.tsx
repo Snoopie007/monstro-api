@@ -13,11 +13,14 @@ import { toast } from 'react-toastify'
 import { Input } from '@/components/forms'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useBotSettingContext } from '../../provider'
+import { useAccountStatus } from '../../../../providers'
 
 export function MemberSelect({ lid }: { lid: string }) {
     const [open, setOpen] = useState(false)
     const [members, setMembers] = useState<Member[]>([])
     const { member, setMember } = useBotSettingContext()
+    const { locationState } = useAccountStatus();
+    const isFreePlan = locationState?.planId === 1;
 
     const [loading, setLoading] = useState(false)
     const [search, setSearch] = useState('')
@@ -67,6 +70,7 @@ export function MemberSelect({ lid }: { lid: string }) {
                     variant="ghost"
                     size={'xs'}
                     className="flex flex-row items-center justify-between gap-2 hover:bg-foreground/5 rounded-md w-[160px]"
+                    disabled={isFreePlan}
                 >
                     <div className="flex flex-row items-center gap-1">
                         <User className="size-3.5" />

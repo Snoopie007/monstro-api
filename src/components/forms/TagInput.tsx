@@ -3,6 +3,7 @@ import { ScrollArea } from "@/components/ui/ScrollArea";
 import { cn } from "@/libs/utils";
 import { XIcon } from "lucide-react";
 import { ChangeEvent, KeyboardEvent, useCallback, useRef, useState } from "react";
+import { Skeleton } from "../ui";
 
 interface TagInputProps {
     list: string[];
@@ -10,9 +11,10 @@ interface TagInputProps {
     placeholder?: string;
     onChange: (tags: string[]) => void;
     className?: string;
+    disabled?: boolean;
 }
 
-export function InputTags({ value, list, onChange, placeholder = "Type to add tags...", className }: TagInputProps) {
+export function InputTags({ value, list, onChange, placeholder = "Type to add tags...", className, disabled }: TagInputProps) {
     const [input, setInput] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -57,11 +59,11 @@ export function InputTags({ value, list, onChange, placeholder = "Type to add ta
                                 className="flex flex-row gap-1 items-center bg-indigo-500 text-white px-2 text-[0.8rem] font-medium py-1 rounded-sm"
                             >
                                 <span>{item}</span>
-                                <XIcon
+                                {!disabled && <XIcon
                                     className="cursor-pointer hover:opacity-80"
                                     size={14}
                                     onClick={() => handleRemove(item)}
-                                />
+                                />}
                             </li>
                         ))}
                     </ul>
@@ -75,6 +77,7 @@ export function InputTags({ value, list, onChange, placeholder = "Type to add ta
                         onKeyUp={handleEnter}
                         className="border-none placeholder:text-sm w-full bg-transparent py-2 px-1 focus:outline-none focus-visible:ring-0 focus:ring-0"
                         placeholder={placeholder}
+                        disabled={disabled}
                     />
                 </div>
             </div>
