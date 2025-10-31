@@ -1,25 +1,25 @@
 import {
-  Button,
-  DialogBody,
-  DialogClose,
-  DialogFooter,
-  Switch,
+	Button,
+	DialogBody,
+	DialogClose,
+	DialogFooter,
+	Switch,
 } from "@/components/ui";
 
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormMessage,
-  FormItem,
-  FormLabel,
-  FormDescription,
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-  Input,
+	Form,
+	FormControl,
+	FormField,
+	FormMessage,
+	FormItem,
+	FormLabel,
+	FormDescription,
+	Select,
+	SelectTrigger,
+	SelectValue,
+	SelectContent,
+	SelectItem,
+	Input,
 } from "@/components/forms";
 import { cn, tryCatch } from "@/libs/utils";
 import { z } from "zod";
@@ -30,395 +30,339 @@ import { CreateMemberSchema } from "../../schema";
 import PhoneInput from "react-phone-number-input/input";
 import { CountryCodes } from "@/libs/data";
 import { CountryCode, Member } from "@/types";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui";
+import { Avatar, AvatarImage } from "@/components/ui";
 
-import useSWR from "swr";
 import { toast } from "react-toastify";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BirthdayField } from "./DOBField";
 import { Loader2 } from "lucide-react";
-import { CustomFieldInput } from "@/app/dashboard/location/[id]/members/[mid]/components/CustomFields";
-import { useCustomFields } from "@/hooks";
 
 export function CreateMemberForm({ lid }: { lid: string }) {
-  const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
-  const { mutate } = useSWR(`/api/protected/members`);
-  const [existingMember, setExistingMember] = useState<Member | undefined>(
-    undefined
-  );
-  const [member, setMember] = useState<Member | undefined>(undefined);
-  const [loading, setLoading] = useState(false);
-  const [invite, setInvite] = useState(false);
-  const [retry, setRetry] = useState(false);
-  const router = useRouter();
+	const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
+	const [existingMember, setExistingMember] = useState<Member | undefined>(
+		undefined
+	);
+	const [member, setMember] = useState<Member | undefined>(undefined);
+	const [loading, setLoading] = useState(false);
+	const [invite, setInvite] = useState(false);
+	const [retry, setRetry] = useState(false);
+	const router = useRouter();
 
-  // Custom fields hook
-  const {
-    fields: customFields,
-    values: customFieldValues,
-    isLoading: customFieldsLoading,
-    updateFieldValue,
-    saveCustomFields,
-    resetValues,
-  } = useCustomFields({ locationId: lid });
 
-  const form = useForm<z.infer<typeof CreateMemberSchema>>({
-    resolver: zodResolver(CreateMemberSchema),
-    defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      dob: undefined,
-      gender: undefined,
-    },
-    mode: "onSubmit",
-  });
 
-  async function onSubmit(v: z.infer<typeof CreateMemberSchema>) {
-    setLoading(true);
-    const { result, error } = await tryCatch(
-      fetch(`/api/protected/loc/${lid}/members`, {
-        method: "POST",
-        body: JSON.stringify({
-          ...v,
-        }),
-      })
-    );
+	const form = useForm<z.infer<typeof CreateMemberSchema>>({
+		resolver: zodResolver(CreateMemberSchema),
+		defaultValues: {
+			firstName: "",
+			lastName: "",
+			email: "",
+			phone: "",
+			dob: undefined,
+			gender: undefined,
+		},
+		mode: "onSubmit",
+	});
 
-    if (error || !result || !result.ok) {
-      toast.error("Something went wrong. Please try again.");
-      return;
-    }
+	async function onSubmit(v: z.infer<typeof CreateMemberSchema>) {
+		setLoading(true);
+		const { result, error } = await tryCatch(
+			fetch(`/api/protected/loc/${lid}/members`, {
+				method: "POST",
+				body: JSON.stringify({
+					...v,
+				}),
+			})
+		);
 
-    const { existing, member: m } = await result.json();
+		if (error || !result || !result.ok) {
+			toast.error("Something went wrong. Please try again.");
+			return;
+		}
 
-    setMember(m);
-    if (existing) {
-      setExistingMember(m);
-      setLoading(false);
-      return;
-    }
+		const { existing, member: m } = await result.json();
 
-    // Save custom fields for the new member
-    const customFieldsSaved = await saveCustomFields(m.id);
-    if (!customFieldsSaved) {
-      // Custom fields failed to save, but member was created
-      toast.warning(
-        "Member created but custom fields failed to save. You can edit them later."
-      );
-    }
+		setMember(m);
+		if (existing) {
+			setExistingMember(m);
+			setLoading(false);
+			return;
+		}
 
-    if (invite) {
-      await sendInvite(m);
-    }
-    setLoading(false);
-    router.push(`/dashboard/location/${lid}/members/${m.id}`);
-  }
 
-  async function sendInvite(m: Member | undefined) {
-    if (!m) return;
-    const { result, error } = await tryCatch(
-      fetch(`/api/protected/loc/${lid}/members/${m.id}/invite`, {
-        method: "POST",
-      })
-    );
-    if (error || !result || !result.ok) {
-      toast.error("Uh oh, we failed to send the invite. Please try again.");
-      setRetry(true);
-      return;
-    }
-    if (retry) {
-      toast.success("Invite sent successfully.");
-      router.push(`/dashboard/location/${lid}/members/${m.id}`);
-    }
-  }
+		if (invite) {
+			await sendInvite(m);
+		}
+		setLoading(false);
+		router.push(`/dashboard/location/${lid}/members/${m.id}`);
+	}
 
-  return (
-    <>
-      <DialogBody>
-        <div>
-          {existingMember && member && (
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <p className="text-base text-foreground font-medium">
-                  This member already exists.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  To add subscription or packages to this member, please go to
-                  the{" "}
-                  <Link
-                    href={`/dashboard/${lid}/members/${member?.id}`}
-                    className="text-indigo-400 underline"
-                  >
-                    member profile
-                  </Link>
-                </p>
-              </div>
-              <div className="flex flex-row gap-4 items-center border border-indigo-500 rounded-sm px-4 py-3">
-                <div>
-                  <Avatar className="w-[35px] h-[35px] rounded-full mx-auto">
-                    <AvatarImage src={member?.avatar || ""} />
-                    <AvatarFallback className="text-sm uppercase text-muted bg-foreground font-medium ">
-                      {member?.firstName?.charAt(0)}
-                      {member?.lastName?.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-                <div className="flex flex-col ">
-                  <p className="text-sm font-medium leading-none">
-                    {member?.firstName} {member?.lastName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {member?.email}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          {!existingMember && (
-            <Form {...form}>
-              <form className="space-y-3">
-                <fieldset className="flex flex-row items-center gap-2">
-                  <FormField
-                    control={form.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormLabel size="tiny">First Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            placeholder="First Name"
-                            {...field}
-                            className="border-foreground/10"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormLabel size="tiny">Last Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            placeholder="Last Name"
-                            {...field}
-                            className="border-foreground/10"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </fieldset>
-                <fieldset className="flex flex-row items-center gap-2">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel size="tiny">Email</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="Email"
-                            {...field}
-                            className="border-foreground/10"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="flex-1  justify-center ">
-                    <FormLabel size="tiny">Phone</FormLabel>
-                    <div className="flex flex-row gap-1">
-                      <Select
-                        onValueChange={(value: string) => {
-                          setPhoneRegion(value as CountryCode);
-                        }}
-                        defaultValue={phoneRegion}
-                      >
-                        <SelectTrigger className="rounded-sm w-[30%] h-auto border-foreground/10">
-                          <SelectValue defaultValue={"US"} />
-                        </SelectTrigger>
+	async function sendInvite(m: Member | undefined) {
+		if (!m) return;
+		const { result, error } = await tryCatch(
+			fetch(`/api/protected/loc/${lid}/members/${m.id}/invite`, {
+				method: "POST",
+			})
+		);
+		if (error || !result || !result.ok) {
+			toast.error("Uh oh, we failed to send the invite. Please try again.");
+			setRetry(true);
+			return;
+		}
+		if (retry) {
+			toast.success("Invite sent successfully.");
+			router.push(`/dashboard/location/${lid}/members/${m.id}`);
+		}
+	}
 
-                        <SelectContent>
-                          {CountryCodes.map((country, index) => (
-                            <SelectItem key={index} value={country.code}>
-                              {country.shortName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field: { onChange, value } }) => (
-                          <FormItem className="flex-1">
-                            <FormControl>
-                              <PhoneInput
-                                type="tel"
-                                className="rounded-sm bg-background inline-block w-full border px-4 h-10 border-foreground/10"
-                                value={value}
-                                withCountryCallingCode={true}
-                                international={true}
-                                country={phoneRegion}
-                                onChange={onChange}
-                              />
-                            </FormControl>
+	return (
+		<>
+			<DialogBody>
+				<div>
+					{existingMember && member && (
+						<div className="space-y-3">
+							<div className="space-y-1">
+								<p className="text-base text-foreground font-medium">
+									This member already exists.
+								</p>
+								<p className="text-sm text-muted-foreground">
+									To add subscription or packages to this member, please go to
+									the{" "}
+									<Link href={`/dashboard/${lid}/members/${member?.id}`}
+										className="text-indigo-400 underline"
+									>
+										member profile
+									</Link>
+								</p>
+							</div>
+							<div className="flex flex-row gap-4 items-center border border-indigo-500 rounded-sm px-4 py-3">
+								<div>
+									<Avatar className="w-[35px] h-[35px] rounded-full mx-auto">
+										<AvatarImage src={member?.avatar || '/images/default-avatar.png'} />
 
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                </fieldset>
-                <fieldset>
-                  <div className="flex flex-row items-start gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
-                    <div className="mt-1.5">
-                      <Switch checked={invite} onCheckedChange={setInvite} />
-                    </div>
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-sm font-medium">
-                        Send Email Invite
-                      </FormLabel>
-                      <FormDescription className="text-xs">
-                        An email will be sent to the member to complete their
-                        account setup.
-                      </FormDescription>
-                    </div>
-                  </div>
-                </fieldset>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground uppercase ">
-                    Optional
-                  </p>
-                  <fieldset className="grid grid-cols-5 gap-2 bg-foreground/10 px-3 py-2 rounded-sm">
-                    <FormField
-                      control={form.control}
-                      name="gender"
-                      render={({ field }) => (
-                        <FormItem className="col-span-2">
-                          <FormLabel size="tiny">Gender</FormLabel>
-                          <FormControl>
-                            <Select
-                              value={field.value}
-                              onValueChange={field.onChange}
-                            >
-                              <SelectTrigger className="w-full py-2 px-3 border border-foreground/10 rounded-sm focus:outline-none focus:ring focus:border-blue-300">
-                                <SelectValue placeholder="Gender" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {["Male", "Female"].map((gender, index) => (
-                                  <SelectItem key={index} value={gender}>
-                                    {gender}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="dob"
-                      render={({ field }) => (
-                        <FormItem className="col-span-3">
-                          <FormLabel size="tiny">Date of Birth</FormLabel>
-                          <BirthdayField
-                            value={field.value}
-                            onChange={field.onChange}
-                          />
-                        </FormItem>
-                      )}
-                    />
-                  </fieldset>
-                </div>
+									</Avatar>
+								</div>
+								<div className="flex flex-col ">
+									<p className="text-sm font-medium leading-none">
+										{member?.firstName} {member?.lastName}
+									</p>
+									<p className="text-xs text-muted-foreground">
+										{member?.email}
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
+					{!existingMember && (
+						<Form {...form}>
+							<form className="space-y-3">
+								<fieldset className="flex flex-row items-center gap-2">
+									<FormField
+										control={form.control}
+										name="firstName"
+										render={({ field }) => (
+											<FormItem className="flex-1">
+												<FormLabel size="tiny">First Name</FormLabel>
+												<FormControl>
+													<Input
+														type="text"
+														placeholder="First Name"
+														{...field}
+													/>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+									<FormField
+										control={form.control}
+										name="lastName"
+										render={({ field }) => (
+											<FormItem className="flex-1">
+												<FormLabel size="tiny">Last Name</FormLabel>
+												<FormControl>
+													<Input
+														type="text"
+														placeholder="Last Name"
+														{...field}
+													/>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								</fieldset>
 
-                {/* Custom Fields Section */}
-                {!customFieldsLoading && customFields.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase">
-                      Custom Fields
-                    </p>
-                    <fieldset className="bg-foreground/10 px-3 py-2 rounded-sm space-y-3">
-                      {customFields.map((field) => (
-                        <div key={field.id} className="space-y-1">
-                          <CustomFieldInput
-                            field={field}
-                            value={customFieldValues[field.id] || ""}
-                            onChange={(value) =>
-                              updateFieldValue(field.id, value)
-                            }
-                            disabled={loading}
-                          />
-                        </div>
-                      ))}
-                    </fieldset>
-                  </div>
-                )}
-              </form>
-            </Form>
-          )}
-        </div>
-      </DialogBody>
-      <DialogFooter>
-        <DialogClose asChild>
-          <Button
-            variant={"outline"}
-            size={"sm"}
-            className="border-foreground/10"
-          >
-            Cancel
-          </Button>
-        </DialogClose>
-        {!existingMember && !retry && (
-          <DialogClose asChild>
-            <Button
-              variant={"foreground"}
-              size={"sm"}
-              disabled={
-                loading ||
-                form.formState.isSubmitting ||
-                !form.formState.isValid
-              }
-              onClick={form.handleSubmit(onSubmit)}
-              className={cn(
-                "children:hidden",
-                loading && "children:inline-block"
-              )}
-            >
-              <Loader2 className="mr-2  animate-spin size-3.5" />
-              Create Account
-            </Button>
-          </DialogClose>
-        )}
-        {retry && (
-          <Button
-            variant={"continue"}
-            size={"sm"}
-            onClick={() => sendInvite(member)}
-            className={cn(
-              "children:hidden",
-              loading && "children:inline-block"
-            )}
-            disabled={loading}
-          >
-            <Loader2 className="mr-2  animate-spin size-3.5" />
-            Retry
-          </Button>
-        )}
-      </DialogFooter>
-    </>
-  );
+								<fieldset>
+									<FormField
+										control={form.control}
+										name="email"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel size="tiny">Email</FormLabel>
+												<FormControl>
+													<Input
+														type="email"
+														placeholder="Email"
+														{...field}
+													/>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								</fieldset>
+								<fieldset >
+									<FormLabel size="tiny">Phone</FormLabel>
+									<div className="flex flex-row gap-1">
+										<Select
+											onValueChange={(value: string) => {
+												setPhoneRegion(value as CountryCode);
+											}}
+											defaultValue={phoneRegion}
+										>
+											<SelectTrigger className=" w-[100px] ">
+												<SelectValue defaultValue={"US"} />
+											</SelectTrigger>
+
+											<SelectContent>
+												{CountryCodes.map((country, index) => (
+													<SelectItem key={index} value={country.code}>
+														{country.shortName}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										<FormField
+											control={form.control}
+											name="phone"
+											render={({ field: { onChange, value } }) => (
+												<FormItem className="flex-1">
+													<FormControl>
+														<PhoneInput
+															type="tel"
+															className="rounded-lg bg-background inline-block w-full border px-4 h-12 border-foreground/10"
+															value={value}
+															withCountryCallingCode={true}
+															international={true}
+															country={phoneRegion}
+															onChange={onChange}
+														/>
+													</FormControl>
+
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+									</div>
+								</fieldset>
+								<fieldset>
+									<div className="flex flex-row items-start gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
+										<div className="mt-1.5">
+											<Switch checked={invite} onCheckedChange={setInvite} />
+										</div>
+										<div className="space-y-0.5">
+											<FormLabel className="text-sm font-medium">
+												Send Email Invite
+											</FormLabel>
+											<FormDescription className="text-xs">
+												An email will be sent to the member to complete their
+												account setup.
+											</FormDescription>
+										</div>
+									</div>
+								</fieldset>
+								<div className="space-y-1">
+									<p className="text-xs text-muted-foreground uppercase ">
+										Optional
+									</p>
+									<fieldset className="grid grid-cols-5 gap-2 bg-foreground/10 px-3 py-2 rounded-sm">
+										<FormField
+											control={form.control}
+											name="gender"
+											render={({ field }) => (
+												<FormItem className="col-span-2">
+													<FormLabel size="tiny">Gender</FormLabel>
+													<FormControl>
+														<Select
+															value={field.value}
+															onValueChange={field.onChange}
+														>
+															<SelectTrigger className="w-full py-2 px-3 ">
+																<SelectValue placeholder="Gender" />
+															</SelectTrigger>
+															<SelectContent>
+																{["Male", "Female"].map((gender, index) => (
+																	<SelectItem key={index} value={gender}>
+																		{gender}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="dob"
+											render={({ field }) => (
+												<FormItem className="col-span-3">
+													<FormLabel size="tiny">Date of Birth</FormLabel>
+													<BirthdayField
+														value={field.value}
+														onChange={field.onChange}
+													/>
+												</FormItem>
+											)}
+										/>
+									</fieldset>
+								</div>
+
+
+							</form>
+						</Form>
+					)}
+				</div>
+			</DialogBody>
+			<DialogFooter>
+				<DialogClose asChild>
+					<Button
+						variant={"outline"}
+
+						className="border-foreground/10"
+					>
+						Cancel
+					</Button>
+				</DialogClose>
+				{!existingMember && !retry && (
+					<DialogClose asChild>
+						<Button
+							variant={"foreground"}
+
+							disabled={
+								loading ||
+								form.formState.isSubmitting ||
+								!form.formState.isValid
+							}
+							onClick={form.handleSubmit(onSubmit)}
+
+						>
+							{loading ? <Loader2 className=" animate-spin size4" /> : "Create Account"}
+
+						</Button>
+					</DialogClose>
+				)}
+				{retry && (
+					<Button
+						variant={"continue"}
+						onClick={() => sendInvite(member)}
+						disabled={loading}
+					>
+						{loading ? <Loader2 className=" animate-spin size4" /> : "Retry"}
+					</Button>
+				)}
+			</DialogFooter>
+		</>
+	);
 }

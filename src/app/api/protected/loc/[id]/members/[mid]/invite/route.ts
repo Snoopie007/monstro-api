@@ -14,7 +14,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     try {
 
         const ml = await db.query.memberLocations.findFirst({
-            where: (memberLocations, { eq, and }) => and(eq(memberLocations.memberId, params.mid), eq(memberLocations.locationId, params.id)),
+            where: (memberLocations, { eq, and }) => and(
+                eq(memberLocations.memberId, params.mid),
+                eq(memberLocations.locationId, params.id)
+            ),
             with: {
                 member: true,
                 location: true

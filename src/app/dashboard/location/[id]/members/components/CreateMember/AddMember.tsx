@@ -41,7 +41,7 @@ export function AddMember({ lid, stripeKey }: CreateMemberProps) {
                 </Button>
             </DialogTrigger>
 
-            <DialogContent className="max-w-lg border-foreground/10" aria-modal>
+            <DialogContent className="max-w-xl border-foreground/10" aria-modal>
                 <VisuallyHidden>
                     <DialogTitle></DialogTitle>
                 </VisuallyHidden>

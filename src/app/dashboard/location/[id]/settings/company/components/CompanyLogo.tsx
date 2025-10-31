@@ -2,7 +2,7 @@
 import { CameraIcon, Loader2, Trash2 } from "lucide-react";
 import React, { useRef, useState } from "react";
 import Image from "next/image";
-import { Button, Card, CardFooter } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 

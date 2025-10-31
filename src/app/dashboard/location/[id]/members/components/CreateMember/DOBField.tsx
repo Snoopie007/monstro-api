@@ -19,7 +19,7 @@ export function BirthdayField({ value, onChange }: BirthdayFieldProps) {
                 <FormControl>
                     <Button
                         variant={"outline"}
-                        className={cn("w-full flex items-center justify-between text-left font-normal rounded-md border-foreground/10",
+                        className={cn("w-full h-12 flex items-center justify-between text-left font-normal rounded-lg border-foreground/10",
                             !value && "text-muted-foreground"
                         )}
                     >
