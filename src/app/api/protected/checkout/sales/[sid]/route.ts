@@ -4,7 +4,7 @@ import { admindb, db } from '@/db/db';
 import { locations, locationState, wallets } from '@/db/schemas';
 import { MonstroPlan } from '@/types/admin';
 import { VendorStripePayments } from '@/libs/server/stripe';
-import { getPlan } from '../utils';
+import { getPlan } from '../../utils';
 import { eq } from 'drizzle-orm';
 import { sales } from '@/db/admin/sales';
 import { Location } from '@/types';

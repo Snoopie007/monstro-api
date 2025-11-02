@@ -53,7 +53,7 @@ export function UserMenu() {
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem className={MenuItemStyle} asChild>
-					<Link href={`/dashboard/account/profile`} className="cursor-pointer">
+					<Link href={`/dashboard/account/${user.vendorId || user.staffId}/profile`} className="cursor-pointer">
 						<User className="size-4 mr-1.5" />
 						Profile
 					</Link>

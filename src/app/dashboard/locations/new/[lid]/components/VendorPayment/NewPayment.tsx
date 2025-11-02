@@ -64,7 +64,7 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
 			const tokenRef = await stripe.createToken(cardElement!, { ...v });
 
 			if (tokenRef.token) {
-				const res = await fetch(`/api/protected/vendor/locations/${lid}/checkout`, {
+				const res = await fetch(`/api/protected/checkout/loc/${lid}/new`, {
 					method: "POST",
 					body: JSON.stringify({
 						vendorId: session?.user.vendorId,

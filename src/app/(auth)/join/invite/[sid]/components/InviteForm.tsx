@@ -33,7 +33,7 @@ const InputStyle = "bg-white border border-gray-200 rounded-lg h-12 text-base"
 
 export function InviteForm({ sale, tos }: InviteFormProps) {
 
-    const [loading, setLoading] = useState<boolean>(false);
+
     const [errors, setErrors] = useState<FieldErrors<z.infer<typeof VendorInviteSchema>> | null>(null);
     const [checked, setChecked] = useState<boolean>(false);
     const router = useRouter();
@@ -61,7 +61,6 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
 
         if (!form.getValues('password')) return;
 
-        setLoading(true);
         const { result, error } = await tryCatch(
             fetch(`/api/auth/invite`, {
                 method: "POST",
@@ -73,7 +72,6 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
 
 
         if (error || !result || !result.ok) {
-            setLoading(false);
 
             const data = await result?.json();
             toast.error(data?.error || "Uh oh, something went wrong")
@@ -141,16 +139,11 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
 
                             <Button
                                 type="button"
-                                className={cn(
-                                    " children:hidden  bg-indigo-500 text-white cursor-pointer ",
-
-                                    { "children:inline-block": loading })
-                                }
+                                variant={"primary"}
                                 onClick={form.handleSubmit(onSubmit)}
-                                disabled={loading || !checked}
+                                disabled={form.formState.isSubmitting || !checked}
                             >
-                                <Loader2 className="mr-2 size-4 animate-spin" />
-                                Create Account
+                                {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : "Create Account"}
                             </Button>
                         </div>
                     </div>

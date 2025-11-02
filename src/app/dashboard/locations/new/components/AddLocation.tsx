@@ -123,7 +123,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
         setLoading(true);
         await sleep(2000);
 
-        const path = saleId ? `/api/protected/vendor/${saleId}` : "/api/protected/vendor/locations";
+        const path = saleId ? `/api/protected/checkout/sales/${saleId}` : "/api/protected/checkout/locs";
 
         const { result, error } = await tryCatch(
             fetch(path, {

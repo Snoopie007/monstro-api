@@ -58,7 +58,7 @@ export default function AddPaymentMethod() {
         try {
             const tokenRef = await stripe.createToken(cardElement!, { ...v });
             if (tokenRef.token) {
-                const res = await fetch(`/api/protected/vendor/payment/methods/new`, {
+                const res = await fetch(`/api/protected/checkout/payment/methods/new`, {
                     method: 'POST',
                     body: JSON.stringify({
                         token: tokenRef.token.id,

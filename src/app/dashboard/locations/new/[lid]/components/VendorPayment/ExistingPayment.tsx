@@ -42,7 +42,7 @@ export default function ExistingVendorPayment({ lid }: { lid: string }) {
 
 		setLoading(true);
 		const { result, error } = await tryCatch(
-			fetch(`/api/protected/vendor/locations/${lid}/existing`, {
+			fetch(`/api/protected/checkout/loc/${lid}/existing`, {
 				method: "POST",
 				body: JSON.stringify({
 					paymentMethodId: paymentMethod.id,

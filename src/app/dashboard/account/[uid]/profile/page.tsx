@@ -2,12 +2,15 @@ import { Staff, Vendor } from "@/types";
 import { UserProfile } from "./components";
 import { db } from "@/db/db";
 import { auth } from "@/auth";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 async function getVendor(id: string): Promise<Vendor | undefined> {
     try {
         const vendor = await db.query.vendors.findFirst({
             where: (vendor, { eq }) => eq(vendor.id, id),
+            with: {
+                user: true,
+            },
         });
 
         return vendor;
@@ -21,6 +24,9 @@ async function getStaff(id: string): Promise<Staff | undefined> {
     try {
         const staff = await db.query.staffs.findFirst({
             where: (staff, { eq }) => eq(staff.id, id),
+            with: {
+                user: true,
+            },
         });
 
         return staff;
@@ -30,19 +36,20 @@ async function getStaff(id: string): Promise<Staff | undefined> {
     }
 }
 
-export default async function ProfilePage() {
+export default async function ProfilePage({ params }: { params: Promise<{ uid: string }> }) {
     const session = await auth();
-
+    const { uid } = await params;
     if (!session) {
-        notFound();
+        return redirect('/login');
     }
 
-    const isVendor = session?.user.role === "vendor";
+
+    const isVendor = uid.startsWith('vdr');
     let user = null;
     if (isVendor) {
-        user = await getVendor(session?.user.vendorId || "");
+        user = await getVendor(uid);
     } else {
-        user = await getStaff(session?.user.staffId || "");
+        user = await getStaff(uid);
     }
 
     if (!user) {
@@ -50,8 +57,16 @@ export default async function ProfilePage() {
     }
 
     return (
-        <div>
-            <UserProfile user={user} isVendor={isVendor} />
+
+        <div className="space-y-2">
+            <div className="space-y-1">
+                <h2 className="text-2xl font-bold">Profile</h2>
+                <p className="text-sm text-muted-foreground">Update your profile information and settings.</p>
+            </div>
+            <div className="space-y-2">
+                {/* <UserAvatar currentAvatar={user?.user?.image || null} onChange={() => { }} isVendor={isVendor} /> */}
+                <UserProfile user={user} isVendor={isVendor} />
+            </div>
         </div>
     );
 }

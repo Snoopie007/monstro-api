@@ -1,5 +1,4 @@
-
-
+'use client'
 import { CameraIcon, Trash2Icon, UploadCloudIcon } from "lucide-react";
 import React, { useRef } from 'react'
 import Image from "next/image";
@@ -11,7 +10,7 @@ interface UserAvatarProps {
     isVendor: boolean
 }
 
-export default function UserAvatar({ currentAvatar, onChange, isVendor }: UserAvatarProps) {
+export function UserAvatar({ currentAvatar, onChange, isVendor }: UserAvatarProps) {
     const fileRef = useRef<HTMLInputElement | null>(null)
 
     async function uploadLogo() {
