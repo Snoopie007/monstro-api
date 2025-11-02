@@ -16,9 +16,10 @@ interface ExpandTextareaProps {
     type: string
     initialContent: string
     onUpdate: (content: string) => void
+    disabled?: boolean
 }
 
-export function ExpandTextarea({ type, initialContent, onUpdate }: ExpandTextareaProps) {
+export function ExpandTextarea({ type, initialContent, onUpdate, disabled }: ExpandTextareaProps) {
     const [open, setOpen] = useState(false)
     const [, setContent] = useState(initialContent)
 
@@ -54,7 +55,7 @@ export function ExpandTextarea({ type, initialContent, onUpdate }: ExpandTextare
     return (
         <Dialog open={open} onOpenChange={handleClose}>
             <DialogTrigger asChild>
-                <Button variant={'ghost'} size={'icon'} className="rounded-md size-5 text-muted-foreground hover:bg-foreground/10">
+                <Button disabled={disabled} variant={'ghost'} size={'icon'} className="rounded-md size-5 text-muted-foreground hover:bg-foreground/10">
                     <Maximize2 className="size-3" />
                 </Button>
             </DialogTrigger>
@@ -75,7 +76,7 @@ export function ExpandTextarea({ type, initialContent, onUpdate }: ExpandTextare
                         {type}
                     </p>
                     <div>
-                        <Button variant={'ghost'} size={'sm'} className="rounded-md h-6 gap-1">
+                        <Button disabled={disabled} variant={'ghost'} size={'sm'} className="rounded-md h-6 gap-1">
                             <Sparkles className="size-3" />
                             Generate
                         </Button>
@@ -87,7 +88,7 @@ export function ExpandTextarea({ type, initialContent, onUpdate }: ExpandTextare
                 </ScrollArea>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button variant={'foreground'} size={'sm'} className="rounded-sm">
+                        <Button disabled={disabled} variant={'foreground'} size={'sm'} className="rounded-sm">
                             Update
                         </Button>
                     </DialogClose>

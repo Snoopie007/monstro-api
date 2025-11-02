@@ -32,6 +32,7 @@ import { useBotSettingContext } from '../provider'
 import { PersonaFields } from './PersonaFields'
 import { TriggerBox } from './Triggers'
 import { KBBox } from './KnowledgeBase'
+import { useAccountStatus } from '../../../providers'
 
 const Models = ['anthropic', 'gpt', 'gemini']
 

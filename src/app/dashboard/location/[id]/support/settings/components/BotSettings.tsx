@@ -1,21 +1,25 @@
 'use client'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BotFields } from '.'
-import { z } from 'zod'
+import type { z } from 'zod'
 import { ScrollArea, Skeleton, Button } from '@/components/ui'
 import { Form } from '@/components/forms'
-import { sleep, tryCatch } from '@/libs/utils'
+import { tryCatch } from '@/libs/utils'
 import { toast } from 'react-toastify'
 import { SupportSettingsSchema } from '@/libs/FormSchemas'
 import { useBotSettingContext } from '../provider'
 import { Loader2 } from 'lucide-react'
+import { useAccountStatus } from '../../../providers'
 
 export function BotSettings({ lid }: { lid: string }) {
-    const { assistant } = useBotSettingContext()
+    const { assistant, exists } = useBotSettingContext()
     const [isSaving, setIsSaving] = useState(false)
+    const { locationState } = useAccountStatus();
+    const isFreePlan = locationState?.planId === 1;
     const isLoading = useMemo(() => !assistant, [assistant])
+
     const form = useForm<z.infer<typeof SupportSettingsSchema>>({
         resolver: zodResolver(SupportSettingsSchema),
         defaultValues: {
@@ -51,6 +55,24 @@ export function BotSettings({ lid }: { lid: string }) {
     }, [assistant])
 
     async function onSubmit(v: z.infer<typeof SupportSettingsSchema>) {
+        if (!exists) {
+            setIsSaving(true)
+            const { result, error } = await tryCatch(
+                fetch(`/api/protected/loc/${lid}/support`, {
+                    method: 'POST',
+                    body: JSON.stringify(v),
+                })
+            )
+            if (error || !result || !result.ok) {
+                toast.error(error?.message || 'Something went wrong.')
+                setIsSaving(false)
+                return
+            }
+            setIsSaving(false)
+            toast.success('Settings saved and assistant created!')
+            return
+        }
+
         if (!assistant) return
         setIsSaving(true)
         const { result, error } = await tryCatch(
@@ -99,7 +121,7 @@ export function BotSettings({ lid }: { lid: string }) {
                                             variant="foreground"
                                             type="submit"
                                             className="rounded-sm"
-                                            disabled={isSaving}
+                                            disabled={isSaving || isFreePlan}
                                             onClick={form.handleSubmit(
                                                 onSubmit
                                             )}

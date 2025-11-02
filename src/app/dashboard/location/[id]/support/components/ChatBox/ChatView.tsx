@@ -94,7 +94,7 @@ export function ChatView({ lid }: { lid: string }) {
 
     if (!current) {
         return (
-            <div className="text-center">
+            <div className="text-center h-full flex items-center justify-center">
                 <p className="text-lg font-medium text-muted-foreground mb-2">
                     No Conversation Selected
                 </p>

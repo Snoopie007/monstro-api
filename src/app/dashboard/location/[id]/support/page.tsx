@@ -1,10 +1,9 @@
-import { SupportAssistant } from '@/types'
+import type { SupportAssistant } from '@/types'
 import { db } from '@/db/db'
 import { eq } from 'drizzle-orm'
 import { supportAssistants } from '@/db/schemas'
 import { SupportList, ChatView } from './components'
 import { SupportProvider } from './providers/SupportProvider'
-import CreateAssistant from './components/CreateAssistant'
 
 async function getAssistant(lid: string): Promise<SupportAssistant | null> {
 
@@ -39,14 +38,6 @@ export default async function SupportPage(props: {
 }) {
     const params = await props.params
     const assistant = await getAssistant(params.id)
-
-    if (!assistant) {
-        return (
-            <div className="w-full h-full">
-                <CreateAssistant />
-            </div>
-        )
-    }
 
     return (
         <div className="w-full h-full">
