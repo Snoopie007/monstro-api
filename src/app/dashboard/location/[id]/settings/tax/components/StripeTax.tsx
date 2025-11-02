@@ -8,7 +8,6 @@ import {
     Button,
 } from '@/components/ui'
 import { cn } from '@/libs/utils';
-import { Loader2 } from 'lucide-react';
 import { tryCatch } from '@/libs/utils';
 import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify';
@@ -41,7 +40,7 @@ export function StripeTax({ lid, location, taxSettings }: StripeTaxProps) {
         setLoading(true);
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/tax/test`)
+            fetch(`/api/protected/loc/${lid}/config/tax`)
         )
 
         if (error || !result || !result.ok) {

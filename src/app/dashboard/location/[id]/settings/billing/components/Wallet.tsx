@@ -1,7 +1,7 @@
 'use client'
 import {
-    Button, Card, CardContent, CardHeader, CardTitle, Dialog,
-    DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+    Button, Dialog, DialogContent,
+    DialogDescription, DialogFooter, DialogHeader, DialogTitle,
     DialogTrigger, Separator, Skeleton
 } from '@/components/ui'
 import { Wallet as WalletType } from '@/types'
@@ -27,7 +27,7 @@ export function Wallet({ lid }: { lid: string }) {
         }
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/vendor/wallet/recharge`, {
+            fetch(`/api/protected/loc/${lid}/config/wallet/recharge`, {
                 method: 'POST',
                 body: JSON.stringify({ amount: rechargeAmount, id: wallet.id })
             })
@@ -49,7 +49,7 @@ export function Wallet({ lid }: { lid: string }) {
 
     if (error) {
         return (
-            <div className='border rounded-xs p-4 flex flex-col items-center justify-center'>
+            <div className='border rounded-lg border-foreground/10 p-4 flex flex-col items-center justify-center'>
                 <p className='text-sm text-center text-red-500'>
                     Oops, something went wrong while trying to fetch your balance...
                 </p>
@@ -58,7 +58,7 @@ export function Wallet({ lid }: { lid: string }) {
     }
 
     return (
-        <div className='border rounded-lg border-foreground/10 p-4'>
+        <div className='border rounded-lg border-foreground/10 p-6'>
             <div className='flex flex-row justify-between items-center mb-6'>
                 <div className='font-medium'>Wallet Balance</div>
                 <Dialog open={open} onOpenChange={setOpen}>

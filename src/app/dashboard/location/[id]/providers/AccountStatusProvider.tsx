@@ -1,6 +1,9 @@
 'use client'
 import supabase from "@/libs/client/supabase";
-import { createContext, useContext, ReactElement, ReactNode, useEffect, useReducer } from "react";
+import {
+    createContext, useContext, ReactElement,
+    ReactNode, useEffect, useReducer
+} from "react";
 import { LocationState } from "@/types/location";
 import { useSession } from "next-auth/react";
 import { LocationStatus } from "@/types";

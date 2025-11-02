@@ -17,7 +17,7 @@ export default function CompanyLogo({ location }: { location: Location }) {
         if (!timezone || timezone === location.timezone) return;
         setLoading(true);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${location.id}/vendor/company`, {
+            fetch(`/api/protected/loc/${location.id}/config/company`, {
                 method: "POST",
                 body: JSON.stringify({ timezone })
             })
@@ -25,10 +25,10 @@ export default function CompanyLogo({ location }: { location: Location }) {
         setLoading(false);
         if (error || !result || !result.ok) {
             toast.error("Failed to update timezone");
+            setTimezone(location.timezone);
             return;
         }
-        const data = await result.json();
-        setTimezone(data.timezone);
+        setTimezone(timezone);
     }
 
 

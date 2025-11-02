@@ -23,7 +23,7 @@ export default function CompanyLogo({
     const formData = new FormData();
     formData.append("file", file);
     const { result, error } = await tryCatch(
-      fetch(`/api/protected/loc/${locationId}/vendor/company/logo`, {
+      fetch(`/api/protected/loc/${locationId}/config/company/logo`, {
         method: "POST",
         body: formData,
       })
@@ -38,7 +38,7 @@ export default function CompanyLogo({
   async function removeLogo() {
     setLoading(true);
     const { result, error } = await tryCatch(
-      fetch(`/api/protected/loc/${locationId}/vendor/company/logo`, {
+      fetch(`/api/protected/loc/${locationId}/config/company/logo`, {
         method: "DELETE",
       })
     );

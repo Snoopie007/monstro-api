@@ -43,7 +43,7 @@ export function UpdatePassword({ locationId }: { locationId: string }) {
 
         setLoading(true)
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${locationId}/profile/password`, {
+            fetch(`/api/protected/loc/${locationId}/config/password`, {
                 method: "PUT",
                 body: JSON.stringify(v)
             })

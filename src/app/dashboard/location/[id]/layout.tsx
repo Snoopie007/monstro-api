@@ -30,7 +30,7 @@ export default async function LocationLayout(props: LocationLayoutProps) {
   const locationState = await getLocationState(params.id);
 
   if (!locationState) {
-    redirect("/dashboard/locations");
+    return redirect("/dashboard/locations");
   }
 
   return (

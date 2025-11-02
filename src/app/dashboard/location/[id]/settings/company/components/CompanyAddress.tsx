@@ -40,7 +40,7 @@ export default function CompanyAddress({ location }: { location: Location }) {
     async function update(values: z.infer<typeof CompanyAddressSchema>) {
         setLoading(true);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${location.id}/vendor/company`, {
+            fetch(`/api/protected/loc/${location.id}/config/company`, {
                 method: "POST",
                 body: JSON.stringify(values)
             })
@@ -48,10 +48,15 @@ export default function CompanyAddress({ location }: { location: Location }) {
         setLoading(false);
         if (error || !result || !result.ok) {
             toast.error("Failed to update address");
+            form.reset({
+                address: location.address || "",
+                city: location.city || "",
+                state: location.state || "",
+                postalCode: location.postalCode || "",
+                country: location.country || "",
+            });
             return;
         }
-        const data = await result.json();
-        console.log(data);
     }
     return (
         <Card className="rounded-sm  border-foreground/10">

@@ -10,7 +10,7 @@ export default function Invoices({ invoices }: { invoices: Stripe.Invoice[] }) {
     return (
         <div className="bg-foreground/5 rounded-lg">
             <Table >
-                <TableHeader>
+                <TableHeader className='border-foreground/5'>
                     <TableRow>
                         {['ID', 'Date', 'Status', 'Amount', 'Invoice'].map((header, i) => (
                             <TableHead key={i}>{header}</TableHead>
@@ -24,7 +24,7 @@ export default function Invoices({ invoices }: { invoices: Stripe.Invoice[] }) {
                         </TableRow>
                     )}
                     {invoices?.map((invoice, index) => (
-                        <TableRow key={index} >
+                        <TableRow key={index} className='border-foreground/5' >
                             <TableCell>{invoice.id}</TableCell>
                             <TableCell >{format(invoice.created * 1000, 'MMM d, yyyy')}</TableCell>
 

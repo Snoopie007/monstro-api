@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     const data = await req.json()
+
     try {
 
         await db.update(locations).set({

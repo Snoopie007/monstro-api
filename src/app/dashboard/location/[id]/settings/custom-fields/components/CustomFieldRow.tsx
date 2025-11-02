@@ -19,7 +19,7 @@ import { Copy, Trash2 } from "lucide-react";
 import { OptionsManager } from "./OptionsManager";
 
 import { Pill } from "@/components/ui/kibo-ui/pill";
-import { customFieldTypeOptions } from "./schemas";
+import { customFieldTypeOptions } from "../schemas";
 import { Textarea } from "@/components/forms";
 import React from "react";
 

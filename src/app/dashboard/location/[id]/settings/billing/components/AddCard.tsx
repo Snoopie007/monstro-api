@@ -68,7 +68,7 @@ export default function AddCard({ locationId, customerId }: AddCardProps) {
             setLoading(false);
             if (tokenRef.token) {
 
-                const res = await fetch(`/api/protected/loc/${locationId}/vendor/card/add`, {
+                const res = await fetch(`/api/protected/loc/${locationId}/config/card/add`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",

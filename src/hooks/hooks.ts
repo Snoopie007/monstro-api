@@ -137,7 +137,7 @@ function useAchievement(id: string, aid: string) {
 
 function useWallet(id: string) {
 	const { data, error, isLoading, mutate } = useSWR(
-		{ url: `vendor/wallet`, id: id },
+		{ url: `config/wallet`, id: id },
 		fetcher
 	);
 	return {

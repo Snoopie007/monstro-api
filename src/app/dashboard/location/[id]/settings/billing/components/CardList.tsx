@@ -47,7 +47,7 @@ export function CardList({ paymentMethods, locationId, customerId }: CardListPro
                                 </div>
                                 <div className='flex flex-row items-center gap-3'>
                                     <p>Valid until {method.card?.exp_month}/{method.card?.exp_year}</p>
-                                    <CardActions paymentMethod={method} />
+                                    <CardActions paymentMethod={method} locationId={locationId} />
                                 </div>
                             </div>
                         ))}

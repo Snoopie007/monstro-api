@@ -6,7 +6,7 @@ import { Location } from "@/types";
 import { cn, tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
-import { Industries, TimeZones } from "@/libs/data";
+import { Industries } from "@/libs/data";
 
 export default function CompanyLogo({ location }: { location: Location }) {
     const [industry, setIndustry] = useState(location.industry);
@@ -17,7 +17,7 @@ export default function CompanyLogo({ location }: { location: Location }) {
         if (!industry || industry === location.industry) return;
         setLoading(true);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${location.id}/vendor/company`, {
+            fetch(`/api/protected/loc/${location.id}/config/company`, {
                 method: "POST",
                 body: JSON.stringify({ industry })
             })
@@ -25,10 +25,10 @@ export default function CompanyLogo({ location }: { location: Location }) {
         setLoading(false);
         if (error || !result || !result.ok) {
             toast.error("Failed to update timezone");
+            setIndustry(location.industry);
             return;
         }
-        const data = await result.json();
-        setIndustry(data.industry);
+
     }
 
 

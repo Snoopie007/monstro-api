@@ -18,18 +18,17 @@ export default function CompanyPhone({ location }: { location: Location }) {
         if (!phone || phone === location.phone) return;
         setLoading(true);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${location.id}/vendor/company`, {
+            fetch(`/api/protected/loc/${location.id}/config/company`, {
                 method: "POST",
                 body: JSON.stringify({ phone })
             })
         )
         setLoading(false);
         if (error || !result || !result.ok) {
-            toast.error("Failed to update company name");
+            toast.error("Failed to update phone number");
+            setPhone(location.phone);
             return;
         }
-        const data = await result.json();
-        setPhone(data.phone);
     }
 
 

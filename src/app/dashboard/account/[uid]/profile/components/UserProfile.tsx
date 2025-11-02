@@ -7,20 +7,15 @@ import {
     FormControl,
     FormItem,
     FormMessage,
-    Input, SelectContent, SelectItem, SelectTrigger, SelectValue
+    Input
 } from "@/components/forms";
 import { cn, tryCatch } from "@/libs/utils";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
-
-import { Select } from "@radix-ui/react-select";
-import { useMemo, useState } from "react";
-import { CountryCode, Member, Vendor } from "@/types";
-import UserAvatar from "./UserAvatar";
-import { CountryCodes } from "@/libs/data";
+import { Staff, Vendor } from "@/types";
 import { toast } from "react-toastify";
 
-export function UserProfile({ user, locationId }: { user: Vendor; locationId: string }) {
+export function UserProfile({ user, isVendor }: { user: Vendor | Staff, isVendor: boolean }) {
 
     const form = useForm({
         defaultValues: {
@@ -32,7 +27,7 @@ export function UserProfile({ user, locationId }: { user: Vendor; locationId: st
 
     async function handleSubmit(v: any) {
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${locationId}/profile/`, {
+            fetch(`/api/protected/account/profile`, {
                 method: "PUT",
                 body: JSON.stringify(v),
             })
@@ -53,7 +48,7 @@ export function UserProfile({ user, locationId }: { user: Vendor; locationId: st
             <div className="px-6 py-8">
                 <Form {...form}>
                     <form id="profile" onSubmit={form.handleSubmit(handleSubmit)}>
-                        <input type="hidden" name="id" value={form.getValues("id")} />
+
                         <fieldset>
                             <div className="flex gap-4">
                                 <FormField
@@ -86,7 +81,7 @@ export function UserProfile({ user, locationId }: { user: Vendor; locationId: st
                         </fieldset>
                         <div className="border-t py-3 px-6 text-right">
                             <Button
-                                type="submit" 
+                                type="submit"
                                 variant={"foreground"}
                                 size={"sm"}
                                 className={cn("children:hidden")}

@@ -47,7 +47,7 @@ export function TaxRate({ lid, location }: StripeTaxProps) {
     async function save() {
         setLoading(true);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/tax`, {
+            fetch(`/api/protected/loc/${lid}/config/tax`, {
                 method: "POST",
                 body: JSON.stringify({
                     taxRate: value

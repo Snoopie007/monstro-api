@@ -2,11 +2,12 @@
 import { Loader2 } from "lucide-react";
 import React, { useState } from 'react'
 import { Button, Card, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui";
-import { cn, tryCatch } from "@/libs/utils";
+import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Input } from "@/components/forms";
-import { z } from "zod";
 import { InfoType } from "../page";
+import { LocationStatus } from "@/types";
+import { useSession } from "next-auth/react";
 
 
 type CompanyInfoProps = {
@@ -20,15 +21,15 @@ type CompanyInfoProps = {
 export default function CompanyInfos({ lid, currentValue, type, title, description }: CompanyInfoProps) {
     const [loading, setLoading] = useState(false);
     const [value, setValue] = useState<string | null>(currentValue);
-
-    async function update() {
+    const { data: session, update } = useSession()
+    async function saveChanges() {
         if (!value || value === currentValue) return;
         setLoading(true);
 
         const payload = { [type]: value };
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/vendor/company`, {
+            fetch(`/api/protected/loc/${lid}/config/company`, {
                 method: "POST",
                 body: JSON.stringify(payload)
             })
@@ -36,10 +37,18 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
         setLoading(false);
         if (error || !result || !result.ok) {
             toast.error(`Failed to update ${type}`);
+            setValue(currentValue);
             return;
         }
-        const data = await result.json();
-        setValue(data[type]);
+        if (type === 'name') {
+            update({
+                locations: session?.user.locations.map((location: { id: string, status: LocationStatus }) => {
+                    return location.id === lid
+                        ? { ...location, [type]: value }
+                        : location
+                })
+            });
+        }
     }
 
     return (
@@ -55,7 +64,7 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
                     type="text"
                     className="rounded-sm w-60"
                     placeholder={`Enter ${type}`}
-                    value={value ?? undefined}
+                    value={value ?? ''}
                     onChange={(e) => setValue(e.target.value)}
                 />
             </div>
@@ -64,11 +73,9 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
                     variant="foreground"
                     size="sm"
                     disabled={loading || !value || value === currentValue}
-                    onClick={update}
-                    className={cn('children:hidden', loading && 'children:block')}
+                    onClick={saveChanges}
                 >
-                    {loading && <Loader2 className="animate-spin size-4 mr-2" />}
-                    Save
+                    {loading ? <Loader2 className="animate-spin size-4 " /> : 'Save'}
                 </Button>
 
             </CardFooter>

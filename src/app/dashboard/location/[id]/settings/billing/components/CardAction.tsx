@@ -7,6 +7,7 @@ import {
     Button,
     DropdownMenuSeparator
 } from '@/components/ui'
+import { tryCatch } from '@/libs/utils'
 import { EllipsisVerticalIcon } from 'lucide-react'
 import Stripe from 'stripe'
 
@@ -14,11 +15,27 @@ import Stripe from 'stripe'
 
 interface CardActionsProps {
     paymentMethod: Stripe.PaymentMethod | null
+    locationId: string
 }
 
-export default function CardActions({ paymentMethod }: CardActionsProps) {
+export default function CardActions({ paymentMethod, locationId }: CardActionsProps) {
 
-
+    async function remove() {
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${locationId}/config/card/remove`, {
+                method: "POST",
+                body: JSON.stringify({ paymentMethodId: paymentMethod?.id })
+            })
+        )
+    }
+    async function makeDefault() {
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${locationId}/config/card/make-default`, {
+                method: "POST",
+                body: JSON.stringify({ paymentMethodId: paymentMethod?.id })
+            })
+        )
+    }
 
     return (
         <DropdownMenu>

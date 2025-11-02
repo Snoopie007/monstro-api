@@ -63,7 +63,7 @@ export function StripeTaxSettings({ lid, location, settings, updateSettings }: S
     async function onSubmit(data: z.infer<typeof TaxSettingsSchema>) {
         setLoading(true);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/tax/settings`, {
+            fetch(`/api/protected/loc/${lid}/config/tax/stripe`, {
                 method: "POST",
                 body: JSON.stringify(data)
             })

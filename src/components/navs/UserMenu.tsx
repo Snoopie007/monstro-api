@@ -5,38 +5,23 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	Avatar,
-	AvatarFallback,
 	AvatarImage,
 } from "@/components/ui";
 
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
-import { CreditCard } from "lucide-react";
+import { CreditCard, User } from "lucide-react";
 import { cn } from "@/libs/utils";
 import { useTheme } from "next-themes";
-import { usePathname } from "next/navigation";
-import { Location } from "@/types/location";
-import { useMemo } from "react";
 
 const MenuItemStyle =
 	"flex flex-row items-center justify-start text-xs hover:bg-foreground/5";
 
 export function UserMenu() {
-	const session = useSession();
+	const { data: session } = useSession();
 
-	const user = session.data?.user;
+	const user = session?.user;
 	const { theme, setTheme } = useTheme();
-
-	const pathName = usePathname();
-	const pathSegments = pathName.split("/").filter(Boolean);
-	const locationId = pathSegments[2];
-
-	const currentLocation = useMemo(() => {
-		if (!user) return null;
-		return user.locations.find(
-			(location: Location) => location.id === locationId
-		);
-	}, [user, locationId]);
 
 
 
@@ -61,24 +46,24 @@ export function UserMenu() {
 				className="w-60 rounded-sm shadow-sm border-foreground/10"
 			>
 				<DropdownMenuItem
-					className={"flex flex-col items-start justify-start text-xs"}
+					className={"flex flex-col items-start justify-start"}
 				>
 					<span className=" font-semibold">{user.name}</span>
 					<span className=" text-muted-foreground">{user.email}</span>
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
-				{/* <DropdownMenuItem className={MenuItemStyle} asChild>
-			<Link href={`/dashboard/account/profile`}>
-			  <User className="size-3 mr-1.5" />
-			  Profile
-			</Link>
-		  </DropdownMenuItem> */}
 				<DropdownMenuItem className={MenuItemStyle} asChild>
+					<Link href={`/dashboard/account/profile`} className="cursor-pointer">
+						<User className="size-4 mr-1.5" />
+						Profile
+					</Link>
+				</DropdownMenuItem>
+				{/* <DropdownMenuItem className={MenuItemStyle} asChild>
 					<Link href={'/'}>
 						<CreditCard className="size-3 mr-1.5" />
 						Billing
 					</Link>
-				</DropdownMenuItem>
+				</DropdownMenuItem> */}
 				<DropdownMenuSeparator />
 				<DropdownMenuItem className="flex flex-col items-start justify-start space-y-2 focus:bg-transparent">
 					<div className="text-xs  text-foreground/70  font-semibold">
@@ -86,9 +71,8 @@ export function UserMenu() {
 					</div>
 					<ul className="space-y-0 justify-start w-full">
 						{["light", "dark", "system"].map((t) => (
-							<li
-								key={t}
-								className="text-xs font-medium capitalize flex items-center w-full p-1.5 hover:bg-foreground/5 rounded-sm gap-2"
+							<li key={t}
+								className="font-medium capitalize flex items-center w-full p-1.5 hover:bg-foreground/5 rounded-sm gap-2 cursor-pointer"
 								onClick={() => setTheme(t)}
 							>
 								<span className="w-3.5 flex justify-center">

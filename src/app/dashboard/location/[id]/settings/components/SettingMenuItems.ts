@@ -5,7 +5,7 @@ type SettingMenuItem = {
 };
 
 export const SettingMenuItems: SettingMenuItem[] = [
-  { path: "company", name: "Business Info", roles: ["vendor", "admin"] },
+  { path: "company", name: "Company Info", roles: ["vendor", "admin"] },
   { path: "custom-fields", name: "Custom Fields", roles: ["vendor", "admin"] },
   { path: "tax", name: "Tax", roles: ["vendor", "admin"] },
   { path: "roles", name: "Roles", roles: ["vendor"] },
@@ -13,5 +13,5 @@ export const SettingMenuItems: SettingMenuItem[] = [
   { path: "invoices", name: "Invoices", roles: ["vendor"] },
   // { path: "benefits", name: "Benefits", roles: ["vendor"] },
   { path: "integrations", name: "Integrations", roles: ["vendor", "admin"] },
-  { path: "config", name: "Account Configs", roles: ["vendor", "admin"] },
+  { path: "processing", name: "Payment Processing", roles: ["vendor", "admin"] },
 ];

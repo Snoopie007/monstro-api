@@ -8,10 +8,10 @@ import { tryCatch } from "@/libs/utils";
 interface UserAvatarProps {
     currentAvatar: string | null;
     onChange: (url: string) => void;
-    locationId: string
+    isVendor: boolean
 }
 
-export default function UserAvatar({ currentAvatar, onChange, locationId }: UserAvatarProps) {
+export default function UserAvatar({ currentAvatar, onChange, isVendor }: UserAvatarProps) {
     const fileRef = useRef<HTMLInputElement | null>(null)
 
     async function uploadLogo() {
@@ -21,7 +21,7 @@ export default function UserAvatar({ currentAvatar, onChange, locationId }: User
         formData.append("file", file)
         formData.append("fileDirectory", 'user-avatar');
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${locationId}/upload`, {
+            fetch(`/api/protected/account/profile/upload`, {
                 method: "POST",
                 body: formData
             })

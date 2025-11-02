@@ -143,91 +143,88 @@ export default async function BillingPage(props: {
 					</p>
 				</div>
 			)}
-			<Card className="border-foreground/10 bg-foreground/5 rounded-lg">
+			<div className="border-foreground/10 bg-foreground/5 rounded-lg p-6 space-y-4">
 
-				<CardContent className="py-6 px-5 space-y-4">
-					<div className="flex flex-row items-center justify-between">
-						<div className="font-medium ">
-							Monstro-X Subscriptions
-						</div>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" size="icon" className="size-8">
-									<EllipsisVertical className="size-5" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent className="border-foreground/5">
-								<DropdownMenuItem>
-									<Link href={`/dashboard/locations/upgrade/${params.id}/plans`}>
-										Change Plan
-									</Link>
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
+				<div className="flex flex-row items-center justify-between">
+					<div className="font-medium ">
+						Monstro-X Subscriptions
 					</div>
-					<div>
-						<Table className="w-full border-b border-foreground/10 mb-4">
-							<TableHeader>
-								<TableRow>
-									{["Plan", "Amount", "Next Invoice", "End Date", ""].map(
-										(header, i) => (
-											<TableHead key={header} className={cn(
-												"h-auto font-normal  py-2",
-												i === 0 && "pl-0"
-											)} >
-												{header}
-											</TableHead>
-										)
-									)}
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{subscriptions.length > 0 ? (
-									subscriptions.map((sub, i) => (
-										<TableRow key={i}>
-											<TableCell className="pl-0">
-												{sub.name}
-												<Badge sub={sub.status} className="ml-2">
-													{sub.status?.replace("_", " ")}
-												</Badge>
-											</TableCell>
-											<TableCell>
-												{formatAmountForDisplay(
-													sub.amount / 100,
-													sub.currency,
-													true
-												)}
-											</TableCell>
-											<TableCell>{sub.nextInvoice}</TableCell>
-											<TableCell>{sub.endDate}</TableCell>
-											<TableCell className="text-right">
-												{["past_due", "unpaid"].includes(sub.status || "") && (
-													<RetryPayment
-														subscription={sub}
-														invoiceId={sub.invoiceId}
-														paymentMethods={paymentMethods}
-														lid={params.id}
-													/>
-												)}
-											</TableCell>
-										</TableRow>
-									))
-								) : (
-									<TableRow>
-										<TableCell colSpan={4} className="text-center">
-											No subscriptions found
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="ghost" size="icon" className="size-8">
+								<EllipsisVertical className="size-5" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent className="border-foreground/5">
+							<DropdownMenuItem>
+								<Link href={`/dashboard/locations/upgrade/${params.id}/plans`}>
+									Change Plan
+								</Link>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
+				<div className="space-y-2">
+					<Table className="w-full border-b border-foreground/10 mb-4">
+						<TableHeader>
+							<TableRow>
+								{["Plan", "Amount", "Next Invoice", "End Date", ""].map(
+									(header, i) => (
+										<TableHead key={header} className={cn(
+											"h-auto font-normal  py-2",
+											i === 0 && "pl-0"
+										)} >
+											{header}
+										</TableHead>
+									)
+								)}
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{subscriptions.length > 0 ? (
+								subscriptions.map((sub, i) => (
+									<TableRow key={i}>
+										<TableCell className="pl-0">
+											{sub.name}
+											<Badge sub={sub.status} className="ml-2">
+												{sub.status?.replace("_", " ")}
+											</Badge>
+										</TableCell>
+										<TableCell>
+											{formatAmountForDisplay(
+												sub.amount / 100,
+												sub.currency,
+												true
+											)}
+										</TableCell>
+										<TableCell>{sub.nextInvoice}</TableCell>
+										<TableCell>{sub.endDate}</TableCell>
+										<TableCell className="text-right">
+											{["past_due", "unpaid"].includes(sub.status || "") && (
+												<RetryPayment
+													subscription={sub}
+													invoiceId={sub.invoiceId}
+													paymentMethods={paymentMethods}
+													lid={params.id}
+												/>
+											)}
 										</TableCell>
 									</TableRow>
-								)}
-							</TableBody>
-						</Table>
-						<p className="font-medium">Total: {calculateMonthlyTotal()}</p>
+								))
+							) : (
+								<TableRow>
+									<TableCell colSpan={4} className="text-center">
+										No subscriptions found
+									</TableCell>
+								</TableRow>
+							)}
+						</TableBody>
+					</Table>
+					<p className="font-medium">Total: {calculateMonthlyTotal()}</p>
 
-					</div>
+				</div>
 
-				</CardContent>
-
-			</Card>
+			</div>
 			<Wallet lid={params.id} />
 			<CardList
 				paymentMethods={paymentMethods}

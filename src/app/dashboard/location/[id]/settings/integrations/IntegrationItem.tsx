@@ -1,4 +1,4 @@
-
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui';
 import { Button } from '@/components/ui/button'
 import { useIntegrations } from '@/hooks';
 import { cn, tryCatch } from '@/libs/utils';
@@ -36,26 +36,27 @@ export function IntegrationItem({ integration, lid }: IntegrationItemProps) {
         }
     };
     return (
-        <li className="bg-foreground/5 flex flex-row gap-2 items-center w-full min-h-4 p-3 rounded-lg ">
-            <div className='flex-1 flex flex-row gap-2 items-center'>
-                <div className="rounded-sm overflow-hidden">
-                    <Image src={`/images/partners/${integration.service.toLowerCase()}-logo.webp`} alt={integration.service} width={34} height={34} />
-                </div>
-                <div>
-                    <div className="font-medium ">{integration.service}</div>
-                </div>
-            </div>
-            <div>
+        <Item variant="muted" className="border-0 rounded-none px-0 border-b last:border-b-0 border-foreground/5 py-4">
+            <ItemMedia variant="image" className="size-10">
+                <Image src={`/images/partners/${integration.service.toLowerCase()}-logo.webp`}
+                    alt={integration.service} fill className='object-contain'
+                />
+
+            </ItemMedia>
+            <ItemContent className='flex flex-col gap-0'>
+                <ItemTitle className='capitalize font-medium'>{integration.service}</ItemTitle>
+                <ItemDescription> Connected to your Monstro-X Account </ItemDescription>
+            </ItemContent>
+            <ItemActions>
                 <Button
                     onClick={() => disconnect()}
-                    variant="ghost"
-                    size="icon"
-                    className='size-6 text-red-500 hover:bg-foreground/5 hover:text-red-500'
+                    variant="destructive"
+                    size="xs"
                 >
                     {loading ? <Loader2 size={"16"} className={cn('animate-spin size-3.5 ')} /> :
-                        <Trash2 className='size-4' />}
+                        'Disconnect'}
                 </Button>
-            </div>
-        </li>
+            </ItemActions>
+        </Item>
     )
 }

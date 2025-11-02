@@ -1,7 +1,6 @@
 import {
   locationState,
   locations,
-  memberLocations,
 } from "@/db/schemas/locations";
 import { MemberInvoice, MemberReferral, MemberSubscription } from "./member";
 
@@ -21,4 +20,11 @@ export type Location = typeof locations.$inferSelect & {
   wallet?: Wallet;
 };
 
-export type LocationState = typeof locationState.$inferSelect;
+export type LocationState = typeof locationState.$inferSelect & {
+  settings: LocationSettings;
+}
+
+
+export type LocationSettings = {
+  passOnFees: boolean;
+}

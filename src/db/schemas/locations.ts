@@ -23,6 +23,7 @@ import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import { MemberLocationProfile } from "@/types/member";
 import { attendances } from "./attendances";
+import { LocationSettings } from "@/types";
 
 export const locations = pgTable("locations", {
   id: uuid("id")
@@ -67,10 +68,7 @@ export const locationState = pgTable("location_state", {
     withTimezone: true,
   }).defaultNow(),
   startDate: timestamp("start_date", { withTimezone: true }),
-  settings: jsonb("settings")
-    .$type<Record<string, any>>()
-    .notNull()
-    .default(sql`'{}'::jsonb`),
+  settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),
   usagePercent: integer("usage_percent").notNull().default(0),
   taxRate: integer("tax_rate").notNull().default(0),
   premiumSupport: boolean("premium_support").notNull().default(false),
