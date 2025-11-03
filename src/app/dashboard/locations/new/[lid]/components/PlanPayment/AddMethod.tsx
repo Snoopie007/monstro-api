@@ -20,8 +20,7 @@ import { VendorBillingSchema } from "@/libs/FormSchemas/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "react-toastify";
-import { PaymentMethod } from "@stripe/stripe-js";
-import { useVendorPaymentMethods } from "@/hooks";
+import { useVPMs } from "@/hooks";
 import BillingFields from "./BillingFields";
 import { useTheme } from "next-themes";
 
@@ -29,7 +28,7 @@ import { useTheme } from "next-themes";
 
 export default function AddPaymentMethod() {
     const [open, setOpen] = useState(false)
-    const { mutate } = useVendorPaymentMethods();
+    const { mutate } = useVPMs();
     const [loading, setLoading] = useState(false)
     const [errorMessage, setErrorMessage] = useState("")
     const [validCard, setValidCard] = useState(false)
@@ -58,7 +57,7 @@ export default function AddPaymentMethod() {
         try {
             const tokenRef = await stripe.createToken(cardElement!, { ...v });
             if (tokenRef.token) {
-                const res = await fetch(`/api/protected/checkout/payment/methods/new`, {
+                const res = await fetch(`/api/protected/account/payments/new`, {
                     method: 'POST',
                     body: JSON.stringify({
                         token: tokenRef.token.id,

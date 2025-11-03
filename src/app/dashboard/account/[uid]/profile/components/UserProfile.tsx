@@ -44,7 +44,7 @@ export function UserProfile({ user, isVendor }: UserProfileProps) {
 
     async function handleSubmit(v: any) {
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/account/${user.id}/info`, {
+            fetch(`/api/protected/account/settings/${user.id}/profile`, {
                 method: "PUT",
                 body: JSON.stringify(v),
             })

@@ -1,10 +1,7 @@
-import { Skeleton } from "@/components/ui";
 import { formatAmountForDisplay } from "@/libs/utils";
-import { addDays, addMonths, format } from "date-fns";
-import { useMemo } from "react";
 import { useNewLocation } from "../../provider/NewLocationContext";
 
-export default function PaymentDetails() {
+export function PaymentDetails() {
     const { locationState, plans } = useNewLocation();
 
     const selectedPlan = plans?.find(p => p.id === locationState.planId);
@@ -12,10 +9,6 @@ export default function PaymentDetails() {
         const amount = selectedPlan?.price || 0;
         return formatAmountForDisplay(amount, 'USD');
     }
-
-
-
-
     return (
         <div className=" border border-foreground/10 rounded-lg p-4 space-y-2.5">
 

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
 }
 
-export async function PUT(req: NextRequest) {
+export async function PATCH(req: NextRequest) {
     const session = await auth();
     const { paymentMethodId, customerId } = await req.json();
     try {

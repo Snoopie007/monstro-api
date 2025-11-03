@@ -29,7 +29,7 @@ function handlePaymentError(toastRef: string | number, message: string) {
 }
 
 
-export default function NewVendorPayment({ lid }: { lid: string }) {
+export function NewPlanPayment({ lid }: { lid: string }) {
 	const { locationState, updateLocationState, tos } = useNewLocation();
 	const [errorMessage, setErrorMessage] = useState("");
 	const [loading, setLoading] = useState<boolean>(false);
@@ -64,7 +64,7 @@ export default function NewVendorPayment({ lid }: { lid: string }) {
 			const tokenRef = await stripe.createToken(cardElement!, { ...v });
 
 			if (tokenRef.token) {
-				const res = await fetch(`/api/protected/checkout/loc/${lid}/new`, {
+				const res = await fetch(`/api/protected/account/loc/${lid}`, {
 					method: "POST",
 					body: JSON.stringify({
 						vendorId: session?.user.vendorId,

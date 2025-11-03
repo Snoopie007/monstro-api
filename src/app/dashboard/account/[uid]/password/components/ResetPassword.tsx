@@ -35,7 +35,7 @@ export function ResetPassword({ userId }: { userId: string }) {
         if (form.formState.isSubmitting) return;
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/account/${userId}/password`, {
+            fetch(`/api/protected/account/settings/${userId}/password`, {
                 method: "PATCH",
                 body: JSON.stringify(v)
             })

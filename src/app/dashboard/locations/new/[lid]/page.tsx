@@ -1,6 +1,6 @@
 import React from "react";
 import { auth } from "@/auth";
-import { VendorPlanBuilder } from "./components";
+import { PlanBuilder } from "./components";
 import { redirect } from "next/navigation";
 import { NewLocationProvider } from "./provider";
 import { admindb, db } from "@/db/db";
@@ -73,7 +73,7 @@ export default async function PlanSelectionPage(props: {
 			>
 				<ScrollArea className="h-[calc(100vh-44px)] ">
 					<div className="max-w-2xl mx-auto pb-20 space-y-4">
-						<VendorPlanBuilder lid={lid} />
+						<PlanBuilder lid={lid} />
 						<CompareTable plans={plans} />
 						<FAQs />
 					</div>

@@ -1,24 +1,24 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { VendorPayment } from './VendorPayment'
+import { Elements } from '@stripe/react-stripe-js'
 import { useState } from 'react'
 import { cn, sleep } from '@/libs/utils'
 import { PlanSelector } from '../../../components'
 import { Button } from '@/components/ui'
 import { Loader2 } from 'lucide-react'
-import { useNewLocation } from '../provider/NewLocationContext'
+import { useNewLocation } from '../provider'
+import { PaymentDetails, ExistingPlanPayment, NewPlanPayment } from './PlanPayment'
+import { getStripe } from '@/libs/client/stripe'
+import { useSession } from 'next-auth/react'
 
 
 
-export function VendorPlanBuilder({ lid }: { lid: string }) {
+export function PlanBuilder({ lid }: { lid: string }) {
     const [step, setStep] = useState(1)
+    const { data: session } = useSession()
     const [loading, setLoading] = useState(false);
     const { locationState, updateLocationState, plans } = useNewLocation()
-
-
-
-
     async function handleNext() {
         setLoading(true);
         await sleep(1000);
@@ -55,7 +55,29 @@ export function VendorPlanBuilder({ lid }: { lid: string }) {
             </AnimatedSection>
             <AnimatedSection className={cn("space-y-4", { hidden: step !== 2 })}>
                 <div className='text-lg font-semibold'>Payment details</div>
-                <VendorPayment lid={lid} />
+                <div className='flex flex-col gap-2'>
+                    <PaymentDetails />
+
+                    <Elements
+                        stripe={getStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY)}
+                        options={{
+                            appearance: {
+                                variables: {
+                                    colorIcon: "#6772e5",
+                                    fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
+                                },
+                            },
+                        }}
+                    >
+                        {session?.user.stripeCustomerId ? (
+
+                            <ExistingPlanPayment lid={lid} />
+                        ) : (
+                            <NewPlanPayment lid={lid} />
+                        )}
+
+                    </Elements>
+                </div>
             </AnimatedSection>
         </div>
     )

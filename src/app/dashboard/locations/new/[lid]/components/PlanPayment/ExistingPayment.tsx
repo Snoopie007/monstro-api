@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNewLocation } from "../../provider";
-import { useVendorPaymentMethods } from "@/hooks";
+import { useVPMs } from "@/hooks";
 import { Stripe } from "stripe";
 import { cn, sleep, tryCatch } from "@/libs/utils";
 import AddPaymentMethod from "./AddMethod";
@@ -10,11 +10,12 @@ import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 
-export default function ExistingVendorPayment({ lid }: { lid: string }) {
+export function ExistingPlanPayment({ lid }: { lid: string }) {
 	const { locationState } = useNewLocation();
 	const { data: session, update } = useSession();
 	const router = useRouter();
-	const { methods, isLoading } = useVendorPaymentMethods();
+	const { methods, isLoading } = useVPMs();
+
 	const [paymentMethod, setPaymentMethod] =
 		useState<Stripe.PaymentMethod | null>(null);
 	const [loading, setLoading] = useState(false);
@@ -42,7 +43,7 @@ export default function ExistingVendorPayment({ lid }: { lid: string }) {
 
 		setLoading(true);
 		const { result, error } = await tryCatch(
-			fetch(`/api/protected/checkout/loc/${lid}/existing`, {
+			fetch(`/api/protected/account/loc/${lid}/methods`, {
 				method: "POST",
 				body: JSON.stringify({
 					paymentMethodId: paymentMethod.id,

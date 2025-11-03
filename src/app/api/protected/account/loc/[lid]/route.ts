@@ -3,7 +3,7 @@ import { db } from "@/db/db";
 import { locationState, vendors } from "@/db/schemas";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { eq } from "drizzle-orm";
-import { getPlan } from "../../../utils";
+import { getPlan } from "../../utils";
 import { auth } from "@/auth";
 
 const stripe = new VendorStripePayments();
