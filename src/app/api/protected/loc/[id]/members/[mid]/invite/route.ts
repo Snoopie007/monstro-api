@@ -1,15 +1,12 @@
 
-import { EmailSender } from '@/libs/server/emails';
-import { MonstroData } from '@/libs/data';
-import { NextRequest, NextResponse, } from 'next/server';
+import { sendEmailViaApi } from '@/libs/server/emails';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { memberLocations } from '@/db/schemas';
 import { eq, and } from 'drizzle-orm';
 
-
-
-
-export async function POST(req: NextRequest, props: { params: Promise<{ id: string, mid: string }> }) {
+export async function POST(_req: NextRequest, props: { params: Promise<{ id: string, mid: string }> }) {
     const params = await props.params;
     try {
 
@@ -28,20 +25,16 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
         }
 
         const { member, location } = ml
-        const emailSender = new EmailSender();
-        await emailSender.send({
-            options: {
-                to: member.email,
-                subject: `Welcome to ${location.name}`,
-            },
+        await sendEmailViaApi({
+            recipient: member.email,
             template: 'MemberInvite',
+            subject: `Welcome to ${location.name}`,
             data: {
                 ui: {
                     btnText: "Accept Invite",
                     btnUrl: `https://m.monstro-x.com/invite/${params.id}?email=${member.email}`
                 },
                 location,
-                monstro: MonstroData,
                 member
             }
         });

@@ -7,17 +7,15 @@ import {
 } from "@/db/schemas";
 import { and } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { MonstroData } from "@/libs/data";
-import { EmailSender } from "@/libs/server/emails";
-import { hasPermission, canView } from "@/libs/server/permissions";
+import { sendEmailViaApi } from "@/libs/server/emails";
+import { hasPermission } from "@/libs/server/permissions";
 
 type StaffProps = {
   id: string;
 };
-const emailSender = new EmailSender();
 
 export async function GET(
-  req: Request,
+  _req: Request,
   props: { params: Promise<StaffProps> }
 ) {
   const params = await props.params;
@@ -68,12 +66,9 @@ export async function POST(
     where: (users, { eq }) => eq(users.email, data.email),
   });
 
-  let userId: string;
   const staffName = `${data.firstName} ${data.lastName}`.trim(); // Combine firstName and lastName
 
   if (existingUser) {
-    userId = existingUser.id;
-
     // Check if staff record already exists for this user
     const existingStaff = await db.query.staffs.findFirst({
       where: (staffs, { eq }) => eq(staffs.userId, existingUser.id),
@@ -144,18 +139,15 @@ export async function POST(
     }
 
     try {
-      await emailSender.send({
-        options: {
-          to: existingUser.email,
-          subject: "Welcome to Monstro",
-        },
+      await sendEmailViaApi({
+        recipient: existingUser.email,
         template: "MemberInvite",
+        subject: "Welcome to Monstro",
         data: {
           ui: { button: "Join the team." },
           location: { name: staffName },
-          monstro: MonstroData,
           member: { name: staffName },
-        },
+        }
       });
       return NextResponse.json({ success: true }, { status: 200 });
     } catch (emailError) {
@@ -176,8 +168,6 @@ export async function POST(
         // Removed password as it's optional and not provided in request
       })
       .returning();
-
-    userId = newUser.id;
 
     // Create staff record
     const [newStaff] = await db
@@ -207,18 +197,15 @@ export async function POST(
     });
 
     try {
-      await emailSender.send({
-        options: {
-          to: data.email,
-          subject: "Welcome to Monstro",
-        },
+      await sendEmailViaApi({
+        recipient: data.email,
         template: "MemberInvite",
+        subject: "Welcome to Monstro",
         data: {
           ui: { button: "Join the team." },
           location: { name: staffName },
-          monstro: MonstroData,
           member: { name: staffName },
-        },
+        }
       });
 
       return NextResponse.json({ success: true }, { status: 200 });
