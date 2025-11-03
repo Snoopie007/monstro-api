@@ -1,8 +1,9 @@
 import { Staff, Vendor } from "@/types";
-import { UserProfile } from "./components";
+import { UserEmail, UserProfile } from "./components";
 import { db } from "@/db/db";
 import { auth } from "@/auth";
 import { notFound, redirect } from "next/navigation";
+import UserPhone from "./components/UserPhone";
 
 async function getVendor(id: string): Promise<Vendor | undefined> {
     try {
@@ -63,9 +64,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
                 <h2 className="text-2xl font-bold">Profile</h2>
                 <p className="text-sm text-muted-foreground">Update your profile information and settings.</p>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-4">
                 {/* <UserAvatar currentAvatar={user?.user?.image || null} onChange={() => { }} isVendor={isVendor} /> */}
                 <UserProfile user={user} isVendor={isVendor} />
+                <UserEmail user={user} />
+                <UserPhone user={user} />
             </div>
         </div>
     );

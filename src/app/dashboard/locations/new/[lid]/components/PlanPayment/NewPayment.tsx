@@ -1,12 +1,12 @@
+'use client'
 import { useState } from "react";
-
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import { cn, sleep, StripeCardOptions } from "@/libs/utils";
+import { sleep, StripeCardOptions } from "@/libs/utils";
 
 import { Loader2, LockIcon } from "lucide-react";
 import { VendorBillingSchema } from "@/libs/FormSchemas/schemas";

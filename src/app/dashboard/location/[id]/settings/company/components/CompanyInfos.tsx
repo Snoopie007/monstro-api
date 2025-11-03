@@ -52,33 +52,32 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
     }
 
     return (
-        <Card className="rounded-sm  border-foreground/10">
+        <div className="bg-foreground/5 rounded-lg">
             <div className="p-6 space-y-4">
-                <CardHeader className="p-0 space-y-2">
-                    <CardTitle className="text-base">{title}</CardTitle>
-                    <CardDescription>
+                <div className="space-y-1">
+                    <div className="text-lg font-bold">{title}</div>
+                    <p className="text-sm text-muted-foreground">
                         {description}
-                    </CardDescription>
-                </CardHeader>
+                    </p>
+                </div>
                 <Input
                     type="text"
-                    className="rounded-sm w-60"
+                    className=" w-60"
                     placeholder={`Enter ${type}`}
                     value={value ?? ''}
                     onChange={(e) => setValue(e.target.value)}
                 />
             </div>
-            <CardFooter className="flex justify-end border-t px-6 py-3 bg-foreground/5 border-foreground/5">
+            <div className="flex justify-end px-6 py-3 bg-foreground/5">
                 <Button
                     variant="foreground"
                     size="sm"
                     disabled={loading || !value || value === currentValue}
                     onClick={saveChanges}
                 >
-                    {loading ? <Loader2 className="animate-spin size-4 " /> : 'Save'}
+                    {loading ? <Loader2 className="animate-spin size-4 " /> : 'Update'}
                 </Button>
-
-            </CardFooter>
-        </Card>
-    )
+            </div>
+        </div>
+    );
 }

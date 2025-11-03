@@ -2,7 +2,7 @@
 import { CameraIcon, Trash2Icon, UploadCloudIcon } from "lucide-react";
 import React, { useRef } from 'react'
 import Image from "next/image";
-import { tryCatch } from "@/libs/utils";
+import { cn, tryCatch } from "@/libs/utils";
 
 interface UserAvatarProps {
     currentAvatar: string | null;
@@ -61,17 +61,19 @@ export function UserAvatar({ currentAvatar, onChange, isVendor }: UserAvatarProp
 
             ) : (
                 <div className="flex flex-row gap-6 items-center">
-                    <div className='flex-1  border h-[80px] border-dashed rounded-sm cursor-pointer group:hover:border-white  flex flex-row items-center justify-center'
+                    <div className={cn('flex-1  border h-[80px] border-dashed rounded-lg cursor-pointer',
+                        ' flex flex-row items-center justify-center border-foreground/10'
+                    )}
                         onClick={() => { fileRef.current?.click() }}>
-                        <span>
-                            <CameraIcon size={30} className='inline-block stroke-accent' />
+                        <span className="text-muted-foreground">
+                            <CameraIcon size={24} className='inline-block stroke-accent' />
                         </span>
                     </div>
                     <div className="flex-1">
                         <b className="font-semibold text-base">
                             Upload Profile Picture
                         </b>
-                        <p className="text-xs mt-1 leading-5">
+                        <p className="text-sm mt-1 leading-5 text-muted-foreground">
                             The proposed size is 350px * 180px. No bigger than 2.5 MB. Only PNG, JPG, JPEG are allowed.
                         </p>
                     </div>

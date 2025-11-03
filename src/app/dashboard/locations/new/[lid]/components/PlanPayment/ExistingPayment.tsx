@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useState } from "react";
 import { useNewLocation } from "../../provider";
 import { useVPMs } from "@/hooks";
@@ -19,9 +20,7 @@ export function ExistingPlanPayment({ lid }: { lid: string }) {
 	const [paymentMethod, setPaymentMethod] =
 		useState<Stripe.PaymentMethod | null>(null);
 	const [loading, setLoading] = useState(false);
-	const [filteredMethods, setFilteredMethods] = useState<
-		Stripe.PaymentMethod[]
-	>([]);
+	const [filteredMethods, setFilteredMethods] = useState<Stripe.PaymentMethod[]>([]);
 
 	useEffect(() => {
 		if (!methods) return;
