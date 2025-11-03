@@ -1,3 +1,6 @@
+import { auth } from "@/auth";
+import type { ExtendedUser } from "@/types/next-auth";
+
 export interface ApiClient {
     get: (url: string, params?: Record<string, string | number | boolean | string[]>) => Promise<unknown>;
     post: (url: string, data?: Record<string, unknown>) => Promise<unknown>;
@@ -39,12 +42,30 @@ export const createMonstroApiClient = (): ApiClient => {
             return response.json()
         },
         post: async (endpoint: string, data?: Record<string, unknown>) => {
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+            }
+            
+            // Try to get user session token first
+            const session = await auth();
+            const sbToken = (session?.user as ExtendedUser)?.sbToken;
+            
+            if (sbToken) {
+                // User is authenticated, use their token
+                headers['Authorization'] = `Bearer ${sbToken}`;
+            } else {
+                // No user session (e.g., password reset, login token flows)
+                // Use service role key which is a valid Supabase JWT
+                const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+                if (serviceKey) {
+                    headers['Authorization'] = `Bearer ${serviceKey}`;
+                }
+            }
+            
             const url = new URL(`${baseUrl}${endpoint}`)
             const response = await fetch(url.toString(), {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers,
                 body: JSON.stringify(data)
             })
             if (!response.ok) {
@@ -52,49 +73,5 @@ export const createMonstroApiClient = (): ApiClient => {
             }
             return response.json()
         }
-    }
-}
-
-/**
- * Server-side function to send emails via monstro-api
- * Call this from server routes/actions in monstro-15 to send templated emails
- * 
- * @example
- * await sendEmailViaApi({
- *   recipient: 'user@example.com',
- *   template: 'LoginTokenEmail',
- *   subject: 'Verify your email',
- *   data: {
- *     user: { name: 'John', email: 'john@example.com' },
- *     otp: { token: '123456' }
- *   }
- * })
- */
-export async function sendEmailViaApi(params: {
-    recipient: string;
-    template: string;
-    subject: string;
-    data: Record<string, string | number | boolean | object | null | undefined>;
-}): Promise<{ success: boolean; message: string }> {
-    const apiUrl = process.env.MONSTRO_API_URL || 'http://localhost:3000'
-    
-    try {
-        const response = await fetch(`${apiUrl}/protected/locations/email`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(params),
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(`API Error: ${response.status} - ${JSON.stringify(errorData)}`)
-        }
-
-        return await response.json()
-    } catch (error) {
-        console.error('Failed to send email via API:', error)
-        throw error
     }
 }
