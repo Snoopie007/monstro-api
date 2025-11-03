@@ -11,8 +11,16 @@ async function verifyToken(token: string) {
     try {
         const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET);
         const { payload } = await jwtVerify(token, secret);
+        
+        // Check if this is a service role token (used for internal service-to-service calls)
+        if (payload.role === 'service_role') {
+            // Service role token - valid for internal operations
+            return { mid: 'service', isServiceRole: true };
+        }
+        
+        // Regular user token
         const { user_metadata } = payload as { user_metadata: { member_id: string } };
-        return { mid: user_metadata.member_id };
+        return { mid: user_metadata.member_id, isServiceRole: false };
     } catch (error) {
         console.log("Token verification error", error);
         return null;
@@ -52,7 +60,10 @@ export async function AuthMiddleware(app: Elysia) {
 
         if (!result) return status(401, { error: "Unauthorized" })
 
-        return { memberId: result.mid }
+        return { 
+            memberId: result.mid,
+            isServiceRole: result.isServiceRole 
+        }
     })
 
 }

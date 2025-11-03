@@ -8,8 +8,6 @@ import { emailQueue } from "@/libs/queues";
 import { evaluateTriggers } from "@/libs/achievements";
 
 
-
-
 export async function memberFamilies(app: Elysia) {
     return app.get("/families", async ({ status, params }) => {
         const { mid } = params as { mid: string };
@@ -191,7 +189,7 @@ export async function memberFamilies(app: Elysia) {
                 subject: "You've been invited to join a family on Monstro",
                 template: "InviteEmailTemplate",
                 metadata: {
-                    member: fm?.member,
+                    member: {...fm?.member},
                 },
             });
 

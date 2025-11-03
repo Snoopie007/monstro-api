@@ -17,13 +17,7 @@ const worker = new Worker('email', async (job) => {
         template: data.template,
         data: {
             ...data.metadata,
-            ui: {
-                btnText: "Join the class.",
-                btnUrl: `referrals/${job.data.member.id}`,
-            },
-
             monstro: MonstroData,
-
         },
     });
 
