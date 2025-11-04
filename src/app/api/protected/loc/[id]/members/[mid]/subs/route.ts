@@ -1,12 +1,10 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/db/schemas";
+import { memberInvoices, memberLocations, memberSubscriptions, transactions, integrations, members, locations } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
-import { createSubscription, updatePastDueSubscriptions } from "../../utils";
+import { createSubscription, updatePastDueSubscriptions, scheduleRecurringInvoiceEmails } from "../../utils";
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { MemberSubscription } from "@/types";
-import { addDays, addMonths } from "date-fns";
-import Stripe from "stripe";
+import type { MemberSubscription } from "@/types";
 import { evaluateTriggers } from "@/libs/achievements";
 
 
@@ -133,6 +131,60 @@ export async function POST(req: Request, props: { params: Promise<{ id: string, 
             }
             return sub
         })
+        
+        // Schedule recurring invoice email reminders (only for manual/cash, plan_id >= 2, no Stripe)
+        if (data.paymentMethod === "cash" || data.paymentMethod === "manual") {
+            try {
+                // Check if location has plan_id >= 2
+                if (locationState?.planId && locationState.planId >= 2) {
+                    // Check if location has NO Stripe integration
+                    const hasStripe = await db.query.integrations.findFirst({
+                        where: and(
+                            eq(integrations.locationId, params.id),
+                            eq(integrations.service, 'stripe')
+                        )
+                    });
+                    
+                    if (!hasStripe) {
+                        // Fetch member and location details
+                        const member = await db.query.members.findFirst({
+                            where: eq(members.id, params.mid)
+                        });
+                        
+                        const location = await db.query.locations.findFirst({
+                            where: eq(locations.id, params.id)
+                        });
+                        
+                        if (member && location && plan.interval && plan.intervalThreshold) {
+                            await scheduleRecurringInvoiceEmails({
+                                subscriptionId: sub.id,
+                                memberId: params.mid,
+                                locationId: params.id,
+                                memberEmail: member.email,
+                                memberFirstName: member.firstName,
+                                memberLastName: member.lastName || '',
+                                locationName: location.name,
+                                locationAddress: location.address || '',
+                                startDate: sub.currentPeriodEnd, // First invoice due at end of first period
+                                interval: plan.interval,
+                                intervalThreshold: plan.intervalThreshold,
+                                invoiceDetails: {
+                                    description: newInvoice.description || `${plan.name} - Recurring Invoice`,
+                                    items: newInvoice.items as any[],
+                                    total: newInvoice.total,
+                                    currency: 'usd'
+                                }
+                            });
+                            console.log(`📧 Scheduled recurring invoice emails for subscription ${sub.id}`);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error scheduling recurring invoice emails:', error);
+                // Don't fail the request if email scheduling fails
+            }
+        }
+        
         if (data.paymentMethod !== "card") {
             try {
                 await evaluateTriggers({

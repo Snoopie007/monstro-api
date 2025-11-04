@@ -1,9 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberInvoices, transactions, memberSubscriptions } from "@/db/schemas";
+import { memberInvoices, transactions, memberSubscriptions, locationState, members, locations } from "@/db/schemas";
 import { eq, and } from "drizzle-orm";
 import { addMonths, addWeeks, addDays, addYears } from "date-fns";
+import { createMonstroApiClient } from "@/libs/api";
 
 type MarkPaidProps = {
 	id: string;
@@ -149,6 +150,61 @@ export async function POST(
 				}
 			}
 		});
+
+		// Send payment successful email (only for manual/cash, plan_id >= 2)
+		if (invoice.paymentMethod === "manual" || invoice.paymentMethod === "cash") {
+			try {
+				// Check if location has plan_id >= 2
+				const locState = await db.query.locationState.findFirst({
+					where: eq(locationState.locationId, params.id)
+				});
+				
+				if (locState?.planId && locState.planId >= 2) {
+					// Fetch member and location details
+					const member = await db.query.members.findFirst({
+						where: eq(members.id, params.mid)
+					});
+					
+					const location = await db.query.locations.findFirst({
+						where: eq(locations.id, params.id)
+					});
+					
+					if (member && location) {
+						const apiClient = createMonstroApiClient();
+						await apiClient.post('/protected/locations/email', {
+							recipient: member.email,
+							subject: 'Payment Received - Thank You',
+							template: 'PaymentSuccessEmail',
+							data: {
+								member: {
+									firstName: member.firstName,
+									lastName: member.lastName
+								},
+								invoice: {
+									id: invoice.id,
+									total: invoice.total,
+									paidDate: paidDate || new Date().toISOString(),
+									description: invoice.description || 'Payment'
+								},
+								location: {
+									name: location.name,
+									address: location.address || ''
+								},
+								monstro: {
+									fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',
+									privacyUrl: 'https://mymonstro.com/privacy',
+									unsubscribeUrl: 'https://mymonstro.com/unsubscribe',
+								}
+							}
+						});
+						console.log(`📧 Sent payment success email for invoice ${invoice.id}`);
+					}
+				}
+			} catch (error) {
+				console.error('Failed to send payment success email:', error);
+				// Don't fail the request if email fails
+			}
+		}
 
 		return NextResponse.json(
 			{

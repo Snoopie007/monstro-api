@@ -5,10 +5,11 @@ import {
   Transaction,
   MemberSubscription,
 } from "@/types";
-import { isAfter } from "date-fns";
+import { isAfter, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import {db} from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
 import { eq, and, lt } from "drizzle-orm";
+import { createMonstroApiClient } from "@/libs/api";
  
 type BaseData = {
   memberPlanId: string;
@@ -375,6 +376,105 @@ export async function updatePastDueSubscriptions(
   return pastDueSubscriptions.length;
 }
 
+/**
+ * Schedule recurring invoice email reminders for a subscription
+ * Calculates all future due dates and schedules emails via BullMQ
+ */
+async function scheduleRecurringInvoiceEmails(params: {
+  subscriptionId: string;
+  memberId: string;
+  locationId: string;
+  memberEmail: string;
+  memberFirstName: string;
+  memberLastName: string;
+  locationName: string;
+  locationAddress: string;
+  startDate: Date;
+  endDate?: Date;
+  interval: string;
+  intervalThreshold: number;
+  invoiceDetails: {
+    description: string;
+    items: any[];
+    total: number;
+    currency: string;
+  };
+}) {
+  const apiClient = createMonstroApiClient();
+  
+  // Calculate all future due dates
+  const dueDates: Date[] = [];
+  let currentDate = new Date(params.startDate);
+  const maxDate = params.endDate || addYears(currentDate, 2); // Default 2 years if no end date
+  
+  while (currentDate <= maxDate) {
+    dueDates.push(new Date(currentDate));
+    
+    // Calculate next due date based on interval
+    switch (params.interval) {
+      case 'day':
+        currentDate = addDays(currentDate, params.intervalThreshold);
+        break;
+      case 'week':
+        currentDate = addWeeks(currentDate, params.intervalThreshold);
+        break;
+      case 'month':
+        currentDate = addMonths(currentDate, params.intervalThreshold);
+        break;
+      case 'year':
+        currentDate = addYears(currentDate, params.intervalThreshold);
+        break;
+      default:
+        throw new Error(`Invalid interval: ${params.interval}`);
+    }
+    
+    // Safety limit: max 100 invoices scheduled at once
+    if (dueDates.length >= 100) break;
+  }
+  
+  // Schedule email for each due date via monstro-api
+  const scheduledCount = 0;
+  for (const dueDate of dueDates) {
+    try {
+      await apiClient.post('/protected/locations/email', {
+        recipient: params.memberEmail,
+        subject: `Invoice Reminder: ${params.invoiceDetails.description}`,
+        template: 'InvoiceReminderEmail',
+        data: {
+          member: {
+            firstName: params.memberFirstName,
+            lastName: params.memberLastName,
+            email: params.memberEmail,
+          },
+          invoice: {
+            id: `${params.subscriptionId}-${dueDate.getTime()}`,
+            total: params.invoiceDetails.total,
+            dueDate: dueDate.toISOString(),
+            description: params.invoiceDetails.description,
+            items: params.invoiceDetails.items,
+          },
+          location: {
+            name: params.locationName,
+            address: params.locationAddress,
+          },
+          monstro: {
+            fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',
+            privacyUrl: 'https://mymonstro.com/privacy',
+            unsubscribeUrl: 'https://mymonstro.com/unsubscribe',
+          },
+        },
+        sendAt: dueDate.toISOString(),
+        jobId: `invoice-reminder-${params.subscriptionId}-${dueDate.getTime()}`,
+      });
+    } catch (error) {
+      console.error(`Failed to schedule email for ${dueDate.toISOString()}:`, error);
+      // Continue scheduling other emails even if one fails
+    }
+  }
+  
+  return scheduledCount;
+}
+
 export {
   calculateCurrentPeriodEnd,
   calculateInvoice,
@@ -382,4 +482,5 @@ export {
   createSubscription,
   createInvoice,
   createTransaction,
+  scheduleRecurringInvoiceEmails,
 };
