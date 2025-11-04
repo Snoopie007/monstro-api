@@ -4,6 +4,8 @@ import { ResetSuccessEmail } from './ResetSuccessEmail'
 import { SimpleOTPEmail } from './SimpleOTP'
 import { InviteEmailTemplate } from './MemberInvite'
 import { UpdateEmailOTP } from './UpdateEmailOTP'
+import InvoiceReminderEmail from './InvoiceReminderEmail'
+import PaymentSuccessEmail from './PaymentSuccessEmail'
 
 
 export const EmailTemplates = {
@@ -12,5 +14,7 @@ export const EmailTemplates = {
     ResetSuccessEmail,
     SimpleOTPEmail,
     InviteEmailTemplate,
-    UpdateEmailOTP
+    UpdateEmailOTP,
+    InvoiceReminderEmail,
+    PaymentSuccessEmail
 }
