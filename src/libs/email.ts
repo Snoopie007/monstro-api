@@ -1,6 +1,6 @@
 import sendgrid from '@sendgrid/mail';
+import { render } from '@react-email/render';
 
-import { interEmailsAndText } from './utils';
 import { EmailTemplates } from '@/emails';
 
 type EmailOptions = {
@@ -26,9 +26,25 @@ export class EmailSender {
         this._fromEmail = 'no-reply@mymonstro.com';
     }
 
+    public async sendSupportEmail(props: EmailOptions) {
+        const TemplateComponent = EmailTemplates[props.template] as any;
+        const html = await render(TemplateComponent(props.data));
+        
+        await this._sender.send({
+            ...props.options,
+            from: {
+                email: 'support@mymonstro.com',
+                name: 'Monstro Support'
+            },
+            replyTo: `case+${props.data.case.id}@support.mymonstro.com`,
+            html
+        });
+    }
+
 
     public async send(props: EmailOptions) {
-        const html = interEmailsAndText(EmailTemplates[props.template], props.data);
+        const TemplateComponent = EmailTemplates[props.template] as any;
+        const html = await render(TemplateComponent(props.data));
 
         await this._sender.send({
             ...props.options,

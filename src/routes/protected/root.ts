@@ -21,7 +21,8 @@ import {
     locationLeaderboard,
     locationRewards,
     locationSessions,
-    locationSupport
+    locationSupport,
+    locationEmail
 } from './locations';
 import {
     groupRoutes
@@ -45,6 +46,10 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(memberGroups);
         app.use(memberPlans);
         app.use(memberChats);
+        return app;
+    })
+    .group('/locations', (app) => {
+        app.use(locationEmail);
         return app;
     })
     .group('/locations/:lid', (app) => {
