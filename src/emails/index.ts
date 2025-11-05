@@ -1,20 +1,23 @@
-import { OTPEmailTemplate } from './OTPEmail'
-import { ResetPasswordEmail } from './ResetPasswordEmail'
-import { ResetSuccessEmail } from './ResetSuccessEmail'
-import { SimpleOTPEmail } from './SimpleOTP'
-import { InviteEmailTemplate } from './MemberInvite'
-import { UpdateEmailOTP } from './UpdateEmailOTP'
-import InvoiceReminderEmail from './InvoiceReminderEmail'
-import PaymentSuccessEmail from './PaymentSuccessEmail'
+import ClassReminderEmail from "./ClassReminderEmail";
+import InvoiceReminderEmail from "./InvoiceReminderEmail";
+import MemberInviteEmail from "./MemberInviteEmail";
+import OTPEmailTemplate from "./OTPEmailTemplate";
+import PaymentSuccessEmail from "./PaymentSuccessEmail";
+import ResetPasswordEmail from "./ResetPasswordEmail";
+import ResetSuccessEmail from "./ResetSuccessEmail";
+import SimpleOTPEmail from "./SimpleOTP";
+import UpdateEmailOTP from "./UpdateEmailOTP";
+
 
 
 export const EmailTemplates = {
-    OTPEmail: OTPEmailTemplate,
+    ClassReminderEmail,
+    InvoiceReminderEmail,
+    MemberInviteEmail,
+    OTPEmailTemplate,
+    PaymentSuccessEmail,
     ResetPasswordEmail,
     ResetSuccessEmail,
     SimpleOTPEmail,
-    InviteEmailTemplate,
-    UpdateEmailOTP,
-    InvoiceReminderEmail,
-    PaymentSuccessEmail
+    UpdateEmailOTP
 }

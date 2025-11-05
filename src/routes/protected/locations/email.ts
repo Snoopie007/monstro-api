@@ -35,18 +35,17 @@ export async function locationEmail(app: Elysia) {
                 if (delay !== undefined && delay > 0) {
                     queueOptions.delay = delay;
                     queueOptions.removeOnComplete = {
-                        age: 60 * 60 * 24 * 7, // Keep for 7 days after sending
+                        age: 60 * 60 * 24 * 7,
                         count: 100
                     };
                 }
                 
-                // Add jobId if provided (prevents duplicate scheduled emails)
                 if (jobId) {
                     queueOptions.jobId = jobId;
                 }
                 
                 // Queue the email
-                await emailQueue.add('send-email', {
+                const addedJob = await emailQueue.add('send-email', {
                     to: recipient,
                     subject: subject,
                     template: template,
@@ -57,10 +56,11 @@ export async function locationEmail(app: Elysia) {
                     success: true,
                     message: sendAt 
                         ? `Email scheduled for ${recipient} at ${sendAt}`
-                        : `Email queued successfully for ${recipient}`
+                        : `Email queued successfully for ${recipient}`,
+                    jobId: addedJob.id
                 }
             } catch (error) {
-                console.error('Error queuing email:', error)
+                console.error('Error queuing email:', error);
                 throw new Error(`Failed to queue email: ${error instanceof Error ? error.message : 'Unknown error'}`)
             }
         })

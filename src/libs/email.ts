@@ -1,6 +1,6 @@
 import sendgrid from '@sendgrid/mail';
+import { render } from '@react-email/render';
 
-import { interEmailsAndText } from './utils';
 import { EmailTemplates } from '@/emails';
 
 type EmailOptions = {
@@ -27,7 +27,8 @@ export class EmailSender {
     }
 
     public async sendSupportEmail(props: EmailOptions) {
-        const html = interEmailsAndText(EmailTemplates[props.template], props.data);
+        const TemplateComponent = EmailTemplates[props.template] as any;
+        const html = await render(TemplateComponent(props.data));
         
         await this._sender.send({
             ...props.options,
@@ -42,7 +43,8 @@ export class EmailSender {
 
 
     public async send(props: EmailOptions) {
-        const html = interEmailsAndText(EmailTemplates[props.template], props.data);
+        const TemplateComponent = EmailTemplates[props.template] as any;
+        const html = await render(TemplateComponent(props.data));
 
         await this._sender.send({
             ...props.options,
