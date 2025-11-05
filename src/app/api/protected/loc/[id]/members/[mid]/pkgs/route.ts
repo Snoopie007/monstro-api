@@ -1,11 +1,10 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberPackages, transactions, locationState, integrations, members, locations } from "@/db/schemas";
+import { memberInvoices, memberPackages, transactions, locationState } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
 import { createPackage } from "../../utils";
 import { NextRequest, NextResponse } from "next/server";
 import { MemberPackage } from "@/types";
 import { eq, and } from "drizzle-orm";
-import { createMonstroApiClient } from "@/libs/api";
 
 type PackageProps = {
 	id: string;
@@ -165,69 +164,6 @@ export async function POST(
 			});
 			return pkg;
 		});
-
-		// Send invoice reminder email immediately for manual/cash packages (only for plan_id >= 2, no Stripe)
-		if (data.paymentMethod === "cash" || data.paymentMethod === "manual") {
-			try {
-				// Check if location has plan_id >= 2
-				if (locationState?.planId && locationState.planId >= 2) {
-					// Check if location has NO Stripe integration
-					const hasStripe = await db.query.integrations.findFirst({
-						where: and(
-							eq(integrations.locationId, params.id),
-							eq(integrations.service, 'stripe')
-						)
-					});
-					
-					if (!hasStripe) {
-						// Fetch member and location details
-						const member = await db.query.members.findFirst({
-							where: eq(members.id, params.mid)
-						});
-						
-						const location = await db.query.locations.findFirst({
-							where: eq(locations.id, params.id)
-						});
-						
-						if (member && location) {
-							const apiClient = createMonstroApiClient();
-							await apiClient.post('/protected/locations/email', {
-								recipient: member.email,
-								subject: `Invoice: ${plan.name}`,
-								template: 'InvoiceReminderEmail',
-								data: {
-									member: {
-										firstName: member.firstName,
-										lastName: member.lastName,
-										email: member.email,
-									},
-									invoice: {
-										id: newPackage.id,
-										total: newInvoice.total,
-										dueDate: newInvoice.dueDate.toISOString(),
-										description: newInvoice.description || `${plan.name} - One-time Payment`,
-										items: newInvoice.items as any[],
-									},
-									location: {
-										name: location.name,
-										address: location.address || '',
-									},
-									monstro: {
-										fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',
-										privacyUrl: 'https://mymonstro.com/privacy',
-										unsubscribeUrl: 'https://mymonstro.com/unsubscribe',
-									},
-								}
-							});
-							console.log(`📧 Sent invoice reminder email for package ${newPackage.id}`);
-						}
-					}
-				}
-			} catch (error) {
-				console.error('Failed to send invoice reminder email:', error);
-				// Don't fail the request if email fails
-			}
-		}
 
 		return NextResponse.json({
 			...newPackage,

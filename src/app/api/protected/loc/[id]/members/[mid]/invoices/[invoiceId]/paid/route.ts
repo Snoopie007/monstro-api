@@ -4,7 +4,7 @@ import { db } from "@/db/db";
 import { memberInvoices, transactions, memberSubscriptions, locationState, members, locations } from "@/db/schemas";
 import { eq, and } from "drizzle-orm";
 import { addMonths, addWeeks, addDays, addYears } from "date-fns";
-import { createMonstroApiClient } from "@/libs/api";
+import { serversideApiClient } from "@/libs/api/server";
 
 type MarkPaidProps = {
 	id: string;
@@ -170,15 +170,15 @@ export async function POST(
 					});
 					
 					if (member && location) {
-						const apiClient = createMonstroApiClient();
+						const apiClient = serversideApiClient();
 						await apiClient.post('/protected/locations/email', {
 							recipient: member.email,
 							subject: 'Payment Received - Thank You',
 							template: 'PaymentSuccessEmail',
 							data: {
 								member: {
-									firstName: member.firstName,
-									lastName: member.lastName
+									firstName: member.firstName || '',
+									lastName: member.lastName || ''
 								},
 								invoice: {
 									id: invoice.id,
@@ -187,7 +187,7 @@ export async function POST(
 									description: invoice.description || 'Payment'
 								},
 								location: {
-									name: location.name,
+									name: location.name || '',
 									address: location.address || ''
 								},
 								monstro: {

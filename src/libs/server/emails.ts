@@ -1,4 +1,4 @@
-import { createMonstroApiClient } from '../api';
+import { serversideApiClient } from '../api/server';
 
 /**
  * Server-side function to send emails via monstro-api
@@ -22,7 +22,7 @@ export async function sendEmailViaApi(params: {
     data: Record<string, string | number | boolean | object | null | undefined>;
 }): Promise<{ success: boolean; message: string }> {
     try {
-        const client = createMonstroApiClient();
+        const client = serversideApiClient();
         return await client.post('/protected/locations/email', params) as { success: boolean; message: string };
     } catch (error) {
         console.error('Failed to send email via API:', error);

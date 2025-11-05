@@ -9,7 +9,7 @@ import { isAfter, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import {db} from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
 import { eq, and, lt } from "drizzle-orm";
-import { createMonstroApiClient } from "@/libs/api";
+import { serversideApiClient } from "@/libs/api/server";
  
 type BaseData = {
   memberPlanId: string;
@@ -400,7 +400,7 @@ async function scheduleRecurringInvoiceEmails(params: {
     currency: string;
   };
 }) {
-  const apiClient = createMonstroApiClient();
+  const apiClient = serversideApiClient();
   
   // Calculate all future due dates
   const dueDates: Date[] = [];
@@ -451,11 +451,11 @@ async function scheduleRecurringInvoiceEmails(params: {
             total: params.invoiceDetails.total,
             dueDate: dueDate.toISOString(),
             description: params.invoiceDetails.description,
-            items: params.invoiceDetails.items,
+            items: params.invoiceDetails.items || [],
           },
           location: {
-            name: params.locationName,
-            address: params.locationAddress,
+            name: params.locationName || '',
+            address: params.locationAddress || '',
           },
           monstro: {
             fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',
