@@ -17,32 +17,32 @@ export async function locationEmail(app: Elysia) {
             const { recipient, subject, template, data, sendAt, jobId } = body as SendEmailBody
             
             try {
-                // Calculate delay if sendAt is provided
-                const delay = sendAt 
-                    ? Math.max(0, new Date(sendAt).getTime() - Date.now())
-                    : undefined;
-                
-                // Queue options
-                const queueOptions: any = {
-                    attempts: 3,
-                    backoff: {
-                        type: 'exponential',
-                        delay: 2000
-                    }
-                };
-                
-                // Add scheduling options if this is a future email
-                if (delay !== undefined && delay > 0) {
-                    queueOptions.delay = delay;
-                    queueOptions.removeOnComplete = {
-                        age: 60 * 60 * 24 * 7,
-                        count: 100
-                    };
+            // Calculate delay if sendAt is provided
+            const delay = sendAt 
+                ? Math.max(0, new Date(sendAt).getTime() - Date.now())
+                : undefined;
+            
+            // Queue options
+            const queueOptions: any = {
+                attempts: 3,
+                backoff: {
+                    type: 'exponential',
+                    delay: 2000
+                },
+                removeOnComplete: {
+                    age: 60 * 60 * 24 * 7,
+                    count: 100
                 }
-                
-                if (jobId) {
-                    queueOptions.jobId = jobId;
-                }
+            };
+            
+            // Add delay if provided (including 0 for immediate sending)
+            if (delay !== undefined) {
+                queueOptions.delay = delay;
+            }
+            
+            if (jobId) {
+                queueOptions.jobId = jobId;
+            }
                 
                 // Queue the email
                 const addedJob = await emailQueue.add('send-email', {
@@ -62,6 +62,34 @@ export async function locationEmail(app: Elysia) {
             } catch (error) {
                 console.error('Error queuing email:', error);
                 throw new Error(`Failed to queue email: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            }
+        })
+        .delete('/email/:jobId', async ({ params }) => {
+            const { jobId } = params;
+            
+            try {
+                // Try to find and remove the job from the queue
+                const job = await emailQueue.getJob(jobId);
+                
+                if (!job) {
+                    return {
+                        success: false,
+                        message: `Job ${jobId} not found in queue`
+                    };
+                }
+                
+                // Remove the job
+                await job.remove();
+                
+                console.log(`📧 Cancelled email job: ${jobId}`);
+                
+                return {
+                    success: true,
+                    message: `Email job ${jobId} cancelled successfully`
+                };
+            } catch (error) {
+                console.error('Error cancelling email job:', error);
+                throw new Error(`Failed to cancel email job: ${error instanceof Error ? error.message : 'Unknown error'}`)
             }
         })
 

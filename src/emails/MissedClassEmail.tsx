@@ -6,11 +6,15 @@ import {
   Container,
   Section,
   Text,
+  Button,
 } from '@react-email/components';
 
-interface ClassReminderEmailProps {
+interface MissedClassEmailProps {
   member: { firstName: string; lastName: string };
-  session: { programName: string; dayTime: string };
+  session: {
+    programName: string;
+    dayTime: string;
+  };
   location: { name: string; address: string };
   monstro?: {
     fullAddress?: string;
@@ -19,12 +23,12 @@ interface ClassReminderEmailProps {
   };
 }
 
-export default function ClassReminderEmail({
+export default function MissedClassEmail({
   member,
   session,
   location,
   monstro,
-}: ClassReminderEmailProps) {
+}: MissedClassEmailProps) {
   return (
     <Html>
       <Head />
@@ -34,10 +38,23 @@ export default function ClassReminderEmail({
             <Text style={greetingStyle}>Hi {member.firstName},</Text>
 
             <Text style={messageStyle}>
-              Just a quick reminder that your class <strong>{session.programName}</strong>{' '}
-              is coming up on <strong>{session.dayTime}</strong>. Don't forget to
-              check in and arrive early.
+              We noticed you missed your <strong>{session.programName}</strong>{' '}
+              class scheduled for <strong>{session.dayTime}</strong>.
             </Text>
+
+            <Text style={messageStyle}>
+              We hope everything is okay! We'd love to see you at your next
+              class.
+            </Text>
+
+            <Section style={buttonContainerStyle}>
+              <Button
+                href={`https://app.mymonstro.com/schedule`}
+                style={buttonStyle}
+              >
+                Book Your Next Class
+              </Button>
+            </Section>
 
             <Text style={signOffStyle}>See you soon,</Text>
 
@@ -101,6 +118,22 @@ const messageStyle: React.CSSProperties = {
   lineHeight: '1.6',
 };
 
+const buttonContainerStyle: React.CSSProperties = {
+  textAlign: 'center',
+  margin: '32px 0',
+};
+
+const buttonStyle: React.CSSProperties = {
+  backgroundColor: '#000000',
+  color: '#ffffff',
+  padding: '12px 32px',
+  borderRadius: '6px',
+  textDecoration: 'none',
+  display: 'inline-block',
+  fontWeight: '600',
+  fontSize: '16px',
+};
+
 const signOffStyle: React.CSSProperties = {
   fontSize: '16px',
   color: '#000000',
@@ -149,7 +182,7 @@ const linkStyle: React.CSSProperties = {
   textDecoration: 'underline',
 };
 
-ClassReminderEmail.PreviewProps = {
+MissedClassEmail.PreviewProps = {
   member: {
     firstName: 'John',
     lastName: 'Doe',
@@ -167,4 +200,5 @@ ClassReminderEmail.PreviewProps = {
     privacyUrl: 'https://mymonstro.com/privacy',
     unsubscribeUrl: 'https://mymonstro.com/unsubscribe',
   },
-} as ClassReminderEmailProps;
+} as MissedClassEmailProps;
+
