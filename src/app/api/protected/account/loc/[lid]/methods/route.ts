@@ -4,7 +4,7 @@ import { VendorStripePayments } from "@/libs/server/stripe";
 
 import { eq } from "drizzle-orm";
 import { getPlan } from "../../../utils";
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import { locations, locationState } from "@/db/schemas/locations";
 import { db } from "@/db/db";
 

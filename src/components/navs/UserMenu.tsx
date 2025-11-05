@@ -9,7 +9,7 @@ import {
 } from "@/components/ui";
 
 import Link from "next/link";
-import { signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "@/hooks/useSession";
 import { CreditCard, User } from "lucide-react";
 import { cn } from "@/libs/utils";
 import { useTheme } from "next-themes";

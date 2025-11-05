@@ -3,7 +3,7 @@
  * Includes auth token from session
  */
 
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import type { ExtendedUser } from "@/types/next-auth";
 
 export interface ApiClient {

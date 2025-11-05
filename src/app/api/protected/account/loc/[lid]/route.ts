@@ -4,7 +4,7 @@ import { locationState, vendors } from "@/db/schemas";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { eq } from "drizzle-orm";
 import { getPlan } from "../../utils";
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 
 const stripe = new VendorStripePayments();
 

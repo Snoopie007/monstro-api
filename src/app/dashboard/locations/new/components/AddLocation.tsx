@@ -23,7 +23,7 @@ import {
     SelectValue,
 } from "@/components/forms";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 
 import { toast } from "react-toastify";
 import { Industries } from "@/libs/data";

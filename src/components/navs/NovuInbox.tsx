@@ -1,5 +1,5 @@
 import { Inbox } from '@novu/nextjs'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/hooks/useSession'
 import { useTheme } from 'next-themes'
 import { Inbox as InboxIcon } from 'lucide-react'
 import { Button } from '../ui/button'

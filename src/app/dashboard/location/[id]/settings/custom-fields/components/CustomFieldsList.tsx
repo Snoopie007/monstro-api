@@ -45,7 +45,6 @@ export function CustomFieldsList({ lid, initialFields }: CustomFieldsListProps) 
     addField,
     removeField,
     duplicateField,
-    fetchCustomFields,
     onSubmit,
   } = useCustomFields({ locationId: lid, initialFields });
 

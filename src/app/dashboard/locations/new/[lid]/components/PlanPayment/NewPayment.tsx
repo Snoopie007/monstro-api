@@ -13,7 +13,7 @@ import { VendorBillingSchema } from "@/libs/FormSchemas/schemas";
 import { useNewLocation } from "../../provider/NewLocationContext";
 import { Button } from "@/components/ui/button";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 import { TermsAndConditions } from "@/components/terms";
 import { FormLabel, FormItem, Form } from "@/components/forms";
 import BillingFields from "./BillingFields";

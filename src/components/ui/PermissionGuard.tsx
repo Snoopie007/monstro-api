@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 import { usePermission, useAnyPermission, useAllPermissions } from "@/hooks/usePermissions";
 import type { Permission } from "@/hooks/usePermissions";
 

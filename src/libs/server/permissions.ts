@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import { NextResponse } from "next/server";
 
 export type Permission = 

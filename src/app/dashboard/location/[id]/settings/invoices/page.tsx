@@ -1,6 +1,6 @@
 
 import { VendorStripePayments } from "@/libs/server/stripe";
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
 import Stripe from "stripe";
 import Invoices from "./Invoices";

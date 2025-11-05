@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
 import { integrations } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";

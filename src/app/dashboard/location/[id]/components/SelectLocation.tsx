@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { ChevronsUpDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Location } from "@/types";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 import { useRouter } from "next/navigation";
 
 
