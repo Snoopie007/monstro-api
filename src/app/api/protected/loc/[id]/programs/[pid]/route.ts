@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 		if (!canEditProgram) {
 			return NextResponse.json({ error: "Access denied" }, { status: 403 });
 		}
-		console.log(data);
+
 		await db.update(programs).set({
 			...data,
 			instructorId: data.instructorId  ? data.instructorId : null

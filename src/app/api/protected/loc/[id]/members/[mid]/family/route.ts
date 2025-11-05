@@ -13,16 +13,13 @@ import {
 	memberPlans,
 	memberPackages,
 } from "@/db/schemas";
-import { MonstroData } from "@/libs/data";
-import { EmailSender } from "@/libs/server/emails";
-import { MemberRelationship } from "@/types/DatabaseEnums";
+import { sendEmailViaApi } from "@/libs/server/emails";
+import type { MemberRelationship } from "@/types/DatabaseEnums";
 
 type Props = {
 	mid: string;
 	id: string;
 };
-const emailSender = new EmailSender();
-
 
 function getInverseRelationship(
 	relationship: MemberRelationship
@@ -119,7 +116,7 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
 		}
 		let memberSubscription = undefined;
 		let memberPackage = undefined;
-		if (familyPlan.type == "one-time") {
+		if (familyPlan.type === "one-time") {
 			const activeMemberPackage = await db.query.memberPackages.findMany({
 				where: (memberSubscriptions, { eq }) =>
 					and(
@@ -146,7 +143,7 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
 					memberPackage = pkg;
 				}
 			}
-		} else if (familyPlan.type == "recurring") {
+		} else if (familyPlan.type === "recurring") {
 			const activeMemberSubscriptions =
 				await db.query.memberSubscriptions.findMany({
 					where: (memberSubscriptions, { eq }) =>
@@ -185,14 +182,13 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
 				),
 		});
 		if (!memberLocation) {
-			const newLocation = await db.insert(memberLocations).values({
+			await db.insert(memberLocations).values({
 				memberId: member.id,
 				locationId: params.id,
 				status: "active",
-				//set remaining parameters so that member just has to enter password to complete the signup
 			});
 		}
-		if (familyPlan.type == "one-time" && memberPackage) {
+		if (familyPlan.type === "one-time" && memberPackage) {
 			await db.insert(memberPackages).values({
 				memberPlanId: familyPlanId,
 				locationId: params.id,
@@ -203,7 +199,7 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
 				status: "active",
 			});
 			emailUrl = `invite/${params.id}/pkg/${memberPackage.id}`;
-		} else if (familyPlan.type == "recurring" && memberSubscription) {
+		} else if (familyPlan.type === "recurring" && memberSubscription) {
 			await db.insert(memberSubscriptions).values({
 				memberPlanId: familyPlanId,
 				locationId: params.id,
@@ -249,18 +245,15 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
 		});
 
 		if (newMember) {
-			await emailSender.send({
-				options: {
-					to: member.email,
-					subject: "Family Member Invitation",
-				},
+			await sendEmailViaApi({
+				recipient: member.email,
 				template: "MemberInvite",
+				subject: "Family Member Invitation",
 				data: {
 					ui: { button: "Join the class.", btnUrl: emailUrl },
 					location: { name: location?.name },
-					monstro: MonstroData,
 					member: { name: firstName },
-				},
+				}
 			});
 		} else {
 			// add email template for members who already have an account
@@ -268,7 +261,6 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
 		return NextResponse.json({
 			message: "New member created and family member relationship established",
 		});
-		// }
 	} catch (error) {
 		console.error(error);
 		return NextResponse.json({ error: "An error occurred" }, { status: 500 });

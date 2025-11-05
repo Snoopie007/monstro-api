@@ -1,11 +1,8 @@
 import { db } from "@/db/db";
 import { importMembers } from "@/db/schemas/ImportMembers";
 import { NextResponse } from "next/server";
-import { EmailSender } from "@/libs/server/emails";
-import { MonstroData } from "@/libs/data";
+import { sendEmailViaApi } from "@/libs/server/emails";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
-const emailSender = new EmailSender();
-const DATE_FORMAT_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function POST(
 	request: Request,
@@ -53,30 +50,21 @@ export async function POST(
 
 		const insertMembers = [];
 		for (const record of records) {
-			const formattedPhone = parsePhoneNumberFromString(
-				record[fieldMapping.phone],
-				"US"
-			);
-			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+			const firstName = record[fieldMapping.firstName];
+			const lastName = record[fieldMapping.lastName];
 			const email = record[fieldMapping.email];
+			const phone = record[fieldMapping.phone];
 			const lastRenewalDate = record[fieldMapping.lastRenewalDate];
 
-			if (!formattedPhone || !formattedPhone.isValid()) {
-				continue;
-			}
-
-			if (!emailRegex.test(email)) {
-				continue;
-			}
-
-			if (!DATE_FORMAT_REGEX.test(lastRenewalDate)) {
-				continue;
-			}
+			if (!email) continue;
+			const formattedPhone = parsePhoneNumberFromString(phone, "US");
+			
+			if (!formattedPhone) continue;
 
 			insertMembers.push({
-				firstName: record[fieldMapping.firstName],
-				lastName: record[fieldMapping.lastName],
-				email: email,
+				firstName,
+				lastName,
+				email,
 				phone: formattedPhone.number,
 				lastRenewalDay: new Date(lastRenewalDate),
 				planId: planId ? planId.toString() : null,
@@ -96,12 +84,10 @@ export async function POST(
 		await Promise.all(
 			insertMembers.map((m) => {
 				const subject = `You've been invited to join ${location.name} on Monstro`;
-				return emailSender.send({
-					options: {
-						to: m.email,
-						subject,
-					},
+				return sendEmailViaApi({
+					recipient: m.email,
 					template: "MemberInvite",
+					subject,
 					data: {
 						location: {
 							name: location.name,
@@ -110,9 +96,8 @@ export async function POST(
 						ui: {
 							btnText: "Accept Invite",
 							btnUrl: `https://m.monstro-x.com/invite/import/${id}`,
-						},
-						monstro: MonstroData,
-					},
+						}
+					}
 				});
 			})
 		);

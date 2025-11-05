@@ -1,9 +1,10 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberPackages, transactions } from "@/db/schemas";
+import { memberInvoices, memberPackages, transactions, locationState } from "@/db/schemas";
 import { getStripeCustomer } from "@/libs/server/stripe";
 import { createPackage } from "../../utils";
 import { NextRequest, NextResponse } from "next/server";
 import { MemberPackage } from "@/types";
+import { eq, and } from "drizzle-orm";
 
 type PackageProps = {
 	id: string;

@@ -1,16 +1,16 @@
 
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { getRedisClient } from "@/libs/server/redis";
-import { EmailSender } from "@/libs/server/emails";
-import { MonstroData } from "@/libs/data";
+import { sendEmailViaApi } from "@/libs/server/emails";
 import { generateOtp } from "@/libs/server/db";
 import { TwilioClient } from "@/libs/server/twilio";
 import LoginTokenSMS from "@/templates/sms/LoginTokenSMS";
+
 const redis = getRedisClient();
 const twilio = new TwilioClient();
 
 const expiresAt = 60 * 30 + 30; // 30 minutes + 30 seconds
-const emailSender = new EmailSender();
 
 export async function POST(req: NextRequest) {
     const { type, user } = await req.json()
@@ -23,17 +23,13 @@ export async function POST(req: NextRequest) {
             redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt })
 
             if (type === "email") {
-
-                await emailSender.send({
-                    options: {
-                        to: user.email,
-                        subject: 'Verify your email address',
-                    },
+                await sendEmailViaApi({
+                    recipient: user.email,
                     template: 'LoginTokenEmail',
+                    subject: 'Verify your email address',
                     data: {
                         user,
-                        otp: { token },
-                        monstro: MonstroData
+                        otp: { token }
                     }
                 });
             } else if (type === "sms") {
@@ -66,17 +62,13 @@ export async function PUT(req: NextRequest) {
         await redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt });
 
         if (type === "email") {
-
-            await emailSender.send({
-                options: {
-                    to: user.email,
-                    subject: 'Verify your email address',
-                },
+            await sendEmailViaApi({
+                recipient: user.email,
                 template: 'LoginTokenEmail',
+                subject: 'Verify your email address',
                 data: {
                     user,
-                    otp: { token },
-                    monstro: MonstroData
+                    otp: { token }
                 }
             });
         } else if (type === "sms") {
@@ -85,13 +77,10 @@ export async function PUT(req: NextRequest) {
             });
         }
 
-
     } catch (error) {
         console.log(error)
         return NextResponse.json({ error }, { status: 500 })
     }
-
-
 
     return NextResponse.json({ success: true }, { status: 200 })
 }

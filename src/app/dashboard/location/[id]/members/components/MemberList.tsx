@@ -31,7 +31,6 @@ import TagsFilter from './TagsFilter'
 import { FilterPopover, SortPopover } from './FilterAndSort'
 import { MembersTabState } from './useMemberTabData'
 import { debounce } from '@tiptap-pro/extension-table-of-contents'
-import { hasPermission } from '@/libs/server/permissions'
 import { usePermission } from '@/hooks/usePermissions'
 
 export function MemberList({
@@ -84,23 +83,6 @@ export function MemberList({
         return 1 // Default to 1 page if data is unavailable
     }, [data.count, pageSize])
 
-    const handleSearch = useMemo(
-        () =>
-            debounce((value: string) => {
-                handleChangeParam({
-                    id: tabId,
-                    page: 0,
-                    pageSize,
-                    searchQuery: value,
-                    selectedTags,
-                    columnFilters,
-                    tagOperator,
-                    sorting,
-                })
-            }, 300), // Wait 300ms after typing stops
-        []
-    )
-
     const handleFiltersChange = (
         updaterOrValue:
             | ColumnFiltersState
@@ -117,34 +99,6 @@ export function MemberList({
             searchQuery,
             selectedTags,
             columnFilters: filters,
-            tagOperator,
-            sorting,
-        })
-    }
-
-    const handleSortChange = (
-        sort: { id: string; direction: 'asc' | 'desc' }[]
-    ) => {
-        handleChangeParam({
-            id: tabId,
-            page: 0,
-            pageSize,
-            searchQuery,
-            selectedTags,
-            columnFilters,
-            tagOperator,
-            sorting: sort,
-        })
-    }
-
-    const handleTagsChange = (tagIds: string[]) => {
-        handleChangeParam({
-            id: tabId,
-            page: 0,
-            pageSize,
-            searchQuery,
-            selectedTags: tagIds,
-            columnFilters,
             tagOperator,
             sorting,
         })
@@ -186,6 +140,65 @@ export function MemberList({
         manualFiltering: true, // Enable manual filtering
     })
 
+    const handleSearch = useMemo(
+        () =>
+            debounce((value: string) => {
+                handleChangeParam({
+                    id: tabId,
+                    page: 0,
+                    pageSize,
+                    searchQuery: value,
+                    selectedTags,
+                    columnFilters,
+                    tagOperator,
+                    sorting,
+                })
+            }, 300), // Wait 300ms after typing stops
+        []
+    )
+
+    const handleSortChange = (
+        sort: { id: string; direction: 'asc' | 'desc' }[]
+    ) => {
+        handleChangeParam({
+            id: tabId,
+            page: 0,
+            pageSize,
+            searchQuery,
+            selectedTags,
+            columnFilters,
+            tagOperator,
+            sorting: sort,
+        })
+    }
+
+    const handleTagsChange = (tagIds: string[]) => {
+        handleChangeParam({
+            id: tabId,
+            page: 0,
+            pageSize,
+            searchQuery,
+            selectedTags: tagIds,
+            columnFilters,
+            tagOperator,
+            sorting,
+        })
+    }
+
+    const renderAddMember = useMemo(() => {
+        if (canAddMember) {
+            return <AddMember lid={params.id} stripeKey={stripeKey} />
+        }
+        return null
+    }, [canAddMember])
+
+    const renderImportMembers = useMemo(() => {
+        if (canAddMember) {
+            return <ImportMembers lid={params.id} />
+        }
+        return null
+    }, [canAddMember])
+
     useEffect(() => {
         if (!isLoading && data.members && data.members.length === 0) {
             handleFetchForCurrentTab(tabId)
@@ -207,22 +220,6 @@ export function MemberList({
             />
         )
     }
-
-
-
-    const renderAddMember = useMemo(() => {
-        if (canAddMember) {
-            return <AddMember lid={params.id} stripeKey={stripeKey} />
-        }
-        return null
-    }, [canAddMember])
-
-    const renderImportMembers = useMemo(() => {
-        if (canAddMember) {
-            return <ImportMembers lid={params.id} />
-        }
-        return null
-    }, [canAddMember])
 
     return (
         <TablePage>
