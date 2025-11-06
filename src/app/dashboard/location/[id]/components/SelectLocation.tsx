@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Location } from "@/types";
 import { useSession } from "@/hooks/useSession";
 import { useRouter } from "next/navigation";
+import { cn } from "@/components/event-calendar";
 
 
 
@@ -43,26 +44,28 @@ export default function LocationSelect({ locationId }: { locationId: string }) {
                 <PopoverTrigger asChild>
                     <Button
                         variant="ghost"
-                        role="combobox"
-                        className="h-auto py-1 px-2 text-xs rounded-sm  cursor-pointer"
+                        className={cn(
+                            "h-8 gap-2 px-4 text-sm rounded-lg bg-foreground/10",
+                            "hover:bg-foreground/20 hover:text-foreground  cursor-pointer"
+                        )}
 
                     >
                         {selectedLocation ? selectedLocation.name : "Select a location"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 stroke-black dark:stroke-white" />
+                        <ChevronsUpDown className=" size-4 -mt-0.5" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent align="start" className="w-[240px] p-0">
+                <PopoverContent align="start" className="w-[280px] p-0 border-foreground/10">
                     <Command>
-                        <CommandInput placeholder="Search location..." className="py-2.5 text-xs h-auto" />
+                        <CommandInput placeholder="Search location..." className="  h-10" />
                         <CommandList>
                             <CommandEmpty>No location found.</CommandEmpty>
                             <CommandGroup>
-                                <ScrollArea className="overflow-y-auto  w-[240px] h-40">
-                                    {session?.user?.locations?.map((location: Location) => (
+                                <ScrollArea className="overflow-y-auto  w-full h-40">
+                                    {session?.user.locations.map((location: Location) => (
                                         <CommandItem
                                             value={`${location.id}`}
                                             key={location.id}
-                                            className="font-semibold text-xs rounded-xs cursor-pointer"
+                                            className="font-semibold text-[0.8rem] rounded-lg cursor-pointer"
                                             onSelect={() => {
                                                 handleSelect(location);
                                             }}

@@ -1,1 +1,2 @@
-export * from './CustomFieldsList';
+export * from './CFList';
+export * from './NewCF';

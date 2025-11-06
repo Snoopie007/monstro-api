@@ -10,7 +10,6 @@ import {
     unique,
     uuid,
     bigint,
-    smallint,
 } from 'drizzle-orm/pg-core'
 import { locations, memberLocations } from './locations'
 import { users } from './users'
@@ -277,46 +276,33 @@ export const memberHasTags = pgTable(
 )
 
 export const memberFields = pgTable('member_fields', {
-    id: text('id')
-        .primaryKey()
-        .notNull()
-        .default(sql`uuid_base62()`),
+    id: text('id').primaryKey().notNull().default(sql`uuid_base62()`),
     name: text('name').notNull(),
     type: CustomFieldTypeEnum('type').notNull(),
-    locationId: text('location_id')
-        .notNull()
-        .references(() => locations.id, { onDelete: 'cascade' }),
+    locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
     placeholder: text('placeholder'),
     helpText: text('help_text'),
-    options: jsonb('options')
-        .$type<Array<{ value: string; label: string }>>()
-        .default(sql`'[]'::jsonb`),
+    options: jsonb('options').$type<Array<{ value: string; label: string }>>().default(sql`'[]'::jsonb`),
     created: timestamp('created_at', { withTimezone: true })
         .notNull()
         .defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 })
 
-export const memberCustomFields = pgTable(
-    'member_custom_fields',
-    {
-        memberId: text('member_id')
-            .notNull()
-            .references(() => members.id, { onDelete: 'cascade' }),
-        customFieldId: text('custom_field_id')
-            .notNull()
-            .references(() => memberFields.id, { onDelete: 'cascade' }),
-        value: text('value').notNull(),
-        created: timestamp('created_at', { withTimezone: true })
-            .notNull()
-            .defaultNow(),
-        updated: timestamp('updated_at', { withTimezone: true }),
-    },
-    (t) => [
-        primaryKey({ columns: [t.memberId, t.customFieldId] }),
-        unique('mcf_member_field_unique').on(t.memberId, t.customFieldId),
-    ]
-)
+export const memberCustomFields = pgTable('member_custom_fields', {
+    memberId: text('member_id')
+        .notNull()
+        .references(() => members.id, { onDelete: 'cascade' }),
+    customFieldId: text('custom_field_id').notNull().references(() => memberFields.id, { onDelete: 'cascade' }),
+    value: text('value').notNull(),
+    created: timestamp('created_at', { withTimezone: true })
+        .notNull()
+        .defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
+}, (t) => [
+    primaryKey({ columns: [t.memberId, t.customFieldId] }),
+    unique('mcf_member_field_unique').on(t.memberId, t.customFieldId),
+])
 
 export const membersRelations = relations(members, ({ many, one }) => ({
     memberLocations: many(memberLocations),
