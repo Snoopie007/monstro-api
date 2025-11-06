@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
-import { CustomFieldsList, NewField } from "./components";
+import { CustomFieldsList, NewCF } from "./components";
 import { MemberField } from "@/types";
-
+import { CFProvider } from "./provider";
 async function getCustomFields(locationId: string): Promise<MemberField[]> {
 	try {
 		const customFields = await db.query.memberFields.findMany({
@@ -16,22 +16,26 @@ async function getCustomFields(locationId: string): Promise<MemberField[]> {
 	}
 }
 
-export default async function CustomFieldsPage(props: {
+type CustomFieldsPageProps = {
 	params: Promise<{ id: string }>;
-}) {
-	const params = await props.params;
-	const initialFields = await getCustomFields(params.id);
+}
+
+export default async function CustomFieldsPage(props: CustomFieldsPageProps) {
+	const { id } = await props.params;
+	const initialFields = await getCustomFields(id);
 
 	return (
-		<div className="space-y-4">
-			<div className="flex justify-between items-center">
-				<div className="space-y-1">
-					<div className='text-xl font-semibold mb-1'>Custom Fields</div>
-					<p className='text-sm'>Create and manage custom fields for your members</p>
+		<CFProvider initialFields={initialFields}>
+			<div className="space-y-4">
+				<div className="flex justify-between items-center">
+					<div className="space-y-1">
+						<div className='text-xl font-semibold mb-1'>Custom Fields</div>
+						<p className='text-sm'>Create and manage custom fields for your members</p>
+					</div>
+					<NewCF lid={id} />
 				</div>
-				<NewField />
+				<CustomFieldsList lid={id} />
 			</div>
-			<CustomFieldsList lid={params.id} initialFields={initialFields} />
-		</div>
+		</CFProvider>
 	);
 }

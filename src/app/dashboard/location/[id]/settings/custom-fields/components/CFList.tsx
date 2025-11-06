@@ -17,17 +17,18 @@ import { Tag } from "lucide-react";
 import { useState } from "react";
 import CFActions from "./CFActions";
 import { MemberField } from "@/types";
+import EditCF from "./EditCF";
+import { useCustomFields } from "../provider";
 
 interface CustomFieldsListProps {
 	lid: string;
-	initialFields: MemberField[];
 }
 
-export function CustomFieldsList({ lid, initialFields }: CustomFieldsListProps) {
-	const [fields, setFields] = useState<MemberField[]>(initialFields);
-
+export function CustomFieldsList({ lid }: CustomFieldsListProps) {
+	const { fields, selectedField, } = useCustomFields();
 	return (
 		<div className="space-y-6">
+			{selectedField && <EditCF />}
 			<div>
 				{fields.length === 0 ? (
 					<Empty variant="border">

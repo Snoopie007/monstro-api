@@ -1,100 +1,123 @@
 "use client";
 import {
     Button,
-    Dialog,
-    DialogContent,
-    DialogTitle,
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    ButtonGroup,
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogFooter,
+    AlertDialogAction,
+    AlertDialogDescription,
+    AlertDialogCancel,
 } from "@/components/ui";
-import { Pencil, Trash2, Copy, MoreHorizontal, Loader2Icon } from "lucide-react";
+import { Pencil, Trash2, Copy, MoreHorizontal, Loader2 } from "lucide-react";
 import { MemberField } from "@/types";
-import EditField from "./EditField";
 import { useState } from "react";
-import { cn } from "@/libs/utils";
-import { VisuallyHidden } from "react-aria";
+import { cn, sleep } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { tryCatch } from "@/libs/utils";
-
+import { useCustomFields } from "../provider";
 
 const HoverTransition = "group-hover:bg-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300";
+const MenuItemStyle = "cursor-pointer text-xs flex flex-row items-center justify-between gap-2";
 
 export default function CFActions({ field }: { field: MemberField }) {
-    const [open, setOpen] = useState(false)
+    const { setSelectedField, setFields } = useCustomFields();
     const lid = field.locationId
     const [loading, setLoading] = useState(false)
-    async function handleDelete() {
-        setLoading(true)
+    const [open, setOpen] = useState(false);
+
+    async function handleDeleteConfirm() {
+        setLoading(true);
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/cfs/${field.id}`, {
                 method: "DELETE",
             })
         );
-        if (error) {
-            setLoading(false)
-            toast.error(error.message);
+        if (error || !result || !result.ok) {
+            setLoading(false);
+            toast.error(error?.message ?? "Failed to delete custom field");
             return;
         }
-        setLoading(false)
-
+        await sleep(1000);
+        setLoading(false);
+        setOpen(false);
+        setFields((prev) => prev.filter((f) => f.id !== field.id));
     }
-
 
     async function handleDuplicate() {
         setLoading(true)
-        const { error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/cfs/${field.id}`, {
+
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${lid}/cfs/${field.id}/dup`, {
                 method: "POST",
             })
         );
-        if (error) {
-            toast.error(error.message);
+
+        if (error || !result || !result.ok) {
+            setLoading(false);
+            toast.error(error?.message ?? "Failed to duplicate custom field");
             return;
         }
+        await sleep(1000);
+        const data = await result.json();
+        setFields((prev) => [...prev, data]);
         setLoading(false)
-    }
 
+
+    }
 
     return (
         <>
-            <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="max-w-lg border-foreground/10 sm:rounded-lg overflow-hidden p-4">
-                    <VisuallyHidden className="pb-0 pt-5">
-                        <DialogTitle className="text-sm"></DialogTitle>
-                    </VisuallyHidden>
+            <AlertDialog open={open} onOpenChange={setOpen}>
+                <AlertDialogContent className=" border-foreground/10">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Custom Field</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. The custom field will be deleted along with all the data associated with it.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+                        <Button variant="destructive" onClick={handleDeleteConfirm} disabled={loading}>
+                            {loading ? <Loader2 className="size-4 animate-spin" /> : 'Delete'}
 
-                    <EditField field={field} onClose={() => setOpen(false)} />
-                </DialogContent>
-            </Dialog>
-            <div className="flex flex-row items-center group">
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <ButtonGroup className="group">
                 <Button
                     variant="ghost"
                     size="icon"
-                    className={cn("size-8 flex-1  rounded-r-none", HoverTransition)}
-                    onClick={() => setOpen(true)}
+                    className={cn("size-8", HoverTransition)}
+                    onClick={() => setSelectedField(field)}
                     disabled={loading}
                 >
-                    {loading ? <Loader2Icon className="size-3.5 animate-spin" /> : <Pencil className="size-3.5" />}
+                    <Pencil className="size-3.5" />
                 </Button>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className={cn("size-8 flex-1  rounded-none", HoverTransition)}
+                    className={cn("size-8 ", HoverTransition)}
                     disabled={loading}
                     onClick={handleDuplicate}
                 >
-                    <Copy className="size-3.5" />
+                    {loading ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-3.5" />}
                 </Button>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className={cn("size-8 rounded-none flex-1", HoverTransition)}
+                    className={cn("size-8 ", HoverTransition)}
                     disabled={!field || loading}
-                    onClick={handleDelete}
+                    onClick={() => setOpen(true)}
                 >
-                    {loading ? <Loader2Icon className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                    <Trash2 className="size-3.5" />
                 </Button>
 
                 <DropdownMenu>
@@ -102,22 +125,22 @@ export default function CFActions({ field }: { field: MemberField }) {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="size-8 group-hover:bg-foreground/10 flex-1 rounded-l-none"
+                            className="size-8 group-hover:bg-foreground/10"
                         >
-                            <MoreHorizontal className="size-4" />
+                            <MoreHorizontal className="size-4.5" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="border-foreground/10 ">
                         <DropdownMenuItem
-                            className="cursor-pointer text-xs flex flex-row items-center justify-between gap-2"
-                            onClick={() => setOpen(true)}
+                            className={MenuItemStyle}
+                            onClick={() => setSelectedField(field)}
                             disabled={!field}
                         >
                             <span > Edit</span>
                             <Pencil className="size-3" />
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                            className="cursor-pointer text-xs flex flex-row items-center justify-between gap-2"
+                            className={MenuItemStyle}
                             onClick={handleDuplicate}
                             disabled={!field}
                         >
@@ -125,8 +148,8 @@ export default function CFActions({ field }: { field: MemberField }) {
                             <Copy className="size-3" />
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                            className="cursor-pointer text-xs flex flex-row items-center justify-between gap-2"
-                            onClick={handleDelete}
+                            className={MenuItemStyle}
+                            onClick={() => setOpen(true)}
                             disabled={!field}
                         >
                             <span > Delete</span>
@@ -135,7 +158,7 @@ export default function CFActions({ field }: { field: MemberField }) {
 
                     </DropdownMenuContent>
                 </DropdownMenu>
-            </div>
+            </ButtonGroup >
         </>
     );
 }

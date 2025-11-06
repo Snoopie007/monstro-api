@@ -1,2 +1,2 @@
 export * from './CFList';
-export * from './NewField';
+export * from './NewCF';

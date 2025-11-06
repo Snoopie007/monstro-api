@@ -9,6 +9,10 @@ const FIELD_TYPES = [
 	"multi-select",
 ] as const;
 
+export type FieldType = typeof FIELD_TYPES[number];
+
+
+
 export const CustomFieldSchema = z.object({
 	name: z.string().min(1, "Field name is required"),
 	type: z.enum(FIELD_TYPES),

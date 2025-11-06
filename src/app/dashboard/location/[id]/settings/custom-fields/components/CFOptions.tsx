@@ -134,11 +134,7 @@ export function CFOptions({ form }: CFOptionsProps) {
 						</div>
 					</ScrollArea>
 
-					{fields.length === 0 && (
-						<div className="text-center border-dashed border-foreground/20 p-4 text-sm ">
-							No options added yet
-						</div>
-					)}
+
 
 					<Button
 						type="button"
@@ -154,5 +150,3 @@ export function CFOptions({ form }: CFOptionsProps) {
 		/>
 	);
 }
-
-// Removed broken CFOption function.
