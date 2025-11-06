@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { authWithContext } from '@/libs/auth/server'
 import { db } from '@/db/db'
 import {
     and,
@@ -46,18 +46,11 @@ export async function GET(
     const columnFiltersParam = searchParams.get('columnFilters')
     const columnFilters = columnFiltersParam ? JSON.parse(columnFiltersParam) : []
 
-
     try {
-        const session = await auth()
+        const session = await authWithContext()
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        // Check if user can view members (view is implicit for authenticated users)
-        const canViewAuth = await canView(params.id);
-        if (!canViewAuth) {
-            return NextResponse.json({ error: "Access denied" }, { status: 403 });
         }
 
         // Base condition: Filter by locationId from memberLocations

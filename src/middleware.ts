@@ -1,21 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/libs/auth";
+import type { NextRequest } from "next/server";
 
 const publicPaths = ["/login", "/join", "/callbacks", "/api/webhooks"];
 
-export default async function middleware(req: Request) {
+export default async function middleware(req: NextRequest) {
   try {
     const { pathname } = new URL(req.url);
     
-    // Get session from Better Auth
-    const session = await auth.api.getSession({ 
-      headers: req.headers 
-    });
-    
-    const isLoggedIn = !!session;
-    
-    // Access user data (enriched by after hook)
-    const locations = session?.user?.locations || [];
+    // Check if session cookie exists (no DB access needed)
+    const sessionCookie = req.cookies.get("monstro.session_token");
+    const isLoggedIn = !!sessionCookie;
     
     // Protected API routes
     if (pathname.startsWith("/api/protected")) {
@@ -59,35 +53,8 @@ export default async function middleware(req: Request) {
         );
       }
       
-      // Location-based access control
-      if (locations.length === 0 && pathname !== "/dashboard/locations/new") {
-        return NextResponse.redirect(
-          new URL("/dashboard/locations/new", req.url)
-        );
-      }
-      
-      const [_, locationId] = pathname.match(
-        /^\/dashboard\/location\/([^/]+)(\/.*)?$/
-      ) || [];
-      
-      if (locationId) {
-        const location = locations.find((loc: any) => loc.id === locationId);
-        
-        if (!location) {
-          return NextResponse.redirect(
-            new URL("/dashboard/locations", req.url)
-          );
-        }
-        
-        if (
-          !["active", "incomplete"].includes(location.status) &&
-          !pathname.startsWith(`/dashboard/location/${location.id}`)
-        ) {
-          return NextResponse.redirect(
-            new URL(`/dashboard/location/${location.id}`, req.url)
-          );
-        }
-      }
+      // NOTE: Location-based access control requires DB access
+      // Move this logic to page-level or API route checks instead
     }
     
     return NextResponse.next();

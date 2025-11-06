@@ -1,5 +1,5 @@
 import { auth } from "@/libs/auth";
-import { getUserContext } from "@/libs/auth/UserContext";
+import { buildUserPayload } from "@/libs/auth/UserContext";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   }
   
   try {
-    const userContext = await getUserContext(session.user.id);
+    const userContext = await buildUserPayload(session.user.id);
     return NextResponse.json(userContext);
   } catch (error) {
     console.error("Error fetching user context:", error);

@@ -14,8 +14,8 @@ export const users = pgTable("users", {
   emailVerified: timestamp("email_verified_at", { withTimezone: true }),
   image: text("image"),
   password: text("password"),
-  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updated: timestamp("updated_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const usersRelations = relations(users, ({ many, one }) => ({

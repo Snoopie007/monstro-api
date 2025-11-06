@@ -58,7 +58,7 @@ export default function LocationSelect({ locationId }: { locationId: string }) {
                             <CommandEmpty>No location found.</CommandEmpty>
                             <CommandGroup>
                                 <ScrollArea className="overflow-y-auto  w-[240px] h-40">
-                                    {session?.user.locations.map((location: Location) => (
+                                    {session?.user?.locations?.map((location: Location) => (
                                         <CommandItem
                                             value={`${location.id}`}
                                             key={location.id}

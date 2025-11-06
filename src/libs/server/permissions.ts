@@ -1,4 +1,4 @@
-import { auth } from "@/libs/auth/server";
+import { authWithContext } from "@/libs/auth/server";
 import { NextResponse } from "next/server";
 
 export type Permission = 
@@ -27,8 +27,8 @@ export interface PermissionCheck {
  * @returns Promise<boolean> - True if user has permission, false otherwise
  */
 export async function hasPermission(permission: Permission, locationId?: string): Promise<boolean> {
-  const session = await auth();
-  
+  const session = await authWithContext();
+  console.log('session trying to check permission', session)
   if (!session?.user) {
     return false;
   }
@@ -62,7 +62,7 @@ export async function hasPermission(permission: Permission, locationId?: string)
  * @returns Promise<boolean> - True if user can view, false otherwise
  */
 export async function canView(locationId?: string): Promise<boolean> {
-  const session = await auth();
+  const session = await authWithContext();
   
   if (!session?.user) {
     return false;
@@ -142,7 +142,7 @@ export async function requirePermission(
  * @returns Promise<string[]> - Array of permission names
  */
 export async function getUserPermissions(locationId?: string): Promise<string[]> {
-  const session = await auth();
+  const session = await authWithContext();
   
   if (!session?.user) {
     return [];
@@ -176,7 +176,9 @@ export async function getUserPermissions(locationId?: string): Promise<string[]>
       // Get all permissions across all locations
       const allPermissions = new Set<string>();
       session.user.locations?.forEach((loc: any) => {
-        loc.permissions?.forEach((perm: any) => allPermissions.add(perm));
+        loc.permissions?.forEach((perm: any) => {
+          allPermissions.add(perm);
+        });
       });
       return Array.from(allPermissions);
     }

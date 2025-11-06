@@ -1,31 +1,37 @@
 "use client";
 
+import { auth } from "@/libs/auth";
 import { 
   useSession as useBetterAuthSession,
   signIn as betterAuthSignIn,
   signOut as betterAuthSignOut,
 } from "@/libs/auth/client";
 import { useMemo } from "react";
+import { useUserContext } from "./useUserContext";
 
 /**
  * Client session hook - matches Next-Auth's useSession API
  * TODO: REFACTOR - Replace with useUserContext() + lean sessions
  */
 export function useSession() {
-  const { data: session, isPending, error } = useBetterAuthSession();
+  const { data: session, isPending } = useBetterAuthSession();
+  const { userContext, isLoading: contextLoading } = useUserContext();
 
   const transformedSession = useMemo(() => {
     if (!session?.user) return null;
 
     return {
-      user: session.user,
+      user: {
+        ...session.user,
+        ...userContext,
+      },
       expires: new Date(session.session.expiresAt).toISOString(),
     };
-  }, [session]);
+  }, [session, userContext]);
 
   return {
     data: transformedSession,
-    status: isPending 
+    status: isPending || contextLoading
       ? "loading" 
       : transformedSession 
         ? "authenticated" 
@@ -56,12 +62,7 @@ export async function signIn(
 ) {
   try {
     if (provider === "credentials") {
-      const result = await betterAuthSignIn.email({
-        email: options.email,
-        password: options.password,
-        callbackURL: options.callbackUrl,
-      });
-
+      const result = await betterAuthSignIn.email({email: options.email, password: options.password});
       if (result.error) {
         return {
           error: result.error.message || "Authentication failed",
