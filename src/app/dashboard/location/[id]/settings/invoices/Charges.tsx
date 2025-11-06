@@ -18,7 +18,7 @@ export default function Charges({ charges }: { charges: Stripe.Charge[] }) {
         <div className="bg-foreground/5 rounded-lg">
             <Table>
                 <TableHeader>
-                    <TableRow>
+                    <TableRow className='border-foreground/5'>
                         {['ID', 'Date', 'Status', 'Amount'].map((header, i) => (
                             <TableHead key={i}>{header}</TableHead>
                         ))}
@@ -36,7 +36,7 @@ export default function Charges({ charges }: { charges: Stripe.Charge[] }) {
                         </TableRow>
                     )}
                     {charges?.map((charge, index) => (
-                        <TableRow key={index}>
+                        <TableRow key={index} className='border-foreground/5'>
                             <TableCell className="py-3">{charge.id}</TableCell>
                             <TableCell className="py-3">
                                 {format(charge.created * 1000, 'MMM d, yyyy')}

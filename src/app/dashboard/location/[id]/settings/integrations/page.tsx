@@ -34,7 +34,7 @@ export default function IntegrationPage(props: { params: Promise<{ id: string }>
                             <IntegrationItem key={index} integration={integration} lid={params.id} />
                         ))
                     ) : (
-                        <Empty variant="border">
+                        <Empty >
                             <EmptyHeader>
                                 <EmptyMedia variant="icon">
                                     <Tag className="size-4" />
@@ -42,8 +42,7 @@ export default function IntegrationPage(props: { params: Promise<{ id: string }>
                                 <EmptyTitle>No integrations found</EmptyTitle>
                                 <EmptyDescription>Add an integration to your location to get started.</EmptyDescription>
                             </EmptyHeader>
-                            <EmptyTitle>No integrations found</EmptyTitle>
-                            <EmptyDescription>Add an integration to your location to get started.</EmptyDescription>
+
                         </Empty>
                     )
                 ) : (
