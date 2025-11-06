@@ -27,3 +27,4 @@ export * from "./item";
 export * from "./hover-card";
 export * from "./empty";
 export * from './stepper';
+export * from './GroupButton';

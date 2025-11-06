@@ -10,8 +10,8 @@ export default function Invoices({ invoices }: { invoices: Stripe.Invoice[] }) {
     return (
         <div className="bg-foreground/5 rounded-lg">
             <Table >
-                <TableHeader className='border-foreground/5'>
-                    <TableRow>
+                <TableHeader >
+                    <TableRow className='border-foreground/5'>
                         {['ID', 'Date', 'Status', 'Amount', 'Invoice'].map((header, i) => (
                             <TableHead key={i}>{header}</TableHead>
                         ))}
