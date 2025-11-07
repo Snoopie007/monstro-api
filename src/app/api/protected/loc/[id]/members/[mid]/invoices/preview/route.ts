@@ -91,7 +91,7 @@ export async function POST(
             items_count: 1,
             type: "from-subscription",
             subscription_id: subscription.id,
-            payment_method: subscription.paymentMethod
+            payment_type: subscription.paymentType
           }
         },
         summary: {
@@ -145,7 +145,7 @@ export async function POST(
             generated_at: new Date().toISOString(),
             items_count: items.length,
             type: "manual",
-            payment_method: body.paymentMethod || "cash"
+            payment_type: body.paymentType || "cash"
           }
         },
         summary: {

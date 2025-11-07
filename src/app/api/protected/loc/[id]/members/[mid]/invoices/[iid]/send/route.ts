@@ -47,8 +47,8 @@ export async function PATCH(
 			})
 			.where(eq(memberInvoices.id, params.invoiceId));
 
-		// Send invoice reminder email for manual/cash invoices (only for plan_id >= 2, no Stripe)
-		if (invoice.paymentMethod === "manual" || invoice.paymentMethod === "cash") {
+		// Send invoice reminder email for cash invoices (only for plan_id >= 2, no Stripe)
+		if (invoice.paymentType === "cash") {
 			try {
 				const locState = await db.query.locationState.findFirst({
 					where: eq(locationState.locationId, params.id)

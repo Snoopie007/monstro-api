@@ -24,7 +24,7 @@ export async function POST(
       items,
       dueDate,
       type,
-      paymentMethod,
+      paymentType,
       tax,
       discount,
       selectedSubscriptionId,
@@ -82,7 +82,7 @@ export async function POST(
         currency: subscription.plan.currency || "usd",
         status: "draft" as const,
         dueDate: new Date(subscription.currentPeriodEnd),
-        paymentMethod: subscription.paymentMethod as "manual" | "cash",
+        paymentType: subscription.paymentType as "manual" | "cash",
         invoiceType: "recurring" as const,
         forPeriodStart: new Date(subscription.currentPeriodStart),
         forPeriodEnd: new Date(subscription.currentPeriodEnd),
@@ -110,7 +110,7 @@ export async function POST(
             description: `${subscription.plan.name} - Recurring Payment`,
             type: "inbound",
             status: "incomplete",
-            paymentMethod: subscription.paymentMethod,
+            paymentType: subscription.paymentType,
             amount: subscription.plan.price,
             currency: subscription.plan.currency || "usd",
             created: new Date(),
@@ -123,7 +123,7 @@ export async function POST(
     }
 
     // Manual payment flow - fully manual, no Stripe
-    if (paymentMethod === "manual") {
+    if (paymentType === "cash") {
         const localInvoiceData = {
             memberId: params.mid,
             locationId: params.id,
@@ -141,7 +141,7 @@ export async function POST(
             currency: "usd",
             status: "draft" as const,
             dueDate: dueDate ? new Date(dueDate) : new Date(),
-            paymentMethod: "manual" as const,
+            paymentType: "cash" as const,
             invoiceType: "one-off" as const,
             metadata: {
               type: type,
@@ -166,8 +166,8 @@ export async function POST(
             description: `Manual invoice - ${type}`,
             type: "inbound",
             status: "incomplete",
-            paymentMethod: localInvoiceData.paymentMethod,
-            amount: localInvoiceData.total,
+            paymentType: localInvoiceData.paymentType,
+            total: localInvoiceData.total,
             currency: localInvoiceData.currency,
             created: new Date(),
           });
@@ -180,7 +180,7 @@ export async function POST(
 
     // Cash payment flow - Stripe handles invoice but payment is cash
     // Stripe flow - card payment
-    if (paymentMethod === "cash" || paymentMethod === "stripe" || !paymentMethod) {
+    if (paymentType === "cash" || paymentType === "card" || !paymentType) {
       // Validate Stripe customer exists
       if (!member?.stripeCustomerId) {
         return NextResponse.json(
@@ -253,7 +253,7 @@ export async function POST(
           currency: "usd",
           status: "draft" as const,
           dueDate: dueDate ? new Date(dueDate) : new Date(),
-          paymentMethod: paymentMethod === "cash" ? ("cash" as const) : ("stripe" as const),
+          paymentType: paymentType === "cash" ? ("cash" as const) : ("card" as const),
           invoiceType: "one-off" as const,
           metadata: {
             stripeInvoiceId: stripeInvoice.id,
@@ -314,7 +314,7 @@ export async function POST(
           currency: "usd",
           status: "draft" as const,
           dueDate: new Date(recurringSettings.startDate),
-          paymentMethod: paymentMethod === "cash" ? ("cash" as const) : ("stripe" as const),
+          paymentType: paymentType === "cash" ? ("cash" as const) : ("card" as const),
           invoiceType: "recurring" as const,
           metadata: {
             stripeScheduleId: stripeInvoice.id,

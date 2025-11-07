@@ -6,7 +6,7 @@ import { achievements, memberAchievements } from './achievements'
 import { rewards } from './rewards'
 import { contractTemplates } from './ContractTemplates'
 import { memberPackages, memberSubscriptions } from './MemberPlans'
-import { InvoiceStatusEnum, MemberRelationshipEnum, CustomFieldTypeEnum } from './DatabaseEnums'
+import { InvoiceStatusEnum, MemberRelationshipEnum, CustomFieldTypeEnum, PaymentTypeEnum } from './DatabaseEnums'
 import { InvoiceItem } from '@/types'
 export const members = pgTable('members', {
     id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
@@ -93,7 +93,7 @@ export const memberInvoices = pgTable('member_invoices', {
     attemptCount: integer('attempt_count').notNull().default(0),
     invoicePdf: text('invoice_pdf'),
     status: InvoiceStatusEnum('status').notNull().default('draft'),
-    paymentMethod: text('payment_method').notNull().default('stripe'),
+    paymentType: PaymentTypeEnum('payment_type').notNull().default('cash'),
     invoiceType: text('invoice_type').notNull().default('one-off'),
     sentAt: timestamp('sent_at', { withTimezone: true }),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

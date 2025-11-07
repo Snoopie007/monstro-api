@@ -96,7 +96,7 @@ export async function PUT(
     }
 
     let stripeRefunded: Stripe.Response<Stripe.Refund> | null = null;
-    if (transaction.paymentMethod === "card") {
+    if (transaction.paymentType === "card") {
       if (!transaction.invoice) {
         return NextResponse.json(
           { error: "Invoice not found" },

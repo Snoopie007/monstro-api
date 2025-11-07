@@ -1,3 +1,4 @@
+import { PaymentTypeEnum } from "@/db/schemas/DatabaseEnums";
 import { z } from "zod";
 
 export const InvoiceItemSchema = z.object({
@@ -58,7 +59,7 @@ export const CreateInvoiceSchema = z
       .max(20, "Cannot exceed 20 items"),
     isRecurring: z.boolean().default(false),
     recurringSettings: RecurringSettingsSchema.optional(),
-    paymentMethod: z.enum(['stripe', 'cash', 'manual']).default('cash'),
+    paymentType: z.enum(PaymentTypeEnum.enumValues).default('cash'),
     selectedSubscriptionId: z.string().optional(),
   })
   .refine(
@@ -139,7 +140,7 @@ export const defaultInvoiceFormValues: Partial<CreateInvoiceFormData> = {
       price: 0,
     },
   ],
-  paymentMethod: 'manual',
+  paymentType: 'cash',
   isRecurring: false,
   selectedSubscriptionId: undefined,
 };

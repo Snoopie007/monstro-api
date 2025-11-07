@@ -43,7 +43,7 @@ export async function POST(
 		}
 
 		// Only allow manual or cash invoices (both require manual payment confirmation)
-		if (invoice.paymentMethod !== "manual" && invoice.paymentMethod !== "cash") {
+		if (invoice.paymentType !== "cash") {
 			return NextResponse.json(
 				{ error: "Only manual or cash invoices can be marked paid via this endpoint" },
 				{ status: 400 }
@@ -151,8 +151,8 @@ export async function POST(
 			}
 		});
 
-		// Send payment successful email (only for manual/cash, plan_id >= 2)
-		if (invoice.paymentMethod === "manual" || invoice.paymentMethod === "cash") {
+		// Send payment successful email (only for cash, plan_id >= 2)
+		if (invoice.paymentType === "cash") {
 			try {
 				// Check if location has plan_id >= 2
 				const locState = await db.query.locationState.findFirst({

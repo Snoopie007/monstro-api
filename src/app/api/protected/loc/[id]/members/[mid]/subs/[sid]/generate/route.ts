@@ -39,7 +39,7 @@ export async function POST(
       );
     }
 
-    if (subscription.paymentMethod !== "cash" && subscription.paymentMethod !== "manual") {
+    if (subscription.paymentType !== "cash") {
       return NextResponse.json(
         { error: "Only manual/cash subscriptions" },
         { status: 400 }
@@ -84,7 +84,7 @@ export async function POST(
       {
         memberId: params.mid,
         locationId: params.id,
-        paymentMethod: subscription.paymentMethod,
+        paymentType: subscription.paymentType,
       },
       tax
     );
@@ -95,7 +95,7 @@ export async function POST(
         {
           memberId: params.mid,
           locationId: params.id,
-          paymentMethod: subscription.paymentMethod,
+          paymentType: subscription.paymentType,
         },
         tax
       ),
@@ -123,7 +123,7 @@ export async function POST(
         invoiceId,
         subscriptionId: subscription.id,
         status: "incomplete",
-        paymentMethod: subscription.paymentMethod,
+        paymentType: subscription.paymentType,
       });
 
       // Move subscription billing dates forward for next period

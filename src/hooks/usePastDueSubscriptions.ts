@@ -23,13 +23,8 @@ export function usePastDueSubscriptions({
   const pastDueSubscriptions = subscriptions?.filter(
     (sub) => 
       sub.status === 'past_due' && 
-      (sub.paymentMethod === 'manual' || sub.paymentMethod === 'cash')
-  ) ?? [];
+      (sub.paymentType === 'cash')
+    ) ?? [];
 
-  return {
-    pastDueSubscriptions,
-    isLoading,
-    error,
-  };
+  return { pastDueSubscriptions, isLoading, error };
 }
-

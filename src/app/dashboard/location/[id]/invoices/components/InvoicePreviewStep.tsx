@@ -373,7 +373,7 @@ export function InvoicePreviewStep({
 			)}
 
 			{/* Info Notice - Different for manual vs Stripe */}
-			{formData.paymentMethod === 'manual' ? (
+			{formData.paymentType === 'cash' ? (
 			<div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
 				<InfoIcon className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
 				<div className="text-sm text-blue-800">
@@ -426,7 +426,7 @@ export function InvoicePreviewStep({
 				<Send className="w-4 h-4 mr-2" />
 				{isCreating 
 					? "Creating Invoice..." 
-					: formData.paymentMethod === 'cash' || formData.paymentMethod === 'manual'
+					: formData.paymentType === 'cash'
 					? "Create Invoice"
 					: "Create & Send Invoice"
 				}
