@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 import { useMemo } from "react";
 
 export type Permission = 

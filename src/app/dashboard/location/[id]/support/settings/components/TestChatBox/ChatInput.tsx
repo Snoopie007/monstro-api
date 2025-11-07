@@ -4,7 +4,7 @@ import { TestChatMessage } from '@/types'
 import { nanoid } from 'nanoid'
 import React, { FormEvent, useRef, useState } from 'react'
 import { useBotSettingContext } from '../../provider'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/hooks/useSession'
 import { useAccountStatus } from '../../../../providers'
 
 interface TestChatInputProps {

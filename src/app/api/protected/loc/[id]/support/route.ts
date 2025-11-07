@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { authWithContext } from '@/libs/auth/server'
 import { db } from '@/db/db'
 import { eq } from 'drizzle-orm'
 import { supportAssistants } from '@/db/schemas'
@@ -27,7 +27,7 @@ export async function GET(
     const params = await props.params
 
     try {
-        const session = await auth()
+        const session = await authWithContext()
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -75,7 +75,7 @@ export async function POST(
     const params = await props.params
 
     try {
-        const session = await auth()
+        const session = await authWithContext()
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -133,7 +133,7 @@ export async function PUT(
     const params = await props.params
 
     try {
-        const session = await auth()
+        const session = await authWithContext()
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

@@ -5,7 +5,7 @@ import {
     ReactNode, useEffect, useReducer
 } from "react";
 import { LocationState } from "@/types/location";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 import { LocationStatus } from "@/types";
 
 type StateType = {

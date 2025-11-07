@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
 import { rewards } from "@/db/schemas";
 import S3Bucket from "@/libs/server/s3";

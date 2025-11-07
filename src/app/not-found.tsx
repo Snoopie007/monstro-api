@@ -2,7 +2,7 @@ import { cn } from "@/libs/utils";
 import Link from "next/link";
 import React from "react";
 import { ArrowLeft } from "lucide-react";
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 
 async function NotFoundContent() {
 	const session = await auth();

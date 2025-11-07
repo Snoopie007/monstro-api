@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+
 import { db } from "@/db/db";
 import { achievements } from "@/db/schemas";
 import { eq } from "drizzle-orm";

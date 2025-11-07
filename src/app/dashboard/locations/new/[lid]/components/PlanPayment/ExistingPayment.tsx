@@ -7,7 +7,7 @@ import { cn, sleep, tryCatch } from "@/libs/utils";
 import AddPaymentMethod from "./AddMethod";
 import { Loader2 } from "lucide-react";
 import { Button, Skeleton } from "@/components/ui";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 

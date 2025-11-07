@@ -1,9 +1,11 @@
+'use client'
+
 import { Inbox } from '@novu/nextjs'
-import { useSession } from 'next-auth/react'
 import { useTheme } from 'next-themes'
 import { Inbox as InboxIcon } from 'lucide-react'
 import { Button } from '../ui/button'
 import Link from 'next/link'
+import { ExtendedUser } from '@/types/next-auth'
 
 const lightAppearance = {
     variables: {
@@ -30,9 +32,7 @@ const darkAppearance = {
     },
 }
 
-export function NovuInbox() {
-    const { data: session } = useSession()
-    const user = session?.user
+export function NovuInbox({ user }: { user: ExtendedUser }) {
     const appId = process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER
     const { theme } = useTheme()
 
