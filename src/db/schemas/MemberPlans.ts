@@ -14,13 +14,12 @@ import { relations, sql } from "drizzle-orm";
 
 import { memberInvoices, members, memberContracts } from "./members";
 import { locations } from "./locations";
-import { transactions } from "./transactions";
 import { recurringReservations, reservations } from "./reservations";
 import { BillingCycleAnchorConfig } from "@/types";
 import {
   LocationStatusEnum,
   PackageStatusEnum,
-  PaymentMethodEnum,
+  PaymentTypeEnum,
   IntervalType,
   PlanType,
 } from "./DatabaseEnums";
@@ -67,7 +66,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
   cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
   trialEnd: timestamp("trial_end", { withTimezone: true }),
   endedAt: timestamp("ended_at", { withTimezone: true }),
-  paymentMethod: PaymentMethodEnum("payment_method").notNull(),
+  paymentType: PaymentTypeEnum("payment_type").notNull().default("cash"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
@@ -92,7 +91,7 @@ export const memberPackages = pgTable("member_packages", {
   startDate: timestamp("start_date", { withTimezone: true }).notNull(),
   expireDate: timestamp("expire_date", { withTimezone: true }),
   status: PackageStatusEnum("status").notNull(),
-  paymentMethod: PaymentMethodEnum("payment_method").notNull(),
+  paymentType: PaymentTypeEnum("payment_type").notNull().default("cash"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
   totalClassAttended: integer("total_class_attended").notNull().default(0),
   totalClassLimit: integer("total_class_limit").notNull().default(0),
@@ -140,7 +139,6 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
     fields: [memberSubscriptions.memberContractId],
     references: [memberContracts.id],
   }),
-  transactions: many(transactions),
   invoices: many(memberInvoices),
   reservations: many(reservations),
   recurrings: many(recurringReservations),
@@ -169,8 +167,6 @@ export const memberPackagesRelations = relations(
       fields: [memberPackages.memberContractId],
       references: [memberContracts.id],
     }),
-    transactions: many(transactions),
-    invoices: many(memberInvoices),
     reservations: many(reservations),
     recurrings: many(recurringReservations),
     childs: many(memberPackages, {

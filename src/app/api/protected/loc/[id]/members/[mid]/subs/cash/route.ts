@@ -2,8 +2,9 @@ import { db } from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import {
-    calculatePeriodEnd, calculateTrialEnd, calculateStripeFee
-} from "../../utils";
+    calculatePeriodEnd,
+    calculateTrialEnd, calculateStripeFee
+} from "../../../utils";
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { evaluateTriggers } from "@/libs/achievements";
@@ -15,38 +16,6 @@ type Props = {
         mid: string;
     }>
 }
-
-
-
-export async function GET(req: NextRequest, props: Props) {
-    const { id, mid } = await props.params;
-
-    try {
-
-        const subscriptions = await db.query.memberSubscriptions.findMany({
-            where: (memberSubscriptions, { eq, and }) => and(
-                eq(memberSubscriptions.memberId, mid),
-                eq(memberSubscriptions.locationId, id)
-            ),
-            with: {
-                plan: {
-                    with: {
-                        planPrograms: {
-                            with: {
-                                program: true
-                            }
-                        }
-                    }
-                }
-            }
-        })
-
-        return NextResponse.json(subscriptions, { status: 200 })
-    } catch (err) {
-        return NextResponse.json({ error: err }, { status: 500 })
-    }
-}
-
 
 export async function POST(req: Request, props: Props) {
     const { id, mid } = await props.params;
@@ -87,23 +56,6 @@ export async function POST(req: Request, props: Props) {
         }
 
 
-        const integration = await db.query.integrations.findFirst({
-            where: (integration, { eq, and }) =>
-                and(
-                    eq(integration.locationId, id),
-                    eq(integration.service, "stripe")
-                ),
-            columns: {
-                accountId: true,
-            },
-        });
-
-        if (!integration) {
-            throw new Error("Integration not found");
-        }
-
-        const stripe = new MemberStripePayments(integration.accountId)
-        stripe.setCustomer(member.stripeCustomerId);
 
         const today = new Date()
         const startDate = data.startDate ? new Date(data.startDate) : today;
@@ -114,27 +66,7 @@ export async function POST(req: Request, props: Props) {
         );
 
 
-        let feePercent = location.locationState?.usagePercent;
-
-        if (paymentType === "card") {
-            feePercent += calculateStripeFee(plan.price);
-        }
-        const stripeSubscription = await stripe.createSubscription(plan, {
-            startDate,
-            cancelAt: data.cancelAt ? new Date(data.cancelAt) : undefined,
-            trialEnd: trialDays ? calculateTrialEnd(startDate, trialDays) : undefined,
-            paymentMethod: paymentMethod.id,
-            allowProration: plan.allowProration,
-            feePercent: feePercent,
-            metadata: {
-                memberId: mid,
-                locationId: id
-            },
-        })
-
-
         const [sub] = await db.insert(memberSubscriptions).values({
-            stripeSubscriptionId: stripeSubscription.id,
             startDate: startDate,
             currentPeriodStart: startDate,
             currentPeriodEnd: endDate,
@@ -246,7 +178,4 @@ export async function POST(req: Request, props: Props) {
         return NextResponse.json({ error: err }, { status: 500 })
     }
 }
-
-
-
 

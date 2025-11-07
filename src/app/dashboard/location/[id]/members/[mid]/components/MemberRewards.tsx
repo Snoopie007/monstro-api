@@ -90,17 +90,17 @@ function MemberRewardItem({ mr }: { mr: MemberReward }) {
 
 	return (
 		<Item variant="muted">
-			<ItemMedia variant="image">
+			<ItemMedia variant="image" className="size-8">
 				<Image
 					src={image || ""}
 					alt={reward?.name || ""}
-					width={50}
-					height={50}
+					width={34}
+					height={34}
 				/>
 			</ItemMedia>
 			<ItemContent className="flex flex-row justify-between gap-2 items-center">
 				<span className="font-medium">{reward?.name}</span>
-				<span className="text-muted-foreground text-xs">
+				<span className="text-muted-foreground ">
 					{format(mr.created, "MMM d, yyyy")}
 				</span>
 			</ItemContent>

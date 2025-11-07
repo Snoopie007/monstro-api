@@ -17,7 +17,7 @@ import {
     FormDescription,
 } from '@/components/forms';
 
-import { SetStateAction, Dispatch, useEffect, useState } from "react";
+import { useState } from "react";
 import { NewSubscriptionSchema } from "../../../schema";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +30,7 @@ import { MemberPlan, MemberSubscription } from "@/types";
 import { Stripe } from "stripe";
 import { DurationPicker } from ".";
 import { toast } from "react-toastify";
+import { PMSelect } from "../../PMSelect";
 
 type SubFormProps = {
     lid: string
@@ -40,11 +41,9 @@ type SubFormProps = {
 
 export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
 
-    const [loading, setLoading] = useState(false);
+    const [paymentType, setPaymentType] = useState<"card" | "cash">("cash");
     const { paymentMethods } = useMemberPaymentMethods()
-
-    const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
-
+    const [paymentMethod, setPaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
 
     const form = useForm<z.infer<typeof NewSubscriptionSchema>>({
         resolver: zodResolver(NewSubscriptionSchema),
@@ -52,40 +51,35 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
             startDate: new Date(),
             endDate: undefined,
             trailDays: undefined,
-            paymentMethod: undefined,
             memberPlanId: undefined,
             allowProration: false,
-            other: {
-                cardId: undefined,
-            },
         },
         mode: "onSubmit",
     })
 
-
-    const paymentMethod = form.watch("paymentMethod")
     async function onSubmit(v: z.infer<typeof NewSubscriptionSchema>) {
-
-        setLoading(true)
+        if (paymentType === "card" && !paymentMethod) {
+            toast.error("Please select a payment method")
+            return
+        }
+        const path = paymentType === "card" ? "subs" : "subs/cash"
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/members/${mid}/subs`, {
+            fetch(`/api/protected/loc/${lid}/members/${mid}/${path}`, {
                 method: "POST",
                 body: JSON.stringify({
-                    ...v,
-                    stripePaymentMethod
+                    ...v
                 })
             })
         )
+
         await sleep(1000)
-        setLoading(false)
         if (error || !result || !result?.ok) return;
-
-
         form.reset()
         const data = await result.json()
         toast.success("Subscription created successfully")
         onFinish(data)
     }
+
 
 
 
@@ -122,35 +116,22 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                             />
 
                         </fieldset>
-                        <fieldset>
-                            <FormField
-                                control={form.control}
-                                name="paymentMethod"
-                                render={({ field }) => (
-                                    <FormItem className="">
-                                        <FormLabel size="tiny">Payment Method</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!form.getValues("memberPlanId")}>
-                                            <SelectTrigger className="capitalize">
-                                                <SelectValue placeholder="Select a payment method" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {['card', "cash"].map((method) => (
-                                                    <SelectItem key={method} value={method.toLowerCase()} className="capitalize">
-                                                        {method}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
 
-                        </fieldset>
 
-                        <fieldset >
-
-                            <div className="col-span-4 flex flex-col gap-1.5">
+                        <fieldset className="grid grid-cols-8 gap-2">
+                            <div className="col-span-3">
+                                <FormLabel size="tiny">Payment Type</FormLabel>
+                                <Select onValueChange={(value) => setPaymentType(value as "card" | "cash")}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a payment type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="card">Credit/Debit</SelectItem>
+                                        <SelectItem value="cash">Cash</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="col-span-5 ">
                                 <FormLabel size="tiny">Duration</FormLabel>
                                 <DurationPicker
                                     onChange={(date) => {
@@ -161,50 +142,20 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                             </div>
 
                         </fieldset>
-                        {paymentMethod === "card" && (
+                        {paymentType === 'card' && (
                             <>
                                 <fieldset className="grid grid-cols-6 gap-2">
 
-                                    <FormField
-                                        control={form.control}
-                                        name="other.cardId"
-                                        render={({ field }) => (
-                                            <FormItem className="col-span-4">
-                                                <FormLabel size="tiny">Select a Card</FormLabel>
-                                                <Select onValueChange={(value) => {
-                                                    field.onChange(value)
+                                    <div className="col-span-4">
+                                        <FormLabel size="tiny">Payment Method</FormLabel>
+                                        <PMSelect paymentMethods={paymentMethods}
+                                            onChange={setPaymentMethod}
+                                            value={paymentMethod?.id || undefined}
+                                            disabled={!form.getValues("memberPlanId")}
 
-                                                    setStripePaymentMethod(paymentMethods.find((method) => method.id === value) || null)
-                                                }} defaultValue={field.value} >
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select a payment method" />
+                                        />
+                                    </div>
 
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {paymentMethods.map((method, index) => (
-                                                            <React.Fragment key={index}>
-                                                                {method.card ? (
-                                                                    <SelectItem value={method.id} className="w-full">
-                                                                        <div className="flex flex-row items-center justify-between gap-4">
-                                                                            <div className="flex flex-row items-center gap-2">
-                                                                                <img src={`/images/cards/${method.card.brand}.svg`} alt={method.card.brand} className="h-7 w-7" />
-
-                                                                                <span className="text-sm capitalize">{method.card.brand} •••• {method.card.last4}</span>
-                                                                            </div>
-                                                                            <span className="text-sm">{method.card.exp_month} / {method.card.exp_year}</span>
-                                                                        </div>
-                                                                    </SelectItem>
-                                                                ) : null}
-                                                            </React.Fragment>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
                                     <FormField
                                         control={form.control}
                                         name="trailDays"
@@ -212,7 +163,7 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                                             <FormItem className="col-span-2">
                                                 <FormLabel size="tiny">Trial days</FormLabel>
                                                 <FormControl>
-                                                    <Input disabled={paymentMethod !== "card"} type="number" placeholder="0" {...field} />
+                                                    <Input disabled={!paymentMethod} type="number" placeholder="0" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -225,10 +176,11 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                                         control={form.control}
                                         name="allowProration"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-row bg-background items-center gap-2 rounded-sm border border-foreground/10 py-2 px-3 ">
+                                            <FormItem className="flex flex-row bg-background items-center gap-2 rounded-lg border border-foreground/10 py-2 px-3 ">
 
                                                 <FormControl>
                                                     <Switch
+                                                        disabled={!paymentMethod}
                                                         checked={field.value}
                                                         onCheckedChange={field.onChange}
                                                     />
@@ -255,19 +207,16 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                     <Button type="button" variant="outline" size={"sm"} className="border-foreground/10">Cancel</Button>
                 </DialogClose>
                 <Button
-                    className={cn("children:hidden", loading && "children:block")}
                     variant={"foreground"}
                     size={"sm"}
                     type="submit"
-                    disabled={loading || !form.formState.isValid}
+                    disabled={!form.formState.isValid || form.formState.isSubmitting}
                     onClick={form.handleSubmit(onSubmit)}
                 >
-                    <Loader2 className="mr-2 h-4 w-4  animate-spin" />
-                    Continue
+                    {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : "Register"}
                 </Button>
             </DialogFooter>
         </>
     )
-
-
 }
+
