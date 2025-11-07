@@ -6,12 +6,6 @@ export const AchievementSchema = z.object({
   badge: z.string(),
   points: z.number(),
   requiredActionCount: z.number(),
-});
-
-export const TriggerSchema = z.object({
-  triggerId: z.string(),
-  weight: z.number().min(1).max(1000),
-  timePeriod: z.number().optional(),
-  timePeriodUnit: z.string().optional().default("day"),
-  memberPlanId: z.string().optional(),
+  triggerId: z.number(),
+  planId: z.string().optional(),
 });

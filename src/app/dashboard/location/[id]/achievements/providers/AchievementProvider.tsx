@@ -1,21 +1,18 @@
 'use client'
-import { Achievement, AchievementTrigger } from "@/types";
+import { Achievement } from "@/types";
 import { createContext, useReducer, ReactElement, useCallback, useContext } from "react"
 
 type StateType = {
     achievements: Achievement[];
-    currentAchievement: Achievement | null;
-    triggers: AchievementTrigger[];
 }
 
 const enum REDUCER_ACTION_TYPE {
     SET_ACHIEVEMENTS,
-    SET_CURRENT_ACHIEVEMENT,
 }
 
 type ReducerAction = {
     type: REDUCER_ACTION_TYPE;
-    payload: Achievement[] | ((prev: Achievement[]) => Achievement[]) | Achievement | null;
+    payload: Achievement[] | ((prev: Achievement[]) => Achievement[]);
 }
 
 const reducer = (state: StateType, action: ReducerAction): StateType => {
@@ -25,8 +22,6 @@ const reducer = (state: StateType, action: ReducerAction): StateType => {
                 ? (action.payload as ((prev: Achievement[]) => Achievement[]))(state.achievements)
                 : action.payload as Achievement[]
             return { ...state, achievements: newAchievements }
-        case REDUCER_ACTION_TYPE.SET_CURRENT_ACHIEVEMENT:
-            return { ...state, currentAchievement: action.payload as Achievement | null }
         default:
             throw new Error()
     }
@@ -42,13 +37,7 @@ const useAchievementContext = (initState: StateType) => {
         })
     }, [])
 
-    const setCurrentAchievement = useCallback((currentAchievement: Achievement | null) => {
-        dispatch({
-            type: REDUCER_ACTION_TYPE.SET_CURRENT_ACHIEVEMENT,
-            payload: currentAchievement
-        })
-    }, [])
-    return { state, setAchievements, setCurrentAchievement }
+    return { state, setAchievements }
 }
 
 type UseAchievementContextType = ReturnType<typeof useAchievementContext>
@@ -57,17 +46,15 @@ export const AchievementContext = createContext<UseAchievementContextType | null
 
 type AchievementProviderType = {
     achievements: Achievement[],
-    triggers: AchievementTrigger[],
     children?: ReactElement | ReactElement[] | undefined
 }
 
 export const AchievementProvider = ({
     achievements,
-    triggers,
     children
 }: AchievementProviderType): ReactElement => {
     return (
-        <AchievementContext.Provider value={useAchievementContext({ achievements, currentAchievement: null, triggers })}>
+        <AchievementContext.Provider value={useAchievementContext({ achievements })}>
             {children}
         </AchievementContext.Provider>
     )
@@ -76,9 +63,6 @@ export const AchievementProvider = ({
 type UseAchievementsHookType = {
     achievements: Achievement[];
     setAchievements: (achievements: Achievement[] | ((prev: Achievement[]) => Achievement[])) => void;
-    currentAchievement: Achievement | null;
-    setCurrentAchievement: (currentAchievement: Achievement | null) => void;
-    triggers: AchievementTrigger[];
 }
 
 export const useAchievements = (): UseAchievementsHookType => {
@@ -86,13 +70,10 @@ export const useAchievements = (): UseAchievementsHookType => {
     if (!context) {
         throw new Error('useAchievements must be used within an AchievementProvider')
     }
-    const { state: { achievements, triggers, currentAchievement }, setAchievements, setCurrentAchievement } = context
+    const { state: { achievements }, setAchievements } = context
 
     return {
         achievements,
         setAchievements,
-        currentAchievement,
-        setCurrentAchievement,
-        triggers
     }
 }

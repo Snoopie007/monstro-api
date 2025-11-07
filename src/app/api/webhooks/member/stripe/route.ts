@@ -250,34 +250,33 @@ async function handleSubscriptionInvoicePayment(
 				})
 				.returning({ invoiceId: memberInvoices.id });
 
-      await createInvoiceTransaction(
-        tx,
-        {
-          ...commonFields,
-          subscriptionId: subscription.id,
-          invoiceId,
-          amount: invoice.amount_paid,
-          description: subscription.plan?.name,
-        },
-        invoice
-      );
-    });
+			await createInvoiceTransaction(
+				tx,
+				{
+					...commonFields,
+					subscriptionId: subscription.id,
+					invoiceId,
+					amount: invoice.amount_paid,
+					description: subscription.plan?.name,
+				},
+				invoice
+			);
+		});
 
-    // Evaluate plan signup triggers after successful payment
-    try {
-      await evaluateTriggers({
-        memberId: subscription.memberId,
-        locationId: subscription.locationId,
-        triggerType: 'plan_signup',
-        data: { memberPlanId: subscription.memberPlanId }
-      });
-    } catch (error) {
-      console.error('Error evaluating plan signup triggers:', error);
-      // Don't fail the webhook if trigger evaluation fails
-    }
-  } catch (error) {
-    console.error("Error handling subscription invoice payment:", error);
-  }
+		// Evaluate plan signup triggers after successful payment
+		try {
+			await evaluateTriggers({
+				memberId: subscription.memberId,
+				locationId: subscription.locationId,
+				triggerType: 'plan_signup',
+			});
+		} catch (error) {
+			console.error('Error evaluating plan signup triggers:', error);
+			// Don't fail the webhook if trigger evaluation fails
+		}
+	} catch (error) {
+		console.error("Error handling subscription invoice payment:", error);
+	}
 }
 
 async function handleRecurringInvoicePayment(invoice: ExtendedStripeInvoice) {
@@ -463,17 +462,16 @@ async function createInvoiceTransaction(
 		memberId: transactionData.memberId,
 		locationId: transactionData.locationId,
 		invoiceId: transactionData.invoiceId,
-		subscriptionId: transactionData.subscriptionId || null,
 		description: transactionData.description,
 		type: "inbound",
-		paymentMethod: "card", // Could be enhanced to detect actual method
-		amount: transactionData.amount,
+		paymentType: "card", // Could be enhanced to detect actual method
+		total: transactionData.amount,
 		status: "paid",
 		chargeDate: stripeInvoice.status_transitions?.paid_at
 			? new Date(stripeInvoice.status_transitions.paid_at * 1000)
 			: new Date(stripeInvoice.created * 1000),
 		currency: transactionData.currency,
-		taxAmount: transactionData.tax,
+		totalTax: transactionData.tax,
 		metadata: {
 			stripeInvoiceId: stripeInvoice.id,
 			stripeChargeId: stripeInvoice.charge,

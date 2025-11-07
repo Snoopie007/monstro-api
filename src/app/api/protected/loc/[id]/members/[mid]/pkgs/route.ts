@@ -177,6 +177,13 @@ export async function POST(req: NextRequest, props: Props) {
 			return pkg;
 		});
 
+
+		// Send email receipt
+
+		// Hook to expire day
+
+		// Trigger evaluation of triggers
+
 		return NextResponse.json({ ...pkg, plan } as MemberPackage, { status: 200 });
 	} catch (err) {
 		console.log(err);
