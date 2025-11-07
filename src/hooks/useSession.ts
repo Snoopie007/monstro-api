@@ -1,6 +1,5 @@
 "use client";
 
-import { auth } from "@/libs/auth";
 import { 
   useSession as useBetterAuthSession,
   signIn as betterAuthSignIn,
@@ -40,7 +39,7 @@ export function useSession() {
     // TODO: REFACTOR - Better Auth doesn't have update()
     // Temporary workaround: reload page
     // Proper fix: Use SWR mutate() with user context
-    update: async (data?: any) => {
+    update: async () => {
       console.warn(
         "⚠️ Session update not supported - reload page or refactor to lean sessions"
       );
@@ -49,12 +48,17 @@ export function useSession() {
   };
 }
 
-// Wrap signIn to match Next-Auth API
+/**
+ * Sign in wrapper - matches Next-Auth API
+ * Two-step process: 1) Verify OTP, 2) Authenticate with Better Auth
+ */
 export async function signIn(
   provider: string,
   options: { 
     email: string; 
     password: string; 
+    token?: string;
+    type?: string;
     redirect?: boolean;
     callbackUrl?: string;
     [key: string]: any;
@@ -62,10 +66,39 @@ export async function signIn(
 ) {
   try {
     if (provider === "credentials") {
-      const result = await betterAuthSignIn.email({email: options.email, password: options.password});
+      const verifyResponse = await fetch("/api/auth/login/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: options.email,
+          token: options.token,
+          type: options.type || "email",
+        }),
+      });
+
+      const verifyResult = await verifyResponse.json();
+
+      if (!verifyResponse.ok) {
+        return {
+          error: verifyResult.error || "Invalid OTP token",
+          code: verifyResult.error,
+          ok: false,
+          status: verifyResponse.status,
+        };
+      }
+
+      // Step 2: Authenticate with Better Auth
+      const result = await betterAuthSignIn.email({
+        email: options.email,
+        password: options.password,
+      });
+
       if (result.error) {
         return {
           error: result.error.message || "Authentication failed",
+          code: result.error.message,
           ok: false,
           status: 401,
         };

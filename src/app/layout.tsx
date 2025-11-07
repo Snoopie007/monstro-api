@@ -3,6 +3,7 @@ import { Poppins, Roboto } from "next/font/google";
 import { ToastContainer } from "react-toastify";
 import "@public/globals.css";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import { QueryProvider } from "@/providers/QueryProvider";
 import Script from "next/script";
 
 export const metadata: Metadata = {
@@ -45,13 +46,15 @@ export default async function RootLayout({
                         apiKey="-OqpEnrUNsFguu-tRoISM0H5Lgsx7qIo" // Safe to expose publically
                         url="https://monitoring.react-scan.com/api/v1/ingest"
                     /> */}
-					<ThemeProvider
-						defaultTheme="system"
-						enableSystem
-						disableTransitionOnChange
-					>
-						{children}
-					</ThemeProvider>
+					<QueryProvider>
+						<ThemeProvider
+							defaultTheme="system"
+							enableSystem
+							disableTransitionOnChange
+						>
+							{children}
+						</ThemeProvider>
+					</QueryProvider>
 					<ToastContainer
 						className="customToast"
 						position="top-right"

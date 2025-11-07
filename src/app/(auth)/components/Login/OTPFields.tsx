@@ -34,7 +34,7 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
         }
 
         setLoading(true);
-
+        console.log(v);
         const res = await signIn("credentials", {
             redirect: false,
             ...v,
@@ -48,7 +48,6 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
         const redirect = searchParams.get('redirect');
         const redirectUrl = redirect ? decodeURIComponent(redirect) : '/dashboard/locations';
         return router.push(redirectUrl);
-
     }
 
     return (

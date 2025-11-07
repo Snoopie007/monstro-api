@@ -1,14 +1,47 @@
 import { db } from '@/db/db';
 import bcrypt from 'bcryptjs';
+import { customSession } from "better-auth/plugins";
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware, APIError } from "better-auth/api";
 import { toNextJsHandler } from "better-auth/next-js";
 import { buildUserPayload } from './UserContext';
 import { accounts, users, sessions } from '@/db/schemas';
+import { getRedisClient } from '../server/redis';
+import { isAfter } from 'date-fns';
 
 const isProduction = process.env.NODE_ENV === "production";
 const isPreview = process.env.VERCEL_ENV === "preview";
+
+// ✅ Add token validation helper
+async function validateToken(token: string, userId: string, type: string) {
+  const redis = getRedisClient();
+  const RedisKey = `loginToken:${userId}:${type}`;
+  const otp = await redis.get(RedisKey);
+  const [storedToken, time] = otp?.toString().split("::") || [];
+
+  // Check if the token is valid
+  if (!otp || storedToken !== token) {
+    throw new Error("INVALID_TOKEN");
+  }
+
+  // Check if the token is expired (more than 30 minutes old)
+  const thirtyMinutesInMs = 30 * 60 * 1000;
+  const tokenExpired = isAfter(
+    new Date(),
+    new Date(parseInt(time) * 1000 + thirtyMinutesInMs)
+  );
+
+  // Delete token after validation attempt
+  await redis.del(RedisKey);
+
+  if (tokenExpired) {
+    throw new Error("TOKEN_EXPIRED");
+  }
+
+  return true;
+}
+
 export const auth = betterAuth({
     database: drizzleAdapter(db, {
       provider: "pg",
@@ -18,6 +51,61 @@ export const auth = betterAuth({
         session: sessions,
       },
     }),
+    plugins: [
+      customSession(async ({user, session}) => {
+        // Fetch vendor with their locations in a single optimized query
+        const userWithVendor = await db.query.users.findFirst({
+          where: (users, { eq }) => eq(users.id, user.id),
+          columns: {
+            id: true,
+          },
+          with: {
+            vendor: {
+              columns: {
+                id: true,
+              },
+              with: {
+                locations: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                  with: {
+                    locationState: {
+                      columns: {
+                        status: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        // Filter and map locations to only include active ones
+        const filteredLocations = userWithVendor?.vendor?.locations
+          .filter((location) => {
+            const { locationState } = location;
+            return locationState && ["active"].includes(locationState.status);
+          })
+          .map((location) => ({
+            id: location.id,
+            name: location.name,
+            status: location.locationState?.status,
+          })) || [];
+
+        return {
+          session: {
+            ...session
+          },
+          user: {
+            ...user,
+            locations: filteredLocations,
+          },
+        }
+      })
+    ],
 
     // Add this to tell Better Auth that "provider" field is actually "providerId"
   account: {
@@ -88,6 +176,7 @@ export const auth = betterAuth({
       before: createAuthMiddleware(async (ctx) => {
         if (ctx.path === "/sign-in/email") {
           const { email, password } = ctx.body;
+          
           // Check if user exists in users table
           const user = await db.query.users.findFirst({
             where: (user, { eq }) => eq(user.email, email),
@@ -97,7 +186,6 @@ export const auth = betterAuth({
               password: true,
             },
           });
-
           
           if (user && user.password) {
             // User exists with password, check if they have an account record
@@ -135,45 +223,6 @@ export const auth = betterAuth({
         }
         
         return ctx;
-      }),
-      
-      // AFTER hooks - enrich user data after sign-in
-      after: createAuthMiddleware(async (ctx) => {
-        const returned = ctx.context.returned;
-        // Handle errors
-        if (returned instanceof APIError) {
-          return returned;
-        }
-  
-        // Check if this is the sign-in endpoint
-        if (ctx.path === "/sign-in/email") {
-          try {
-            const returnedUser = (returned && (returned as Record<string,any>).user);
-            const userId = returnedUser?.id;
-            
-            if (userId) {
-              // TODO: REFACTOR - Don't fetch all this data at login
-              const userPayload = await buildUserPayload(userId);
-              const enrichedSession = {
-                ...(returned as Record<string,any>),
-                user: {
-                  ...returnedUser,
-                  ...userPayload,
-                },
-              }
-
-              console.log('enriched session: ', enrichedSession)
-  
-              // Return modified response with full user data
-              return enrichedSession;
-            }
-          } catch (error) {
-            console.error("Error building user payload:", error);
-            return returned;
-          }
-        }
-  
-        return returned;
       }),
     },
   });

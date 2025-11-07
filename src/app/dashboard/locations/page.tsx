@@ -1,9 +1,6 @@
 import { db } from '@/db/db'
-import React from 'react'
-import { auth } from '@/libs/auth'
 import { LocationsList } from './components/LocationsList'
 import { inArray } from 'drizzle-orm'
-import { headers } from 'next/headers'
 import { authWithContext } from '@/libs/auth/server'
 
 
@@ -52,7 +49,7 @@ export default async function LocationsPage() {
             <div>Invalid Session</div>
         )
     }
-    console.log(session)
+
     const locations = await fetchLocations(session.user.role === "staff" ? session.user.staffId : session.user.vendorId, session.user.role) || []
     return (
         <div className='w-full h-full'>

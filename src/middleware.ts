@@ -1,15 +1,33 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { auth } from "./libs/auth/server";
 
 const publicPaths = ["/login", "/join", "/callbacks", "/api/webhooks"];
+
+export const runtime = 'nodejs';
 
 export default async function middleware(req: NextRequest) {
   try {
     const { pathname } = new URL(req.url);
     
     // Check if session cookie exists (no DB access needed)
-    const sessionCookie = req.cookies.get("monstro.session_token");
-    const isLoggedIn = !!sessionCookie;
+    const session = await auth();
+    const isLoggedIn = !!session;
+    const locations = session?.user?.locations || [];
+
+    // check if vendor/staff trying to access the location has access to the location
+    const [_, locationId] = pathname.match(/^\/dashboard\/location\/([^/]+)(\/.*)?$/) || []
+
+    if (locationId) {
+      const next = locations.find((loc: { id: string }) => loc.id === locationId)
+      if (!next) {
+        return NextResponse.redirect(new URL("/dashboard/locations", req.nextUrl.origin))
+      }
+
+      if (!["active", "incomplete"].includes(next.status) && !pathname.startsWith(`/dashboard/location/${next.id}`)) {
+        return NextResponse.redirect(new URL(`/dashboard/location/${next.id}`, req.nextUrl.origin))
+      }
+    }
     
     // Protected API routes
     if (pathname.startsWith("/api/protected")) {

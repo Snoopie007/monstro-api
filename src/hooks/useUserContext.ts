@@ -1,24 +1,22 @@
 // src/hooks/useUserContext.ts (NEW FILE)
 "use client";
 
-import useSWR from "swr";
+import { useQuery } from "@tanstack/react-query";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export function useUserContext() {
-  const { data, error, isLoading, mutate } = useSWR(
-    "/api/auth/user/context",
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
-  );
+  const { data, error, isLoading, refetch } = useQuery({
+    queryKey: ["/api/auth/user/context"],
+    queryFn: () => fetcher("/api/auth/user/context"),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
   return {
     userContext: data,
     isLoading,
     error,
-    refresh: mutate, // Can manually refresh when needed
+    refresh: refetch, // Can manually refresh when needed
   };
 }

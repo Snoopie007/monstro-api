@@ -26,7 +26,7 @@ export default function LocationSelect({ locationId }: { locationId: string }) {
         if (locationId) {
             setSelectedLocation(session?.user.locations.find((location: Location) => `${location.id}` === locationId));
         }
-    }, [locationId])
+    }, [locationId, session?.user.locations])
 
     function handleSelect(location: Location) {
 
