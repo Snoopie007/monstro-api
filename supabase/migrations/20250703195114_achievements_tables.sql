@@ -6,23 +6,11 @@ CREATE TABLE IF NOT EXISTS achievements (
   badge text NOT NULL,
   location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
   required_action_count integer NOT NULL,
+  plan_id text REFERENCES member_plans (id) ON DELETE CASCADE,
   points integer NOT NULL,
+  trigger_id integer not null,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
-);
-
-CREATE TABLE IF NOT EXISTS achievement_triggers (
-  id serial PRIMARY KEY UNIQUE NOT NULL,
-  name text NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS triggered_achievements (
-  trigger_id integer REFERENCES achievement_triggers (id) ON DELETE CASCADE NOT NULL,
-  achievement_id text REFERENCES achievements (id) ON DELETE CASCADE NOT NULL,
-  weight integer NOT NULL,
-  time_period integer,
-  time_period_unit interval_type,
-  member_plan_id text REFERENCES member_plans (id) ON DELETE CASCADE
 );
 
 

@@ -105,71 +105,63 @@ export async function POST(req: Request, props: Props) {
 
 
         // // Schedule recurring invoice email reminders (only for manual/cash, plan_id >= 2, no Stripe)
-        // if (paymentType === 'cash') {
-        //     try {
-        //         // Check if location has plan_id >= 2
-        //         if (locationState?.planId && locationState.planId >= 2) {
-        //             // Check if location has NO Stripe integration
-        //             const hasStripe = await db.query.integrations.findFirst({
-        //                 where: and(
-        //                     eq(integrations.locationId, params.id),
-        //                     eq(integrations.service, 'stripe')
-        //                 )
-        //             });
+        try {
+            // Check if location has plan_id >= 2
+            if (locationState?.planId && locationState.planId >= 2) {
+                // Check if location has NO Stripe integration
+                const hasStripe = await db.query.integrations.findFirst({
+                    where: and(
+                        eq(integrations.locationId, params.id),
+                        eq(integrations.service, 'stripe')
+                    )
+                });
 
-        //             if (!hasStripe) {
-        //                 // Fetch member and location details
-        //                 const member = await db.query.members.findFirst({
-        //                     where: eq(members.id, params.mid)
-        //                 });
+                if (!hasStripe) {
+                    // Fetch member and location details
+                    const member = await db.query.members.findFirst({
+                        where: eq(members.id, params.mid)
+                    });
 
-        //                 const location = await db.query.locations.findFirst({
-        //                     where: eq(locations.id, params.id)
-        //                 });
+                    const location = await db.query.locations.findFirst({
+                        where: eq(locations.id, params.id)
+                    });
 
-        //                 if (member && location && plan.interval && plan.intervalThreshold) {
-        //                     await scheduleRecurringInvoiceEmails({
-        //                         subscriptionId: sub.id,
-        //                         memberId: params.mid,
-        //                         locationId: params.id,
-        //                         memberEmail: member.email || '',
-        //                         memberFirstName: member.firstName || '',
-        //                         memberLastName: member.lastName || '',
-        //                         locationName: location.name,
-        //                         locationAddress: location.address || '',
-        //                         startDate: sub.currentPeriodEnd, // First invoice due at end of first period
-        //                         interval: plan.interval,
-        //                         intervalThreshold: plan.intervalThreshold,
-        //                         invoiceDetails: {
-        //                             description: newInvoice.description || `${plan.name} - Recurring Invoice`,
-        //                             items: newInvoice.items as any[],
-        //                             total: newInvoice.total,
-        //                             currency: 'usd'
-        //                         }
-        //                     });
-        //                     console.log(`📧 Scheduled recurring invoice emails for subscription ${sub.id}`);
-        //                 }
-        //             }
-        //         }
-        //     } catch (error) {
-        //         console.error('Error scheduling recurring invoice emails:', error);
-        //         // Don't fail the request if email scheduling fails
-        //     }
-        // }
+                    if (member && location && plan.interval && plan.intervalThreshold) {
+                        await scheduleRecurringInvoiceEmails({
+                            subscriptionId: sub.id,
+                            memberId: params.mid,
+                            locationId: params.id,
+                            memberEmail: member.email || '',
+                            memberFirstName: member.firstName || '',
+                            memberLastName: member.lastName || '',
+                            locationName: location.name,
+                            locationAddress: location.address || '',
+                            startDate: sub.currentPeriodEnd, // First invoice due at end of first period
+                            interval: plan.interval,
+                            intervalThreshold: plan.intervalThreshold,
+                            invoiceDetails: {
+                                description: newInvoice.description || `${plan.name} - Recurring Invoice`,
+                                items: newInvoice.items as any[],
+                                total: newInvoice.total,
+                                currency: 'usd'
+                            }
+                        });
+                        console.log(`📧 Scheduled recurring invoice emails for subscription ${sub.id}`);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error scheduling recurring invoice emails:', error);
+            // Don't fail the request if email scheduling fails
+        }
 
-        // if (data.paymentMethod !== "card") {
-        //     try {
-        //         await evaluateTriggers({
-        //             memberId: params.mid,
-        //             locationId: params.id,
-        //             triggerType: 'plan_signup',
-        //             data: { memberPlanId: sub.memberPlanId }
-        //         });
-        //     } catch (error) {
-        //         console.error('Error evaluating plan signup triggers:', error);
-        //         // Don't fail the request if trigger evaluation fails
-        //     }
-        // }
+        await evaluateTriggers({
+            memberId: mid,
+            locationId: id,
+            triggerType: 'plan_signup',
+
+        });
+
 
 
         return NextResponse.json({ ...sub, plan: plan, }, { status: 200 })

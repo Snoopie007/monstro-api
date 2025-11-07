@@ -1,39 +1,8 @@
 import {
 	MemberPlan,
-	MemberPackage,
-	MemberInvoice,
-	Transaction,
-	MemberSubscription,
 } from "@/types";
 import { isAfter, addDays, addWeeks, addMonths, addYears } from "date-fns";
-import { db } from "@/db/db";
-import { memberSubscriptions } from "@/db/schemas";
-import { eq, and, lt } from "drizzle-orm";
 import { serversideApiClient } from "@/libs/api/server";
-
-type BaseData = {
-	memberPlanId: string;
-	locationId: string;
-	memberId: string;
-	programId: string;
-	startDate: Date | string;
-	paymentType: string;
-};
-
-type PackageData = BaseData & {
-	expireDate?: Date;
-	totalClassLimit?: number;
-};
-
-
-// type BaseReturnType = {
-// 	newTransaction: TransactionInsert;
-// 	newInvoice: MemberInvoiceInsert;
-// };
-
-// type CreatePackageReturn = BaseReturnType & {
-// 	newPkg: MemberPackageInsert;
-// };
 
 
 
@@ -94,12 +63,6 @@ function calculateInvoice(plans: MemberPlan[], tax: number, discount: number) {
 		subtotal,
 	};
 }
-
-type RestProps = {
-	memberId: string;
-	locationId: string;
-	paymentMethod: string;
-};
 
 
 

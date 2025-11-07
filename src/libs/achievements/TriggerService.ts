@@ -18,14 +18,9 @@ export interface TriggerEvaluation {
     memberId: string
     locationId: string
     triggerType: 'attendances_count' | 'referrals_count' | 'plan_signup'
-    data?: any
 }
 
-export async function evaluateTriggers({
-    memberId,
-    locationId,
-    triggerType,
-}: TriggerEvaluation) {
+export async function evaluateTriggers({ memberId, locationId, triggerType }: TriggerEvaluation) {
     const triggerMap = {
         attendances_count: 2,
         referrals_count: 3,
@@ -53,16 +48,12 @@ export async function evaluateTriggers({
                     count = await countAttendances(
                         memberId,
                         locationId,
-                        trigger.timePeriod,
-                        trigger.timePeriodUnit
                     )
                     break
                 case 'referrals_count':
                     count = await countReferrals(
                         memberId,
                         locationId,
-                        trigger.timePeriod,
-                        trigger.timePeriodUnit
                     )
                     break
                 case 'plan_signup':

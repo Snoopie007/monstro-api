@@ -3,10 +3,8 @@ import { attendances, memberReferrals, memberSubscriptions, reservations } from 
 import { eq, and, gte, lt, sql } from "drizzle-orm";
 
 export async function countAttendances(
-  memberId: string, 
-  locationId: string, 
-  timePeriod: number | null, 
-  timePeriodUnit: 'day' | 'week' | 'month' | 'year' | null
+  memberId: string,
+  locationId: string,
 ): Promise<number> {
   try {
     let whereConditions = [
@@ -14,28 +12,7 @@ export async function countAttendances(
       eq(reservations.locationId, locationId)
     ];
 
-    // Apply time period filter if specified
-    if (timePeriod && timePeriodUnit) {
-      const now = new Date();
-      let startDate = new Date();
-      
-      switch (timePeriodUnit) {
-        case 'day':
-          startDate.setDate(now.getDate() - timePeriod);
-          break;
-        case 'week':
-          startDate.setDate(now.getDate() - (timePeriod * 7));
-          break;
-        case 'month':
-          startDate.setMonth(now.getMonth() - timePeriod);
-          break;
-        case 'year':
-          startDate.setFullYear(now.getFullYear() - timePeriod);
-          break;
-      }
-      
-      whereConditions.push(gte(attendances.checkInTime, startDate));
-    }
+
 
     const query = db.select({ count: sql<number>`count(*)` })
       .from(attendances)
@@ -51,10 +28,8 @@ export async function countAttendances(
 }
 
 export async function countReferrals(
-  memberId: string, 
-  locationId: string, 
-  timePeriod: number | null, 
-  timePeriodUnit: 'day' | 'week' | 'month' | 'year' | null
+  memberId: string,
+  locationId: string,
 ): Promise<number> {
   try {
     let whereConditions = [
@@ -62,28 +37,7 @@ export async function countReferrals(
       eq(memberReferrals.locationId, locationId)
     ];
 
-    // Apply time period filter if specified
-    if (timePeriod && timePeriodUnit) {
-      const now = new Date();
-      let startDate = new Date();
-      
-      switch (timePeriodUnit) {
-        case 'day':
-          startDate.setDate(now.getDate() - timePeriod);
-          break;
-        case 'week':
-          startDate.setDate(now.getDate() - (timePeriod * 7));
-          break;
-        case 'month':
-          startDate.setMonth(now.getMonth() - timePeriod);
-          break;
-        case 'year':
-          startDate.setFullYear(now.getFullYear() - timePeriod);
-          break;
-      }
-      
-      whereConditions.push(gte(memberReferrals.created, startDate));
-    }
+
 
     const query = db.select({ count: sql<number>`count(*)` })
       .from(memberReferrals)
@@ -98,21 +52,17 @@ export async function countReferrals(
 }
 
 export async function checkPlanSignup(
-  memberId: string, 
-  locationId: string, 
-  requiredPlanId?: string
+  memberId: string,
+  locationId: string,
+  planId: string
 ): Promise<number> {
   try {
     let whereConditions = [
       eq(memberSubscriptions.memberId, memberId),
       eq(memberSubscriptions.locationId, locationId),
       eq(memberSubscriptions.status, 'active')
+      eq(memberSubscriptions.memberPlanId, planId)
     ];
-
-    // If a specific plan is required, filter by it
-    if (requiredPlanId) {
-      whereConditions.push(eq(memberSubscriptions.memberPlanId, requiredPlanId));
-    }
 
     const query = db.select({ count: sql<number>`count(*)` })
       .from(memberSubscriptions)
