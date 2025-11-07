@@ -19,17 +19,17 @@ interface MembersPageProps {
 }
 
 export default function MembersPage({ id, stripeKey }: MembersPageProps) {
-    if (!id) {
-        return <div>Loading...</div>
-    }
-
     const {
         membersTabs,
         handleNewTab,
         handleRemoveTab,
         handleChangeParam,
         handleFetchForCurrentTab,
-    } = useMemberTabData(id)
+    } = useMemberTabData(id ?? '')
+    
+    if (!id) {
+        return <div>Loading...</div>
+    }
 
     useEffect(() => {
         // Only fetch on initial mount when we have exactly one tab with no data

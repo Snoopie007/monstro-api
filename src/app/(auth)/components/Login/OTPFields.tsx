@@ -9,7 +9,7 @@ import { FormControl, FormField } from '@/components/forms'
 import { FormItem } from '@/components/forms'
 import { UseFormReturn } from 'react-hook-form'
 import { toast } from 'react-toastify'
-import { signIn } from 'next-auth/react'
+import { signIn } from '@/hooks/useSession'
 import { Loader2 } from 'lucide-react'
 import { OTPRetry } from './OTPRetry'
 import { LoginSchema } from '@/libs/FormSchemas/schemas'
@@ -34,7 +34,7 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
         }
 
         setLoading(true);
-
+        console.log(v);
         const res = await signIn("credentials", {
             redirect: false,
             ...v,
@@ -48,7 +48,6 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
         const redirect = searchParams.get('redirect');
         const redirectUrl = redirect ? decodeURIComponent(redirect) : '/dashboard/locations';
         return router.push(redirectUrl);
-
     }
 
     return (

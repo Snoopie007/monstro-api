@@ -3,7 +3,7 @@ import { db } from "@/db/db";
 import { memberLocations } from "@/db/schemas";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import { MemberLocationProfile } from "@/types/member";
 import { hasPermission } from "@/libs/server/permissions";
 

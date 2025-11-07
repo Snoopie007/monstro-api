@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useCallback, useRef, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/hooks/useSession'
 import { createClient } from '@supabase/supabase-js'
 import { SupportConversation, SupportMessage } from '@/types'
 

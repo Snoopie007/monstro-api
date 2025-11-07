@@ -1,5 +1,5 @@
 import React from "react";
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import { PlanBuilder } from "./components";
 import { redirect } from "next/navigation";
 import { NewLocationProvider } from "./provider";

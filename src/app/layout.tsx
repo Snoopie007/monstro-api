@@ -2,17 +2,9 @@ import type { Metadata } from "next";
 import { Poppins, Roboto } from "next/font/google";
 import { ToastContainer } from "react-toastify";
 import "@public/globals.css";
-import { SessionProvider } from "next-auth/react";
-import { auth } from "@/auth";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import { QueryProvider } from "@/providers/QueryProvider";
 import Script from "next/script";
-import { ReactNode } from "react";
-
-// Type fix for NextAuth SessionProvider with React 19
-const CompatibleSessionProvider = SessionProvider as (props: {
-	session: any;
-	children: ReactNode;
-}) => ReactNode;
 
 export const metadata: Metadata = {
 	title: "Monstro",
@@ -37,10 +29,7 @@ export default async function RootLayout({
 }: {
 	children: React.ReactNode;
 }) {
-	const session = await auth();
-
 	return (
-		<CompatibleSessionProvider session={session}>
 			<html
 				suppressHydrationWarning
 				lang="en"
@@ -57,13 +46,15 @@ export default async function RootLayout({
                         apiKey="-OqpEnrUNsFguu-tRoISM0H5Lgsx7qIo" // Safe to expose publically
                         url="https://monitoring.react-scan.com/api/v1/ingest"
                     /> */}
-					<ThemeProvider
-						defaultTheme="system"
-						enableSystem
-						disableTransitionOnChange
-					>
-						{children}
-					</ThemeProvider>
+					<QueryProvider>
+						<ThemeProvider
+							defaultTheme="system"
+							enableSystem
+							disableTransitionOnChange
+						>
+							{children}
+						</ThemeProvider>
+					</QueryProvider>
 					<ToastContainer
 						className="customToast"
 						position="top-right"
@@ -73,6 +64,5 @@ export default async function RootLayout({
 					/>
 				</body>
 			</html>
-		</CompatibleSessionProvider>
 	);
 }

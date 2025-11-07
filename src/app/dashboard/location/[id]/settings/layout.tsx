@@ -1,6 +1,6 @@
 import { ScrollArea } from '@/components/ui/ScrollArea';
 import { SettingMenu } from './components';
-import { auth } from '@/auth';
+import { authWithContext } from '@/libs/auth/server';
 
 export default async function SettingsLayout(
     props: {
@@ -9,7 +9,7 @@ export default async function SettingsLayout(
     }
 ) {
     const params = await props.params;
-    const session = await auth();
+    const session = await authWithContext();
     const { children } = props;
 
 

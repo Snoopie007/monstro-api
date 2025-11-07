@@ -1,13 +1,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { VendorStripePayments } from '@/libs/server/stripe';
-import { auth } from '@/auth';
+import { authWithContext } from '@/libs/auth/server';
 
 export async function GET(req: NextRequest) {
-    const session = await auth();
+    const session = await authWithContext();
 
     try {
-
         if (!session || !session.user.stripeCustomerId) {
             return NextResponse.json({ error: "Vendor not found" }, { status: 404 })
         }
@@ -25,7 +24,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-    const session = await auth();
+    const session = await authWithContext();
     const { paymentMethodId, customerId } = await req.json();
     try {
         if (!session || !session.user.stripeCustomerId) {
@@ -46,7 +45,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-    const session = await auth();
+    const session = await authWithContext();
 
     try {
         if (!session || !session.user.stripeCustomerId) {

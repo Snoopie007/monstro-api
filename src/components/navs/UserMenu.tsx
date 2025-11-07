@@ -1,3 +1,5 @@
+'use client'
+
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -9,18 +11,17 @@ import {
 } from "@/components/ui";
 
 import Link from "next/link";
-import { signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "@/hooks/useSession";
 import { CreditCard, User } from "lucide-react";
 import { cn } from "@/libs/utils";
 import { useTheme } from "next-themes";
+import { ExtendedUser } from "@/types/next-auth";
 
 const MenuItemStyle =
 	"flex flex-row items-center justify-start text-xs hover:bg-foreground/5";
 
-export function UserMenu() {
-	const { data: session } = useSession();
-
-	const user = session?.user;
+export function UserMenu({ user }: { user: ExtendedUser }) {
+	// const { data: session } = useSession();
 	const { theme, setTheme } = useTheme();
 
 
@@ -35,8 +36,8 @@ export function UserMenu() {
 			<DropdownMenuTrigger asChild>
 				<Avatar className="ml-2 h-7 w-7">
 					<AvatarImage
-						src={user.image || '/images/default-avatar.png'}
-						alt={user.name}
+						src={user?.image ?? '/images/default-avatar.png'}
+						alt={user?.name ?? 'User'}
 					/>
 
 				</Avatar>
@@ -48,12 +49,12 @@ export function UserMenu() {
 				<DropdownMenuItem
 					className={"flex flex-col items-start justify-start"}
 				>
-					<span className=" font-semibold">{user.name}</span>
-					<span className=" text-muted-foreground">{user.email}</span>
+					<span className=" font-semibold">{user?.name}</span>
+					<span className=" text-muted-foreground">{user?.email}</span>
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem className={MenuItemStyle} asChild>
-					<Link href={`/dashboard/account/${user.vendorId || user.staffId}/profile`} className="cursor-pointer">
+					<Link href={`/dashboard/account/${user?.vendorId || user?.staffId}/profile`} className="cursor-pointer">
 						<User className="size-4 mr-1.5" />
 						Profile
 					</Link>

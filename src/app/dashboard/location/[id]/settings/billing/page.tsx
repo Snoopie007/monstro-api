@@ -19,7 +19,7 @@ import Link from "next/link";
 import React from "react";
 
 import { cn, formatAmountForDisplay } from "@/libs/utils";
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { LocationState } from "@/types";
 import { Stripe } from "stripe";

@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { memberContracts } from "@/db/schemas";
 import { db } from "@/db/db";
 import { and, eq } from "drizzle-orm";
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import { generatePdfFromHtml } from "@/libs/generatePdf";
 import { generateContractHtml } from "@/libs/ContractTemplates";
 

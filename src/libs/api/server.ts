@@ -3,8 +3,9 @@
  * Includes auth token from session
  */
 
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import type { ExtendedUser } from "@/types/next-auth";
+import { getSupabaseJWT } from "../server/supabase";
 
 export interface ApiClient {
     get: (url: string, params?: Record<string, string | number | boolean | string[]>) => Promise<unknown>;
@@ -41,10 +42,7 @@ export const serversideApiClient = (): ApiClient => {
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
             }
-            
-            // Try to get user session token first
-            const session = await auth();
-            const sbToken = (session?.user as ExtendedUser)?.sbToken;
+            const sbToken = await getSupabaseJWT();
             
             if (sbToken) {
                 // User is authenticated, use their token

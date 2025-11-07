@@ -10,7 +10,7 @@ import { Loader2 } from 'lucide-react'
 import { useNewLocation } from '../provider'
 import { PaymentDetails, ExistingPlanPayment, NewPlanPayment } from './PlanPayment'
 import { getStripe } from '@/libs/client/stripe'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/hooks/useSession'
 
 
 

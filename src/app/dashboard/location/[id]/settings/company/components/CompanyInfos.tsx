@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 import { Input } from "@/components/forms";
 import { InfoType } from "../page";
 import { LocationStatus } from "@/types";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 
 
 type CompanyInfoProps = {
