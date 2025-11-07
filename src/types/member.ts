@@ -1,6 +1,5 @@
 import { Contract, MemberContract } from './contract'
 import { FamilyMember } from './FamilyMember'
-import { Transaction } from './transaction'
 import { Location } from './location'
 import { PlanProgram } from './program'
 import {
@@ -9,13 +8,13 @@ import {
     memberLocations,
     memberPackages,
     memberPlans,
-    memberPointsHistory,
     memberReferrals,
     members,
     memberSubscriptions,
     memberFields,
     memberCustomFields,
 } from '@/db/schemas'
+import { PaymentType } from './DatabaseEnums'
 
 export type Member = typeof members.$inferSelect & {
     familyMembers?: FamilyMember[]
@@ -34,15 +33,15 @@ export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
     plan?: MemberPlan
     contract?: MemberContract | null
     member?: Member
+    paymentType: PaymentType
 }
 
 export type MemberPackage = typeof memberPackages.$inferSelect & {
-    invoice?: MemberInvoice | null
     plan?: MemberPlan
     contract?: MemberContract | null
     member?: Member
     parent?: MemberPackage | null
-    transactions?: Transaction[]
+    paymentType: PaymentType
 }
 
 export type BillingCycleAnchorConfig = {

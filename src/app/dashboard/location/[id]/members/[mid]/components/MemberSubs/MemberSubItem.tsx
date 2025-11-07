@@ -89,6 +89,25 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
         setFamilyPlans(data)
         setLoading(false)
     }
+
+
+    function getPaymentType(paymentType: string) {
+        switch (paymentType) {
+            case 'card':
+                return 'Credit Card'
+            case 'us_bank_account':
+                return 'ACH'
+            case 'paypal':
+                return 'PayPal'
+            case 'apple_pay':
+                return 'Apple Pay'
+            case 'google_pay':
+                return 'Google Pay'
+            case 'manual':
+                return 'Manual'
+        }
+        return paymentType
+    }
     return (
         <div className="bg-muted/50 rounded-lg px-4 py-3 space-y-2">
             <div className="flex flex-row justify-between items-center">
@@ -117,8 +136,8 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                     <InfoField label="Price">
                         {`${formatAmountForDisplay(sub.plan?.price! / 100, 'usd', true)} / ${sub.plan?.interval}`}
                     </InfoField>
-                    <InfoField label="Payment Method">
-                        {sub.paymentMethod}
+                    <InfoField label="Payment Type">
+                        {getPaymentType(sub.paymentType)}
                     </InfoField>
                 </div>
                 <div className="grid grid-cols-3 items-center">

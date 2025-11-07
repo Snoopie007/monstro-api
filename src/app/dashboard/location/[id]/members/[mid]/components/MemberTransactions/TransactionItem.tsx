@@ -6,7 +6,7 @@ import {
     ItemActions,
 } from '@/components/ui'
 import { formatAmountForDisplay } from '@/libs/utils'
-import { Transaction } from '@/types'
+import { PaymentType, Transaction } from '@/types'
 import { format } from 'date-fns'
 import MemberPaymentActions from './actions'
 
@@ -16,6 +16,8 @@ interface TransactionItemProps {
 }
 
 export function TransactionItem({ transaction, params }: TransactionItemProps) {
+
+
     return (
         <Item variant="muted" className='p-3'>
             <ItemMedia>
@@ -26,26 +28,10 @@ export function TransactionItem({ transaction, params }: TransactionItemProps) {
             <ItemContent className='flex flex-row justify-between gap-2 items-center'>
 
                 <span className='font-medium'>
-                    {formatAmountForDisplay(transaction.amount / 100, transaction.currency || 'usd', true)}
+                    {formatAmountForDisplay(transaction.total / 100, transaction.currency || 'usd', true)}
                 </span>
                 <span>
-                    {transaction.paymentMethod === 'card' &&
-                        transaction.metadata?.card ? (
-                        <div className="flex flex-row items-center gap-1">
-                            <span className="capitalize">
-                                {transaction.metadata?.card?.brand}
-                            </span>
-                            <span>
-                                ••••{' '}
-                                {transaction.metadata?.card &&
-                                    transaction.metadata?.card.last4}
-                            </span>
-                        </div>
-                    ) : (
-                        <span className="capitalize">
-                            {transaction.paymentMethod}
-                        </span>
-                    )}
+                    {TransactionType({ transaction })}
                 </span>
                 <span className='font-medium'>
                     {format(transaction.created, 'MMM d, yyyy')}
@@ -58,6 +44,48 @@ export function TransactionItem({ transaction, params }: TransactionItemProps) {
                     lid={params.id}
                 />
             </ItemActions>
-        </Item>
+        </Item >
     )
+}
+
+
+function TransactionType({ transaction }: { transaction: Transaction }) {
+    switch (transaction.paymentType) {
+        case 'card':
+            const card = transaction.metadata?.card;
+            if (!card) {
+                return null;
+            }
+            return (
+                <div className="flex flex-row items-center gap-1">
+                    <span className="capitalize">
+                        {card.brand}
+                    </span>
+                    <span>
+                        {'•••• ' + card.last4}
+                    </span>
+                </div>
+            )
+        case 'us_bank_account':
+            const bank = transaction.metadata?.us_bank_account;
+            if (!bank) {
+                return null;
+            }
+            return (
+                <div className="flex flex-row items-center gap-1">
+                    <span className="capitalize">
+                        {bank.bank_name}
+                    </span>
+                    <span>
+                        {'•••• ' + bank.last4}
+                    </span>
+                </div>
+            )
+        default:
+            return (
+                <span className="capitalize">
+                    {transaction.paymentType}
+                </span>
+            )
+    }
 }

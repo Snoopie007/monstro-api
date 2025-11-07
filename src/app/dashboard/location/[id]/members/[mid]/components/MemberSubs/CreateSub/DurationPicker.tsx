@@ -92,24 +92,22 @@ export function DurationPicker({ onChange }: DurationPickerProps) {
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger>
-                <div className="h-10 border border-foreground/10 rounded-sm px-3 py-2 flex flex-row items-center bg-background gap-1">
-                    <CalendarIcon size={16} className="-mt-0.5 mr-1" />
-                    <div className="flex flex-row items-center text-sm gap-3 text-foreground/80">
-                        <span
-                            className={`px-1 rounded-sm cursor-pointer ${selected === 'start' ? 'bg-indigo-600 text-white' : 'hover:bg-foreground/10'}`}
-                            onClick={handleDateClick('start')}
-                        >
-                            {date.from ? format(date.from, "LLL dd, y") : ""}
-                        </span>
-                        <span>-</span>
-                        <span
-                            className={`px-1 rounded-sm cursor-pointer ${selected === 'end' ? 'bg-indigo-600 text-white' : 'hover:bg-foreground/10'}`}
-                            onClick={handleDateClick('end')}
-                        >
-                            {date.to ? format(date.to, "LLL dd, y") : "Never"}
-                        </span>
-                    </div>
+            <PopoverTrigger className="h-12 border w-full border-foreground/10 rounded-lg px-3 flex flex-row items-center bg-background gap-1">
+                <CalendarIcon size={16} className="mr-1" />
+                <div className="flex flex-row items-center text-sm gap-3 text-foreground/80">
+                    <span
+                        className={`px-1 rounded-sm cursor-pointer ${selected === 'start' ? 'bg-indigo-600 text-white' : 'hover:bg-foreground/10'}`}
+                        onClick={handleDateClick('start')}
+                    >
+                        {date.from ? format(date.from, "LLL dd, y") : ""}
+                    </span>
+                    <span>-</span>
+                    <span
+                        className={`px-1 rounded-sm cursor-pointer ${selected === 'end' ? 'bg-indigo-600 text-white' : 'hover:bg-foreground/10'}`}
+                        onClick={handleDateClick('end')}
+                    >
+                        {date.to ? format(date.to, "LLL dd, y") : "Never"}
+                    </span>
                 </div>
             </PopoverTrigger>
             <PopoverContent className="w-auto flex flex-row overflow-hidden border-foreground/10  p-0" align="start" side="bottom">
@@ -127,7 +125,7 @@ export function DurationPicker({ onChange }: DurationPickerProps) {
                             <li
                                 key={preset.name}
                                 onClick={() => handlePresetSelect(preset, selected || 'start')}
-                                className="text-xs cursor-pointer hover:text-indigo-500 font-medium"
+                                className="text-sm cursor-pointer hover:text-indigo-500 font-medium"
                             >
                                 {preset.name}
                             </li>

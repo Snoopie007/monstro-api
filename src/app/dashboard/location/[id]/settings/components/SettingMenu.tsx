@@ -32,7 +32,7 @@ export function SettingMenu({ roles, locationId }: { roles: string, locationId: 
                 {SettingMenuItems.filter(item => item.roles.includes(roles)).map((item, i) => (
                     <li key={i} className={cn("font-semibold rounded-sm", isActive(item.path) && 'bg-accent')}>
                         <Link href={`/dashboard/location/${locationId}/settings/${item.path}`}
-                            className=' block   text-sm px-3 py-2 hover:bg-accent rounded-sm'>
+                            className='block  text-sm px-3 py-2 hover:bg-accent rounded-sm'>
                             {item.name}
                         </Link>
                     </li>
