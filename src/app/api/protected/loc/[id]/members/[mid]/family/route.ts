@@ -195,7 +195,7 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
 				startDate: memberPackage.startDate,
 				memberId: member.id,
 				parentId: memberPackage.id,
-				paymentMethod: memberPackage.paymentMethod,
+				paymentType: memberPackage.paymentType,
 				status: "active",
 			});
 			emailUrl = `invite/${params.id}/pkg/${memberPackage.id}`;
@@ -206,7 +206,7 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
 				status: "active",
 				startDate: memberSubscription.startDate,
 				currentPeriodStart: memberSubscription.currentPeriodStart,
-				paymentMethod: memberSubscription.paymentMethod,
+				paymentType: memberSubscription.paymentType,
 				memberId: member.id,
 				parentId: memberSubscription.id,
 				currentPeriodEnd: memberSubscription.currentPeriodEnd,

@@ -178,7 +178,7 @@ export async function POST(req: Request, props: Props) {
         await evaluateTriggers({
             memberId: mid,
             locationId: id,
-            triggerType: 'plan_signup',
+            triggerType: 'Plan Signup',
 
         });
         return NextResponse.json({ ...sub, plan: plan, }, { status: 200 })

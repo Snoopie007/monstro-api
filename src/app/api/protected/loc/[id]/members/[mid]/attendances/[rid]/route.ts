@@ -42,8 +42,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: str
 			await evaluateTriggers({
 				memberId: params.mid,
 				locationId: params.id,
-				triggerType: 'attendances_count',
-				data: { attendanceId: newAttendance[0].id }
+				triggerType: 'Attendances Count',
 			});
 		} catch (error) {
 			console.error('Error evaluating attendance triggers:', error);
@@ -54,7 +53,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: str
 		try {
 			const apiClient = serviceApiClient();
 			const jobId = `missed-class-${params.rid}`;
-			
+
 			await apiClient.delete(`/protected/locations/email/${jobId}`);
 			console.log(`📧 Cancelled missed class email for reservation ${params.rid}`);
 		} catch (error) {

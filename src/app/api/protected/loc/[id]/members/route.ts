@@ -69,9 +69,9 @@ export async function GET(
         // Optional search condition for members (case-insensitive match)
         const searchCondition = query
             ? or(
-                  ilike(members.firstName, `%${query}%`), // Match firstName
-                  ilike(members.lastName, `%${query}%`) // Match lastName
-              )
+                ilike(members.firstName, `%${query}%`), // Match firstName
+                ilike(members.lastName, `%${query}%`) // Match lastName
+            )
             : undefined
 
         // Tag filtering condition
@@ -447,7 +447,7 @@ export async function POST(
                     await evaluateTriggers({
                         memberId: referrer.id,
                         locationId: params.id,
-                        triggerType: 'referrals_count'
+                        triggerType: 'Referrals Count'
                     });
                 }
             } catch (error) {

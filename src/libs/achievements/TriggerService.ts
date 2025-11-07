@@ -1,13 +1,12 @@
 import { db } from '@/db/db'
 import {
     achievements,
-    achievementTriggers,
     memberAchievements,
     memberPointsHistory,
-    triggeredAchievements,
     memberLocations,
 } from '@/db/schemas'
 import { eq, and, gte, desc, sql } from 'drizzle-orm'
+import { AchievementTriggers } from '@/libs/data'
 import {
     countAttendances,
     countReferrals,
@@ -17,70 +16,70 @@ import {
 export interface TriggerEvaluation {
     memberId: string
     locationId: string
-    triggerType: 'attendances_count' | 'referrals_count' | 'plan_signup'
+    triggerType: "Attendances Count" | "Referrals Count" | "Plan Signup" | "Amount Spent"
 }
 
 export async function evaluateTriggers({ memberId, locationId, triggerType }: TriggerEvaluation) {
-    const triggerMap = {
-        attendances_count: 2,
-        referrals_count: 3,
-        plan_signup: 4,
+
+    const triggerId = AchievementTriggers.find(t => t.name === triggerType)?.id
+    if (!triggerId) {
+        throw new Error(`Trigger type ${triggerType} not found`)
     }
-
     try {
-        const triggers = await db.query.triggeredAchievements.findMany({
-            where: eq(triggeredAchievements.triggerId, triggerMap[triggerType]),
-            with: {
-                achievement: true,
-            },
-        })
-
-        for (const trigger of triggers) {
-            // Only process triggers for the correct location
-            if (trigger.achievement.locationId !== locationId) {
-                continue
-            }
-
-            let count = 0
-
-            switch (triggerType) {
-                case 'attendances_count':
-                    count = await countAttendances(
-                        memberId,
-                        locationId,
-                    )
-                    break
-                case 'referrals_count':
-                    count = await countReferrals(
-                        memberId,
-                        locationId,
-                    )
-                    break
-                case 'plan_signup':
-                    count = await checkPlanSignup(
-                        memberId,
-                        locationId,
-                        trigger.memberPlanId
-                    )
-                    break
-            }
-
-            await updateMemberAchievement(
-                memberId,
-                trigger.achievementId,
-                locationId,
-                count
+        const achievements = await db.query.achievements.findMany({
+            where: (achievements, { and, eq }) => and(
+                eq(achievements.triggerId, triggerId),
+                eq(achievements.locationId, locationId)
             )
 
-            if (count >= trigger.achievement.requiredActionCount) {
-                await awardAchievement(
-                    memberId,
-                    trigger.achievementId,
-                    locationId,
-                    trigger.achievement.points
-                )
-            }
-        }
+        })
+
+        // for (const trigger of triggers) {
+        //     // Only process triggers for the correct location
+        //     if (trigger.achievement.locationId !== locationId) {
+        //         continue
+        //     }
+
+        //     let count = 0
+
+        //     switch (triggerType) {
+        //         case 'attendances_count':
+        //             count = await countAttendances(
+        //                 memberId,
+        //                 locationId,
+        //             )
+        //             break
+        //         case 'referrals_count':
+        //             count = await countReferrals(
+        //                 memberId,
+        //                 locationId,
+        //             )
+        //             break
+        //         case 'plan_signup':
+        //             count = await checkPlanSignup(
+        //                 memberId,
+        //                 locationId,
+        //                 trigger.memberPlanId
+        //             )
+        //             break
+        //     }
+
+        //     await updateMemberAchievement(
+        //         memberId,
+        //         trigger.achievementId,
+        //         locationId,
+        //         count
+        //     )
+
+        //     if (count >= trigger.achievement.requiredActionCount) {
+        //         await awardAchievement(
+        //             memberId,
+        //             trigger.achievementId,
+        //             locationId,
+        //             trigger.achievement.points
+        //         )
+        //     }
+        // }
     } catch (error) {
         console.error('Error evaluating triggers:', error)
         throw error

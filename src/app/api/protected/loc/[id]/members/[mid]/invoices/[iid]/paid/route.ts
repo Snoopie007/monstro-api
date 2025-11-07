@@ -9,7 +9,7 @@ import { serversideApiClient } from "@/libs/api/server";
 type MarkPaidProps = {
 	id: string;
 	mid: string;
-	invoiceId: string;
+	iid: string;
 };
 
 export async function POST(
@@ -32,7 +32,7 @@ export async function POST(
 
 		// Get invoice
 		const invoice = await db.query.memberInvoices.findFirst({
-			where: eq(memberInvoices.id, params.invoiceId),
+			where: eq(memberInvoices.id, params.iid),
 		});
 
 		if (!invoice) {
@@ -72,14 +72,14 @@ export async function POST(
 					paid: true,
 					updated: new Date(),
 				})
-				.where(eq(memberInvoices.id, params.invoiceId));
+				.where(eq(memberInvoices.id, params.iid));
 
 			// UPDATE the existing incomplete transaction (don't create new one)
 			await tx
 				.update(transactions)
 				.set({
 					status: "paid",
-					paymentMethod: paymentMethod,
+					paymentType: paymentMethod,
 					chargeDate: paidDate ? new Date(paidDate) : new Date(),
 					updated: new Date(),
 					metadata: {
@@ -90,7 +90,7 @@ export async function POST(
 				})
 				.where(
 					and(
-						eq(transactions.invoiceId, params.invoiceId),
+						eq(transactions.invoiceId, params.iid),
 						eq(transactions.status, "incomplete")
 					)
 				);
@@ -102,15 +102,15 @@ export async function POST(
 					where: eq(memberSubscriptions.id, invoice.memberSubscriptionId),
 					with: { plan: true },
 				});
-				
+
 				if (subscription && subscription.plan) {
 					// Calculate next billing period based on plan interval
 					const currentPeriodEnd = new Date(subscription.currentPeriodEnd);
 					let nextPeriodEnd: Date;
-					
+
 					const interval = subscription.plan.interval || 'month';
 					const intervalThreshold = subscription.plan.intervalThreshold || 1;
-					
+
 					switch (interval) {
 						case 'day':
 							nextPeriodEnd = addDays(currentPeriodEnd, intervalThreshold);
@@ -127,7 +127,7 @@ export async function POST(
 						default:
 							nextPeriodEnd = addMonths(currentPeriodEnd, 1);
 					}
-					
+
 					// Update subscription: set to active AND move billing period forward
 					await tx
 						.update(memberSubscriptions)
@@ -158,17 +158,17 @@ export async function POST(
 				const locState = await db.query.locationState.findFirst({
 					where: eq(locationState.locationId, params.id)
 				});
-				
+
 				if (locState?.planId && locState.planId >= 2) {
 					// Fetch member and location details
 					const member = await db.query.members.findFirst({
 						where: eq(members.id, params.mid)
 					});
-					
+
 					const location = await db.query.locations.findFirst({
 						where: eq(locations.id, params.id)
 					});
-					
+
 					if (member && location) {
 						const apiClient = serversideApiClient();
 						await apiClient.post('/protected/locations/email', {
@@ -211,7 +211,7 @@ export async function POST(
 				success: true,
 				message: "Invoice marked as paid successfully",
 				invoice: {
-					id: params.invoiceId,
+					id: params.iid,
 					status: "paid",
 					paid: true,
 				},

@@ -60,7 +60,7 @@ export async function checkPlanSignup(
     let whereConditions = [
       eq(memberSubscriptions.memberId, memberId),
       eq(memberSubscriptions.locationId, locationId),
-      eq(memberSubscriptions.status, 'active')
+      eq(memberSubscriptions.status, 'active'),
       eq(memberSubscriptions.memberPlanId, planId)
     ];
 

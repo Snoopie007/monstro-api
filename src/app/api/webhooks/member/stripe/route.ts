@@ -268,7 +268,7 @@ async function handleSubscriptionInvoicePayment(
 			await evaluateTriggers({
 				memberId: subscription.memberId,
 				locationId: subscription.locationId,
-				triggerType: 'plan_signup',
+				triggerType: 'Plan Signup',
 			});
 		} catch (error) {
 			console.error('Error evaluating plan signup triggers:', error);
