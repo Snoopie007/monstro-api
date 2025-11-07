@@ -3,44 +3,12 @@ import bcrypt from 'bcryptjs';
 import { customSession } from "better-auth/plugins";
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { createAuthMiddleware, APIError } from "better-auth/api";
+import { createAuthMiddleware } from "better-auth/api";
 import { toNextJsHandler } from "better-auth/next-js";
-import { buildUserPayload } from './UserContext';
 import { accounts, users, sessions } from '@/db/schemas';
-import { getRedisClient } from '../server/redis';
-import { isAfter } from 'date-fns';
 
 const isProduction = process.env.NODE_ENV === "production";
 const isPreview = process.env.VERCEL_ENV === "preview";
-
-// ✅ Add token validation helper
-async function validateToken(token: string, userId: string, type: string) {
-  const redis = getRedisClient();
-  const RedisKey = `loginToken:${userId}:${type}`;
-  const otp = await redis.get(RedisKey);
-  const [storedToken, time] = otp?.toString().split("::") || [];
-
-  // Check if the token is valid
-  if (!otp || storedToken !== token) {
-    throw new Error("INVALID_TOKEN");
-  }
-
-  // Check if the token is expired (more than 30 minutes old)
-  const thirtyMinutesInMs = 30 * 60 * 1000;
-  const tokenExpired = isAfter(
-    new Date(),
-    new Date(parseInt(time) * 1000 + thirtyMinutesInMs)
-  );
-
-  // Delete token after validation attempt
-  await redis.del(RedisKey);
-
-  if (tokenExpired) {
-    throw new Error("TOKEN_EXPIRED");
-  }
-
-  return true;
-}
 
 export const auth = betterAuth({
     database: drizzleAdapter(db, {
@@ -113,24 +81,6 @@ export const auth = betterAuth({
       providerId: "provider",  // Map providerId to your provider column
     },
   },
-
-    // Note: When passing schema directly to drizzleAdapter,
-    // you don't need user.modelName or user.fields configuration
-    // The adapter reads the structure from the Drizzle schema
-    
-    // // Add additional fields you want in the user object
-    // user: {
-    //   additionalFields: {
-    //     // These will be available in session.user
-    //     phone: { type: "string", required: false },
-    //     role: { type: "string", required: false },
-    //     vendorId: { type: "number", required: false },
-    //     staffId: { type: "number", required: false },
-    //     stripeCustomerId: { type: "string", required: false },
-    //     sbToken: { type: "string", required: false },
-    //     locations: { type: "string", required: false }, // JSON string
-    //   },
-    // },
     emailAndPassword: {
       enabled: true,
       // Custom password verification
