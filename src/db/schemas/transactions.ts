@@ -16,7 +16,7 @@ import { TransactionItem, TransactionMetadata } from "@/types";
 export const transactions = pgTable("transactions", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	description: text("description"),
-	items: jsonb("items").$type<TransactionItem[]>().array().default(sql`'{}'::jsonb[]`),
+	items: jsonb("items").$type<TransactionItem[]>().notNull().array().default(sql`'{}'::jsonb[]`),
 	type: TransactionTypeEnum("type").notNull(),
 	paymentType: PaymentTypeEnum("payment_type").notNull(),
 	total: integer("total").notNull().default(0),

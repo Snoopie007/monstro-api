@@ -2,7 +2,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Transaction } from "@/types";
 import { format } from "date-fns";
-
+import { formatAmountForDisplay } from "@/libs/utils";
 
 export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
 
@@ -28,14 +28,16 @@ export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
         },
     },
     {
-        accessorKey: "amount",
-        header: "Amount",
-        id: "amount",
+        accessorKey: "total",
+        header: "Total",
+        id: "total",
         cell: ({ row }) => {
 
             const transaction = row.original
             return (
-                <div className="flex flex-row items-center gap-2">{transaction.amount / 100}</div>
+                <div className="flex flex-row items-center gap-2">
+                    {formatAmountForDisplay(transaction.total / 100, transaction.currency || 'usd', true)}
+                </div>
             )
         },
     },

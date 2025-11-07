@@ -2,7 +2,7 @@
 
 import { db } from "@/db/db";
 import { TransactionsList } from "./components/TransactionsList";
-import { Transaction } from "@/types";
+import { Transaction, TransactionItem } from "@/types";
 
 async function fetchTransactions(id: string): Promise<Transaction[]> {
     try {

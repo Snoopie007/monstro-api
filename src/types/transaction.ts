@@ -18,11 +18,8 @@ export type Transaction = typeof transactions.$inferSelect & {
   paymentType: PaymentType;
   member?: Member;
   status: TransactionStatus;
-  subscription?: MemberSubscription;
-  package?: MemberPackage;
   metadata?: TransactionMetadata;
   invoice?: MemberInvoice;
-  items?: TransactionItem[];
 };
 
 export type TransactionItem = {
