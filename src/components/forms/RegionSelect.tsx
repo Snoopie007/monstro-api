@@ -28,10 +28,10 @@ export function RegionSelect({ value, onChange, className }: RegionSelectProps) 
                     <Button
                         variant="outline"
                         role="combobox"
-                        className={cn("w-full bg-background border border-foreground/10 cursor-pointer  rounded-xs font-normal justify-between", className)}
+                        className={cn("w-full h-12 bg-background border border-foreground/10 cursor-pointer  rounded-lg font-normal justify-between", className)}
                     >
                         {selected ? selected : "Select a state"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                     </Button>
                 </FormControl>
             </PopoverTrigger>

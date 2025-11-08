@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
 import { memberTags, memberHasTags, members } from "@/db/schemas";
-import { eq, and, inArray } from "drizzle-orm";
-import { MemberHasTagInsert } from "@/types";
+import { eq, and } from "drizzle-orm";
 
-// GET /api/protected/loc/[id]/members/[mid]/tags - Get tags for a specific member
 export async function GET(
   req: Request,
   props: { params: Promise<{ id: string; mid: string }> }

@@ -21,19 +21,9 @@ import { useParams } from "next/navigation";
 import { format, intervalToDuration } from "date-fns";
 import { MemberSubscription } from "@/types";
 import { EndDayPicker, PaymentMethodPicker } from ".";
+import { InfoField } from "../../../InfoField";
 
 const UpdateSubSchema = z.object({
-	paymentType: z.enum([
-		"card",
-		"cash",
-		"check",
-		"zelle",
-		"venmo",
-		"paypal",
-		"apple",
-		"google",
-		"manual",
-	]),
 	endAt: z.date().optional(),
 	paymentMethodId: z.string().optional(),
 	trialDays: z.number().min(0, "Trial days must be non-negative").optional(),
@@ -55,7 +45,6 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 	const form = useForm<z.infer<typeof UpdateSubSchema>>({
 		resolver: zodResolver(UpdateSubSchema),
 		defaultValues: {
-			paymentType: sub.paymentMethod,
 			endAt: sub.cancelAt || undefined,
 			trialDays: 0,
 			allowProration: sub.plan?.allowProration,
@@ -76,7 +65,6 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 		}
 	}, [sub]);
 
-	const paymentType = form.watch("paymentType");
 
 
 	async function onSubmit(v: z.infer<typeof UpdateSubSchema>) {
@@ -110,11 +98,11 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 		<div className={cn(show ? "block" : "hidden")}>
 			<Form {...form}>
 				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4">
-					<SubInfo sub={mutableSub} />
+
 					<fieldset className="space-y-4">
 						<FormLabel size={"tiny"}>Duration</FormLabel>
 						<div className="flex flex-row gap-2 items-center">
-							<span className="text-xs font-medium">
+							<span className="text-sm font-medium">
 								{format(new Date(sub.currentPeriodStart), "MMM d, yyyy")}
 							</span>
 							<ArrowRight className="size-3.5 " />
@@ -137,12 +125,10 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 						</div>
 					</fieldset>
 
-					{paymentType === "card" && (
-						<fieldset
-							className={cn(
-								sub.status === "trialing" && "grid grid-cols-2 gap-2"
-							)}
-						>
+					{sub.paymentType !== "cash" && (
+						<fieldset className={cn(
+							sub.status === "trialing" && "grid grid-cols-2 gap-2"
+						)}>
 							<FormField
 								control={form.control}
 								name="paymentMethodId"
@@ -190,7 +176,7 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 							control={form.control}
 							name="reset"
 							render={({ field }) => (
-								<FormItem className="flex flex-row bg-foreground/5 items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
+								<FormItem className="flex flex-row bg-foreground/5 items-center gap-3 rounded-lg border border-foreground/10 p-3 ">
 									<FormControl>
 										<Switch
 											className="-mt-1"
@@ -211,13 +197,13 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 							)}
 						/>
 					</fieldset>
-					{paymentType === "card" && (
+					{sub.paymentType !== "cash" && (
 						<fieldset>
 							<FormField
 								control={form.control}
 								name="allowProration"
 								render={({ field }) => (
-									<FormItem className="flex flex-row bg-foreground/5 items-center gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
+									<FormItem className="flex flex-row bg-foreground/5 items-center gap-3 rounded-lg border border-foreground/10 p-3 ">
 										<FormControl>
 											<Switch
 												className="-mt-1"
@@ -242,59 +228,20 @@ export function UpdateSub({ sub, show, close }: UpdateSubProps) {
 			</Form>
 			<DialogFooter className="flex flex-row gap-2 sm:justify-between">
 				<DialogClose asChild>
-					<Button variant="outline" size="sm" disabled={loading}>
+					<Button variant="outline" className="border-foreground/10" disabled={loading}>
 						Cancel
 					</Button>
 				</DialogClose>
 				<Button
 					type="submit"
-					variant="foreground"
-					size="sm"
+					variant="primary"
 					disabled={loading || !form.formState.isValid}
 					onClick={form.handleSubmit(onSubmit)}
 				>
-					{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-					Update Subscription
+					{loading ? <Loader2 className=" size-4 animate-spin" /> : "Update Subscription"}
 				</Button>
 			</DialogFooter>
 		</div>
 	);
 }
 
-function SubInfo({ sub }: { sub: MemberSubscription }) {
-	return (
-		<div className="text-sm p-4 bg-foreground/5 rounded-sm grid grid-cols-2 gap-4">
-			<div className="flex flex-col">
-				<span className="font-medium">Plan:</span>
-				<span className="text-foreground/50 text-xs capitalize">
-					{" "}
-					{sub.plan?.name}
-				</span>
-			</div>
-			<div className="flex flex-col">
-				<span className="font-medium">Duration:</span>
-				<span className="text-foreground/50 text-xs capitalize">
-					{format(new Date(sub.currentPeriodStart), "MMM d, yyyy")} {" - "}
-					{sub.cancelAt
-						? format(new Date(sub.cancelAt), "MMM d, yyyy")
-						: "Forever"}
-				</span>
-			</div>
-			<div className="flex flex-col">
-				<span className="font-medium">Payment Type:</span>
-				<span className="text-foreground/50 text-xs capitalize">
-					{" "}
-					{sub.paymentMethod}
-					<span className="text-red-500 lowercase"> (Cannot be changed)</span>
-				</span>
-			</div>
-			<div className="flex flex-col ">
-				<span className="font-medium">Next billing date:</span>
-				<span className="text-foreground/50 text-xs">
-					{" "}
-					{format(new Date(sub.currentPeriodEnd), "MMM d, yyyy")}
-				</span>
-			</div>
-		</div>
-	);
-}

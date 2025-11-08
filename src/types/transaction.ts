@@ -11,6 +11,9 @@ export type TransactionMetadata = {
     bank_name: string;
     last4: string;
   }
+  subscriptionId?: string;
+  packageId?: string;
+  chargeId?: string;
 } & Record<string, unknown>;
 
 export type Transaction = typeof transactions.$inferSelect & {

@@ -1,7 +1,7 @@
 import { authWithContext } from "@/libs/auth/server";
 import { NextResponse } from "next/server";
 
-export type Permission = 
+export type Permission =
   // Member Management (view is implicit for all authenticated users)
   | "edit member" | "add member" | "delete member"
   // Program Management (view is implicit for all authenticated users)
@@ -28,7 +28,7 @@ export interface PermissionCheck {
  */
 export async function hasPermission(permission: Permission, locationId?: string): Promise<boolean> {
   const session = await authWithContext();
-  console.log('session trying to check permission', session)
+  console.log('session trying to check permission')
   if (!session?.user) {
     return false;
   }
@@ -42,7 +42,7 @@ export async function hasPermission(permission: Permission, locationId?: string)
   if (session.user.role === "staff") {
     if (!locationId) {
       // Check if user has permission for any location
-      return session.user.locations?.some((loc: any) => 
+      return session.user.locations?.some((loc: any) =>
         loc.permissions?.includes(permission)
       ) || false;
     }
@@ -63,7 +63,7 @@ export async function hasPermission(permission: Permission, locationId?: string)
  */
 export async function canView(locationId?: string): Promise<boolean> {
   const session = await authWithContext();
-  
+
   if (!session?.user) {
     return false;
   }
@@ -125,14 +125,14 @@ export async function requirePermission(
   // This would be used in API routes where we have access to the request
   // For now, we'll use the session-based approach
   const hasAuth = await hasPermission(permission);
-  
+
   if (!hasAuth) {
     return NextResponse.json(
       { error: "Insufficient permissions" },
       { status: 403 }
     );
   }
-  
+
   return null;
 }
 
@@ -143,7 +143,7 @@ export async function requirePermission(
  */
 export async function getUserPermissions(locationId?: string): Promise<string[]> {
   const session = await authWithContext();
-  
+
   if (!session?.user) {
     return [];
   }
@@ -164,9 +164,9 @@ export async function getUserPermissions(locationId?: string): Promise<string[]>
       // Business Management (view is implicit)
       "edit business_profile", "add member_card"
     ];
-    
+
     if (!locationId) return allPermissions;
-    
+
     return session.user.locations?.some((loc: any) => loc.id === locationId) ? allPermissions : [];
   }
 
@@ -210,7 +210,7 @@ export function withPermission(
     }
 
     const hasAuth = await hasPermission(permission, locationId);
-    
+
     if (!hasAuth) {
       return NextResponse.json(
         { error: "Insufficient permissions" },

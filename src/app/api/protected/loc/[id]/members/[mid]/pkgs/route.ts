@@ -173,6 +173,9 @@ export async function POST(req: NextRequest, props: Props) {
 				subTotal: plan.price,
 				total,
 				currency: plan.currency,
+				metadata: {
+					packageId: pkg.id,
+				},
 			});
 			return pkg;
 		});
@@ -184,7 +187,7 @@ export async function POST(req: NextRequest, props: Props) {
 
 		// Trigger evaluation of triggers
 
-		return NextResponse.json({ ...pkg, plan } as MemberPackage, { status: 200 });
+		return NextResponse.json({ ...pkg, plan }, { status: 200 });
 	} catch (err) {
 		console.log(err);
 		return NextResponse.json({ error: err }, { status: 500 });

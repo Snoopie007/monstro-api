@@ -148,7 +148,7 @@ export default function AddPaymentMethod({
 												<Input
 													type="text"
 													placeholder="Name on card"
-													className="border-none rounded-sm  px-3 py-2 w-full"
+
 													{...field}
 													value={
 														field.value.charAt(0).toUpperCase() +
@@ -174,7 +174,7 @@ export default function AddPaymentMethod({
 												<Input
 													type="text"
 													placeholder="Billing Address"
-													className=" border-none rounded-sm  p-3 w-full"
+
 													{...field}
 												/>
 											</FormControl>
@@ -192,7 +192,7 @@ export default function AddPaymentMethod({
 											<FormControl>
 												<Input
 													type="text"
-													className="border-none  rounded-sm"
+
 													placeholder="City"
 													{...field}
 												/>
@@ -224,7 +224,7 @@ export default function AddPaymentMethod({
 											<FormControl>
 												<Input
 													type="text"
-													className="border-none rounded-sm"
+
 													placeholder="Zipcode"
 													{...field}
 												/>
@@ -238,7 +238,7 @@ export default function AddPaymentMethod({
 								<FormItem className="flex-1">
 									<FormLabel size="tiny">Card Info</FormLabel>
 									<CardElement
-										className=" bg-background  rounded-sm  p-3 w-full"
+										className=" bg-background  rounded-lg  p-4 w-full"
 										options={{
 											...StripeCardOptions,
 											style: {
@@ -267,7 +267,7 @@ export default function AddPaymentMethod({
 									control={form.control}
 									name="default"
 									render={({ field }) => (
-										<FormItem className="flex flex-row items-center gap-2 rounded-sm border border-foreground/10 py-2 px-3 ">
+										<FormItem className="flex flex-row items-center gap-2 rounded-lg border border-foreground/10 p-3 ">
 											<FormControl>
 												<Switch
 													checked={field.value}
@@ -290,29 +290,24 @@ export default function AddPaymentMethod({
 						</form>
 					</Form>
 				</DialogBody>
-				<DialogFooter>
+				<DialogFooter className="flex flex-row gap-2 sm:justify-between">
 					<DialogClose asChild>
 						<Button
 							type="button"
 							variant="outline"
 							className="border-foreground/10"
-							size={"sm"}
 						>
 							Cancel
 						</Button>
 					</DialogClose>
 					<Button
-						className={cn("children:hidden", {
-							"children:inline-flex": loading,
-						})}
-						variant={"foreground"}
+
+						variant={"primary"}
 						onClick={form.handleSubmit(onSubmit)}
-						size={"sm"}
 						type="submit"
 						disabled={!stripe || loading}
 					>
-						<Loader2 className="mr-2 h-4 w-4 hidden animate-spin" />
-						Add Card
+						{loading ? <Loader2 className=" size-4 animate-spin" /> : "Add Card"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

@@ -28,10 +28,10 @@ export function EndDayPicker({ onChange, startDate, endDate }: EndDayPickerProps
         <div>
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger>
-                    <div className="h-8 border border-foreground/10 rounded-sm px-3 py-2 flex flex-row items-center bg-background gap-1">
-                        <CalendarIcon className="mr-1 size-3.5" />
+                    <div className="h-8 border border-foreground/10 rounded-lg p-3 flex flex-row items-center bg-background gap-1">
+                        <CalendarIcon className="   mr-1 size-4" />
                         <div className="flex flex-row items-center text-sm gap-3 text-foreground/80">
-                            <span className="px-1 rounded-sm text-xs">
+                            <span className="px-1 text-sm">
                                 {end ? format(end, "LLL dd, y") : "Forever"}
                             </span>
                         </div>
@@ -40,13 +40,14 @@ export function EndDayPicker({ onChange, startDate, endDate }: EndDayPickerProps
                 <PopoverContent className="w-auto flex flex-row overflow-hidden border-foreground/10 p-0" align="start" side="bottom">
                     <div className="calendar-wrapper">
                         <Calendar
+                            captionLayout="dropdown-months"
                             mode="single"
                             disabled={(date: Date) => date < start}
                             selected={end || undefined}
 
                         />
                     </div>
-                    <div className="bg-foreground/5 p-4 w-[180px]">
+                    <div className="bg-foreground/5 p-4 w-1/2">
                         <ul className="space-y-3">
                             {[1, 2, 3, 6, 12].map((months) => (
                                 <li
@@ -54,7 +55,7 @@ export function EndDayPicker({ onChange, startDate, endDate }: EndDayPickerProps
                                     onClick={() => handleDateSelect(addMonths(start, months))}
                                     className="text-xs cursor-pointer flex flex-row items-center gap-1"
                                 >
-                                    <span className="text-xs cursor-pointer hover:text-indigo-500 font-medium">
+                                    <span className="text-sm cursor-pointer hover:text-indigo-500 font-medium">
                                         {months} {months === 1 ? 'cycle' : 'cycles'}
                                     </span>
                                     <span className="text-xs text-foreground/50">
@@ -64,7 +65,7 @@ export function EndDayPicker({ onChange, startDate, endDate }: EndDayPickerProps
                             ))}
                             <li
                                 onClick={() => handleDateSelect(null)}
-                                className="text-xs cursor-pointer hover:text-indigo-500 font-medium"
+                                className="text-sm cursor-pointer hover:text-indigo-500 font-medium"
                             >
                                 Never
                             </li>

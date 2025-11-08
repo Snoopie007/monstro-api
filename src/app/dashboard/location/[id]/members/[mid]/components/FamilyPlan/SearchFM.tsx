@@ -144,16 +144,16 @@ export function SearchFM({ setSlide, parentPlan, fms, familyPlans }: SearchFMPro
                 )}
             </div>
             <div className="px-4 pb-4 flex justify-between flex-row">
-                <Button variant="foreground" size="sm" className='border-foreground/10'
+                <Button variant="foreground" className='border-foreground/10'
                     onClick={() => setSlide('new')}> Add Child Account
                 </Button>
                 <div className='flex flex-row gap-2'>
                     <DialogClose asChild>
-                        <Button variant="outline" size="sm" >
+                        <Button variant="outline" className='border-foreground/10'  >
                             Cancel
                         </Button>
                     </DialogClose>
-                    <Button variant="primary" size="sm" onClick={handleSearch} disabled={loading}>
+                    <Button variant="primary" onClick={handleSearch} disabled={loading}>
                         {loading ? <Loader2 className="size-4 animate-spin" /> : 'Search'}
                     </Button>
 

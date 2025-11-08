@@ -28,6 +28,17 @@ export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
         },
     },
     {
+        accessorKey: "totalTax",
+        header: "Tax",
+        id: "totalTax",
+        cell: ({ row }) => {
+            const transaction = row.original
+            return (
+                <div className="flex flex-row items-center gap-2">{formatAmountForDisplay(transaction.totalTax / 100, transaction.currency || 'usd', true)}</div>
+            )
+        },
+    },
+    {
         accessorKey: "total",
         header: "Total",
         id: "total",
@@ -47,9 +58,15 @@ export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
         id: "direction",
     },
     {
-        accessorKey: "paymentMethod",
-        header: "Payment Method",
-        id: "paymentMethod",
+        accessorKey: "paymentType",
+        header: "Payment Type",
+        id: "paymentType",
+        cell: ({ row }) => {
+            const transaction = row.original
+            return (
+                <div className="flex flex-row items-center gap-2">{transaction.paymentType}</div>
+            )
+        },
     },
     {
         accessorKey: "type",

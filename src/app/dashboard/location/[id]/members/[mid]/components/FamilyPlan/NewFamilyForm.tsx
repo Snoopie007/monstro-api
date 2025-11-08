@@ -206,21 +206,20 @@ export function FamilyMemberForm({
 				</fieldset>
 				<div className="flex flex-row gap-2 mt-4 justify-between" >
 
-					<Button variant="foreground" type="button" size="sm" onClick={() => setSlide('existing')}>
+					<Button variant="foreground" type="button" onClick={() => setSlide('existing')}>
 						Back
 					</Button>
 
 					<div className="flex flex-row gap-2">
 						<DialogClose asChild>
-							<Button variant="outline" type="button" size="sm">
+							<Button variant="outline" type="button" className='border-foreground/10'>
 								Cancel
 							</Button>
 						</DialogClose>
 
 						<Button className={cn("children:hidden", { "children:inline-flex": loading })}
 							type="submit"
-							variant={"foreground"}
-							size="sm"
+							variant={"primary"}
 							disabled={loading}
 							onClick={form.handleSubmit(onSubmit)}
 						>

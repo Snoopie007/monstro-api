@@ -1,182 +1,140 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { getStripeCustomer, VendorStripePayments } from "@/libs/server/stripe";
+import { MemberStripePayments, VendorStripePayments } from "@/libs/server/stripe";
 import { eq } from "drizzle-orm";
-import { memberPackages, transactions } from "@/db/schemas";
+import { transactions } from "@/db/schemas";
 import Stripe from "stripe";
 
 type TransactionProps = {
-  mid: string;
-  id: string;
+	mid: string;
+	id: string;
 };
 
 export async function GET(
-  req: Request,
-  props: { params: Promise<TransactionProps> }
+	req: Request,
+	props: { params: Promise<TransactionProps> }
 ) {
-  const params = await props.params;
-  try {
-    const transactions = await db.query.transactions.findMany({
-      where: (transactions, { eq, and }) =>
-        and(
-          eq(transactions.memberId, params.mid),
-          eq(transactions.locationId, params.id)
-        ),
-    });
+	const params = await props.params;
+	try {
+		const transactions = await db.query.transactions.findMany({
+			where: (transactions, { eq, and }) =>
+				and(
+					eq(transactions.memberId, params.mid),
+					eq(transactions.locationId, params.id)
+				),
+		});
 
-    return NextResponse.json(transactions, { status: 200 });
-  } catch (err) {
-    return NextResponse.json({ error: err }, { status: 500 });
-  }
+		return NextResponse.json(transactions, { status: 200 });
+	} catch (err) {
+		return NextResponse.json({ error: err }, { status: 500 });
+	}
 }
 
-export async function PUT(
-  req: NextRequest,
-  props: { params: Promise<TransactionProps> }
-) {
-  const params = await props.params;
-  const data = await req.json();
-  // Validate required fields
-  if (!data.chargeId) {
-    return NextResponse.json(
-      { error: "Transaction ID is required" },
-      { status: 400 }
-    );
-  }
+export async function PUT(req: Request, props: { params: Promise<TransactionProps> }) {
+	const params = await props.params;
+	const { chargeId, subscriptionId, packageId } = await req.json();
 
-  try {
-    const transaction = await db.query.transactions.findFirst({
-      where: (transactions, { eq }) =>
-        eq(transactions.metadata, { chargeId: data.chargeId }),
-      with: {
-        invoice: {
-          with: {
-            subscription: true,
-            package: true,
-          },
-        },
-        package: true,
-      },
-    });
+	if (!chargeId) {
+		throw new Error("Transaction ID is required");
+	}
 
-    /**
-     * Validate transaction for refund processing
-     * 1. Check if transaction exists in the database
-     * 2. Verify it hasn't already been refunded
-     * 3. Ensure it's an eligible transaction type (incoming payment that's completed)
-     */
-    if (!transaction) {
-      return NextResponse.json(
-        { error: "Transaction not found" },
-        { status: 404 }
-      );
-    }
+	try {
+		const transaction = await db.query.transactions.findFirst({
+			where: (transactions, { eq }) =>
+				eq(transactions.metadata, { chargeId: chargeId }),
+			with: {
+				member: true,
+			},
+		});
 
-    /**
-     * Prevent duplicate refund attempts
-     * Each transaction can only be refunded once to avoid double refunds
-     */
-    if (transaction.refunded) {
-      return NextResponse.json(
-        { error: "Transaction already refunded" },
-        { status: 400 }
-      );
-    }
 
-    /**
-     * Validate refund eligibility
-     * Only completed incoming payments can be refunded
-     * Outgoing transactions or those with non-completed status (pending, failed) are ineligible
-     */
-    if (transaction.type !== "inbound" || transaction.status !== "paid") {
-      return NextResponse.json(
-        { error: "Only completed incoming transactions can be refunded" },
-        { status: 400 }
-      );
-    }
+		if (!transaction) {
+			throw new Error("Transaction not found");
+		}
+		const { member } = transaction;
+		if (!member) {
+			throw new Error("Member not found");
+		}
 
-    let stripeRefunded: Stripe.Response<Stripe.Refund> | null = null;
-    if (transaction.paymentType === "card") {
-      if (!transaction.invoice) {
-        return NextResponse.json(
-          { error: "Invoice not found" },
-          { status: 404 }
-        );
-      }
+		/**
+		 * Prevent duplicate refund attempts
+		 * Each transaction can only be refunded once to avoid double refunds
+		 */
+		if (transaction.refunded) {
+			throw new Error("Transaction already refunded");
+		}
 
-      // Check if transaction is for a subscription or package
-      if (!transaction.invoice.subscription && !transaction.invoice.package) {
-        return NextResponse.json(
-          {
-            error:
-              "Invoice must be associated with either a subscription or package",
-          },
-          { status: 404 }
-        );
-      }
 
-      // Get the actual Stripe charge ID for refund
-      let stripeChargeId: string | null = null;
-      // Handle Stripe refunds differently for subscriptions vs packages
-      if (transaction.invoice.subscription) {
-        // For subscription-based transactions, verify Stripe subscription exists
-        const stripeSubscription =
-          transaction.invoice.subscription.stripeSubscriptionId;
-        if (!stripeSubscription) {
-          return NextResponse.json(
-            { error: "Stripe subscription not found" },
-            { status: 404 }
-          );
-        }
+		/**
+		 * Validate refund eligibility
+		 * Only completed incoming payments can be refunded
+		 * Outgoing transactions or those with non-completed status (pending, failed) are ineligible
+		 */
+		if (transaction.type !== "inbound" || transaction.status !== "paid") {
+			throw new Error("Only completed incoming transactions can be refunded");
+		}
 
-        // For subscriptions, the charge ID might be in transaction metadata
-        stripeChargeId =
-          transaction.metadata?.chargeId || transaction.metadata?.charge_id;
+		let stripeRefunded: Stripe.Response<Stripe.Refund> | null = null;
+		if (transaction.paymentType === "card") {
 
-        if (!stripeChargeId) {
-          return NextResponse.json(
-            { error: "Stripe charge ID not found in transaction metadata" },
-            { status: 404 }
-          );
-        }
+			// Get the actual Stripe charge ID for refund
+			let stripeChargeId: string | null = null;
 
-        // Use customer-based Stripe instance for subscriptions
-        const stripe = await getStripeCustomer({
-          id: params.id,
-          mid: params.mid,
-        });
-        stripeRefunded = await stripe.refund(stripeChargeId);
-      } else if (transaction.invoice.package || transaction.package) {
-        stripeChargeId =
-          transaction.metadata?.chargeId || transaction.metadata?.charge_id;
+			if (subscriptionId) {
+				// For subscription-based transactions, verify Stripe subscription exists
+				const sub = await db.query.memberSubscriptions.findFirst({
+					where: (memberSubscriptions, { eq }) =>
+						eq(memberSubscriptions.id, subscriptionId),
+				});
+				if (!sub?.stripeSubscriptionId) {
+					throw new Error("Stripe subscription not found");
+				}
 
-        if (!stripeChargeId) {
-          return NextResponse.json(
-            { error: "Stripe charge ID not found for package transaction" },
-            { status: 404 }
-          );
-        }
+				// For subscriptions, the charge ID might be in transaction metadata
+				stripeChargeId = transaction.metadata?.chargeId as string;
 
-        // For package-based transactions, refund directly using charge ID
-        // without needing a Stripe customer, since packages are one-time payments
-        const stripe = new VendorStripePayments();
-        stripeRefunded = await stripe.refund(stripeChargeId);
-      }
-    }
-    if (stripeRefunded) {
-      await db
-        .update(transactions)
-        .set({ refunded: true })
-        .where(eq(transactions.metadata, { chargeId: data.chargeId }));
+				if (!stripeChargeId) {
+					throw new Error("Stripe charge ID not found in transaction metadata");
+				}
 
-      // delete the member_package from the member
-      // await db
-      //   .delete(memberPackages)
-      //   .where(eq(memberPackages.memberId, params.mid));
-    }
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (err) {
-    console.log(err);
-    return NextResponse.json({ error: err }, { status: 500 });
-  }
+				// Use customer-based Stripe instance for subscriptions
+
+				const integrations = await db.query.integrations.findFirst({
+					where: (integrations, { eq, and }) => and(
+						eq(integrations.locationId, params.id),
+						eq(integrations.service, "stripe")
+					),
+				});
+				if (!integrations || !integrations.accountId) {
+					throw new Error("Stripe integration not found");
+				}
+				if (!member.stripeCustomerId) {
+					throw new Error("Stripe customer not found");
+				}
+				const stripe = new MemberStripePayments(integrations.accountId);
+				stripe.setCustomer(member.stripeCustomerId);
+
+				stripeRefunded = await stripe.refund(stripeChargeId);
+			} else {
+				stripeChargeId = transaction.metadata?.chargeId as string;
+				if (!stripeChargeId) {
+					throw new Error("Stripe charge ID not found for package transaction");
+				}
+
+				// For package-based transactions, refund directly using charge ID
+				// without needing a Stripe customer, since packages are one-time payments
+				const stripe = new VendorStripePayments();
+				stripeRefunded = await stripe.refund(stripeChargeId);
+			}
+		}
+		if (stripeRefunded) {
+			await db.update(transactions).set({ refunded: true })
+				.where(eq(transactions.metadata, { chargeId: chargeId }));
+
+		}
+		return NextResponse.json({ success: true }, { status: 200 });
+	} catch (err) {
+		console.log(err);
+		return NextResponse.json({ error: err }, { status: 500 });
+	}
 }

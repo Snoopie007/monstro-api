@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { and, eq, isNull } from 'drizzle-orm';
-import { authenticateMember } from '@/libs/utils';
-import { reservations, recurringReservations, recurringReservationsExceptions } from '@/db/schemas';
+import { recurringReservationsExceptions } from '@/db/schemas';
 
 export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string, rid: string, mid: string }> }) {
 
     const date = req.nextUrl.searchParams.get('date');
-    
-    
+
+
     if (!date) {
         return NextResponse.json(
             { error: "Date query parameter is required (e.g., ?date=2025-06-12)" },
@@ -16,9 +15,8 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
         );
     }
     const params = await props.params;
-    console.log(params.id,params.rid,params.mid,date)
-    if(!params.id)
-    {
+    console.log(params.id, params.rid, params.mid, date)
+    if (!params.id) {
         return NextResponse.json({ error: "Location id is required" }, { status: 400 });
     }
 
@@ -29,7 +27,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
             return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
         }
 
-         const reservationException = await db.query.recurringReservationsExceptions.findFirst({
+        const reservationException = await db.query.recurringReservationsExceptions.findFirst({
             where: (e, { eq, and }) => and(
                 eq(e.recurringReservationId, params.rid),
                 eq(e.occurrenceDate, exceptionDate)
@@ -39,7 +37,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
         if (reservationException) {
             return NextResponse.json({ error: "This reservation exception already exists" }, { status: 400 });
         }
-        
+
         const recurringreservation = await db.query.recurringReservations.findFirst({
             where: (r, { eq, and }) => and(
                 eq(r.id, params.rid),
@@ -57,7 +55,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
             }
         });
 
-       
+
 
         if (!recurringreservation) {
             return NextResponse.json({ error: "Reservation not found or not authorized" }, { status: 404 });
