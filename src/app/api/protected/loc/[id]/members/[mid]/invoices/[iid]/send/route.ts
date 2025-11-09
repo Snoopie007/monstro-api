@@ -7,7 +7,7 @@ import { serversideApiClient } from "@/libs/api/server";
 type SendInvoiceProps = {
 	id: string;
 	mid: string;
-	invoiceId: string;
+	iid: string;
 };
 
 export async function PATCH(
@@ -19,7 +19,7 @@ export async function PATCH(
 	try {
 		// Get invoice
 		const invoice = await db.query.memberInvoices.findFirst({
-			where: eq(memberInvoices.id, params.invoiceId),
+			where: eq(memberInvoices.id, params.iid),
 		});
 
 		if (!invoice) {
@@ -45,7 +45,7 @@ export async function PATCH(
 				sentAt: new Date(),
 				updated: new Date(),
 			})
-			.where(eq(memberInvoices.id, params.invoiceId));
+			.where(eq(memberInvoices.id, params.iid));
 
 		// Send invoice reminder email for cash invoices (only for plan_id >= 2, no Stripe)
 		if (invoice.paymentType === "cash") {
@@ -53,7 +53,7 @@ export async function PATCH(
 				const locState = await db.query.locationState.findFirst({
 					where: eq(locationState.locationId, params.id)
 				});
-				
+
 				if (locState?.planId && locState.planId >= 2) {
 					// Check if location has NO Stripe integration
 					const hasStripe = await db.query.integrations.findFirst({
@@ -62,17 +62,17 @@ export async function PATCH(
 							eq(integrations.service, 'stripe')
 						)
 					});
-					
+
 					if (!hasStripe) {
 						// Fetch member and location details
 						const member = await db.query.members.findFirst({
 							where: eq(members.id, params.mid)
 						});
-						
+
 						const location = await db.query.locations.findFirst({
 							where: eq(locations.id, params.id)
 						});
-						
+
 						if (member && location) {
 							const apiClient = serversideApiClient();
 							await apiClient.post('/protected/locations/email', {
@@ -117,7 +117,7 @@ export async function PATCH(
 			success: true,
 			message: "Invoice marked as sent",
 			invoice: {
-				id: params.invoiceId,
+				id: params.iid,
 				status: "sent",
 			},
 		});

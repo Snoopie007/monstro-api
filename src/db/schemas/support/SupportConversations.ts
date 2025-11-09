@@ -1,8 +1,7 @@
 import { pgTable, text, timestamp, jsonb, boolean, integer } from "drizzle-orm/pg-core";
 import { sql, relations } from "drizzle-orm";
 import { members } from "../members";
-import { supportAssistants } from "./SupportAssistants";
-import { messageRoleEnum, channelEnum, conversationStatusEnum } from "./SupportBotEnums";
+import { messageRoleEnum, channelEnum, conversationStatusEnum, supportAssistants } from ".";
 import { locations } from "../locations";
 
 export const supportConversations = pgTable("support_conversations", {

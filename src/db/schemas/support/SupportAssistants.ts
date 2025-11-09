@@ -8,10 +8,8 @@ import {
 } from 'drizzle-orm/pg-core'
 import { sql, relations } from 'drizzle-orm'
 import { locations } from '../locations'
-import { assistantStatusEnum, botModelEnum } from './SupportBotEnums'
-import { supportConversations } from './SupportConversations'
+import { supportConversations, supportTriggers, assistantStatusEnum, botModelEnum } from '.'
 import type { SupportPersona } from '@/types'
-import { supportTriggers } from './SupportTriggers'
 import { KnowledgeBase } from '@/types/knowledgeBase'
 
 // Single support bot per location

@@ -11,8 +11,8 @@ import {
 } from "@/components/ui";
 
 import Link from "next/link";
-import { signOut, useSession } from "@/hooks/useSession";
-import { CreditCard, User } from "lucide-react";
+import { signOut } from "@/hooks/useSession";
+import { User } from "lucide-react";
 import { cn } from "@/libs/utils";
 import { useTheme } from "next-themes";
 import { ExtendedUser } from "@/types/next-auth";

@@ -34,7 +34,6 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
         }
 
         setLoading(true);
-        console.log(v);
         const res = await signIn("credentials", {
             redirect: false,
             ...v,

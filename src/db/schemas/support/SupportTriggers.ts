@@ -1,7 +1,6 @@
 import { pgTable, text, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { sql, relations } from "drizzle-orm";
-import { triggerTypeEnum } from "./SupportBotEnums";
-import { supportAssistants } from "./SupportAssistants";
+import { triggerTypeEnum, supportAssistants } from '.';
 import { SupportTool } from "@/types";
 
 // Support bot triggers (previously scenarios)

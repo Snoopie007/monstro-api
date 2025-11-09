@@ -4,12 +4,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 
 type Props = {
-	params: Promise<{ id: string; cfid: string }>;
+	params: Promise<{ id: string; }>;
 }
 
 
 export async function POST(req: NextRequest, props: Props) {
-	const { id, cfid } = await props.params;
+	const { id } = await props.params;
 	const body = await req.json();
 
 	if (body.type === "select" || body.type === "multi-select") {
