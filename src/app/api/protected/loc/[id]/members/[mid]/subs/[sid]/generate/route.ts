@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { memberSubscriptions, memberInvoices, transactions, locationState } from "@/db/schemas";
 import { eq, and } from "drizzle-orm";
-import { createInvoice, createTransaction, calculateCurrentPeriodEnd } from "../../../../utils";
+import { calculatePeriodEnd } from "../../../../utils";
 
 type GenerateInvoiceProps = {
   id: string;
@@ -48,7 +48,7 @@ export async function POST(
 
     // Calculate next billing period
     const nextPeriodStart = subscription.currentPeriodEnd;
-    const nextPeriodEnd = calculateCurrentPeriodEnd(
+    const nextPeriodEnd = calculatePeriodEnd(
       nextPeriodStart,
       subscription.plan.interval!,
       subscription.plan.intervalThreshold!

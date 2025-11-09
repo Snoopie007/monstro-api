@@ -69,10 +69,9 @@ export async function POST(req: Request, props: { params: Promise<Props> }) {
 			const [user] = await db
 				.insert(users)
 				.values({
-					name: firstName,
+					name: `${firstName} ${lastName}`,
 					email: email,
-					password: "",
-					created: new Date(),
+					createdAt: new Date(),
 				})
 				.returning();
 

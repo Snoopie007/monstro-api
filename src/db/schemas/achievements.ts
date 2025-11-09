@@ -41,6 +41,10 @@ export const memberAchievementsRelations = relations(memberAchievements, ({ one 
     fields: [memberAchievements.memberId],
     references: [members.id],
   }),
+  location: one(locations, {
+    fields: [memberAchievements.locationId],
+    references: [locations.id],
+  }),
   achievement: one(achievements, {
     fields: [memberAchievements.achievementId],
     references: [achievements.id],
@@ -49,4 +53,5 @@ export const memberAchievementsRelations = relations(memberAchievements, ({ one 
 export const achievementsRelations = relations(achievements, ({ many, one }) => ({
   members: many(memberAchievements),
   pointsHistory: many(memberPointsHistory),
+  memberAchievements: many(memberAchievements),
 }));

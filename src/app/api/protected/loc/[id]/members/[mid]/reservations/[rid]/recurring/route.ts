@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { and, eq, isNull } from 'drizzle-orm';
+import { isNull } from 'drizzle-orm';
 import { recurringReservationsExceptions } from '@/db/schemas';
 
 export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string, rid: string, mid: string }> }) {

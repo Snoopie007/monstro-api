@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { attendances } from '@/db/schemas';
-import { evaluateTriggers } from "@/libs/achievements";
+import { triggerIncrement } from "@/libs/achievements";
 import { serviceApiClient } from "@/libs/api/server";
 
 export async function POST(req: NextRequest, props: { params: Promise<{ mid: string, id: string, rid: string }> }) {
@@ -39,10 +39,11 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: str
 
 		// Evaluate attendance triggers after successful check-in
 		try {
-			await evaluateTriggers({
-				memberId: params.mid,
-				locationId: params.id,
-				triggerType: 'Attendances Count',
+			await triggerIncrement({
+				mid: params.mid,
+				lid: params.id,
+				type: 'Attendances Count',
+				amount: 1,
 			});
 		} catch (error) {
 			console.error('Error evaluating attendance triggers:', error);

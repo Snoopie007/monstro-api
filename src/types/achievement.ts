@@ -16,7 +16,7 @@ export type MemberPointsHistory = typeof memberPointsHistory.$inferSelect & {
     location?: Location,
     achievement?: Achievement,
 };
-
+export type NewMemberPointsHistory = typeof memberPointsHistory.$inferInsert;
 export type MemberAchievement = typeof memberAchievements.$inferSelect & {
     member?: Member,
     location?: Location,

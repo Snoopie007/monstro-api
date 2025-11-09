@@ -6,7 +6,7 @@ import {
 } from "../../utils";
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { evaluateTriggers } from "@/libs/achievements";
+import { triggerSignUp } from "@/libs/achievements";
 
 
 type Props = {
@@ -171,16 +171,7 @@ export async function POST(req: Request, props: Props) {
         //     });
         // }
 
-
-
-
-
-        await evaluateTriggers({
-            memberId: mid,
-            locationId: id,
-            triggerType: 'Plan Signup',
-
-        });
+        // await triggerSignUp({ mid: mid, lid: id, pid: plan.id });
         return NextResponse.json({ ...sub, plan: plan, }, { status: 200 })
     } catch (err) {
         console.log(err)

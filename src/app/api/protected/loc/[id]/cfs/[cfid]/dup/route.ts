@@ -9,7 +9,7 @@ type Props = {
 
 
 export async function POST(req: NextRequest, props: Props) {
-    const { id, cfid } = await props.params;
+    const { cfid } = await props.params;
 
 
 
