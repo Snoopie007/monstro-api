@@ -18,7 +18,8 @@ export * from "./VendorReferrals";
 export * from "./transactions";
 export * from "./accounts";
 export * from "./ImportMembers";
-
-// SUPPORT ASSISTANT SCHEMAS
-export * from "./support";
-
+export * from "./SupportAssistants";
+export * from "./SupportConversations";
+export * from "./SupportTriggers";
+export * from "./SupportDocuments";
+export * from "./SupportLogs";
