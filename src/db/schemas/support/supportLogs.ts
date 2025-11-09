@@ -1,6 +1,7 @@
 import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm/sql";
-import { supportAssistants, supportConversations } from ".";
+import { supportAssistants } from "./SupportAssistants";
+import { supportConversations } from "./SupportConversations";
 
 // Support interaction logs
 export const supportLogs = pgTable("support_logs", {

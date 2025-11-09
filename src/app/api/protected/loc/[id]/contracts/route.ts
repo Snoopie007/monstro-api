@@ -1,36 +1,35 @@
-import {NextResponse} from "next/server";
-import {auth} from "@/auth";
-import {db} from "@/db/db";
+import { NextResponse } from "next/server";
+import { db } from "@/db/db";
 
-import {contractTemplates} from "@/db/schemas";
+import { contractTemplates } from "@/db/schemas";
 import { hasPermission } from "@/libs/server/permissions";
 
 export async function GET(
   req: Request,
-  props: {params: Promise<{id: string}>}
+  props: { params: Promise<{ id: string }> }
 ) {
   const params = await props.params;
-  const {searchParams} = new URL(req.url);
+  const { searchParams } = new URL(req.url);
   const query = searchParams.get("withDraft") || true;
   try {
     const templates = await db.query.contractTemplates.findMany({
-      where: (templates, {eq, and, inArray}) =>
+      where: (templates, { eq, and, inArray }) =>
         and(
           eq(templates.locationId, params.id),
           inArray(templates.isDraft, query === "true" ? [true, false] : [false])
         ),
     });
 
-    return NextResponse.json(templates, {status: 200});
+    return NextResponse.json(templates, { status: 200 });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({error: err}, {status: 500});
+    return NextResponse.json({ error: err }, { status: 500 });
   }
 }
 
 export async function POST(
   req: Request,
-  props: {params: Promise<{id: string}>}
+  props: { params: Promise<{ id: string }> }
 ) {
   const params = await props.params;
   const data = await req.json();
@@ -39,7 +38,7 @@ export async function POST(
     if (!canAddContract) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
-    const [{id}] = await db
+    const [{ id }] = await db
       .insert(contractTemplates)
       .values({
         ...data,
@@ -47,11 +46,11 @@ export async function POST(
         isDraft: true,
         editable: true,
       })
-      .returning({id: contractTemplates.id});
+      .returning({ id: contractTemplates.id });
 
-    return NextResponse.json({id}, {status: 200});
+    return NextResponse.json({ id }, { status: 200 });
   } catch (err) {
     console.log(err);
-    return NextResponse.json({error: err}, {status: 500});
+    return NextResponse.json({ error: err }, { status: 500 });
   }
 }

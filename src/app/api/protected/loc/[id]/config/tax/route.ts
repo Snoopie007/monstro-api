@@ -1,7 +1,6 @@
 import { db } from "@/db/db";
 import { locationState } from "@/db/schemas/locations";
 import { eq } from "drizzle-orm";
-import { MemberStripePayments } from "@/libs/server/stripe";
 import { NextRequest, NextResponse } from "next/server";
 
 
