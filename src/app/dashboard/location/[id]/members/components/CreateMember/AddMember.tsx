@@ -2,8 +2,6 @@ import {
     Button,
     Dialog,
     DialogContent,
-    DialogDescription,
-    DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui';
@@ -36,7 +34,7 @@ export function AddMember({ lid, stripeKey }: CreateMemberProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size={"sm"} variant={"create"} className='rounded-lg'>
+                <Button variant={"ghost"} className='bg-foreground/5 rounded-lg'>
                     + Member
                 </Button>
             </DialogTrigger>

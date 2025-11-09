@@ -9,6 +9,7 @@ import {
     DialogFooter,
     DialogTrigger,
     DialogClose,
+    ButtonGroup,
 } from '@/components/ui'
 import React, { useEffect, useState } from 'react'
 import Papa from 'papaparse'
@@ -63,8 +64,7 @@ export function ImportMembers({ lid }: { lid: string }) {
             complete: (results) => {
                 if (!results.meta.fields?.length || !results.data?.length) {
                     setErrors([
-                        `Invalid CSV: No ${
-                            !results.meta.fields?.length ? 'headers' : 'data'
+                        `Invalid CSV: No ${!results.meta.fields?.length ? 'headers' : 'data'
                         } found.`,
                     ])
                     return
@@ -146,9 +146,11 @@ export function ImportMembers({ lid }: { lid: string }) {
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="create" size="sm" className='rounded-lg'>
-                    <FileDown className='size-4' /> Import Members
+                <Button variant="ghost" className=' bg-foreground/5 flex flex-row items-center gap-2'>
+                    <FileDown className='size-4' />
+                    <span>Import Members</span>
                 </Button>
+
             </DialogTrigger>
             <DialogContent className="w-full max-w-lg md:rounded-lg p-0 gap-0 border-foreground/10">
                 {isLoading ? (

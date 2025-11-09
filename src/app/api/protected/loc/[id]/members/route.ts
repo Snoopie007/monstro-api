@@ -25,7 +25,6 @@ import {
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { MemberSortableField, sortColumnMap } from '@/types/member'
 import { hasPermission, canView } from "@/libs/server/permissions";
-import { evaluateTriggers } from "@/libs/achievements";
 
 export async function GET(
     req: Request,
@@ -429,25 +428,26 @@ export async function POST(
         })
 
         // Evaluate referral triggers if this member was referred
-        if (data.referralCode) {
-            try {
-                // Find the referrer by their referral code
-                const referrer = await db.query.members.findFirst({
-                    where: eq(members.referralCode, data.referralCode),
-                });
+        // if (data.referralCode) {
+        //     try {
+        //         // Find the referrer by their referral code
+        //         const referrer = await db.query.members.findFirst({
+        //             where: eq(members.referralCode, data.referralCode),
+        //         });
 
-                if (referrer) {
-                    await evaluateTriggers({
-                        memberId: referrer.id,
-                        locationId: params.id,
-                        triggerType: 'Referrals Count'
-                    });
-                }
-            } catch (error) {
-                console.error('Error evaluating referral triggers:', error);
-                // Don't fail the request if trigger evaluation fails
-            }
-        }
+        //         if (referrer) {
+        //             await triggerIncrement({
+        //                 mid: referrer.id,
+        //                 lid: params.id,
+        //                 type: 'Referrals Count',
+        //                 amount: 1,
+        //             });
+        //         }
+        //     } catch (error) {
+        //         console.error('Error evaluating referral triggers:', error);
+        //         // Don't fail the request if trigger evaluation fails
+        //     }
+        // }
 
         return NextResponse.json({ existing: false, member }, { status: 200 })
     } catch (err) {
