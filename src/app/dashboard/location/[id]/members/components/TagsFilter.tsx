@@ -101,9 +101,8 @@ const TagsFilter = ({
 	return (
 		<Tags className={cn("max-w-[500px]", fullWidth ? "w-full" : undefined)}>
 			<TagsTrigger
-				className={`border-none bg-foreground/10 hover:bg-foreground/20 hover:text-background shadow-sm ${
-					selectedTags.length === 0 ? "h-8" : undefined
-				}`}
+				className={`border-foreground/5 bg-foreground/5 hover:bg-foreground/20 hover:text-background ${selectedTags.length === 0 ? "h-9" : undefined
+					}`}
 			>
 				{selectedTags.map((tagId) => (
 					<TagsValue

@@ -241,6 +241,7 @@ export function MemberList({
                             onChange={(event) => {
                                 handleSearch(event.target.value)
                             }}
+                            className='h-9'
                             variant="search"
                         />
                         <TagsFilter

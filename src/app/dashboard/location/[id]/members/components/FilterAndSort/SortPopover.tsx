@@ -75,7 +75,7 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="hover:bg-foreground/10">
+                <Button variant="ghost" className="hover:bg-foreground/10">
                     <ListOrderedIcon size={14} className="mr-2" />
                     Sort
                     {sort.length > 0 && <span className="text-sm text-foreground/80 ml-2 px-2 py-0.5 bg-foreground/10 rounded-full">{sort.length}</span>}
