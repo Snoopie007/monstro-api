@@ -7,9 +7,9 @@ import { formatAmountForDisplay } from "@/libs/utils";
 export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
 
     {
-        accessorKey: "item",
-        header: "Item",
-        id: "item"
+        accessorKey: "id",
+        header: "ID",
+        id: "id"
     },
     {
         accessorKey: "description",
@@ -53,11 +53,6 @@ export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
         },
     },
     {
-        accessorKey: "direction",
-        header: "Direction",
-        id: "direction",
-    },
-    {
         accessorKey: "paymentType",
         header: "Payment Type",
         id: "paymentType",
@@ -70,7 +65,7 @@ export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
     },
     {
         accessorKey: "type",
-        header: "Type",
+        header: "Direction",
         id: "type",
     },
     {

@@ -1,22 +1,27 @@
-import { Sheet, SheetContent, SheetTitle, SheetFooter, SheetClose, Button, ScrollArea, SheetSection, SheetTrigger } from '@/components/ui';
+'use client'
+import {
+	Dialog,
+	DialogTrigger,
+	DialogContent,
+	DialogFooter,
+	Button,
+	ScrollArea,
+	DialogTitle
+} from '@/components/ui';
 import { z } from "zod";
 import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Reward } from '@/types';
-import {
-	Form
-} from '@/components/forms';
+import { Form } from '@/components/forms';
 import { cn, tryCatch } from '@/libs/utils';
 import { toast } from 'react-toastify';
-import useSWR from 'swr';
 import { RewardsSchema } from '../schemas';
 import { RewardImages } from './RewardImages';
 import { Loader2, Pencil } from 'lucide-react';
 import { VisuallyHidden } from 'react-aria';
 import RewardFields from './RewardFields';
-import { useRewards } from '@/hooks/useRewards';
-
+import { useRewards } from '../providers';
 
 export interface UpdateRewardProps {
 	lid: string,
@@ -24,7 +29,7 @@ export interface UpdateRewardProps {
 }
 
 export function UpdateReward({ reward, lid }: UpdateRewardProps) {
-	const { mutate } = useRewards(lid);
+	const { setRewards } = useRewards();
 	const [loading, setLoading] = useState(false);
 	const [open, setOpen] = useState(false);
 	const [removedImages, setRemovedImages] = useState<string[]>([]);
@@ -49,16 +54,14 @@ export function UpdateReward({ reward, lid }: UpdateRewardProps) {
 	}, [reward]);
 
 
-
-
-	async function handleSubmit(data: z.infer<typeof RewardsSchema>) {
+	async function handleSubmit(v: z.infer<typeof RewardsSchema>) {
 		if (!form.formState.isValid) return form.trigger();
 
 		setLoading(true);
 		const formData = new FormData();
 
 		// Add form data fields using Object.entries
-		Object.entries(data).forEach(([key, value]) => {
+		Object.entries(v).forEach(([key, value]) => {
 			formData.append(key, value.toString());
 		});
 
@@ -85,65 +88,58 @@ export function UpdateReward({ reward, lid }: UpdateRewardProps) {
 		)
 
 		setLoading(false);
-		if (error || !result) {
+		if (error || !result || !result.ok) {
 			toast.error("Something went wrong, please try again later");
 			return;
 		}
 
-		await mutate();
+		const data = await result.json();
+		setRewards((prev) => prev.map((r) => (r.id === reward.id ? data : r)));
 		setRemovedImages([]);
 		setFiles([]);
 		toast.success("Reward Updated");
 		form.reset();
-
+		setOpen(false);
 	};
 
 
 	return (
-		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
-				<Button variant={'ghost'} size={'icon'} className='size-5'>
-					<Pencil size={12} className="size-3.5" />
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogTrigger asChild>
+				<Button variant={'ghost'} size={'icon'} className='size-8'>
+					<Pencil className="size-4" />
 				</Button>
-			</SheetTrigger>
-			<SheetContent className="bg-background border-foreground/10 sm:max-w-[550px] sm:w-[550px] p-0">
+			</DialogTrigger>
+			<DialogContent className="bg-background border-foreground/10 sm:max-w-[550px] sm:w-[550px] p-0">
 				<VisuallyHidden>
-					<SheetTitle></SheetTitle>
+					<DialogTitle></DialogTitle>
 				</VisuallyHidden>
-				<ScrollArea className="h-[calc(100vh-150px)] w-full ">
+				<ScrollArea className="h-[calc(100vh-400px)] bg-foreground/5 w-full ">
 					<Form {...form}>
-						<form >
+						<form className='space-y-4 p-4' >
 							<RewardFields form={form} />
-
-							<SheetSection>
-								<RewardImages
-									images={reward?.images || []}
-									onRemoveImage={(url) => setRemovedImages([...removedImages, url])}
-									name='files'
-									onFileChange={(files) => setFiles(files)}
-								/>
-							</SheetSection>
+							<RewardImages
+								images={reward?.images || []}
+								onRemoveImage={(url) => setRemovedImages([...removedImages, url])}
+								name='files'
+								onFileChange={(files) => setFiles(files)}
+							/>
 						</form>
 					</Form>
 				</ScrollArea>
-				<SheetFooter className='border-t py-3 px-4 border-foreground/10'>
-					<SheetClose asChild>
-						<Button variant={'outline'} size={'sm'} >
-							Cancel
-						</Button>
-					</SheetClose>
-					<Button variant={'foreground'} size={'sm'}
-						form='reward'
+				<DialogFooter className='p-4  flex flex-row justify-between'>
+					<Button variant={'outline'} onClick={() => setOpen(false)}>
+						Cancel
+					</Button>
+					<Button variant={'primary'}
 						type='submit'
 						onClick={form.handleSubmit(handleSubmit)}
 						disabled={loading || !form.formState.isValid}
-						className={cn("children:hidden", { "children:block": loading })}
 					>
-						<Loader2 className={"animate-spin mr-2 size-3.5"} />
-						Save
+						{loading ? <Loader2 className={"animate-spin size-3.5"} /> : 'Save'}
 					</Button>
-				</SheetFooter>
-			</SheetContent>
-		</Sheet>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	)
 }
