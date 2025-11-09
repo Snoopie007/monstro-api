@@ -1,7 +1,7 @@
 'use client'
 import { Loader2 } from "lucide-react";
 import React, { useState } from 'react'
-import { Button, Card, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Input } from "@/components/forms";
@@ -41,13 +41,7 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
             return;
         }
         if (type === 'name') {
-            update({
-                locations: session?.user.locations.map((location: { id: string, status: LocationStatus }) => {
-                    return location.id === lid
-                        ? { ...location, [type]: value }
-                        : location
-                })
-            });
+            // update the session
         }
     }
 

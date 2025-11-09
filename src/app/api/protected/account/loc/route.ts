@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { locations, locationState, wallets } from "@/db/schemas";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
-
-const DEFAULT_LOCATION_STATE = {
-  planId: null,
-  paymentPlanId: null,
-  agreeToTerms: false,
-  pkgId: null,
-  usagePercent: 0,
-};
+import { DEFAULT_LOCATION_SETTINGS } from "@/libs/data";
 
 export async function POST(req: Request) {
   const data = await req.json();
@@ -27,7 +20,7 @@ export async function POST(req: Request) {
 
       await tx.insert(locationState).values({
         locationId: location.id,
-        ...DEFAULT_LOCATION_STATE,
+        settings: DEFAULT_LOCATION_SETTINGS,
       });
 
       await tx.insert(wallets)

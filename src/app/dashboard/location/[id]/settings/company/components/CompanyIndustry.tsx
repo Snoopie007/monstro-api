@@ -1,7 +1,7 @@
 'use client'
 import { Loader2 } from "lucide-react";
 import React, { useState } from 'react'
-import { Button, Card, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { Location } from "@/types";
 import { cn, tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";

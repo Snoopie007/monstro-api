@@ -10,11 +10,12 @@ type SettingMenuItem = {
 
 const SettingMenuItems: SettingMenuItem[] = [
     { path: "company", name: "Company Info", roles: ["vendor", "admin"] },
-    { path: "custom-fields", name: "Custom Fields", roles: ["vendor", "admin"] },
+    { path: "cfs", name: "Custom Fields", roles: ["vendor", "admin"] },
     { path: "tax", name: "Tax", roles: ["vendor", "admin"] },
     { path: "roles", name: "Roles", roles: ["vendor"] },
     { path: "billing", name: "Billing", roles: ["vendor"] },
     { path: "invoices", name: "Invoices", roles: ["vendor"] },
+    { path: "tags", name: "Tags", roles: ["vendor", "admin"] },
     // { path: "benefits", name: "Benefits", roles: ["vendor"] },
     { path: "integrations", name: "Integrations", roles: ["vendor", "admin"] },
     { path: "processing", name: "Payment Processing", roles: ["vendor", "admin"] },

@@ -59,7 +59,7 @@ export const locationState = pgTable("location_state", {
   locationId: text("location_id")
     .primaryKey()
     .references(() => locations.id, { onDelete: "cascade" }),
-  planId: integer("plan_id"),
+  planId: integer("plan_id").notNull().default(1),
   waiverId: text("waiver_id").references(() => locations.id, {
     onDelete: "set null",
   }),

@@ -1,3 +1,10 @@
+import { LocationSettings } from "@/types";
+const DEFAULT_LOCATION_SETTINGS: LocationSettings = {
+    theme: 'default',
+    passOnFees: false,
+    processingMethods: ["card"],
+}
+
 const AchievementTriggers = [
     { id: 1, name: "Attendances Count" },
     { id: 2, name: "Referrals Count" },
@@ -12,13 +19,8 @@ const CountryCodes = [
     { name: "Australia", code: "AU", shortName: "AUS" }
 ]
 
-const PaymentMethods: string[] = [
-    "card",
-    "cash",
-    "zelle",
-    "bank payment",
-    "cheque"
-]
+
+
 
 const TimeZones = [
     "GMT-04:00 America/New_York (EDT)",
@@ -142,5 +144,5 @@ export {
     AchievementTriggers,
     TimeZones,
     Industries,
-    PaymentMethods,
+    DEFAULT_LOCATION_SETTINGS,
 }
