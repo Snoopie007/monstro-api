@@ -23,6 +23,7 @@ import { AchievementForm } from "./AchievementForm";
 import { useEffect, useState } from "react";
 import { Loader2, Pencil } from "lucide-react";
 import { usePermission } from "@/hooks/usePermissions";
+import { useAchievements } from "../../providers";
 
 interface UpdateAchievementProps {
 	achievement: Achievement;
@@ -30,7 +31,7 @@ interface UpdateAchievementProps {
 
 export function UpdateAchievement({ achievement }: UpdateAchievementProps) {
 	const [open, setOpen] = useState(false);
-
+	const { achievements, setAchievements } = useAchievements();
 	const canEditAchievement = usePermission("edit achievement", achievement.locationId);
 
 	const form = useForm<z.infer<typeof AchievementSchema>>({
@@ -55,7 +56,13 @@ export function UpdateAchievement({ achievement }: UpdateAchievementProps) {
 	}, [achievement]);
 
 	async function onSubmit(v: z.infer<typeof AchievementSchema>) {
-		if (!canEditAchievement) return;
+		if (!canEditAchievement || form.formState.isSubmitting) return;
+
+		if (v.triggerId === 3 && v.planId && achievements.some(a => a.planId === v.planId && a.id !== achievement.id)) {
+			toast.error("Achievement already exists for this plan");
+			return;
+		}
+
 		const formData = new FormData();
 
 		Object.entries(v).forEach(([key, value]) => {
@@ -79,18 +86,17 @@ export function UpdateAchievement({ achievement }: UpdateAchievementProps) {
 			})
 		);
 
-		if (result?.status === 403) {
-			toast.error("You are not authorized to edit this achievement");
-			return;
-		}
 
 		if (error || !result || !result.ok) {
 			toast.error("Something went wrong, please try again later");
 			return;
 		}
 
+		const data = await result.json();
+		setAchievements((prev) => prev.map(a => a.id === achievement.id ? data : a));
 		toast.success("Achievement Updated");
-		handleOpenChange(false);
+		form.reset();
+		setOpen(false);
 	}
 
 	function handleOpenChange(open: boolean) {

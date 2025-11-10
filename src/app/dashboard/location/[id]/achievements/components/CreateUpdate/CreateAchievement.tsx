@@ -26,11 +26,12 @@ import { VisuallyHidden } from "@react-aria/visually-hidden";
 
 interface CreateAchievementProps {
 	lid: string;
+
 }
 
 export function CreateAchievement({ lid }: CreateAchievementProps) {
 	const [open, setOpen] = useState(false);
-	const { setAchievements } = useAchievements();
+	const { achievements, setAchievements } = useAchievements();
 
 	const canAddAchievement = usePermission("add achievement", lid);
 	const form = useForm<z.infer<typeof AchievementSchema>>({
@@ -46,7 +47,14 @@ export function CreateAchievement({ lid }: CreateAchievementProps) {
 	});
 
 	async function onSubmit(v: z.infer<typeof AchievementSchema>) {
-		if (!canAddAchievement) return;
+		if (!canAddAchievement || form.formState.isSubmitting) return;
+
+		if (v.triggerId === 3 && v.planId && achievements.some(a => a.planId === v.planId)) {
+			toast.error("Achievement already exists for this plan");
+			return;
+		}
+
+
 		const formData = new FormData();
 
 		Object.entries(v).forEach(([key, value]) => {

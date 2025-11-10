@@ -5,9 +5,8 @@ import {
     CustomFieldInput,
     type CustomFieldDefinition,
 } from './CustomFieldInput'
-import { CustomFieldDisplay } from './CustomFieldDisplay'
 import { Button } from '@/components/ui/button'
-import { ChevronsUpDown, CircleFadingPlusIcon, Loader2, SaveIcon } from 'lucide-react'
+import { ChevronsUpDown, CircleFadingPlusIcon, Loader2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import {
     CardTitle, Collapsible, CollapsibleContent, CollapsibleTrigger, EmptyHeader,
@@ -42,11 +41,11 @@ export function CustomFieldsBox({
     const [open, setOpen] = useState(true)
 
     // Fetch custom fields and values
-    const fetchCustomFields = async () => {
+    async function fetchCustomFields() {
         setLoading(true)
         try {
             const response = await fetch(
-                `/api/protected/loc/${locationId}/members/${memberId}/custom-fields`
+                `/api/protected/loc/${locationId}/members/${memberId}/cfs`
             )
             const data = await response.json()
 
@@ -83,7 +82,7 @@ export function CustomFieldsBox({
             )
 
             const response = await fetch(
-                `/api/protected/loc/${locationId}/members/${memberId}/custom-fields`,
+                `/api/protected/loc/${locationId}/members/${memberId}/cfs`,
                 {
                     method: 'POST',
                     headers: {

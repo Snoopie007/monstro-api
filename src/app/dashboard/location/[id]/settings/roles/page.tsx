@@ -16,7 +16,7 @@ import { Role } from "@/types";
 import useSWR from "swr";
 import { UpsertRole } from "./components";
 import RoleListActions from "./components/actions";
-import { UserIcon, ShieldIcon } from "lucide-react";
+import { UserIcon, ShieldIcon, PlusIcon } from "lucide-react";
 import { useDebounce } from "@/hooks";
 import { tryCatch } from "@/libs/utils";
 
@@ -88,11 +88,12 @@ export default function RolesPage(props: { params: Promise<{ id: string }> }) {
             value={query}
             onChange={(e) => handleSearchRoles(e.target.value)}
             placeholder="Search Roles"
-            className="h-11"
+            className="h-10"
           />
           <div className="flex-initial">
-            <Button variant={"primary"} onClick={handleCreateRole}>
-              Add Role
+            <Button variant={"primary"} className="flex flex-row items-center gap-2" onClick={handleCreateRole}>
+              <span>Add Role</span>
+              <PlusIcon className="size-4" />
             </Button>
           </div>
         </div>
