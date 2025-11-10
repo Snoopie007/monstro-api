@@ -1,9 +1,8 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberPackages, transactions, locationState } from "@/db/schemas";
+import { memberPackages, transactions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 
 import { NextRequest, NextResponse } from "next/server";
-import { MemberPackage } from "@/types";
 import { calculatePeriodEnd, calculateStripeFee } from "../../utils";
 
 type Props = {
@@ -38,13 +37,12 @@ export async function GET(req: NextRequest, props: Props) {
 export async function POST(req: NextRequest, props: Props) {
 
 	const { id, mid } = await props.params;
-	const { paymentMethod, paymentType, trialDays, ...data } = await req.json();
+	const body = await req.json();
 
-
-
+	const { paymentMethod, paymentType, trialDays, ...data } = body;
 	try {
 		const plan = await db.query.memberPlans.findFirst({
-			where: (memberPlan, { eq }) => eq(memberPlan.id, data.planId)
+			where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
 		})
 
 		if (!plan) {

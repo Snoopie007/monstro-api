@@ -50,7 +50,9 @@ export async function GET(req: NextRequest, props: Props) {
 
 export async function POST(req: Request, props: Props) {
     const { id, mid } = await props.params;
-    const { paymentMethod, paymentType, trialDays, ...data } = await req.json();
+    const body = await req.json();
+    console.log(body);
+    const { paymentMethod, paymentType, trialDays, ...data } = body;
     try {
         const plan = await db.query.memberPlans.findFirst({
             where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
