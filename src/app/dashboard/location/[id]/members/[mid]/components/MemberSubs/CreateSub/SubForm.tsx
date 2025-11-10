@@ -63,11 +63,13 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
             return
         }
         const path = paymentType === "card" ? "subs" : "subs/cash"
+        console.log('values: ', v)
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/members/${mid}/${path}`, {
                 method: "POST",
                 body: JSON.stringify({
-                    ...v
+                    ...v,
+                    paymentMethod: paymentMethod
                 })
             })
         )
