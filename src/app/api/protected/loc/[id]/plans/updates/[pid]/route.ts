@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/db/db";
-import { getStripeCustomer, MemberStripePayments } from "@/libs/server/stripe";
-import Stripe from "stripe";
-import { memberPlans, memberSubscriptions, planPrograms } from "@/db/schemas";
+import { memberPlans, planPrograms } from "@/db/schemas";
 import { eq, inArray } from "drizzle-orm";
 
 export async function PUT(
