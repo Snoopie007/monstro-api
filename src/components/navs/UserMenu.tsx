@@ -15,7 +15,7 @@ import { signOut } from "@/hooks/useSession";
 import { User } from "lucide-react";
 import { cn } from "@/libs/utils";
 import { useTheme } from "next-themes";
-import { ExtendedUser } from "@/types/next-auth";
+import { ExtendedUser } from "@/types/user";
 
 const MenuItemStyle =
 	"flex flex-row items-center justify-start text-xs hover:bg-foreground/5";

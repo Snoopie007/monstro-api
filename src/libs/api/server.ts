@@ -4,7 +4,7 @@
  */
 
 import { auth } from "@/libs/auth/server";
-import type { ExtendedUser } from "@/types/next-auth";
+import type { ExtendedUser } from "@/types/user";
 import { getSupabaseJWT } from "../server/supabase";
 
 export interface ApiClient {
@@ -75,7 +75,7 @@ export const serversideApiClient = (): ApiClient => {
             
             // Try to get user session token first
             const session = await auth();
-            const sbToken = (session?.user as ExtendedUser)?.sbToken;
+            const sbToken = (session?.user as unknown as ExtendedUser).sbToken;
             
             if (sbToken) {
                 // User is authenticated, use their token
