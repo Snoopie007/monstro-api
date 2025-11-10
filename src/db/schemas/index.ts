@@ -24,3 +24,4 @@ export * from "./SupportTriggers";
 export * from "./SupportDocuments";
 export * from "./SupportLogs";
 export * from "./SupportBotEnums";
+export * from "./tax";

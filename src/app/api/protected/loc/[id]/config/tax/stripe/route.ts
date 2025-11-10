@@ -10,9 +10,15 @@ type Props = {
 
 export async function POST(request: NextRequest, props: Props) {
     const params = await props.params;
-    const { office, ...rest } = await request.json();
-
+    const { taxRateId } = await request.json();
     try {
+
+        const taxRate = await db.query.taxRates.findFirst({
+            where: (taxRates, { eq }) => eq(taxRates.id, taxRateId),
+        });
+        if (!taxRate) {
+            return NextResponse.json({ error: "Tax rate not found" }, { status: 404 });
+        }
         const integration = await db.query.integrations.findFirst({
             where: (integration, { eq, and }) => and(eq(integration.locationId, params.id), eq(integration.service, "stripe")),
         });
@@ -20,11 +26,17 @@ export async function POST(request: NextRequest, props: Props) {
             return NextResponse.json({ error: "Stripe account not found" }, { status: 404 });
         }
         const stripe = new MemberStripePayments(integration.accessToken);
-        const isoState = `${office.state.substring(0, 2).toUpperCase()}`;
+
+        await stripe.createTaxRate({
+            display_name: taxRate.name,
+            percentage: taxRate.percentage,
+            country: taxRate.country,
+            state: taxRate.state,
+            inclusive: false,
+        });
 
 
-
-        return NextResponse.json({}, { status: 200 });
+        return NextResponse.json({ success: true }, { status: 200 });
 
     } catch (error) {
         console.log(error);

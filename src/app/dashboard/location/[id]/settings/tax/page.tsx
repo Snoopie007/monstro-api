@@ -1,25 +1,26 @@
-import { db } from "@/db/db";
-import React from "react";
-import { Location } from "@/types";
-import { TaxRateList, NewTaxRate } from "./components/";
-import { redirect } from "next/navigation";
-import { TaxRateProvider } from "./providers";
 
-async function fetchLocation(lid: string): Promise<Location | null> {
+import React from "react";
+import { NewTaxRate } from "./components/";
+import {
+	Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription,
+	Table, TableHeader, TableBody, TableCell, TableHead, TableRow
+} from "@/components/ui";
+import { PercentIcon } from "lucide-react";
+import { db } from "@/db/db";
+import { TaxRate } from "@/types";
+import { TaxRateProvider } from "./provider";
+
+
+export async function getTaxRates({ id }: { id: string }): Promise<TaxRate[]> {
+
 	try {
-		const location = await db.query.locations.findFirst({
-			where: (location, { eq }) => eq(location.id, lid),
-			with: {
-				locationState: true,
-			},
+		const taxRates = await db.query.taxRates.findMany({
+			where: (taxRates, { eq }) => eq(taxRates.locationId, id),
 		});
-		if (!location) {
-			return null;
-		}
-		return location as Location & { locationState?: any };
+		return taxRates;
 	} catch (error) {
-		console.log(error);
-		return null;
+		console.error(error);
+		return [];
 	}
 }
 
@@ -27,16 +28,10 @@ export default async function SettingsPage(props: {
 	params: Promise<{ id: string }>;
 }) {
 	const params = await props.params;
-	const location = await fetchLocation(params.id);
-
-	if (!location) {
-		return redirect("/dashboard/locations");
-	}
-
-	const { locationState } = location; // Type-guard for accessing locationState
+	const taxRates = await getTaxRates({ id: params.id });
 
 	return (
-		<TaxRateProvider initialTaxRates={locationState?.settings?.taxRates || []}>
+		<TaxRateProvider initialTaxRates={taxRates}>
 			<div className="space-y-4">
 				<div className="flex justify-between items-center">
 					<div className="space-y-1">
@@ -45,7 +40,40 @@ export default async function SettingsPage(props: {
 					</div>
 					<NewTaxRate lid={params.id} />
 				</div>
-				<TaxRateList lid={params.id} />
+				<div className='space-y-4 bg-foreground/5 rounded-lg'>
+					{taxRates.length === 0 ? (
+						<Empty>
+							<EmptyHeader>
+								<EmptyMedia variant="icon">
+									<PercentIcon className='size-4' />
+								</EmptyMedia>
+								<EmptyTitle>No tax rates found</EmptyTitle>
+								<EmptyDescription>Create your first tax rate to get started</EmptyDescription>
+							</EmptyHeader>
+						</Empty>
+					) : (
+						<Table>
+							<TableHeader>
+								<TableRow>
+									{["Name", "Country", "State", "Percentage", ""].map((header) => (
+										<TableHead key={header}>{header}</TableHead>
+									))}
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{taxRates.map((taxRate, index) => (
+									<TableRow key={index}>
+										<TableCell>{taxRate.name}</TableCell>
+										<TableCell>{taxRate.country}</TableCell>
+										<TableCell>{taxRate.state}</TableCell>
+										<TableCell>{taxRate.percentage}</TableCell>
+										<TableCell></TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					)}
+				</div>
 			</div>
 		</TaxRateProvider>
 	);

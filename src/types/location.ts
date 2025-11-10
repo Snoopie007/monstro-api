@@ -30,14 +30,4 @@ export type LocationSettings = {
   theme: 'default';
   passOnFees: boolean;
   processingMethods: PaymentType[];
-  taxRates: TaxRate[] | null;
-}
-
-export type TaxRate = {
-  name: string;
-  percentage: number;
-  stripeRateId: string | null;
-  country: string;
-  state: string;
-  status: 'active' | 'inactive';
 }

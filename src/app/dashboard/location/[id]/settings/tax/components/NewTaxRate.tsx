@@ -26,16 +26,15 @@ import { CountryCodes } from '@/libs/data';
 import { tryCatch } from '@/libs/utils';
 import { toast } from 'react-toastify';
 import { Loader2 } from 'lucide-react';
-import { useTaxRate } from '../providers';
+import { useTaxRates } from '../provider';
 
 interface NewTaxRateProps {
     lid: string;
 }
 
 export function NewTaxRate({ lid }: NewTaxRateProps) {
-    const { setTaxRates } = useTaxRate();
     const [open, setOpen] = useState(false);
-
+    const { setTaxRates } = useTaxRates();
     const form = useForm<z.infer<typeof taxRateSchema>>({
         resolver: zodResolver(taxRateSchema),
         defaultValues: {
@@ -43,18 +42,19 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
             country: "US",
             state: "",
             percentage: 0,
+            inclusive: false,
         },
     });
 
 
 
-    async function onSubmit(data: z.infer<typeof taxRateSchema>) {
+    async function onSubmit(v: z.infer<typeof taxRateSchema>) {
         if (form.formState.isSubmitting) return;
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/config/tax/stripe`, {
+            fetch(`/api/protected/loc/${lid}/tax`, {
                 method: "POST",
-                body: JSON.stringify(data)
+                body: JSON.stringify(v)
             })
         );
 
@@ -63,11 +63,10 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
             return;
         }
 
-        const res = await result.json();
-        // Update tax rates list if needed
-        if (res.taxRate) {
-            setTaxRates((prev) => [...prev, res.taxRate]);
-        }
+        const newTaxRate = await result.json();
+
+        // Update tax rates list using function form
+        setTaxRates((prev) => [...prev, newTaxRate]);
 
         setOpen(false);
         form.reset();
@@ -92,12 +91,12 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
                 <DialogBody>
                     <Form {...form}>
                         <form className='space-y-4'>
-                            <div className='grid grid-cols-2 gap-2'>
+                            <div className='grid grid-cols-6 gap-2'>
                                 <FormField
                                     control={form.control}
                                     name="name"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className='col-span-4'>
                                             <FormLabel size='tiny'>Name</FormLabel>
                                             <FormControl>
                                                 <Input type="text" placeholder="Example: State Tax" {...field} />
@@ -110,29 +109,27 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
                                     control={form.control}
                                     name="percentage"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className='col-span-2'>
                                             <FormLabel size='tiny'>Percentage</FormLabel>
                                             <FormControl>
                                                 <Input
-                                                    type="text"
-                                                    placeholder="0.00"
-                                                    {...field}
+                                                    type="number"
+                                                    min={0}
+                                                    max={100}
+                                                    step="1"
+                                                    placeholder="0"
+                                                    value={field.value === 0 ? '' : field.value}
                                                     onChange={(e) => {
                                                         const value = e.target.value;
-                                                        // Allow only numbers and one decimal point
-                                                        if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
-                                                            const numValue = value === '' ? 0 : parseFloat(value);
-                                                            field.onChange(isNaN(numValue) ? 0 : numValue);
+                                                        if (value === '') {
+                                                            field.onChange(0);
+                                                        } else {
+                                                            const numValue = parseInt(value);
+                                                            if (!isNaN(numValue)) {
+                                                                field.onChange(Math.min(100, Math.max(0, Math.round(numValue))));
+                                                            }
                                                         }
                                                     }}
-                                                    onBlur={(e) => {
-                                                        // Format to 2 decimal places on blur
-                                                        const value = parseFloat(e.target.value);
-                                                        if (!isNaN(value)) {
-                                                            field.onChange(parseFloat(value.toFixed(2)));
-                                                        }
-                                                    }}
-                                                    value={field.value ? field.value.toString() : ''}
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -140,7 +137,40 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
                                     )}
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-3 gap-2">
+
+                                <FormField control={form.control} name="inclusive" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel size='tiny'>Inclusive</FormLabel>
+                                        <FormControl>
+                                            <Select onValueChange={(value) => field.onChange(value === "true")} value={field.value.toString()}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select inclusive" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="true">Yes</SelectItem>
+                                                    <SelectItem value="false">No</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </FormControl>
+                                    </FormItem>
+                                )} />
+                                <FormField
+                                    control={form.control}
+                                    name="state"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size='tiny'>State</FormLabel>
+                                            <RegionSelect
+                                                value={field.value}
+                                                onChange={(value) => field.onChange(value)}
+                                            />
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                                 <FormField
                                     control={form.control}
                                     name="country"
@@ -165,21 +195,6 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
                                         </FormItem>
                                     )}
                                 />
-
-                                <FormField
-                                    control={form.control}
-                                    name="state"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel size='tiny'>State</FormLabel>
-                                            <RegionSelect
-                                                value={field.value}
-                                                onChange={(value) => field.onChange(value)}
-                                            />
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
                             </div>
 
 
@@ -189,12 +204,12 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
                 </DialogBody>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button size='sm' variant={'outline'}>
+                        <Button variant={'outline'}>
                             Cancel
                         </Button>
                     </DialogClose>
                     <Button
-                        size='sm'
+
                         variant={'foreground'}
                         onClick={form.handleSubmit(onSubmit)}
                         disabled={form.formState.isSubmitting || !form.formState.isValid}

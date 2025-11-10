@@ -20,3 +20,4 @@ export * from "./tag";
 export * from "./FamilyMember";
 export * from "./invoices";
 export * from "./support";
+export * from "./tax";

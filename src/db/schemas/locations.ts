@@ -24,6 +24,7 @@ import { LocationStatusEnum } from "./DatabaseEnums";
 import type { MemberLocationProfile } from "@/types/member";
 import { attendances } from "./attendances";
 import type { LocationSettings } from "@/types";
+import { taxRates } from "./tax";
 
 export const locations = pgTable("locations", {
   id: uuid("id")
@@ -167,6 +168,10 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
   wallet: one(wallets, {
     fields: [locations.id],
     references: [wallets.locationId],
+  }),
+  taxRate: one(taxRates, {
+    fields: [locations.id],
+    references: [taxRates.locationId],
   }),
 }));
 

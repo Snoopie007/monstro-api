@@ -2,11 +2,17 @@
 import { Input } from "./input";
 import { useState, useEffect } from "react";
 
+import {
+    ButtonGroup,
+    ButtonGroupText,
+} from "../ui";
+import { Label } from "./label";
+
+
 interface PriceInputProps {
     value: number | undefined
     onChange: (value: number) => void
 }
-
 export function PriceInput({ value, onChange }: PriceInputProps) {
     const [inputValue, setInputValue] = useState("0.00");
 
@@ -80,13 +86,13 @@ export function PriceInput({ value, onChange }: PriceInputProps) {
     }
 
     return (
-        <div className="relative">
-            <span className="absolute left-3 top-[50%] -translate-y-[50%] text-sm text-foreground/50">
-                $
-            </span>
+        < ButtonGroup className="w-full">
+            <ButtonGroupText asChild>
+                <Label className="bg-foreground/5 border-foreground/5" >$</Label>
+            </ButtonGroupText>
             <Input
                 type="text"
-                className="pl-6"
+                className="pl-3"
                 placeholder="0.00"
                 value={inputValue}
                 onKeyDown={handleKeyDown}
@@ -98,6 +104,7 @@ export function PriceInput({ value, onChange }: PriceInputProps) {
                 onChange={handleChange}
                 onFocus={handleFocus}
             />
-        </div>
+
+        </ButtonGroup>
     )
 }
