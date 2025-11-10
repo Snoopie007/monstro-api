@@ -70,7 +70,7 @@ export async function POST(req: Request, props: Props) {
             memberId: mid,
             memberPlanId: plan.id,
             paymentType,
-            status: "incomplete",
+            status: "active",
             metadata: {
                 memberId: mid,
                 locationId: id
