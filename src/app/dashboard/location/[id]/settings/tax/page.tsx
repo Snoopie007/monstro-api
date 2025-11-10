@@ -11,7 +11,7 @@ import { TaxRate } from "@/types";
 import { TaxRateProvider } from "./provider";
 
 
-export async function getTaxRates({ id }: { id: string }): Promise<TaxRate[]> {
+async function getTaxRates({ id }: { id: string }): Promise<TaxRate[]> {
 
 	try {
 		const taxRates = await db.query.taxRates.findMany({

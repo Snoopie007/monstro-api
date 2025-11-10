@@ -25,7 +25,7 @@ import { taxRateSchema } from './schema';
 import { CountryCodes } from '@/libs/data';
 import { tryCatch } from '@/libs/utils';
 import { toast } from 'react-toastify';
-import { Loader2 } from 'lucide-react';
+import { Loader2, PlusIcon } from 'lucide-react';
 import { useTaxRates } from '../provider';
 
 interface NewTaxRateProps {
@@ -76,8 +76,9 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size={"sm"} variant={"foreground"}>
-                    Add Tax Rate
+                <Button size={"sm"} variant={"foreground"} className="flex flex-row items-center gap-1">
+                    <span>Tax Rate</span>
+                    <PlusIcon className='size-4' />
                 </Button>
             </DialogTrigger>
 

@@ -212,7 +212,7 @@ async function handleSubscriptionInvoicePayment(
 		const tax = calculateTaxFromInvoice(invoice);
 
 		await db.transaction(async (tx) => {
-			const commonFields = {
+			const CommonFields = {
 				memberId: subscription.memberId,
 				locationId: subscription.locationId,
 				description: invoice.description,
@@ -223,7 +223,7 @@ async function handleSubscriptionInvoicePayment(
 			const [{ invoiceId }] = await tx
 				.insert(memberInvoices)
 				.values({
-					...commonFields,
+					...CommonFields,
 					memberSubscriptionId: subscription.id,
 					status: "paid",
 					paid: true,
@@ -253,7 +253,7 @@ async function handleSubscriptionInvoicePayment(
 			await createInvoiceTransaction(
 				tx,
 				{
-					...commonFields,
+					...CommonFields,
 					subscriptionId: subscription.id,
 					invoiceId,
 					amount: invoice.amount_paid,
