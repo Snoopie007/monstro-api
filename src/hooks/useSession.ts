@@ -14,7 +14,7 @@ import { useUserContext } from "./useUserContext";
  */
 export function useSession() {
   const { data: session, isPending } = useBetterAuthSession();
-  const { userContext, isLoading: contextLoading } = useUserContext();
+  const { userContext, isLoading: contextLoading, refresh: refreshContext } = useUserContext();
 
   const transformedSession = useMemo(() => {
     if (!session?.user) return null;
@@ -36,14 +36,8 @@ export function useSession() {
         ? "authenticated" 
         : "unauthenticated",
     
-    // TODO: REFACTOR - Better Auth doesn't have update()
-    // Temporary workaround: reload page
-    // Proper fix: Use SWR mutate() with user context
     update: async () => {
-      console.warn(
-        "⚠️ Session update not supported - reload page or refactor to lean sessions"
-      );
-      window.location.reload();
+      await refreshContext();
     },
   };
 }

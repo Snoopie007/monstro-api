@@ -42,6 +42,8 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
         }
         if (type === 'name') {
             // update the session
+            await update();
+            toast.success(`Location name updated!`);
         }
     }
 

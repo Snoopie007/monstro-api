@@ -4,7 +4,7 @@
  */
 
 export interface ApiClient {
-    get: (url: string, params?: Record<string, string | number | boolean | string[]>) => Promise<unknown>;
+    get: <T>(url: string, params?: Record<string, string | number | boolean | string[]>) => Promise<T>;
     post: (url: string, data?: Record<string, unknown>) => Promise<unknown>;
 }
 

@@ -13,7 +13,7 @@ import { Industries } from "@/libs/data";
 
 import { signIn } from '@/hooks/useSession'
 import { useJoin } from '../providers/JoinProvider';
-import { toast } from 'sonner';
+import { toast } from 'react-toastify';
 import { Loader2 } from 'lucide-react';
 
 const MemberCount = [

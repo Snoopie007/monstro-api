@@ -28,7 +28,7 @@ export interface PermissionCheck {
  */
 export async function hasPermission(permission: Permission, locationId?: string): Promise<boolean> {
   const session = await authWithContext();
-  console.log('session trying to check permission')
+
   if (!session?.user) {
     return false;
   }

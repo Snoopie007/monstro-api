@@ -79,6 +79,17 @@ export async function buildUserPayload(userId: string) {
         vendor: { locations, ...vendor },
         ...rest
       } = user;
+
+      const filteredLocations = locations
+        .filter((location) => {
+          const { locationState } = location;
+          return locationState && ["active"].includes(locationState.status);
+        })
+        .map((location) => ({
+          id: location.id,
+          name: location.name,
+          status: location.locationState?.status,
+        })) || [];
   
       userPayload = {
         id: rest.id,
@@ -88,7 +99,8 @@ export async function buildUserPayload(userId: string) {
         image: vendor?.avatar,
         vendorId: vendor?.id,
         stripeCustomerId: vendor?.stripeCustomerId,
-        role: "vendor"
+        role: "vendor",
+        locations: filteredLocations,
       };
     } else if (user.staff) {
       const {

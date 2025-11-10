@@ -24,6 +24,7 @@ const buttonVariants = cva(
 				menu: "flex  flex-row items-center justify-start rounded-sm gap-2 w-full hover:bg-accent hover:text-accent-foreground",
 				clear: "rounded-sm bg-gray-200 text-black hover:bg-gray-100",
 				continue: "rounded-sm  bg-red-500 text-white",
+				create: "rounded-sm bg-indigo-500 text-white",
 			},
 			size: {
 				default: "px-4 py-2",

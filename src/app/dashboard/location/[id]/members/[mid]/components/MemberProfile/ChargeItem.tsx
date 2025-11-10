@@ -52,9 +52,9 @@ export default function ChargeItem({ params, open, setOpen }: Props) {
         resolver: zodResolver(ChargeItemSchema),
         defaultValues: {
             amount: 0,
-            paymentMethod: "",
+            paymentType: "card",
             description: "",
-            cardId: undefined,
+            // cardId: undefined,
             item: "",
             chargeDate: undefined,
         }
@@ -160,7 +160,7 @@ export default function ChargeItem({ params, open, setOpen }: Props) {
 
                             <FormField
                                 control={form.control}
-                                name="paymentMethod"
+                                name="paymentType"
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Payment Method</FormLabel>

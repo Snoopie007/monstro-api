@@ -21,9 +21,9 @@ import { transactions } from "./transactions";
 import { vendors } from "./vendors";
 import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
-import { MemberLocationProfile } from "@/types/member";
+import type { MemberLocationProfile } from "@/types/member";
 import { attendances } from "./attendances";
-import { LocationSettings } from "@/types";
+import type { LocationSettings } from "@/types";
 
 export const locations = pgTable("locations", {
   id: uuid("id")
