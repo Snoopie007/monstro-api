@@ -19,5 +19,4 @@ export * from "./integrations";
 export * from "./tag";
 export * from "./FamilyMember";
 export * from "./invoices";
-// SUPPORT BOT TYPES
 export * from "./support";

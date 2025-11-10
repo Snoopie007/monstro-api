@@ -6,7 +6,6 @@ import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Input } from "@/components/forms";
 import { InfoType } from "../page";
-import { LocationStatus } from "@/types";
 import { useSession } from "@/hooks/useSession";
 
 
@@ -21,7 +20,7 @@ type CompanyInfoProps = {
 export default function CompanyInfos({ lid, currentValue, type, title, description }: CompanyInfoProps) {
     const [loading, setLoading] = useState(false);
     const [value, setValue] = useState<string | null>(currentValue);
-    const { data: session, update } = useSession()
+    const { update } = useSession()
     async function saveChanges() {
         if (!value || value === currentValue) return;
         setLoading(true);
@@ -41,9 +40,8 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
             return;
         }
         if (type === 'name') {
-            // update the session
             await update();
-            toast.success(`Location name updated!`);
+            return toast.success(`Location name updated!`);
         }
     }
 

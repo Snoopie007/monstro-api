@@ -10,7 +10,7 @@ type Props = {
 
 export async function POST(request: NextRequest, props: Props) {
     const params = await props.params;
-    const { office, ...rest } = await request.json();
+    const { state, type, country } = await request.json();
 
     try {
         const integration = await db.query.integrations.findFirst({
@@ -20,24 +20,13 @@ export async function POST(request: NextRequest, props: Props) {
             return NextResponse.json({ error: "Stripe account not found" }, { status: 404 });
         }
         const stripe = new MemberStripePayments(integration.accessToken);
-        const isoState = `${office.state.substring(0, 2).toUpperCase()}`;
+        const isoState = `${state.substring(0, 2).toUpperCase()}`;
 
 
-        const taxSettings = await stripe.updateTaxSettings({
-            defaults: {
-                tax_behavior: rest.tax_behavior,
-                tax_code: rest.tax_code,
-            },
-            head_office: {
-                address: {
-                    ...office,
-                    state: isoState,
-                },
-            },
-        });
 
+        const registration = await stripe.createTaxRegistration(type, isoState, country);
 
-        return NextResponse.json(taxSettings, { status: 200 });
+        return NextResponse.json(registration, { status: 200 });
 
     } catch (error) {
         console.log(error);

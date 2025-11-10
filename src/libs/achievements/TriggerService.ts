@@ -1,22 +1,12 @@
 import { db } from '@/db/db'
 import {
-    achievements,
     memberAchievements,
     memberPointsHistory,
     memberLocations,
 } from '@/db/schemas'
 import { AchievementTriggers } from '@/libs/data'
-import { Achievement, NewMemberPointsHistory } from '@/types/'
+import { NewMemberPointsHistory } from '@/types/'
 import { and, eq, inArray, SQL, sql } from 'drizzle-orm'
-
-// export interface TriggerEvaluation {
-//     memberId: string
-//     locationId: string
-//     triggerType: "Attendances Count" | "Referrals Count" | "Plan Signup" | "Amount Spent"
-//     planId?: string
-// }
-
-
 
 export async function triggerSignUp(data: { mid: string, lid: string, pid: string }) {
     const { mid, lid, pid } = data
@@ -41,16 +31,18 @@ export async function triggerSignUp(data: { mid: string, lid: string, pid: strin
     const today = new Date()
 
     await db.transaction(async (tx) => {
-        await tx.insert(memberAchievements).values({
+        const CommonData = {
             memberId: mid,
             locationId: lid,
+        }
+        await tx.insert(memberAchievements).values({
+            ...CommonData,
             achievementId: a.id,
             progress: 1,
             dateAchieved: today,
         })
         await tx.insert(memberPointsHistory).values({
-            memberId: mid,
-            locationId: lid,
+            ...CommonData,
             points: a.points,
             type: 'earned',
             created: today,
@@ -112,6 +104,7 @@ export async function triggerIncrement(data: TriggerIncrement) {
         eq(memberAchievements.memberId, mid),
         eq(memberAchievements.locationId, lid)
     )
+
     for (const a of achievements) {
         const ma = a.memberAchievements[0];
         const CommonData = {
@@ -121,6 +114,7 @@ export async function triggerIncrement(data: TriggerIncrement) {
             created: today,
             updated: today,
         }
+
         if (ma) {
             // If the member already has an achievement entry, check if it is already achieved.
             // If the achievement is already achieved, continue to the next achievement.

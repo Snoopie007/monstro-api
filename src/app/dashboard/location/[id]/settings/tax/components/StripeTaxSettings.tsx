@@ -40,28 +40,28 @@ interface StripeTaxSettingsProps {
 
 export function StripeTaxSettings({ lid, location, settings, updateSettings }: StripeTaxSettingsProps) {
 
-    const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
 
+    const { head_office, defaults } = settings || {};
     const form = useForm<z.infer<typeof TaxSettingsSchema>>({
         resolver: zodResolver(TaxSettingsSchema),
         defaultValues: {
             office: {
                 country: "US",
-                state: location.state || "",
-                city: location.city || "",
-                line1: location.address || "",
-                postal_code: location.postalCode || "",
+                state: head_office?.address?.state || location.state || "",
+                city: head_office?.address?.city || location.city || "",
+                line1: head_office?.address?.line1 || location.address || "",
+                postal_code: head_office?.address?.postal_code || location.postalCode || "",
             },
-            tax_behavior: 'exclusive',
-            tax_code: 'txcd_99999999',
+            tax_behavior: defaults?.tax_behavior || 'exclusive',
+            tax_code: defaults?.tax_code || 'txcd_99999999',
         },
     });
 
 
 
     async function onSubmit(data: z.infer<typeof TaxSettingsSchema>) {
-        setLoading(true);
+        if (form.formState.isSubmitting) return;
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/config/tax/stripe`, {
                 method: "POST",
@@ -69,7 +69,6 @@ export function StripeTaxSettings({ lid, location, settings, updateSettings }: S
             })
         )
 
-        setLoading(false);
 
         if (error || !result || !result.ok) {
             toast.error("Failed to update tax settings");
@@ -149,7 +148,7 @@ export function StripeTaxSettings({ lid, location, settings, updateSettings }: S
                             </fieldset>
                             <fieldset>
                                 <FormLabel size='tiny'>Head Office Address</FormLabel>
-                                <div className="flex flex-row gap-4">
+                                <div className="flex flex-row gap-2">
                                     <FormField
                                         control={form.control}
                                         name="office.line1"
@@ -157,7 +156,7 @@ export function StripeTaxSettings({ lid, location, settings, updateSettings }: S
                                             <FormItem className="flex-1">
 
                                                 <FormControl>
-                                                    <Input type="text" className="rounded-sm" placeholder="Street Address" {...field} />
+                                                    <Input type="text" placeholder="Street Address" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -171,7 +170,7 @@ export function StripeTaxSettings({ lid, location, settings, updateSettings }: S
                                             <FormItem>
 
                                                 <FormControl>
-                                                    <Input type="text" className="rounded-sm" placeholder="City" {...field} />
+                                                    <Input type="text" placeholder="City" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -203,7 +202,7 @@ export function StripeTaxSettings({ lid, location, settings, updateSettings }: S
                                             <FormItem className="col-span-3">
 
                                                 <FormControl>
-                                                    <Input type="text" className="rounded-sm" placeholder="Postal Code" {...field} />
+                                                    <Input type="text" placeholder="Postal Code" {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -219,7 +218,7 @@ export function StripeTaxSettings({ lid, location, settings, updateSettings }: S
 
                                                 <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                                     <FormControl>
-                                                        <SelectTrigger className="rounded-sm">
+                                                        <SelectTrigger>
                                                             <SelectValue placeholder="Select your country" />
                                                         </SelectTrigger>
                                                     </FormControl>
@@ -248,10 +247,8 @@ export function StripeTaxSettings({ lid, location, settings, updateSettings }: S
                         </Button>
                     </DialogClose>
                     <Button size='sm' variant={'foreground'} onClick={form.handleSubmit(onSubmit)}
-                        className={cn("children:hidden", loading && "children:flex")}
-                        disabled={loading || !form.formState.isValid}>
-                        <Loader2 className='size-4 animate-spin mr-2' />
-                        Save
+                        disabled={form.formState.isSubmitting || !form.formState.isValid}>
+                        {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin mr-2' /> : "Save"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

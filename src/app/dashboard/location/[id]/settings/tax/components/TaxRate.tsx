@@ -65,7 +65,7 @@ export function TaxRate({ lid, location }: StripeTaxProps) {
     }
 
     return (
-        <Card className="rounded-sm  border-foreground/10">
+        <Card>
             <div className="p-6 space-y-4">
                 <CardHeader className="p-0 space-y-2">
                     <CardTitle className="text-base">Tax Rate</CardTitle>
@@ -96,10 +96,8 @@ export function TaxRate({ lid, location }: StripeTaxProps) {
                     size="sm"
                     disabled={loading || value === 0}
                     onClick={save}
-                    className={cn('children:hidden', loading && 'children:block')}
                 >
-                    <Loader2 className='size-4 mr-2' />
-                    Save
+                    {loading ? <Loader2 className='size-4 animate-spin' /> : "Save"}
                 </Button>
 
             </CardFooter>
