@@ -13,7 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { locations, memberLocations } from "./locations";
 import { users } from "./users";
-import { achievements } from "./achievements";
+import { achievements, memberAchievements } from "./achievements";
 import { rewards } from "./rewards";
 import { contractTemplates } from "./contracts";
 import { memberPackages } from "./MemberPlans";
@@ -51,27 +51,6 @@ export const members = pgTable("members", {
 		.defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
-
-export const memberAchievements = pgTable(
-	"member_achievements",
-	{
-		memberId: text("member_id")
-			.notNull()
-			.references(() => members.id, { onDelete: "cascade" }),
-		locationId: text("location_id")
-			.notNull()
-			.references(() => locations.id, { onDelete: "cascade" }),
-		achievementId: text("achievement_id")
-			.notNull()
-			.references(() => achievements.id, { onDelete: "cascade" }),
-		progress: integer("progress").default(0),
-		dateAchieved: timestamp("date_achieved", { withTimezone: true }),
-		created: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-	},
-	(t) => [primaryKey({ columns: [t.memberId, t.achievementId] })]
-);
 
 export const memberPointsHistory = pgTable("member_points_history", {
 	id: uuid("id")
@@ -328,17 +307,6 @@ export const familyMemberRelations = relations(familyMembers, ({ one, many }) =>
 		relationName: "relatedMemberFamily",
 		fields: [familyMembers.relatedMemberId],
 		references: [members.id],
-	}),
-}));
-
-export const memberAchievementsRelations = relations(memberAchievements, ({ one }) => ({
-	member: one(members, {
-		fields: [memberAchievements.memberId],
-		references: [members.id],
-	}),
-	achievement: one(achievements, {
-		fields: [memberAchievements.achievementId],
-		references: [achievements.id],
 	}),
 }));
 

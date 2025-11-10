@@ -4,7 +4,7 @@ import { relations, sql } from "drizzle-orm";
 import { memberPackages, memberPlans, memberSubscriptions } from "./MemberPlans";
 import { recurringReservations, reservations } from "./reservations";
 import { staffs } from "./staffs";
-import { PlanInterval, ProgramStatusEnum } from "./DatabaseEnums";
+import { IntervalType, ProgramStatusEnum } from "./DatabaseEnums";
 import { members } from "./members";
 
 export const programs = pgTable("programs", {
@@ -16,7 +16,7 @@ export const programs = pgTable("programs", {
 	maxAge: integer("max_age").notNull(),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	instructorId: integer("instructor_id").references(() => staffs.id, { onDelete: "cascade" }),
-	interval: PlanInterval("interval").notNull().default("week"),
+	interval: IntervalType("interval").notNull().default("week"),
 	intervalThreshold: smallint("interval_threshold").notNull().default(1),
 	icon: text("icon"),
 	allowWaitlist: boolean("allow_waitlist").notNull().default(false),

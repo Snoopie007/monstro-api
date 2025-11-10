@@ -1,21 +1,35 @@
-import { transactions } from "@/db/schemas/transactions";
-import type { TransactionStatus, TransactionType } from "./DatabaseEnums";
-import type { Member, MemberInvoice, MemberPackage, MemberSubscription } from "./member";
+import { transactions } from "@/db/schemas";
+import type { PaymentType, TransactionStatus, TransactionType } from "./DatabaseEnums";
+import type { Member, MemberInvoice } from "./member";
 
-
-type TransactionMetadata = {
-    card?: {
-        brand: string;
-        last4: string;
-    };
+export type TransactionMetadata = {
+  card?: {
+    brand: string;
+    last4: string;
+  }
+  us_bank_account?: {
+    bank_name: string;
+    last4: string;
+  }
+  subscriptionId?: string;
+  packageId?: string;
+  chargeId?: string;
 } & Record<string, unknown>;
 
 export type Transaction = typeof transactions.$inferSelect & {
-    type: TransactionType;
-    member?: Member;
-    status: TransactionStatus;
-    subscription?: MemberSubscription;
-    package?: MemberPackage;
-    metadata?: TransactionMetadata;
-    invoice?: MemberInvoice;
+  type: TransactionType;
+  paymentType: PaymentType;
+  member?: Member;
+  status: TransactionStatus;
+  metadata?: TransactionMetadata;
+  invoice?: MemberInvoice;
 };
+
+export type TransactionItem = {
+  name: string;
+  quantity: number;
+  price: number;
+  productId?: string;
+}
+
+export type NewTransaction = typeof transactions.$inferInsert;
