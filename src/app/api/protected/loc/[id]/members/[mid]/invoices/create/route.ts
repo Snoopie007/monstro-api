@@ -111,6 +111,15 @@ export async function POST(
           total: subscription.plan.price,
           currency: subscription.plan.currency || "usd",
           created: new Date(),
+          subTotal: subscription.plan.price,
+          // TODO: implement tax
+          // tax: 
+          items: [{
+            productId: subscription.plan.id,
+            amount: subscription.plan.price,
+            tax: 0,
+            quantity: 1,
+        }],
         });
 
         return newInvoice;
@@ -177,7 +186,7 @@ export async function POST(
 
     // Cash payment flow - Stripe handles invoice but payment is cash
     // Stripe flow - card payment
-    if (paymentType === "cash" || paymentType === "card" || !paymentType) {
+    if (paymentType === "card" || !paymentType) {
       // Validate Stripe customer exists
       if (!member?.stripeCustomerId) {
         return NextResponse.json(
