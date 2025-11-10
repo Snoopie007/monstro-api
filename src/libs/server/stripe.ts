@@ -89,10 +89,7 @@ abstract class BaseStripePayments {
 		return await this._stripe.webhooks.constructEvent(body, sig, key);
 	}
 
-	async updatePaymentMethod(
-		id: string,
-		update: Stripe.PaymentMethodUpdateParams
-	) {
+	async updatePaymentMethod(id: string, update: Stripe.PaymentMethodUpdateParams) {
 		return await this._stripe.paymentMethods.update(id, update);
 	}
 
@@ -228,6 +225,8 @@ abstract class BaseStripePayments {
 		});
 		return res;
 	}
+
+
 	async attachPaymentMethod(paymentMethodId: string) {
 		if (!this._customer) {
 			throw new Error("Customer ID is required");
@@ -439,8 +438,7 @@ class MemberStripePayments extends BaseStripePayments {
 		}
 
 		const isAllowProration = plan.interval === "month" || plan.interval === "year"
-		const taxSettings = await this.retrieveTaxSettings()
-		const automaticTax = taxSettings.status === 'active';
+
 
 		const accountDestination = {
 			type: "account" as const,
@@ -453,7 +451,7 @@ class MemberStripePayments extends BaseStripePayments {
 			transfer_data: {
 				destination: this._accountId,
 			},
-			automatic_tax: { enabled: automaticTax, liability: accountDestination },
+			automatic_tax: { enabled: false, liability: accountDestination },
 			invoice_settings: { issuer: accountDestination },
 			description: `Subscription to ${plan.name}`,
 			items: [{ price: plan.stripePriceId as string }],
@@ -477,30 +475,6 @@ class MemberStripePayments extends BaseStripePayments {
 		return this._stripe.subscriptions.create(options);
 	}
 
-	async createSubSchedule(priceId: string, settings: MemberSubscriptionSettings): Promise<Stripe.SubscriptionSchedule> {
-		if (!this._customer) {
-			throw new Error("Customer not set");
-		}
-		const { startDate, cancelAt, feePercent, ...rest } = settings;
-
-		const options: Stripe.SubscriptionScheduleCreateParams = {
-			customer: this._customer,
-			start_date: startDate ? new Date(startDate).getTime() / 1000 : undefined,
-			end_behavior: "release",
-
-			phases: [{
-				items: [{ price: priceId }],
-				billing_cycle_anchor: 'automatic',
-				application_fee_percent: (feePercent || 0),
-				...(cancelAt && { end_date: new Date(cancelAt).getTime() / 1000 }),
-				currency: 'usd',
-				collection_method: 'charge_automatically',
-
-			}],
-			...rest
-		}
-		return this._stripe.subscriptionSchedules.create(options);
-	}
 
 
 	async createStripeProduct(
@@ -528,18 +502,28 @@ class MemberStripePayments extends BaseStripePayments {
 		return product.default_price as Stripe.Price;
 	}
 
-	async retrieveTaxSettings() {
-		const res = await this._stripe.tax.settings.retrieve();
-		return res;
+	// async retrieveTaxSettings() {
+	// 	return await this._stripe.tax.settings.retrieve();
+
+	// }
+
+	// async updateTaxSettings(settings: Stripe.Tax.SettingsUpdateParams) {
+	// 	return await this._stripe.tax.settings.update(settings);
+	// }
+
+	// async getTaxRegistrations() {
+	// 	return await this._stripe.tax.registrations.list();
+	// }
+
+
+	async createTaxRate(data: Stripe.TaxRateCreateParams) {
+		return await this._stripe.taxRates.create(data);
 	}
 
-	async updateTaxSettings(settings: Stripe.Tax.SettingsUpdateParams) {
-		return await this._stripe.tax.settings.update(settings);
-	}
-
-	async getTaxRegistrations() {
-		const res = await this._stripe.tax.registrations.list();
-		return res.data;
+	async getTaxRates() {
+		return await this._stripe.taxRates.list({
+			limit: 10,
+		});
 	}
 
 	async updateTaxRegistration(

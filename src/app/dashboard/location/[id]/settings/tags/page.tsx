@@ -38,16 +38,15 @@ export default function TagsManagementPage(props: TagsManagementPageProps) {
 				</div>
 				<NewTag lid={params.id} />
 			</div>
-
-			<div className="bg-muted/50 rounded-lg overflow-hidden ">
-				{isLoading ? (
-					<div className="space-y-2">
-						{Array.from({ length: 5 }).map((_, i) => (
-							<Skeleton key={i} className="h-12 w-full" />
-						))}
-					</div>
-				) : (
-					tags.length === 0 ? (
+			{isLoading ? (
+				<div className="space-y-2">
+					{Array.from({ length: 5 }).map((_, i) => (
+						<Skeleton key={i} className="h-12 w-full" />
+					))}
+				</div>
+			) : (
+				<div className="bg-muted/50 rounded-lg ">
+					{tags.length === 0 ? (
 						<Empty>
 							<EmptyHeader>
 								<EmptyMedia variant="icon">
@@ -85,9 +84,9 @@ export default function TagsManagementPage(props: TagsManagementPageProps) {
 								))}
 							</TableBody>
 						</Table>
-					)
-				)}
-			</div>
+					)}
+				</div>
+			)}
 		</div>
 	);
 }

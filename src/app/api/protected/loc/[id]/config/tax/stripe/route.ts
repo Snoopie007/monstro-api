@@ -23,21 +23,8 @@ export async function POST(request: NextRequest, props: Props) {
         const isoState = `${office.state.substring(0, 2).toUpperCase()}`;
 
 
-        const taxSettings = await stripe.updateTaxSettings({
-            defaults: {
-                tax_behavior: rest.tax_behavior,
-                tax_code: rest.tax_code,
-            },
-            head_office: {
-                address: {
-                    ...office,
-                    state: isoState,
-                },
-            },
-        });
 
-
-        return NextResponse.json(taxSettings, { status: 200 });
+        return NextResponse.json({}, { status: 200 });
 
     } catch (error) {
         console.log(error);
