@@ -1,10 +1,9 @@
 import { db } from "@/db/db";
-import { memberSubscriptions } from "@/db/schemas";
+import { memberInvoices, memberSubscriptions, transactions } from "@/db/schemas";
 import {
     calculatePeriodEnd,
 } from "../../../utils";
 import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
 import { triggerSignUp } from "@/libs/achievements";
 
 
@@ -63,7 +62,6 @@ export async function POST(req: Request, props: Props) {
             plan.intervalThreshold!
         );
 
-
         const [sub] = await db.insert(memberSubscriptions).values({
             startDate: startDate,
             currentPeriodStart: startDate,
@@ -74,32 +72,35 @@ export async function POST(req: Request, props: Props) {
             paymentType,
             status: "incomplete",
             metadata: {
-                paymentMethodId: paymentMethod.id,
                 memberId: mid,
                 locationId: id
             }
         }).returning()
 
+        // const tx = await db.transaction(async (tx) => {
+            // TODO: uncomment and refine when invoices are being done
+            // // Invoice starts as DRAFT
+            // const [{ invoiceId }] = await tx.insert(memberInvoices).values({
+            //     locationId: id,
+            //     memberId: mid,
+            //     description: `Recurring Invoice for ${plan.name}`,
+            //     status: "paid",
+            //     paymentType: "cash",
+            //     invoiceType: "recurring",
+            //     memberSubscriptionId: sub.id
+            // }).returning({ invoiceId: memberInvoices.id });
 
-
-        // if (data.paymentType === "cash") {
-        //     // Invoice starts as DRAFT
-        //     const [{ invoiceId }] = await tx.insert(memberInvoices).values({
-
-        //         status: "paid",
-        //         paymentType: "cash",
-        //         invoiceType: "recurring",
-        //         memberSubscriptionId: sub.id
-        //     }).returning({ invoiceId: memberInvoices.id });
-
-        //     // Transaction created as incomplete
-        //     await tx.insert(transactions).values({
-
-        //         invoiceId,
-        //         status: "paid",
-        //         paymentType: "cash",
-        //     });
-        // }
+            // // Transaction created as incomplete
+            // await tx.insert(transactions).values({
+            //     locationId: id,
+            //     memberId: mid,
+            //     type: "inbound",
+            //     invoiceId,
+            //     status: "paid",
+            //     paymentType: "cash",
+            // });
+        // })
+        
 
 
         // // Schedule recurring invoice email reminders (only for manual/cash, plan_id >= 2, no Stripe)
