@@ -104,7 +104,7 @@ export function memberPlansSubRoutes(app: Elysia) {
                 .insert(memberSubscriptions)
                 .values({
                     ...sharedData,
-                    paymentMethod: sub.paymentMethod,
+                    paymentType: sub.paymentType,
                     startDate: sub.startDate,
                     status: "active",
                     currentPeriodStart: sub.currentPeriodStart,
@@ -140,7 +140,7 @@ export function memberPlansSubRoutes(app: Elysia) {
                     to: memberLocation.member.email,
                     subject: subject,
                 },
-                template: "InviteEmailTemplate",
+                template: "MemberInviteEmail",
                 data: {
                     ui: {
                         btnText: "Join the class.",

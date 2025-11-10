@@ -22,6 +22,7 @@ import {
 	InvoiceStatusEnum,
 	MemberRelationshipEnum,
 	CustomFieldTypeEnum,
+	PaymentTypeEnum,
 } from "./DatabaseEnums";
 import { attendances } from "./attendances";
 
@@ -170,45 +171,32 @@ export const memberContracts = pgTable("member_contracts", {
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
 
-export const memberInvoices = pgTable("member_invoices", {
-	id: uuid("id")
-		.primaryKey()
-		.notNull()
-		.default(sql`uuid_base62()`),
-	metadata: jsonb("metadata")
-		.$type<Record<string, any>>()
-		.default(sql`'{}'::jsonb`),
-	currency: text("currency"),
-	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
-	memberPackageId: text("member_package_id").references(() => memberPackages.id,
-		{ onDelete: "cascade" }
-	),
-	memberSubscriptionId: text("member_subscription_id").references(
-		() => memberSubscriptions.id,
-		{ onDelete: "cascade" }
-	),
-	description: text("description"),
-	items: jsonb("items")
-		.$type<Record<string, any>>()
-		.array()
-		.default(sql`'{}'::jsonb[]`),
-	paid: boolean("paid").notNull().default(false),
-	tax: integer("tax").notNull().default(0),
-	total: integer("total").notNull().default(0),
-	discount: integer("discount").notNull().default(0),
-	subtotal: integer("subtotal").notNull().default(0),
-	forPeriodStart: timestamp("for_period_start", { withTimezone: true }),
-	forPeriodEnd: timestamp("for_period_end", { withTimezone: true }),
-	dueDate: timestamp("due_date", { withTimezone: true }).notNull().defaultNow(),
-	attemptCount: integer("attempt_count").notNull().default(0),
-	invoicePdf: text("invoice_pdf"),
-	status: InvoiceStatusEnum("status").notNull().default("draft"),
-	created: timestamp("created_at", { withTimezone: true })
-		.notNull()
-		.defaultNow(),
-	updated: timestamp("updated_at", { withTimezone: true }),
-});
+export const memberInvoices = pgTable('member_invoices', {
+    id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
+    metadata: jsonb('metadata').$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+    currency: text('currency'),
+    memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+    locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
+    memberSubscriptionId: text('member_subscription_id').references(() => memberSubscriptions.id, { onDelete: 'cascade' }),
+    description: text('description'),
+    items: jsonb('items').$type<Record<string, any>[]>().array().default(sql`'{}'::jsonb[]`),
+    paid: boolean('paid').notNull().default(false),
+    tax: integer('tax').notNull().default(0),
+    total: integer('total').notNull().default(0),
+    discount: integer('discount').notNull().default(0),
+    subtotal: integer('subtotal').notNull().default(0),
+    forPeriodStart: timestamp('for_period_start', { withTimezone: true }),
+    forPeriodEnd: timestamp('for_period_end', { withTimezone: true }),
+    dueDate: timestamp('due_date', { withTimezone: true }).notNull().defaultNow(),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    invoicePdf: text('invoice_pdf'),
+    status: InvoiceStatusEnum('status').notNull().default('draft'),
+    paymentType: PaymentTypeEnum('payment_type').notNull().default('cash'),
+    invoiceType: text('invoice_type').notNull().default('one-off'),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp('updated_at', { withTimezone: true }),
+})
 
 export const familyMembers = pgTable("family_members", {
 	id: uuid("id")
@@ -402,22 +390,18 @@ export const memberContractsRelations = relations(
 );
 
 export const memberInvoicesRelations = relations(memberInvoices, ({ one }) => ({
-	member: one(members, {
-		fields: [memberInvoices.memberId],
-		references: [members.id],
-	}),
-	subscription: one(memberSubscriptions, {
-		fields: [memberInvoices.memberSubscriptionId],
-		references: [memberSubscriptions.id],
-	}),
-	package: one(memberPackages, {
-		fields: [memberInvoices.memberPackageId],
-		references: [memberPackages.id],
-	}),
-	location: one(locations, {
-		fields: [memberInvoices.locationId],
-		references: [locations.id],
-	}),
+    member: one(members, {
+        fields: [memberInvoices.memberId],
+        references: [members.id],
+    }),
+    subscription: one(memberSubscriptions, {
+        fields: [memberInvoices.memberSubscriptionId],
+        references: [memberSubscriptions.id],
+    }),
+    location: one(locations, {
+        fields: [memberInvoices.locationId],
+        references: [locations.id],
+    }),
 }));
 
 export const memberRewardRelations = relations(memberRewards, ({ one }) => ({

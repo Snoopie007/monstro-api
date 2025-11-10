@@ -101,7 +101,7 @@ export function memberPlansPkgRoutes(app: Elysia) {
                 .insert(memberPackages)
                 .values({
                     ...sharedData,
-                    paymentMethod: pkg.paymentMethod,
+                    paymentType: pkg.paymentType,
                     startDate: pkg.startDate,
                     status: "active",
                 })
@@ -126,7 +126,7 @@ export function memberPlansPkgRoutes(app: Elysia) {
                     to: memberLocation.member.email,
                     subject: subject,
                 },
-                template: "InviteEmailTemplate",
+                template: "MemberInviteEmail",
                 data: {
                     ui: {
                         btnText: "Join the class.",
