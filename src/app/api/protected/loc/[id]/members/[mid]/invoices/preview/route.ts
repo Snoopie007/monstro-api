@@ -111,8 +111,16 @@ export async function POST(
 		const member = await db.query.members.findFirst({
 			where: eq(members.id, params.mid),
 		});
+		// Get Stripe customer instance
+		const integration = await db.query.integrations.findFirst({
+			where: (integrations, { eq, and }) =>
+				and(
+					eq(integrations.locationId, params.id),
+					eq(integrations.service, "stripe")
+				),
+		});
 
-		if (!member?.stripeCustomerId) {
+		if (!member?.stripeCustomerId || !integration || !integration.accountId) {
 
 			// Calculate totals
 			const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -159,20 +167,13 @@ export async function POST(
 			});
 		}
 
-		// Get Stripe customer instance
-		const integration = await db.query.integrations.findFirst({
-			where: (integrations, { eq, and }) =>
-				and(
-					eq(integrations.locationId, params.id),
-					eq(integrations.service, "stripe")
-				),
-		});
 		if (!integration || !integration.accountId) {
 			return NextResponse.json(
 				{ error: "Stripe integration not found" },
 				{ status: 404 }
 			);
 		}
+
 		const stripe = new MemberStripePayments(integration.accountId);
 		stripe.setCustomer(member.stripeCustomerId);
 		// Prepare invoice items for preview (without creating them)

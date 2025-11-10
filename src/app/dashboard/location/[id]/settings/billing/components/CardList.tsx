@@ -1,5 +1,5 @@
 'use client'
-import { Badge, Skeleton } from '@/components/ui'
+import { Badge, Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle, Skeleton } from '@/components/ui'
 
 import React from 'react'
 import AddCard from './AddCard';
@@ -7,6 +7,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '@/libs/client/stripe';
 import Stripe from 'stripe';
 import CardActions from './CardAction';
+import { CreditCardIcon } from 'lucide-react';
 
 interface CardListProps {
     paymentMethods: Stripe.PaymentMethod[]
@@ -15,6 +16,41 @@ interface CardListProps {
 }
 
 export function CardList({ paymentMethods, locationId, customerId }: CardListProps) {
+
+    const renderPaymentMethods = () => {
+        if (paymentMethods && paymentMethods.length > 0) {
+            return (
+                <div>
+                    {paymentMethods.map((method, i) => (
+                        <div key={i} className='bg-foreground/5 rounded-lg p-4 flex flex-row justify-between items-center'>
+                            <div className=' flex flex-row items-center gap-2'>
+                                <span className='capitalize'>{method.card?.brand}{" "}</span>
+                                {method.card?.funding} •••• {method.card?.last4}
+                                {method.allow_redisplay === "always" && (
+                                    <Badge roles="blue" >Default</Badge>
+                                )}
+                            </div>
+                            <div className='flex flex-row items-center gap-3'>
+                                <p>Valid until {method.card?.exp_month}/{method.card?.exp_year}</p>
+                                <CardActions paymentMethod={method} locationId={locationId} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )
+        }
+            return (
+                <Empty variant="border">
+                    <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                            <CreditCardIcon className="size-5" />
+                        </EmptyMedia>
+                        <EmptyTitle>No payment methods found</EmptyTitle>
+                        <EmptyDescription>Add a payment method to get started</EmptyDescription>
+                    </EmptyHeader>
+                </Empty>    
+            )
+    }
     return (
         <div className='space-y-1'>
             <div className='font-medium'>Payment Methods</div>
@@ -34,30 +70,12 @@ export function CardList({ paymentMethods, locationId, customerId }: CardListPro
                         <AddCard customerId={customerId} locationId={locationId} />
                     </Elements>
                 )}
-                {paymentMethods && paymentMethods.length > 0 ? (
-                    <div>
-                        {paymentMethods.map((method, i) => (
-                            <div key={i} className='bg-foreground/5 rounded-lg p-4 flex flex-row justify-between items-center'>
-                                <div className=' flex flex-row items-center gap-2'>
-                                    <span className='capitalize'>{method.card?.brand}{" "}</span>
-                                    {method.card?.funding} •••• {method.card?.last4}
-                                    {method.allow_redisplay === "always" && (
-                                        <Badge roles="blue" >Default</Badge>
-                                    )}
-                                </div>
-                                <div className='flex flex-row items-center gap-3'>
-                                    <p>Valid until {method.card?.exp_month}/{method.card?.exp_year}</p>
-                                    <CardActions paymentMethod={method} locationId={locationId} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className='flex flex-col gap-2'>
-                        <Skeleton className='h-6 w-full' />
-                        <Skeleton className='h-6 w-full' />
-                    </div>
-                )}
+                    {!paymentMethods ? (
+                        <div className='flex flex-col gap-2'>
+                            <Skeleton className='h-6 w-full' />
+                            <Skeleton className='h-6 w-full' />
+                        </div>
+                    ) : renderPaymentMethods()}
             </div>
         </div>
     )
