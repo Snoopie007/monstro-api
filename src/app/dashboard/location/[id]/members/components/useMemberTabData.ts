@@ -89,7 +89,7 @@ export function useMemberTabData(locationId: string, memberId?: string) {
         // Fetch data asynchronously
         try {
             // Fetch all members for this location
-            const response = await apiRef.current?.get(`/api/protected/loc/${locationId}/members`, {
+            const response: Record<string, any> | undefined = await apiRef.current?.get(`/api/protected/loc/${locationId}/members`, {
                 size: 25,
                 page: 1,
             })
@@ -265,7 +265,7 @@ export function useMemberTabData(locationId: string, memberId?: string) {
                 }
 
                 // Fetch members and custom fields from API
-                const response = await apiRef.current?.get(
+                const response: Record<string, any> | undefined = await apiRef.current?.get(
                     `/api/protected/loc/${currentTab.locationId}/members`,
                     params
                 )
