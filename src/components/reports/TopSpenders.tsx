@@ -69,7 +69,7 @@ export function TopSpenders({ mls, transactions, lid }: TopSpendersProps) {
                 const currentTotal = memberTotals.get(tx.memberId) || 0
                 memberTotals.set(
                     tx.memberId,
-                    currentTotal + (tx.amount / 100 || 0)
+                    currentTotal + (tx.total / 100 || 0)
                 )
             })
 

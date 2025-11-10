@@ -64,7 +64,7 @@ export function RecurringRevenueChart({
                 if (transaction.status === 'paid' && !transaction.refunded) {
                     const month =
                         MONTHS[new Date(transaction.created as Date).getMonth()]
-                    recurringRevenueByMonth[month] += transaction.amount / 100
+                    recurringRevenueByMonth[month] += transaction.total / 100
                 }
             })
 

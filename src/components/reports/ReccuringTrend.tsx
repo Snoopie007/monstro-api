@@ -72,7 +72,7 @@ export function ReccuringTrend({ transactions, lid }: RecurringTrendProps) {
                         isSameYear(created, targetDate)
                     )
                 })
-                .reduce((acc, t) => acc + (t.amount || 0), 0) / 100
+                .reduce((acc, t) => acc + (t.total || 0), 0) / 100
 
         const current = sumForMonth(now)
         const previous = sumForMonth(lastMonth)
