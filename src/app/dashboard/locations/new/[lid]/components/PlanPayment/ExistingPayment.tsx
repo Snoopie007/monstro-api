@@ -62,15 +62,7 @@ export function ExistingPlanPayment({ lid }: { lid: string }) {
 			return;
 		}
 
-		await update({
-			locations: session?.user.locations.map(
-				(location: { id: string; status: string }) => {
-					return location.id === locationState.locationId
-						? { ...location, status: "active" }
-						: location;
-				}
-			),
-		});
+		await update();
 
 		toast.update(toastRef, {
 			render: "Payment successful",

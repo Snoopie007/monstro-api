@@ -5,13 +5,10 @@ import { VendorStripePayments } from '@/libs/server/stripe';
 
 const stripe = new VendorStripePayments()
 export async function POST(req: Request) {
-
     const data = await req.json()
-
     try {
-
-        await stripe.setupIntent(data.token, data.customerId);
-
+        stripe.setCustomer(data.customerId);
+        await stripe.setupIntent(data.token);
         return NextResponse.json({ message: "Success" }, { status: 200 });
 
     } catch (err) {
