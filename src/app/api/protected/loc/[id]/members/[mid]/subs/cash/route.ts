@@ -78,29 +78,29 @@ export async function POST(req: Request, props: Props) {
         }).returning()
 
         // const tx = await db.transaction(async (tx) => {
-            // TODO: uncomment and refine when invoices are being done
-            // // Invoice starts as DRAFT
-            // const [{ invoiceId }] = await tx.insert(memberInvoices).values({
-            //     locationId: id,
-            //     memberId: mid,
-            //     description: `Recurring Invoice for ${plan.name}`,
-            //     status: "paid",
-            //     paymentType: "cash",
-            //     invoiceType: "recurring",
-            //     memberSubscriptionId: sub.id
-            // }).returning({ invoiceId: memberInvoices.id });
+        // TODO: uncomment and refine when invoices are being done
+        // // Invoice starts as DRAFT
+        // const [{ invoiceId }] = await tx.insert(memberInvoices).values({
+        //     locationId: id,
+        //     memberId: mid,
+        //     description: `Recurring Invoice for ${plan.name}`,
+        //     status: "paid",
+        //     paymentType: "cash",
+        //     invoiceType: "recurring",
+        //     memberSubscriptionId: sub.id
+        // }).returning({ invoiceId: memberInvoices.id });
 
-            // // Transaction created as incomplete
-            // await tx.insert(transactions).values({
-            //     locationId: id,
-            //     memberId: mid,
-            //     type: "inbound",
-            //     invoiceId,
-            //     status: "paid",
-            //     paymentType: "cash",
-            // });
+        // // Transaction created as incomplete
+        // await tx.insert(transactions).values({
+        //     locationId: id,
+        //     memberId: mid,
+        //     type: "inbound",
+        //     invoiceId,
+        //     status: "paid",
+        //     paymentType: "cash",
+        // });
         // })
-        
+
 
 
         // // Schedule recurring invoice email reminders (only for manual/cash, plan_id >= 2, no Stripe)
@@ -154,11 +154,11 @@ export async function POST(req: Request, props: Props) {
         //     // Don't fail the request if email scheduling fails
         // }
 
-        await triggerSignUp({
-            mid: mid,
-            lid: id,
-            pid: plan.id,
-        });
+        // await triggerSignUp({
+        //     mid: mid,
+        //     lid: id,
+        //     pid: plan.id,
+        // });
 
 
 
