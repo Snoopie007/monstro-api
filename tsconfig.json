@@ -24,6 +24,6 @@
 		"@public/*": ["./public/*"]
 	  }
 	},
-	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "next.config.ts", "src/app/api/protected/loc/[id]/config/tax/stripe", ".archived/StripeTax.tsx", ".archived/StripeReg.tsx", ".archived/StripeTaxSettings.tsx", "src/app/dashboard/location/[id]/settings/tax/components/schema.ts"],
+	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "next.config.ts", "src/app/api/protected/loc/[id]/config/tax/[taxId]/stripe", ".archived/StripeTax.tsx", ".archived/StripeReg.tsx", ".archived/StripeTaxSettings.tsx", "src/app/dashboard/location/[id]/settings/tax/components/schema.ts"],
 	"exclude": ["node_modules"]
   }

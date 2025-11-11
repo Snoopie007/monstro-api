@@ -1,10 +1,9 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberSubscriptions, transactions } from "@/db/schemas";
+import { memberSubscriptions } from "@/db/schemas";
 import {
     calculatePeriodEnd,
 } from "../../../utils";
 import { NextResponse } from "next/server";
-import { triggerSignUp } from "@/libs/achievements";
 
 
 type Props = {

@@ -6,7 +6,6 @@ import {
 } from "../../utils";
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { triggerSignUp } from "@/libs/achievements";
 import { getTaxRateId } from "../../utils";
 
 

@@ -7,7 +7,7 @@ import {
     DropdownMenuTrigger,
 
 } from "@/components/ui";
-import { Pencil, MoreHorizontal, Pause, Play, Star } from "lucide-react";
+import { Pencil, MoreHorizontal, Pause, Play, Star, Link } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn, sleep } from "@/libs/utils";
 import { toast } from "react-toastify";
@@ -24,11 +24,12 @@ export default function TaxActions({ taxRate }: { taxRate: TaxRate }) {
     const [open, setOpen] = useState(false);
 
 
-    const { isActive, isDefault } = useMemo(() => {
+    const { isActive, isDefault, isStripeConnected } = useMemo(() => {
 
         return {
             isActive: taxRate.status === "active",
             isDefault: taxRate.isDefault,
+            isStripeConnected: taxRate.stripeRateId ? true : false,
         }
     }, [taxRate]);
 
@@ -49,7 +50,6 @@ export default function TaxActions({ taxRate }: { taxRate: TaxRate }) {
             toast.error(error?.message ?? "Failed to set default tax rate");
             return;
         }
-        await sleep(1000);
         setTaxRates((prev) => prev.map((t) => {
 
             if (t.id === taxRate.id) {
@@ -75,7 +75,6 @@ export default function TaxActions({ taxRate }: { taxRate: TaxRate }) {
             toast.error(error?.message ?? "Failed to toggle tax rate status");
             return;
         }
-        await sleep(1000);
         setTaxRates((prev) => prev.map((t) => {
             if (t.id === taxRate.id) {
                 return { ...t, status: isActive ? "inactive" : "active" };
@@ -84,6 +83,26 @@ export default function TaxActions({ taxRate }: { taxRate: TaxRate }) {
         }));
     }
 
+
+    async function connectToStripe() {
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${lid}/config/tax/${taxRate.id}/stripe`, {
+                method: "POST",
+            })
+        );
+        if (error || !result || !result.ok) {
+            toast.error(error?.message ?? "Failed to connect to Stripe");
+            return;
+        }
+        const data = await result.json();
+        toast.success("Tax rate connected to Stripe successfully");
+        setTaxRates((prev) => prev.map((t) => {
+            if (t.id === taxRate.id) {
+                return { ...t, stripeRateId: data.stripeRateId };
+            }
+            return t;
+        }));
+    }
     return (
         <>
             <DropdownMenu>
@@ -105,6 +124,16 @@ export default function TaxActions({ taxRate }: { taxRate: TaxRate }) {
                         <span > Edit</span>
                         <Pencil className="size-3" />
                     </DropdownMenuItem>
+                    {!isStripeConnected && (
+                        <DropdownMenuItem
+                            className={MenuItemStyle}
+                            onClick={connectToStripe}
+                            disabled={!taxRate}
+                        >
+                            <span > Connect to Stripe</span>
+                            <Link className="size-3" />
+                        </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                         className={MenuItemStyle}
                         onClick={toggleStatus}
