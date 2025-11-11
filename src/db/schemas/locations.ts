@@ -71,7 +71,6 @@ export const locationState = pgTable("location_state", {
   startDate: timestamp("start_date", { withTimezone: true }),
   settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),
   usagePercent: integer("usage_percent").notNull().default(0),
-  taxRate: integer("tax_rate").notNull().default(0),
   premiumSupport: boolean("premium_support").notNull().default(false),
   status: LocationStatusEnum("status").notNull().default("incomplete"),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
