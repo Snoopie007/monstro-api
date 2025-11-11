@@ -11,6 +11,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const isPreview = process.env.VERCEL_ENV === "preview";
 
 export const auth = betterAuth({
+    baseURL: process.env.NEXT_PUBLIC_APP_URL,
     database: drizzleAdapter(db, {
       provider: "pg",
       schema: {
@@ -117,8 +118,9 @@ export const auth = betterAuth({
   
     trustedOrigins: [
       "https://monstro-x.com",
-      "https://*.monstro-x.com",
-      isPreview && "https://*.monstrox.vercel.app",
+      "https://www.monstro-x.com",
+      "https://app.monstro-x.com",
+      isPreview && "https://monstrox.vercel.app",
     ].filter(Boolean) as string[],
   
     hooks: {
