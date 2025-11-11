@@ -1,13 +1,11 @@
 import { relations } from "drizzle-orm";
 import { text, pgTable, primaryKey } from "drizzle-orm/pg-core";
 import { users } from "./users";
-import { vendors } from "./vendors";
-import type { AdapterAccountType } from "next-auth/adapters";
 
 export const accounts = pgTable("account", {
     // Better Auth expected fields (camelCase in code, snake_case in DB)
     userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").$type<AdapterAccountType>(),
+    type: text("type"),
     provider: text("provider").notNull(),
     accountId: text("provider_accogitunt_id").notNull(), // Better Auth expects 'accountId'
     password: text("password"), // ← Add this
