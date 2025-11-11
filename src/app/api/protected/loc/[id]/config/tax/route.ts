@@ -1,5 +1,6 @@
 import { db } from "@/db/db";
 import { taxRates } from "@/db/schemas";
+import { MemberStripePayments } from "@/libs/server/stripe";
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -12,11 +13,31 @@ type Props = {
 export async function POST(request: NextRequest, props: Props) {
     const params = await props.params;
     const data = await request.json();
+
+
     try {
+
+
+
         const [taxRate] = await db.insert(taxRates).values({
             ...data,
             locationId: params.id,
         }).returning();
+
+
+        const integration = await db.query.integrations.findFirst({
+            where: (integration, { eq, and }) => and(eq(integration.locationId, params.id), eq(integration.service, "stripe")),
+        });
+        if (integration && integration.accessToken) {
+            const stripe = new MemberStripePayments(integration.accessToken);
+            await stripe.createTaxRate({
+                display_name: taxRate.name,
+                percentage: taxRate.percentage,
+                country: taxRate.country,
+                state: taxRate.state,
+                inclusive: false,
+            });
+        }
 
         return NextResponse.json(taxRate, { status: 200 });
 
