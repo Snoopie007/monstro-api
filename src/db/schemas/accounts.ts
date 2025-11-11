@@ -7,7 +7,7 @@ export const accounts = pgTable("account", {
     userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
     type: text("type"),
     provider: text("provider").notNull(),
-    accountId: text("provider_accogitunt_id").notNull(), // Better Auth expects 'accountId'
+    accountId: text("provider_account_id").notNull(), // Better Auth expects 'accountId'
     password: text("password"), // ← Add this
     refreshToken: text("refresh_token"), // Better Auth expects 'refreshToken'
     accessToken: text("access_token"), // Better Auth expects 'accessToken'
