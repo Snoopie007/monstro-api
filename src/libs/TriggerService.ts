@@ -60,7 +60,6 @@ export async function triggerSignUp(data: { mid: string, lid: string, pid: strin
     })
 }
 
-
 type ProgressInput = {
     memberId: string,
     locationId: string,
@@ -222,4 +221,3 @@ export async function triggerIncrement(data: TriggerIncrement) {
         }
     });
 }
-
