@@ -71,7 +71,6 @@ export const locationState = pgTable("location_state", {
   startDate: timestamp("start_date", { withTimezone: true }),
   settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),
   usagePercent: integer("usage_percent").notNull().default(0),
-  taxRate: integer("tax_rate").notNull().default(0),
   premiumSupport: boolean("premium_support").notNull().default(false),
   status: LocationStatusEnum("status").notNull().default("incomplete"),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -147,61 +146,3 @@ export const memberLocations = pgTable(
   },
   (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]
 );
-
-export const locationsRelations = relations(locations, ({ many, one }) => ({
-  memberLocations: many(memberLocations),
-  integrations: many(integrations),
-  programs: many(programs),
-  memberPlans: many(memberPlans),
-  memberSubscriptions: many(memberSubscriptions),
-  memberInvoices: many(memberInvoices),
-  pointsHistory: many(memberPointsHistory),
-  referrals: many(memberReferrals),
-  locationState: one(locationState, {
-    fields: [locations.id],
-    references: [locationState.locationId],
-  }),
-  vendor: one(vendors, {
-    fields: [locations.vendorId],
-    references: [vendors.id],
-  }),
-  wallet: one(wallets, {
-    fields: [locations.id],
-    references: [wallets.locationId],
-  }),
-  taxRate: one(taxRates, {
-    fields: [locations.id],
-    references: [taxRates.locationId],
-  }),
-}));
-
-export const locationStateRelations = relations(locationState, ({ one }) => ({
-  location: one(locations, {
-    fields: [locationState.locationId],
-    references: [locations.id],
-  }),
-}));
-
-export const memberLocationsRelations = relations(
-  memberLocations,
-  ({ one, many }) => ({
-    member: one(members, {
-      fields: [memberLocations.memberId],
-      references: [members.id],
-    }),
-    location: one(locations, {
-      fields: [memberLocations.locationId],
-      references: [locations.id],
-    }),
-    transactions: many(transactions),
-    attendances: many(attendances),
-  })
-);
-
-export const walletRelations = relations(wallets, ({ one, many }) => ({
-  location: one(locations, {
-    fields: [wallets.locationId],
-    references: [locations.id],
-  }),
-  usages: many(walletUsages, { relationName: "usages" }),
-}));

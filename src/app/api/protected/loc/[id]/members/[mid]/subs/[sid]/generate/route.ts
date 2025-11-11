@@ -12,12 +12,24 @@ type GenerateInvoiceProps = {
 };
 
 export async function POST(
-	_req: NextRequest,
+	req: NextRequest,
 	props: { params: Promise<GenerateInvoiceProps> }
 ) {
 	const params = await props.params;
 
 	try {
+		const location = await db.query.locations.findFirst({
+			where: (location, { eq, and }) => and(
+				eq(location.id, params.id),
+			),
+			with: {
+				taxRate: true,
+			}
+		});
+		if (!location) {
+			throw new Error("Location not found");
+		}
+		const taxRate = location.taxRate;
 		// Get subscription with plan
 		const subscription = await db.query.memberSubscriptions.findFirst({
 			where: eq(memberSubscriptions.id, params.sid),
@@ -25,10 +37,7 @@ export async function POST(
 		});
 
 		if (!subscription) {
-			return NextResponse.json(
-				{ error: "Subscription not found" },
-				{ status: 404 }
-			);
+			throw new Error("Subscription not found");
 		}
 
 		// Validate subscription is active and manual/cash
@@ -75,7 +84,7 @@ export async function POST(
 		});
 
 		const tax = Math.floor(
-			subscription.plan.price * ((locationStateData?.taxRate || 0) / 10000)
+			subscription.plan.price * ((taxRate?.percentage || 0) / 100)
 		);
 
 		// // Use same utility functions as subscription creation
@@ -108,7 +117,7 @@ export async function POST(
 		// };
 
 		// Create invoice and transaction, then update subscription billing dates
-		const invoice = await db.transaction(async (tx) => {
+		await db.transaction(async (tx) => {
 			// const [{ invoiceId }] = await tx
 			//   .insert(memberInvoices)
 			//   .values({

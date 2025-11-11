@@ -8,7 +8,10 @@ import {
 } from 'drizzle-orm/pg-core'
 import { sql, relations } from 'drizzle-orm'
 import { locations } from './locations'
-import { supportConversations, supportTriggers, assistantStatusEnum, botModelEnum } from '.'
+import { supportConversations } from './SupportConversations'
+import { supportTriggers } from './SupportTriggers'
+import { assistantStatusEnum, botModelEnum } from './SupportBotEnums'
+
 import type { SupportPersona } from '@/types'
 import { KnowledgeBase } from '@/types/knowledgeBase'
 
@@ -25,14 +28,12 @@ export const supportAssistants = pgTable(
         prompt: text('prompt')
             .notNull()
             .default(
-                'You are a helpful customer support assistant. You have access to member information tools to help with subscriptions, billing, and bookable sessions. You can also create support tickets and escalate to human agents when needed.'
+                ''
             ),
         temperature: numeric('temperature').notNull().default('0.7'),
         initialMessage: text('initial_message')
             .notNull()
-            .default(
-                "Hi! I'm here to help you. I can assist with your membership status, billing questions, available classes, and any other support needs. What can I help you with today?"
-            ),
+            .default(""),
         model: botModelEnum('model').notNull().default('gpt'),
         modelId: text('model_id').notNull(),
         status: assistantStatusEnum('status').notNull().default('Draft'),

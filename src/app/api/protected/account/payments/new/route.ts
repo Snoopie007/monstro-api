@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { authWithContext } from "@/libs/auth/server";
 export async function POST(req: Request, props: { params: Promise<{}> }) {
-  const params = await props.params;
+
   const session = await authWithContext();
   const { token, default: isDefault } = await req.json();
 

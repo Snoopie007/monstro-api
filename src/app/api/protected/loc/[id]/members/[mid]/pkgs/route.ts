@@ -58,6 +58,7 @@ export async function POST(req: NextRequest, props: Props) {
 				member: true,
 				location: {
 					with: {
+						taxRate: true,
 						locationState: true
 					}
 				}
@@ -74,10 +75,11 @@ export async function POST(req: NextRequest, props: Props) {
 			throw new Error("Member not found");
 		}
 
+		const { taxRate, locationState } = location;
 
 
 
-		const tax = Math.floor(plan.price * (location.locationState?.taxRate / 10000));
+		const tax = Math.floor(plan.price * (taxRate?.percentage || 0) / 100);
 		const total = plan.price + tax;
 
 
