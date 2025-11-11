@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { attendances } from '@/db/schemas';
-import { triggerIncrement } from "@/libs/achievements";
+import { triggerIncrement } from "@/libs/TriggerService";
 import { serviceApiClient } from "@/libs/api/server";
 
 export async function POST(req: NextRequest, props: { params: Promise<{ mid: string, id: string, rid: string }> }) {

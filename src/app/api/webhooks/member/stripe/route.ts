@@ -14,7 +14,7 @@ import { tryCatch } from "@/libs/utils";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
-import { triggerSignUp } from "@/libs/achievements";
+import { triggerSignUp } from "@/libs/TriggerService";
 
 /**
  * Stripe Webhook Handler for Member Billing Events

@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberSubscriptions, memberInvoices, transactions, locationState } from "@/db/schemas";
+import { memberSubscriptions, memberInvoices, locationState } from "@/db/schemas";
 import { eq, and } from "drizzle-orm";
-import { calculatePeriodEnd } from "../../../../utils";
+import { calculatePeriodEnd, calculateTax } from "../../../../utils";
 
 type GenerateInvoiceProps = {
 	id: string;
@@ -23,13 +23,16 @@ export async function POST(
 				eq(location.id, params.id),
 			),
 			with: {
-				taxRate: true,
+				locationState: true,
+				taxRates: true,
 			}
 		});
 		if (!location) {
 			throw new Error("Location not found");
 		}
-		const taxRate = location.taxRate;
+
+
+
 		// Get subscription with plan
 		const subscription = await db.query.memberSubscriptions.findFirst({
 			where: eq(memberSubscriptions.id, params.sid),
@@ -78,14 +81,8 @@ export async function POST(
 			);
 		}
 
-		// Get location state for tax calculation
-		const locationStateData = await db.query.locationState.findFirst({
-			where: eq(locationState.locationId, params.id),
-		});
 
-		const tax = Math.floor(
-			subscription.plan.price * ((taxRate?.percentage || 0) / 100)
-		);
+		const tax = calculateTax(subscription.plan.price, location.taxRates);
 
 		// // Use same utility functions as subscription creation
 		// const newTransaction = createTransaction(
