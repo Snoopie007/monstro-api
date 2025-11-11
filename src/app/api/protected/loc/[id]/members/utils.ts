@@ -1,21 +1,26 @@
 import {
-	MemberPlan,
+	PaymentType,
 	TaxRate,
 } from "@/types";
 import { isAfter, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { serversideApiClient } from "@/libs/api/server";
 
 
-
 const STRIPE_FEE_PERCENT = 2.9
 const STRIPE_FEE_AMOUNT = 0.30
-function calculateStripeFee(amount: number) {
-
+const STRIPE_BANK_FEE = 0.8;
+function calculateStripeFeePercentage(amount: number, paymentType: PaymentType) {
+	if (paymentType === 'us_bank_account') {
+		return STRIPE_BANK_FEE;
+	}
 	const additionalPercentage = Number(((STRIPE_FEE_AMOUNT / (amount / 100)) * 100).toFixed(2))
-	return additionalPercentage + STRIPE_FEE_PERCENT
+	return Number((additionalPercentage + STRIPE_FEE_PERCENT).toFixed(2))
 }
 
-
+function calculateStripeFeeAmount(amount: number, paymentType: PaymentType) {
+	const stripeFeePercentage = calculateStripeFeePercentage(amount, paymentType);
+	return Math.floor(amount * (stripeFeePercentage / 100));
+}
 
 function calculatePeriodEnd(
 	startDate: Date,
@@ -187,7 +192,8 @@ async function scheduleRecurringInvoiceEmails(params: {
 export {
 	calculatePeriodEnd,
 	calculateTax,
-	calculateStripeFee,
+	calculateStripeFeeAmount,
+	calculateStripeFeePercentage,
 	getTaxRateId,
 	calculateTrialEnd,
 	scheduleRecurringInvoiceEmails,

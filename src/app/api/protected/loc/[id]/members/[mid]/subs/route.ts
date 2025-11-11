@@ -2,11 +2,13 @@ import { db } from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import {
-    calculatePeriodEnd, calculateTrialEnd, calculateStripeFee,
+    calculatePeriodEnd, calculateTrialEnd,
+    calculateStripeFeePercentage,
 } from "../../utils";
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getTaxRateId } from "../../utils";
+import { PaymentType } from "@/types";
 
 
 type Props = {
@@ -72,9 +74,7 @@ export async function POST(req: Request, props: Props) {
                 member: true,
                 location: {
                     with: {
-                        taxRates: {
-                            where: (taxRate, { eq, and }) => and(eq(taxRate.status, "active"), eq(taxRate.isDefault, true)),
-                        },
+                        taxRates: true,
                         locationState: true
                     }
                 }
@@ -122,11 +122,9 @@ export async function POST(req: Request, props: Props) {
         const taxRateId = getTaxRateId(location.taxRates);
 
 
-        let feePercent = location.locationState?.usagePercent;
+        const stripeFeePercentage = calculateStripeFeePercentage(plan.price, paymentMethod.type as PaymentType);
+        const feePercent = location.locationState?.usagePercent + stripeFeePercentage;
 
-        if (paymentType === "card") {
-            feePercent += calculateStripeFee(plan.price);
-        }
         const stripeSubscription = await stripe.createSubscription(plan, {
             startDate,
             cancelAt: data.cancelAt ? new Date(data.cancelAt) : undefined,

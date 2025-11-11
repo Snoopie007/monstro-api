@@ -23,7 +23,11 @@ type BaseSettings = {
 };
 
 interface PaymentIntentSettings extends BaseSettings {
-	authorizeOnly?: boolean;
+	authorizeOnly?: boolean,
+	taxRateId?: string,
+	productName?: string,
+	tax?: number,
+	unitCost?: number,
 }
 type MemberSubscriptionSettings = BaseSettings & {
 	cancelAt?: Date | null,
@@ -391,7 +395,8 @@ class MemberStripePayments extends BaseStripePayments {
 		return res.data;
 	}
 
-	async createPaymentIntent(amount: number, settings?: PaymentIntentSettings) {
+	async createPaymentIntent(amount: number, applicationFeeAmount: number, options?: PaymentIntentSettings) {
+
 		if (!this._customer) {
 			throw new Error("Customer not set");
 		}
@@ -399,31 +404,38 @@ class MemberStripePayments extends BaseStripePayments {
 			throw new Error("Account ID not set");
 		}
 
-		// const percentage = calculatePercentage(amount) + (settings?.feePercent || 0)
-		const applicationFeeAmount = Math.floor((amount / 100) * (settings?.feePercent || 0) / 100);
-
 		const option: Stripe.PaymentIntentCreateParams = {
+			payment_method_types: ['card', 'us_bank_account'],
+			customer: this._customer,
 			amount,
-			description: settings?.description,
+			amount_details: {
+				line_items: [{
+					product_name: options?.productName || "",
+					quantity: 1,
+					unit_cost: options?.unitCost || 0,
+					tax: {
+						total_tax_amount: options?.tax || 0,
+					},
+				}],
+			},
+			description: options?.description,
 			transfer_data: {
 				destination: this._accountId,
 			},
-			automatic_payment_methods: { enabled: true },
-			currency: settings?.currency || "usd",
+			currency: options?.currency || "usd",
 			confirm: true,
-			customer: this._customer,
-			setup_future_usage: "off_session",
 			application_fee_amount: applicationFeeAmount,
-			payment_method: settings?.paymentMethod || undefined,
-			capture_method: settings?.authorizeOnly ? "manual" : "automatic",
-			return_url: settings?.returnUrl || "https://unknown.com",
+			payment_method: options?.paymentMethod || undefined,
+			capture_method: options?.authorizeOnly ? "manual" : "automatic",
+			return_url: options?.returnUrl || "https://unknown.com",
 			expand: ["payment_method"],
-			metadata: settings?.metadata || undefined
+			metadata: options?.metadata || undefined
 		}
 
 		const { client_secret, payment_method, latest_charge } = await this._stripe.paymentIntents.create(option);
 		return { clientSecret: client_secret as string, paymentMethod: payment_method as Stripe.PaymentMethod, chargeId: latest_charge };
 	}
+
 
 	async createSubscription(plan: MemberPlan, settings: MemberSubscriptionSettings) {
 		if (!this._customer) {

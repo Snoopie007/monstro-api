@@ -3,7 +3,8 @@ import { memberPackages, transactions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 
 import { NextRequest, NextResponse } from "next/server";
-import { calculatePeriodEnd, calculateStripeFee, calculateTax } from "../../utils";
+import { calculatePeriodEnd, calculateStripeFeeAmount, calculateTax } from "../../utils";
+import { PaymentType } from "@/types";
 
 type Props = {
 	params: Promise<{
@@ -58,9 +59,7 @@ export async function POST(req: NextRequest, props: Props) {
 				member: true,
 				location: {
 					with: {
-						taxRates: {
-							where: (taxRate, { eq, and }) => and(eq(taxRate.status, "active"), eq(taxRate.isDefault, true)),
-						},
+						taxRates: true,
 						locationState: true
 					}
 				}
@@ -71,13 +70,28 @@ export async function POST(req: NextRequest, props: Props) {
 			throw new Error("No member location found")
 		}
 
-		const { location, member } = ml;
+		const { location: { taxRates, locationState }, member } = ml;
 
 		if (!member || !member.stripeCustomerId) {
 			throw new Error("Member not found");
 		}
-		const tax = calculateTax(plan.price, location.taxRates);
-		const total = plan.price + tax;
+
+		const integration = await db.query.integrations.findFirst({
+			where: (integration, { eq, and }) => and(
+				eq(integration.locationId, id),
+				eq(integration.service, "stripe")
+			),
+			columns: {
+				accountId: true,
+			},
+		});
+
+		if (!integration) {
+			throw new Error("Integration not found");
+		}
+
+		const stripe = new MemberStripePayments(integration.accountId)
+		stripe.setCustomer(member.stripeCustomerId);
 
 		const today = new Date();
 		const startDate = data.startDate ? new Date(data.startDate) : today;
@@ -95,46 +109,40 @@ export async function POST(req: NextRequest, props: Props) {
 			);
 		}
 
+		const tax = calculateTax(plan.price, taxRates);
+		let subTotal = plan.price;
+		let total = subTotal + tax;
+		const monstroFee = Math.floor(subTotal * (locationState.usagePercent / 100));
+		const stripeFee = calculateStripeFeeAmount((
+			locationState.settings.passOnFees ? total : total + monstroFee
+		), paymentMethod.type as PaymentType);
 
-		let clientSecret: string | null = null;
-		if (paymentType === "card") {
-			const integration = await db.query.integrations.findFirst({
-				where: (integration, { eq, and }) =>
-					and(
-						eq(integration.locationId, id),
-						eq(integration.service, "stripe")
-					),
-				columns: {
-					accountId: true,
-				},
-			});
+		const applicationFeeAmount = monstroFee + stripeFee;
 
-			if (!integration) {
-				throw new Error("Integration not found");
-			}
 
-			const stripe = new MemberStripePayments(integration.accountId)
-			stripe.setCustomer(member.stripeCustomerId);
 
-			let feePercent = location.locationState?.usagePercent;
-
-			if (paymentType === "card") {
-				feePercent += calculateStripeFee(plan.price);
-			}
-
-			const { clientSecret: stripeClientSecret } = await stripe.createPaymentIntent(total, {
-				paymentMethod: paymentMethod.id,
-				currency: plan.currency,
-				feePercent: feePercent / 100,
-				description: `One time payment for ${plan.name}`,
-				metadata: {
-					planId: plan.id,
-					locationId: id,
-					memberId: mid,
-				},
-			});
-			clientSecret = stripeClientSecret;
+		if (locationState.settings.passOnFees) {
+			total += applicationFeeAmount;
+			subTotal += applicationFeeAmount;
 		}
+
+		const { clientSecret } = await stripe.createPaymentIntent(total, applicationFeeAmount, {
+			paymentMethod: paymentMethod.id,
+			currency: plan.currency,
+			description: `Payment for ${plan.name}`,
+			productName: plan.name,
+			unitCost: subTotal,
+			tax: tax,
+			metadata: {
+				planId: plan.id,
+				startDate: today,
+				locationId: id,
+				memberId: mid,
+			},
+		});
+
+
+
 
 		const pkg = await db.transaction(async (tx) => {
 			const CommonData = {
@@ -145,7 +153,7 @@ export async function POST(req: NextRequest, props: Props) {
 
 			const [pkg] = await tx.insert(memberPackages).values({
 				...CommonData,
-				stripePaymentId: clientSecret?.split("_secret_")[0] || null,
+				stripePaymentId: clientSecret.split("_secret_")[0] || null,
 				memberPlanId: plan.id,
 				...data,
 				status: "active",

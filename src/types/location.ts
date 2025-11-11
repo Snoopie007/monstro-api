@@ -9,6 +9,7 @@ import { Transaction } from "./transaction";
 import { Wallet } from "./wallet";
 import { MemberPointsHistory } from "./achievement";
 import { PaymentType } from "./DatabaseEnums";
+import { TaxRate } from "./tax";
 
 export type Location = typeof locations.$inferSelect & {
   locationState?: LocationState;
@@ -19,6 +20,7 @@ export type Location = typeof locations.$inferSelect & {
   referrals?: MemberReferral[];
   transactions?: Transaction[];
   wallet?: Wallet;
+  taxRates?: TaxRate[];
 };
 
 export type LocationState = typeof locationState.$inferSelect & {
