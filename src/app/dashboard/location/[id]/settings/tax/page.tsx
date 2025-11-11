@@ -1,9 +1,8 @@
 
 import React from "react";
-import { NewTaxRate } from "./components/";
+import { NewTaxRate, TaxList } from "./components/";
 import {
 	Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription,
-	Table, TableHeader, TableBody, TableCell, TableHead, TableRow
 } from "@/components/ui";
 import { PercentIcon } from "lucide-react";
 import { db } from "@/db/db";
@@ -52,26 +51,7 @@ export default async function SettingsPage(props: {
 							</EmptyHeader>
 						</Empty>
 					) : (
-						<Table>
-							<TableHeader>
-								<TableRow>
-									{["Name", "Country", "State", "Percentage", ""].map((header) => (
-										<TableHead key={header}>{header}</TableHead>
-									))}
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{taxRates.map((taxRate, index) => (
-									<TableRow key={index}>
-										<TableCell>{taxRate.name}</TableCell>
-										<TableCell>{taxRate.country}</TableCell>
-										<TableCell>{taxRate.state}</TableCell>
-										<TableCell>{taxRate.percentage}</TableCell>
-										<TableCell></TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
+						<TaxList />
 					)}
 				</div>
 			</div>

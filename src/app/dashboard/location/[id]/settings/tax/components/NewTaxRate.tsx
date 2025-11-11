@@ -52,7 +52,7 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
         if (form.formState.isSubmitting) return;
 
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/tax`, {
+            fetch(`/api/protected/loc/${lid}/config/tax`, {
                 method: "POST",
                 body: JSON.stringify(v)
             })
