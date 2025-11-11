@@ -44,7 +44,7 @@ abstract class BaseStripePayments {
 
 	constructor(key: string) {
 		this._stripe = new Stripe(key, {
-			apiVersion: "2025-05-28.basil",
+			apiVersion: "2025-10-29.clover",
 			appInfo: {
 				name: "My Monstro",
 				url: "https://mymonstro.com",
