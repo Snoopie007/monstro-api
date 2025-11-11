@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { auth } from "@/auth";
+import { authWithContext } from "@/libs/auth/server";
 import { eq, sql } from "drizzle-orm";
 import { wallets } from "@/db/schemas";
 import { VendorStripePayments } from "@/libs/server/stripe";
@@ -15,7 +15,7 @@ export async function POST(
   const { amount, id } = body;
 
   const stripe = new VendorStripePayments();
-  const session = await auth();
+  const session = await authWithContext();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

@@ -23,7 +23,7 @@ import type { MemberInvoice } from "@/types";
 import { format } from "date-fns";
 import { CircleFadingPlusIcon, EllipsisVerticalIcon, CheckCircle2, Clock } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import { MarkPaid } from "./MarkPaid";
 interface MemberInvoiceProps {
 	params: { id: string; mid: string };
@@ -115,11 +115,11 @@ function InvoiceItem({
 		}
 	}
 
-	// Both manual and cash invoices can be manually marked as sent/paid
+	// Cash invoices can be manually marked as sent/paid
 	const isManualAndDraft = 
-		(invoice.paymentMethod === "manual" || invoice.paymentMethod === "cash") && invoice.status === "draft";
+		invoice.paymentType === "cash" && invoice.status === "draft";
 	const isManualAndSent = 
-		(invoice.paymentMethod === "manual" || invoice.paymentMethod === "cash") && invoice.status === "sent";
+		invoice.paymentType === "cash" && invoice.status === "sent";
 
 	return (
 		<Item variant="muted" className="p-3">
@@ -134,9 +134,9 @@ function InvoiceItem({
 						)}
 						{invoice.status}
 					</Badge>
-					{/* {invoice.paymentMethod && invoice.paymentMethod !== "stripe" && (
+					{/* {invoice.paymentType && invoice.paymentType !== "stripe" && (
 						<Badge variant="outline" className="w-fit capitalize text-xs">
-							{invoice.paymentMethod}
+							{invoice.paymentType}
 						</Badge>
 					)} */}
 				</div>

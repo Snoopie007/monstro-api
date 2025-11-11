@@ -13,7 +13,7 @@ import { VendorBillingSchema } from "@/libs/FormSchemas/schemas";
 import { useNewLocation } from "../../provider/NewLocationContext";
 import { Button } from "@/components/ui/button";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 import { TermsAndConditions } from "@/components/terms";
 import { FormLabel, FormItem, Form } from "@/components/forms";
 import BillingFields from "./BillingFields";
@@ -80,15 +80,7 @@ export function NewPlanPayment({ lid }: { lid: string }) {
 					);
 				}
 
-				await update({
-					locations: session?.user.locations.map(
-						(location: { id: string; status: string }) => {
-							return location.id === locationState.locationId
-								? { ...location, status: "active" }
-								: location;
-						}
-					),
-				});
+				await update();
 				toast.update(toastRef, {
 					render: "Payment successful",
 					type: "success",

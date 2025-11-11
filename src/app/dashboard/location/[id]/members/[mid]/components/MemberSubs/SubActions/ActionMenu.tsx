@@ -8,6 +8,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	ButtonGroup,
 } from "@/components/ui";
 import { Pencil, Trash2, X, Pause, Play, EllipsisVertical } from "lucide-react";
 import { MemberSubscription } from "@/types";
@@ -61,11 +62,11 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
 					/>
 				</DialogContent>
 			</Dialog>
-			<div className="flex flex-row items-center group">
+			<ButtonGroup className=" group">
 				<Button
 					variant="ghost"
 					size="icon"
-					className={cn("size-6 flex-1  rounded-r-none", HoverTransition)}
+					className={cn("size-6", HoverTransition)}
 					onClick={() => setAction("update")}
 				>
 					<Pencil className="size-3" />
@@ -73,7 +74,7 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
 				<Button
 					variant="ghost"
 					size="icon"
-					className={cn("size-6 border-foreground/5 flex-1", HoverTransition)}
+					className={cn("size-6 border-foreground/5 ", HoverTransition)}
 					disabled={!sub}
 					onClick={() => {
 						if (sub.status === "canceled") return
@@ -88,7 +89,7 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
 						<Button
 							variant="ghost"
 							size="icon"
-							className="size-6 group-hover:bg-foreground/5 flex-1 rounded-l-none"
+							className="size-6 group-hover:bg-foreground/5"
 						>
 							<EllipsisVertical className="size-4" />
 						</Button>
@@ -120,7 +121,7 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
-			</div>
+			</ButtonGroup>
 		</>
 	);
 }

@@ -20,7 +20,7 @@ export function DayFieldPopover({ value, onChange }: DayFieldPopoverProps) {
                 <Button
                     variant={"outline"}
                     className={cn(
-                        "w-2/3 flex items-center justify-between text-left font-normal rounded-md border-foreground/10",
+                        "w-2/3 flex items-center justify-between text-left font-normal rounded-lg border-foreground/10",
                         !value && "text-muted-foreground"
                     )}
                 >
@@ -38,6 +38,7 @@ export function DayFieldPopover({ value, onChange }: DayFieldPopoverProps) {
             >
                 <Calendar
                     mode="single"
+                    captionLayout="dropdown-months"
                     selected={value ? new Date(value) : undefined}
                     onSelect={(date) => {
                         if (date) {

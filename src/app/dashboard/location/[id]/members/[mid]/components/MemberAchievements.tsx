@@ -1,11 +1,10 @@
 'use client'
 
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui'
 import {
-    Item,
-    ItemContent,
-    ItemMedia,
-} from '@/components/ui/item'
+    Empty, EmptyHeader, EmptyMedia,
+    EmptyTitle, EmptyDescription, Progress, Item, ItemContent, ItemMedia
+} from '@/components/ui'
+
 import { useMemberAchievements } from '@/hooks'
 import { MemberAchievement } from '@/types'
 import { format } from 'date-fns'
@@ -45,14 +44,35 @@ function MemberAchievementItem({ ma }: { ma: MemberAchievement }) {
             <ItemMedia variant="image">
                 <Image src={achievement?.badge || ''} alt={achievement?.name || ''} width={50} height={50} />
             </ItemMedia>
-            <ItemContent>
-                <span className="font-medium">
-                    {achievement?.name}
-                </span>
-                <span className="text-muted-foreground text-xs">
-                    {ma.dateAchieved ? format(ma.dateAchieved, 'MMM d, yyyy') : 'In Progress'}
+            <ItemContent className="flex flex-row justify-between gap-2 items-center">
+                <div className="flex flex-col ">
+                    <span className="text-sm font-medium">
+                        {achievement?.name}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                        {achievement?.points} points
+                    </span>
+                </div>
+                <span className="text-muted-foreground text-sm">
+                    {ma.dateAchieved ?
+                        (
+                            <span className="text-muted-foreground text-sm">
+                                Achieved on {format(ma.dateAchieved, 'MMM d, yyyy')}
+                            </span>
+                        ) : (
+                            <div className="flex flex-col justify-center items-center">
+
+                                <Progress
+                                    value={((ma.progress || 0) / (achievement?.requiredActionCount || 1)) * 100}
+                                    className="h-2 w-24 bg-foreground/10"
+                                />
+                                <span className="text-muted-foreground text-xs font-medium">
+                                    {ma.progress || 0} / {achievement?.requiredActionCount || 1}
+                                </span>
+                            </div>
+                        )}
                 </span>
             </ItemContent>
-        </Item>
+        </Item >
     )
 }

@@ -1,13 +1,12 @@
 'use client'
 import { Loader2 } from "lucide-react";
 import React, { useState } from 'react'
-import { Button, Card, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { Input } from "@/components/forms";
 import { InfoType } from "../page";
-import { LocationStatus } from "@/types";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 
 
 type CompanyInfoProps = {
@@ -21,7 +20,7 @@ type CompanyInfoProps = {
 export default function CompanyInfos({ lid, currentValue, type, title, description }: CompanyInfoProps) {
     const [loading, setLoading] = useState(false);
     const [value, setValue] = useState<string | null>(currentValue);
-    const { data: session, update } = useSession()
+    const { update } = useSession()
     async function saveChanges() {
         if (!value || value === currentValue) return;
         setLoading(true);
@@ -41,13 +40,8 @@ export default function CompanyInfos({ lid, currentValue, type, title, descripti
             return;
         }
         if (type === 'name') {
-            update({
-                locations: session?.user.locations.map((location: { id: string, status: LocationStatus }) => {
-                    return location.id === lid
-                        ? { ...location, [type]: value }
-                        : location
-                })
-            });
+            await update();
+            return toast.success(`Location name updated!`);
         }
     }
 

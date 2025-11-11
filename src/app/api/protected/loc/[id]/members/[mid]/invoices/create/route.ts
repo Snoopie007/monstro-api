@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { memberInvoices, members, transactions, memberSubscriptions } from "@/db/schemas";
 import { eq } from "drizzle-orm";
-import { getStripeCustomer } from "@/libs/server/stripe";
 import type Stripe from "stripe";
+import { MemberStripePayments } from "@/libs/server/stripe";
 
 type CreateInvoiceProps = {
   id: string;
@@ -24,7 +24,7 @@ export async function POST(
       items,
       dueDate,
       type,
-      paymentMethod,
+      paymentType,
       tax,
       discount,
       selectedSubscriptionId,
@@ -82,7 +82,7 @@ export async function POST(
         currency: subscription.plan.currency || "usd",
         status: "draft" as const,
         dueDate: new Date(subscription.currentPeriodEnd),
-        paymentMethod: subscription.paymentMethod as "manual" | "cash",
+        paymentType: subscription.paymentType,
         invoiceType: "recurring" as const,
         forPeriodStart: new Date(subscription.currentPeriodStart),
         forPeriodEnd: new Date(subscription.currentPeriodEnd),
@@ -100,21 +100,27 @@ export async function POST(
           .returning();
 
         // Create incomplete transaction
-        await tx
-          .insert(transactions)
-          .values({
-            memberId: params.mid,
-            locationId: params.id,
-            invoiceId: newInvoice.id,
-            subscriptionId: subscription.id,
-            description: `${subscription.plan.name} - Recurring Payment`,
-            type: "inbound",
-            status: "incomplete",
-            paymentMethod: subscription.paymentMethod,
+        await tx.insert(transactions).values({
+          memberId: params.mid,
+          locationId: params.id,
+          invoiceId: newInvoice.id,
+          description: `${subscription.plan.name} - Recurring Payment`,
+          type: "inbound",
+          status: "incomplete",
+          paymentType: subscription.paymentType,
+          total: subscription.plan.price,
+          currency: subscription.plan.currency || "usd",
+          created: new Date(),
+          subTotal: subscription.plan.price,
+          // TODO: implement tax
+          // tax: 
+          items: [{
+            productId: subscription.plan.id,
             amount: subscription.plan.price,
-            currency: subscription.plan.currency || "usd",
-            created: new Date(),
-          });
+            tax: 0,
+            quantity: 1,
+        }],
+        });
 
         return newInvoice;
       });
@@ -123,30 +129,30 @@ export async function POST(
     }
 
     // Manual payment flow - fully manual, no Stripe
-    if (paymentMethod === "manual") {
-        const localInvoiceData = {
-            memberId: params.mid,
-            locationId: params.id,
-            description:
-              description ||
-              `Custom invoice for ${member.firstName} ${member.lastName}`,
-            items: items,
-            total: items.reduce((sum: number, item: Record<string, unknown>) => sum + (item.price as number) * (item.quantity as number), 0),
-            subtotal: items.reduce(
-              (sum: number, item: Record<string, unknown>) => sum + (item.price as number) * (item.quantity as number),
-              0
-            ),
-            tax: tax || 0,
-            discount: discount || 0,
-            currency: "usd",
-            status: "draft" as const,
-            dueDate: dueDate ? new Date(dueDate) : new Date(),
-            paymentMethod: "manual" as const,
-            invoiceType: "one-off" as const,
-            metadata: {
-              type: type,
-            },
-          };
+    if (paymentType === "cash") {
+      const localInvoiceData = {
+        memberId: params.mid,
+        locationId: params.id,
+        description:
+          description ||
+          `Custom invoice for ${member.firstName} ${member.lastName}`,
+        items: items,
+        total: items.reduce((sum: number, item: Record<string, unknown>) => sum + (item.price as number) * (item.quantity as number), 0),
+        subtotal: items.reduce(
+          (sum: number, item: Record<string, unknown>) => sum + (item.price as number) * (item.quantity as number),
+          0
+        ),
+        tax: tax || 0,
+        discount: discount || 0,
+        currency: "usd",
+        status: "draft" as const,
+        dueDate: dueDate ? new Date(dueDate) : new Date(),
+        paymentType: "cash" as const,
+        invoiceType: "one-off" as const,
+        metadata: {
+          type: type,
+        },
+      };
 
 
       const invoice = await db.transaction(async (tx) => {
@@ -166,8 +172,8 @@ export async function POST(
             description: `Manual invoice - ${type}`,
             type: "inbound",
             status: "incomplete",
-            paymentMethod: localInvoiceData.paymentMethod,
-            amount: localInvoiceData.total,
+            paymentType: localInvoiceData.paymentType,
+            total: localInvoiceData.total,
             currency: localInvoiceData.currency,
             created: new Date(),
           });
@@ -180,7 +186,7 @@ export async function POST(
 
     // Cash payment flow - Stripe handles invoice but payment is cash
     // Stripe flow - card payment
-    if (paymentMethod === "cash" || paymentMethod === "stripe" || !paymentMethod) {
+    if (paymentType === "card" || !paymentType) {
       // Validate Stripe customer exists
       if (!member?.stripeCustomerId) {
         return NextResponse.json(
@@ -190,7 +196,21 @@ export async function POST(
       }
 
       // Get Stripe customer instance
-      const stripe = await getStripeCustomer({ id: params.id, mid: params.mid });
+      const integration = await db.query.integrations.findFirst({
+        where: (integrations, { eq, and }) =>
+          and(
+            eq(integrations.locationId, params.id),
+            eq(integrations.service, "stripe")
+          ),
+      });
+      if (!integration || !integration.accountId) {
+        return NextResponse.json(
+          { error: "Stripe integration not found" },
+          { status: 404 }
+        );
+      }
+      const stripe = new MemberStripePayments(integration.accountId);
+      stripe.setCustomer(member.stripeCustomerId);
 
       let stripeInvoice: Stripe.Invoice | Stripe.SubscriptionSchedule | undefined;
       let localInvoiceData: Record<string, unknown> | undefined;
@@ -204,9 +224,8 @@ export async function POST(
             {
               amount: item.price * item.quantity,
               currency: "usd",
-              description: `${item.name}${
-                item.description ? ` - ${item.description}` : ""
-              }`,
+              description: `${item.name}${item.description ? ` - ${item.description}` : ""
+                }`,
               metadata: {
                 locationId: params.id,
                 createdBy: "admin",
@@ -225,8 +244,8 @@ export async function POST(
           due_date: dueDate
             ? Math.floor(new Date(dueDate).getTime() / 1000)
             : Math.floor(
-                new Date(Date.now() + 24 * 60 * 60 * 1000).getTime() / 1000
-              ),
+              new Date(Date.now() + 24 * 60 * 60 * 1000).getTime() / 1000
+            ),
           pending_invoice_items_behavior: "include",
           metadata: {
             locationId: params.id,
@@ -253,7 +272,7 @@ export async function POST(
           currency: "usd",
           status: "draft" as const,
           dueDate: dueDate ? new Date(dueDate) : new Date(),
-          paymentMethod: paymentMethod === "cash" ? ("cash" as const) : ("stripe" as const),
+          paymentType: paymentType === "cash" ? ("cash" as const) : ("card" as const),
           invoiceType: "one-off" as const,
           metadata: {
             stripeInvoiceId: stripeInvoice.id,
@@ -314,7 +333,7 @@ export async function POST(
           currency: "usd",
           status: "draft" as const,
           dueDate: new Date(recurringSettings.startDate),
-          paymentMethod: paymentMethod === "cash" ? ("cash" as const) : ("stripe" as const),
+          paymentType: paymentType === "cash" ? ("cash" as const) : ("card" as const),
           invoiceType: "recurring" as const,
           metadata: {
             stripeScheduleId: stripeInvoice.id,

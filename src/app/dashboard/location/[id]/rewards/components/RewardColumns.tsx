@@ -1,7 +1,6 @@
 
 import { Reward } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
-import { Pencil } from "lucide-react";
 import { UpdateReward } from "./UpdateReward";
 
 export const RewardColumns = (lid: string): ColumnDef<Reward, any>[] => [
@@ -14,7 +13,7 @@ export const RewardColumns = (lid: string): ColumnDef<Reward, any>[] => [
             return (
 
                 <div className="flex flex-row items-center gap-2 group justify-between w-[150px]">
-                    <span className="text-sm font-medium truncate">
+                    <span className=" font-medium truncate">
                         {reward.name}
                     </span>
                     <UpdateReward reward={reward} lid={lid} />

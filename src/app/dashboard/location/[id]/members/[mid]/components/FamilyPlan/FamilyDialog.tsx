@@ -31,6 +31,9 @@ export function FamilyDialog({ familyPlans, parentPlan }: FamilyDialogProps) {
 
     function handleOpenChange(open: boolean) {
         setOpen(open);
+        if (!open) {
+            setSlide('existing');
+        }
     }
 
     return (
@@ -48,6 +51,7 @@ export function FamilyDialog({ familyPlans, parentPlan }: FamilyDialogProps) {
 
                     <SearchFM
                         setSlide={setSlide}
+                        onClose={() => handleOpenChange(false)}
                         parentPlan={parentPlan}
                         familyPlans={familyPlans}
                         fms={member?.familyMembers || []}

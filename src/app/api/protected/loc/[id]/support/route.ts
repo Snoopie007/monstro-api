@@ -1,9 +1,8 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { authWithContext } from '@/libs/auth/server'
 import { db } from '@/db/db'
 import { eq } from 'drizzle-orm'
-import { supportAssistants } from '@/db/schemas'
-import { BotModel, BotStatus } from '@/db/schemas/support/'
+import { supportAssistants, BotModel, BotStatus } from '@/db/schemas'
 import { DEFAULT_SUPPORT_TOOLS } from '@/libs/SupportDefaults'
 import type { SupportPersona } from '@/types'
 
@@ -27,7 +26,7 @@ export async function GET(
     const params = await props.params
 
     try {
-        const session = await auth()
+        const session = await authWithContext()
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -75,7 +74,7 @@ export async function POST(
     const params = await props.params
 
     try {
-        const session = await auth()
+        const session = await authWithContext()
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -133,7 +132,7 @@ export async function PUT(
     const params = await props.params
 
     try {
-        const session = await auth()
+        const session = await authWithContext()
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

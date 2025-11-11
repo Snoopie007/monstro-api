@@ -9,6 +9,7 @@ import { eq } from 'drizzle-orm';
 import { sales } from '@/db/admin/sales';
 import { Location } from '@/types';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { DEFAULT_LOCATION_SETTINGS } from '@/libs/data';
 const stripe = new VendorStripePayments();
 
 
@@ -78,11 +79,11 @@ export async function POST(req: Request) {
 
         await db.transaction(async (tx) => {
             await tx.insert(locationState).values({
-                planId: sale.planId,
+                planId: sale.planId || 1,
+                settings: DEFAULT_LOCATION_SETTINGS,
                 agreeToTerms: sale.agreedToTerms,
                 locationId: location.id,
                 status: "active",
-                usagePercent: 0,
                 startDate: today,
                 lastRenewalDate: today,
             })

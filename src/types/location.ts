@@ -8,6 +8,7 @@ import { Program } from "./program";
 import { Transaction } from "./transaction";
 import { Wallet } from "./wallet";
 import { MemberPointsHistory } from "./achievement";
+import { PaymentType } from "./DatabaseEnums";
 
 export type Location = typeof locations.$inferSelect & {
   locationState?: LocationState;
@@ -26,5 +27,7 @@ export type LocationState = typeof locationState.$inferSelect & {
 
 
 export type LocationSettings = {
+  theme: 'default';
   passOnFees: boolean;
+  processingMethods: PaymentType[];
 }

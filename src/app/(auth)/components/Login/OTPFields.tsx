@@ -9,7 +9,7 @@ import { FormControl, FormField } from '@/components/forms'
 import { FormItem } from '@/components/forms'
 import { UseFormReturn } from 'react-hook-form'
 import { toast } from 'react-toastify'
-import { signIn } from 'next-auth/react'
+import { signIn } from '@/hooks/useSession'
 import { Loader2 } from 'lucide-react'
 import { OTPRetry } from './OTPRetry'
 import { LoginSchema } from '@/libs/FormSchemas/schemas'
@@ -20,7 +20,6 @@ interface VerifyOTPProps {
 
 export function VerifyOTP({ form }: VerifyOTPProps) {
     const searchParams = useSearchParams();
-    const [loading, setLoading] = useState(false);
     const router = useRouter();
     const { type, ...rest } = form.getValues();
 
@@ -33,22 +32,20 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
             return;
         }
 
-        setLoading(true);
-
         const res = await signIn("credentials", {
             redirect: false,
             ...v,
         });
 
-        setLoading(false)
         if (res?.error) {
+
             toast.error(res.code || 'Something went wrong. Please contact support at support@monstro.com.');
             return;
         }
         const redirect = searchParams.get('redirect');
         const redirectUrl = redirect ? decodeURIComponent(redirect) : '/dashboard/locations';
-        return router.push(redirectUrl);
 
+        router.push(redirectUrl);
     }
 
     return (
@@ -84,16 +81,10 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
             <div className="flex ">
                 <Button
                     size="lg"
-                    disabled={form.formState.isSubmitting || loading || !form.formState.isValid}
-                    className={cn(
-                        "children:hidden cursor-pointer ",
-
-                        { "children:inline-block": loading })
-                    }
+                    disabled={form.formState.isSubmitting || !form.formState.isValid}
                     onClick={form.handleSubmit(onSubmit)}
                 >
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                    Verify
+                    {form.formState.isSubmitting ? <Loader2 className=" size-4 animate-spin" /> : "Verify"}
                 </Button>
             </div>
         </div>

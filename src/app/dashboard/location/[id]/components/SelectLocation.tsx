@@ -10,8 +10,9 @@ import { useEffect, useState } from "react";
 import { ChevronsUpDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Location } from "@/types";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 import { useRouter } from "next/navigation";
+import { cn } from "@/components/event-calendar";
 
 
 
@@ -25,7 +26,7 @@ export default function LocationSelect({ locationId }: { locationId: string }) {
         if (locationId) {
             setSelectedLocation(session?.user.locations.find((location: Location) => `${location.id}` === locationId));
         }
-    }, [locationId])
+    }, [locationId, session?.user.locations])
 
     function handleSelect(location: Location) {
 
@@ -41,11 +42,16 @@ export default function LocationSelect({ locationId }: { locationId: string }) {
 
             < Popover open={open} onOpenChange={setOpen} >
                 <PopoverTrigger asChild>
-                    <Button variant="ghost" role="combobox" className="h-8 px-4 text-sm rounded-lg bg-foreground/10  hover:bg-foreground/20 hover:text-foreground  cursor-pointer"
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "h-8 gap-2 px-4 text-sm rounded-lg bg-foreground/10",
+                            "hover:bg-foreground/20 hover:text-foreground  cursor-pointer"
+                        )}
 
                     >
                         {selectedLocation ? selectedLocation.name : "Select a location"}
-                        <ChevronsUpDown className="ml-2 size-4 stroke-black dark:stroke-white" />
+                        <ChevronsUpDown className=" size-4 -mt-0.5" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-[280px] p-0 border-foreground/10">

@@ -9,6 +9,7 @@ import {
 import { tryCatch } from '@/libs/utils'
 import { Transaction } from '@/types/transaction'
 import { EllipsisVertical } from 'lucide-react'
+import { toast } from 'react-toastify'
 
 interface MemberPaymentActionsProps {
     transaction: Transaction
@@ -21,13 +22,18 @@ export default function MemberPaymentActions({
     mid,
     lid,
 }: MemberPaymentActionsProps) {
-    async function makeARefund(id: string) {
+    async function makeARefund(id: string | undefined) {
+        if (!id) return;
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/members/${mid}/transactions`, {
                 method: 'PUT',
                 body: JSON.stringify({ chargeId: id }),
             })
         )
+        if (error) {
+            toast.error('Something went wrong, please try again later');
+            return;
+        }
     }
 
     return (

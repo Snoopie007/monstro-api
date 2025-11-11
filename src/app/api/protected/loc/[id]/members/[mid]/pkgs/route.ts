@@ -1,27 +1,26 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberPackages, transactions } from "@/db/schemas";
-import { getStripeCustomer } from "@/libs/server/stripe";
-import { createPackage } from "../../utils";
-import { NextRequest, NextResponse } from "next/server";
-import { MemberPackage } from "@/types";
+import { memberPackages, transactions } from "@/db/schemas";
+import { MemberStripePayments } from "@/libs/server/stripe";
 
-type PackageProps = {
-	id: string;
-	mid: string;
+import { NextRequest, NextResponse } from "next/server";
+import { calculatePeriodEnd, calculateStripeFee } from "../../utils";
+
+type Props = {
+	params: Promise<{
+		id: string;
+		mid: string;
+	}>
 };
 
-export async function GET(
-	req: NextRequest,
-	props: { params: Promise<PackageProps> }
-) {
-	const params = await props.params;
+export async function GET(req: NextRequest, props: Props) {
+	const { id, mid } = await props.params;
 
 	try {
 		const packages = await db.query.memberPackages.findMany({
 			where: (memberPackage, { eq, and }) =>
 				and(
-					eq(memberPackage.memberId, params.mid),
-					eq(memberPackage.locationId, params.id)
+					eq(memberPackage.memberId, mid),
+					eq(memberPackage.locationId, id)
 				),
 			with: {
 				plan: true,
@@ -35,139 +34,158 @@ export async function GET(
 	}
 }
 
-export async function POST(
-	req: NextRequest,
-	props: { params: Promise<PackageProps> }
-) {
-	const params = await props.params;
-	const { stripePaymentMethod, hasIncompletePlan, other, ...data } =
-		await req.json();
+export async function POST(req: NextRequest, props: Props) {
 
+	const { id, mid } = await props.params;
+	const body = await req.json();
+
+	const { paymentMethod, paymentType, trialDays, ...data } = body;
 	try {
 		const plan = await db.query.memberPlans.findFirst({
-			where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId),
-		});
+			where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
+		})
 
 		if (!plan) {
-			return NextResponse.json(
-				{ error: "No valid plan not found" },
-				{ status: 404 }
-			);
+			throw new Error("Plan not found")
 		}
 
-		const locationState = await db.query.locationState.findFirst({
-			where: (locationState, { eq }) => eq(locationState.locationId, params.id),
+		const ml = await db.query.memberLocations.findFirst({
+			where: (memberLocation, { eq, and }) => and(
+				eq(memberLocation.memberId, mid),
+				eq(memberLocation.locationId, id)
+			),
+			with: {
+				member: true,
+				location: {
+					with: {
+						locationState: true
+					}
+				}
+			}
 		});
 
-		if (!locationState) {
-			return NextResponse.json(
-				{ error: "No valid location not found" },
-				{ status: 404 }
+		if (!ml) {
+			throw new Error("No member location found")
+		}
+
+		const { location, member } = ml;
+
+		if (!member || !member.stripeCustomerId) {
+			throw new Error("Member not found");
+		}
+
+
+
+
+		const tax = Math.floor(plan.price * (location.locationState?.taxRate / 10000));
+		const total = plan.price + tax;
+
+
+		const today = new Date();
+		const startDate = data.startDate ? new Date(data.startDate) : today;
+
+		const { expireInterval, expireThreshold } = plan;
+
+		let expireDate: Date | null = null;
+		if (data.expireDate) {
+			expireDate = new Date(data.expireDate);
+		} else if (expireInterval && expireThreshold) {
+			expireDate = calculatePeriodEnd(
+				startDate,
+				expireInterval,
+				expireThreshold
 			);
 		}
 
-		const tax = Math.floor(plan.price * (locationState.taxRate / 10000));
-		const amount = plan.price + tax;
 
-		const { newTransaction, newPkg, newInvoice } = createPackage(
-			{
-				...data,
-				memberId: params.mid,
-				locationId: params.id,
-			},
-			plan,
-			tax
-		);
+		let clientSecret: string | null = null;
+		if (paymentType === "card") {
+			const integration = await db.query.integrations.findFirst({
+				where: (integration, { eq, and }) =>
+					and(
+						eq(integration.locationId, id),
+						eq(integration.service, "stripe")
+					),
+				columns: {
+					accountId: true,
+				},
+			});
 
-		let clientSecret: string | undefined;
-		let md = {};
+			if (!integration) {
+				throw new Error("Integration not found");
+			}
 
-		if (data.paymentMethod === "card") {
-			const stripe = await getStripeCustomer(params);
-			const res = await stripe.createPaymentIntent(amount, {
-				paymentMethod: stripePaymentMethod.id,
+			const stripe = new MemberStripePayments(integration.accountId)
+			stripe.setCustomer(member.stripeCustomerId);
+
+			let feePercent = location.locationState?.usagePercent;
+
+			if (paymentType === "card") {
+				feePercent += calculateStripeFee(plan.price);
+			}
+
+			const { clientSecret: stripeClientSecret } = await stripe.createPaymentIntent(total, {
+				paymentMethod: paymentMethod.id,
 				currency: plan.currency,
-				applicationFeePercent: locationState.usagePercent / 100,
+				feePercent: feePercent / 100,
 				description: `One time payment for ${plan.name}`,
 				metadata: {
 					planId: plan.id,
-					tax,
-					startDate: newPkg.startDate,
-					locationId: params.id,
-					memberId: params.mid,
+					locationId: id,
+					memberId: mid,
 				},
 			});
-			if (!res.clientSecret) {
-				return NextResponse.json(
-					{ error: "Failed to create payment intent" },
-					{ status: 500 }
-				);
-			}
-			newTransaction.status = "paid";
-			newTransaction.type = "inbound";
-			newPkg.status = "active";
-			newInvoice.status = "paid";
-			const cardInfo =
-				data.token?.card || data.stripePaymentMethod?.card || null;
-
-			if (cardInfo) {
-				md = {
-					card: { brand: cardInfo.brand, last4: cardInfo.last4 },
-				};
-			}
-		} else if (data.paymentMethod === "cash") {
-			// Manual payment - package active immediately
-			newPkg.status = "active";
-			
-			// Invoice starts as DRAFT (staff must mark as sent)
-			newInvoice.status = "draft";
-			newInvoice.paymentMethod = "manual";
-			newInvoice.invoiceType = "one-off";
-			// NO sentAt - set when staff marks as "sent"
-			
-			// Transaction created as incomplete
-			newTransaction.status = "incomplete";
-			newTransaction.paymentMethod = "cash";
-			newTransaction.type = "inbound";
-			
-			md = {
-				paymentMethod: "cash",
-				createdAt: new Date().toISOString(),
-			};
+			clientSecret = stripeClientSecret;
 		}
 
-		const newPackage = await db.transaction(async (tx) => {
-			const stripePaymentId = clientSecret?.split("_secret_")[0];
-			const [pkg] = await tx
-				.insert(memberPackages)
-				.values({
-					...newPkg,
-					stripePaymentId,
-					metadata: md,
-				})
-				.returning();
-			/** Create Invoice */
-			const [{ iid }] = await tx
-				.insert(memberInvoices)
-				.values({
-					...newInvoice,
-					memberPackageId: pkg.id,
-				})
-				.returning({ iid: memberInvoices.id });
+		const pkg = await db.transaction(async (tx) => {
+			const CommonData = {
+				locationId: id,
+				memberId: mid,
+				paymentType,
+			}
+
+			const [pkg] = await tx.insert(memberPackages).values({
+				...CommonData,
+				stripePaymentId: clientSecret?.split("_secret_")[0] || null,
+				memberPlanId: plan.id,
+				...data,
+				status: "active",
+				startDate,
+				expireDate,
+			}).returning();
+
 			/** Create Transaction */
 			await tx.insert(transactions).values({
-				...newTransaction,
-				invoiceId: iid,
-				packageId: pkg.id,
-				metadata: md,
+				description: `One time payment for ${plan.name}`,
+				...CommonData,
+				totalTax: tax,
+				type: "inbound",
+				items: [{
+					productId: plan.id,
+					amount: plan.price,
+					tax: tax,
+					quantity: 1,
+				}],
+				status: "paid",
+				subTotal: plan.price,
+				total,
+				currency: plan.currency,
+				metadata: {
+					packageId: pkg.id,
+				},
 			});
 			return pkg;
 		});
 
-		return NextResponse.json({
-			...newPackage,
-			plan,
-		} as MemberPackage, { status: 200 });
+
+		// Send email receipt
+
+		// Hook to expire day
+
+		// Trigger evaluation of triggers
+
+		return NextResponse.json({ ...pkg, plan }, { status: 200 });
 	} catch (err) {
 		console.log(err);
 		return NextResponse.json({ error: err }, { status: 500 });

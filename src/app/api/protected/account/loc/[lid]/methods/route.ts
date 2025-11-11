@@ -4,7 +4,7 @@ import { VendorStripePayments } from "@/libs/server/stripe";
 
 import { eq } from "drizzle-orm";
 import { getPlan } from "../../../utils";
-import { auth } from "@/auth";
+import { authWithContext } from '@/libs/auth/server';
 import { locations, locationState } from "@/db/schemas/locations";
 import { db } from "@/db/db";
 
@@ -14,8 +14,8 @@ export async function POST(
 ) {
 	const data = await req.json();
 	const { paymentMethodId, state } = data;
+	const session = await authWithContext();
 
-	const session = await auth();
 	if (!session || !session.user.stripeCustomerId) {
 		return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
 	}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 import { useMemo } from "react";
 
-export type Permission = 
+export type Permission =
   // Member Management
   | "view member" | "edit member" | "add member" | "delete member"
   // Program Management
@@ -16,7 +16,7 @@ export type Permission =
   | "view role" | "edit role" | "add role" | "delete role"
   // Business Management
   | "edit business_profile" | "add member_card";
-
+// Reward Management
 /**
  * Hook to check if the current user has a specific permission
  * @param permission - The permission to check
@@ -33,7 +33,7 @@ export function usePermission(permission: Permission, locationId?: string): bool
     // Vendors have all permissions for their locations
     if (session.user.role === "vendor") {
       if (!locationId) return true; // Vendor has global permission if no location specified
-      
+
       return session.user.locations?.some((loc: any) => loc.id === locationId) || false;
     }
 
@@ -41,7 +41,7 @@ export function usePermission(permission: Permission, locationId?: string): bool
     if (session.user.role === "staff") {
       if (!locationId) {
         // Check if user has permission for any location
-        return session.user.locations?.some((loc: any) => 
+        return session.user.locations?.some((loc: any) =>
           loc.permissions?.includes(permission)
         ) || false;
       }
@@ -78,7 +78,7 @@ export function useAnyPermission(permissions: Permission[], locationId?: string)
     // Staff members need explicit permission checks
     if (session.user.role === "staff") {
       if (!locationId) {
-        return session.user.locations?.some((loc: any) => 
+        return session.user.locations?.some((loc: any) =>
           loc.permissions?.some((perm: any) => permissions.includes(perm as Permission))
         ) || false;
       }
@@ -160,9 +160,9 @@ export function useUserPermissions(locationId?: string): string[] {
         // Business Management
         "edit business_profile", "add member_card"
       ];
-      
+
       if (!locationId) return allPermissions;
-      
+
       return session.user.locations?.some((loc: any) => loc.id === locationId) ? allPermissions : [];
     }
 

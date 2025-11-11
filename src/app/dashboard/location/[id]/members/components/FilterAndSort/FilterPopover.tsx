@@ -82,7 +82,7 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="hover:bg-foreground/10">
+                <Button variant="ghost" className="hover:bg-foreground/10">
                     <FilterIcon size={14} className="mr-2" />
                     Filter
                     {filterKv.length > 0 &&
@@ -131,7 +131,7 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
                 </div>
 
                 <div className="flex flex-row justify-between">
-                    <Button variant="create" size="xs" onClick={() => {
+                    <Button variant="ghost" className='bg-foreground/5 rounded-lg' onClick={() => {
                         const firstAvailableColumn = allColumnOptions.find(option =>
                             option && !filterKv.some(filter => filter.id === option.id)
                         );

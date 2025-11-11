@@ -139,7 +139,7 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
             const invoice = await response.json();
             setCreatedInvoice(invoice);
             toast.success(
-                data.type === 'from-subscription' || data.paymentMethod === 'manual'
+                data.type === 'from-subscription' || data.paymentType === 'cash'
                     ? 'Invoice created as draft'
                     : 'Invoice created and sent'
             );
@@ -153,10 +153,9 @@ export const useInvoiceCreation = ({id, mid, ref}: {id: string, mid: string | nu
 
     // Send invoice
     const handleSendInvoice = async () => {
-        // For manual or cash payment methods, or if it's a simple invoice object (from-subscription)
+        // For cash payment methods, or if it's a simple invoice object (from-subscription)
         // Just complete and navigate to member page
-        if (createdInvoice?.paymentMethod === 'manual' || 
-            createdInvoice?.paymentMethod === 'cash' ||
+        if (createdInvoice?.paymentType === 'cash' ||
             !createdInvoice?.invoice?.id) {
             handleComplete();
             return;

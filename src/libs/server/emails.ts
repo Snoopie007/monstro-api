@@ -1,57 +1,31 @@
-import * as sendgrid from '@sendgrid/mail';
-import { interEmailsAndText } from '../utils';
-import { EmailTemplates } from '../../templates/emails';
+import { serversideApiClient } from '../api/server';
 
-type EmailOptions = {
-    options: {
-        to: string;
-        subject: string;
-        headers?: Record<string, string>;
-    },
-    template: keyof typeof EmailTemplates;
-    data: Record<string, any>;
-}
-
-
-export class EmailSender {
-    private _sender: sendgrid.MailService;
-    private _fromEmail: string;
-    constructor() {
-        if (!process.env.SENDGRID_API_KEY) {
-            throw new Error("SENDGRID_API_KEY must be set in the environment");
-        }
-        this._sender = sendgrid
-        this._sender.setApiKey(process.env.SENDGRID_API_KEY);
-        this._fromEmail = 'no-reply@mymonstro.com';
-    }
-
-
-    public async sendSupportEmail(props: EmailOptions) {
-        const html = interEmailsAndText(EmailTemplates[props.template], props.data);
-        console.log(html);
-        await this._sender.send({
-            ...props.options,
-            from: {
-                email: 'support@mymonstro.com',
-                name: 'Monstro Support'
-            },
-            replyTo: `case+${props.data.case.id}@support.mymonstro.com`,
-            html
-        });
-    }
-
-
-    public async send(props: EmailOptions) {
-        const html = interEmailsAndText(EmailTemplates[props.template], props.data);
-
-        await this._sender.send({
-            ...props.options,
-            from: {
-                email: this._fromEmail,
-                name: 'Monstro'
-            },
-            html
-        });
+/**
+ * Server-side function to send emails via monstro-api
+ * Call this from server routes/actions in monstro-15 to send templated emails
+ * 
+ * @example
+ * await sendEmailViaApi({
+ *   recipient: 'user@example.com',
+ *   template: 'LoginTokenEmail',
+ *   subject: 'Verify your email',
+ *   data: {
+ *     user: { name: 'John', email: 'john@example.com' },
+ *     otp: { token: '123456' }
+ *   }
+ * })
+ */
+export async function sendEmailViaApi(params: {
+    recipient: string;
+    template: string;
+    subject: string;
+    data: Record<string, string | number | boolean | object | null | undefined>;
+}): Promise<{ success: boolean; message: string }> {
+    try {
+        const client = serversideApiClient();
+        return await client.post('/protected/locations/email', params) as { success: boolean; message: string };
+    } catch (error) {
+        console.error('Failed to send email via API:', error);
+        throw error;
     }
 }
-

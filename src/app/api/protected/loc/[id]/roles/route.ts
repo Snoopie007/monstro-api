@@ -42,7 +42,7 @@ export async function POST(req: Request, props: { params: Promise<RoleProps> }) 
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
     
-    console.log(data)
+
     try {
         const [role] = await db.insert(roles).values({
            name: data.name,

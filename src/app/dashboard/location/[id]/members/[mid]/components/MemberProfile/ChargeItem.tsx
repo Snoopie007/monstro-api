@@ -26,6 +26,7 @@ import {
     SelectValue,
     Input,
     Textarea,
+    PriceInput,
 } from "@/components/forms";
 import { SetStateAction, Dispatch, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -52,9 +53,9 @@ export default function ChargeItem({ params, open, setOpen }: Props) {
         resolver: zodResolver(ChargeItemSchema),
         defaultValues: {
             amount: 0,
-            paymentMethod: "",
+            paymentType: "card",
             description: "",
-            cardId: undefined,
+            // cardId: undefined,
             item: "",
             chargeDate: undefined,
         }
@@ -106,15 +107,7 @@ export default function ChargeItem({ params, open, setOpen }: Props) {
                                 render={({ field }) => (
                                     <FormItem className="flex-1">
                                         <FormLabel size="tiny">Amount</FormLabel>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-[50%] -translate-y-[48%] text-sm text-foreground/50">$</span>
-                                            <Input {...field} type="number" step="0.01" min="0.00" className="pl-6" placeholder="0.00" value={field.value || ""}
-                                                onChange={(e) => {
-                                                    const value = e.target.value ? Math.floor(parseFloat(e.target.value) * 100) / 100 : "";
-                                                    field.onChange(value);
-                                                }}
-                                            />
-                                        </div>
+                                        <PriceInput value={field.value} onChange={field.onChange} />
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -160,16 +153,16 @@ export default function ChargeItem({ params, open, setOpen }: Props) {
 
                             <FormField
                                 control={form.control}
-                                name="paymentMethod"
+                                name="paymentType"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel size="tiny">Payment Method</FormLabel>
+                                        <FormLabel size="tiny">Payment Type</FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Select a payment method" />
+                                                <SelectValue placeholder="Select a payment type" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {['card', "cash", "zelle", "bank payment", "cheque"].map((method) => (
+                                                {['card', "cash"].map((method) => (
                                                     <SelectItem key={method} value={method.toLowerCase()} className="capitalize">
                                                         {method}
                                                     </SelectItem>

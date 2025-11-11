@@ -23,7 +23,7 @@ import {
     SelectValue,
 } from "@/components/forms";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 
 import { toast } from "react-toastify";
 import { Industries } from "@/libs/data";
@@ -147,9 +147,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
         }
         const data = await result.json();
 
-        await update({
-            locations: [...session?.user.locations, data],
-        })
+        await update()
 
         const url = saleId ? `/dashboard/location/${data.id}` : `/dashboard/locations/new/${data.id}`;
         return router.push(url);

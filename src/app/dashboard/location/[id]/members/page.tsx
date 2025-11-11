@@ -1,5 +1,3 @@
-import { MemberList } from './components/MemberList'
-
 import { db } from '@/db/db'
 import { and } from 'drizzle-orm'
 import MembersPage from './components/MembersPage'

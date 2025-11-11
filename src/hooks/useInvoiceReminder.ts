@@ -26,16 +26,16 @@ export function useInvoiceReminder(subscription: MemberSubscription) {
 
     // Only check if subscription is manual/cash and active
     if (
-      (subscription.paymentMethod === 'cash' || subscription.paymentMethod === 'manual') &&
+      (subscription.paymentType === 'cash') &&
       subscription.status === 'active'
     ) {
       checkExistingInvoice();
     }
-  }, [subscription.id, subscription.paymentMethod, subscription.status, memberInvoices]);
+  }, [subscription.id, subscription.paymentType, subscription.status, memberInvoices]);
 
   const shouldShowReminder = (): boolean => {
     // Only show for manual/cash subscriptions
-    if (subscription.paymentMethod !== 'cash' && subscription.paymentMethod !== 'manual') {
+    if (subscription.paymentType !== 'cash') {
       return false;
     }
     

@@ -9,11 +9,8 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
 
     try {
 
-        await db.update(locationState).set({
-            settings: {
-                ...data.settings,
-            },
-        }).where(eq(locationState.locationId, params.id))
+        await db.update(locationState).set(data)
+            .where(eq(locationState.locationId, params.id))
 
 
         return NextResponse.json({ success: true }, { status: 200 });

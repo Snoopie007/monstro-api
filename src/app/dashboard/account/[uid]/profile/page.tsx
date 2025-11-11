@@ -1,7 +1,7 @@
 import { Staff, Vendor } from "@/types";
 import { UserEmail, UserProfile } from "./components";
 import { db } from "@/db/db";
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import { notFound, redirect } from "next/navigation";
 import UserPhone from "./components/UserPhone";
 

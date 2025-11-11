@@ -90,8 +90,8 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
 						<div className="flex flex-row items-start gap-3">
 							<RadioGroupItem value="now" id="now" />
 
-							<div className="space-y-0">
-								<Label htmlFor="now" className="text-sm cursor-pointer">
+							<div>
+								<Label htmlFor="now" >
 									Immediately
 								</Label>
 								<div className="text-xs text-muted-foreground">
@@ -103,8 +103,8 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
 						<div className="flex flex-row items-start gap-3">
 							<RadioGroupItem value="end" id="end" />
 
-							<div className="space-y-0">
-								<Label htmlFor="end" className="text-sm cursor-pointer">
+							<div >
+								<Label htmlFor="end" >
 									End of current period
 								</Label>
 								<div className="text-xs text-muted-foreground">
@@ -116,8 +116,8 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
 						<div className="flex flex-row items-start gap-3">
 							<RadioGroupItem value="custom" id="custom" />
 
-							<div className="w-full flex flex-col gap-1">
-								<Label htmlFor="custom" className="text-sm cursor-pointer">
+							<div className="w-full flex flex-col gap-2">
+								<Label htmlFor="custom" >
 									On custom date
 								</Label>
 								{formState.cancelOption === "custom" && (
@@ -157,7 +157,7 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
 						onChange={(e) =>
 							setFormState((prev) => ({ ...prev, reason: e.target.value }))
 						}
-						placeholder="Help us improve by sharing your reason for cancellation"
+						placeholder="Reason for cancellation"
 						rows={3}
 					/>
 				</div>
@@ -166,8 +166,7 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
 			<DialogFooter className="bg-transparent sm:justify-between">
 				<DialogClose asChild>
 					<Button
-						variant="foreground"
-						size="sm"
+						variant="outline"
 						className="border-foreground/10"
 						disabled={loading}
 					>
@@ -175,8 +174,7 @@ export function CancelSub({ sub, show, close }: CancelSubProps) {
 					</Button>
 				</DialogClose>
 				<Button
-					variant="continue"
-					size="sm"
+					variant="destructive"
 					onClick={handleSubmit}
 					disabled={loading}
 				>

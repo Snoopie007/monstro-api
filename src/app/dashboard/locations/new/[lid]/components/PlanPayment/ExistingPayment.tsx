@@ -7,7 +7,7 @@ import { cn, sleep, tryCatch } from "@/libs/utils";
 import AddPaymentMethod from "./AddMethod";
 import { Loader2 } from "lucide-react";
 import { Button, Skeleton } from "@/components/ui";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 
@@ -62,15 +62,7 @@ export function ExistingPlanPayment({ lid }: { lid: string }) {
 			return;
 		}
 
-		await update({
-			locations: session?.user.locations.map(
-				(location: { id: string; status: string }) => {
-					return location.id === locationState.locationId
-						? { ...location, status: "active" }
-						: location;
-				}
-			),
-		});
+		await update();
 
 		toast.update(toastRef, {
 			render: "Payment successful",

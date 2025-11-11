@@ -1,4 +1,5 @@
 export * from "./users";
+export * from "./sessions";
 export * from "./locations";
 export * from "./programs";
 export * from "./members";
@@ -17,7 +18,10 @@ export * from "./VendorReferrals";
 export * from "./transactions";
 export * from "./accounts";
 export * from "./ImportMembers";
-
-// SUPPORT ASSISTANT SCHEMAS
-export * from "./support";
-
+export * from "./SupportAssistants";
+export * from "./SupportConversations";
+export * from "./SupportTriggers";
+export * from "./SupportDocuments";
+export * from "./SupportLogs";
+export * from "./SupportBotEnums";
+export * from "./tax";

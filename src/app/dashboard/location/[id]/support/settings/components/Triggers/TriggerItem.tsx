@@ -4,7 +4,7 @@ import { Button, Switch } from '@/components/ui'
 import { SupportTrigger } from '@/types'
 import { Edit2, Loader2, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react'
 import { tryCatch } from '@/libs/utils'
-import { toast } from 'sonner'
+import { toast } from 'react-toastify'
 import { useMemo, useState } from 'react'
 
 interface TriggerItemProps {
@@ -66,7 +66,7 @@ export function TriggerItem({ trigger, onSelect, onUpdate }: TriggerItemProps) {
             <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">{trigger.name}</p>
                 <div className="flex items-center gap-2">
-                    <Switch checked={trigger.isActive} size="sm" onCheckedChange={handleToggle} />
+                    <Switch checked={trigger.isActive} onCheckedChange={handleToggle} />
                     <Button
                         variant="ghost"
                         type="button"

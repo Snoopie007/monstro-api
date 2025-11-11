@@ -10,9 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/libs/utils";
 import { Industries } from "@/libs/data";
-import { signIn } from 'next-auth/react';
+
+import { signIn } from '@/hooks/useSession'
 import { useJoin } from '../providers/JoinProvider';
-import { toast } from 'sonner';
+import { toast } from 'react-toastify';
 import { Loader2 } from 'lucide-react';
 
 const MemberCount = [
@@ -97,7 +98,8 @@ export function QuizForm() {
         try {
             setLoading(true);
             await signIn("credentials", {
-                ...user,
+                email: user?.email || "",
+                password: user?.password || "",
                 redirect: true,
                 callbackUrl: "/dashboard/locations/new"
             })

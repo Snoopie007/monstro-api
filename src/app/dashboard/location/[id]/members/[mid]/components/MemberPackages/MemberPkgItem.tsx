@@ -89,21 +89,28 @@ export function MemberPackageItem({ pkg }: MemberPackageItemProps) {
             </div>
             <div className="space-y-4 py-2">
                 <div className="grid grid-cols-3 items-center">
-                    <InfoField label="Duration">
-                        {format(pkg.startDate, 'MMM d, yyyy')} {' - '}
+                    <InfoField label="Start Date">
+                        {format(pkg.startDate, 'MMM d, yyyy')}
+                    </InfoField>
+                    <InfoField label="Expire Date">
                         {pkg.expireDate ? format(pkg.expireDate, 'MMM d, yyyy') : 'n/a'}
                     </InfoField>
+                    <InfoField label="Remaining">
+                        {remaining} classes
+                    </InfoField>
+                </div>
+                <div className="grid grid-cols-3 items-center">
                     <InfoField label="Price">
                         {formatAmountForDisplay(
                             (pkg.plan?.price || 0) / 100,
                             pkg.plan?.currency || 'usd'
                         )}
                     </InfoField>
-                    <InfoField label="Remaining">
-                        {remaining} classes
+                    <InfoField label="Payment Type">
+                        {pkg.paymentType || 'cash'}
                     </InfoField>
-                </div>
 
+                </div>
                 {isFamilyPlan && isPayer && (
                     <div className={`space-y-1  col-span-1 `}>
                         <div className="text-xs font-medium text-muted-foreground">Family Plan Members</div>

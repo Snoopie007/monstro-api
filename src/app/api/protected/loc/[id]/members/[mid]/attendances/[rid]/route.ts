@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { attendances } from '@/db/schemas';
-import { evaluateTriggers } from "@/libs/achievements";
+import { triggerIncrement } from "@/libs/achievements";
+import { serviceApiClient } from "@/libs/api/server";
 
 export async function POST(req: NextRequest, props: { params: Promise<{ mid: string, id: string, rid: string }> }) {
 	const params = await props.params;
@@ -38,15 +39,27 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: str
 
 		// Evaluate attendance triggers after successful check-in
 		try {
-			await evaluateTriggers({
-				memberId: params.mid,
-				locationId: params.id,
-				triggerType: 'attendances_count',
-				data: { attendanceId: newAttendance[0].id }
+			await triggerIncrement({
+				mid: params.mid,
+				lid: params.id,
+				type: 'Attendances Count',
+				amount: 1,
 			});
 		} catch (error) {
 			console.error('Error evaluating attendance triggers:', error);
 			// Don't fail the request if trigger evaluation fails
+		}
+
+		// Cancel the missed class email since member checked in
+		try {
+			const apiClient = serviceApiClient();
+			const jobId = `missed-class-${params.rid}`;
+
+			await apiClient.delete(`/protected/locations/email/${jobId}`);
+			console.log(`📧 Cancelled missed class email for reservation ${params.rid}`);
+		} catch (error) {
+			console.error('Error cancelling missed class email:', error);
+			// Don't fail the check-in if email cancellation fails
 		}
 
 		return NextResponse.json(newAttendance, { status: 201 });

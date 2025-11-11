@@ -2,14 +2,14 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Transaction } from "@/types";
 import { format } from "date-fns";
-
+import { formatAmountForDisplay } from "@/libs/utils";
 
 export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
 
     {
-        accessorKey: "item",
-        header: "Item",
-        id: "item"
+        accessorKey: "id",
+        header: "ID",
+        id: "id"
     },
     {
         accessorKey: "description",
@@ -28,30 +28,44 @@ export const TransactionColumns = (): ColumnDef<Transaction, any>[] => [
         },
     },
     {
-        accessorKey: "amount",
-        header: "Amount",
-        id: "amount",
+        accessorKey: "totalTax",
+        header: "Tax",
+        id: "totalTax",
         cell: ({ row }) => {
-
             const transaction = row.original
             return (
-                <div className="flex flex-row items-center gap-2">{transaction.amount / 100}</div>
+                <div className="flex flex-row items-center gap-2">{formatAmountForDisplay(transaction.totalTax / 100, transaction.currency || 'usd', true)}</div>
             )
         },
     },
     {
-        accessorKey: "direction",
-        header: "Direction",
-        id: "direction",
+        accessorKey: "total",
+        header: "Total",
+        id: "total",
+        cell: ({ row }) => {
+
+            const transaction = row.original
+            return (
+                <div className="flex flex-row items-center gap-2">
+                    {formatAmountForDisplay(transaction.total / 100, transaction.currency || 'usd', true)}
+                </div>
+            )
+        },
     },
     {
-        accessorKey: "paymentMethod",
-        header: "Payment Method",
-        id: "paymentMethod",
+        accessorKey: "paymentType",
+        header: "Payment Type",
+        id: "paymentType",
+        cell: ({ row }) => {
+            const transaction = row.original
+            return (
+                <div className="flex flex-row items-center gap-2">{transaction.paymentType}</div>
+            )
+        },
     },
     {
         accessorKey: "type",
-        header: "Type",
+        header: "Direction",
         id: "type",
     },
     {

@@ -1,1 +1,1 @@
-export * from './MemberPaymentMethods';
+export * from './MemberPMs';

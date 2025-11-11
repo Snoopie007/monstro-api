@@ -19,7 +19,7 @@ import { Loader2 } from "lucide-react";
 import { cn, sleep, tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn } from "@/hooks/useSession";
 import { Sale } from "@/types/admin";
 import { TermsAndConditions } from "@/components/terms";
 import { MonstroLegal } from "@/libs/server/MDXParse";

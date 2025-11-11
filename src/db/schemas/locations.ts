@@ -21,9 +21,10 @@ import { transactions } from "./transactions";
 import { vendors } from "./vendors";
 import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
-import { MemberLocationProfile } from "@/types/member";
+import type { MemberLocationProfile } from "@/types/member";
 import { attendances } from "./attendances";
-import { LocationSettings } from "@/types";
+import type { LocationSettings } from "@/types";
+import { taxRates } from "./tax";
 
 export const locations = pgTable("locations", {
   id: uuid("id")
@@ -59,7 +60,7 @@ export const locationState = pgTable("location_state", {
   locationId: text("location_id")
     .primaryKey()
     .references(() => locations.id, { onDelete: "cascade" }),
-  planId: integer("plan_id"),
+  planId: integer("plan_id").notNull().default(1),
   waiverId: text("waiver_id").references(() => locations.id, {
     onDelete: "set null",
   }),
@@ -167,6 +168,10 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
   wallet: one(wallets, {
     fields: [locations.id],
     references: [wallets.locationId],
+  }),
+  taxRate: one(taxRates, {
+    fields: [locations.id],
+    references: [taxRates.locationId],
   }),
 }));
 

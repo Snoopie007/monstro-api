@@ -1,3 +1,2 @@
-export * from './AchievementTriggerService';
-export * from './TriggerCounters';
+export * from './TriggerService';
 export * from './PointsService';

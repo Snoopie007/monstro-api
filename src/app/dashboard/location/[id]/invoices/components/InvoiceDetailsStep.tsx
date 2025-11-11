@@ -199,7 +199,7 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId
 
                     <FormField
                     control={form.control}
-                    name="paymentMethod"
+                    name="paymentType"
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Payment Method</FormLabel>
@@ -210,12 +210,12 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            <SelectItem value={hasStripeCustomer ? 'cash' : 'manual'}>Cash (Cash/Check)</SelectItem>
-                            {hasStripeCustomer && <SelectItem value="stripe">Card (Stripe)</SelectItem>}
+                            <SelectItem value='cash'>Cash (Cash/Check)</SelectItem>
+                            {hasStripeCustomer && <SelectItem value="card">Card (Stripe)</SelectItem>}
                             </SelectContent>
                         </Select>
                         <FormDescription>
-                            {field.value === 'manual'
+                            {field.value === 'cash'
                             ? 'Invoice will be created as draft. You can mark it as sent and collect payment manually.'
                             : 'Invoice will be processed through Stripe'}
                         </FormDescription>

@@ -38,7 +38,7 @@ export function ProgramMembers({
     const fetchCustomFields = async () => {
       try {
         const response = await fetch(
-          `/api/protected/loc/${locationId}/custom-fields`
+          `/api/protected/loc/${locationId}/cfs`
         );
         const data = await response.json();
 

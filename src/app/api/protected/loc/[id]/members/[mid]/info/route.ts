@@ -3,7 +3,7 @@ import { db } from "@/db/db";
 import { memberLocations } from "@/db/schemas";
 import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { authWithContext } from "@/libs/auth/server";
 import { MemberLocationProfile } from "@/types/member";
 import { hasPermission } from "@/libs/server/permissions";
 
@@ -15,8 +15,8 @@ export async function POST(
 	const data = await req.json();
 
 	try {
-		const session = await auth();
-		if (!session?.user?.id) {
+		const session = await authWithContext();
+		if (!session || !session.user) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 
@@ -92,7 +92,7 @@ export async function GET(
 	const params = await props.params;
 
 	try {
-		const session = await auth();
+		const session = await authWithContext();
 		if (!session?.user?.vendorId) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}

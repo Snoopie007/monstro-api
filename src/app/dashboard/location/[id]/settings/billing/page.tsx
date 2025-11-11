@@ -1,6 +1,4 @@
 import {
-	Card,
-	CardContent,
 	Table,
 	TableBody,
 	TableHeader,
@@ -19,7 +17,7 @@ import Link from "next/link";
 import React from "react";
 
 import { cn, formatAmountForDisplay } from "@/libs/utils";
-import { auth } from "@/auth";
+import { authWithContext } from "@/libs/auth/server";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { LocationState } from "@/types";
 import { Stripe } from "stripe";
@@ -108,7 +106,7 @@ export default async function BillingPage(props: {
 	params: Promise<{ id: string }>;
 }) {
 	const params = await props.params;
-	const sesson = await auth();
+	const sesson = await authWithContext();
 	const locationState = await getLocationState(params.id);
 
 	const { paymentMethods, subscriptions } = await fetchClientStripe(

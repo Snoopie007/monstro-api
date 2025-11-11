@@ -1,7 +1,6 @@
 import { db } from "@/db/db";
-import { locationState } from "@/db/schemas/locations";
-import { eq } from "drizzle-orm";
-import { MemberStripePayments } from "@/libs/server/stripe";
+import { taxRates } from "@/db/schemas";
+
 import { NextRequest, NextResponse } from "next/server";
 
 
@@ -14,11 +13,12 @@ export async function POST(request: NextRequest, props: Props) {
     const params = await props.params;
     const data = await request.json();
     try {
-        await db.update(locationState).set({
-            taxRate: data.taxRate
-        }).where(eq(locationState.locationId, params.id));
+        const [taxRate] = await db.insert(taxRates).values({
+            ...data,
+            locationId: params.id,
+        }).returning();
 
-        return NextResponse.json({ success: true }, { status: 200 });
+        return NextResponse.json(taxRate, { status: 200 });
 
     } catch (error) {
         console.log(error);

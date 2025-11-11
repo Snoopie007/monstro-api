@@ -1,6 +1,6 @@
 'use client';
 
-import { Input } from '@/components/forms';
+import { Input, Label } from '@/components/forms';
 import {
     Button, DialogClose,
     Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription,
@@ -8,12 +8,14 @@ import {
 } from '@/components/ui';
 import { CirclePlusIcon, Loader2, User } from 'lucide-react';
 import { FamilyMember } from '@/types/FamilyMember';
-import { cn, sleep } from '@/libs/utils';
+import { cn, sleep, tryCatch } from '@/libs/utils';
 import { useMemo, useState } from 'react';
 import { MemberPackage, MemberSubscription } from '@/types/member';
+import { toast } from 'react-toastify';
 
 interface SearchFMProps {
     setSlide: (slide: 'existing' | 'new') => void;
+    onClose: () => void;
     parentPlan: MemberSubscription | MemberPackage;
     fms: FamilyMember[];
     familyPlans: MemberSubscription[] | MemberPackage[];
@@ -24,8 +26,8 @@ type SearchObject = {
     lastName: string;
     email: string;
 };
-export function SearchFM({ setSlide, parentPlan, fms, familyPlans }: SearchFMProps) {
-    console.log(fms);
+export function SearchFM({ setSlide, parentPlan, fms, familyPlans, onClose }: SearchFMProps) {
+
     const [search, setSearch] = useState<SearchObject>({
         firstName: '',
         lastName: '',
@@ -36,7 +38,6 @@ export function SearchFM({ setSlide, parentPlan, fms, familyPlans }: SearchFMPro
     const [familyMember, setFamilyMember] = useState<FamilyMember | null>(null);
 
     const filteredFMs = useMemo(() => {
-
         const attachedIds = new Set(familyPlans.map(plan => plan.member?.id));
         return fms.filter(fm => !attachedIds.has(fm.relatedMemberId));
     }, [fms, familyPlans]);
@@ -80,6 +81,31 @@ export function SearchFM({ setSlide, parentPlan, fms, familyPlans }: SearchFMPro
 
     }
 
+    async function handleAttach(familyMember: FamilyMember) {
+        if (!familyMember) return;
+        const { locationId, memberId, id } = parentPlan;
+
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${locationId}/members/${memberId}/subs/${id}/childs`, {
+                method: "POST",
+                body: JSON.stringify({
+                    familyMemberId: familyMember.relatedMemberId,
+                }),
+            })
+        );
+        if (error || !result || !result.ok) {
+            toast.error("Something went wrong. Please try again.");
+            return;
+        }
+
+        const { familyMember: fm } = await result.json();
+        setFamilyMember(fm);
+
+
+        onClose();
+    }
+
+
 
     return (
         <div className='space-y-2'>
@@ -99,26 +125,35 @@ export function SearchFM({ setSlide, parentPlan, fms, familyPlans }: SearchFMPro
                 <div className='space-y-2'>
 
                     <div className='grid grid-cols-2 gap-2'>
-                        <Input
-                            placeholder='First Name'
-                            className='bg-foreground/5'
-                            value={search.firstName}
-                            onChange={e => setSearch({ ...search, firstName: e.target.value })}
-                        />
-                        <Input
-                            placeholder='Last Name'
-                            className='bg-foreground/5'
-                            value={search.lastName}
-                            onChange={e => setSearch({ ...search, lastName: e.target.value })}
-                        />
+                        <div>
+                            <Label size="tiny">First Name</Label>
+                            <Input
+                                placeholder='First Name'
+                                className='bg-foreground/5'
+                                value={search.firstName}
+                                onChange={e => setSearch({ ...search, firstName: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <Label size="tiny">Last Name</Label>
+                            <Input
+                                placeholder='Last Name'
+                                className='bg-foreground/5'
+                                value={search.lastName}
+                                onChange={e => setSearch({ ...search, lastName: e.target.value })}
+                            />
+                        </div>
 
                     </div>
-                    <Input
-                        placeholder='Email'
-                        className='bg-foreground/5'
-                        value={search.email}
-                        onChange={e => setSearch({ ...search, email: e.target.value })}
-                    />
+                    <div>
+                        <Label size="tiny">Email</Label>
+                        <Input
+                            placeholder='Email'
+                            className='bg-foreground/5'
+                            value={search.email}
+                            onChange={e => setSearch({ ...search, email: e.target.value })}
+                        />
+                    </div>
                     {status === 'errors' && (
                         <p className='text-red-500 text-sm font-medium'>
                             Please enter a first name and last name or email address
@@ -126,7 +161,7 @@ export function SearchFM({ setSlide, parentPlan, fms, familyPlans }: SearchFMPro
                     )}
                 </div>
                 {status === 'found' && familyMember && (
-                    <SearchResult familyMember={familyMember} />
+                    <SearchResult familyMember={familyMember} onAttach={handleAttach} />
                 )}
                 {status === 'not found' && (
                     <Empty>
@@ -144,16 +179,16 @@ export function SearchFM({ setSlide, parentPlan, fms, familyPlans }: SearchFMPro
                 )}
             </div>
             <div className="px-4 pb-4 flex justify-between flex-row">
-                <Button variant="foreground" size="sm" className='border-foreground/10'
+                <Button variant="foreground" className='border-foreground/10'
                     onClick={() => setSlide('new')}> Add Child Account
                 </Button>
                 <div className='flex flex-row gap-2'>
                     <DialogClose asChild>
-                        <Button variant="outline" size="sm" >
+                        <Button variant="outline" className='border-foreground/10'  >
                             Cancel
                         </Button>
                     </DialogClose>
-                    <Button variant="primary" size="sm" onClick={handleSearch} disabled={loading}>
+                    <Button variant="primary" onClick={handleSearch} disabled={loading}>
                         {loading ? <Loader2 className="size-4 animate-spin" /> : 'Search'}
                     </Button>
 
@@ -163,8 +198,19 @@ export function SearchFM({ setSlide, parentPlan, fms, familyPlans }: SearchFMPro
     );
 }
 
+interface SearchResultProps {
+    familyMember: FamilyMember;
+    onAttach: (familyMember: FamilyMember) => void;
+}
 
-function SearchResult({ familyMember }: { familyMember: FamilyMember }) {
+function SearchResult({ familyMember, onAttach }: SearchResultProps) {
+    const [loading, setLoading] = useState(false);
+    async function handleAttach() {
+        setLoading(true);
+        await sleep(2000);
+        await onAttach(familyMember);
+        setLoading(false);
+    }
     return (
         <div className="flex flex-row justify-between items-center bg-foreground/5 rounded-lg p-3">
             <div className="flex flex-row gap-3 items-center">
@@ -180,8 +226,8 @@ function SearchResult({ familyMember }: { familyMember: FamilyMember }) {
                     </div>
                 </div>
             </div>
-            <Button variant="ghost" size="icon" className='size-8'>
-                <CirclePlusIcon className="size-5" />
+            <Button variant="ghost" size="icon" className='size-8' onClick={handleAttach} disabled={loading}>
+                {loading ? <Loader2 className="size-4 animate-spin" /> : <CirclePlusIcon className="size-5" />}
             </Button>
         </div>
     );
