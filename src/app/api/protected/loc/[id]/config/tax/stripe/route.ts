@@ -25,14 +25,19 @@ export async function POST(request: NextRequest, props: Props) {
         if (!integration || !integration.accessToken) {
             return NextResponse.json({ error: "Stripe account not found" }, { status: 404 });
         }
+
+        const isoState = `${taxRate.state.substring(0, 2).toUpperCase()}`;
+
         const stripe = new MemberStripePayments(integration.accessToken);
 
         await stripe.createTaxRate({
             display_name: taxRate.name,
             percentage: taxRate.percentage,
             country: taxRate.country,
-            state: taxRate.state,
-            inclusive: false,
+            state: isoState,
+            inclusive: taxRate.inclusive,
+            description: taxRate.description ?? undefined,
+            active: taxRate.status === "active" ? true : false,
         });
 
 

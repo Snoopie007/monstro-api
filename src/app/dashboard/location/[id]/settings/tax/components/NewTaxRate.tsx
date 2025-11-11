@@ -11,6 +11,7 @@ import {
     SelectItem,
     Input,
     RegionSelect,
+    Textarea,
 } from '@/components/forms';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -34,7 +35,7 @@ interface NewTaxRateProps {
 
 export function NewTaxRate({ lid }: NewTaxRateProps) {
     const [open, setOpen] = useState(false);
-    const { setTaxRates } = useTaxRates();
+    const { taxRates, setTaxRates } = useTaxRates();
     const form = useForm<z.infer<typeof taxRateSchema>>({
         resolver: zodResolver(taxRateSchema),
         defaultValues: {
@@ -42,6 +43,7 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
             country: "US",
             state: "",
             percentage: 0,
+            description: "",
             inclusive: false,
         },
     });
@@ -51,10 +53,11 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
     async function onSubmit(v: z.infer<typeof taxRateSchema>) {
         if (form.formState.isSubmitting) return;
 
+        const isDefault = taxRates.length === 0;
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/config/tax`, {
                 method: "POST",
-                body: JSON.stringify(v)
+                body: JSON.stringify({ ...v, isDefault })
             })
         );
 
@@ -197,7 +200,19 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
                                     )}
                                 />
                             </div>
-
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel size='tiny'>Description</FormLabel>
+                                        <FormControl>
+                                            <Textarea placeholder="Description" className=" h-12 resize-none" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
                         </form>
                     </Form>

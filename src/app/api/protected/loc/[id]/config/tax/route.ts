@@ -16,11 +16,9 @@ export async function POST(request: NextRequest, props: Props) {
 
 
     try {
-
-
-
         const [taxRate] = await db.insert(taxRates).values({
             ...data,
+            status: "active",
             locationId: params.id,
         }).returning();
 
@@ -28,14 +26,19 @@ export async function POST(request: NextRequest, props: Props) {
         const integration = await db.query.integrations.findFirst({
             where: (integration, { eq, and }) => and(eq(integration.locationId, params.id), eq(integration.service, "stripe")),
         });
+
+
         if (integration && integration.accessToken) {
             const stripe = new MemberStripePayments(integration.accessToken);
+            const isoState = `${taxRate.state.substring(0, 2).toUpperCase()}`;
             await stripe.createTaxRate({
                 display_name: taxRate.name,
                 percentage: taxRate.percentage,
                 country: taxRate.country,
-                state: taxRate.state,
-                inclusive: false,
+                state: isoState,
+                inclusive: taxRate.inclusive,
+                description: taxRate.description ?? undefined,
+                active: taxRate.status === "active" ? true : false,
             });
         }
 

@@ -2,11 +2,12 @@ import { db } from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import {
-    calculatePeriodEnd, calculateTrialEnd, calculateStripeFee
+    calculatePeriodEnd, calculateTrialEnd, calculateStripeFee,
 } from "../../utils";
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { triggerSignUp } from "@/libs/achievements";
+import { getTaxRateId } from "../../utils";
 
 
 type Props = {
@@ -51,8 +52,8 @@ export async function GET(req: NextRequest, props: Props) {
 export async function POST(req: Request, props: Props) {
     const { id, mid } = await props.params;
     const body = await req.json();
-    console.log(body);
     const { paymentMethod, paymentType, trialDays, ...data } = body;
+
     try {
         const plan = await db.query.memberPlans.findFirst({
             where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
@@ -72,6 +73,9 @@ export async function POST(req: Request, props: Props) {
                 member: true,
                 location: {
                     with: {
+                        taxRates: {
+                            where: (taxRate, { eq, and }) => and(eq(taxRate.status, "active"), eq(taxRate.isDefault, true)),
+                        },
                         locationState: true
                     }
                 }
@@ -116,6 +120,9 @@ export async function POST(req: Request, props: Props) {
         );
 
 
+        const taxRateId = getTaxRateId(location.taxRates);
+
+
         let feePercent = location.locationState?.usagePercent;
 
         if (paymentType === "card") {
@@ -127,7 +134,8 @@ export async function POST(req: Request, props: Props) {
             trialEnd: trialDays ? calculateTrialEnd(startDate, trialDays) : undefined,
             paymentMethod: paymentMethod.id,
             allowProration: plan.allowProration,
-            feePercent: feePercent,
+            feePercent,
+            taxRateId,
             metadata: {
                 memberId: mid,
                 locationId: id

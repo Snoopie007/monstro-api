@@ -3,7 +3,7 @@ import { memberPackages, transactions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 
 import { NextRequest, NextResponse } from "next/server";
-import { calculatePeriodEnd, calculateStripeFee } from "../../utils";
+import { calculatePeriodEnd, calculateStripeFee, calculateTax } from "../../utils";
 
 type Props = {
 	params: Promise<{
@@ -58,7 +58,9 @@ export async function POST(req: NextRequest, props: Props) {
 				member: true,
 				location: {
 					with: {
-						taxRate: true,
+						taxRates: {
+							where: (taxRate, { eq, and }) => and(eq(taxRate.status, "active"), eq(taxRate.isDefault, true)),
+						},
 						locationState: true
 					}
 				}
@@ -74,14 +76,8 @@ export async function POST(req: NextRequest, props: Props) {
 		if (!member || !member.stripeCustomerId) {
 			throw new Error("Member not found");
 		}
-
-		const { taxRate, locationState } = location;
-
-
-
-		const tax = Math.floor(plan.price * (taxRate?.percentage || 0) / 100);
+		const tax = calculateTax(plan.price, location.taxRates);
 		const total = plan.price + tax;
-
 
 		const today = new Date();
 		const startDate = data.startDate ? new Date(data.startDate) : today;

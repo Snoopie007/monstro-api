@@ -1,5 +1,6 @@
 import {
 	MemberPlan,
+	TaxRate,
 } from "@/types";
 import { isAfter, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { serversideApiClient } from "@/libs/api/server";
@@ -42,29 +43,31 @@ function calculatePeriodEnd(
 	return endDate;
 }
 
-function calculateInvoice(plans: MemberPlan[], tax: number, discount: number) {
-	const items: { name: string; quantity: number; price: number }[] = [];
-	let subtotal = 0;
 
-	plans.forEach((plan) => {
-		items.push({
-			name: plan.name,
-			quantity: 1,
-			price: plan.price,
-		});
-		subtotal += plan.price;
-	});
-	const total = subtotal - discount + tax;
-	return {
-		items,
-		tax,
-		total,
-		discount,
-		subtotal,
-	};
+function calculateTax(price: number, taxRates: TaxRate[]) {
+	if (taxRates.length === 0) return 0;
+
+	let tax = 0;
+	let defaultTaxRate = taxRates.find((taxRate) => taxRate.isDefault);
+	if (!defaultTaxRate) {
+		defaultTaxRate = taxRates[0];
+	}
+	if (defaultTaxRate) {
+		tax = Math.floor(price * (defaultTaxRate.percentage || 0) / 100);
+	}
+
+	return tax;
 }
 
-
+function getTaxRateId(taxRates: TaxRate[]): string | undefined {
+	if (taxRates.length === 0) return undefined;
+	const defaultTaxRate = taxRates.find((taxRate) => taxRate.isDefault);
+	if (defaultTaxRate && defaultTaxRate.stripeRateId) {
+		return defaultTaxRate.stripeRateId as string;
+	} else {
+		return taxRates[0].stripeRateId as string;
+	}
+}
 
 
 function calculateTrialEnd(startDate: Date, trialDays: number): Date {
@@ -183,8 +186,9 @@ async function scheduleRecurringInvoiceEmails(params: {
 
 export {
 	calculatePeriodEnd,
-	calculateInvoice,
+	calculateTax,
 	calculateStripeFee,
+	getTaxRateId,
 	calculateTrialEnd,
 	scheduleRecurringInvoiceEmails,
 };

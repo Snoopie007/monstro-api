@@ -28,6 +28,7 @@ interface PaymentIntentSettings extends BaseSettings {
 type MemberSubscriptionSettings = BaseSettings & {
 	cancelAt?: Date | null,
 	trialEnd?: Date | null,
+	taxRateId?: string;
 	startDate?: Date,
 	allowProration?: boolean
 }
@@ -520,35 +521,16 @@ class MemberStripePayments extends BaseStripePayments {
 		return await this._stripe.taxRates.create(data);
 	}
 
+	async updateTaxRate(taxRateId: string, data: Stripe.TaxRateUpdateParams) {
+		return await this._stripe.taxRates.update(taxRateId, data);
+	}
+
 	async getTaxRates() {
 		return await this._stripe.taxRates.list({
 			limit: 10,
 		});
 	}
 
-	async updateTaxRegistration(
-		registrationId: string,
-		updates: Stripe.Tax.RegistrationUpdateParams
-	) {
-		return await this._stripe.tax.registrations.update(registrationId, updates);
-	}
-
-	async createTaxRegistration(
-		type: Stripe.Tax.RegistrationCreateParams.CountryOptions.Us.Type,
-		state: string,
-		country: string
-	) {
-		return await this._stripe.tax.registrations.create({
-			country: country,
-			country_options: {
-				us: {
-					state,
-					type,
-				},
-			},
-			active_from: "now",
-		});
-	}
 
 	async updateSubscription(
 		sid: string,
