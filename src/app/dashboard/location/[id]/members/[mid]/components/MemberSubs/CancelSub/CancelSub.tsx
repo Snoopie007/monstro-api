@@ -54,9 +54,10 @@ export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 		}
 
 		setLoading(true);
+		const path = sub.paymentType === "card" ? "subs" : "subs/cash";
 		const { result, error } = await tryCatch(
-			fetch(`/api/protected/loc/${params.id}/members/${params.mid}/subs/${sub.id}`, {
-				method: "DELETE",
+			fetch(`/api/protected/loc/${params.id}/members/${params.mid}/${path}/${sub.id}`, {
+				method: sub.paymentType === "card" ? "DELETE" : "PATCH",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify(formState),
 			})

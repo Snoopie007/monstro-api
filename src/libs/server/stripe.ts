@@ -449,7 +449,8 @@ class MemberStripePayments extends BaseStripePayments {
 		if (!this._accountId) {
 			throw new Error("Account ID not set");
 		}
-		const { startDate, trialEnd, paymentMethod, feePercent, allowProration, cancelAt, ...rest } = settings;
+		const { startDate, trialEnd, paymentMethod, feePercent, allowProration, cancelAt,
+			taxRateId, ...rest } = settings;
 
 		if (!plan.stripePriceId) {
 			throw new Error("Price not found");
@@ -465,11 +466,12 @@ class MemberStripePayments extends BaseStripePayments {
 
 		const options: Stripe.SubscriptionCreateParams = {
 			...rest,
+			... (taxRateId && { default_tax_rates: [taxRateId] }),
 			customer: this._customer,
 			transfer_data: {
 				destination: this._accountId,
 			},
-			automatic_tax: { enabled: false, liability: accountDestination },
+			automatic_tax: { enabled: false},
 			invoice_settings: { issuer: accountDestination },
 			description: `Subscription to ${plan.name}`,
 			items: [{ price: plan.stripePriceId as string }],
