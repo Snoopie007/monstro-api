@@ -8,7 +8,7 @@ import {
   primaryKey,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
-import { memberAchievements, memberPointsHistory } from "./members";
+import { memberPointsHistory, members } from "./members";
 import { memberPlans } from "./MemberPlans";
 
 export const achievements = pgTable("achievements", {
@@ -22,6 +22,15 @@ export const achievements = pgTable("achievements", {
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
+
+export const memberAchievements = pgTable('member_achievements', {
+  memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+  locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  achievementId: text('achievement_id').notNull().references(() => achievements.id, { onDelete: 'cascade' }),
+  progress: integer('progress').default(0),
+  dateAchieved: timestamp('date_achieved', { withTimezone: true }),
+  created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, t => [primaryKey({ columns: [t.memberId, t.achievementId] })])
 
 export const achievementTriggers = pgTable("achievement_triggers", {
   id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -39,11 +48,8 @@ export const triggeredAchievements = pgTable("triggered_achievements", {
 
 export const achievementsRelations = relations(achievements, ({ many, one }) => ({
   members: many(memberAchievements),
-  triggedAchievement: one(triggeredAchievements, {
-    fields: [achievements.id],
-    references: [triggeredAchievements.achievementId],
-  }),
   pointsHistory: many(memberPointsHistory),
+  memberAchievements: many(memberAchievements),
 }));
 
 export const triggeredAchievementsRelations = relations(triggeredAchievements, ({ one }) => ({
@@ -59,4 +65,19 @@ export const triggeredAchievementsRelations = relations(triggeredAchievements, (
 
 export const achievementTriggersRelations = relations(achievementTriggers, ({ many }) => ({
   triggeredAchievements: many(triggeredAchievements),
+}));
+
+export const memberAchievementsRelations = relations(memberAchievements, ({ one }) => ({
+  member: one(members, {
+    fields: [memberAchievements.memberId],
+    references: [members.id],
+  }),
+  location: one(locations, {
+    fields: [memberAchievements.locationId],
+    references: [locations.id],
+  }),
+  achievement: one(achievements, {
+    fields: [memberAchievements.achievementId],
+    references: [achievements.id],
+  }),
 }));

@@ -17,7 +17,7 @@ export function memberProfile(app: Elysia) {
     return app.patch("/profile", async ({ status, params, body }) => {
         const { mid } = params as { mid: string };
         const data = body as any;
-        console.log(data);
+
         try {
             await db.transaction(async (tx) => {
                 const [member] = await tx.update(members)

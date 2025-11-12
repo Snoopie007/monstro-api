@@ -104,7 +104,7 @@ export function memberPlansSubRoutes(app: Elysia) {
                 .insert(memberSubscriptions)
                 .values({
                     ...sharedData,
-                    paymentMethod: sub.paymentMethod,
+                    paymentType: sub.paymentType,
                     startDate: sub.startDate,
                     status: "active",
                     currentPeriodStart: sub.currentPeriodStart,
@@ -122,12 +122,7 @@ export function memberPlansSubRoutes(app: Elysia) {
                 return status(500, { error: "Failed to create family subscription" });
             }
 
-
-
-            // const emailUrl = `invite/${locationId}/sub/${familySubscription.id}`;
-
-            // const subject = `You've been invited to join ${sub?.location?.name} on Monstro`;
-            // change to being added to a family plan email not invite
+            /// Send Email to notify family member and have them download the app
 
             return status(200, {
                 ...familySubscription,

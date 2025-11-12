@@ -6,8 +6,6 @@ import {
 	memberSubscriptions,
 } from "@/db/schemas";
 import S3Bucket from "@/libs/s3";
-import { interpolate } from "@/libs/utils";
-import type { Contract } from "@/types/contract";
 import { and, eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 import type { MemberPlan } from "@/types";
@@ -59,13 +57,13 @@ export function mlDocsRoutes(app: Elysia) {
 			const docIds: string[] = [];
 			member.subscriptions.forEach((sub) => {
 				if (sub.plan.contractId) {
-					docIds.push(sub.plan.contractId);
+					docIds.push(sub.plan.contractId.toString());
 				}
 			});
 
 			member.packages.forEach((pkg) => {
 				if (pkg.plan.contractId) {
-					docIds.push(pkg.plan.contractId);
+					docIds.push(pkg.plan.contractId.toString());
 				}
 			});
 
@@ -77,8 +75,8 @@ export function mlDocsRoutes(app: Elysia) {
 			const extendedDocuments = documents.map((doc) => {
 				const signedDoc = member.contracts.find((c) => c.templateId === doc.id);
 				const memberPlan =
-					member.subscriptions.find((s) => s.plan.contractId === doc.id) ||
-					member.packages.find((p) => p.plan.contractId === doc.id);
+					member.subscriptions.find((s) => s.plan.contractId?.toString() === doc.id) ||
+					member.packages.find((p) => p.plan.contractId?.toString() === doc.id);
 				return {
 					...doc,
 					memberContract: signedDoc,

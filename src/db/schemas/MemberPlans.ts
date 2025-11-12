@@ -8,6 +8,7 @@ import {
 	jsonb,
 	unique,
 	uuid,
+	foreignKey,
 } from "drizzle-orm/pg-core";
 import { planPrograms } from "./programs";
 import { contractTemplates } from "./contracts";
@@ -21,8 +22,8 @@ import type { BillingCycleAnchorConfig } from "@/types";
 import {
 	LocationStatusEnum,
 	PackageStatusEnum,
-	PaymentMethodEnum,
-	PlanInterval,
+	PaymentTypeEnum,
+	IntervalType,
 	PlanType,
 } from "./DatabaseEnums";
 
@@ -33,21 +34,21 @@ export const memberPlans = pgTable("member_plans", {
 	family: boolean("family").notNull().default(false),
 	familyMemberLimit: integer("family_member_limit").notNull().default(0),
 	archived: boolean("archived").notNull().default(false),
-	contractId: text("contract_id").references(() => contractTemplates.id),
-	interval: PlanInterval("interval").default("month"),
+	contractId: integer("contract_id").references(() => contractTemplates.id),
+	interval: IntervalType("interval").default("month"),
 	intervalThreshold: integer("interval_threshold").default(1),
 	type: PlanType("type").notNull().default("recurring"),
 	currency: text("currency").notNull().default("USD"),
 	price: integer("price").notNull().default(0),
 	stripePriceId: text("stripe_price_id"),
 	totalClassLimit: integer("total_class_limit"),
-	classLimitInterval: PlanInterval("class_limit_interval"),
+	classLimitInterval: IntervalType("class_limit_interval"),
 	classLimitThreshold: integer("class_limit_threshold"),
-	expireInterval: PlanInterval("expire_interval"),
+	expireInterval: IntervalType("expire_interval"),
 	expireThreshold: integer("expire_threshold"),
 	billingAnchorConfig: jsonb("billing_anchor_config").$type<BillingCycleAnchorConfig>().default(sql`'{}'::jsonb`),
 	allowProration: boolean("allow_proration").notNull().default(false),
-	locationId: text("location_id").notNull().references(() => locations.id),
+	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
@@ -55,9 +56,9 @@ export const memberPlans = pgTable("member_plans", {
 export const memberSubscriptions = pgTable("member_subscriptions", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-	parentId: uuid("parent_id"),
+	parentId: text("parent_id"), 
 	memberPlanId: text("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
-	memberContractId: text("member_contract_id").references(() => memberContracts.id),
+	memberContractId: text("member_contract_id").references(() => memberContracts.id, { onDelete: "set null" }),  // ← ADD set null
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	stripeSubscriptionId: text("stripe_subscription_id"),
 	status: LocationStatusEnum("status").notNull().default("incomplete"),
@@ -68,30 +69,45 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 	cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
 	trialEnd: timestamp("trial_end", { withTimezone: true }),
 	endedAt: timestamp("ended_at", { withTimezone: true }),
-	paymentMethod: PaymentMethodEnum("payment_method").notNull(),
+	paymentType: PaymentTypeEnum("payment_type").notNull().default("cash"),
 	metadata: jsonb("metadata").$type<Record<string, any>>().notNull().default(sql`'{}'::jsonb`),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
-}, (table) => [unique().on(table.memberId, table.parentId)]);
+},
+(table) => [
+  foreignKey({
+	columns: [table.parentId],
+	foreignColumns: [table.id],
+	name: "parent_child_fk",
+  }),
+]);
 
 export const memberPackages = pgTable("member_packages", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	memberPlanId: text("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-	memberContractId: text("member_contract_id").references(() => memberContracts.id),
+	memberContractId: text("member_contract_id").references(() => memberContracts.id, { onDelete: "set null" }),
 	stripePaymentId: text("stripe_payment_id"),
-	parentId: uuid("parent_id"),
+	parentId: text("parent_id"),
 	startDate: timestamp("start_date", { withTimezone: true }).notNull(),
 	expireDate: timestamp("expire_date", { withTimezone: true }),
 	status: PackageStatusEnum("status").notNull(),
-	paymentMethod: PaymentMethodEnum("payment_method").notNull(),
+	paymentType: PaymentTypeEnum("payment_type").notNull().default("cash"),
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().default(sql`'{}'::jsonb`),
 	totalClassAttended: integer("total_class_attended").notNull().default(0),
 	totalClassLimit: integer("total_class_limit").notNull().default(0),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
-}, (t) => [unique().on(t.memberId, t.parentId)]);
+  },
+	(table) => [
+	  foreignKey({
+		columns: [table.parentId],
+		foreignColumns: [table.id],
+		name: "parent_child_fk",
+	  }),
+	]
+  );
 
 export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
 	location: one(locations, { fields: [memberPlans.locationId], references: [locations.id] }),

@@ -10,7 +10,6 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import {
-	memberAchievements,
 	memberContracts,
 	memberInvoices,
 	memberPointsHistory,
@@ -26,6 +25,7 @@ import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
 import type { LocationSettings } from "@/types";
 import { attendances } from "./attendances";
+import { memberAchievements } from "./achievements";
 
 export const locations = pgTable("locations", {
 	id: uuid("id")
