@@ -118,25 +118,10 @@ export function memberPlansPkgRoutes(app: Elysia) {
                 return status(500, { error: "Failed to create family package" });
             }
 
-            const emailUrl = `invite/${locationId}/pkg/${familyPackage.id}`;
+            // const emailUrl = `invite/${locationId}/pkg/${familyPackage.id}`;
 
-            const subject = `You've been invited to join ${pkg?.location?.name} on Monstro`;
-            await emailSender.send({
-                options: {
-                    to: memberLocation.member.email,
-                    subject: subject,
-                },
-                template: "InviteEmailTemplate",
-                data: {
-                    ui: {
-                        btnText: "Join the class.",
-                        btnUrl: emailUrl,
-                    },
-                    location: { name: pkg?.location?.name },
-                    monstro: MonstroData,
-                    member: { firstName: memberLocation.member.firstName },
-                },
-            });
+            // const subject = `You've been invited to join ${pkg?.location?.name} on Monstro`;
+            // change to being added to a family plan email not invite
 
             return status(200, {
                 ...familyPackage,

@@ -14,7 +14,7 @@ const emailSender = new EmailSender();
 export function memberPlansSubRoutes(app: Elysia) {
     return app.post('/sub', async ({ status, params, body }) => {
         const { pid } = params as { pid: string };
-        console.log(pid);
+
         const { familyMemberId } = body as { familyMemberId: string };
         try {
             const sub = await db.query.memberSubscriptions.findFirst({
@@ -122,35 +122,12 @@ export function memberPlansSubRoutes(app: Elysia) {
                 return status(500, { error: "Failed to create family subscription" });
             }
 
-            try {
-                await evaluateTriggers({
-                    memberId: familySubscription.memberId,
-                    locationId: familySubscription.locationId,
-                    triggerType: 'plan_signup',
-                });
-            } catch (error) {
-                console.error('Error evaluating plan signup triggers:', error);
-            }
 
-            const emailUrl = `invite/${locationId}/sub/${familySubscription.id}`;
 
-            const subject = `You've been invited to join ${sub?.location?.name} on Monstro`;
-            await emailSender.send({
-                options: {
-                    to: memberLocation.member.email,
-                    subject: subject,
-                },
-                template: "InviteEmailTemplate",
-                data: {
-                    ui: {
-                        btnText: "Join the class.",
-                        btnUrl: emailUrl,
-                    },
-                    location: { name: sub?.location?.name },
-                    monstro: MonstroData,
-                    member: { firstName: memberLocation.member.firstName },
-                },
-            });
+            // const emailUrl = `invite/${locationId}/sub/${familySubscription.id}`;
+
+            // const subject = `You've been invited to join ${sub?.location?.name} on Monstro`;
+            // change to being added to a family plan email not invite
 
             return status(200, {
                 ...familySubscription,
