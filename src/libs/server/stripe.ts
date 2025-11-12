@@ -134,10 +134,10 @@ abstract class BaseStripePayments {
 		return await this._stripe.customers.update(this._customer, updates);
 	}
 
-	async getPaymentMethods(customerId: string, type: "card" | "us_bank_account", limit?: number) {
+	async getPaymentMethods(customerId: string, options?: { limit?: number, type?: "card" | "us_bank_account" }) {
 		return await this._stripe.customers.listPaymentMethods(customerId, {
-			limit,
-			type: type,
+			limit: options?.limit || 10,
+			...(options?.type && { type: options.type as Stripe.CustomerListPaymentMethodsParams.Type }),
 		});
 	}
 
@@ -471,7 +471,7 @@ class MemberStripePayments extends BaseStripePayments {
 			transfer_data: {
 				destination: this._accountId,
 			},
-			automatic_tax: { enabled: false},
+			automatic_tax: { enabled: false },
 			invoice_settings: { issuer: accountDestination },
 			description: `Subscription to ${plan.name}`,
 			items: [{ price: plan.stripePriceId as string }],

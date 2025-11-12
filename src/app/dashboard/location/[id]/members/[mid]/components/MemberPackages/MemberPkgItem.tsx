@@ -6,14 +6,13 @@ import {
 } from '@/components/ui'
 import { formatAmountForDisplay, tryCatch } from '@/libs/utils'
 import { MemberPackage } from '@/types/member'
-import { format, sub } from 'date-fns'
-import { EllipsisVerticalIcon } from 'lucide-react'
+import { format } from 'date-fns'
 import { InfoField } from '../InfoField'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
 import { cn } from '@/libs/utils'
 import { FamilyDialog } from '../FamilyPlan'
-
+import { PkgActions } from './PkgActions'
 interface MemberPackageItemProps {
     pkg: MemberPackage
 }
@@ -81,11 +80,7 @@ export function MemberPackageItem({ pkg }: MemberPackageItemProps) {
                 <div className="font-medium flex items-center gap-1.5 text-sm">
                     {pkg.plan?.name}
                 </div>
-                <div>
-                    <Button variant="ghost" size="icon" className="size-6">
-                        <EllipsisVerticalIcon className="size-4" />
-                    </Button>
-                </div>
+                <PkgActions pkg={pkg} />
             </div>
             <div className="space-y-4 py-2">
                 <div className="grid grid-cols-3 items-center">

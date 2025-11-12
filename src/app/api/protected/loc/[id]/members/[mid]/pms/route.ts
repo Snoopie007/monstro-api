@@ -65,7 +65,7 @@ export async function POST(req: Request, props: Props) {
 		//  Refretch Token with fingerprint
 		const token = await stripe.getToken(tokenId);
 		// Fetch list of payment methods from stripe
-		const stripePaymentMethods = await stripe.getPaymentMethods(member.stripeCustomerId, type);
+		const stripePaymentMethods = await stripe.getPaymentMethods(member.stripeCustomerId, { type: type });
 
 
 		// Find the payment method with the same fingerprint

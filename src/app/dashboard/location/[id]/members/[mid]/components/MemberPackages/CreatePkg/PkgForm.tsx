@@ -36,7 +36,7 @@ import { format } from "date-fns";
 import { Loader2, CalendarIcon, ChevronRight } from "lucide-react";
 import { cn, tryCatch } from "@/libs/utils";
 import { useMemberStatus } from "../../../providers";
-import { MemberPaymentMethod } from "@/types";
+import { PaymentMethod } from "@/types";
 import React from "react";
 import { MemberPackage, MemberPlan } from "@/types";
 import { toast } from "react-toastify";
@@ -52,10 +52,9 @@ interface PkgFormProps {
 
 export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
     const [paymentType, setPaymentType] = useState<"card" | "cash">("cash");
-    const [paymentMethod, setPaymentMethod] = useState<MemberPaymentMethod | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
     const { mutate } = useMemberPackages(lid, mid)
-    const { ml } = useMemberStatus()
-    const paymentMethods = ml.memberPaymentMethods;
+    const { paymentMethods } = useMemberStatus()
 
 
     const form = useForm<z.infer<typeof NewPackageSchema>>({

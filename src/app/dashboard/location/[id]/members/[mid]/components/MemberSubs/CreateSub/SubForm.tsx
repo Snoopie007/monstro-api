@@ -26,8 +26,7 @@ import { Loader2 } from "lucide-react";
 import { cn, sleep, tryCatch } from "@/libs/utils";
 import { useMemberStatus } from "../../../providers";
 import React from "react";
-import { MemberPaymentMethod, MemberPlan, MemberSubscription } from "@/types";
-import { Stripe } from "stripe";
+import { MemberPlan, MemberSubscription, PaymentMethod } from "@/types";
 import { DurationPicker } from ".";
 import { toast } from "react-toastify";
 import { PMSelect } from "../../PMSelect";
@@ -42,9 +41,8 @@ type SubFormProps = {
 export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
 
     const [paymentType, setPaymentType] = useState<"card" | "cash">("cash");
-    const { ml } = useMemberStatus()
-    const paymentMethods = ml.memberPaymentMethods;
-    const [paymentMethod, setPaymentMethod] = useState<MemberPaymentMethod | null>(null);
+    const { paymentMethods } = useMemberStatus()
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
 
     const form = useForm<z.infer<typeof NewSubscriptionSchema>>({
         resolver: zodResolver(NewSubscriptionSchema),
