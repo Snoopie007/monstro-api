@@ -116,6 +116,12 @@ async function scheduleRecurringInvoiceEmails(params: {
 }) {
 	const apiClient = serversideApiClient();
 
+	///request
+	// - queue
+	//  trigger - send email
+	// trigger - check if sub is active
+	// requeue
+
 	// Calculate all future due dates
 	const dueDates: Date[] = [];
 	let currentDate = new Date(params.startDate);

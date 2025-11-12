@@ -6,9 +6,10 @@ import {
     calculateStripeFeePercentage,
 } from "../../utils";
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
+
 import { getTaxRateId } from "../../utils";
 import { PaymentType } from "@/types";
+import { triggerSignUp } from "@/libs/TriggerService";
 
 
 type Props = {
@@ -178,7 +179,6 @@ export async function POST(req: Request, props: Props) {
         //     });
         // }
 
-        // await triggerSignUp({ mid: mid, lid: id, pid: plan.id });
         return NextResponse.json({ ...sub, plan: plan, }, { status: 200 })
     } catch (err) {
         console.log(err)
