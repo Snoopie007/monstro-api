@@ -25,7 +25,7 @@ import type { MemberLocationProfile } from "@/types/member";
 import { attendances } from "./attendances";
 import type { LocationSettings } from "@/types";
 import { taxRates } from "./tax";
-import { memberPaymentMethods } from "./MemberPaymentMethods";
+import { memberPaymentMethods } from "./PaymentMethods";
 
 export const locations = pgTable("locations", {
   id: uuid("id")

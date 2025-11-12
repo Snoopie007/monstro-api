@@ -17,14 +17,14 @@ import {
     EmptyMedia,
     Empty
 } from '@/components/ui'
-import { Member, MemberPaymentMethod, CardPaymentMethod, UsBankAccountPaymentMethod } from '@/types'
+import { Member, CardPaymentMethod, UsBankAccountPaymentMethod, PaymentMethod } from '@/types'
 interface PaymentMethodsProps {
     params: { id: string; mid: string }
     editable: boolean
 }
 
 export function PaymentMethods({ params }: PaymentMethodsProps) {
-    const { member, ml } = useMemberStatus()
+    const { member, paymentMethods } = useMemberStatus()
 
 
 
@@ -46,10 +46,10 @@ export function PaymentMethods({ params }: PaymentMethodsProps) {
             >
                 <AddPaymentMethod member={member} locationId={params.id} />
             </Elements>
-            {ml.memberPaymentMethods && ml.memberPaymentMethods.length > 0 ? (
+            {paymentMethods && paymentMethods.length > 0 ? (
 
                 <div className=" space-y-2">
-                    {ml.memberPaymentMethods.map((method, i) => (
+                    {paymentMethods.map((method, i) => (
                         <PaymentMethodItem key={i} method={method} params={params} member={member} />
                     ))}
                 </div>
@@ -73,7 +73,7 @@ export function PaymentMethods({ params }: PaymentMethodsProps) {
 const PAYMENT_ITEM_STYLES = "px-4 py-3 hover:bg-muted-foreground/5"
 
 interface PaymentMethodItemProps {
-    method: MemberPaymentMethod;
+    method: PaymentMethod;
     params: { id: string; mid: string };
     member: Member;
 }
@@ -82,7 +82,6 @@ interface PaymentMethodItemProps {
 function PaymentMethodItem({
     method,
     params,
-    member,
 }: PaymentMethodItemProps) {
     if (method.type === "card") {
         const card = method.card as CardPaymentMethod;

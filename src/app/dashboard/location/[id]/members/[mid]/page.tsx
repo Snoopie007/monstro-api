@@ -8,7 +8,7 @@ import {
 } from "@/components/ui";
 import { db } from "@/db/db";
 import { hasPermission } from "@/libs/server/permissions";
-import type { Member, MemberLocation } from "@/types";
+import type { Member, MemberLocation, PaymentMethod } from "@/types";
 import { sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import {
@@ -38,15 +38,12 @@ type PromiseReturnType = {
 
 
 async function fetchMemberLocationData(id: string, mid: string): Promise<PromiseReturnType | null> {
-	if (!id || !mid) {
-		return null;
-	}
+	if (!id || !mid) return null;
 
 	try {
 		const ml = await db.query.memberLocations.findFirst({
 			where: (ml, { eq, and }) => and(eq(ml.memberId, mid), eq(ml.locationId, id)),
 			with: {
-				memberPaymentMethods: true,
 				member: {
 					with: {
 						familyMembers: {
@@ -74,6 +71,7 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
             `.as("totalPointsEarned"),
 			},
 		});
+
 
 		if (!ml) {
 			return null;
@@ -105,6 +103,26 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 
 
 
+async function fetchPaymentMethods(id: string, mid: string): Promise<PaymentMethod[]> {
+	try {
+		const mpns = await db.query.memberPaymentMethods.findMany({
+			where: (mpm, { eq, and }) => and(eq(mpm.memberId, mid), eq(mpm.locationId, id)),
+			with: {
+				paymentMethod: true,
+			},
+		});
+		const paymentMethods = mpns.map((mpm) => {
+			return {
+				...mpm.paymentMethod,
+				isDefault: mpm.isDefault,
+			};
+		});
+		return paymentMethods;
+	} catch (error) {
+		console.log("error", error);
+		return [];
+	}
+}
 export default async function MemberProfilePage(props: {
 	params: Promise<{ id: string; mid: string }>;
 }) {
@@ -112,7 +130,7 @@ export default async function MemberProfilePage(props: {
 	const canEditMember = await hasPermission("edit member", params.id);
 
 	const res = await fetchMemberLocationData(params.id, params.mid);
-
+	const paymentMethods = await fetchPaymentMethods(params.id, params.mid);
 	if (!res || !res.member || !res.ml) {
 		return notFound();
 	}
@@ -121,7 +139,7 @@ export default async function MemberProfilePage(props: {
 
 	return (
 		<TooltipProvider>
-			<MemberProvider member={member} ml={ml}>
+			<MemberProvider member={member} ml={ml} paymentMethods={paymentMethods}>
 				<div className="flex flex-row gap-2 p-2 h-[calc(100vh-50px)] overflow-hidden">
 					<div className="w-1/3 space-y-2 min-w-0 flex flex-col h-full">
 						<MemberProfile params={params} />

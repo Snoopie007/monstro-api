@@ -36,7 +36,7 @@ export const RegisterSchema = z.object({
 
 export const AddCreditCardSchema = z.object({
     name: z.string().min(2, { message: "Required" }),
-    default: z.boolean().optional(),
+    type: z.enum(["card", "us_bank_account"]),
     address: z.object({
         line1: z.string().optional(),
         line2: z.string().optional(),

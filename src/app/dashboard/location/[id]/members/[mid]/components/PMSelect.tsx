@@ -1,12 +1,12 @@
 'use client'
 import { Stripe } from "stripe";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/forms";
-import { CardPaymentMethod, MemberPaymentMethod, UsBankAccountPaymentMethod } from "@/types";
+import { CardPaymentMethod, PaymentMethod, UsBankAccountPaymentMethod } from "@/types";
 
 
 interface PMSelectProps {
-    paymentMethods: MemberPaymentMethod[];
-    onChange: (paymentMethod: MemberPaymentMethod) => void;
+    paymentMethods: PaymentMethod[];
+    onChange: (paymentMethod: PaymentMethod) => void;
     value: string | undefined;
     defaultValue?: string | undefined;
     disabled?: boolean;
@@ -42,7 +42,7 @@ export function PMSelect({ paymentMethods, onChange, value, defaultValue, disabl
 }
 
 
-function PMSelector({ method }: { method: MemberPaymentMethod }) {
+function PMSelector({ method }: { method: PaymentMethod }) {
     if (method.type === "card") {
         const card = method.card as CardPaymentMethod;
         return (

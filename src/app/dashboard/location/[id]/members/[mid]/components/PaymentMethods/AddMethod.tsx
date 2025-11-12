@@ -53,7 +53,7 @@ export default function AddPaymentMethod({
 
 	const [loading, setLoading] = useState(false);
 	const [validCard, setValidCard] = useState(false);
-	const { addPaymentMethod } = useMemberStatus();
+	const { setPaymentMethods } = useMemberStatus();
 	const { theme } = useTheme();
 	const stripe = useStripe();
 	const elements = useElements();
@@ -62,7 +62,7 @@ export default function AddPaymentMethod({
 		resolver: zodResolver(AddCreditCardSchema),
 		defaultValues: {
 			name: "",
-			default: false,
+			type: "card",
 			address: {
 				line1: "",
 				line2: "",
@@ -82,31 +82,32 @@ export default function AddPaymentMethod({
 		const cardElement = elements.getElement(CardElement);
 
 		try {
+
 			const tokenRef = await stripe.createToken(cardElement!, { ...v });
-			console.log(tokenRef);
+
 			if (tokenRef.token) {
 				const res = await fetch(
 					`/api/protected/loc/${locationId}/members/${member.id}/pms`,
 					{
 						method: "POST",
 						body: JSON.stringify({
-							token: tokenRef.token,
+							tokenId: tokenRef.token.id,
 							...v,
 						}),
 					}
 				);
-				setLoading(false);
-				// if (res.ok) {
-				// 	const data = await res.json();
-				// 	addPaymentMethods(data);
-				// 	toast.success("Card added successfully", { theme: "dark" });
-				// }
+				if (res.ok) {
+					const data = await res.json();
+					setPaymentMethods((prev) => [...prev, data]);
+					toast.success("Payment method added successfully", { theme: "dark" });
+
+				}
 			}
 		} catch (error) {
 			console.log(error);
 			toast.error("Failed to add card", { theme: "dark" });
 		} finally {
-			// setOpen(false);
+			setOpen(false);
 			setLoading(false);
 		}
 	}

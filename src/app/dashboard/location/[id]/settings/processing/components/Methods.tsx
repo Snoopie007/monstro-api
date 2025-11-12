@@ -23,21 +23,21 @@ const METHODS: Array<ProcessingMethod> = [
         name: "Bank Account",
         description: "ACH bank account processing for US customers."
     },
-    {
-        type: "paypal",
-        name: "PayPal",
-        description: "PayPal processing for international customers."
-    },
-    {
-        type: "apple_pay",
-        name: "Apple Pay",
-        description: "Apple Pay processing for Apple customers."
-    },
-    {
-        type: "google_pay",
-        name: "Google Pay",
-        description: "Google Pay processing for Google customers."
-    }
+    // {
+    //     type: "paypal",
+    //     name: "PayPal",
+    //     description: "PayPal processing for international customers."
+    // },
+    // {
+    //     type: "apple_pay",
+    //     name: "Apple Pay",
+    //     description: "Apple Pay processing for Apple customers."
+    // },
+    // {
+    //     type: "google_pay",
+    //     name: "Google Pay",
+    //     description: "Google Pay processing for Google customers."
+    // }
 ]
 
 // Assume locationState.settings.processingMethods: PaymentType[] | undefined

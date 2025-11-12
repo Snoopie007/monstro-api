@@ -1,25 +1,31 @@
-
-import { memberPaymentMethods } from "@/db/schemas/MemberPaymentMethods"
-import { MemberLocation } from "./member"
+import { memberPaymentMethods, paymentMethods } from "@/db/schemas/PaymentMethods"
 import { PaymentType } from "./DatabaseEnums"
+import { Member } from "./member"
+import { Location } from "./location"
 
-export type MemberPaymentMethod = typeof memberPaymentMethods.$inferSelect & {
-    memberLocation?: MemberLocation
+export type PaymentMethod = typeof paymentMethods.$inferSelect & {
     type: PaymentType
     card: CardPaymentMethod | null
     usBankAccount: UsBankAccountPaymentMethod | null
+    isDefault?: boolean
+}
+
+
+export type MemberPaymentMethod = typeof memberPaymentMethods.$inferSelect & {
+    method?: PaymentMethod
+    member?: Member
+    location?: Location
 }
 
 export type CardPaymentMethod = {
     brand: string
-    last4: string
+    last4: string | null
     expMonth: number
     expYear: number
 }
 
 export type UsBankAccountPaymentMethod = {
-    bankName: string
-    last4: string
-    accountType: string
-    accountNumber: string
+    bankName: string | null
+    last4: string | null
+    accountType: string | null
 }

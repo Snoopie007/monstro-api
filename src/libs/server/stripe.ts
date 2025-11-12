@@ -123,6 +123,10 @@ abstract class BaseStripePayments {
 		return await this._stripe.paymentIntents.retrieve(paymentIntentId);
 	}
 
+	async getToken(tokenId: string) {
+		return await this._stripe.tokens.retrieve(tokenId);
+	}
+
 	async updateCustomer(updates: Stripe.CustomerUpdateParams) {
 		if (!this._customer) {
 			throw new Error("Customer not set");
@@ -130,9 +134,10 @@ abstract class BaseStripePayments {
 		return await this._stripe.customers.update(this._customer, updates);
 	}
 
-	async getPaymentMethods(customerId: string, limit?: number) {
+	async getPaymentMethods(customerId: string, type: "card" | "us_bank_account", limit?: number) {
 		return await this._stripe.customers.listPaymentMethods(customerId, {
 			limit,
+			type: type,
 		});
 	}
 

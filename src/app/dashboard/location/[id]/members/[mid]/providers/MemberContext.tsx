@@ -1,5 +1,5 @@
 "use client";
-import { Member, MemberLocation, MemberPaymentMethod } from "@/types";
+import { Member, MemberLocation, PaymentMethod } from "@/types";
 import {
 	createContext,
 	useReducer,
@@ -7,19 +7,18 @@ import {
 	useCallback,
 	useContext,
 } from "react";
-import { Stripe } from "stripe";
 
 type StateType = {
 	member: Member;
 	ml: MemberLocation;
+	paymentMethods: PaymentMethod[];
 };
 
 const enum REDUCER_ACTION_TYPE {
 	MUTATE,
 	UPDATE_MEMBER,
 	UPDATE_MEMBER_LOCATION,
-	ADD_PAYMENT_METHOD,
-	REMOVE_PAYMENT_METHOD,
+	SET_PAYMENT_METHODS,
 }
 
 type ReducerAction = {
@@ -27,10 +26,10 @@ type ReducerAction = {
 	payload?:
 	| Member
 	| MemberLocation
-	| MemberPaymentMethod
-	| string
+	| PaymentMethod[]
 	| ((prev: Member) => Member)
-	| ((prev: MemberLocation) => MemberLocation);
+	| ((prev: MemberLocation) => MemberLocation)
+	| ((prev: PaymentMethod[]) => PaymentMethod[]);
 };
 
 const reducer = (state: StateType, action: ReducerAction): StateType => {
@@ -51,25 +50,16 @@ const reducer = (state: StateType, action: ReducerAction): StateType => {
 					)
 					: (action.payload as MemberLocation);
 			return { ...state, ml: newMemberLocation };
-		case REDUCER_ACTION_TYPE.ADD_PAYMENT_METHOD:
-			const paymentMethodToAdd = action.payload as MemberPaymentMethod;
-			return {
-				...state,
-				ml: {
-					...state.ml,
-					memberPaymentMethods: [...(state.ml.memberPaymentMethods || []), paymentMethodToAdd]
-				}
-			};
-		case REDUCER_ACTION_TYPE.REMOVE_PAYMENT_METHOD:
-			const paymentMethodIdToRemove = action.payload as string;
-			return {
-				...state,
-				ml: {
-					...state.ml,
-					memberPaymentMethods: (state.ml.memberPaymentMethods || []).filter(
-						pm => pm.stripeId !== paymentMethodIdToRemove
+		case REDUCER_ACTION_TYPE.SET_PAYMENT_METHODS:
+			const newPaymentMethods =
+				typeof action.payload === "function"
+					? (action.payload as (prev: PaymentMethod[]) => PaymentMethod[])(
+						state.paymentMethods
 					)
-				}
+					: (action.payload as PaymentMethod[]);
+			return {
+				...state,
+				paymentMethods: newPaymentMethods
 			};
 		default:
 			throw new Error();
@@ -110,17 +100,10 @@ const useMemberContext = (initState: StateType) => {
 		[]
 	);
 
-	const addPaymentMethod = useCallback((paymentMethod: Stripe.PaymentMethod) => {
+	const setPaymentMethods = useCallback((paymentMethodsOrFn: PaymentMethod[] | ((prev: PaymentMethod[]) => PaymentMethod[])) => {
 		dispatch({
-			type: REDUCER_ACTION_TYPE.ADD_PAYMENT_METHOD,
-			payload: paymentMethod as unknown as MemberPaymentMethod,
-		});
-	}, []);
-
-	const removePaymentMethod = useCallback((paymentMethodId: string) => {
-		dispatch({
-			type: REDUCER_ACTION_TYPE.REMOVE_PAYMENT_METHOD,
-			payload: paymentMethodId,
+			type: REDUCER_ACTION_TYPE.SET_PAYMENT_METHODS,
+			payload: paymentMethodsOrFn,
 		});
 	}, []);
 
@@ -129,8 +112,7 @@ const useMemberContext = (initState: StateType) => {
 		mutate,
 		updateMember,
 		updateMemberLocation,
-		addPaymentMethod,
-		removePaymentMethod,
+		setPaymentMethods,
 	};
 };
 
@@ -140,6 +122,7 @@ export const MemberContext = createContext<UseMemberContextType | null>(null);
 
 type MemberProviderType = {
 	ml: MemberLocation;
+	paymentMethods: PaymentMethod[];
 	member: Member;
 	children?: ReactElement | ReactElement[] | undefined;
 };
@@ -147,11 +130,12 @@ type MemberProviderType = {
 export const MemberProvider = ({
 	member,
 	ml,
+	paymentMethods,
 	children,
 }: MemberProviderType): ReactElement => {
 	return (
 		<MemberContext.Provider
-			value={useMemberContext({ member, ml })}
+			value={useMemberContext({ member, ml, paymentMethods })}
 		>
 			{children}
 		</MemberContext.Provider>
@@ -161,6 +145,7 @@ export const MemberProvider = ({
 type UseMemberStatusHookType = {
 	member: Member;
 	ml: MemberLocation;
+	paymentMethods: PaymentMethod[];
 	mutate: (member: Member) => void;
 	updateMember: (memberOrFn: Member | ((prev: Member) => Member)) => void;
 	updateMemberLocation: (
@@ -168,8 +153,7 @@ type UseMemberStatusHookType = {
 			| MemberLocation
 			| ((prev: MemberLocation) => MemberLocation)
 	) => void;
-	addPaymentMethod: (paymentMethod: Stripe.PaymentMethod) => void;
-	removePaymentMethod: (paymentMethodId: string) => void;
+	setPaymentMethods: (paymentMethodsOrFn: PaymentMethod[] | ((prev: PaymentMethod[]) => PaymentMethod[])) => void;
 };
 
 export const useMemberStatus = (): UseMemberStatusHookType => {
@@ -178,12 +162,11 @@ export const useMemberStatus = (): UseMemberStatusHookType => {
 		throw new Error("useMemberStatus must be used within a MemberProvider");
 	}
 	const {
-		state: { member, ml },
+		state: { member, ml, paymentMethods },
 		mutate,
 		updateMember,
 		updateMemberLocation,
-		addPaymentMethod,
-		removePaymentMethod,
+		setPaymentMethods,
 	} = context;
-	return { member, ml, mutate, updateMember, updateMemberLocation, addPaymentMethod, removePaymentMethod };
+	return { member, ml, paymentMethods, mutate, updateMember, updateMemberLocation, setPaymentMethods };
 };

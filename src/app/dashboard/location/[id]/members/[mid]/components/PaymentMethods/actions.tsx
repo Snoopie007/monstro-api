@@ -7,11 +7,11 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui";
 import { tryCatch } from "@/libs/utils";
-import { MemberPaymentMethod } from "@/types";
+import { PaymentMethod } from "@/types";
 import { EllipsisVertical } from "lucide-react";
 
 interface PaymentMethodActionsProps {
-  paymentMethod: MemberPaymentMethod;
+  paymentMethod: PaymentMethod;
   mid: string;
   lid: string;
 }
