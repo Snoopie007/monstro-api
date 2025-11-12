@@ -77,8 +77,9 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
             toast.error("Please select a payment method")
             return
         }
+        const path = paymentType === "card" ? "pkgs" : "pkgs/cash"
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/members/${mid}/pkgs`, {
+            fetch(`/api/protected/loc/${lid}/members/${mid}/${path}`, {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,

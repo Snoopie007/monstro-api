@@ -50,7 +50,7 @@ export async function POST(req: NextRequest, props: Props) {
 
         const { location: { taxRates, locationState }, member } = ml;
 
-        if (!member || !member.stripeCustomerId) {
+        if (!member) {
             throw new Error("Member not found");
         }
 
