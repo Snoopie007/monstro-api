@@ -1,11 +1,12 @@
 'use client'
 import { Stripe } from "stripe";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/forms";
+import { CardPaymentMethod, MemberPaymentMethod, UsBankAccountPaymentMethod } from "@/types";
 
 
 interface PMSelectProps {
-    paymentMethods: Stripe.PaymentMethod[];
-    onChange: (paymentMethod: Stripe.PaymentMethod) => void;
+    paymentMethods: MemberPaymentMethod[];
+    onChange: (paymentMethod: MemberPaymentMethod) => void;
     value: string | undefined;
     defaultValue?: string | undefined;
     disabled?: boolean;
@@ -13,9 +14,17 @@ interface PMSelectProps {
 
 
 export function PMSelect({ paymentMethods, onChange, value, defaultValue, disabled }: PMSelectProps) {
+
+    if (paymentMethods.length === 0) {
+        return (
+            <div className="text-sm text-muted-foreground h-12 flex items-center justify-center bg-background rounded-md border border-foreground/10">
+                No payment methods found
+            </div>
+        )
+    }
     return (
         <Select onValueChange={(value) => {
-            const paymentMethod = paymentMethods.find((method) => method.id === value)
+            const paymentMethod = paymentMethods.find((method) => method.stripeId === value)
             if (paymentMethod) {
                 onChange(paymentMethod)
             }
@@ -24,10 +33,8 @@ export function PMSelect({ paymentMethods, onChange, value, defaultValue, disabl
                 <SelectValue placeholder="Select a payment method" />
             </SelectTrigger>
             <SelectContent>
-                {paymentMethods.map((method, index) => (
-                    method.type === "card" && method.card && (
-                        <PMSelector key={method.id} method={method} />
-                    )
+                {paymentMethods.map((method) => (
+                    <PMSelector key={method.stripeId} method={method} />
                 ))}
             </SelectContent>
         </Select>
@@ -35,31 +42,31 @@ export function PMSelect({ paymentMethods, onChange, value, defaultValue, disabl
 }
 
 
-function PMSelector({ method }: { method: Stripe.PaymentMethod }) {
-    if (method.type === "card" && method.card) {
-        const card = method.card as Stripe.PaymentMethod.Card;
+function PMSelector({ method }: { method: MemberPaymentMethod }) {
+    if (method.type === "card") {
+        const card = method.card as CardPaymentMethod;
         return (
-            <SelectItem key={method.id} value={method.id} className="w-full">
+            <SelectItem key={method.stripeId} value={method.stripeId} className="w-full">
                 <div className="flex flex-row items-center justify-between gap-4">
                     <div className="flex flex-row items-center gap-2 ">
-                        <img src={`/images/cards/${card.brand}.svg`} alt={card.brand} className="h-7 w-7" />
+                        <img src={`/images/cards/${card.brand || ""}.svg`} alt={card.brand || ""} className="h-7 w-7" />
                         <span className="text-sm capitalize">{card.brand} •••• {card.last4}</span>
                     </div>
-                    <div className="text-sm">{card.exp_month} / {card.exp_year}</div>
+                    <div className="text-sm">{card.expMonth} / {card.expYear}</div>
                 </div>
             </SelectItem>
         );
     }
-    if (method.type === "us_bank_account" && method.us_bank_account) {
-        const bank = method.us_bank_account as Stripe.PaymentMethod.UsBankAccount;
+    if (method.type === "us_bank_account") {
+        const bank = method.usBankAccount as UsBankAccountPaymentMethod;
         return (
-            <SelectItem key={method.id} value={method.id} className="w-full">
+            <SelectItem key={method.stripeId} value={method.stripeId} className="w-full">
                 <div className="flex flex-row items-center justify-between gap-4">
                     <span className="text-sm capitalize">
-                        {bank.bank_name} •••• {bank.last4}
+                        {bank.bankName} •••• {bank.last4}
                     </span>
                     <span className="text-sm">
-                        {bank.account_type}
+                        {bank.accountType}
                     </span>
                 </div>
             </SelectItem>

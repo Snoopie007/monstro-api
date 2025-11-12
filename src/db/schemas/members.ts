@@ -146,6 +146,9 @@ export const memberCustomFields = pgTable('member_custom_fields', {
     unique('mcf_member_field_unique').on(t.memberId, t.customFieldId),
 ])
 
+
+
+
 export const membersRelations = relations(members, ({ many, one }) => ({
     memberLocations: many(memberLocations),
     achievements: many(memberAchievements),

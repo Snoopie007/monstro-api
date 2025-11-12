@@ -8,7 +8,6 @@ import {
 } from "@/components/ui";
 import { db } from "@/db/db";
 import { hasPermission } from "@/libs/server/permissions";
-import { MemberStripePayments } from "@/libs/server/stripe";
 import type { Member, MemberLocation } from "@/types";
 import { sql } from "drizzle-orm";
 import type Stripe from "stripe";
@@ -47,18 +46,12 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 		const ml = await db.query.memberLocations.findFirst({
 			where: (ml, { eq, and }) => and(eq(ml.memberId, mid), eq(ml.locationId, id)),
 			with: {
+				memberPaymentMethods: true,
 				member: {
 					with: {
 						familyMembers: {
 							with: {
 								relatedMember: true,
-							},
-						},
-						subscriptions: {
-							where: (ms, { eq }) => eq(ms.locationId, id),
-							with: {
-								plan: true,
-
 							},
 						},
 					},
@@ -110,19 +103,6 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 	}
 }
 
-async function fetchStripePaymentMethods(
-	customerId: string,
-): Promise<Stripe.PaymentMethod[]> {
-	try {
-		const stripe = new MemberStripePayments();
-		const paymentMethods = await stripe.getPaymentMethods(customerId, 25);
-		return paymentMethods.data;
-	} catch (error) {
-		console.log("error", error);
-		return [];
-	}
-}
-
 
 
 export default async function MemberProfilePage(props: {
@@ -139,14 +119,9 @@ export default async function MemberProfilePage(props: {
 
 	const { member, ml } = res;
 
-	let paymentMethods: Stripe.PaymentMethod[] = [];
-	if (member.stripeCustomerId) {
-		paymentMethods = await fetchStripePaymentMethods(member.stripeCustomerId);
-	}
-
 	return (
 		<TooltipProvider>
-			<MemberProvider member={member} ml={ml} paymentMethods={paymentMethods}>
+			<MemberProvider member={member} ml={ml}>
 				<div className="flex flex-row gap-2 p-2 h-[calc(100vh-50px)] overflow-hidden">
 					<div className="w-1/3 space-y-2 min-w-0 flex flex-col h-full">
 						<MemberProfile params={params} />

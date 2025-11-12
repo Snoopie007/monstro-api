@@ -7,13 +7,12 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui";
 import { tryCatch } from "@/libs/utils";
+import { MemberPaymentMethod } from "@/types";
 import { EllipsisVertical } from "lucide-react";
-import Stripe from "stripe";
 
 interface PaymentMethodActionsProps {
-  paymentMethod: Stripe.PaymentMethod | null;
+  paymentMethod: MemberPaymentMethod;
   mid: string;
-  customerId: string;
   lid: string;
 }
 
@@ -21,26 +20,24 @@ export default function PaymentMethodsActions({
   paymentMethod,
   mid,
   lid,
-  customerId,
 }: PaymentMethodActionsProps) {
-  async function detachPaymentMethod(id: string) {
+
+
+
+  async function detach(id: string) {
     const { result, error } = await tryCatch(
-      fetch(`/api/protected/vendor/payment/methods?paymentMethodId=${id}`, {
+      fetch(`/api/protected/loc/${lid}/members/${mid}/pms/${id}`, {
         method: "DELETE",
       })
     );
   }
 
-  async function makeDefualtPaymentMethod(id: string) {
+  async function setDefault(id: string) {
     const { result, error } = await tryCatch(
-      fetch(`/api/protected/vendor/payment/methods`, {
+      fetch(`/api/protected/loc/${lid}/members/${mid}/pms/${id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
-          customerId: customerId,
-          paymentMethodId: id,
+          isDefault: true,
         }),
       })
     );
@@ -61,14 +58,14 @@ export default function PaymentMethodsActions({
           <>
             <DropdownMenuItem
               className="cursor-pointer hover:bg-indigo-500 text-sm py-2 leading-5"
-              onClick={() => makeDefualtPaymentMethod(paymentMethod.id)}
+              onClick={() => setDefault(paymentMethod.stripeId)}
             >
               <span>Default</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="mb-2" />
             <DropdownMenuItem
               className="cursor-pointer bg-red-500 "
-              onClick={() => detachPaymentMethod(paymentMethod.id)}
+              onClick={() => detach(paymentMethod.stripeId)}
             >
               <span>Remove</span>
             </DropdownMenuItem>

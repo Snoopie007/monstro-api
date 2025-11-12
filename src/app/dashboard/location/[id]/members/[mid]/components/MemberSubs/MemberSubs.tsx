@@ -14,7 +14,7 @@ interface MemberSubsProps {
     params: { id: string; mid: string }
 }
 export function MemberSubs({ params }: MemberSubsProps) {
-    const { subs, isLoading } = useMemberSubscriptions(params.id, params.mid)
+    const { subs, isLoading, mutate } = useMemberSubscriptions(params.id, params.mid)
 
     if (isLoading) {
         return (

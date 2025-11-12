@@ -156,7 +156,7 @@ function useMemberSubscriptions(id: string, mid: string) {
 
 	return {
 		subs: data,
-		fetchSubs: mutate,
+		mutate,
 		error,
 		isLoading,
 	};

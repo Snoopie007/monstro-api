@@ -1,9 +1,6 @@
 "use client";
 import {
 	Button,
-	Dialog,
-	DialogContent,
-	DialogTitle,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -12,62 +9,40 @@ import {
 } from "@/components/ui";
 import { Pencil, Trash2, X, Pause, Play, EllipsisVertical } from "lucide-react";
 import { MemberSubscription } from "@/types";
-import { CancelSub, UpdateSub, PauseSub, ResumeSub } from ".";
+
 import { useState } from "react";
 import { cn } from "@/libs/utils";
-import { VisuallyHidden } from "react-aria";
 import { useMemberSubscriptions } from "@/hooks";
-
+import { ResumePauseSub } from "./ResumePauseSub";
+import { UpdateSub } from "./UpdateSub";
+import { CancelSub } from "./CancelSub";
 const HoverTransition = "group-hover:bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300";
+const ItemBtnStyle = "cursor-pointer text-xs flex flex-row items-center justify-between gap-2 ";
+
 
 export function SubActions({ sub }: { sub: MemberSubscription }) {
-	const [action, setAction] = useState<"cancel" | "update" | "pause" | "resume" | undefined>(
-		undefined
-	);
-	const { fetchSubs } = useMemberSubscriptions(sub.locationId, sub.memberId)
-	function handleClose(open: boolean) {
-		if (!open) {
-			setAction(undefined);
-			fetchSubs()
-		}
-	}
+	const { mutate } = useMemberSubscriptions(sub.locationId, sub.memberId)
+	const [openCancel, setOpenCancel] = useState(false);
+	const [openUpdate, setOpenUpdate] = useState(false);
+	const [openRPSub, setOpenRPSub] = useState(false);
+
+
+
+
+
 
 
 	return (
 		<>
-			<Dialog open={action !== undefined} onOpenChange={handleClose}>
-				<DialogContent className="max-w-lg border-foreground/10 sm:rounded-lg overflow-hidden">
-					<VisuallyHidden className="pb-0 pt-5">
-						<DialogTitle className="text-sm"></DialogTitle>
-					</VisuallyHidden>
-					<CancelSub
-						sub={sub}
-						show={action === "cancel"}
-						close={() => handleClose(false)}
-					/>
-					<UpdateSub
-						sub={sub}
-						show={action === "update"}
-						close={() => handleClose(false)}
-					/>
-					<PauseSub
-						sub={sub}
-						show={action === "pause"}
-						close={() => handleClose(false)}
-					/>
-					<ResumeSub
-						sub={sub}
-						show={action === "resume"}
-						close={() => handleClose(false)}
-					/>
-				</DialogContent>
-			</Dialog>
+			<UpdateSub sub={sub} open={openUpdate} onOpenChange={setOpenUpdate} />
+			<CancelSub sub={sub} open={openCancel} onOpenChange={setOpenCancel} />
+			<ResumePauseSub sub={sub} open={openRPSub} onOpenChange={setOpenRPSub} />
 			<ButtonGroup className=" group">
 				<Button
 					variant="ghost"
 					size="icon"
 					className={cn("size-6", HoverTransition)}
-					onClick={() => setAction("update")}
+					onClick={() => setOpenUpdate(true)}
 				>
 					<Pencil className="size-3" />
 				</Button>
@@ -76,10 +51,7 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
 					size="icon"
 					className={cn("size-6 border-foreground/5 ", HoverTransition)}
 					disabled={!sub}
-					onClick={() => {
-						if (sub.status === "canceled") return
-						setAction("cancel")
-					}}
+					onClick={() => setOpenCancel(true)}
 				>
 					<X className="size-3.5" />
 				</Button>
@@ -96,24 +68,24 @@ export function SubActions({ sub }: { sub: MemberSubscription }) {
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end" className="border-foreground/10 ">
 						<DropdownMenuItem
-							className="cursor-pointer text-xs flex flex-row items-center justify-between gap-2"
-							onClick={() => setAction("update")}
+							className={ItemBtnStyle}
+							onClick={() => setOpenUpdate(true)}
 							disabled={!sub}
 						>
 							<span > Update</span>
 							<Pencil className="size-3" />
 						</DropdownMenuItem>
 						<DropdownMenuItem
-							className="cursor-pointer text-xs flex flex-row items-center justify-between gap-2"
-							onClick={() => setAction(sub.status === "active" ? "pause" : "resume")}
+							className={ItemBtnStyle}
+							onClick={() => setOpenRPSub(true)}
 							disabled={!sub || !['active', 'paused'].includes(sub.status)}
 						>
 							<span > {sub.status === "active" ? "Pause" : "Resume"}</span>
 							{sub.status === "active" ? <Pause className="size-3" /> : <Play className="size-3" />}
 						</DropdownMenuItem>
 						<DropdownMenuItem
-							className="cursor-pointer text-xs flex flex-row items-center justify-between gap-2"
-							onClick={() => setAction("cancel")}
+							className={ItemBtnStyle}
+							onClick={() => setOpenCancel(true)}
 							disabled={!sub}
 						>
 							<span > Cancel</span>

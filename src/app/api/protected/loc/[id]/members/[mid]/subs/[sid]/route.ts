@@ -90,11 +90,11 @@ export async function PUT(req: Request, props: { params: Promise<Params> }) {
 
 export async function PATCH(req: Request, props: { params: Promise<Params> }) {
     const params = await props.params;
-    const updates = await req.json();
+    const { endAt, trialDays, allowProration, reset, paymentMethodId } = await req.json();
 
     try {
 
-        const current = await db.query.memberSubscriptions.findFirst({
+        const sub = await db.query.memberSubscriptions.findFirst({
             where: (sub, { eq }) => eq(sub.id, params.sid),
             with: {
                 plan: true,
@@ -103,7 +103,7 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
         });
 
 
-        if (!current) {
+        if (!sub) {
             throw new Error("No active subscription found")
         }
 
@@ -115,7 +115,7 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
             throw new Error("No valid location found")
         }
 
-        const member = current.member;
+        const member = sub.member;
         if (!member.stripeCustomerId) {
             throw new Error("Member does not have a Stripe customer ID")
         }
@@ -126,25 +126,24 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
                 eq(integration.service, "stripe")
             ),
         });
-        if (!integration) {
+        if (!integration || !integration.accountId) {
             throw new Error("Integration not found")
         }
-        if (!integration.accountId) {
-            throw new Error("Integration account ID not found")
-        }
+
         const stripe = new MemberStripePayments(integration.accountId);
         stripe.setCustomer(member.stripeCustomerId);
-        const endDate = updates.endAt ? new Date(updates.endAt) : undefined
-        const trialEnd = updates.trialDays ? addDays(current.currentPeriodStart, updates.trialDays) : undefined
+
+        const endDate = endAt ? new Date(endAt) : undefined
+        const trialEnd = trialDays ? addDays(sub.currentPeriodStart, trialDays) : undefined
 
 
-        if (updates.paymentMethod === "card") {
+        if (sub.stripeSubscriptionId) {
 
-            await stripe.updateSubscription(current.stripeSubscriptionId!, {
-                billing_cycle_anchor: updates.reset ? 'now' : 'unchanged',
-                default_payment_method: updates.paymentMethodId,
+            await stripe.updateSubscription(sub.stripeSubscriptionId, {
+                billing_cycle_anchor: reset ? 'now' : 'unchanged',
+                default_payment_method: paymentMethodId,
                 ...(endDate && { cancel_at: Math.floor(endDate.getTime() / 1000) }),
-                proration_behavior: updates.allowProration ? "create_prorations" : "none",
+                proration_behavior: allowProration ? "create_prorations" : "none",
                 ...(trialEnd && { trial_end: Math.floor(trialEnd.getTime() / 1000) }),
             });
         }
@@ -152,15 +151,15 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
 
         const today = Date.now()
         await db.update(memberSubscriptions).set({
-            ...(updates.reset && {
+            ...(reset && {
                 currentPeriodStart: today,
                 currentPeriodEnd: addMonths(today, 1),
             }),
             cancelAt: endDate,
             endedAt: endDate,
             trialEnd: trialEnd,
-            paymentMethod: updates.paymentMethod,
-        }).where(eq(memberSubscriptions.id, current.id));
+            paymentMethod: paymentMethodId,
+        }).where(eq(memberSubscriptions.id, sub.id));
 
 
 

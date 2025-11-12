@@ -21,3 +21,4 @@ export * from "./FamilyMember";
 export * from "./invoices";
 export * from "./support";
 export * from "./tax";
+export * from "./PaymentMethods";

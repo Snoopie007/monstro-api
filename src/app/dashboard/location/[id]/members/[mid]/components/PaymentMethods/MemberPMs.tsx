@@ -5,7 +5,7 @@ import AddPaymentMethod from './AddMethod'
 import { Elements } from '@stripe/react-stripe-js'
 import { getStripe } from '@/libs/client/stripe'
 import PaymentMethodsActions from './actions'
-import { useMemberStatus, useMemberPaymentMethods } from '../../providers'
+import { useMemberStatus } from '../../providers'
 import { CreditCardIcon } from 'lucide-react'
 import {
     Badge,
@@ -17,15 +17,14 @@ import {
     EmptyMedia,
     Empty
 } from '@/components/ui'
-import Stripe from 'stripe'
+import { Member, MemberPaymentMethod, CardPaymentMethod, UsBankAccountPaymentMethod } from '@/types'
 interface PaymentMethodsProps {
     params: { id: string; mid: string }
     editable: boolean
 }
 
-export function PaymentMethods({ params, editable }: PaymentMethodsProps) {
-    const { member } = useMemberStatus()
-    const { paymentMethods } = useMemberPaymentMethods()
+export function PaymentMethods({ params }: PaymentMethodsProps) {
+    const { member, ml } = useMemberStatus()
 
 
 
@@ -47,10 +46,10 @@ export function PaymentMethods({ params, editable }: PaymentMethodsProps) {
             >
                 <AddPaymentMethod member={member} locationId={params.id} />
             </Elements>
-            {paymentMethods.length > 0 ? (
+            {ml.memberPaymentMethods && ml.memberPaymentMethods.length > 0 ? (
 
                 <div className=" space-y-2">
-                    {paymentMethods.map((method, i) => (
+                    {ml.memberPaymentMethods.map((method, i) => (
                         <PaymentMethodItem key={i} method={method} params={params} member={member} />
                     ))}
                 </div>
@@ -73,27 +72,34 @@ export function PaymentMethods({ params, editable }: PaymentMethodsProps) {
 
 const PAYMENT_ITEM_STYLES = "px-4 py-3 hover:bg-muted-foreground/5"
 
+interface PaymentMethodItemProps {
+    method: MemberPaymentMethod;
+    params: { id: string; mid: string };
+    member: Member;
+}
+
+
 function PaymentMethodItem({
     method,
     params,
     member,
-}: { method: any; params: { id: string; mid: string }; member: any }) {
+}: PaymentMethodItemProps) {
     if (method.type === "card") {
-        const card = method.card as Stripe.PaymentMethod.Card;
+        const card = method.card as CardPaymentMethod;
         return (
             <Item variant="muted" className={PAYMENT_ITEM_STYLES}>
                 <ItemContent className="flex flex-row justify-between items-center gap-2">
                     <span>{card.brand}</span>
                     <span>
-                        {card.funding} •••• {card.last4}{" "}
-                        {method.allow_redisplay === "always" && (
+                        credit •••• {card.last4}{" "}
+                        {method.isDefault && (
                             <Badge roles="blue" size="tiny">
                                 Default
                             </Badge>
                         )}
                     </span>
                     <span>
-                        expires on {card.exp_month}/{card.exp_year}
+                        expires on {card.expMonth}/{card.expYear}
                     </span>
                 </ItemContent>
                 <ItemActions>
@@ -101,25 +107,24 @@ function PaymentMethodItem({
                         mid={params.mid}
                         paymentMethod={method}
                         lid={params.id}
-                        customerId={member.stripeCustomerId || ""}
                     />
                 </ItemActions>
             </Item>
         );
     } else if (method.type === "us_bank_account") {
-        const bank = method.us_bank_account as Stripe.PaymentMethod.UsBankAccount;
+        const bank = method.usBankAccount as UsBankAccountPaymentMethod;
         return (
             <Item variant="muted" className={PAYMENT_ITEM_STYLES}>
                 <ItemContent className="flex flex-row justify-between items-center gap-2">
-                    <span>{method.us_bank_account?.bank_name} •••• {bank.last4}
-                        {method.allow_redisplay === "always" && (
+                    <span>{bank.bankName} •••• {bank.last4}
+                        {method.isDefault && (
                             <Badge roles="blue" size="tiny">
                                 Default
                             </Badge>
                         )}
                     </span>
                     <span>
-                        {bank.account_type}
+                        {bank.accountType}
                     </span>
                 </ItemContent>
                 <ItemActions>
@@ -127,7 +132,6 @@ function PaymentMethodItem({
                         mid={params.mid}
                         paymentMethod={method}
                         lid={params.id}
-                        customerId={member.stripeCustomerId || ""}
                     />
                 </ItemActions>
             </Item>

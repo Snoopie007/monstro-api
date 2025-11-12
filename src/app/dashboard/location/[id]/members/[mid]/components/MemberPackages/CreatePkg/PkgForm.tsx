@@ -35,10 +35,10 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { Loader2, CalendarIcon, ChevronRight } from "lucide-react";
 import { cn, tryCatch } from "@/libs/utils";
-import { useMemberPaymentMethods, useMemberStatus } from "../../../providers";
+import { useMemberStatus } from "../../../providers";
+import { MemberPaymentMethod } from "@/types";
 import React from "react";
 import { MemberPackage, MemberPlan } from "@/types";
-import { Stripe } from "stripe";
 import { toast } from "react-toastify";
 import { useMemberPackages, } from "@/hooks";
 import { PMSelect } from "../../PMSelect";
@@ -52,10 +52,10 @@ interface PkgFormProps {
 
 export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
     const [paymentType, setPaymentType] = useState<"card" | "cash">("cash");
-    const [paymentMethod, setPaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<MemberPaymentMethod | null>(null);
     const { mutate } = useMemberPackages(lid, mid)
     const { ml } = useMemberStatus()
-    const { paymentMethods } = useMemberPaymentMethods()
+    const paymentMethods = ml.memberPaymentMethods;
 
 
     const form = useForm<z.infer<typeof NewPackageSchema>>({
@@ -162,10 +162,10 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
                                 <fieldset>
 
                                     <FormLabel size="tiny">Payment Method</FormLabel>
-                                    <PMSelect paymentMethods={paymentMethods}
+                                    <PMSelect paymentMethods={paymentMethods || []}
                                         onChange={(paymentMethod) => {
                                             setPaymentMethod(paymentMethod)
-                                        }} value={paymentMethod?.id || undefined}
+                                        }} value={paymentMethod?.stripeId || undefined}
                                         disabled={!form.getValues("memberPlanId")}
                                     />
 

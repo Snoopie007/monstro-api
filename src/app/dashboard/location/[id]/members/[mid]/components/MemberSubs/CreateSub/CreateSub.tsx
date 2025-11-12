@@ -24,11 +24,11 @@ interface CreateSubscriptionProps {
 export function CreateSubscription({ params }: CreateSubscriptionProps) {
     const [open, setOpen] = useState<boolean>(false)
     const { subscriptions } = useSubscriptions(params.id)
-    const { fetchSubs } = useMemberSubscriptions(params.id, params.mid)
+    const { mutate } = useMemberSubscriptions(params.id, params.mid)
 
     async function handleFinish(data: MemberSubscription) {
         setOpen(false)
-        fetchSubs()
+        mutate()
     }
 
     return (

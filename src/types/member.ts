@@ -15,6 +15,8 @@ import {
     memberCustomFields,
 } from '@/db/schemas'
 import { PaymentType } from './DatabaseEnums'
+import { MemberPaymentMethod } from './PaymentMethods'
+
 
 export type Member = typeof members.$inferSelect & {
     familyMembers?: FamilyMember[]
@@ -72,7 +74,10 @@ export type MemberLocation = typeof memberLocations.$inferSelect & {
     knownFamilyMembers?: FamilyMember[],
     lastCheckInTime?: Date | null
     totalPointsEarned?: number
+    memberPaymentMethods?: MemberPaymentMethod[]
 }
+
+
 
 export type MemberLocationProfile = {
     firstName: string

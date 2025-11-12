@@ -25,6 +25,7 @@ import type { MemberLocationProfile } from "@/types/member";
 import { attendances } from "./attendances";
 import type { LocationSettings } from "@/types";
 import { taxRates } from "./tax";
+import { memberPaymentMethods } from "./MemberPaymentMethods";
 
 export const locations = pgTable("locations", {
   id: uuid("id")
@@ -147,6 +148,9 @@ export const memberLocations = pgTable(
   (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]
 );
 
+
+
+
 export const locationsRelations = relations(locations, ({ many, one }) => ({
   memberLocations: many(memberLocations),
   integrations: many(integrations),
@@ -191,6 +195,10 @@ export const memberLocationsRelations = relations(
     }),
     transactions: many(transactions),
     attendances: many(attendances),
+    memberPaymentMethods: many(memberPaymentMethods, {
+      relationName: 'memberPaymentMethods',
+
+    }),
   })
 );
 
@@ -201,3 +209,4 @@ export const walletRelations = relations(wallets, ({ one, many }) => ({
   }),
   usages: many(walletUsages, { relationName: "usages" }),
 }));
+

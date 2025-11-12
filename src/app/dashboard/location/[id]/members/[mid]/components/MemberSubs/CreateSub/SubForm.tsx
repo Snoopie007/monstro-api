@@ -24,9 +24,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
 import { cn, sleep, tryCatch } from "@/libs/utils";
-import { useMemberPaymentMethods } from "../../../providers";
+import { useMemberStatus } from "../../../providers";
 import React from "react";
-import { MemberPlan, MemberSubscription } from "@/types";
+import { MemberPaymentMethod, MemberPlan, MemberSubscription } from "@/types";
 import { Stripe } from "stripe";
 import { DurationPicker } from ".";
 import { toast } from "react-toastify";
@@ -42,8 +42,9 @@ type SubFormProps = {
 export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
 
     const [paymentType, setPaymentType] = useState<"card" | "cash">("cash");
-    const { paymentMethods } = useMemberPaymentMethods()
-    const [paymentMethod, setPaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
+    const { ml } = useMemberStatus()
+    const paymentMethods = ml.memberPaymentMethods;
+    const [paymentMethod, setPaymentMethod] = useState<MemberPaymentMethod | null>(null);
 
     const form = useForm<z.infer<typeof NewSubscriptionSchema>>({
         resolver: zodResolver(NewSubscriptionSchema),
@@ -63,7 +64,7 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
             return
         }
         const path = paymentType === "card" ? "subs" : "subs/cash"
-        console.log('values: ', v)
+
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/members/${mid}/${path}`, {
                 method: "POST",
@@ -150,9 +151,9 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
 
                                     <div className="col-span-4">
                                         <FormLabel size="tiny">Payment Method</FormLabel>
-                                        <PMSelect paymentMethods={paymentMethods}
+                                        <PMSelect paymentMethods={paymentMethods || []}
                                             onChange={setPaymentMethod}
-                                            value={paymentMethod?.id || undefined}
+                                            value={paymentMethod?.stripeId || undefined}
                                             disabled={!form.getValues("memberPlanId")}
 
                                         />

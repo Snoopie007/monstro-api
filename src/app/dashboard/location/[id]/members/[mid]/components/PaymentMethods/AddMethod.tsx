@@ -37,8 +37,8 @@ import { RegionSelect } from "@/components/forms";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "react-toastify";
-import { useMemberPaymentMethods } from "../../providers/MemberContext";
 import { VisuallyHidden } from "react-aria";
+import { useMemberStatus } from "../../providers";
 
 interface AddPaymentMethodProps {
 	member: Member;
@@ -53,7 +53,7 @@ export default function AddPaymentMethod({
 
 	const [loading, setLoading] = useState(false);
 	const [validCard, setValidCard] = useState(false);
-	const { addPaymentMethods } = useMemberPaymentMethods();
+	const { addPaymentMethod } = useMemberStatus();
 	const { theme } = useTheme();
 	const stripe = useStripe();
 	const elements = useElements();
@@ -83,36 +83,30 @@ export default function AddPaymentMethod({
 
 		try {
 			const tokenRef = await stripe.createToken(cardElement!, { ...v });
-
+			console.log(tokenRef);
 			if (tokenRef.token) {
 				const res = await fetch(
-					`/api/protected/loc/${locationId}/members/${member.id}/payments`,
+					`/api/protected/loc/${locationId}/members/${member.id}/pms`,
 					{
 						method: "POST",
 						body: JSON.stringify({
-							token: tokenRef.token.id,
+							token: tokenRef.token,
 							...v,
-							member: {
-								email: member.email,
-								firstName: member.firstName,
-								lastName: member.lastName,
-								phone: member.phone,
-							},
 						}),
 					}
 				);
 				setLoading(false);
-				if (res.ok) {
-					const data = await res.json();
-					addPaymentMethods(data);
-					toast.success("Card added successfully", { theme: "dark" });
-				}
+				// if (res.ok) {
+				// 	const data = await res.json();
+				// 	addPaymentMethods(data);
+				// 	toast.success("Card added successfully", { theme: "dark" });
+				// }
 			}
 		} catch (error) {
 			console.log(error);
 			toast.error("Failed to add card", { theme: "dark" });
 		} finally {
-			setOpen(false);
+			// setOpen(false);
 			setLoading(false);
 		}
 	}
@@ -262,31 +256,7 @@ export default function AddPaymentMethod({
 									<FormMessage />
 								</FormItem>
 							</fieldset>
-							<fieldset>
-								<FormField
-									control={form.control}
-									name="default"
-									render={({ field }) => (
-										<FormItem className="flex flex-row items-center gap-2 rounded-lg border border-foreground/10 p-3 ">
-											<FormControl>
-												<Switch
-													checked={field.value}
-													onCheckedChange={field.onChange}
-												/>
-											</FormControl>
-											<div className="space-y-0.5">
-												<FormLabel className="text-sm">
-													Make this default payment method
-												</FormLabel>
-												<FormDescription className="text-xs">
-													This will override the current subscription plan
-													proration setting.
-												</FormDescription>
-											</div>
-										</FormItem>
-									)}
-								/>
-							</fieldset>
+
 						</form>
 					</Form>
 				</DialogBody>
@@ -305,9 +275,9 @@ export default function AddPaymentMethod({
 						variant={"primary"}
 						onClick={form.handleSubmit(onSubmit)}
 						type="submit"
-						disabled={!stripe || loading}
+						disabled={!stripe || loading || !validCard}
 					>
-						{loading ? <Loader2 className=" size-4 animate-spin" /> : "Add Card"}
+						{loading ? <Loader2 className=" size-4 animate-spin" /> : "Add Method"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

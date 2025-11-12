@@ -129,7 +129,7 @@ export async function POST(req: Request, props: Props) {
             startDate,
             cancelAt: data.cancelAt ? new Date(data.cancelAt) : undefined,
             trialEnd: trialDays ? calculateTrialEnd(startDate, trialDays) : undefined,
-            paymentMethod: paymentMethod.id,
+            paymentMethod: paymentMethod.stripeId,
             allowProration: plan.allowProration,
             feePercent,
             taxRateId,
