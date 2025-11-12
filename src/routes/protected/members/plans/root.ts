@@ -41,7 +41,6 @@ export const memberPlans = new Elysia({ prefix: '/plans/:pid' })
                                 },
                             },
                         },
-                        invoices: true,
                     },
                 });
             }

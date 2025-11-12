@@ -16,6 +16,12 @@ export * from "./reservations";
 export * from "./ImportedMember";
 export * from "./rewards";
 export * from "./achievements";
-export * from "./support";
+export * from "./SupportAssistants";
+export * from "./SupportConversations";
+export * from "./SupportTriggers";
+export * from "./SupportBotEnums";
+export * from "./SupportLogs";
+export * from "./SupportDocuments";
 export * from "./chat";
-
+export * from "./PaymentMethods";
+export * from "./tax";

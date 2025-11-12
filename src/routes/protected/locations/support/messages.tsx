@@ -1,7 +1,7 @@
 import type { Elysia } from "elysia";
 import { getModel, calculateAICost, DEFAULT_SUPPORT_TOOLS, formatHistory } from "@/libs/ai";
 import { db } from "@/db/db";
-import { supportConversations, supportMessages } from "@/db/schemas/support";
+import { supportConversations, supportMessages } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { formattedPrompt } from "@/libs/ai/Prompts";
 import { ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
@@ -103,7 +103,7 @@ export async function supportMessagesRoute(app: Elysia) {
 
             const modelWithPrompt = prompt.pipe(modelWithTools);
 
-            const history = formatHistory(messages);
+            const history = formatHistory(messages as SupportMessage[]);
 
             await invokeBot(modelWithPrompt, history, conversation, ml);
 
@@ -206,5 +206,5 @@ async function saveMessage(newMessage: NewSupportMessage): Promise<SupportMessag
         throw new Error('Failed to save message');
     }
 
-    return savedMessage;
+    return savedMessage as SupportMessage;
 }

@@ -5,7 +5,6 @@ import type { FamilyMember } from "@/types";
 import { generateReferralCode } from "@/libs/utils";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { emailQueue } from "@/libs/queues";
-import { evaluateTriggers } from "@/libs/achievements";
 
 
 export async function memberFamilies(app: Elysia) {
@@ -138,17 +137,7 @@ export async function memberFamilies(app: Elysia) {
                         return await tx.rollback();
                     }
 
-                    // Evaluate referral triggers for the inviting member
-                    try {
-                        await evaluateTriggers({
-                            memberId: mid,
-                            locationId: memberLocation.locationId,
-                            triggerType: 'referrals_count'
-                        });
-                    } catch (error) {
-                        console.error('Error evaluating referral triggers:', error);
-                        // Don't fail the request if trigger evaluation fails
-                    }
+
 
                     const [familyMember] = await tx.insert(familyMembers).values({
                         memberId: member.id,
@@ -184,14 +173,7 @@ export async function memberFamilies(app: Elysia) {
             }
 
             // Send email to the invited member
-            await emailQueue.add("email", {
-                to: fm?.member?.email,
-                subject: "You've been invited to join a family on Monstro",
-                template: "InviteEmailTemplate",
-                metadata: {
-                    member: {...fm?.member},
-                },
-            });
+            /// TODO: Send email to the notify family member.
 
             return status(200, fm);
         } catch (error) {

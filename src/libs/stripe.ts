@@ -1,45 +1,50 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { db } from "@/db/db";
+
 import type { MemberPlan } from "@/types";
-import type { MonstroPlan, PackagePaymentPlan } from "@/types/admin";
+import type { MonstroPlan } from "@/types/admin";
 import type { AddressParam } from "@stripe/stripe-js";
-import { isAfter, addDays, addWeeks } from "date-fns";
+import { isSameDay, addMonths, isAfter } from "date-fns";
 import Stripe from "stripe";
 
 type Customer = {
     firstName: string;
-    lastName: string;
+    lastName: string | null;
     email: string;
-    phone: string;
+    phone: string | null;
     address?: AddressParam;
+};
+
+type BaseSettings = {
+    description?: string;
+    feePercent?: number;
+    currency?: string;
+    returnUrl?: string;
+    paymentMethod?: string;
+    metadata?: Record<string, any>;
+};
+
+interface PaymentIntentSettings extends BaseSettings {
+    authorizeOnly?: boolean,
+    taxRateId?: string,
+    productName?: string,
+    tax?: number,
+    unitCost?: number,
 }
-
-const isProd = process.env.NODE_ENV === "production"
-const STRIPE_FEE_PERCENT = 2.9
-const STRIPE_FEE_AMOUNT = 0.30
-
-// function calculateMonstroFee(amount: number, monstroPercent: number) {
-//     const stripeFees = (amount / 100) * STRIPE_FEE_PERCENT + STRIPE_FEE_AMOUNT
-//     const monstroFees = (amount / 100) * (monstroPercent / 100)
-//     return {
-//         stripeFees,
-//         monstroFees
-//     }
-// }
-
-function calculatePercentage(amount: number) {
-    const additionalPercentage = Number(((STRIPE_FEE_AMOUNT / (amount / 100)) * 100).toFixed(2))
-    return additionalPercentage + STRIPE_FEE_PERCENT
+type MemberSubscriptionSettings = BaseSettings & {
+    cancelAt?: Date | null,
+    trialEnd?: Date | null,
+    taxRateId?: string;
+    startDate?: Date,
+    allowProration?: boolean
 }
+const isProd = process.env.NODE_ENV === "production";
 
 abstract class BaseStripePayments {
     protected _stripe: Stripe;
     protected _customer: string | null = null;
 
-
     constructor(key: string) {
         this._stripe = new Stripe(key, {
-            apiVersion: "2025-07-30.basil",
+            apiVersion: "2025-10-29.clover",
             appInfo: {
                 name: "My Monstro",
                 url: "https://mymonstro.com",
@@ -49,33 +54,46 @@ abstract class BaseStripePayments {
 
     public setCustomer(customer: string) {
         this._customer = customer;
-        return this
+        return this;
+    }
+    async connectOAuth(code: string, scope?: string) {
+        return await this._stripe.oauth.token({
+            grant_type: "authorization_code",
+            code,
+            scope: scope || "read_write",
+        });
     }
 
-    public async createCustomer(customer: Customer, token: string | undefined, metadata?: Record<string, any>) {
+    public async createCustomer(
+        customer: Customer,
+        token: string | undefined,
+        metadata?: Record<string, any>
+    ) {
         const c = await this._stripe.customers.create({
             name: `${customer.firstName} ${customer.lastName}`,
             email: customer.email,
-            phone: customer.phone,
+            phone: customer.phone || undefined,
             ...(token && { source: token }),
-            metadata: metadata || undefined,
             ...(customer.address && {
                 address: {
                     ...customer.address,
-                    country: 'US'
-                }
-            })
+                    country: customer.address.country || "US",
+                },
+            }),
+            metadata: metadata || undefined,
         });
-        this.setCustomer(c.id)
-        return c
+        this.setCustomer(c.id);
+        return c;
     }
 
-    async setDefaultPaymentMethod(paymentMethodId: string) {
-        if (!this._customer) {
-            throw new Error("Customer not set");
-        }
-        return await this._stripe.customers.update(this._customer, { invoice_settings: { default_payment_method: paymentMethodId } });
+    async constructEvent(
+        body: Buffer,
+        sig: string,
+        key: string
+    ): Promise<Stripe.Event> {
+        return await this._stripe.webhooks.constructEvent(body, sig, key);
     }
+
     async updatePaymentMethod(id: string, update: Stripe.PaymentMethodUpdateParams) {
         return await this._stripe.paymentMethods.update(id, update);
     }
@@ -90,8 +108,32 @@ abstract class BaseStripePayments {
         return await this._stripe.setupIntents.create(option);
     }
 
+    async getCustomer(customerId: string): Promise<Stripe.Customer | undefined> {
+        const customer = await this._stripe.customers.retrieve(customerId);
+
+        if (customer.deleted) {
+            return undefined;
+        }
+        return customer;
+    }
+
     async retrievePaymentMethod(customerId: string, paymentId: string) {
-        return await this._stripe.customers.retrievePaymentMethod(customerId, paymentId);
+        return await this._stripe.customers.retrievePaymentMethod(
+            customerId,
+            paymentId
+        );
+    }
+
+    async getInvoice(invoiceId: string) {
+        return await this._stripe.invoices.retrieve(invoiceId);
+    }
+
+    async getPaymentIntent(paymentIntentId: string) {
+        return await this._stripe.paymentIntents.retrieve(paymentIntentId);
+    }
+
+    async getToken(tokenId: string) {
+        return await this._stripe.tokens.retrieve(tokenId);
     }
 
     async updateCustomer(updates: Stripe.CustomerUpdateParams) {
@@ -101,8 +143,11 @@ abstract class BaseStripePayments {
         return await this._stripe.customers.update(this._customer, updates);
     }
 
-    async getPaymentMethods(customerId: string, limit?: number) {
-        return await this._stripe.customers.listPaymentMethods(customerId, { limit });
+    async getPaymentMethods(customerId: string, options?: { limit?: number, type?: "card" | "us_bank_account" }) {
+        return await this._stripe.customers.listPaymentMethods(customerId, {
+            limit: options?.limit || 10,
+            ...(options?.type && { type: options.type as Stripe.CustomerListPaymentMethodsParams.Type }),
+        });
     }
 
     async setupIntent(source: string, type?: string) {
@@ -113,51 +158,74 @@ abstract class BaseStripePayments {
             customer: this._customer,
             confirm: true,
             payment_method_data: {
-                type: 'card',
+                type: "card",
                 card: {
-                    token: source
-                }
+                    token: source,
+                },
             },
             payment_method_types: type ? [type] : ["card"],
-            expand: ["payment_method"]
+            expand: ["payment_method"],
         };
-        const { client_secret, payment_method } = await this._stripe.setupIntents.create(option);
+        const { client_secret, payment_method } =
+            await this._stripe.setupIntents.create(option);
 
-        return { clientSecret: client_secret as string, paymentMethod: payment_method as Stripe.PaymentMethod };
+        return {
+            clientSecret: client_secret as string,
+            paymentMethod: payment_method as Stripe.PaymentMethod,
+        };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async getSubscriptions(customerId: string, limit?: number) {
-        return await this._stripe.subscriptions.list({ customer: customerId, limit: 10 });
+        const list = await this._stripe.subscriptions.list({
+            customer: customerId,
+            limit: limit || 10,
+        });
+        return list;
     }
 
     async getCharges(limit?: number) {
         const res = await this._stripe.charges.list({ limit: limit || 10 });
         return res.data;
     }
-    async detachPaymentMethod(paymentMethodId: string) {
-        return await this._stripe.paymentMethods.detach(paymentMethodId);
-    }
-    async retrieveCustomer(customerId: string, options?: Stripe.CustomerRetrieveParams): Promise<Stripe.Customer> {
-        const res = await this._stripe.customers.retrieve(customerId, options);
-        return res as Stripe.Customer;
-    }
+
     async getInvoices(limit?: number) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
-        const res = await this._stripe.invoices.list({ customer: this._customer, limit: limit || 10 });
+        const res = await this._stripe.invoices.list({
+            customer: this._customer,
+            limit: limit || 10,
+        });
         return res.data;
     }
 
     async retryPayment(invoiceId: string, paymentMethod: string) {
-        return await this._stripe.invoices.pay(invoiceId, { payment_method: paymentMethod });
+        return await this._stripe.invoices.pay(invoiceId, {
+            payment_method: paymentMethod,
+        });
     }
 
     async refund(chargeId: string) {
         return await this._stripe.refunds.create({ charge: chargeId });
     }
 
+    async removeAccount(accountId: string) {
+        // Validate accountId to prevent empty string causing invalid API calls
+        if (!accountId || accountId.trim() === "") {
+            throw new Error("Invalid account ID: cannot be empty");
+        }
+        return await this._stripe.accounts.del(accountId);
+    }
+
+    async getSubscription(subscriptionId: string) {
+        return await this._stripe.subscriptions.retrieve(subscriptionId, {
+            expand: [
+                "latest_invoice",
+                "latest_invoice.payments",
+                "latest_invoice.payment_intent",
+            ],
+        });
+    }
 
     async calculateTax(amount: number, quantity: number, reference: string) {
         if (!this._customer) {
@@ -166,13 +234,34 @@ abstract class BaseStripePayments {
         const res = await this._stripe.tax.calculations.create({
             currency: "usd",
             customer: this._customer,
-            line_items: [{
-                amount,
-                quantity,
-                reference
-            }]
+            line_items: [
+                {
+                    amount,
+                    quantity,
+                    reference,
+                },
+            ],
         });
         return res;
+    }
+
+
+    async attachPaymentMethod(paymentMethodId: string) {
+        if (!this._customer) {
+            throw new Error("Customer ID is required");
+        }
+        return await this._stripe.paymentMethods.attach(paymentMethodId,
+            { customer: this._customer }
+        );
+    }
+
+    /**
+     * Detach a payment method from a customer
+     */
+    async detachPaymentMethod(paymentMethodId: string) {
+        return await this._stripe.paymentMethods.detach(
+            paymentMethodId
+        );
     }
 }
 
@@ -189,16 +278,8 @@ interface VendorPaymentIntentResponse {
 }
 
 class VendorStripePayments extends BaseStripePayments {
-    constructor(key?: string) {
-        super(key || process.env.STRIPE_SECRET_KEY!);
-    }
-
-    async connectOAuth(code: string, scope?: string) {
-        return await this._stripe.oauth.token({
-            grant_type: "authorization_code",
-            code,
-            scope: scope || "read_write"
-        });
+    constructor(secretKey?: string) {
+        super(secretKey || process.env.STRIPE_SECRET_KEY!);
     }
 
     /**
@@ -208,7 +289,11 @@ class VendorStripePayments extends BaseStripePayments {
      * @param options - The options for the payment intent
      * @returns The client secret for the payment intent
      */
-    async createPaymentIntent(amount: number, cardId: string | undefined, options?: VendorPaymentIntentOptions): Promise<VendorPaymentIntentResponse> {
+    async createPaymentIntent(
+        amount: number,
+        cardId: string | undefined,
+        options?: VendorPaymentIntentOptions
+    ): Promise<VendorPaymentIntentResponse> {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
@@ -222,16 +307,27 @@ class VendorStripePayments extends BaseStripePayments {
             customer: this._customer,
             setup_future_usage: "off_session",
             statement_descriptor: "Monstro",
-            ...(cardId && { payment_method: cardId }),
             metadata: options?.metadata || undefined,
-            return_url: "https://mymonstro.com",
+            return_url: "https://www.monstro-x.com",
         };
 
+        if (cardId) {
+            option.payment_method = cardId;
+        }
+
         const paymentIntent = await this._stripe.paymentIntents.create(option);
-        return { clientSecret: paymentIntent.client_secret as string, paymentIntent: paymentIntent as Stripe.PaymentIntent };
+        return {
+            clientSecret: paymentIntent.client_secret as string,
+            paymentIntent: paymentIntent as Stripe.PaymentIntent,
+        };
     }
 
-    async createSubscription(plan: MonstroPlan, metadata: Record<string, any>, trial?: number) {
+    async createSubscription(
+        plan: MonstroPlan,
+        metadata: Record<string, any>,
+        trial?: number,
+        paymentMethodId?: string | undefined
+    ) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
@@ -239,8 +335,9 @@ class VendorStripePayments extends BaseStripePayments {
         const options: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
             description: `Monstro ${plan.name} Subscription`,
-            items: [{ price: plan.priceId! }],
-            metadata
+            ...(paymentMethodId && { default_payment_method: paymentMethodId }),
+            items: [{ price: isProd ? plan.priceId! : plan.testPriceId! }],
+            metadata,
         };
         if (trial) {
             options.trial_period_days = trial;
@@ -248,118 +345,72 @@ class VendorStripePayments extends BaseStripePayments {
         return this._stripe.subscriptions.create(options);
     }
 
-    async createPaymentPlan(plan: PackagePaymentPlan, coupon: string | undefined, metadata: Record<string, any>) {
-
+    async createScaleUpgrade(
+        metadata: Record<string, any>,
+        paymentMethodId?: string | undefined
+    ) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
         const today = new Date();
-        const startDate = addDays(today, plan.trial || 0);
-        const endDate = addWeeks(startDate, (plan.length * 4));
+        const endDate = addMonths(today, 12);
 
         const options: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
             items: [{
-                price: isProd ? plan.priceId! : plan.testPriceId!
+                price: isProd ? 'price_1SO0hRDePDUzIffAeVml2g3g' : 'price_1SNgjhDePDUzIffADGAKBvN3',
             }],
             cancel_at: Math.floor(endDate.getTime() / 1000),
-            metadata
+            metadata,
         };
 
-        if (coupon) {
-            options.discounts = [{ coupon }];
-        }
-
-        if (plan.trial) {
-            options.trial_end = Math.floor(startDate.getTime() / 1000);
+        if (paymentMethodId) {
+            options.default_payment_method = paymentMethodId;
         }
 
         return this._stripe.subscriptions.create(options);
     }
 
-    async createPackageSubscriptions(metadata: Record<string, any>) {
 
-        if (!this._customer) {
-            throw new Error("Customer not set");
-        }
-        const phaseOneCoupon = isProd ? "qHgZNW46" : "QuJSpLOZ"
-        const phaseOnePrice = isProd ? "price_1R9XXWDePDUzIffAbDo18Rtf" : "price_1R4UUNDePDUzIffArAlN6mq6"
-        const phaseTwoPrice = isProd ? "price_1R4WeVDePDUzIffAZQPObJhE" : "price_1R4SG5DePDUzIffAz3GU05uZ"
-
-        const options: Stripe.SubscriptionScheduleCreateParams = {
-            customer: this._customer,
-            start_date: "now",
-            end_behavior: "release",
-            phases: [{
-                items: [{ price: phaseOnePrice, discounts: [{ coupon: phaseOneCoupon }] }],
-                iterations: 12,
-                billing_cycle_anchor: 'automatic',
-                currency: 'usd',
-                collection_method: 'charge_automatically',
-                metadata
-            }, {
-                items: [{ price: phaseTwoPrice }],
-                billing_cycle_anchor: 'automatic',
-                currency: 'usd',
-                collection_method: 'charge_automatically',
-                metadata
-            }],
-            metadata,
-            expand: ["subscription"]
-        }
-        const schedule = await this._stripe.subscriptionSchedules.create(options);
-
-        return schedule;
-    }
-
-    async updateSchedule(scheduleId: string, updates: Stripe.SubscriptionScheduleUpdateParams) {
-        return await this._stripe.subscriptionSchedules.update(scheduleId, updates);
-    }
-
-    async createGHLSubscription(metadata: Record<string, any>) {
-        const price = isProd ? "price_1R4WblDePDUzIffAvMQrZRFE" : "price_1R4S9xDePDUzIffAFUKu0ROH"
-        const coupon = isProd ? "kQcIf0sW" : "7Yt7dfGs"
+    async createGHLSubscription(metadata: Record<string, any>, paymentMethodId?: string | undefined) {
+        const price = isProd ? "price_1R4WblDePDUzIffAvMQrZRFE" : "price_1R4S9xDePDUzIffAFUKu0ROH";
         if (!this._customer) {
             throw new Error("Customer not set");
         }
         const options: Stripe.SubscriptionCreateParams = {
             customer: this._customer,
             description: `Monstro Marketing Suite Subscription`,
-            items: [{ price, discounts: [{ coupon }] }],
-            metadata
+            items: [{ price }],
+            metadata,
+            ...(paymentMethodId && { default_payment_method: paymentMethodId }),
         };
         return this._stripe.subscriptions.create(options);
     }
 }
 
-type BaseStripeSettings = {
-    description?: string,
-    applicationFeePercent?: number,
-    currency?: string,
-    returnUrl?: string,
-    paymentMethod?: string,
-    metadata?: Record<string, any>
-}
-
-interface MemberSubscriptionSettings extends BaseStripeSettings {
-    cancelAt: Date | null | undefined,
-    trialEnd: Date | null | undefined,
-    allowProration?: boolean
-}
-
-interface PaymentIntentSettings extends BaseStripeSettings {
-    authorizeOnly?: boolean,
-}
-
 class MemberStripePayments extends BaseStripePayments {
-    private _accountId: string;
-    constructor(accountId: string, secretKey?: string) {
-        super(secretKey || process.env.STRIPE_SECRET_KEY!);
-        this._accountId = accountId;
+    private _accountId: string | null;
+    constructor(accountId?: string, secretKey?: string) {
+        super(secretKey || process.env.STRIPE_MEMBER_SECRET_KEY!);
+        this._accountId = accountId || null;
     }
 
+    async getPaymentMethod(id: string): Promise<Stripe.PaymentMethod> {
+        return await this._stripe.paymentMethods.retrieve(id, { expand: ["customer"] });
+    }
+    override async getCharges(limit?: number) {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        const res = await this._stripe.charges.list({
+            limit: limit || 10,
+            customer: this._customer,
+        });
+        return res.data;
+    }
 
-    async createPaymentIntent(amount: number, settings?: PaymentIntentSettings) {
+    async createPaymentIntent(amount: number, applicationFeeAmount: number, options?: PaymentIntentSettings) {
+
         if (!this._customer) {
             throw new Error("Customer not set");
         }
@@ -367,26 +418,32 @@ class MemberStripePayments extends BaseStripePayments {
             throw new Error("Account ID not set");
         }
 
-        const percentage = calculatePercentage(amount) + (settings?.applicationFeePercent || 0)
-        const applicationFeeAmount = Math.floor((amount / 100) * (percentage / 100));
-
         const option: Stripe.PaymentIntentCreateParams = {
+            payment_method_types: ['card', 'us_bank_account'],
+            customer: this._customer,
             amount,
-            description: settings?.description,
+            amount_details: {
+                line_items: [{
+                    product_name: options?.productName || "",
+                    quantity: 1,
+                    unit_cost: options?.unitCost || 0,
+                    tax: {
+                        total_tax_amount: options?.tax || 0,
+                    },
+                }],
+            },
+            description: options?.description,
             transfer_data: {
                 destination: this._accountId,
             },
-            automatic_payment_methods: { enabled: true },
-            currency: settings?.currency || "usd",
+            currency: options?.currency || "usd",
             confirm: true,
-            customer: this._customer,
-            setup_future_usage: "off_session",
             application_fee_amount: applicationFeeAmount,
-            payment_method: settings?.paymentMethod || undefined,
-            capture_method: settings?.authorizeOnly ? "manual" : "automatic",
-            return_url: settings?.returnUrl || "https://unknown.com",
+            payment_method: options?.paymentMethod || undefined,
+            capture_method: options?.authorizeOnly ? "manual" : "automatic",
+            return_url: options?.returnUrl || "https://unknown.com",
             expand: ["payment_method"],
-            metadata: settings?.metadata || undefined
+            metadata: options?.metadata || undefined
         }
 
         const { client_secret, payment_method, latest_charge } = await this._stripe.paymentIntents.create(option);
@@ -394,41 +451,42 @@ class MemberStripePayments extends BaseStripePayments {
     }
 
 
-    async createSubscription(plan: MemberPlan, startDate: Date | undefined, settings: MemberSubscriptionSettings) {
+    async createSubscription(plan: MemberPlan, settings: MemberSubscriptionSettings) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
         if (!this._accountId) {
             throw new Error("Account ID not set");
         }
-        const { trialEnd, paymentMethod, applicationFeePercent, allowProration, cancelAt, ...rest } = settings;
+        const { startDate, trialEnd, paymentMethod, feePercent, allowProration, cancelAt,
+            taxRateId, ...rest } = settings;
 
         if (!plan.stripePriceId) {
             throw new Error("Price not found");
         }
-        const isAllowProration = plan.interval === "month" || plan.interval === "year"
-        const taxSettings = await this.retrieveTaxSettings()
-        const stripePercentage = calculatePercentage(plan.price)
 
-        const automaticTax = taxSettings.status === 'active';
+        const isAllowProration = plan.interval === "month" || plan.interval === "year"
+
 
         const accountDestination = {
             type: "account" as const,
             account: this._accountId
         }
+
         const options: Stripe.SubscriptionCreateParams = {
             ...rest,
+            ... (taxRateId && { default_tax_rates: [taxRateId] }),
             customer: this._customer,
             transfer_data: {
                 destination: this._accountId,
             },
-            automatic_tax: { enabled: automaticTax, liability: accountDestination },
+            automatic_tax: { enabled: false },
             invoice_settings: { issuer: accountDestination },
             description: `Subscription to ${plan.name}`,
             items: [{ price: plan.stripePriceId as string }],
             collection_method: "charge_automatically",
             default_payment_method: paymentMethod || undefined,
-            application_fee_percent: stripePercentage + (applicationFeePercent || 0),
+            application_fee_percent: feePercent || 0,
             cancel_at: cancelAt ? cancelAt.getTime() / 1000 : undefined,
             trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
         };
@@ -445,91 +503,300 @@ class MemberStripePayments extends BaseStripePayments {
 
         return this._stripe.subscriptions.create(options);
     }
-    createSubSchedule(priceId: string, startDate: Date, settings: MemberSubscriptionSettings): Promise<Stripe.SubscriptionSchedule> {
-        if (!this._customer) {
-            throw new Error("Customer not set");
-        }
-        const { cancelAt, applicationFeePercent, ...rest } = settings;
 
-        const options: Stripe.SubscriptionScheduleCreateParams = {
-            customer: this._customer,
-            start_date: new Date(startDate).getTime() / 1000,
-            end_behavior: "release",
 
-            phases: [{
-                items: [{ price: priceId }],
-                billing_cycle_anchor: 'automatic',
-                application_fee_percent: (applicationFeePercent || 0),
-                ...(cancelAt && { end_date: new Date(cancelAt).getTime() / 1000 }),
-                currency: 'usd',
-                collection_method: 'charge_automatically',
 
-            }],
-            ...rest
-        }
-        return this._stripe.subscriptionSchedules.create(options);
-    }
-
-    async createStripeProduct(data: MemberPlan, locationId: string): Promise<Stripe.Price> {
-        const { interval, price, intervalThreshold } = data
+    async createStripeProduct(
+        data: MemberPlan,
+        metadata: Record<string, any>
+    ): Promise<Stripe.Price> {
+        const { interval, price, intervalThreshold } = data;
         const product = await this._stripe.products.create({
             name: data.name,
             description: data.description,
             active: true,
             default_price_data: {
-
                 currency: data.currency || "usd",
                 recurring: {
                     interval: interval as Stripe.PriceCreateParams.Recurring.Interval,
-                    interval_count: intervalThreshold || 1
+                    interval_count: intervalThreshold || 1,
                 },
                 unit_amount: price,
-                metadata: {
-                    locationId: locationId,
-                    planId: data.id || ''
-                }
+                metadata,
             },
-            metadata: {
-                locationId: locationId,
-            },
-            expand: ["default_price"]
+            metadata,
+            expand: ["default_price"],
         });
 
-
-        return product.default_price as Stripe.Price
+        return product.default_price as Stripe.Price;
     }
 
-    async retrieveTaxSettings() {
-        const res = await this._stripe.tax.settings.retrieve();
-        return res;
+    // async retrieveTaxSettings() {
+    // 	return await this._stripe.tax.settings.retrieve();
+
+    // }
+
+    // async updateTaxSettings(settings: Stripe.Tax.SettingsUpdateParams) {
+    // 	return await this._stripe.tax.settings.update(settings);
+    // }
+
+    // async getTaxRegistrations() {
+    // 	return await this._stripe.tax.registrations.list();
+    // }
+
+
+    async createTaxRate(data: Stripe.TaxRateCreateParams) {
+        return await this._stripe.taxRates.create(data);
     }
 
-    async updateTaxSettings(settings: Stripe.Tax.SettingsUpdateParams) {
-        return await this._stripe.tax.settings.update(settings);
+    async updateTaxRate(taxRateId: string, data: Stripe.TaxRateUpdateParams) {
+        return await this._stripe.taxRates.update(taxRateId, data);
     }
 
-    async getTaxRegistrations() {
-        const res = await this._stripe.tax.registrations.list();
-        return res.data;
-    }
-
-    async updateTaxRegistration(registrationId: string, updates: Stripe.Tax.RegistrationUpdateParams) {
-        return await this._stripe.tax.registrations.update(registrationId, updates);
-    }
-
-    async createTaxRegistration(type: Stripe.Tax.RegistrationCreateParams.CountryOptions.Us.Type, state: string, country: string) {
-        return await this._stripe.tax.registrations.create({
-            country: country,
-            country_options: {
-                us: {
-                    state,
-                    type
-                }
-            },
-            active_from: 'now'
+    async getTaxRates() {
+        return await this._stripe.taxRates.list({
+            limit: 10,
         });
     }
 
+
+    async updateSubscription(
+        sid: string,
+        updates: Partial<Stripe.SubscriptionUpdateParams>
+    ): Promise<Stripe.Subscription> {
+        const commonPhaseOptions: Stripe.SubscriptionUpdateParams = {
+            ...updates,
+        };
+
+        return this._stripe.subscriptions.update(sid, commonPhaseOptions);
+    }
+
+    async cancelSubscription(
+        subscriptionId: string,
+        endOfPeriod: boolean,
+        cancelDate?: Date
+    ) {
+        const today = new Date();
+        if (cancelDate && isSameDay(cancelDate, today)) {
+            return this._stripe.subscriptions.cancel(subscriptionId);
+        } else {
+            return this._stripe.subscriptions.update(subscriptionId, {
+                cancel_at_period_end: endOfPeriod,
+                ...(!endOfPeriod && {
+                    cancel_at: cancelDate ? cancelDate.getTime() / 1000 : undefined,
+                }),
+            });
+        }
+    }
+
+    async createRefund(params: {
+        payment_intent?: string;
+        charge?: string;
+    }): Promise<Stripe.Refund> {
+        return this._stripe.refunds.create({
+            ...(params.payment_intent && { payment_intent: params.payment_intent }),
+            ...(params.charge && { charge: params.charge }),
+            refund_application_fee: false,
+            reverse_transfer: true,
+            reason: "requested_by_customer",
+        });
+    }
+
+    // Enhanced invoice creation methods for one-off invoices
+    async createInvoiceItem(
+        customerId: string,
+        itemData: {
+            amount: number;
+            currency: string;
+            description: string;
+            metadata?: Record<string, any>;
+        }
+    ): Promise<Stripe.InvoiceItem> {
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
+
+        return await this._stripe.invoiceItems.create({
+            customer: customerId,
+            amount: itemData.amount,
+            currency: itemData.currency,
+            description: itemData.description,
+            metadata: itemData.metadata || {},
+        });
+    }
+
+    async createDraftInvoice(
+        customerId: string,
+        options: {
+            collection_method: "charge_automatically" | "send_invoice";
+            description?: string;
+            due_date?: number;
+            metadata?: Record<string, any>;
+            auto_advance?: boolean;
+            pending_invoice_items_behavior?: "include" | "exclude";
+        }
+    ): Promise<Stripe.Invoice> {
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
+
+        const accountDestination = {
+            type: "account" as const,
+            account: this._accountId,
+        };
+
+        return await this._stripe.invoices.create({
+            customer: customerId,
+            collection_method: options.collection_method,
+            description: options.description,
+            due_date: options.due_date,
+            metadata: options.metadata || {},
+            auto_advance: options.auto_advance || false,
+            on_behalf_of: this._accountId,
+            issuer: accountDestination,
+            transfer_data: {
+                destination: this._accountId,
+            },
+            pending_invoice_items_behavior:
+                options.pending_invoice_items_behavior || "include",
+        });
+    }
+
+    async previewInvoice(
+        customerId: string,
+        invoiceItems?: any[]
+    ): Promise<Stripe.Invoice> {
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
+
+        const params: any = {};
+
+        // If invoice items are provided, create an isolated preview with only those items
+        if (invoiceItems && invoiceItems.length > 0) {
+            params.invoice_items = invoiceItems;
+            // Don't include customer to avoid pulling in subscriptions and pending items
+        } else {
+            // Fallback to customer-based preview if no specific items
+            params.customer = customerId;
+        }
+
+        return await this._stripe.invoices.createPreview(params);
+    }
+
+    async finalizeInvoice(invoiceId: string): Promise<Stripe.Invoice> {
+        return await this._stripe.invoices.finalizeInvoice(invoiceId);
+    }
+
+    async sendInvoice(invoiceId: string): Promise<Stripe.Invoice> {
+        return await this._stripe.invoices.sendInvoice(invoiceId);
+    }
+
+    async deleteInvoiceItem(
+        invoiceItemId: string
+    ): Promise<Stripe.DeletedInvoiceItem> {
+        return await this._stripe.invoiceItems.del(invoiceItemId);
+    }
+
+    // Create recurring invoice using subscription schedules with custom items
+    async createRecurringInvoiceSchedule(
+        customerId: string,
+        items: Array<{
+            price_data: {
+                currency: string;
+                product_data: {
+                    name: string;
+                    description?: string;
+                };
+                unit_amount: number;
+                recurring: {
+                    interval: "month" | "year" | "week" | "day";
+                    interval_count?: number;
+                };
+            };
+            quantity: number;
+        }>,
+        startDate: Date,
+        endDate?: Date
+    ): Promise<Stripe.SubscriptionSchedule> {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
+
+        const accountDestination = {
+            type: "account" as const,
+            account: this._accountId,
+        };
+
+        // Create prices for each item first, then use them in the schedule
+        const scheduleItems: Array<{ price: string; quantity: number }> = [];
+        for (const item of items) {
+            // Create product for this item
+            const productData: any = {
+                name: item.price_data.product_data.name,
+            };
+
+            // Only include description if it's not empty
+            if (
+                item.price_data.product_data.description &&
+                item.price_data.product_data.description.trim() !== ""
+            ) {
+                productData.description = item.price_data.product_data.description;
+            }
+
+            const product = await this._stripe.products.create(productData);
+
+            // Create the price
+            const price = await this._stripe.prices.create({
+                currency: item.price_data.currency,
+                product: product.id,
+                unit_amount: item.price_data.unit_amount,
+                recurring: {
+                    interval: item.price_data.recurring.interval,
+                    interval_count: item.price_data.recurring.interval_count || 1,
+                },
+            });
+
+            scheduleItems.push({
+                price: price.id,
+                quantity: item.quantity,
+            });
+        }
+
+        const options: Stripe.SubscriptionScheduleCreateParams = {
+            customer: customerId,
+            start_date: Math.floor(startDate.getTime() / 1000),
+            end_behavior: "cancel",
+            phases: [
+                {
+                    items: scheduleItems,
+                    transfer_data: {
+                        destination: this._accountId,
+                    },
+                    invoice_settings: { issuer: accountDestination },
+                    billing_cycle_anchor: "automatic",
+                    collection_method: "charge_automatically",
+                    ...(endDate && { end_date: Math.floor(endDate.getTime() / 1000) }),
+                },
+            ],
+        };
+
+        return await this._stripe.subscriptionSchedules.create(options);
+    }
+
+    // Release a subscription schedule to activate it
+    async releaseSubscriptionSchedule(
+        scheduleId: string
+    ): Promise<Stripe.SubscriptionSchedule> {
+        if (!this._accountId) {
+            throw new Error("Account ID not set");
+        }
+
+        return await this._stripe.subscriptionSchedules.release(scheduleId);
+    }
 }
 
 

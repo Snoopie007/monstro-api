@@ -7,6 +7,7 @@ import { isSessionPasted, getSessionState } from "@/libs/utils";
 import { eq } from "drizzle-orm";
 import { emailQueue } from "@/libs/queues";
 import { format, subDays, addHours } from "date-fns";
+import { MonstroData } from "@/libs/data";
 
 type ReservationBody = {
     type: "pkg" | "sub";
@@ -163,7 +164,7 @@ export async function locationReservations(app: Elysia) {
                     where: (ls, { eq }) => eq(ls.locationId, lid)
                 });
 
-                if (locationState?.planId && parseInt(locationState.planId) >= 2) {
+                if (locationState?.planId && locationState.planId >= 2) {
                     // Fetch member and location details
                     const member = await db.query.members.findFirst({
                         where: (m, { eq }) => eq(m.id, memberId)
@@ -198,11 +199,7 @@ export async function locationReservations(app: Elysia) {
                                 name: location.name || '',
                                 address: location.address || '',
                             },
-                            monstro: {
-                                fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',
-                                privacyUrl: 'https://mymonstro.com/privacy',
-                                unsubscribeUrl: 'https://mymonstro.com/unsubscribe',
-                            },
+                            monstro: MonstroData,
                         };
 
                         // For missed class email validation

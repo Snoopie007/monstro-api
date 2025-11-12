@@ -1,7 +1,7 @@
 import type { Elysia } from "elysia";
 import { getModel, calculateAICost, chunkedStream } from "@/libs/ai";
 import { db } from "@/db/db";
-import { supportAssistants } from "@/db/schemas/support";
+import { supportAssistants } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { formattedPrompt } from "@/libs/ai/Prompts";
 import { BaseMessage } from "@langchain/core/messages";

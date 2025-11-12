@@ -4,7 +4,6 @@ import type { Reservation } from "@/types/attendance";
 import { isSameHour } from "date-fns";
 import Elysia from "elysia";
 import { eq } from "drizzle-orm";
-import { evaluateTriggers } from "@/libs/achievements/AchievementTriggerService";
 import { emailQueue } from "@/libs/queues";
 
 
@@ -125,25 +124,13 @@ export async function locationCheckin(app: Elysia) {
             }
 
             // Evaluate attendance triggers after successful check-in
-            if (memberInfo?.member) {
-                try {
-                    await evaluateTriggers({
-                        memberId: memberInfo.member.id,
-                        locationId: memberInfo.locationId,
-                        triggerType: 'attendances_count',
-                        data: { attendanceId: checkin[0]?.id }
-                    });
-                } catch (error) {
-                    console.error('Error evaluating attendance triggers:', error);
-                    // Don't fail the request if trigger evaluation fails
-                }
-            }
+            // TODO: Evaluate attendance triggers
 
             // Cancel the missed class email since member checked in
             try {
                 const reservationIdToCancel = reservation.isRecurring ? recurringId : reservationId;
                 const jobId = `missed-class-${reservationIdToCancel}`;
-                
+
                 const job = await emailQueue.getJob(jobId);
                 if (job) {
                     await job.remove();

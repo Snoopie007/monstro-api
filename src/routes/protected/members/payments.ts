@@ -25,12 +25,12 @@ export function memberPayments(app: Elysia) {
             console.log("Stripe Secret Key", process.env.STRIPE_TEST_SECRET_KEY);
             const stripe = new VendorStripePayments(isTestMember ? process.env.STRIPE_TEST_SECRET_KEY : undefined);
 
-
-            const stripeCustomer = await stripe.retrieveCustomer(member.stripeCustomerId);
-            const defaultPaymentMethod = stripeCustomer.default_source || stripeCustomer.invoice_settings.default_payment_method;
+            const stripeCustomer = await stripe.getCustomer(member.stripeCustomerId);
             if (!stripeCustomer) {
                 return status(404, { error: "Stripe Customer not found" })
             }
+
+            const defaultPaymentMethod = stripeCustomer.invoice_settings?.default_payment_method;
             const paymentMethods = await stripe.getPaymentMethods(stripeCustomer.id);
 
 
@@ -98,7 +98,7 @@ export function memberPayments(app: Elysia) {
             stripe.setCustomer(member.stripeCustomerId);
 
 
-            await stripe.setDefaultPaymentMethod(paymentMethodId);
+            await stripe.updateCustomer({ invoice_settings: { default_payment_method: paymentMethodId } })
 
             return status(200, { success: true })
 

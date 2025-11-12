@@ -1,4 +1,4 @@
-import { familyMembers } from "@/db/schemas/members";
+import { familyMembers } from "@/db/schemas";
 import type { MemberRelationship } from "./DatabaseEnums";
 import type { Member } from "./member";
 
@@ -7,4 +7,3 @@ export type FamilyMember = typeof familyMembers.$inferSelect & {
   relatedMember?: Member;
   relationship: MemberRelationship;
 };
-

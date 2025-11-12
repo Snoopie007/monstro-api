@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/db";
-import { supportConversations } from "@/db/schemas/support";
+import { supportConversations } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { jwtVerify } from "jose";
 import { ConnectionManager, DatabaseListener } from "@/libs/ws/";

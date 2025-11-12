@@ -10,11 +10,9 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import {
-	memberContracts,
 	memberInvoices,
 	memberPointsHistory,
 	memberReferrals,
-	memberRewards,
 	members,
 } from "./members";
 import { integrations } from "./integrations";
@@ -23,9 +21,11 @@ import { transactions } from "./transactions";
 import { vendors } from "./vendors";
 import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
-import type { LocationSettings } from "@/types";
+import type { MemberLocationProfile } from "@/types/member";
 import { attendances } from "./attendances";
-import { memberAchievements } from "./achievements";
+import type { LocationSettings } from "@/types";
+import { taxRates } from "./tax";
+import { memberPaymentMethods } from "./PaymentMethods";
 
 export const locations = pgTable("locations", {
 	id: uuid("id")
@@ -61,9 +61,7 @@ export const locationState = pgTable("location_state", {
 	locationId: text("location_id")
 		.primaryKey()
 		.references(() => locations.id, { onDelete: "cascade" }),
-	planId: text("plan_id"),
-	pkgId: text("pkg_id"),
-	paymentPlanId: text("payment_plan_id"),
+	planId: integer("plan_id").notNull().default(1),
 	waiverId: text("waiver_id").references(() => locations.id, {
 		onDelete: "set null",
 	}),
@@ -72,16 +70,11 @@ export const locationState = pgTable("location_state", {
 		withTimezone: true,
 	}).defaultNow(),
 	startDate: timestamp("start_date", { withTimezone: true }),
-	settings: jsonb("settings")
-		.$type<LocationSettings>()
-		.notNull()
-		.default(sql`'{}'::jsonb`),
+	settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),
 	usagePercent: integer("usage_percent").notNull().default(0),
-	taxRate: integer("tax_rate").notNull().default(0),
+	premiumSupport: boolean("premium_support").notNull().default(false),
 	status: LocationStatusEnum("status").notNull().default("incomplete"),
-	created: timestamp("created_at", { withTimezone: true })
-		.notNull()
-		.defaultNow(),
+	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
 
@@ -121,6 +114,7 @@ export const walletUsages = pgTable("wallet_usages", {
 		.notNull()
 		.defaultNow(),
 });
+
 export const memberLocations = pgTable(
 	"member_locations",
 	{
@@ -131,8 +125,8 @@ export const memberLocations = pgTable(
 			.notNull()
 			.references(() => locations.id, { onDelete: "cascade" }),
 		status: LocationStatusEnum("status").notNull().default("incomplete"),
-		inviteDate: timestamp("invite_date", { withTimezone: true }),
 		points: integer("points").notNull().default(0),
+		inviteDate: timestamp("invite_date", { withTimezone: true }),
 		inviteAcceptedDate: timestamp("invite_accepted_date", {
 			withTimezone: true,
 		}),
@@ -140,12 +134,23 @@ export const memberLocations = pgTable(
 			.notNull()
 			.defaultNow(),
 		updated: timestamp("updated_at", { withTimezone: false }),
-		waiverId: text("waiver_id").references(() => memberContracts.id, {
+		waiverId: text("waiver_id").references(() => locations.id, {
 			onDelete: "set null",
 		}),
+
+
+		// MEMBER INFO UPDATE START: Added member personal information fields
+		profile: jsonb("profile").$type<MemberLocationProfile>(),
+		// MEMBER INFO UPDATE END
+		botMetadata: jsonb("bot_metadata").default(sql`'{}'::jsonb`),
+		lastBotInteraction: timestamp("last_bot_interaction", { withTimezone: true }),
+
 	},
 	(t) => [primaryKey({ columns: [t.memberId, t.locationId] })]
 );
+
+
+
 
 export const locationsRelations = relations(locations, ({ many, one }) => ({
 	memberLocations: many(memberLocations),
@@ -154,6 +159,8 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 	memberPlans: many(memberPlans),
 	memberSubscriptions: many(memberSubscriptions),
 	memberInvoices: many(memberInvoices),
+	pointsHistory: many(memberPointsHistory),
+	referrals: many(memberReferrals),
 	locationState: one(locationState, {
 		fields: [locations.id],
 		references: [locationState.locationId],
@@ -166,7 +173,7 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
 		fields: [locations.id],
 		references: [wallets.locationId],
 	}),
-	attendances: many(attendances),
+	taxRates: many(taxRates),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -176,22 +183,28 @@ export const locationStateRelations = relations(locationState, ({ one }) => ({
 	}),
 }));
 
-export const memberLocationsRelations = relations(memberLocations, ({ one, many }) => ({
-	member: one(members, {
-		fields: [memberLocations.memberId],
-		references: [members.id],
-	}),
-	location: one(locations, {
-		fields: [memberLocations.locationId],
-		references: [locations.id],
-	}),
-	transactions: many(transactions),
-	achievements: many(memberAchievements),
-	rewards: many(memberRewards),
-	referrals: many(memberReferrals),
-	pointsHistory: many(memberPointsHistory),
-	attendances: many(attendances),
-}));
+export const memberLocationsRelations = relations(
+	memberLocations,
+	({ one, many }) => ({
+		member: one(members, {
+			fields: [memberLocations.memberId],
+			references: [members.id],
+		}),
+		location: one(locations, {
+			fields: [memberLocations.locationId],
+			references: [locations.id],
+		}),
+		transactions: many(transactions),
+		attendances: many(attendances),
+		pointsHistory: many(memberPointsHistory, {
+			relationName: 'pointsHistory',
+		}),
+		memberPaymentMethods: many(memberPaymentMethods, {
+			relationName: 'memberPaymentMethods',
+
+		}),
+	})
+);
 
 export const walletRelations = relations(wallets, ({ one, many }) => ({
 	location: one(locations, {
@@ -200,3 +213,4 @@ export const walletRelations = relations(wallets, ({ one, many }) => ({
 	}),
 	usages: many(walletUsages, { relationName: "usages" }),
 }));
+

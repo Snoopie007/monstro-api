@@ -1,4 +1,4 @@
-import { db } from "@/db/db";
+
 import type { Elysia } from "elysia";
 import S3Bucket from "@/libs/s3";
 

@@ -6,8 +6,6 @@ import { and } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { EmailSender } from "@/libs/email";
 import { MonstroData } from "@/libs/data";
-import { evaluateTriggers } from "@/libs/achievements";
-
 
 const emailSender = new EmailSender();
 
@@ -123,6 +121,10 @@ export function memberPlansSubRoutes(app: Elysia) {
             }
 
             /// Send Email to notify family member and have them download the app
+
+            /// TODO: Trigger signup 
+            /// TODO: Trigger increment payments
+
 
             return status(200, {
                 ...familySubscription,

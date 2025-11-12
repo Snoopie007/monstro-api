@@ -24,8 +24,8 @@ export async function memberAccounts(app: Elysia) {
                 where: (a, { eq }) => eq(a.userId, member.userId),
                 columns: {
                     provider: true,
-                    providerAccountId: true,
-                    expires_at: true,
+                    accountId: true,
+                    expiresAt: true,
                 }
             });
 

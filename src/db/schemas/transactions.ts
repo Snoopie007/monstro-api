@@ -1,11 +1,11 @@
 import {
-  integer,
-  text,
-  timestamp,
-  pgTable,
-  jsonb,
-  boolean,
-  uuid,
+	integer,
+	text,
+	timestamp,
+	pgTable,
+	jsonb,
+	boolean,
+	uuid,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
