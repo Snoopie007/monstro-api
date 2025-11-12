@@ -47,7 +47,7 @@ export async function POST(req: Request, props: Props) {
 
         const { location, member } = ml;
 
-        if (!member || !member.stripeCustomerId) {
+        if (!member) {
             throw new Error("Member not found");
         }
 
