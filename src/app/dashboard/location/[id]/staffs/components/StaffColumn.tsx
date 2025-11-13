@@ -1,7 +1,5 @@
 import { Badge } from "@/components/ui/badge";
 import { StaffRowData } from "@/hooks/useStaffs";
-import { cn } from "@/libs/utils";
-import { Staff } from "@/types";
 import { ColumnDef } from "@tanstack/react-table";
 
 export const StaffColumns = (): ColumnDef<StaffRowData, any>[] => [
