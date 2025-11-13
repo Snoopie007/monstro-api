@@ -111,3 +111,70 @@ export function calculateNextPeriodEnd(
             throw new Error(`Invalid interval: ${interval}`);
     }
 }
+
+export async function fetchReservationData(reservationId: string) {
+    const reservation = await db.query.reservations.findFirst({
+        where: (reservations, { eq }) => eq(reservations.id, reservationId),
+        with: {
+            session: {
+                with: {
+                    program: true,
+                    staff: true,
+                }
+            },
+            member: true,
+            location: true,
+        }
+    });
+
+    if (!reservation) {
+        throw new Error(`Reservation not found for ID: ${reservationId}`);
+    }
+
+    return reservation;
+}
+
+export async function fetchRecurringReservationData(recurringReservationId: string) {
+    const recurringReservation = await db.query.recurringReservations.findFirst({
+        where: (recurringReservations, { eq }) => eq(recurringReservations.id, recurringReservationId),
+        with: {
+            session: {
+                with: {
+                    program: true,
+                    staff: true,
+                }
+            },
+            member: true,
+            location: true,
+            exceptions: true,
+        }
+    });
+
+    if (!recurringReservation) {
+        throw new Error(`Recurring reservation not found for ID: ${recurringReservationId}`);
+    }
+
+    return recurringReservation;
+}
+
+export function calculateNextClassOccurrence(
+    startDate: Date,
+    interval: string,
+    intervalThreshold: number,
+    currentOccurrence: number = 0
+): Date {
+    const nextDate = new Date(startDate);
+    
+    switch (interval) {
+        case 'day':
+            return addDays(nextDate, intervalThreshold * currentOccurrence);
+        case 'week':
+            return addWeeks(nextDate, intervalThreshold * currentOccurrence);
+        case 'month':
+            return addMonths(nextDate, intervalThreshold * currentOccurrence);
+        case 'year':
+            return addYears(nextDate, intervalThreshold * currentOccurrence);
+        default:
+            throw new Error(`Invalid interval: ${interval}`);
+    }
+}

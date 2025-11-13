@@ -4,6 +4,7 @@ import { EmailSender } from "@/libs/email";
 import { MonstroData } from "@/libs/data";
 import { shouldSendMissedClassEmail } from "@/libs/emailValidation";
 import { invoiceWorker } from "./invoices";
+import { classWorker } from "./classes";
 
 
 const emailSender = new EmailSender();
@@ -51,5 +52,9 @@ worker.on('failed', (job, err) => {
 });
 
 invoiceWorker.on('failed', (job, err) => {
-    console.error(`❌ Recurring invoice job ${job?.id} failed:`, err);
+    console.error(`❌ Invoice job ${job?.id} failed:`, err);
+});
+
+classWorker.on('failed', (job, err) => {
+    console.error(`❌ Class reminder job ${job?.id} failed:`, err);
 });

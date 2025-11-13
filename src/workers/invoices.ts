@@ -1,6 +1,6 @@
 import { redisConfig } from "@/config";
 import { Worker } from "bullmq";
-import { checkInvoiceOverdue, processOneOffInvoice, processRecurringInvoice } from "./jobs";
+import { checkInvoiceOverdue, processOneOffInvoice, processRecurringInvoice } from "./jobs/invoices";
 
 export const invoiceWorker = new Worker('invoices', async (job) => {
     const {name, data} = job;

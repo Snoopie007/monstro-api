@@ -4,7 +4,7 @@ import type { Reservation } from "@/types/attendance";
 import { isSameHour } from "date-fns";
 import Elysia from "elysia";
 import { eq } from "drizzle-orm";
-import { emailQueue } from "@/libs/queues";
+import { emailQueue, classQueue } from "@/libs/queues";
 
 
 type CheckinBody = {
@@ -126,19 +126,19 @@ export async function locationCheckin(app: Elysia) {
             // Evaluate attendance triggers after successful check-in
             // TODO: Evaluate attendance triggers
 
-            // Cancel the missed class email since member checked in
+            // Cancel the missed class check job since member checked in
             try {
                 const reservationIdToCancel = reservation.isRecurring ? recurringId : reservationId;
                 const jobId = `missed-class-${reservationIdToCancel}`;
 
-                const job = await emailQueue.getJob(jobId);
+                const job = await classQueue.getJob(jobId);
                 if (job) {
                     await job.remove();
-                    console.log(`📧 Cancelled missed class email for reservation ${reservationIdToCancel}`);
+                    console.log(`📧 Cancelled missed class check for reservation ${reservationIdToCancel}`);
                 }
             } catch (error) {
-                console.error('Error cancelling missed class email:', error);
-                // Don't fail the check-in if email cancellation fails
+                console.error('Error cancelling missed class check:', error);
+                // Don't fail the check-in if job cancellation fails
             }
 
             return status(200, checkin);

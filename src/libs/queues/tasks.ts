@@ -17,10 +17,25 @@ export const invoiceQueue = new Queue('invoices', {
     }
 })
 
+export const classQueue = new Queue('classes', {
+    connection: redisConfig,
+    defaultJobOptions: {
+        ...queueConfig.defaultJobOptions,
+        removeOnComplete: {
+            age: 60 * 60 * 24 * 7, // Keep completed jobs for 7 days
+            count: 100
+        }
+    }
+});
+
 emailQueue.on('error', (err) => {
     console.error('Email queue error:', err);
 });
 
 invoiceQueue.on('error', (err) => {
     console.error('Invoice queue error:', err);
+});
+
+classQueue.on('error', (err) => {
+    console.error('Class queue error:', err);
 });
