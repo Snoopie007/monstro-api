@@ -1,9 +1,10 @@
 
 import { db } from "@/db/db";
 import { NextRequest, NextResponse } from "next/server";
+
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { memberPaymentMethods } from "@/db/schemas";
-
+import { and, eq } from "drizzle-orm";
 type Props = {
     params: Promise<{ id: string; mid: string; pmid: string }>
 }
