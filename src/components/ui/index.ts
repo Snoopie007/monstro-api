@@ -29,3 +29,4 @@ export * from "./empty";
 export * from './stepper';
 export * from './GroupButton';
 export * from './progress';
+export * from './InfoField';

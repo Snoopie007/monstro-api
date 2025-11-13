@@ -1,12 +1,13 @@
 
 import useSWR from "swr";
 import { fetcher } from "./hooks";
+import { Program } from "@/types";
 
 function usePrograms(id: string) {
-	const { data, error, isLoading, mutate } = useSWR({ url: `programs?page=1`, id: id }, fetcher);
+	const { data, error, isLoading, mutate } = useSWR<Program[]>({ url: `programs?page=1`, id: id }, fetcher);
 
 	return {
-		data,
+		programs: data,
 		error,
 		isLoading,
 		mutate,

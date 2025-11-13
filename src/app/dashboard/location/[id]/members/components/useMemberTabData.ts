@@ -165,46 +165,45 @@ export function useMemberTabData(locationId: string, memberId?: string) {
      * @param tagOperator - The tag operator to filter the members by
      * @param sorting - The sorting configuration to sort the members by
      */
-    const handleChangeParam = useCallback(
-        ({
-            id,
-            page,
-            pageSize,
-            searchQuery,
-            selectedTags,
-            columnFilters,
-            tagOperator,
-            sorting = [],
-        }: {
-            id: number
-            page: number
-            pageSize: number
-            searchQuery: string
-            selectedTags: string[]
-            columnFilters: ColumnFiltersState
-            tagOperator: 'AND' | 'OR'
-            sorting: { id: string; direction: 'asc' | 'desc' }[]
-        }) => {
-            setMembersTabs((v) =>
-                v.map((tab) =>
-                    tab.id === id
-                        ? {
-                            ...tab,
-                            state: {
-                                ...tab.state,
-                                page,
-                                pageSize,
-                                searchQuery,
-                                selectedTags,
-                                columnFilters,
-                                tagOperator,
-                                sorting,
-                            },
-                        }
-                        : tab
-                )
+    const handleChangeParam = useCallback(({
+        id,
+        page,
+        pageSize,
+        searchQuery,
+        selectedTags,
+        columnFilters,
+        tagOperator,
+        sorting = [],
+    }: {
+        id: number
+        page: number
+        pageSize: number
+        searchQuery: string
+        selectedTags: string[]
+        columnFilters: ColumnFiltersState
+        tagOperator: 'AND' | 'OR'
+        sorting: { id: string; direction: 'asc' | 'desc' }[]
+    }) => {
+        setMembersTabs((v) =>
+            v.map((tab) =>
+                tab.id === id
+                    ? {
+                        ...tab,
+                        state: {
+                            ...tab.state,
+                            page,
+                            pageSize,
+                            searchQuery,
+                            selectedTags,
+                            columnFilters,
+                            tagOperator,
+                            sorting,
+                        },
+                    }
+                    : tab
             )
-        },
+        )
+    },
         []
     )
 

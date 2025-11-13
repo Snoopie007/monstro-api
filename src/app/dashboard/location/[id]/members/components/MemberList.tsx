@@ -18,7 +18,7 @@ import { AddMember } from './CreateMember'
 import { Member } from '@/types/member'
 
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
-import { ScrollArea, Separator } from '@/components/ui'
+import { Button, ScrollArea, Separator } from '@/components/ui'
 import {
     TablePage,
     TablePageContent,
@@ -222,92 +222,90 @@ export function MemberList({
     }
 
     return (
-        <TablePage>
-            <TablePageHeader>
-                <TablePageHeaderSection>
-                    <div className="flex flex-row items-center gap-2">
-                        <FilterPopover
-                            columns={columns}
-                            filters={columnFilters}
-                            onFiltersChange={handleFiltersChange}
-                            customFields={data.customFields}
-                        />
-                        <SortPopover
-                            columns={columns}
-                            onSortChange={handleSortChange}
-                        />
+        <div className='space-y-2 bg-muted/50  rounded-lg '>
+            <div className="flex flex-row items-center gap-2 px-2 pt-2">
+                <FilterPopover
+                    columns={columns}
+                    filters={columnFilters}
+                    onFiltersChange={handleFiltersChange}
+                    customFields={data.customFields}
+                />
+                <SortPopover
+                    columns={columns}
+                    onSortChange={handleSortChange}
+                />
 
-                        <Input placeholder="Find a member..."
-                            onChange={(event) => {
-                                handleSearch(event.target.value)
-                            }}
-                            className='h-9'
-                            variant="search"
-                        />
-                        <TagsFilter
-                            locationId={params.id}
-                            selectedTags={selectedTags}
-                            onTagsChange={handleTagsChange}
-                            canCreateTags={true}
-                        />
-                        {renderAddMember}
-                        {renderImportMembers}
-                    </div>
-                </TablePageHeaderSection>
-            </TablePageHeader>
-            <TablePageContent>
-                <ScrollArea className="h-[calc(100vh-190px)] overflow-hidden">
+                <Input placeholder="Find a member..."
+                    onChange={(event) => {
+                        handleSearch(event.target.value)
+                    }}
+                    className='h-9'
+                    variant="search"
+                />
+                <TagsFilter
+                    locationId={params.id}
+                    selectedTags={selectedTags}
+                    onTagsChange={handleTagsChange}
+                    canCreateTags={true}
+                />
+                {renderAddMember}
+                {renderImportMembers}
+            </div>
+            <div>
+                <ScrollArea className="h-[calc(100vh-210px)] overflow-hidden">
                     <MemberTable
                         table={table}
                         isLoading={isLoading}
                         columns={columns.length}
                     />
                 </ScrollArea>
-            </TablePageContent>
-            <TablePageFooter>
-                <div className="flex gap-2 items-center p-2">
-                    <button
-                        className="text-foreground/50 border-foreground/50 p-1 border rounded-xs hover:text-indigo-600 hover:border-indigo-600 cursor-pointer"
+            </div>
+            <div className=' flex flex-row items-center px-4 py-2 gap-2 text-sm'>
+                <div className="flex gap-2 items-center ">
+                    <Button
+                        variant="ghost"
+                        className='size-8 bg-background'
+                        size="icon"
                         onClick={() => table.previousPage()}
                         disabled={!table.getCanPreviousPage()}
                     >
                         <ChevronLeftIcon size={14} />
-                    </button>
+                    </Button>
                     <span>Page</span>
-                    <span>
-                        <input
-                            type="number"
-                            value={page + 1}
-                            onChange={(e) =>
-                                handleChangeParam({
-                                    id: tabId,
-                                    page: Number(e.target.value) - 1,
-                                    pageSize,
-                                    searchQuery,
-                                    selectedTags,
-                                    columnFilters,
-                                    tagOperator,
-                                    sorting,
-                                })
-                            }
-                            className="w-10 py-0.5 text-center border border-foreground/50 text-xs rounded-xs"
-                        />
-                    </span>
+                    <Input
+                        type="number"
+                        value={page + 1}
+                        onChange={(e) =>
+                            handleChangeParam({
+                                id: tabId,
+                                page: Number(e.target.value) - 1,
+                                pageSize,
+                                searchQuery,
+                                selectedTags,
+                                columnFilters,
+                                tagOperator,
+                                sorting,
+                            })
+                        }
+                        className="w-18 h-9"
+                    />
                     <span>of {totalPages}</span>
-                    <button
-                        className="text-foreground/50 border-foreground/50 p-1 border rounded-xs hover:text-indigo-600 hover:border-indigo-600 cursor-pointer"
+                    <Button
+                        variant="ghost"
+                        className='size-8 bg-background'
+                        size="icon"
                         onClick={() => table.nextPage()}
                         disabled={!table.getCanNextPage()}
                     >
                         <ChevronRightIcon size={14} />
-                    </button>
+                    </Button>
                 </div>
                 <Separator
                     orientation="vertical"
                     className="bg-foreground/10"
                 />
-                <div className=" px-2">Total members: {data?.count}</div>
-            </TablePageFooter>
-        </TablePage>
+                Total members: {data?.count}
+            </div>
+        </div>
     )
 }

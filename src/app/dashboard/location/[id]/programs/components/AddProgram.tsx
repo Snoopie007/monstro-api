@@ -15,7 +15,11 @@ import { z } from "zod";
 import { useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem, FormLabel, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, FormDescription } from '@/components/forms';
+import {
+    Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem,
+    FormLabel, Select, SelectTrigger, SelectValue, SelectContent,
+    SelectItem, FormDescription
+} from '@/components/forms';
 import { cn, getTimezoneOffset, sleep, tryCatch } from "@/libs/utils";
 
 import SessionComponent from './ProgramSessions';
@@ -23,7 +27,7 @@ import { NewProgramSchema } from '../schemas';
 
 import { toast } from 'react-toastify';
 import { usePrograms } from '@/hooks/usePrograms';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { VisuallyHidden } from 'react-aria';
 import { useStaffs } from '@/hooks/useStaffs';
 
@@ -34,7 +38,7 @@ export function AddProgram({ lid }: { lid: string }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const { mutate } = usePrograms(lid);
-    const { staffs, error: staffsError, isLoading: staffsLoading } = useStaffs(lid);
+    const { staffs } = useStaffs(lid);
     const form = useForm<z.infer<typeof NewProgramSchema>>({
         resolver: zodResolver(NewProgramSchema),
         defaultValues: {
@@ -78,7 +82,7 @@ export function AddProgram({ lid }: { lid: string }) {
             await sleep(1000);
             setLoading(false);
 
-            if(result?.status === 403) {
+            if (result?.status === 403) {
                 toast.error("You are not authorized to create a program");
                 return;
             }
@@ -102,18 +106,23 @@ export function AddProgram({ lid }: { lid: string }) {
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button variant={"create"} size={"sm"}>
-                    + Program
+                <Button variant="primary" className="flex flex-row items-center gap-2 ">
+                    <span className="font-medium">
+                        Add Program
+                    </span>
+
+                    <Plus className="size-4" />
+
                 </Button>
             </SheetTrigger>
             <SheetContent className="border-foreground/10 sm:max-w-[540px] sm:w-[540px] p-0">
                 <VisuallyHidden>
                     <SheetTitle></SheetTitle>
                 </VisuallyHidden>
-                <ScrollArea className="h-[calc(100vh-95px)] w-full ">
+                <ScrollArea className="h-[calc(100vh-52px)] w-full ">
 
                     <Form {...form}>
-                        <form >
+                        <form className='space-y-4 pb-10'>
                             <SheetSection>
                                 <fieldset>
                                     <FormField
@@ -230,19 +239,18 @@ export function AddProgram({ lid }: { lid: string }) {
                         </form>
                     </Form>
                 </ScrollArea>
-                <SheetFooter className='border-t border-foreground/10 py-2 px-4'>
+                <SheetFooter className='border-t border-foreground/10 py-3 px-4'>
                     <SheetClose asChild>
-                        <Button variant={"outline"} size={"sm"}>Cancel</Button>
+                        <Button variant={"outline"} className="border-foreground/10">Cancel</Button>
                     </SheetClose>
                     <Button
                         variant={"foreground"}
-                        size={"sm"}
                         onClick={form.handleSubmit(onSubmit)}
-                        disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
-                        className={cn("children:hidden  ", (loading && "children:inline-block"))}
+                        disabled={!form.formState.isValid || form.formState.isSubmitting}
+
                     >
-                        <Loader2 className="mr-2 size-3.5 animate-spin" />
-                        Save
+                        {form.formState.isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : "Save"}
+
                     </Button>
                 </SheetFooter>
 

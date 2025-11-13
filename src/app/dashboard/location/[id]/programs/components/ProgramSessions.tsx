@@ -15,8 +15,9 @@ import {
 import { z } from 'zod';
 import { DaysOfWeek, NewProgramSchema } from '../schemas';
 import { Button } from '@/components/ui';
-import { cn, stringToTime } from '@/libs/utils';
-import { Plus, X } from 'lucide-react';
+import { cn } from '@/libs/utils';
+import { Minus, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 
 interface AddProgramSessionsProps {
@@ -43,11 +44,15 @@ export default function SessionComponent({ control }: AddProgramSessionsProps) {
 
     // Memoize the remove handler to prevent recreation
     const handleRemoveSession = useCallback((index: number) => {
+        if (fields.length === 1) {
+            toast.error("You must have at least one session");
+            return;
+        }
         remove(index);
-    }, [remove]);
+    }, [remove, fields.length]);
 
     // Memoize days of week options
-    const daysOfWeekOptions = useMemo(() => 
+    const daysOfWeekOptions = useMemo(() =>
         DaysOfWeek.map((day, i) => (
             <SelectItem key={i} value={i.toString()}>{day}</SelectItem>
         )), []
@@ -74,73 +79,78 @@ export default function SessionComponent({ control }: AddProgramSessionsProps) {
                         </div>
                     ))}
                 </div>
-                <div className='space-y-1'>
+                <div className='space-y-1 '>
                     {fields.map((item, k) => {
                         return (
-                            <div className='grid grid-cols-4 gap-2  ' key={item.id}>
-                                <FormField
-                                    control={control}
-                                    name={`sessions.${k}.day`}
-                                    render={({ field, fieldState }) => (
-                                        <FormItem className='col-span-1'>
+                            <div className='flex flex-row items-center gap-2 justify-between' key={item.id}>
+                                <div className='grid grid-cols-3 gap-2 items-center'>
+                                    <FormField
+                                        control={control}
+                                        name={`sessions.${k}.day`}
+                                        render={({ field, fieldState }) => (
+                                            <FormItem className='col-span-1'>
 
-                                            <FormControl>
-                                                <Select onValueChange={(v) => field.onChange(parseInt(v) + 1)} value={(field.value - 1).toString()}>
-                                                    <SelectTrigger className={cn({ "border-red-500": fieldState.error }, "rounded-md")}>
-                                                        <SelectValue placeholder="Select a day" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {daysOfWeekOptions}
-                                                    </SelectContent>
-                                                </Select>
-                                            </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={control}
-                                    name={`sessions.${k}.time`}
-                                    render={({ field }) => (
-                                        <FormItem className={cn("col-span-1")}>
-                                            <FormControl>
+                                                <FormControl>
+                                                    <Select onValueChange={(v) => field.onChange(parseInt(v) + 1)} value={(field.value - 1).toString()}>
+                                                        <SelectTrigger className={cn({ "border-red-500": fieldState.error },)}>
+                                                            <SelectValue placeholder="Select a day" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {daysOfWeekOptions}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name={`sessions.${k}.time`}
+                                        render={({ field }) => (
+                                            <FormItem className={cn("col-span-1")}>
+                                                <FormControl>
 
-                                                <Input type="time"
-                                                    step="1"
-                                                    value={field.value}
-                                                    onChange={(e) => field.onChange(e.target.value)}
-                                                    className="bg-background rounded-md appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none border-foreground/10"
-                                                />
+                                                    <Input type="time"
+                                                        step="1"
+                                                        value={field.value}
+                                                        onChange={(e) => field.onChange(e.target.value)}
+                                                        className="bg-background rounded-lg appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none border-foreground/10"
+                                                    />
 
-                                            </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={control}
-                                    name={`sessions.${k}.duration`}
-                                    render={({ field }) => (
-                                        <FormItem className="col-span-1 ">
-                                            <FormControl>
-                                                <Input 
-                                                    type='number' 
-                                                    className={cn("rounded-md")} 
-                                                    placeholder={'Duration'}
-                                                    value={field.value}
-                                                    onChange={(e) => {
-                                                        const value = parseInt(e.target.value);
-                                                        if (value) {
-                                                            field.onChange(value);
-                                                        }
-                                                    }}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                {k > 0 ? <div onClick={() => handleRemoveSession(k)} className='cursor-pointer pt-3'>
-                                    <X className='w-4 h-4 stroke-red-500' />
-                                </div> : null}
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name={`sessions.${k}.duration`}
+                                        render={({ field }) => (
+                                            <FormItem className="col-span-1 ">
+                                                <FormControl>
+                                                    <Input
+                                                        type='number'
+                                                        placeholder={'Duration'}
+                                                        value={field.value}
+                                                        onChange={(e) => {
+                                                            const value = parseInt(e.target.value);
+                                                            if (value) {
+                                                                field.onChange(value);
+                                                            }
+                                                        }}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <Button type='button'
+                                    variant={"ghost"}
+                                    size={"icon"}
+                                    onClick={() => handleRemoveSession(k)}
+                                    className='size-6   hover:bg-foreground/10'>
+                                    <Minus className='size-4 stroke-red-500' />
+                                </Button>
                             </div>
                         );
                     })}

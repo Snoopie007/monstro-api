@@ -45,8 +45,8 @@ export default function LocationSelect({ locationId }: { locationId: string }) {
                     <Button
                         variant="ghost"
                         className={cn(
-                            "h-8 gap-2 px-4 text-sm rounded-lg bg-foreground/10",
-                            "hover:bg-foreground/20 hover:text-foreground  cursor-pointer"
+                            "h-8 gap-2 px-4 text-sm rounded-lg bg-muted/50 ",
+                            "hover:bg-muted/80 hover:text-foreground  cursor-pointer"
                         )}
 
                     >
