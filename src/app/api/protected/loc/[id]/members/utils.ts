@@ -113,12 +113,20 @@ async function scheduleRecurringInvoiceReminders(params: {
 async function scheduleOneOffInvoiceReminders(invoiceId: string, dueDate: Date, locationId: string) {
     const apiClient = serversideApiClient();
     
-    // Schedule reminder 10 days before due date
-    const reminderDate = addDays(dueDate, -10);
+    // Schedule PRE-DUE reminder (5 days before)
+    const preDueReminderDate = addDays(dueDate, -5);
+    if (preDueReminderDate > new Date()) {
+        await apiClient.post(`/x/loc/${locationId}/invoices/reminder`, {
+            invoiceId,
+            sendAt: preDueReminderDate.toISOString(),
+        });
+    }
     
-    await apiClient.post(`/x/loc/${locationId}/invoices/reminder`, {
+    // Schedule OVERDUE CHECK (30 mins after due date)
+    const overdueCheckDate = new Date(dueDate.getTime() + 30 * 60 * 1000); // 30 minutes after
+    await apiClient.post(`/x/loc/${locationId}/invoices/overdue`, {
         invoiceId,
-        sendAt: reminderDate.toISOString(),
+        sendAt: overdueCheckDate.toISOString(),
     });
 }
 
@@ -136,6 +144,25 @@ async function cancelRecurringInvoiceReminders(params: {
 	}
 }
 
+async function cancelInvoiceReminders(params: {
+	invoiceId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		// Cancel pre-due reminder
+		await apiClient.delete(`/x/loc/${params.locationId}/invoices/reminder/${params.invoiceId}`);
+		
+		// Cancel overdue check/reminders
+		await apiClient.delete(`/x/loc/${params.locationId}/invoices/overdue/${params.invoiceId}`);
+		
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel invoice reminders:', error);
+		throw error;
+	}
+}
+
 export {
 	calculatePeriodEnd,
 	calculateTax,
@@ -145,5 +172,6 @@ export {
 	calculateTrialEnd,
 	scheduleRecurringInvoiceReminders,
 	scheduleOneOffInvoiceReminders,
-	cancelRecurringInvoiceReminders
+	cancelRecurringInvoiceReminders,
+	cancelInvoiceReminders
 };
