@@ -35,16 +35,16 @@ interface StaffsPageProps {
 
 export default function StaffsPage(props: StaffsPageProps) {
   const params = use(props.params);
-  const { staffs, isLoading, error } = useStaffs(params.id);
+  const { staffs, isLoading, error, mutate } = useStaffs(params.id);
   const {
     roles,
     isLoading: isRolesLoading,
     error: isRolesError,
   } = useRoles(params.id);
   const [currentStaff, setCurrentStaff] = useState<Staff | null>(null);
-  const { mutate } = useSWR(`/api/protected/${params.id}/staffs`);
 
-  const columns = StaffColumns();
+  const columns = useMemo(() => StaffColumns(), []);
+
   const table = useReactTable({
     data: staffs,
     columns,
@@ -60,21 +60,22 @@ export default function StaffsPage(props: StaffsPageProps) {
     };
   }, [currentStaff]);
 
-  async function removeStaff(staffId: number) {
-    const { result, error } = await tryCatch(
-      fetch(`/api/protected/loc/${params.id}/staffs/${staffId}`, {
-        method: "DELETE",
-      })
-    );
+  // TODO: Add remove staff function
+  // async function removeStaff(staffId: number) {
+  //   const { result, error } = await tryCatch(
+  //     fetch(`/api/protected/loc/${params.id}/staffs/${staffId}`, {
+  //       method: "DELETE",
+  //     })
+  //   );
 
-    if (error || !result || !result.ok) {
-      toast.error("Something went wrong.");
-      return;
-    }
+  //   if (error || !result || !result.ok) {
+  //     toast.error("Something went wrong.");
+  //     return;
+  //   }
 
-    toast.success("Staff deleted successfully.");
-    mutate();
-  }
+  //   toast.success("Staff deleted successfully.");
+  //   mutate();
+  // }
 
   return (
     <>
