@@ -5,6 +5,7 @@ import { memberInvoices, members, transactions, memberSubscriptions } from "@/db
 import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { MemberStripePayments } from "@/libs/server/stripe";
+import { scheduleOneOffInvoiceReminders } from "../../../utils";
 
 type CreateInvoiceProps = {
   id: string;
@@ -125,6 +126,11 @@ export async function POST(
         return newInvoice;
       });
 
+      // Schedule reminder for subscription-generated invoices
+      if (invoice.dueDate) {
+        await scheduleOneOffInvoiceReminders(invoice.id, new Date(invoice.dueDate), params.id);
+      }
+
       return NextResponse.json(invoice, { status: 201 });
     }
 
@@ -180,6 +186,11 @@ export async function POST(
 
         return newInvoice;
       });
+
+      // Schedule reminder for one-off cash invoices
+      if (invoice.dueDate) {
+        await scheduleOneOffInvoiceReminders(invoice.id, new Date(invoice.dueDate), params.id);
+      }
 
       return NextResponse.json(invoice, { status: 201 });
     }
@@ -355,6 +366,11 @@ export async function POST(
         .insert(memberInvoices)
         .values(localInvoiceData as unknown as typeof memberInvoices.$inferInsert)
         .returning();
+
+      // Schedule reminder for one-off Stripe invoices
+      if (type === "one-off" && invoice.dueDate) {
+        await scheduleOneOffInvoiceReminders(invoice.id, new Date(invoice.dueDate), params.id);
+      }
 
       return NextResponse.json(
         {

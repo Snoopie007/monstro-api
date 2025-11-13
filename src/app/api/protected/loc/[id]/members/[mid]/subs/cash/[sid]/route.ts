@@ -2,6 +2,7 @@ import { db } from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { cancelRecurringInvoiceReminders } from "../../../../utils";
 
 type Params = {
     id: string;
@@ -67,7 +68,7 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
                 updated: new Date()
             })
             .where(eq(memberSubscriptions.id, sid));
-
+            await cancelRecurringInvoiceReminders({ subscriptionId: sid, locationId: id });
         return NextResponse.json({ success: true }, { status: 200 });
 
     } catch (err) {

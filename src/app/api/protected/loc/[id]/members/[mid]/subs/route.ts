@@ -4,6 +4,7 @@ import { MemberStripePayments } from "@/libs/server/stripe";
 import {
     calculatePeriodEnd, calculateTrialEnd,
     calculateStripeFeePercentage,
+    scheduleRecurringInvoiceReminders,
 } from "../../utils";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -157,6 +158,19 @@ export async function POST(req: Request, props: Props) {
                 locationId: id
             }
         }).returning()
+
+        const { locationState } = location;
+
+        if (locationState?.planId && locationState.planId >= 2) {
+            if (member && location && plan.interval && plan.intervalThreshold) {
+                await scheduleRecurringInvoiceReminders({ 
+                    subscriptionId: sub.id, 
+                    memberId: mid, 
+                    locationId: id 
+                });
+                console.log(`📧 Scheduled recurring invoice emails for subscription ${sub.id}`);
+            }
+        }
 
 
 
