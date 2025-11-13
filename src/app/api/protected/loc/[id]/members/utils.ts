@@ -163,6 +163,97 @@ async function cancelInvoiceReminders(params: {
 	}
 }
 
+// Class reminder scheduling functions
+async function scheduleClassReminders(params: {
+	reservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		// Schedule upcoming class reminder (3 days before)
+		await apiClient.post(`/x/loc/${params.locationId}/class/reminder`, {
+			reservationId: params.reservationId,
+			locationId: params.locationId,
+		});
+
+		// Schedule missed class check (30 mins after class end)
+		await apiClient.post(`/x/loc/${params.locationId}/class/missed`, {
+			reservationId: params.reservationId,
+			locationId: params.locationId,
+		});
+
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to schedule class reminders:', error);
+		throw error;
+	}
+}
+
+async function scheduleRecurringClassReminders(params: {
+	recurringReservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.post(`/x/loc/${params.locationId}/class/recurring`, {
+			recurringReservationId: params.recurringReservationId,
+			locationId: params.locationId,
+		});
+
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to schedule recurring class reminders:', error);
+		throw error;
+	}
+}
+
+async function cancelClassReminders(params: {
+	reservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		// Cancel upcoming class reminder
+		await apiClient.delete(`/x/loc/${params.locationId}/class/reminder/${params.reservationId}`);
+
+		// Cancel missed class check
+		await apiClient.delete(`/x/loc/${params.locationId}/class/missed/${params.reservationId}`);
+
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel class reminders:', error);
+		throw error;
+	}
+}
+
+async function cancelMissedClassReminder(params: {
+	reservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.delete(`/x/loc/${params.locationId}/class/missed/${params.reservationId}`);
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel missed class reminder:', error);
+		throw error;
+	}
+}
+
+async function cancelRecurringClassReminders(params: {
+	recurringReservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.delete(`/x/loc/${params.locationId}/class/recurring/${params.recurringReservationId}`);
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel recurring class reminders:', error);
+		throw error;
+	}
+}
+
 export {
 	calculatePeriodEnd,
 	calculateTax,
@@ -173,5 +264,10 @@ export {
 	scheduleRecurringInvoiceReminders,
 	scheduleOneOffInvoiceReminders,
 	cancelRecurringInvoiceReminders,
-	cancelInvoiceReminders
+	cancelInvoiceReminders,
+	scheduleClassReminders,
+	scheduleRecurringClassReminders,
+	cancelClassReminders,
+	cancelMissedClassReminder,
+	cancelRecurringClassReminders
 };
