@@ -33,7 +33,7 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="max-w-4xl mx-auto w-full space-y-4">
+			<div className="max-w-6xl mx-auto w-full space-y-4">
 				<div className="flex flex-row items-center gap-2 justify-between">
 					<Input
 						placeholder="Find a program..."

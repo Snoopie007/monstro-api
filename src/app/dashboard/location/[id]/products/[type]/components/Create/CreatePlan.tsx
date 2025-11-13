@@ -31,7 +31,7 @@ import React, { useState } from "react";
 
 import { toast } from "react-toastify";
 import { PlanSubFields } from "./SubFields";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { PlanPkgFields } from "./PkgFields";
 import AddPrograms from "../AddPrograms";
 import { usePackages, useSubscriptions } from "@/hooks/usePlans";
@@ -114,11 +114,12 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
 				<Button
-					size={"sm"}
-					variant={"ghost"}
-					className="flex-1 items-center gap-1 rounded-sm bg-foreground/10 hover:bg-foreground/10"
+
+					variant={"primary"}
+					className=" items-center gap-2"
 				>
-					+ {type === "subs" ? "Subscription" : "Package"}
+					{type === "subs" ? "Subscription" : "Package"}
+					<Plus className="size-3.5 text-white" />
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="max-w-lg border-foreground/10">
@@ -216,21 +217,21 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 					<div className="flex flex-row gap-2 items-center">
 						<DialogClose asChild>
 							<Button
-								size={"sm"}
+
 								variant={"outline"}
-								className="bg-transparent"
+								className="border-foreground/10"
 							>
 								Cancel
 							</Button>
 						</DialogClose>
 						<Button
-							size={"sm"}
+
 							onClick={form.handleSubmit(onSubmit)}
-							variant={"foreground"}
+							variant={"primary"}
 							disabled={form.formState.isSubmitting || !form.formState.isValid}
 						>
 							{form.formState.isSubmitting ? (
-								<Loader2 className="size-3.5 animate-spin" />
+								<Loader2 className="size-4 animate-spin" />
 							) : (
 								"Save"
 							)}

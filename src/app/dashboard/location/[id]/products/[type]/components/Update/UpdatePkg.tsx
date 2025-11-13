@@ -38,10 +38,11 @@ import { VisuallyHidden } from "react-aria";
 interface CreatePlanProps {
   lid: string;
   pkg: MemberPlan;
+  open: boolean;
+  setOpen: (open: boolean) => void;
 }
 
-export function UpdatePkg({ lid, pkg }: CreatePlanProps) {
-  const [open, setOpen] = useState(false);
+export function UpdatePkg({ lid, pkg, open, setOpen }: CreatePlanProps) {
   const { mutate: mutatePkgs } = usePackages(lid);
 
   const form = useForm<z.infer<typeof UpdatePkgPlanSchema>>({
@@ -94,15 +95,7 @@ export function UpdatePkg({ lid, pkg }: CreatePlanProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          size={"icon"}
-          variant={"ghost"}
-          className=" rounded-md bg-foreground/10 hover:bg-foreground/10 size-5 p-0"
-        >
-          <Pencil className="size-3" />
-        </Button>
-      </DialogTrigger>
+
       <DialogContent className="max-w-lg border-foreground/10">
         <VisuallyHidden className="space-y-0">
           <DialogTitle></DialogTitle>

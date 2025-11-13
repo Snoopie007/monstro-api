@@ -3,9 +3,9 @@ import { Program } from "@/types/program";
 import { ChevronRight } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui";
 import ProgramActions from "./ProgramActions";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { InfoField } from "@/components/ui";
-
+import { ProgramSessions } from "./Sessions";
 
 export function ProgramItem({ program }: { program: Program }) {
     const lid = program.locationId;
@@ -45,7 +45,8 @@ export function ProgramItem({ program }: { program: Program }) {
                     <ProgramActions program={program} lid={lid} />
                 </div>
             </div>
-            <Collapsible open={open} onOpenChange={setOpen} className="border-t border-foreground/5 group px-4 pt-3 pb-2">
+            <ProgramSessions program={program} />
+            {/* <Collapsible open={open} onOpenChange={setOpen} className="border-t border-foreground/5 group px-4 pt-3 pb-2">
                 <CollapsibleTrigger onClick={() => setOpen(!open)}>
                     <div className="flex flex-row items-center gap-1">
                         <ChevronRight className="size-4 transition-transform duration-300 group-data-[state=open]:rotate-90 " />
@@ -55,7 +56,7 @@ export function ProgramItem({ program }: { program: Program }) {
                 <CollapsibleContent className="py-4">
 
                 </CollapsibleContent>
-            </Collapsible>
+            </Collapsible> */}
 
 
 

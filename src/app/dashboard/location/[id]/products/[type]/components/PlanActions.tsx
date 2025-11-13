@@ -8,38 +8,32 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui";
 import { cn, tryCatch } from "@/libs/utils";
-import { Program } from "@/types";
-import { MoreVertical, Pencil, Pause, Play, Trash2, Timer } from "lucide-react";
+import { MemberPlan } from "@/types";
+import { MoreVertical, Pencil, Pause, Play, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
-import { UpdateProgram } from "./UpdateProgram";
-import { CreateSession } from "./Sessions/CreateSession";
-
-interface ProgramActionsProps {
-    program: Program;
+import { UpdatePkg, UpdateSub } from "./Update";
+interface PlanActionsProps {
+    plan: MemberPlan;
     lid: string;
 }
 
 const ItemBtnStyle = "cursor-pointer font-medium text-xs flex flex-row items-center justify-between gap-2 ";
 
-export default function ProgramActions({
-    program,
+export default function PlanActions({
+    plan,
     lid,
-}: ProgramActionsProps) {
+}: PlanActionsProps) {
     const [openUpdate, setOpenUpdate] = useState(false);
-    const [openSession, setOpenSession] = useState(false);
-    const PATH = `/api/protected/loc/${lid}/programs/${program.id}`;
-    async function toggleStatus() {
-
-
-    }
-
 
 
     return (
         <>
-            <CreateSession program={program} availableStaff={[]} staffId={'staff_id'} open={openSession} onOpenChange={setOpenSession} />
-            <UpdateProgram program={program} open={openUpdate} setOpen={setOpenUpdate} />
+            {plan.type === 'recurring' ? (
+                <UpdateSub lid={lid} sub={plan} open={openUpdate} setOpen={setOpenUpdate} />
+            ) : (
+                <UpdatePkg lid={lid} pkg={plan} open={openUpdate} setOpen={setOpenUpdate} />
+            )}
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="size-8 bg-foreground/5 rounded-md">
@@ -54,17 +48,7 @@ export default function ProgramActions({
                         <span>Update</span>
                         <Pencil className="size-3" />
                     </DropdownMenuItem>
-                    <DropdownMenuItem className={ItemBtnStyle} onClick={() => setOpenSession(true)}>
-                        <span>Create Session</span>
-                        <Timer className="size-3.5" />
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                        className={ItemBtnStyle}
-                        onClick={() => toggleStatus()}
-                    >
-                        <span>{program.status === 'active' ? 'Pause' : 'Resume'}</span>
-                        {program.status === 'active' ? <Pause className="size-3" /> : <Play className="size-3" />}
-                    </DropdownMenuItem>
+
                     <DropdownMenuSeparator className="mb-2" />
                     <DropdownMenuItem
                         className={cn(ItemBtnStyle, "text-red-500 hover:text-red-500")}

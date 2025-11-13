@@ -17,21 +17,21 @@ export async function GET(req: Request, props: { params: Promise<Params> }) {
 		const program = await db.query.programs.findFirst({
 			where: (programs, { eq }) => eq(programs.id, params.pid),
 			with: {
-					location: true,
-					instructor: {
-						with: {
-							user: true
-						}
-					},
-					sessions: true,
-					planPrograms: {
-							with: {
-									plan: true
-							}
+				location: true,
+				instructor: {
+					with: {
+						user: true
 					}
+				},
+				sessions: true,
+				planPrograms: {
+					with: {
+						plan: true
+					}
+				}
 			}
-	});
-	
+		});
+
 		return NextResponse.json(program, { status: 200 });
 	} catch (err) {
 		console.error(err)
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 
 		await db.update(programs).set({
 			...data,
-			instructorId: data.instructorId  ? data.instructorId : null
+			instructorId: data.instructorId ? data.instructorId : null
 		}).where(eq(programs.id, params.pid))
 		return NextResponse.json({ success: true }, { status: 200 })
 	} catch (err) {
@@ -69,7 +69,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
 		if (!canEditProgram) {
 			return NextResponse.json({ error: "Access denied" }, { status: 403 });
 		}
-		const [updatedProgram] =  await db.update(programs).set({
+		const [updatedProgram] = await db.update(programs).set({
 			instructorId: instructorId === "null" ? undefined : instructorId
 		}).where(eq(programs.id, params.pid)).returning()
 		return NextResponse.json({ success: true }, { status: 200 })
