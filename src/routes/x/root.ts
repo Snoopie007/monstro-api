@@ -4,7 +4,7 @@ import { xSupport } from './loc/support/root';
 import { xInvoices } from './loc/invoices/root';
 
 export const XRoutes = new Elysia()
-    .use(AuthXMiddleware)
+    // .use(AuthXMiddleware)
     .group('/loc/:lid', (app) => {
         app.use(xSupport);
         app.use(xInvoices);

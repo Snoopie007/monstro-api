@@ -6,7 +6,7 @@ export const emailQueue = new Queue('email', {
     defaultJobOptions: queueConfig.defaultJobOptions
 });
 
-export const invoiceQueue = new Queue('invoice', {
+export const invoiceQueue = new Queue('invoices', {
     connection: redisConfig,
     defaultJobOptions: {
         ...queueConfig.defaultJobOptions,

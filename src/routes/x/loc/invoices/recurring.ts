@@ -45,21 +45,31 @@ export async function recurringInvoiceRoutes(app: Elysia) {
         const { subscriptionId } = params;
             
             try {
-                const jobId = `recurring-invoice-${subscriptionId}`;
-                const job = await invoiceQueue.getJob(jobId);
-
-                if (!job) {
-                    return {
-                        success: false,
-                        message: `No recurring invoice job found for subscription ${subscriptionId}`
-                    };
+                // Remove all reminder jobs for this subscription (including numbered reminders)
+                let removedCount = 0;
+                
+                // Try to remove the main job (for pre-due reminders)
+                const mainJobId = `recurring-invoice-${subscriptionId}`;
+                const mainJob = await invoiceQueue.getJob(mainJobId);
+                if (mainJob) {
+                    await mainJob.remove();
+                    removedCount++;
                 }
-
-                await job.remove();
+                
+                // Remove all numbered reminder jobs (overdue reminders)
+                for (let i = 0; i < 10; i++) { // Max 10 reminders
+                    const reminderJobId = `recurring-invoice-${subscriptionId}-reminder-${i}`;
+                    const reminderJob = await invoiceQueue.getJob(reminderJobId);
+                    if (reminderJob) {
+                        await reminderJob.remove();
+                        removedCount++;
+                    }
+                }
 
                 return {
                     success: true,
-                    message: `Cancelled recurring invoice reminders for subscription ${subscriptionId}`
+                    message: `Cancelled ${removedCount} recurring invoice reminder(s) for subscription ${subscriptionId}`,
+                    removedCount
                 };
             } catch (error) {
                 console.error('Error cancelling recurring invoice:', error);
