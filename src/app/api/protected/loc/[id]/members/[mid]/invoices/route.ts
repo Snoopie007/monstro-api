@@ -4,6 +4,7 @@ import { db } from "@/db/db";
 import { memberInvoices, members } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { MemberStripePayments } from "@/libs/server/stripe";
+import { scheduleOneOffInvoiceReminders } from "../../utils";
 
 type InvoiceProps = {
 	mid: string;
@@ -257,6 +258,10 @@ export async function POST(
 			.insert(memberInvoices)
 			.values(localInvoiceData)
 			.returning();
+
+		if (type === "one-off" && invoice.dueDate) {
+			await scheduleOneOffInvoiceReminders(invoice.id, new Date(invoice.dueDate), params.id);
+		}
 
 		return NextResponse.json(
 			{

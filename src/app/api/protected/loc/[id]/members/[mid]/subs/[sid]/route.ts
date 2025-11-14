@@ -5,6 +5,7 @@ import Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { addDays, addMonths } from "date-fns";
 import { MemberStripePayments } from "@/libs/server/stripe";
+import { cancelRecurringInvoiceReminders } from "../../../utils";
 
 type Params = {
     id: string;
@@ -268,7 +269,7 @@ export async function DELETE(req: Request, props: { params: Promise<Params> }) {
                     updated: new Date()
                 })
                 .where(eq(memberSubscriptions.id, sid)).returning();
-
+            await cancelRecurringInvoiceReminders({ subscriptionId: sid, locationId: id });
             return NextResponse.json({ success: true }, { status: 200 });
         }
 

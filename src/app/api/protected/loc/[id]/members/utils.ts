@@ -89,110 +89,169 @@ function calculateTrialEnd(startDate: Date, trialDays: number): Date {
 }
 
 
-
-/**
- * Schedule recurring invoice email reminders for a subscription
- * Calculates all future due dates and schedules emails via BullMQ
- */
-async function scheduleRecurringInvoiceEmails(params: {
+async function scheduleRecurringInvoiceReminders(params: {
 	subscriptionId: string;
 	memberId: string;
 	locationId: string;
-	memberEmail: string;
-	memberFirstName: string;
-	memberLastName: string;
-	locationName: string;
-	locationAddress: string;
-	startDate: Date;
-	endDate?: Date;
-	interval: string;
-	intervalThreshold: number;
-	invoiceDetails: {
-		description: string;
-		items: any[];
-		total: number;
-		currency: string;
-	};
 }) {
 	const apiClient = serversideApiClient();
+	try {
+		await apiClient.post(`/x/loc/${params.locationId}/invoices/recurring`, {
+			subscriptionId: params.subscriptionId,
+			memberId: params.memberId,
+			locationId: params.locationId,
+		})
 
-	///request
-	// - queue
-	//  trigger - send email
-	// trigger - check if sub is active
-	// requeue
-
-	// Calculate all future due dates
-	const dueDates: Date[] = [];
-	let currentDate = new Date(params.startDate);
-	const maxDate = params.endDate || addYears(currentDate, 2); // Default 2 years if no end date
-
-	while (currentDate <= maxDate) {
-		dueDates.push(new Date(currentDate));
-
-		// Calculate next due date based on interval
-		switch (params.interval) {
-			case 'day':
-				currentDate = addDays(currentDate, params.intervalThreshold);
-				break;
-			case 'week':
-				currentDate = addWeeks(currentDate, params.intervalThreshold);
-				break;
-			case 'month':
-				currentDate = addMonths(currentDate, params.intervalThreshold);
-				break;
-			case 'year':
-				currentDate = addYears(currentDate, params.intervalThreshold);
-				break;
-			default:
-				throw new Error(`Invalid interval: ${params.interval}`);
-		}
-
-		// Safety limit: max 100 invoices scheduled at once
-		if (dueDates.length >= 100) break;
+		return {success: true};
+	} catch (error) {
+		console.error('Failed to schedule recurring invoice reminders:', error);
+		throw error;
 	}
+}
 
-	// Schedule email for each due date via monstro-api
-	const scheduledCount = 0;
-	for (const dueDate of dueDates) {
-		try {
-			await apiClient.post('/protected/locations/email', {
-				recipient: params.memberEmail,
-				subject: `Invoice Reminder: ${params.invoiceDetails.description}`,
-				template: 'InvoiceReminderEmail',
-				data: {
-					member: {
-						firstName: params.memberFirstName,
-						lastName: params.memberLastName,
-						email: params.memberEmail,
-					},
-					invoice: {
-						id: `${params.subscriptionId}-${dueDate.getTime()}`,
-						total: params.invoiceDetails.total,
-						dueDate: dueDate.toISOString(),
-						description: params.invoiceDetails.description,
-						items: params.invoiceDetails.items || [],
-					},
-					location: {
-						name: params.locationName || '',
-						address: params.locationAddress || '',
-					},
-					monstro: {
-						fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',
-						privacyUrl: 'https://mymonstro.com/privacy',
-						unsubscribeUrl: 'https://mymonstro.com/unsubscribe',
-					},
-				},
-				sendAt: dueDate.toISOString(),
-				jobId: `invoice-reminder-${params.subscriptionId}-${dueDate.getTime()}`,
-			});
-		} catch (error) {
-			console.error(`Failed to schedule email for ${dueDate.toISOString()}:`, error);
-			// Continue scheduling other emails even if one fails
-		}
+// In monstro-15: When creating a one-off invoice
+async function scheduleOneOffInvoiceReminders(invoiceId: string, dueDate: Date, locationId: string) {
+    const apiClient = serversideApiClient();
+    
+    // Schedule PRE-DUE reminder (5 days before)
+    const preDueReminderDate = addDays(dueDate, -5);
+    if (preDueReminderDate > new Date()) {
+        await apiClient.post(`/x/loc/${locationId}/invoices/reminder`, {
+            invoiceId,
+            sendAt: preDueReminderDate.toISOString(),
+        });
+    }
+    
+    // Schedule OVERDUE CHECK (30 mins after due date)
+    const overdueCheckDate = new Date(dueDate.getTime() + 30 * 60 * 1000); // 30 minutes after
+    await apiClient.post(`/x/loc/${locationId}/invoices/overdue`, {
+        invoiceId,
+        sendAt: overdueCheckDate.toISOString(),
+    });
+}
+
+async function cancelRecurringInvoiceReminders(params: {
+	subscriptionId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.delete(`/x/loc/${params.locationId}/invoices/recurring/${params.subscriptionId}`);
+		return {success: true};
+	} catch (error) {
+		console.error('Failed to cancel recurring invoice reminders:', error);
+		throw error;
 	}
+}
 
-	return scheduledCount;
+async function cancelInvoiceReminders(params: {
+	invoiceId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		// Cancel pre-due reminder
+		await apiClient.delete(`/x/loc/${params.locationId}/invoices/reminder/${params.invoiceId}`);
+		
+		// Cancel overdue check/reminders
+		await apiClient.delete(`/x/loc/${params.locationId}/invoices/overdue/${params.invoiceId}`);
+		
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel invoice reminders:', error);
+		throw error;
+	}
+}
+
+// Class reminder scheduling functions
+async function scheduleClassReminders(params: {
+	reservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		// Schedule upcoming class reminder (3 days before)
+		await apiClient.post(`/x/loc/${params.locationId}/class/reminder`, {
+			reservationId: params.reservationId,
+			locationId: params.locationId,
+		});
+
+		// Schedule missed class check (30 mins after class end)
+		await apiClient.post(`/x/loc/${params.locationId}/class/missed`, {
+			reservationId: params.reservationId,
+			locationId: params.locationId,
+		});
+
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to schedule class reminders:', error);
+		throw error;
+	}
+}
+
+async function scheduleRecurringClassReminders(params: {
+	recurringReservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.post(`/x/loc/${params.locationId}/class/recurring`, {
+			recurringReservationId: params.recurringReservationId,
+			locationId: params.locationId,
+		});
+
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to schedule recurring class reminders:', error);
+		throw error;
+	}
+}
+
+async function cancelClassReminders(params: {
+	reservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		// Cancel upcoming class reminder
+		await apiClient.delete(`/x/loc/${params.locationId}/class/reminder/${params.reservationId}`);
+
+		// Cancel missed class check
+		await apiClient.delete(`/x/loc/${params.locationId}/class/missed/${params.reservationId}`);
+
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel class reminders:', error);
+		throw error;
+	}
+}
+
+async function cancelMissedClassReminder(params: {
+	reservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.delete(`/x/loc/${params.locationId}/class/missed/${params.reservationId}`);
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel missed class reminder:', error);
+		throw error;
+	}
+}
+
+async function cancelRecurringClassReminders(params: {
+	recurringReservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.delete(`/x/loc/${params.locationId}/class/recurring/${params.recurringReservationId}`);
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel recurring class reminders:', error);
+		throw error;
+	}
 }
 
 export {
@@ -202,5 +261,13 @@ export {
 	calculateStripeFeePercentage,
 	getTaxRateId,
 	calculateTrialEnd,
-	scheduleRecurringInvoiceEmails,
+	scheduleRecurringInvoiceReminders,
+	scheduleOneOffInvoiceReminders,
+	cancelRecurringInvoiceReminders,
+	cancelInvoiceReminders,
+	scheduleClassReminders,
+	scheduleRecurringClassReminders,
+	cancelClassReminders,
+	cancelMissedClassReminder,
+	cancelRecurringClassReminders
 };
