@@ -159,9 +159,9 @@ export default async function MemberProfilePage(props: {
 							</div>
 						</ScrollArea>
 					</div>
-					<div className="w-2/4 min-w-0 flex flex-col h-full">
-						<MemberChatView />
-					</div>
+				<div className="w-2/4 min-w-0 flex flex-col h-full">
+					<MemberChatView locationId={params.id} currentMemberId={params.mid} />
+				</div>
 
 					<div className="w-1/3  min-w-0 h-full">
 						<ScrollArea className="h-full overflow-hidden">
