@@ -6,7 +6,7 @@ import { useRoles } from "@/hooks/useRoles";
 import InviteStaff from "./components/InviteStaff";
 import { Input } from "@/components/forms";
 import {
-	Button,
+	Badge,
 	Item, ItemMedia, ItemContent, Avatar,
 	ItemGroup, AvatarImage, AvatarFallback, ItemTitle, ItemDescription, ItemActions, ItemSeparator,
 	Empty,
@@ -15,7 +15,8 @@ import {
 	EmptyTitle,
 	EmptyDescription
 } from "@/components/ui";
-import { UserIcon } from "lucide-react";
+import { PhoneIcon, UserIcon } from "lucide-react";
+import Link from "next/link";
 
 interface StaffsPageProps {
 	params: Promise<{
@@ -76,15 +77,31 @@ export default function StaffsPage(props: StaffsPageProps) {
 													<AvatarFallback>{staff?.firstName?.charAt(0)} {staff?.lastName?.charAt(0)}</AvatarFallback>
 												</Avatar>
 											</ItemMedia>
-											<ItemContent className="gap-1">
-												<ItemTitle>{staff?.firstName} {staff?.lastName}</ItemTitle>
+											<ItemContent className="gap-1" >
+												<ItemTitle>
+													<Link href={`/dashboard/location/${params.id}/staffs/${staff?.id}`}>
+														{staff?.firstName} {staff?.lastName}
+													</Link>
+												</ItemTitle>
 												<ItemDescription>{staff?.email}</ItemDescription>
-											</ItemContent>
-											<ItemActions>
-												<Button variant="ghost" size="icon">
 
-												</Button>
-											</ItemActions>
+											</ItemContent>
+											<ItemContent>
+												<ItemTitle><PhoneIcon className="size-4" /> {staff?.phone ?? 'No phone number'}</ItemTitle>
+											</ItemContent>
+											<ItemContent>
+
+											</ItemContent>
+											<ItemContent className="gap-1" >
+												<ItemTitle>Roles</ItemTitle>
+												<div className="flex flex-row gap-1">
+													{roles?.map((role) => (
+														<Badge key={role.id} roles={role.color}>
+															{role.name}
+														</Badge>
+													))}
+												</div>
+											</ItemContent>
 										</Item>
 										{index !== filteredStaffs.length - 1 && <ItemSeparator className="bg-foreground/5" />}
 									</React.Fragment>
@@ -98,6 +115,8 @@ export default function StaffsPage(props: StaffsPageProps) {
 								<EmptyMedia variant="icon">
 									<UserIcon className="size-5" />
 								</EmptyMedia>
+								<EmptyTitle>No staffs found</EmptyTitle>
+								<EmptyDescription>Add a new staff to get started</EmptyDescription>
 							</EmptyHeader>
 						</Empty>
 					)}

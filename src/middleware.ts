@@ -41,8 +41,7 @@ export default async function middleware(req: NextRequest) {
 
 		// Unauthenticated user redirects
 		if (!isLoggedIn) {
-			if (
-				pathname.startsWith("/api/auth") ||
+			if (pathname.startsWith("/api/auth") ||
 				publicPaths.some((path) => pathname.startsWith(path))
 			) {
 				return NextResponse.next();

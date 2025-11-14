@@ -35,7 +35,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
 
 
     const [errors, setErrors] = useState<FieldErrors<z.infer<typeof VendorInviteSchema>> | null>(null);
-    const [checked, setChecked] = useState<boolean>(false);
+    const [checked, setChecked] = useState<boolean>(true);
     const router = useRouter();
 
 
@@ -92,7 +92,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
 
             <Form {...form}>
                 <form >
-                    <div className="space-y-2">
+                    <div className="space-y-3">
 
                         <div className="space-y-1">
                             <div className="text-xl font-bold">
@@ -133,19 +133,16 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                                 </FormItem>
                             )} />
                         </fieldset>
-                        <TermsAndConditions checked={checked} tos={tos} setChecked={setChecked} />
+                        <TermsAndConditions checked={checked} tos={tos} setChecked={setChecked} className="border-gray-200" />
 
-                        <div >
-
-                            <Button
-                                type="button"
-                                variant={"primary"}
-                                onClick={form.handleSubmit(onSubmit)}
-                                disabled={form.formState.isSubmitting || !checked}
-                            >
-                                {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : "Create Account"}
-                            </Button>
-                        </div>
+                        <Button
+                            size="lg"
+                            variant={"primary"}
+                            onClick={form.handleSubmit(onSubmit)}
+                            disabled={form.formState.isSubmitting || !checked}
+                        >
+                            {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : "Create Account"}
+                        </Button>
                     </div>
                 </form>
             </Form>

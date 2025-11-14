@@ -12,9 +12,10 @@ interface TermsAndConditionsProps {
     checked: boolean;
     setChecked: (checked: boolean) => void;
     tos: MonstroLegal | undefined;
+    className?: string;
 }
 
-export function TermsAndConditions({ checked, setChecked, tos }: TermsAndConditionsProps) {
+export function TermsAndConditions({ checked, setChecked, tos, className }: TermsAndConditionsProps) {
     const [scrolled, setScrolled] = useState(false);
 
 
@@ -30,7 +31,7 @@ export function TermsAndConditions({ checked, setChecked, tos }: TermsAndConditi
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <div className="items-center  flex space-x-1 border group border-foreground/10 p-3 rounded-lg cursor-pointer">
+                <div className={cn("items-center  flex space-x-1 border group border-foreground/10 p-3 rounded-lg cursor-pointer", className)}>
                     <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="group" data-checked={checked}>
                         <rect x="1" y="1" width="14" height="14" rx="2" strokeWidth="1.5" className="stroke-gray-500" />
                         <path d="M12 5L6.5 10.5L4 8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"

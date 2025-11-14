@@ -69,7 +69,7 @@ export default function InviteStaff({ roles, lid }: { roles: Array<Role>, lid: s
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant={"primary"} className="h-10 flex flex-row items-center gap-2" >
+                <Button variant={"primary"} className=" flex flex-row items-center gap-2" >
                     <span>Invite</span>
                     <PlusIcon className="size-4" />
                 </Button>
