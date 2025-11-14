@@ -12,8 +12,8 @@ import {
 	MultiDialogContent,
 	Avatar, AvatarImage, Button, Badge
 } from "@/components/ui";
-import { CalendarEvent as OldCalendarEvent } from "@/types";
-import { EnhancedEventDialogProps, Member, MemberWithValidation } from "@/components/event-calendar/types";
+import { CalendarEvent } from "@/types/calendar";
+import { EnhancedEventDialogProps, Member, MemberWithValidation } from "@/types";
 
 import { Input } from "@/components/forms/";
 import {
@@ -112,8 +112,8 @@ export function EnhancedEventDialog({
 		async (memberId: string) => {
 			if (!onRemoveReservation || !event || !originalData) return;
 
-			// Create a mock old event for the removal function
-			const mockOldEvent: OldCalendarEvent = {
+			// Create calendar event with attendance data for the removal function
+			const calendarEventWithData: CalendarEvent = {
 				id: event.id,
 				title: event.title,
 				start: event.start,
@@ -131,7 +131,7 @@ export function EnhancedEventDialog({
 			setIsUpdating(true);
 
 			try {
-				await onRemoveReservation(mockOldEvent, memberId);
+				await onRemoveReservation(calendarEventWithData, memberId);
 				refreshMemberList();
 				toast.success("Member removed successfully");
 			} catch (error) {

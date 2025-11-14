@@ -1,5 +1,6 @@
 import { db } from "@/db/db";
-import { CalendarEvent, RecurringReservation, Reservation } from "@/types";
+import { CalendarEvent } from "@/types/calendar";
+import { RecurringReservation, Reservation } from "@/types";
 import { endOfMonth, startOfMonth, addDays, addMinutes } from "date-fns";
 import { toDate,  } from 'date-fns-tz'
 import { NextResponse, NextRequest } from "next/server";
@@ -306,22 +307,33 @@ function mergeAndFilterEvents(
     if (existingEvent) {
       // Merge members if they exist in the new event
       if (event.data?.members?.length) {
+        if (!existingEvent.data) {
+          existingEvent.data = {
+            programId: event.data.programId,
+            sessionId: event.data.sessionId,
+            members: [],
+            isRecurring: false,
+          };
+        }
         existingEvent.data.members = [
           ...(existingEvent.data.members || []),
           ...event.data.members,
         ];
       }
+      
       // Update reservation data if present in new event
-      if (event.data?.reservationId) {
-        existingEvent.data.reservationId = event.data.reservationId;
+      if (existingEvent.data) {
+        if (event.data?.reservationId) {
+          existingEvent.data.reservationId = event.data.reservationId;
+        }
+        if (event.data?.recurringId) {
+          existingEvent.data.recurringId = event.data.recurringId;
+        }
+        if (event.data?.memberPlanId) {
+          existingEvent.data.memberPlanId = event.data.memberPlanId;
+        }
+        existingEvent.data.isRecurring = !!existingEvent.data.recurringId;
       }
-      if (event.data?.recurringId) {
-        existingEvent.data.recurringId = event.data.recurringId;
-      }
-      if (event.data?.memberPlanId) {
-        existingEvent.data.memberPlanId = event.data.memberPlanId;
-      }
-      existingEvent.data.isRecurring = !!existingEvent.data.recurringId;
     } else {
       eventMap.set(event.id, { ...event });
     }

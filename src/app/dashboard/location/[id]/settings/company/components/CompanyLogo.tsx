@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Button, Card } from "@/components/ui";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
-import { cn } from "@/components/event-calendar";
+import { cn } from "@/libs/utils";
 
 export default function CompanyLogo({
 	logo,

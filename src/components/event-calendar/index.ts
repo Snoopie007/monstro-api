@@ -15,11 +15,3 @@ export { CalendarDndProvider, useCalendarDnd } from "./CalendarDndContext";
 
 // Constants and utility exports
 export * from "./constants";
-export * from "./utils";
-
-// Hook exports
-export * from "./hooks/useCurrentTimeIndicator";
-export * from "./hooks/useEventVisibility";
-
-// Type exports
-export type { CalendarEvent, CalendarView, EventColor } from "./types";

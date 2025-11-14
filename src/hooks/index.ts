@@ -6,3 +6,5 @@ export * from "./usePrograms";
 export * from "./useCustomFields";
 export * from "./useDebounce";
 export * from "./useMemberAttendance";
+export * from './useCurrentTimeIndicator'
+export * from './useEventVisibility'

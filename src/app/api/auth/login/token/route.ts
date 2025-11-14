@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
             if (type === "email") {
                 await sendEmailViaApi({
                     recipient: user.email,
-                    template: 'LoginTokenEmail',
+                    template: 'SimpleOTPEmail',
                     subject: 'Verify your email address',
                     data: {
                         user,

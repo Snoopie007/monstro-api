@@ -22,13 +22,13 @@ import {
   DraggableEvent,
   DroppableCell,
   EventItem,
-  isMultiDayEvent,
-  useCurrentTimeIndicator,
   WeekCellsHeight,
-} from "@/components/event-calendar";
-import type { CalendarEvent } from "@/components/event-calendar/types";
-import { EndHour, StartHour } from "@/components/event-calendar/constants";
-import { cn } from "@/components/event-calendar/utils";
+} from "../event-calendar";
+import { useCurrentTimeIndicator } from "@/hooks";
+import type { CalendarEvent } from "@/types";
+import { EndHour, StartHour } from "./constants";
+import { cn } from "@/libs/utils";
+import { isMultiDayEvent } from "@/libs/calendar";
 
 interface WeekViewProps {
   currentDate: Date;

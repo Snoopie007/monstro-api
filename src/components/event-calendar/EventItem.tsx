@@ -8,9 +8,9 @@ import { differenceInMinutes, format, getMinutes, isPast } from "date-fns";
 import {
   getBorderRadiusClasses,
   getEventColorClasses,
-} from "@/components/event-calendar/utils";
-import type { CalendarEvent } from "@/components/event-calendar/types";
-import { cn } from "@/components/event-calendar/utils";
+} from "@/libs/calendar";
+import type { CalendarEvent } from "@/types";
+import { cn } from "@/libs/utils";
 
 // Using date-fns format with custom formatting:
 // 'h' - hours (1-12)
