@@ -7,11 +7,11 @@ import { xEmail } from './loc/email/root';
 
 export const XRoutes = new Elysia()
     .use(AuthXMiddleware)
+    .use(xEmail)
     .group('/loc/:lid', (app) => {
         app.use(xSupport);
         app.use(xInvoices);
         app.use(xClass);
-        app.use(xEmail);
         return app;
     })
 

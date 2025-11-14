@@ -1,6 +1,7 @@
 import type { Elysia } from "elysia";
 import { EmailSender } from "@/libs/email";
 import type { EmailTemplates } from "@/emails";
+import { MonstroData } from "@/libs/data";
 
 type SendEmailBody = {
     recipient: string;
@@ -16,13 +17,23 @@ export async function xEmailSend(app: Elysia) {
         const { recipient, subject, template, data } = body as SendEmailBody;
 
         try {
+            // Automatically inject Monstro data and default location if not provided
+            const enrichedData = {
+                ...data,
+                monstro: data.monstro || MonstroData,
+                location: data.location || {
+                    name: 'Monstro',
+                    email: MonstroData.email
+                }
+            };
+
             await emailSender.send({
                 options: {
                     to: recipient,
                     subject: subject,
                 },
                 template: template,
-                data: data
+                data: enrichedData
             });
 
             console.log(`📧 Sent immediate email to ${recipient} using template ${template}`);
