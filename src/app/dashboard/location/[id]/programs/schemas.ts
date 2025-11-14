@@ -19,6 +19,10 @@ const ProgramSchema = z.object({
     minAge: z.coerce.number().min(2, { message: "Min > 2" }),
     maxAge: z.coerce.number().min(3, { message: "Max > 3" }),
     instructorId: z.string().optional(),
+    allowWaitlist: z.boolean().optional(),
+    waitlistCapacity: z.coerce.number().min(0, { message: "Waitlist capacity > 0" }).optional(),
+    allowMakeUpClass: z.boolean().optional(),
+    cancelationThreshold: z.coerce.number().min(0, { message: "Cancelation threshold > 0" }).optional(),
 })
 
 const UpdateProgramSchema = ProgramSchema.superRefine((data, ctx) => {

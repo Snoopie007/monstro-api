@@ -1,10 +1,10 @@
 import useSWR from "swr";
 import { fetcher } from "./hooks";
-
+import { Contract } from "@/types";
 
 
 function useContracts(id: string, withDraft: boolean = true) {
-	const { data, error, isLoading } = useSWR({ url: `contracts?withDraft=${withDraft}`, id: id }, fetcher);
+	const { data, error, isLoading } = useSWR<Contract[]>({ url: `contracts?withDraft=${withDraft}`, id: id }, fetcher);
 	return {
 		contracts: data,
 		error,

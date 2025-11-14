@@ -12,6 +12,7 @@ import { CreateMemberForm } from '.';
 import { Member } from '@/types';
 import { Stripe } from 'stripe';
 import { VisuallyHidden } from 'react-aria';
+import { UserPlusIcon } from 'lucide-react';
 
 interface CreateMemberProps {
     lid: string
@@ -34,8 +35,9 @@ export function AddMember({ lid, stripeKey }: CreateMemberProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant={"ghost"} className='bg-foreground/5 rounded-lg'>
-                    + Member
+                <Button variant={"ghost"} className='bg-foreground/5 flex flex-row items-center gap-2'>
+                    <span>Member</span>
+                    <UserPlusIcon className="size-4" />
                 </Button>
             </DialogTrigger>
 

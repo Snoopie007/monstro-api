@@ -127,7 +127,7 @@ export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel size={"tiny"}>Program Description</FormLabel>
+                                    <FormLabel size={"tiny"}>Description</FormLabel>
                                     <FormControl>
                                         <Textarea
                                             placeholder="Program Description"

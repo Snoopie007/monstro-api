@@ -55,7 +55,7 @@ export default function ProgramActions({
                         <Pencil className="size-3" />
                     </DropdownMenuItem>
                     <DropdownMenuItem className={ItemBtnStyle} onClick={() => setOpenSession(true)}>
-                        <span>Create Session</span>
+                        <span>Add Session</span>
                         <Timer className="size-3.5" />
                     </DropdownMenuItem>
                     <DropdownMenuItem

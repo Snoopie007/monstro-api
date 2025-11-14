@@ -49,7 +49,7 @@ export default function SessionItem({ session, lid }: SessionItemProps) {
                 <DropdownMenuContent className="border-foreground/10">
                     <DropdownMenuItem className={ItemBtnStyle} onSelect={() => setOpenCancel(true)}>
                         <span>Cancel Session</span>
-                        <Trash2 className="size-3.5 text-red-500" />
+                        <Trash2 className="size-3 text-red-500" />
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu >
