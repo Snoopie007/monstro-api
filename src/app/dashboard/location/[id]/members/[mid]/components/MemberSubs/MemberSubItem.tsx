@@ -6,7 +6,7 @@ import type { MemberSubscription } from '@/types'
 import { format } from 'date-fns'
 import { SubActions } from './SubActions'
 import { Clock4Icon } from 'lucide-react'
-import { InfoField } from '../InfoField'
+import { InfoField } from '../../../../../../../../components/ui/InfoField'
 import { useEffect, useMemo, useState } from 'react'
 
 import { FamilyDialog } from '../FamilyPlan'

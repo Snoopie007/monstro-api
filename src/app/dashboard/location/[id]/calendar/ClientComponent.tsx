@@ -39,11 +39,10 @@ function convertToNewCalendarEvent(
   return {
     id: oldEvent.id,
     title: oldEvent.title,
-    description: `Session: ${oldEvent.data.sessionId}${
-      oldEvent.data.members.length > 0
-        ? ` | ${oldEvent.data.members.length} member(s)`
-        : ""
-    }`,
+    description: `Session: ${oldEvent.data.sessionId}${oldEvent.data.members.length > 0
+      ? ` | ${oldEvent.data.members.length} member(s)`
+      : ""
+      }`,
     start: oldEvent.start,
     end: oldEvent.end,
     allDay: false,
@@ -162,9 +161,8 @@ export default function CalendarPageClient({
         if (!event.data.recurringId) {
           throw new Error("Missing recurringId for recurring reservation");
         }
-        url = `/api/protected/loc/${id}/members/${memberId}/reservations/${
-          event.data.recurringId
-        }/recurring?date=${format(event.start, "yyyy-MM-dd")}`;
+        url = `/api/protected/loc/${id}/members/${memberId}/reservations/${event.data.recurringId
+          }/recurring?date=${format(event.start, "yyyy-MM-dd")}`;
       } else {
         if (!event.data.reservationId) {
           throw new Error("Missing reservationId for regular reservation");
@@ -215,7 +213,7 @@ export default function CalendarPageClient({
   return (
     <div className="flex flex-row h-full ">
       <CalendarDndProvider onEventUpdate={handleEventUpdate}>
-        <div className="relative flex-1 h-full p-2">
+        <div className="relative flex-1 h-full pr-2 pb-2">
           {/* Loader Overlay on the container */}
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -237,12 +235,11 @@ export default function CalendarPageClient({
         </div>
       </CalendarDndProvider>
 
-      <div className="flex-initial w-[300px] flex flex-col pl-0 pr-2 pt-2 pb-1 space-y-2">
+      <div className="flex-initial w-[300px] flex flex-col space-y-2">
         {/* Small calendar date picker for navigation to day view */}
-        <div className="rounded-lg border border-foreground/10 bg-background flex py-4 flex-row justify-center items-center">
+        <div className="rounded-lg border border-foreground/10  flex py-4 flex-row justify-center items-center">
           <Calendar
             mode="single"
-            fromDate={new Date()}
             selected={currentDate}
             onSelect={(date) => {
               if (date) {

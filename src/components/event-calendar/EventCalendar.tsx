@@ -47,6 +47,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/libs/utils";
+import { ButtonGroup } from "../ui";
 
 export interface EventCalendarProps {
 	events?: CalendarEvent[];
@@ -334,57 +335,53 @@ export function EventCalendar({
 					className={cn("flex items-center justify-between pb-2", className)}
 				>
 					<div className="flex items-center gap-1 sm:gap-4">
-						<h2 className="text-sm font-semibold ">{viewTitle}</h2>
 
-						<div className="flex items-center sm:gap-2">
+
+						<ButtonGroup>
+							<div className={cn(
+								"bg-foreground/5 rounded-lg px-4 h-10 flex items-center justify-center",
+								"border border-foreground/10 text-sm font-semibold"
+							)}>
+								{viewTitle}
+							</div>
 							<Button
-								variant="ghost"
+								variant="outline"
 								size="icon"
 								onClick={handlePrevious}
-								className="size-6"
+								className="border-foreground/10 size-10"
 								aria-label="Previous"
 							>
 								<ChevronLeftIcon size={16} aria-hidden="true" />
 							</Button>
 							<Button
-								variant="ghost"
+								variant="outline"
 								size="icon"
 								onClick={handleNext}
-								className="size-6"
+								className="border-foreground/10 size-10"
 								aria-label="Next"
 							>
 								<ChevronRightIcon size={16} aria-hidden="true" />
 							</Button>
-						</div>
+						</ButtonGroup>
 					</div>
-					<div className="flex items-center gap-2 bg-foreground/5 rounded-lg p-1">
+					<ButtonGroup>
 						<Button
-							variant="ghost"
-							className="max-[479px]:aspect-square max-[479px]:p-0!"
+							variant="outline"
 							onClick={handleToday}
-							size="sm"
+							className="border-foreground/10"
 						>
-							<RiCalendarCheckLine
-								className="min-[480px]:hidden"
-								size={16}
-								aria-hidden="true"
-							/>
+
 							<span className=" max-[479px]:sr-only">Today</span>
 						</Button>
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" size="sm">
+								<Button variant="outline" className="border-foreground/10 flex flex-row items-center gap-2">
 									<span>
-										<span className="min-[480px]:hidden" aria-hidden="true">
-											{view.charAt(0).toUpperCase()}
-										</span>
-										<span className="max-[479px]:sr-only">
-											{view.charAt(0).toUpperCase() + view.slice(1)}
-										</span>
+										{view.charAt(0).toUpperCase() + view.slice(1)}
 									</span>
 									<ChevronDownIcon
-										className="-me-1 opacity-60"
-										size={16}
+										className="text-muted-foreground size-4 -mt-0.5"
+
 										aria-hidden="true"
 									/>
 								</Button>
@@ -407,18 +404,19 @@ export function EventCalendar({
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
-						<Button
-							size="sm"
-							className="dark:bg-foreground/10 dark:hover:bg-foreground/20"
-							onClick={() => {
-								setSelectedEvent(null); // Ensure we're creating a new event
-								setClickedDateTime(undefined); // Clear any previous clicked time
-								setIsEventDialogOpen(true);
-							}}
-						>
-							+ New program
-						</Button>
-					</div>
+					</ButtonGroup>
+					<Button
+
+						variant="outline"
+						className="border-foreground/10"
+						onClick={() => {
+							setSelectedEvent(null); // Ensure we're creating a new event
+							setClickedDateTime(undefined); // Clear any previous clicked time
+							setIsEventDialogOpen(true);
+						}}
+					>
+						+ New program
+					</Button>
 				</div>
 
 				<div

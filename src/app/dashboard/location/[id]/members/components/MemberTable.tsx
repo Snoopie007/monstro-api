@@ -24,7 +24,7 @@ export function MemberTable<TData, TValue>({
 	isLoading: boolean;
 }) {
 	return (
-		<Table className="w-full border-r border-b border-foreground/5">
+		<Table className="w-full">
 			<TableHeader>
 				{table.getHeaderGroups().map((headerGroup) => (
 					<TableRow
@@ -35,7 +35,7 @@ export function MemberTable<TData, TValue>({
 							return (
 								<TableHead
 									key={header.id}
-									className="h-auto border-l border-foreground/5 py-1 text-foreground whitespace-nowrap"
+									className="h-10 border-l border-foreground/5 py-1 text-foreground whitespace-nowrap"
 								>
 									{header.isPlaceholder
 										? null

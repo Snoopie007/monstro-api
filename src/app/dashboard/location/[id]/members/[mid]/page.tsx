@@ -140,7 +140,7 @@ export default async function MemberProfilePage(props: {
 	return (
 		<TooltipProvider>
 			<MemberProvider member={member} ml={ml} paymentMethods={paymentMethods}>
-				<div className="flex flex-row gap-2 p-2 h-[calc(100vh-50px)] overflow-hidden">
+				<div className="flex flex-row gap-2 pr-2 pb-2 h-[calc(100vh-50px)] overflow-hidden">
 					<div className="w-1/3 space-y-2 min-w-0 flex flex-col h-full">
 						<MemberProfile params={params} />
 						<PointsProfile />

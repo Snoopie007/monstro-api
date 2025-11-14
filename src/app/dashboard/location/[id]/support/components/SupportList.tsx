@@ -73,8 +73,8 @@ export function SupportList({ lid }: { lid: string }) {
     }
 
     return (
-        <div className="flex flex-col">
-            <div className="flex items-center justify-between p-2">
+        <div className="flex flex-col bg-muted/50 rounded-lg  h-full">
+            <div className="flex items-center justify-between px-4 py-2">
                 <div className="text-base font-bold">Support Inbox</div>
                 <div className="flex items-center gap-1">
                     <TooltipProvider>
@@ -84,7 +84,7 @@ export function SupportList({ lid }: { lid: string }) {
                                     variant="ghost"
                                     size="icon"
                                     className="size-8"
-                                    onClick={() => {}}
+                                    onClick={() => { }}
                                     disabled={isLoading}
                                 >
                                     <RefreshCw

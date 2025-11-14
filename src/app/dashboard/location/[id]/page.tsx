@@ -21,7 +21,7 @@ export default function LocationDashboard(props: { params: Promise<{ id: string 
 
     return (
         <ScrollArea className='  h-full '>
-            <div className='grid grid-cols-4 p-2 gap-4'>
+            <div className='grid grid-cols-4 pr-2 pb-2 gap-4'>
 
                 <div className=' col-span-3 space-y-4     '>
                     <div className="grid grid-cols-4 gap-4">

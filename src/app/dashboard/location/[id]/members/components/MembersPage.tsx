@@ -26,7 +26,7 @@ export default function MembersPage({ id, stripeKey }: MembersPageProps) {
         handleChangeParam,
         handleFetchForCurrentTab,
     } = useMemberTabData(id ?? '')
-    
+
     if (!id) {
         return <div>Loading...</div>
     }
@@ -60,23 +60,23 @@ export default function MembersPage({ id, stripeKey }: MembersPageProps) {
 
     return (
         <Tabs activationMode="manual" defaultValue={String(membersTabs[0].id)} className="w-full">
-            <TabsList className="w-full bg-transparent  justify-start border-none  rounded-none gap-1">
+            <TabsList className="w-full bg-transparent  justify-start border-none px-0  h-11 ">
                 {membersTabs.map((tab) => (
                     <TabsTrigger
                         key={tab.id}
                         value={String(tab.id)}
-                        className=" gap-1 group rounded bg-foreground/5 h-full data-[state=active]:shadow-none  relative"
+                        className=" gap-1 data-[state=active]:bg-muted/50 rounded-lg group bg-transparent h-full data-[state=active]:shadow-none  "
                         asChild
                     >
                         <div className="flex flex-row items-center gap-1">
-                            <span > {tab.name.length > 11 ? `${tab.name.slice(0, 11)}...` : tab.name} </span>
+                            <span className='text-sm'> {tab.name.length > 11 ? `${tab.name.slice(0, 11)}...` : tab.name} </span>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className=" rounded-sm size-[12px] hover:bg-foreground/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                className="size-5 "
                                 onClick={() => handleRemoveTab(tab.id)}
                             >
-                                <X className="size-[12px]" />
+                                <X className="size-3" />
                             </Button>
                         </div>
                     </TabsTrigger>

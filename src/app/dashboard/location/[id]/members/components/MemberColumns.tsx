@@ -40,7 +40,7 @@ export const MemberColumns = (
 			id: "select",
 			header: ({ table }) => (
 				<Checkbox
-					className="border-foreground/50 rounded-sm mt-1.5"
+					className="border-foreground/50 mt-1.5"
 					checked={
 						table.getIsAllPageRowsSelected() ||
 						(table.getIsSomePageRowsSelected() && "indeterminate")
@@ -51,7 +51,7 @@ export const MemberColumns = (
 			),
 			cell: ({ row }) => (
 				<Checkbox
-					className="border-foreground/50 rounded-sm mt-1.5"
+					className="border-foreground/50 mt-1.5"
 					checked={row.getIsSelected()}
 					onCheckedChange={(value) => row.toggleSelected(!!value)}
 					aria-label="Select row"
@@ -143,7 +143,7 @@ export const MemberColumns = (
 
 				if (!customFieldValue || !customFieldValue.value) {
 					return (
-						<span className="text-muted-foreground text-xs italic">-</span>
+						<span className="text-muted-foreground italic">-</span>
 					);
 				}
 

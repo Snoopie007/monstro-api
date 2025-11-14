@@ -28,7 +28,7 @@ export function SettingMenu({ roles, locationId }: { roles: string, locationId: 
         return pathname.includes(path);
     }
     return (
-        <aside className="col-span-2">
+        <aside className="col-span-2 ">
             <ul className="text-foreground flex flex-col gap-2">
                 {SettingMenuItems.filter(item => item.roles.includes(roles)).map((item, i) => (
                     <li key={i} className={cn("font-semibold rounded-sm", isActive(item.path) && 'bg-accent')}>

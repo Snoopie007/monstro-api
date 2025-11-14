@@ -7,7 +7,7 @@ import {
 import { formatAmountForDisplay, tryCatch } from '@/libs/utils'
 import { MemberPackage } from '@/types/member'
 import { format } from 'date-fns'
-import { InfoField } from '../InfoField'
+import { InfoField } from '../../../../../../../../components/ui/InfoField'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
 import { cn } from '@/libs/utils'

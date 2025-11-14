@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import { fetcher } from "./hooks";
+import { useMemo } from "react";
 
 export interface StaffRowData {
   id: string;
@@ -25,26 +26,28 @@ export interface StaffRowData {
 }
 
 function useStaffs(locationId: string) {
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     { url: `staffs`, id: locationId },
     fetcher
   );
 
   // Map the API response to StaffRowData format
-  const mappedStaffs =
-    data?.map((staffLocation: any) => ({
+  const mappedStaffs = useMemo(() => {
+    return data?.map((staffLocation: any) => ({
       id: staffLocation.staff.id,
       name: `${staffLocation.staff.firstName} ${staffLocation.staff.lastName}`.trim(),
       email: staffLocation.staff.email,
       phone: staffLocation.staff.phone,
-      role: staffLocation.roles?.[0]?.role?.name || "No Role", // Get the first role's name, or default
-      roleColor: staffLocation.roles?.[0]?.role?.color || "No Color", // Get the first role's color, or default
+      role: staffLocation.roles?.[0]?.role?.name || "No Role",
+      roleColor: staffLocation.roles?.[0]?.role?.color || "No Color",
     })) || [];
+  }, [data]); // Only recalculate when SWR data changes
 
   return {
     staffs: mappedStaffs as StaffRowData[],
     error,
     isLoading,
+    mutate
   };
 }
 

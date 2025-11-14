@@ -24,7 +24,7 @@ export default async function TransactionsPage(props: { params: Promise<{ id: st
 
     return (
         <TransactionProvider transactions={transactions}>
-            <div className=' space-y-4 p-2'>
+            <div className=' space-y-4 pr-2 pb-2'>
                 <div className='border border-foreground/10 rounded-lg'>
                     <TransactionsList lid={params.id} />
                 </div>

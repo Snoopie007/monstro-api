@@ -46,6 +46,7 @@ export const programSessions = pgTable("program_sessions", {
   id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
   programId: text("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
   time: time("time").notNull(),
+  canceled: boolean("canceled").notNull().default(false),
   duration: smallint("duration").notNull().default(0),
   day: smallint("day").notNull().default(1),
   staffId: text("staff_id").references(() => staffs.id, { onDelete: "set null" }),

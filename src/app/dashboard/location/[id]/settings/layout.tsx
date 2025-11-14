@@ -18,7 +18,7 @@ export default async function SettingsLayout(
         <div className=" h-full w-full">
             <ScrollArea className='h-[calc(100vh-50px)] '>
                 <div className="max-w-5xl m-auto  pb-20">
-                    <section className="mb-6  border-b border-foreground/10 py-4">
+                    <section className="mb-6  border-b border-foreground/5 py-4">
                         <h4 className='text-lg font-bold'>Settings</h4>
                     </section>
                     <section className='grid grid-cols-8 gap-6'>

@@ -16,10 +16,6 @@ export const accounts = pgTable("account", {
     idToken: text("id_token"), // Better Auth expects 'idToken'
     scope: text("scope"),
     sessionState: text("session_state"), // Better Auth expects 'sessionState'
-
-    // Custom field (not used by Better Auth, only by your app)
-    // Commented out temporarily - add back if column exists in DB
-    // vendorId: text("vendor_id").references(() => vendors.id, { onDelete: "cascade" }),
 }, (t) => [primaryKey({ columns: [t.provider, t.accountId] })]);
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -27,9 +23,4 @@ export const accountsRelations = relations(accounts, ({ one }) => ({
         fields: [accounts.userId],
         references: [users.id],
     }),
-    // Vendor relation commented out since vendorId is commented out
-    // vendor: one(vendors, {
-    //     fields: [accounts.vendorId],
-    //     references: [vendors.id],
-    // }),
 }));
