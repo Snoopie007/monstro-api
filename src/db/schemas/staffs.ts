@@ -27,8 +27,7 @@ export const staffs = pgTable("staffs", {
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
-export const staffsLocations = pgTable(
-  "staff_locations",
+export const staffLocations = pgTable("staff_locations",
   {
     id: text("id")
       .primaryKey()
@@ -50,7 +49,7 @@ export const staffsLocationRoles = pgTable(
   {
     staffLocationId: text("staff_location_id")
       .notNull()
-      .references(() => staffsLocations.id, { onDelete: "cascade" }),
+      .references(() => staffLocations.id, { onDelete: "cascade" }),
     roleId: text("role_id")
       .notNull()
       .references(() => roles.id, { onDelete: "cascade" }),
@@ -59,7 +58,7 @@ export const staffsLocationRoles = pgTable(
 );
 
 export const staffsRelations = relations(staffs, ({ many, one }) => ({
-  staffLocations: many(staffsLocations),
+  staffLocations: many(staffLocations),
   user: one(users, {
     fields: [staffs.userId],
     references: [users.id],
@@ -67,14 +66,14 @@ export const staffsRelations = relations(staffs, ({ many, one }) => ({
 }));
 
 export const staffLocationsRelations = relations(
-  staffsLocations,
+  staffLocations,
   ({ one, many }) => ({
     staff: one(staffs, {
-      fields: [staffsLocations.staffId],
+      fields: [staffLocations.staffId],
       references: [staffs.id],
     }),
     location: one(locations, {
-      fields: [staffsLocations.locationId],
+      fields: [staffLocations.locationId],
       references: [locations.id],
     }),
     roles: many(staffsLocationRoles),
@@ -88,9 +87,9 @@ export const staffsLocationRolesRelations = relations(
       fields: [staffsLocationRoles.roleId],
       references: [roles.id],
     }),
-    staffLocation: one(staffsLocations, {
+    staffLocation: one(staffLocations, {
       fields: [staffsLocationRoles.staffLocationId],
-      references: [staffsLocations.id],
+      references: [staffLocations.id],
     }),
   })
 );

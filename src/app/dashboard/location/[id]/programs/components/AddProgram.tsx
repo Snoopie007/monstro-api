@@ -2,13 +2,11 @@ import {
     Button,
     Sheet,
     SheetContent,
-    SheetHeader,
     SheetTitle,
     SheetTrigger,
     SheetFooter,
     SheetClose,
     ScrollArea,
-    SheetSection,
     Switch
 } from '@/components/ui';
 
@@ -30,7 +28,7 @@ import { toast } from 'react-toastify';
 import { usePrograms } from '@/hooks/usePrograms';
 import { Loader2, Plus } from 'lucide-react';
 import { VisuallyHidden } from 'react-aria';
-import { useStaffs } from '@/hooks/useStaffs';
+import { useStaffLocations } from '@/hooks/useStaffs';
 
 
 
@@ -39,7 +37,7 @@ export function AddProgram({ lid }: { lid: string }) {
     const [open, setOpen] = useState(false);
 
     const { mutate } = usePrograms(lid);
-    const { staffs } = useStaffs(lid);
+    const { sls } = useStaffLocations(lid);
     const form = useForm<z.infer<typeof NewProgramSchema>>({
         resolver: zodResolver(NewProgramSchema),
         defaultValues: {
@@ -63,10 +61,6 @@ export function AddProgram({ lid }: { lid: string }) {
         },
         mode: "onChange",
     })
-
-    const allowWaitlist = form.watch("allowWaitlist");
-    const allowMakeUpClass = form.watch("allowMakeUpClass");
-
 
 
     async function onSubmit(v: z.infer<typeof NewProgramSchema>) {
@@ -181,9 +175,14 @@ export function AddProgram({ lid }: { lid: string }) {
                                                         <SelectValue placeholder="Select a instructor" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {staffs.map((staff) => (
-                                                            <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
-                                                        ))}
+                                                        {sls.map((sl) => {
+                                                            const staff = sl.staff;
+                                                            return (
+                                                                <SelectItem key={staff?.id ?? ''} value={staff?.id ?? ''}>
+                                                                    {staff?.firstName} {staff?.lastName}
+                                                                </SelectItem>
+                                                            )
+                                                        })}
                                                         <SelectItem value={"null"} key={"none"}>None</SelectItem>
                                                     </SelectContent>
                                                 </Select>

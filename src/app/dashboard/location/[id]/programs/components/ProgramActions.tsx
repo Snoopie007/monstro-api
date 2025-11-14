@@ -30,7 +30,19 @@ export default function ProgramActions({
     const [openSession, setOpenSession] = useState(false);
     const PATH = `/api/protected/loc/${lid}/programs/${program.id}`;
     async function toggleStatus() {
-
+        const { result, error } = await tryCatch(
+            fetch(PATH, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: program.status === 'active' ? 'inactive' : 'active' }),
+            }));
+        if (result?.status === 403) {
+            toast.error("You are not authorized to update this program");
+            return;
+        }
+        if (error || !result || !result.ok) {
+            toast.error("Error updating the program, please try again.");
+            return;
+        }
 
     }
 

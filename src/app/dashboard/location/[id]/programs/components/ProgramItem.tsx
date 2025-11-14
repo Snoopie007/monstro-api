@@ -1,27 +1,24 @@
 "use client";
 import { Program } from "@/types/program";
-import { ChevronRight } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui";
+import { AvatarFallback } from "@/components/ui";
 import ProgramActions from "./ProgramActions";
-import { useCallback, useEffect, useState } from "react";
-import { InfoField } from "@/components/ui";
+import { useState } from "react";
+import { Avatar, AvatarImage, InfoField } from "@/components/ui";
 import { ProgramSessions } from "./Sessions";
 
 export function ProgramItem({ program }: { program: Program }) {
     const lid = program.locationId;
-    const [open, setOpen] = useState(false);
 
     return (
         <div className="flex flex-col gap-2 bg-muted/50 border rounded-lg border-foreground/5 last:border-b-0">
             <div className="flex flex-row gap-4 items-center justify-between  p-4">
                 <div className="flex-shrink-0">
-                    {program.icon ? (
-                        <img src={program.icon} alt={program.name} className="size-10 rounded-full" />
-                    ) : (
-                        <div className="size-10 rounded-full bg-foreground/5 flex items-center justify-center">
-                            <span className=" font-medium">{program.name.charAt(0)}</span>
-                        </div>
-                    )}
+                    <Avatar className="size-10">
+                        <AvatarImage src={program.icon ?? ''} />
+                        <AvatarFallback>
+                            {program.name.charAt(0)}
+                        </AvatarFallback>
+                    </Avatar>
                 </div>
                 <div className="grid grid-cols-5 flex-1 gap-x-4 w-full">
 

@@ -26,7 +26,7 @@ import { InviteStaffSchema } from '../schema'
 import { Role } from '@/types';
 import { toast } from 'react-toastify';
 import { VisuallyHidden } from 'react-aria';
-import { Loader2 } from 'lucide-react';
+import { Loader2, PlusIcon } from 'lucide-react';
 
 export default function InviteStaff({ roles, lid }: { roles: Array<Role>, lid: string }) {
     const [open, setOpen] = useState<boolean>(false);
@@ -69,7 +69,10 @@ export default function InviteStaff({ roles, lid }: { roles: Array<Role>, lid: s
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant={"create"} size={"sm"}  > + Invite</Button>
+                <Button variant={"primary"} className="h-10 flex flex-row items-center gap-2" >
+                    <span>Invite</span>
+                    <PlusIcon className="size-4" />
+                </Button>
             </DialogTrigger>
             <DialogContent className={cn("border-foreground/10 p-0")}>
                 <VisuallyHidden>

@@ -11,13 +11,13 @@ import { Staff } from '@/types'
 import { EllipsisVertical } from 'lucide-react'
 
 
-interface StaffListProps {
+interface StaffActionsProps {
     staff?: Staff | null
     onChange: (staff: any) => void,
     deleteFunction: Function
 }
 
-export default function StaffListActions({ staff, onChange, deleteFunction }: StaffListProps) {
+export default function StaffActions({ staff }: StaffActionsProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -25,18 +25,15 @@ export default function StaffListActions({ staff, onChange, deleteFunction }: St
                     <EllipsisVertical size={16} />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className='w-[180px] border-foreground/20 p-2'>
+            <DropdownMenuContent className='w-[180px] border-foreground/20'>
 
-                <DropdownMenuItem
-                    onClick={() => onChange(staff)}
-                    className='cursor-pointer hover:bg-indigo-500 text-sm py-2 leading-5'
-                >
+                <DropdownMenuItem onClick={() => { }} className='cursor-pointer'>
 
                     <span>Profile</span>
 
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className='mb-2' />
-                <DropdownMenuItem className='cursor-pointer bg-red-500 ' onClick={() => deleteFunction(staff?.id)}>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className='cursor-pointer ' onClick={() => { }}>
 
                     <span>Remove</span>
 

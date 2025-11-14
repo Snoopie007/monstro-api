@@ -1,6 +1,5 @@
 'use client'
-import { StaffRowData } from '@/hooks/useStaffs'
-import { ProgramSession } from '@/types'
+import { ProgramSession, Staff } from '@/types'
 import { useCallback, useState } from 'react'
 import { tryCatch } from '@/libs/utils'
 import { toast } from 'react-toastify'
@@ -16,7 +15,7 @@ import {
 interface SessionItemProps {
     session: ProgramSession
     lid: string
-    availableStaff: StaffRowData[]
+    availableStaff: Staff[]
 }
 const ItemBtnStyle = "cursor-pointer font-medium text-xs flex flex-row items-center justify-between gap-2 ";
 

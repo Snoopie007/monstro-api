@@ -20,7 +20,7 @@ export async function DELETE(req: Request, props: { params: Promise<StaffProps> 
   }
 }
 
-export async function PUT(req: Request, props: { params: Promise<StaffProps> }) {
+export async function PATCH(req: Request, props: { params: Promise<StaffProps> }) {
   const params = await props.params;
 
   const data = await req.json()

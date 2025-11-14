@@ -88,11 +88,11 @@ export function ProgramSessions({ program }: { program: Program }) {
                     hasFetched && sessions.length > 0 ? (
                         <div className="flex flex-col gap-4 ">
                             {Object.entries(groupedSessions()).map(([day, daySessions]) => (
-                                <div key={day} className=" col-span-1  border-b border-foreground/5 pb-4  last:border-b-0">
+                                <div key={day} className=" col-span-1  border-b border-foreground/5 pb-4   last:border-b-0">
                                     <div className="font-medium text-sm ">
                                         {DaysOfWeek[parseInt(day) - 1]}
                                     </div>
-                                    <div className="space-y-2 flex flex-row">
+                                    <div className="flex flex-row gap-2">
                                         {daySessions.map((session: ProgramSession, i: number) => (
                                             <SessionItem key={i} session={session} lid={lid} availableStaff={[]} />
                                         ))}

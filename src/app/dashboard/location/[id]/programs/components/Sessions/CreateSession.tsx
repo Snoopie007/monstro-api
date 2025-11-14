@@ -22,15 +22,14 @@ import { toast } from "react-toastify";
 import { SessionSchema, DaysOfWeek } from "../../schemas";
 import { DialogDescription } from "@/components/ui/dialog";
 
-import { Loader2, Plus } from "lucide-react";
-import { StaffRowData } from "@/hooks/useStaffs";
-import { Program } from "@/types";
+import { Loader2 } from "lucide-react";
+import { Program, Staff } from "@/types";
 
 
 
 interface CreateSessionProps {
     program: Program
-    availableStaff: StaffRowData[]
+    availableStaff: Staff[]
     staffId: string
     open: boolean
     onOpenChange: (open: boolean) => void
@@ -167,7 +166,9 @@ export function CreateSession({ program, availableStaff, staffId, open, onOpenCh
 
                                                         <SelectContent>
                                                             {availableStaff.map((staff) => (
-                                                                <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
+                                                                <SelectItem key={staff.id} value={staff.id}>
+                                                                    {staff.firstName} {staff.lastName}
+                                                                </SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>

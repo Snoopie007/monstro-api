@@ -1,6 +1,5 @@
 "use client";
 
-import { RiCalendarCheckLine } from "@remixicon/react";
 import {
 	addDays,
 	addMonths,
@@ -33,21 +32,22 @@ import {
 	MonthView,
 	WeekCellsHeight,
 	WeekView,
-} from "@/components/event-calendar";
+} from "./";
 import type {
 	CalendarEvent,
 	CalendarView,
 } from "@/components/event-calendar/types";
-import { Button } from "@/components/ui/button";
+
+import { cn } from "@/libs/utils";
 import {
+	Button,
+	ButtonGroup,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuShortcut,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/libs/utils";
-import { ButtonGroup } from "../ui";
+} from "../ui";
 
 export interface EventCalendarProps {
 	events?: CalendarEvent[];
@@ -406,16 +406,17 @@ export function EventCalendar({
 						</DropdownMenu>
 					</ButtonGroup>
 					<Button
-
 						variant="outline"
-						className="border-foreground/10"
+						className="border-foreground/10 flex flex-row items-center gap-2"
 						onClick={() => {
 							setSelectedEvent(null); // Ensure we're creating a new event
 							setClickedDateTime(undefined); // Clear any previous clicked time
 							setIsEventDialogOpen(true);
 						}}
 					>
-						+ New program
+						<span >New event</span>
+						<PlusIcon className="size-4" />
+
 					</Button>
 				</div>
 

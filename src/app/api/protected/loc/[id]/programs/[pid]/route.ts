@@ -59,18 +59,19 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 	}
 }
 
-export async function PUT(req: NextRequest, props: { params: Promise<{ id: string, pid: string }> }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string, pid: string }> }) {
 	const params = await props.params;
 	const body = await req.json()
-	const { instructorId } = body;
-	console.log(body);
+
+
 	try {
 		const canEditProgram = await hasPermission("edit program", params.id);
 		if (!canEditProgram) {
 			return NextResponse.json({ error: "Access denied" }, { status: 403 });
 		}
-		const [updatedProgram] = await db.update(programs).set({
-			instructorId: instructorId === "null" ? undefined : instructorId
+		await db.update(programs).set({
+			...body,
+			instructorId: body.instructorId === "null" ? undefined : body.instructorId
 		}).where(eq(programs.id, params.pid)).returning()
 		return NextResponse.json({ success: true }, { status: 200 })
 	} catch (err) {

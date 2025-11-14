@@ -197,7 +197,6 @@ export const memberLocationsRelations = relations(
     attendances: many(attendances),
     memberPaymentMethods: many(memberPaymentMethods, {
       relationName: 'memberPaymentMethods',
-
     }),
   })
 );
