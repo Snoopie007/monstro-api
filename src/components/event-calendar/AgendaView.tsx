@@ -7,9 +7,9 @@ import { addDays, format, isToday } from "date-fns";
 import {
   AgendaDaysToShow,
   EventItem,
-  getAgendaEventsForDay,
 } from "@/components/event-calendar";
-import type { CalendarEvent } from "@/components/event-calendar/types";
+import type { CalendarEvent } from "@/types";
+import { getAgendaEventsForDay } from "@/libs/calendar";
 
 interface AgendaViewProps {
   currentDate: Date;

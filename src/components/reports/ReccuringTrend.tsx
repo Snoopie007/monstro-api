@@ -1,6 +1,6 @@
 'use client'
 
-import { cn } from '@/components/event-calendar/utils'
+import { cn } from '@/libs/utils'
 import {
     Badge,
     Card,

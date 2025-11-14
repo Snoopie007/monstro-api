@@ -14,35 +14,30 @@ import { useSessionCalendar } from "./providers/SessionCalendarProvider";
 import { Calendar } from "@/components/ui/calendar";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { CalendarFilters } from "./components/CalendarFilters";
-import { CalendarEvent as OldCalendarEvent } from "@/types";
 import { tryCatch } from "@/libs/utils";
 import { EnhancedEventDialog } from "./components/EnhancedEventDialog";
 
-// Import new event calendar components
 import {
   EventCalendar,
-  CalendarDndProvider,
-  type CalendarEvent,
-  type CalendarView,
+  CalendarDndProvider
 } from "@/components/event-calendar";
 import LoaderOverlay from "@/components/ui/loader-overlay";
+import { CalendarEvent, ExtendedCalendarEvent, CalendarView } from "@/types";
 
-// Extend the CalendarEvent type to include original data
-interface ExtendedCalendarEvent extends CalendarEvent {
-  __originalData?: OldCalendarEvent["data"];
-}
-
-// Data adapter to convert old CalendarEvent to new CalendarEvent format
+// Data adapter to convert attendance-specific CalendarEvent to ExtendedCalendarEvent format for UI
 function convertToNewCalendarEvent(
-  oldEvent: OldCalendarEvent
+  oldEvent: CalendarEvent
 ): ExtendedCalendarEvent {
   return {
     id: oldEvent.id,
     title: oldEvent.title,
-    description: `Session: ${oldEvent.data.sessionId}${oldEvent.data.members.length > 0
-      ? ` | ${oldEvent.data.members.length} member(s)`
-      : ""
-      }`,
+    description: oldEvent.data
+      ? `Session: ${oldEvent.data.sessionId}${
+          oldEvent.data.members.length > 0
+            ? ` | ${oldEvent.data.members.length} member(s)`
+            : ""
+        }`
+      : undefined,
     start: oldEvent.start,
     end: oldEvent.end,
     allDay: false,
@@ -150,10 +145,14 @@ export default function CalendarPageClient({
 
   // Handle removing a reservation (migrated from original implementation)
   const handleRemoveReservation = async (
-    event: OldCalendarEvent,
+    event: CalendarEvent,
     memberId: string
   ) => {
     try {
+      if (!event.data) {
+        throw new Error("Event data is missing");
+      }
+
       const isRecurring = event.data.isRecurring;
       let url: string;
 

@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { CalendarEvent } from '@/types';
+import { CalendarEvent } from '@/types/calendar';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Clock, User, Plus } from 'lucide-react';
 import { format } from 'date-fns';
@@ -42,7 +42,7 @@ export function AddReservation({ event, onRemoveReservation, lid, rid }: AddRese
             <>
               <span className="mr-1">Manage</span>
               <span className="bg-indigo-100 text-indigo-800 text-xs px-1.5 py-0.5 rounded-full ml-1">
-                {event.data.members.length}
+                {event.data?.members.length}
               </span>
             </>
           ) : (
@@ -74,7 +74,7 @@ export function AddReservation({ event, onRemoveReservation, lid, rid }: AddRese
             <div className="space-y-4">
               <div className="border border-gray-100 rounded-lg bg-gray-50 overflow-hidden">
                 <ScrollArea className="h-[280px] w-full">
-                  {event.data.members.length > 0 ? (
+                  {event.data?.members?.length && event.data.members.length > 0 ? (
                     <ul className="divide-y divide-gray-100">
                       {event.data.members.map((member) => (
                         <li

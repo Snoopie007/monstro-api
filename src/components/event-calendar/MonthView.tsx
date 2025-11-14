@@ -20,19 +20,12 @@ import {
   EventGap,
   EventHeight,
   EventItem,
-  getAllEventsForDay,
-  getEventsForDay,
-  getSpanningEventsForDay,
-  sortEvents,
-  useEventVisibility,
-} from "@/components/event-calendar";
-import type { CalendarEvent } from "@/components/event-calendar/types";
+} from "../event-calendar";
+import type { CalendarEvent } from "@/types";
 import { DefaultStartHour } from "@/components/event-calendar/constants";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { getAllEventsForDay, getEventsForDay, getSpanningEventsForDay, sortEvents } from "@/libs/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useEventVisibility } from "@/hooks";
 
 interface MonthViewProps {
   currentDate: Date;

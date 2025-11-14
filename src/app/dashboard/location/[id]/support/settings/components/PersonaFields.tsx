@@ -11,7 +11,7 @@ import {
     Textarea,
     Input,
 } from '@/components/forms'
-import { cn } from '@/components/event-calendar'
+import { cn } from '@/libs/utils'
 
 interface PersonaFieldsProps {
     form: UseFormReturn<z.infer<typeof SupportSettingsSchema>>

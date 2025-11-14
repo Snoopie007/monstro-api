@@ -38,37 +38,3 @@ export type RecurringReservationException =
     recurring?: RecurringReservation;
     reservation?: Reservation;
   };
-
-export type CalendarEvent = {
-  id: string;
-  title: string;
-  end: Date;
-  duration: number;
-  start: Date;
-  data: CalendarEventData;
-  staff: CalendarEventStaff;
-};
-
-export type CalendarEventStaff = {
-  id: string;
-  name: string;
-  avatar?: string | null;
-};
-
-export type CalendarEventData = {
-  reservationId?: string;
-  recurringId?: string;
-  programId: string;
-  sessionId: string;
-  members: CalendarEventMember[];
-  isRecurring: boolean;
-  memberPlanId?: string[] | null;
-};
-
-export type CalendarEventMember = {
-  memberId?: string;
-  name: string;
-  avatar?: string | null;
-};
-
-export type CalendarView = "month" | "week" | "day";

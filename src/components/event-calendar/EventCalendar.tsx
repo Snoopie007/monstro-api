@@ -23,7 +23,6 @@ import { toast } from "react-toastify";
 import {
 	AgendaDaysToShow,
 	AgendaView,
-	addHoursToDate,
 	CalendarDndProvider,
 	DayView,
 	EventDialog,
@@ -36,18 +35,18 @@ import {
 import type {
 	CalendarEvent,
 	CalendarView,
-} from "@/components/event-calendar/types";
-
-import { cn } from "@/libs/utils";
+} from "@/types";
 import {
-	Button,
-	ButtonGroup,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuShortcut,
 	DropdownMenuTrigger,
-} from "../ui";
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/libs/utils";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/GroupButton";
+import { addHoursToDate } from "@/libs/calendar";
 
 export interface EventCalendarProps {
 	events?: CalendarEvent[];

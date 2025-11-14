@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Location } from "@/types";
 import { useSession } from "@/hooks/useSession";
 import { useRouter } from "next/navigation";
-import { cn } from "@/components/event-calendar";
+import { cn } from "@/libs/utils";
 
 
 
