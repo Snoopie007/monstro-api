@@ -18,7 +18,9 @@ export const serversideApiClient = (): ApiClient => {
 
     return {
         get: async (endpoint: string, params?: Record<string, string | number | boolean | string[]>) => {
-            const url = new URL(`${baseUrl}${endpoint}`)
+            // For XRoutes, strip /api from baseUrl
+            const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+            const url = new URL(`${finalBaseUrl}${endpoint}`)
 
             if (params) {
                 Object.entries(params).forEach(([key, value]) => {
@@ -55,14 +57,16 @@ export const serversideApiClient = (): ApiClient => {
                     headers['Authorization'] = `Bearer ${serviceKey}`;
                 }
             }
-            const url = new URL(`${baseUrl}${endpoint}`)
+
+            // For XRoutes, strip /api from baseUrl
+            const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+            const url = new URL(`${finalBaseUrl}${endpoint}`);
             const response = await fetch(url.toString(), {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(data)
             })
 
-            console.log(response)
             if (!response.ok) {
                 throw new Error(`API Error: ${response.status}`)
             }
@@ -89,7 +93,9 @@ export const serversideApiClient = (): ApiClient => {
                 }
             }
             
-            const url = new URL(`${baseUrl}${endpoint}`)
+            // For XRoutes, strip /api from baseUrl
+            const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+            const url = new URL(`${finalBaseUrl}${endpoint}`);
             const response = await fetch(url.toString(), {
                 method: 'DELETE',
                 headers

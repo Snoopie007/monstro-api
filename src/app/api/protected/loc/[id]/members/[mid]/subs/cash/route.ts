@@ -2,7 +2,7 @@ import { db } from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
 import {
     calculatePeriodEnd,
-    scheduleRecurringInvoiceEmails,
+    scheduleRecurringInvoiceReminders,
 } from "../../../utils";
 import { NextResponse } from "next/server";
 
@@ -104,32 +104,12 @@ export async function POST(req: Request, props: Props) {
 
         const { locationState } = location;
 
-        // if (locationState?.planId && locationState.planId >= 2) {
-
-
-        //     if (member && location && plan.interval && plan.intervalThreshold) {
-        //         await scheduleRecurringInvoiceEmails({
-        //             subscriptionId: sub.id,
-        //             memberId: params.mid,
-        //             locationId: params.id,
-        //             memberEmail: member.email || '',
-        //             memberFirstName: member.firstName || '',
-        //             memberLastName: member.lastName || '',
-        //             locationName: location.name,
-        //             locationAddress: location.address || '',
-        //             startDate: sub.currentPeriodEnd, // First invoice due at end of first period
-        //             interval: plan.interval,
-        //             intervalThreshold: plan.intervalThreshold,
-        //             invoiceDetails: {
-        //                 description: newInvoice.description || `${plan.name} - Recurring Invoice`,
-        //                 items: newInvoice.items as any[],
-        //                 total: newInvoice.total,
-        //                 currency: 'usd'
-        //             }
-        //         });
-        //         console.log(`📧 Scheduled recurring invoice emails for subscription ${sub.id}`);
-        //     }
-        // }
+        if (locationState?.planId && locationState.planId >= 2) {
+            if (member && location && plan.interval && plan.intervalThreshold) {
+                await scheduleRecurringInvoiceReminders({ subscriptionId: sub.id, memberId: mid, locationId: id });
+                console.log(`📧 Scheduled recurring invoice emails for subscription ${sub.id}`);
+            }
+        }
 
         // await triggerSignUp({
         //     mid: mid,

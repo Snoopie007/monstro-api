@@ -104,7 +104,6 @@ export async function GET(
                         'active': 'active',
                         'inactive': 'incomplete',
                         'past due': 'past_due',
-                        'past_due': 'past_due',
                         'canceled': 'canceled',
                         'cancelled': 'canceled',
                         'paused': 'paused',

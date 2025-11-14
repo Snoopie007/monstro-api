@@ -7,7 +7,7 @@ import {
 	recurringReservations,
 	recurringReservationsExceptions,
 } from "@/db/schemas";
-import { serviceApiClient } from "@/libs/api/server";
+import { cancelClassReminders } from "../../../utils";
 
 export async function DELETE(
 	req: NextRequest,
@@ -56,23 +56,19 @@ export async function DELETE(
 			);
 		}
 
-		await db.delete(reservations).where(eq(reservations.id, params.rid));
+	await db.delete(reservations).where(eq(reservations.id, params.rid));
 
-		// Cancel scheduled reminder emails
-		try {
-			const apiClient = serviceApiClient();
-
-			// Cancel both upcoming reminder and missed class emails
-			await Promise.allSettled([
-				apiClient.delete(`/protected/locations/email/class-reminder-${params.rid}`),
-				apiClient.delete(`/protected/locations/email/missed-class-${params.rid}`)
-			]);
-
-			console.log(`📧 Cancelled reminder emails for reservation ${params.rid}`);
-		} catch (error) {
-			console.error('Error cancelling reminder emails:', error);
-			// Don't fail the cancellation if email cancellation fails
-		}
+	// Cancel scheduled reminder emails
+	try {
+		await cancelClassReminders({
+			reservationId: params.rid,
+			locationId: params.id,
+		});
+		console.log(`📧 Cancelled class reminders for reservation ${params.rid}`);
+	} catch (error) {
+		console.error('Error cancelling class reminders:', error);
+		// Don't fail the cancellation if email cancellation fails
+	}
 
 		return NextResponse.json(
 			{
