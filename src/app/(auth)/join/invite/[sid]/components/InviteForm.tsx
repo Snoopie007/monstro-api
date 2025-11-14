@@ -78,7 +78,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
             return;
         }
 
-        const signInResult = await signIn("credentials", { redirect: false, ...v })
+        const signInResult = await signIn("credentials", { redirect: false, ...v, skipVerification: true })
         if (signInResult?.error) {
             toast.error(signInResult.code || 'Something went wrong. Please contact support at support@monstro.com.');
             return;
