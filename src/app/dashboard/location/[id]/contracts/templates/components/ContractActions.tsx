@@ -8,14 +8,13 @@ import {
     DropdownMenuSeparator,
     ButtonGroup,
 } from "@/components/ui";
-import { cn, tryCatch } from "@/libs/utils";
+import { cn } from "@/libs/utils";
 import { Contract } from "@/types";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { toast } from "react-toastify";
 import { useState } from "react";
 import Link from "next/link";
 import { usePermission } from "@/hooks/usePermissions";
-
+import RemoveContract from "./RemoveContract";
 interface ContractActionsProps {
     contract: Contract;
     lid: string;
@@ -27,76 +26,54 @@ export default function ContractActions({
     contract,
     lid,
 }: ContractActionsProps) {
-    const [loading, setLoading] = useState(false);
     const canEditContract = usePermission('edit contract', lid);
     const canDeleteContract = usePermission('delete contract', lid);
+    const [openRemove, setOpenRemove] = useState(false);
 
-    async function onDelete() {
-        if (!contract.id) return;
-        setLoading(true);
-
-        const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/contracts/${contract.id}`, {
-                method: 'DELETE',
-            })
-        );
-
-        setLoading(false);
-
-        if (result?.status === 403) {
-            toast.error('You are not authorized to delete this contract');
-            return;
-        }
-
-        if (error && !result) {
-            toast.error(error.message);
-            return;
-        }
-
-        toast.success('Contract deleted successfully');
-
-    }
 
     return (
-        <ButtonGroup className="group">
-            <Button variant="ghost" size="icon" className={cn("size-8", HoverTransition)}>
-                <Link href={`/builder/${lid}/contract/${contract.id}`}>
-                    <Pencil className="size-3.5" />
-                </Link>
-            </Button>
-            <Button variant="ghost" size="icon" className={cn("size-8", HoverTransition)}>
-                <Trash2 className="size-3.5" onClick={onDelete} />
-            </Button>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-8">
-                        <MoreVertical className="size-3.5" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="border-foreground/10 ">
-                    {contract.editable && canEditContract && (
-                        <DropdownMenuItem className={ItemBtnStyle} asChild>
-                            <Link href={`/builder/${lid}/contract/${contract.id}`}>
-                                <span>Edit</span>
-                                <Pencil className="size-3" />
-                            </Link>
-                        </DropdownMenuItem>
-                    )}
-                    {contract.editable && canDeleteContract && (
-                        <>
-                            <DropdownMenuSeparator className="mb-2" />
-                            <DropdownMenuItem
-                                className={cn(ItemBtnStyle, "text-red-500 hover:text-red-500")}
-                                onClick={onDelete}
-                                disabled={loading}
-                            >
-                                <span>Delete</span>
-                                <Trash2 className="size-3" />
+        <>
+            <RemoveContract cid={contract.id} editable={contract.editable} lid={lid} open={openRemove} onOpenChange={setOpenRemove} />
+            <ButtonGroup className="group">
+                <Button variant="ghost" size="icon" className={cn("size-8", HoverTransition)}>
+                    <Link href={`/builder/${lid}/contract/${contract.id}`}>
+                        <Pencil className="size-3.5" />
+                    </Link>
+                </Button>
+                <Button variant="ghost" size="icon" className={cn("size-8", HoverTransition)}>
+                    <Trash2 className="size-3.5" onClick={() => setOpenRemove(true)} />
+                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8">
+                            <MoreVertical className="size-3.5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="border-foreground/10 ">
+                        {contract.editable && canEditContract && (
+                            <DropdownMenuItem className={ItemBtnStyle} asChild>
+                                <Link href={`/builder/${lid}/contract/${contract.id}`}>
+                                    <span>Edit</span>
+                                    <Pencil className="size-3" />
+                                </Link>
                             </DropdownMenuItem>
-                        </>
-                    )}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </ButtonGroup>
+                        )}
+                        {contract.editable && canDeleteContract && (
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    className={cn(ItemBtnStyle, "text-red-500 hover:text-red-500")}
+                                    onClick={() => setOpenRemove(true)}
+                                >
+                                    <span>Delete</span>
+                                    <Trash2 className="size-3.5" />
+                                </DropdownMenuItem>
+                            </>
+                        )}
+
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </ButtonGroup>
+        </>
     );
 }

@@ -21,11 +21,8 @@ import { useRoles } from "@/hooks/useRoles";
 import InviteStaff from "./components/InviteStaff";
 import { Input } from "@/components/forms";
 import { Staff } from "@/types";
-import useSWR from "swr";
-import { toast } from "react-toastify";
 import { flexRender, getCoreRowModel, useReactTable } from "@/libs/table-utils";
 import { StaffColumns } from "./components/StaffColumn";
-import { tryCatch } from "@/libs/utils";
 
 interface StaffsPageProps {
   params: Promise<{
@@ -99,7 +96,7 @@ export default function StaffsPage(props: StaffsPageProps) {
           </TablePageHeaderSection>
         </TablePageHeader>
         <TablePageContent>
-          <Table className="w-auto border-r border-b border-foreground/5">
+          <Table className="border-r border-b border-foreground/5">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow
@@ -115,9 +112,9 @@ export default function StaffsPage(props: StaffsPageProps) {
                         {header.isPlaceholder
                           ? null
                           : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                       </TableHead>
                     );
                   })}

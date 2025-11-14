@@ -8,21 +8,21 @@ import {
     TableHead,
     TableHeader,
     TableRow,
+    Empty,
+    EmptyHeader,
+    EmptyMedia,
+    EmptyTitle,
+    EmptyDescription,
 } from "@/components/ui";
 import { useSignedContracts } from '@/hooks/useContracts';
 
-import Loading from '@/components/loading';
 import Link from 'next/link';
-import {
-    TablePage, TablePageContent, TablePageFooter,
-    TablePageHeader, TablePageHeaderSection
-} from "@/components/ui/TablePage";
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { format } from "date-fns";
-import { CloudDownloadIcon } from "lucide-react";
+import { CloudDownloadIcon, FileIcon } from "lucide-react";
 import { MemberContract } from "@/types";
-import { Input } from "@/components/forms/input";
+import { Input } from "@/components/forms";
 
 
 export default function MemberContractsPage(props: { params: Promise<{ id: string }> }) {
@@ -46,84 +46,78 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
         link.click();
         document.body.removeChild(link);
     }
+    return (
+        <div className="flex flex-col gap-4">
+            <div className="max-w-3xl mx-auto w-full space-y-4">
+                <div className="flex flex-row items-center justify-between">
+                    <Input
+                        placeholder="Find a contract..."
+                        variant="search"
+                        className="h-10 bg-foreground/5 rounded-lg w-[300px]"
+                    />
+                    <Button variant={"primary"} asChild>
+                        <Link href={`/dashboard/location/${params.id}/contracts/templates`}>
+                            View Templates
+                        </Link>
+                    </Button>
+                </div>
+                <div className="border border-foreground/10 rounded-lg">
 
-    if (isLoading) {
-        return <Loading />
-    }
-    if (contracts) {
-        return (
-            <TablePage>
-                <TablePageHeader>
-                    <TablePageHeaderSection>
-                        <Input
-                            placeholder="Find a contract..."
-                            variant="search"
-                        />
-                        <Button variant={"create"} size={"sm"} asChild>
-                            <Link href={`/dashboard/location/${params.id}/contracts/templates`}>
-                                View Templates
-                            </Link>
-                        </Button>
-                    </TablePageHeaderSection>
-                </TablePageHeader>
-                <TablePageContent>
-                    <Table className=" w-auto border-r border-b border-foreground/10 ">
-                        <TableHeader className=" text-xs  border-foreground/10">
-                            <TableRow className='bg-foreground/10 ' >
-                                {["Title", "Member", "Signed Date"].map((title) => (
-                                    <TableHead key={title} className="font-semibold text-foreground h-auto py-2 border border-l-0 border-foreground/10 text-xs" >
-                                        {title}
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {contracts.length > 0 ? (
-                                <>
-                                    {contracts.map((contract: MemberContract, index: number) => (
-                                        <TableRow key={index} className='cursor-pointer  '>
-                                            <TableCell className="text-sm py-1 w-[200px]  flex flex-row items-center justify-between">
-                                                {contract.contractTemplate?.title}
-                                                <Button variant={"ghost"} size={"icon"}
-                                                    onClick={() => downloadContract(contract.id, contract.memberId)}
-                                                    //asChild
-                                                    className="size-6 hover:bg-foreground/5 text-foreground/50 rounded-sm">
-                                                    {/* <Link href={""} target="_blank"> */}
-                                                    <CloudDownloadIcon className="size-3.5" />
-                                                    {/* </Link> */}
-                                                </Button>
-                                            </TableCell>
-
-
-                                            <TableCell className="text-sm  py-1 border border-foreground/10">
-                                                {contract.member?.firstName} {contract.member?.lastName}
-                                            </TableCell>
-
-                                            <TableCell className="text-sm py-1 border border-foreground/10">
-                                                {format(contract.created, "MM/dd/yyyy")}
-                                            </TableCell>
-                                        </TableRow>
+                    {!isLoading && contracts && contracts.length > 0 ? (
+                        <Table>
+                            <TableHeader >
+                                <TableRow className='bg-foreground/10 ' >
+                                    {["Title", "Member", "Signed Date"].map((title) => (
+                                        <TableHead key={title} >
+                                            {title}
+                                        </TableHead>
                                     ))}
-                                </>
-                            ) : (
-                                <TableRow >
-                                    <TableCell colSpan={7} className="text-sm py-4 px-6 font-roboto">
-                                        <p className=' text-center'>No Contracts Found</p>
-                                    </TableCell>
                                 </TableRow>
-                            )}
+                            </TableHeader>
+                            <TableBody>
+                                {contracts.map((contract: MemberContract, index: number) => (
+                                    <TableRow key={index} className='cursor-pointer  '>
+                                        <TableCell>
+                                            {contract.contractTemplate?.title}
+                                            <Button variant={"ghost"} size={"icon"}
+                                                onClick={() => downloadContract(contract.id, contract.memberId)}
 
-                        </TableBody>
-                    </Table>
-                </TablePageContent>
-                <TablePageFooter className="border-t border-foreground/10">
-                    <div className=" p-2">
-                        <p className="text-xs ">Total Contracts: {contracts.length}</p>
-                    </div>
+                                                className="size-6 hover:bg-foreground/5 text-foreground/50 rounded-sm">
 
-                </TablePageFooter>
-            </TablePage>
+                                                <CloudDownloadIcon className="size-3.5" />
 
-        )
-    }
+                                            </Button>
+                                        </TableCell>
+
+
+                                        <TableCell >
+                                            {contract.member?.firstName} {contract.member?.lastName}
+                                        </TableCell>
+
+                                        <TableCell >
+                                            {format(contract.created, "MM/dd/yyyy")}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <Empty>
+                            <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                    <FileIcon className="size-5" />
+                                </EmptyMedia>
+                                <EmptyTitle>No contracts found</EmptyTitle>
+                                <EmptyDescription>Create a contract to get started</EmptyDescription>
+                            </EmptyHeader>
+                        </Empty>
+                    )}
+
+                </div>
+            </div>
+
+        </div >
+
+    )
 }
