@@ -16,16 +16,16 @@ async function fetchLocations(id: string, role: string) {
             })
             return locations
         } else if (role === "staff") {
-            const staffLocations = await db.query.staffsLocations.findMany({
+            const staffLocations = await db.query.staffLocations.findMany({
                 where: (staffLocations, { eq }) => eq(staffLocations.staffId, id),
-            })  
-            
+            })
+
             const locationIds = staffLocations.map(sl => sl.locationId)
-            
+
             if (locationIds.length === 0) {
                 return []
             }
-            
+
             const locations = await db.query.locations.findMany({
                 where: (locations) => inArray(locations.id, locationIds),
                 with: {
@@ -55,7 +55,7 @@ export default async function LocationsPage() {
         <div className='w-full h-full'>
             <div className='p-4'>
                 <LocationsList locations={locations} />
-                {/* <></> */}
+
             </div>
         </div>
     )

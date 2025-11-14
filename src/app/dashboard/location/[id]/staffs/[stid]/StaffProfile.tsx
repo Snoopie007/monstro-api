@@ -52,12 +52,7 @@ export function StaffProfile({ staff, onChange }: StaffListProps) {
                                 </div>
                             </div>
                             <div className='flex flex-row items-center gap-2 text-sm'>
-                                {staff?.role && (
-                                    <Badge roles={staff?.role.color}>
-                                        <span >  {staff?.role.name}</span>
-                                        <ChevronDown size={14} />
-                                    </Badge>
-                                )}
+
                                 <div className='text-indigo-400 cursor-pointer'>
                                     Reset password
                                 </div>

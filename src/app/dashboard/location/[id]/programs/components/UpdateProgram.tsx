@@ -15,14 +15,14 @@ import {
 } from "@/components/forms";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { cn, sleep, tryCatch } from "@/libs/utils";
+import { cn, tryCatch } from "@/libs/utils";
 import { z } from "zod";
-import { useEffect, useState } from "react";
-import { Loader2, Pencil } from "lucide-react";
-import { useProgram, usePrograms } from "@/hooks/usePrograms";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { usePrograms } from "@/hooks/usePrograms";
 import { toast } from "react-toastify";
 import { UpdateProgramSchema } from "../schemas";
-import { useStaffs } from "@/hooks/useStaffs";
+import { useStaffLocations } from "@/hooks/useStaffs";
 import { Program } from "@/types";
 export interface UpdateProgramProps {
 
@@ -34,7 +34,7 @@ export interface UpdateProgramProps {
 export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
     const lid = program.locationId;
     const pid = program.id;
-    const { staffs } = useStaffs(lid);
+    const { sls } = useStaffLocations(lid);
     const { mutate } = usePrograms(lid);
     // Initialize form with default values that match your program structure
     const form = useForm<z.infer<typeof UpdateProgramSchema>>({
@@ -140,7 +140,7 @@ export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
                                 </FormItem>
                             )}
                         />
-                        {staffs && staffs.length > 0 && (
+                        {sls && sls.length > 0 && (
                             <FormField control={form.control} name="instructorId" render={({ field }) => (
                                 <FormItem className="flex-1">
                                     <FormLabel size={"tiny"}>Default Assigned Staff</FormLabel>
@@ -156,9 +156,15 @@ export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
                                             </SelectTrigger>
 
                                             <SelectContent>
-                                                {staffs.map((staff) => (
-                                                    <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
-                                                ))}
+                                                {sls.map((s) => {
+                                                    const staff = s.staff;
+                                                    if (!staff) return null;
+                                                    return (
+                                                        <SelectItem key={staff.id} value={staff.id}>
+                                                            {staff.firstName} {staff.lastName}
+                                                        </SelectItem>
+                                                    )
+                                                })}
                                                 <SelectItem value={"null"} key={"none"}>None</SelectItem>
                                             </SelectContent>
                                         </Select>
