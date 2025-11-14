@@ -5,9 +5,7 @@ import type { RecurringReservation, Reservation, MemberPackage, MemberSubscripti
 import { recurringReservations, recurringReservationsExceptions, reservations } from "@/db/schemas";
 import { isSessionPasted, getSessionState } from "@/libs/utils";
 import { eq } from "drizzle-orm";
-import { emailQueue } from "@/libs/queues";
-import { format, subDays, addHours } from "date-fns";
-import { MonstroData } from "@/libs/data";
+import { emailQueue, classQueue } from "@/libs/queues";
 
 type ReservationBody = {
     type: "pkg" | "sub";
@@ -158,116 +156,52 @@ export async function locationReservations(app: Elysia) {
                 } as Reservation;
             }
 
-            // Schedule class reminder emails (only for planId >= 2)
+            // Schedule class reminder jobs using new queue-based system
             try {
                 const locationState = await db.query.locationState.findFirst({
                     where: (ls, { eq }) => eq(ls.locationId, lid)
                 });
 
                 if (locationState?.planId && locationState.planId >= 2) {
-                    // Fetch member and location details
-                    const member = await db.query.members.findFirst({
-                        where: (m, { eq }) => eq(m.id, memberId)
-                    });
-
-                    const location = await db.query.locations.findFirst({
-                        where: (l, { eq }) => eq(l.id, lid)
-                    });
-
-                    if (member && location && session.program) {
-                        const startOn = reservation.startOn;
-                        const endOn = reservation.endOn;
-                        const now = new Date();
-                        
-                        // Format the day and time for display
-                        const dayTime = format(startOn, "EEEE, MMMM d 'at' h:mm a");
-
-                        // Calculate when to send emails
-                        const upcomingReminderTime = subDays(startOn, 3);
-                        const missedClassTime = addHours(endOn, 1);
-
-                        const emailData = {
-                            member: {
-                                firstName: member.firstName || '',
-                                lastName: member.lastName || '',
-                            },
-                            session: {
-                                programName: session.program.name,
-                                dayTime,
-                            },
-                            location: {
-                                name: location.name || '',
-                                address: location.address || '',
-                            },
-                            monstro: MonstroData,
-                        };
-
-                        // For missed class email validation
-                        const missedClassEmailData = {
-                            ...emailData,
-                            session: {
-                                ...emailData.session,
-                                startTime: startOn.toISOString(),
-                                endTime: endOn.toISOString(),
-                                reservationId: reservation.isRecurring ? null : reservation.id,
-                                recurringId: reservation.isRecurring ? reservation.recurringId : null,
-                            },
-                        };
-
-                        // Calculate delays
-                        const missedDelay = Math.max(0, missedClassTime.getTime() - Date.now());
-
-                        // Schedule upcoming class reminder
-                        if (startOn > now) {
-                            // Class is in the future
-                            let upcomingDelay: number;
-                            
-                            if (upcomingReminderTime > now) {
-                                // Class is 3+ days away - schedule for 3 days before
-                                upcomingDelay = upcomingReminderTime.getTime() - Date.now();
-                                console.log(`📧 Scheduled upcoming class reminder for 3 days before ${dayTime}`);
-                            } else {
-                                // Class is < 3 days away - send immediately
-                                upcomingDelay = 0;
-                                console.log(`📧 Sending upcoming class reminder immediately (class is < 3 days away)`);
-                            }
-
-                            await emailQueue.add('send-email', {
-                                to: member.email,
-                                subject: `Reminder: ${session.program.name} class coming up`,
-                                template: 'ClassReminderEmail',
-                                metadata: emailData,
-                            }, {
-                                jobId: `class-reminder-${reservation.id}`,
-                                delay: upcomingDelay,
-                                attempts: 3,
-                                backoff: { type: 'exponential', delay: 2000 },
-                                removeOnComplete: { age: 60 * 60 * 24 * 7, count: 100 },
-                            });
-                        } else {
-                            console.log(`⏭️ Skipping upcoming reminder - class is in the past`);
-                        }
-
-                        // Schedule missed class email (1 hour after class ends)
-                        await emailQueue.add('send-email', {
-                            to: member.email,
-                            subject: `We missed you at ${session.program.name}`,
-                            template: 'MissedClassEmail',
-                            metadata: missedClassEmailData,
+                    if (!rest.recurring) {
+                        // Single reservation - schedule class reminder and missed check
+                        await classQueue.add('send-class-reminder', {
+                            reservationId: reservation.id,
+                            locationId: lid,
                         }, {
-                            jobId: `missed-class-${reservation.id}`,
-                            delay: missedDelay,
+                            jobId: `class-reminder-${reservation.id}`,
                             attempts: 3,
-                            backoff: { type: 'exponential', delay: 2000 },
-                            removeOnComplete: { age: 60 * 60 * 24 * 7, count: 100 },
+                            backoff: { type: 'exponential', delay: 5000 }
                         });
 
-                        console.log(`📧 Scheduled class reminder emails for reservation ${reservation.id}`);
+                        await classQueue.add('check-missed-class', {
+                            reservationId: reservation.id,
+                            locationId: lid,
+                        }, {
+                            jobId: `missed-class-${reservation.id}`,
+                            attempts: 3,
+                            backoff: { type: 'exponential', delay: 5000 }
+                        });
+
+                        console.log(`📧 Scheduled class reminders for reservation ${reservation.id}`);
+                    } else {
+                        // Recurring reservation - schedule recurring reminder job
+                        await classQueue.add('process-recurring-class-reminder', {
+                            recurringReservationId: reservation.recurringId,
+                            locationId: lid,
+                            reminderCount: 0,
+                        }, {
+                            jobId: `recurring-class-reminder-${reservation.recurringId}`,
+                            attempts: 3,
+                            backoff: { type: 'exponential', delay: 5000 }
+                        });
+
+                        console.log(`📧 Scheduled recurring class reminders for recurring reservation ${reservation.recurringId}`);
                     }
                 }
             } catch (error) {
-                console.error('Error scheduling class reminder emails:', error);
-                // Don't fail the reservation if email scheduling fails
+                console.error('Error scheduling class reminder jobs:', error);
+                // Don't fail the reservation if job scheduling fails
             }
 
             return status(200, reservation);
