@@ -50,7 +50,7 @@ export function UserMenu({ user }: { user: ExtendedUser }) {
 					className={"flex flex-col items-start justify-start"}
 				>
 					<span className=" font-semibold">{user?.name}</span>
-					<span className=" text-muted-foreground">{user?.email}</span>
+					<span className=" text-muted-foreground truncate max-w-48">{user?.email}</span>
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem className={MenuItemStyle} asChild>

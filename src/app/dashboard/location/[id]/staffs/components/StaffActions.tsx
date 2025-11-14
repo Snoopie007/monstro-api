@@ -9,15 +9,17 @@ import {
 } from '@/components/ui'
 import { Staff } from '@/types'
 import { EllipsisVertical } from 'lucide-react'
-
+import { useRouter } from 'next/navigation'
 
 interface StaffActionsProps {
     staff?: Staff | null
     onChange: (staff: any) => void,
-    deleteFunction: Function
+    deleteFunction: Function,
+    lid: string
 }
 
-export default function StaffActions({ staff }: StaffActionsProps) {
+export function StaffActions({ staff, lid }: StaffActionsProps) {
+    const router = useRouter();
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -27,7 +29,9 @@ export default function StaffActions({ staff }: StaffActionsProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent className='w-[180px] border-foreground/20'>
 
-                <DropdownMenuItem onClick={() => { }} className='cursor-pointer'>
+                <DropdownMenuItem onClick={() => {
+                    router.push(`/dashboard/location/${lid}/staffs/${staff?.id}`);
+                }} className='cursor-pointer'>
 
                     <span>Profile</span>
 

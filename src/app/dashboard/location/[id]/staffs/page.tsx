@@ -13,10 +13,13 @@ import {
 	EmptyHeader,
 	EmptyMedia,
 	EmptyTitle,
-	EmptyDescription
+	EmptyDescription,
+	InfoField
 } from "@/components/ui";
 import { PhoneIcon, UserIcon } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/libs/utils";
+import { format } from "date-fns";
 
 interface StaffsPageProps {
 	params: Promise<{
@@ -48,7 +51,7 @@ export default function StaffsPage(props: StaffsPageProps) {
 
 	return (
 		<div className="flex flex-col pr-2 pb-2 h-full">
-			<div className="max-w-4xl mx-auto w-full space-y-4">
+			<div className="max-w-6xl mx-auto w-full space-y-4">
 
 				<div className="flex flex-row  items-center gap-2 justify-between ">
 					<Input
@@ -67,44 +70,53 @@ export default function StaffsPage(props: StaffsPageProps) {
 					{!isLoading && filteredStaffs.length > 0 && (
 						<ItemGroup>
 							{filteredStaffs.map((sl, index) => {
-								const { staff, location, roles } = sl;
+								const { staff, roles } = sl;
 								return (
-									<React.Fragment key={sl.id}>
-										<Item>
-											<ItemMedia>
-												<Avatar>
-													<AvatarImage src={staff?.avatar ?? ''} className="grayscale" />
-													<AvatarFallback>{staff?.firstName?.charAt(0)} {staff?.lastName?.charAt(0)}</AvatarFallback>
-												</Avatar>
-											</ItemMedia>
-											<ItemContent className="gap-1" >
-												<ItemTitle>
-													<Link href={`/dashboard/location/${params.id}/staffs/${staff?.id}`}>
-														{staff?.firstName} {staff?.lastName}
-													</Link>
-												</ItemTitle>
-												<ItemDescription>{staff?.email}</ItemDescription>
+									<div key={sl.id} className={cn(
+										"flex flex-row items-center justify-between gap-3 p-3 border-b border-foreground/5",
+										"last:border-b-0"
+									)}>
 
-											</ItemContent>
-											<ItemContent>
-												<ItemTitle><PhoneIcon className="size-4" /> {staff?.phone ?? 'No phone number'}</ItemTitle>
-											</ItemContent>
-											<ItemContent>
-
-											</ItemContent>
-											<ItemContent className="gap-1" >
-												<ItemTitle>Roles</ItemTitle>
-												<div className="flex flex-row gap-1">
-													{roles?.map((role) => (
-														<Badge key={role.id} roles={role.color}>
-															{role.name}
-														</Badge>
-													))}
+										<div className="flex-shrink-0">
+											<Avatar className="size-12">
+												<AvatarImage src={staff?.avatar ?? ''} className="grayscale" />
+												<AvatarFallback>{staff?.firstName?.charAt(0)} {staff?.lastName?.charAt(0)}</AvatarFallback>
+											</Avatar>
+										</div>
+										<div className="grid grid-cols-6 gap-2 items-center flex-1">
+											<div className="flex flex-col items-start col-span-2">
+												<Link href={`/dashboard/location/${params.id}/staffs/${staff?.id}`}>
+													<span className="text-sm font-bold">{staff?.firstName} {staff?.lastName}</span>
+												</Link>
+												<span className="text-sm text-muted-foreground truncate max-w-48">{staff?.email}</span>
+											</div>
+											<div className="flex flex-col  col-span-1">
+												<span className="text-sm">Phone</span>
+												<span className="text-sm">{staff?.phone ?? 'No phone number'}</span>
+											</div>
+											<div className="flex flex-col col-span-2">
+												<span className="text-sm">Roles</span>
+												<div className="flex flex-row gap-2">
+													{roles && roles.length > 0 ? (
+														roles?.map((r) => (
+															<Badge key={r.id} roles={r.color}>
+																{r.name}
+															</Badge>
+														))
+													) : (
+														<span className="text-sm text-muted-foreground">No roles</span>
+													)}
 												</div>
-											</ItemContent>
-										</Item>
-										{index !== filteredStaffs.length - 1 && <ItemSeparator className="bg-foreground/5" />}
-									</React.Fragment>
+											</div>
+											<div className="flex flex-col col-span-1">
+												<span className="text-sm">Joined</span>
+												<span className="text-sm text-muted-foreground">{format(staff?.created || new Date(), 'MMM d, yyyy')}</span>
+											</div>
+										</div>
+										<div className="flex-shrink-0">
+
+										</div>
+									</div>
 								)
 							})}
 						</ItemGroup>
