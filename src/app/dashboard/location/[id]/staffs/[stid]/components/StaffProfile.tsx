@@ -98,7 +98,9 @@ export function StaffProfile({ staff, lid }: StaffProfileProps) {
                     disabled={form.formState.isSubmitting || !form.formState.isValid}
                     onClick={form.handleSubmit(handleSubmit)}
                 >
-                    {form.formState.isSubmitting ? <Loader2 className=" h-4 w-4 animate-spin" /> : "Update"}
+                    {form.formState.isSubmitting ? (
+                        <Loader2 className="size-4 animate-spin" />
+                    ) : "Update"}
                 </Button>
             </div>
         </div >

@@ -15,6 +15,7 @@ interface StaffEmailProps {
 export function StaffEmail({ staff, lid }: StaffEmailProps) {
     const [newEmail, setNewEmail] = useState<string>(staff.email || "");
     const [loading, setLoading] = useState<boolean>(false);
+
     async function handleSubmit() {
         setLoading(true);
         const { result, error } = await tryCatch(

@@ -3,7 +3,7 @@ import React, { use, useMemo, useState } from "react";
 import ErrorComponent from "@/components/error";
 import { useStaffLocations } from "@/hooks/useStaffs";
 import { useRoles } from "@/hooks/useRoles";
-import InviteStaff from "./components/InviteStaff";
+import { InviteStaff } from "./components";
 import { Input } from "@/components/forms";
 import {
 	Badge,
