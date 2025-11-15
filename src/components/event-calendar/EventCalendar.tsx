@@ -42,10 +42,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuShortcut,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+	Button,
+	ButtonGroup,
+	ScrollArea,
+} from "../ui";
 import { cn } from "@/libs/utils";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/GroupButton";
 import { addHoursToDate } from "@/libs/calendar";
 
 export interface EventCalendarProps {
@@ -317,17 +318,12 @@ export function EventCalendar({
 
 	return (
 		<div
-			className={cn(
-				"flex flex-col rounded-lg max-h-full",
-				view === "month" ? "h-full" : "",
-			)}
-			style={
-				{
-					"--event-height": `${EventHeight}px`,
-					"--event-gap": `${EventGap}px`,
-					"--week-cells-height": `${WeekCellsHeight}px`,
-				} as React.CSSProperties
-			}
+			className={cn("flex flex-col rounded-lg max-h-full", view === "month" ? "h-full" : "")}
+			style={{
+				"--event-height": `${EventHeight}px`,
+				"--event-gap": `${EventGap}px`,
+				"--week-cells-height": `${WeekCellsHeight}px`,
+			} as React.CSSProperties}
 		>
 			<CalendarDndProvider onEventUpdate={handleEventUpdate}>
 				<div
@@ -419,43 +415,42 @@ export function EventCalendar({
 					</Button>
 				</div>
 
-				<div
-					className={cn(
-						"flex flex-1 flex-col bg-foreground/5 rounded-lg overflow-auto",
-						view === "month" ? "h-full min-h-0" : "",
-					)}
-				>
-					{view === "month" && (
-						<MonthView
-							currentDate={currentDate}
-							events={events}
-							onEventSelect={handleEventSelect}
-							onEventCreate={handleEventCreate}
-						/>
-					)}
-					{view === "week" && (
-						<WeekView
-							currentDate={currentDate}
-							events={events}
-							onEventSelect={handleEventSelect}
-							onEventCreate={handleEventCreate}
-						/>
-					)}
-					{view === "day" && (
-						<DayView
-							currentDate={currentDate}
-							events={events}
-							onEventSelect={handleEventSelect}
-							onEventCreate={handleEventCreate}
-						/>
-					)}
-					{view === "agenda" && (
-						<AgendaView
-							currentDate={currentDate}
-							events={events}
-							onEventSelect={handleEventSelect}
-						/>
-					)}
+				<div className={cn(
+					"flex flex-1 flex-col bg-muted/50 rounded-lg overflow-hidden", view === "month" ? "h-full min-h-0" : "",
+				)}>
+					<ScrollArea>
+						{view === "month" && (
+							<MonthView
+								currentDate={currentDate}
+								events={events}
+								onEventSelect={handleEventSelect}
+								onEventCreate={handleEventCreate}
+							/>
+						)}
+						{view === "week" && (
+							<WeekView
+								currentDate={currentDate}
+								events={events}
+								onEventSelect={handleEventSelect}
+								onEventCreate={handleEventCreate}
+							/>
+						)}
+						{view === "day" && (
+							<DayView
+								currentDate={currentDate}
+								events={events}
+								onEventSelect={handleEventSelect}
+								onEventCreate={handleEventCreate}
+							/>
+						)}
+						{view === "agenda" && (
+							<AgendaView
+								currentDate={currentDate}
+								events={events}
+								onEventSelect={handleEventSelect}
+							/>
+						)}
+					</ScrollArea>
 				</div>
 
 				<EventDialog
