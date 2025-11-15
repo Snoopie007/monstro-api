@@ -171,7 +171,7 @@ export async function POST(
 
 					if (member && location) {
 						const apiClient = serversideApiClient();
-						await apiClient.post('/protected/locations/email', {
+						await apiClient.post('/x/email/send', {
 							recipient: member.email,
 							subject: 'Payment Received - Thank You',
 							template: 'PaymentSuccessEmail',

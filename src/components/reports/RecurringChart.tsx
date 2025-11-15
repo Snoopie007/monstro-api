@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import { Transaction } from '@/types/transaction'
 import { Loader2 } from 'lucide-react'
 import { MONTHS } from '@/libs/data'
-import { cn } from '@/components/event-calendar'
+import { cn } from '@/libs/utils'
 
 const chartConfig = {
     desktop: {

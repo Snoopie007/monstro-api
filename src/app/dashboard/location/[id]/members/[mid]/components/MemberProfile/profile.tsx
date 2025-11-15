@@ -19,7 +19,7 @@ import { useMemberStatus } from "../../providers/MemberContext";
 import { ProfileActions } from "./ProfileActions";
 import { format } from "date-fns";
 import { FamilyMember } from "@/types/FamilyMember";
-import { cn } from "@/components/event-calendar";
+import { cn } from "@/libs/utils";
 
 
 

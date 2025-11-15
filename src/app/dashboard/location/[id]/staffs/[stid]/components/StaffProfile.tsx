@@ -3,41 +3,35 @@ import { Button } from "@/components/ui";
 import {
     Form,
     FormField,
-    FormLabel,
     FormControl,
     FormItem,
     FormMessage,
     Input,
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem
 } from "@/components/forms";
 import { tryCatch } from "@/libs/utils";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Staff, Vendor } from "@/types";
+import { Staff } from "@/types";
 import { toast } from "react-toastify";
 
 
-interface UserProfileProps {
-    user: Vendor | Staff;
-    isVendor: boolean;
+interface StaffProfileProps {
+    staff: Staff;
+    lid: string;
 }
 
 
-export function UserProfile({ user, isVendor }: UserProfileProps) {
+export function StaffProfile({ staff, lid }: StaffProfileProps) {
 
     const form = useForm({
         defaultValues: {
-            firstName: user.firstName || "",
-            lastName: user.lastName || "",
+            firstName: staff.firstName || "",
+            lastName: staff.lastName || "",
         },
     });
     async function handleSubmit(v: any) {
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/account/settings/${user.id}/profile`, {
+            fetch(`/api/protected/loc/${lid}/staffs/${staff.id}`, {
                 method: "PUT",
                 body: JSON.stringify(v),
             })
@@ -99,7 +93,7 @@ export function UserProfile({ user, isVendor }: UserProfileProps) {
             <div className="bg-foreground/5 py-3 px-6 flex justify-end">
                 <Button
                     type="submit"
-                    size="sm"
+
                     variant={"foreground"}
                     disabled={form.formState.isSubmitting || !form.formState.isValid}
                     onClick={form.handleSubmit(handleSubmit)}

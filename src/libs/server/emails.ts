@@ -23,7 +23,8 @@ export async function sendEmailViaApi(params: {
 }): Promise<{ success: boolean; message: string }> {
     try {
         const client = serviceApiClient();
-        return await client.post('/protected/locations/email', params) as { success: boolean; message: string };
+        // Use immediate send endpoint for all email sends (OTPs, payments, invites)
+        return await client.post('/x/email/send', params) as { success: boolean; message: string };
     } catch (error) {
         console.error('Failed to send email via API:', error);
         throw error;

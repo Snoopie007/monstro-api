@@ -1,10 +1,9 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { Plus } from "lucide-react";
 
 import { useCalendarDnd } from "@/components/event-calendar";
-import { cn } from "@/components/event-calendar/utils";
+import { cn } from "@/libs/utils";
 
 interface DroppableCellProps {
   id: string;

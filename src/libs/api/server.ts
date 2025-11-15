@@ -124,7 +124,9 @@ export const serviceApiClient = (): ApiClient => {
 
     return {
         get: async (endpoint: string, params?: Record<string, string | number | boolean | string[]>) => {
-            const url = new URL(`${baseUrl}${endpoint}`)
+            // For XRoutes, strip /api from baseUrl
+            const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+            const url = new URL(`${finalBaseUrl}${endpoint}`)
 
             if (params) {
                 Object.entries(params).forEach(([key, value]) => {
@@ -147,7 +149,9 @@ export const serviceApiClient = (): ApiClient => {
             return response.json()
         },
         post: async (endpoint: string, data?: Record<string, unknown>) => {
-            const url = new URL(`${baseUrl}${endpoint}`)
+            // For XRoutes, strip /api from baseUrl
+            const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+            const url = new URL(`${finalBaseUrl}${endpoint}`)
             const response = await fetch(url.toString(), {
                 method: 'POST',
                 headers: getHeaders(),
@@ -160,7 +164,9 @@ export const serviceApiClient = (): ApiClient => {
             return response.json()
         },
         delete: async (endpoint: string) => {
-            const url = new URL(`${baseUrl}${endpoint}`)
+            // For XRoutes, strip /api from baseUrl
+            const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+            const url = new URL(`${finalBaseUrl}${endpoint}`)
             const response = await fetch(url.toString(), {
                 method: 'DELETE',
                 headers: getHeaders()
