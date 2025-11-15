@@ -1,7 +1,6 @@
 "use client";
 import { useMemberPlans } from "@/hooks/usePlans";
 import { MemberPlan } from "@/types/member";
-import { Loader2 } from "lucide-react";
 import { PlanCheckbox } from "./PlanItemCheckbox";
 import { Checkbox } from "@/components/forms";
 import { Skeleton } from "@/components/ui";

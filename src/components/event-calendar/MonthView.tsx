@@ -202,8 +202,7 @@ export function MonthView({
 													}
 
 													return (
-														<div key={event.id}
-															className="aria-hidden:hidden"
+														<div key={event.id} className="aria-hidden:hidden"
 															aria-hidden={isHidden ? "true" : undefined}
 														>
 															<DraggableEvent
@@ -250,9 +249,11 @@ interface HasMoreEventsProps {
 function HasMoreEvents({ remainingCount, day, allEvents, onEventClick }: HasMoreEventsProps) {
 	return (
 		<Popover modal>
-			<PopoverTrigger onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-				<div className="text-muted-foreground flex flex-row items-start justify-start text-xs pt-1.5">
-					+ {remainingCount}more
+			<PopoverTrigger onClick={(e: React.MouseEvent) => {
+				e.stopPropagation();
+			}} >
+				<div className="text-muted-foreground cursor-pointer hover:text-foreground flex flex-row items-start justify-start text-xs pt-1.5">
+					+ {remainingCount} more
 
 				</div>
 			</PopoverTrigger>

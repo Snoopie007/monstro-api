@@ -89,7 +89,6 @@ export function EventCalendar({
 	// Determine which state to use
 	const currentDate = externalCurrentDate ?? internalCurrentDate;
 	const view = externalView ?? internalView;
-	const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
 	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
 		null,
 	);
@@ -102,9 +101,7 @@ export function EventCalendar({
 		const handleKeyDown = (e: KeyboardEvent) => {
 			// Skip if user is typing in an input, textarea or contentEditable element
 			// or if the event dialog is open
-			if (
-				isEventDialogOpen ||
-				e.target instanceof HTMLInputElement ||
+			if (e.target instanceof HTMLInputElement ||
 				e.target instanceof HTMLTextAreaElement ||
 				(e.target instanceof HTMLElement && e.target.isContentEditable)
 			) {
@@ -132,7 +129,7 @@ export function EventCalendar({
 		return () => {
 			window.removeEventListener("keydown", handleKeyDown);
 		};
-	}, [isEventDialogOpen]);
+	}, []);
 
 	const handlePrevious = () => {
 		let newDate: Date;
@@ -207,7 +204,6 @@ export function EventCalendar({
 		}
 		// Default behavior: open built-in dialog
 		setSelectedEvent(event);
-		setIsEventDialogOpen(true);
 	};
 
 	const handleEventCreate = (startTime: Date) => {
@@ -244,13 +240,11 @@ export function EventCalendar({
 			},
 		};
 		setSelectedEvent(newEvent);
-		setIsEventDialogOpen(true);
 	};
 
 	const handleEventDelete = (eventId: string) => {
 		const deletedEvent = events.find((e) => e.id === eventId);
 		onEventDelete?.(eventId);
-		setIsEventDialogOpen(false);
 		setSelectedEvent(null);
 
 		// Show toast notification when an event is deleted
@@ -381,10 +375,7 @@ export function EventCalendar({
 									/>
 								</Button>
 							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								align="end"
-								className="min-w-32 border-border/20"
-							>
+							<DropdownMenuContent align="end" className="min-w-32 border-border/20"	>
 								<DropdownMenuItem onClick={() => handleViewChange("month")}>
 									Month <DropdownMenuShortcut>M</DropdownMenuShortcut>
 								</DropdownMenuItem>
@@ -400,19 +391,18 @@ export function EventCalendar({
 							</DropdownMenuContent>
 						</DropdownMenu>
 					</ButtonGroup>
-					<Button
+					{/* <Button
 						variant="outline"
 						className="border-foreground/10 flex flex-row items-center gap-2"
 						onClick={() => {
 							setSelectedEvent(null); // Ensure we're creating a new event
-							setClickedDateTime(undefined); // Clear any previous clicked time
-							setIsEventDialogOpen(true);
+							setClickedDateTime(undefined);
 						}}
 					>
 						<span >New event</span>
 						<PlusIcon className="size-4" />
 
-					</Button>
+					</Button> */}
 				</div>
 
 				<div className={cn(
@@ -453,41 +443,7 @@ export function EventCalendar({
 					</ScrollArea>
 				</div>
 
-				<EventDialog
-					program={null}
-					isOpen={isEventDialogOpen}
-					onClose={() => {
-						setIsEventDialogOpen(false);
-						setSelectedEvent(null);
-						setClickedDateTime(undefined);
-					}}
-					onSave={(program) => {
-						// Convert program to event format for the parent handler
-						if (onEventAdd) {
-							const event: CalendarEvent = {
-								id: crypto.randomUUID(),
-								title: program.name,
-								description: program.description,
-								start: new Date(),
-								end: new Date(),
-								allDay: false,
-								color: "sky",
-								staff: {
-									id: "",
-									name: "",
-									avatar: "",
-								},
-							};
-							onEventAdd(event);
-						}
-						setIsEventDialogOpen(false);
-						setSelectedEvent(null);
-						setClickedDateTime(undefined);
-					}}
-					onDelete={handleEventDelete}
-					lid={lid || ""}
-					initialDateTime={clickedDateTime}
-				/>
+
 			</CalendarDndProvider>
 		</div>
 	);
