@@ -7,6 +7,7 @@ import {
 	endOfMonth,
 	endOfWeek,
 	format,
+	isPast,
 	isSameDay,
 	isSameMonth,
 	isToday,
@@ -273,12 +274,15 @@ function HasMoreEvents({ remainingCount, day, allEvents, onEventClick }: HasMore
 								const eventEnd = new Date(event.end);
 								const isFirstDay = isSameDay(day, eventStart);
 								const isLastDay = isSameDay(day, eventEnd);
+								const isEventInPast = isPast(eventEnd);
 
 								return (
 									<EventItem
 										key={event.id}
 										onClick={(e: React.MouseEvent) => {
-											onEventClick(event, e);
+											if (!isEventInPast) {
+												onEventClick(event, e);
+											}
 										}}
 										event={event}
 										view="month"

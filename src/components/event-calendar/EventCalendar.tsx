@@ -25,7 +25,6 @@ import {
 	AgendaView,
 	CalendarDndProvider,
 	DayView,
-	EventDialog,
 	EventGap,
 	EventHeight,
 	MonthView,
