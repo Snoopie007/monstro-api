@@ -2,61 +2,35 @@
 
 import {
 	addDays,
-	addMonths,
-	addWeeks,
 	endOfWeek,
 	format,
 	isSameMonth,
 	startOfWeek,
-	subMonths,
-	subWeeks,
 } from "date-fns";
-import {
-	ChevronDownIcon,
-	ChevronLeftIcon,
-	ChevronRightIcon,
-	PlusIcon,
-} from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
 import {
 	AgendaDaysToShow,
-	AgendaView,
 	CalendarDndProvider,
-	DayView,
 	EventGap,
 	EventHeight,
-	MonthView,
 	WeekCellsHeight,
-	WeekView,
 } from "./";
-import type {
-	CalendarEvent,
-	CalendarView,
-} from "@/types";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuShortcut,
-	DropdownMenuTrigger,
-	Button,
-	ButtonGroup,
-	ScrollArea,
-} from "../ui";
+import type { CalendarEvent, CalendarView } from "@/types";
 import { cn } from "@/libs/utils";
-import { addHoursToDate } from "@/libs/calendar";
+import { CalendarToolbar } from "./CalendarToolbar";
+import { CalendarViewRenderer } from "./CalendarViewRenderer";
+import {
+	useCalendarKeyboardShortcuts,
+} from "@/hooks";
 
 export interface EventCalendarProps {
 	events?: CalendarEvent[];
-	onEventAdd?: (event: CalendarEvent) => void;
 	onEventUpdate?: (event: CalendarEvent) => void;
-	onEventDelete?: (eventId: string) => void;
 	onEventClick?: (event: CalendarEvent) => void;
 	className?: string;
 	initialView?: CalendarView;
-	lid?: string; // Location ID for program creation
 
 	// External state props
 	currentDate?: Date;
@@ -67,13 +41,10 @@ export interface EventCalendarProps {
 
 export function EventCalendar({
 	events = [],
-	onEventAdd,
 	onEventUpdate,
-	onEventDelete,
 	onEventClick,
 	className,
 	initialView = "month",
-	lid,
 
 	// External state props
 	currentDate: externalCurrentDate,
@@ -88,187 +59,131 @@ export function EventCalendar({
 	// Determine which state to use
 	const currentDate = externalCurrentDate ?? internalCurrentDate;
 	const view = externalView ?? internalView;
-	const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
-		null,
-	);
-	const [clickedDateTime, setClickedDateTime] = useState<Date | undefined>(
-		undefined,
-	);
 
-	// Add keyboard shortcuts for view switching
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			// Skip if user is typing in an input, textarea or contentEditable element
-			// or if the event dialog is open
-			if (e.target instanceof HTMLInputElement ||
-				e.target instanceof HTMLTextAreaElement ||
-				(e.target instanceof HTMLElement && e.target.isContentEditable)
-			) {
-				return;
+	// Handle view changes
+	const handleViewChange = useCallback(
+		(newView: CalendarView) => {
+			if (onViewChange) {
+				onViewChange(newView);
+			} else {
+				setInternalView(newView);
 			}
+		},
+		[onViewChange]
+	);
 
-			switch (e.key.toLowerCase()) {
-				case "m":
-					handleViewChange("month");
-					break;
-				case "w":
-					handleViewChange("week");
-					break;
-				case "d":
-					handleViewChange("day");
-					break;
-				case "a":
-					handleViewChange("agenda");
-					break;
-			}
-		};
+	// Use keyboard shortcuts hook (no dialog needed anymore)
+	useCalendarKeyboardShortcuts({
+		isDialogOpen: false, // Never blocked since no dialog
+		onViewChange: handleViewChange,
+	});
 
-		window.addEventListener("keydown", handleKeyDown);
-
-		return () => {
-			window.removeEventListener("keydown", handleKeyDown);
-		};
-	}, []);
-
-	const handlePrevious = () => {
+	// Date navigation handlers
+	const handlePrevious = useCallback(() => {
 		let newDate: Date;
 
 		if (view === "month") {
-			newDate = subMonths(currentDate, 1);
+			newDate = new Date(
+				currentDate.getFullYear(),
+				currentDate.getMonth() - 1,
+				1
+			);
 		} else if (view === "week") {
-			newDate = subWeeks(currentDate, 1);
+			newDate = new Date(currentDate);
+			newDate.setDate(currentDate.getDate() - 7);
 		} else if (view === "day") {
 			newDate = addDays(currentDate, -1);
 		} else if (view === "agenda") {
 			newDate = addDays(currentDate, -AgendaDaysToShow);
 		} else {
-			newDate = subMonths(currentDate, 1);
+			newDate = new Date(
+				currentDate.getFullYear(),
+				currentDate.getMonth() - 1,
+				1
+			);
 		}
 
-		// Use external handler if provided, otherwise use internal state
 		if (onDateChange) {
 			onDateChange(newDate);
 		} else {
 			setInternalCurrentDate(newDate);
 		}
-	};
+	}, [currentDate, view, onDateChange]);
 
-	const handleNext = () => {
+	const handleNext = useCallback(() => {
 		let newDate: Date;
 
 		if (view === "month") {
-			newDate = addMonths(currentDate, 1);
+			newDate = new Date(
+				currentDate.getFullYear(),
+				currentDate.getMonth() + 1,
+				1
+			);
 		} else if (view === "week") {
-			newDate = addWeeks(currentDate, 1);
+			newDate = new Date(currentDate);
+			newDate.setDate(currentDate.getDate() + 7);
 		} else if (view === "day") {
 			newDate = addDays(currentDate, 1);
 		} else if (view === "agenda") {
 			newDate = addDays(currentDate, AgendaDaysToShow);
 		} else {
-			newDate = addMonths(currentDate, 1);
+			newDate = new Date(
+				currentDate.getFullYear(),
+				currentDate.getMonth() + 1,
+				1
+			);
 		}
 
-		// Use external handler if provided, otherwise use internal state
 		if (onDateChange) {
 			onDateChange(newDate);
 		} else {
 			setInternalCurrentDate(newDate);
 		}
-	};
+	}, [currentDate, view, onDateChange]);
 
-	const handleToday = () => {
+	const handleToday = useCallback(() => {
 		const today = new Date();
 
-		// Use external handler if provided, otherwise use internal state
 		if (onDateChange) {
 			onDateChange(today);
 		} else {
 			setInternalCurrentDate(today);
 		}
-	};
+	}, [onDateChange]);
 
-	const handleViewChange = (newView: CalendarView) => {
-		// Use external handler if provided, otherwise use internal state
-		if (onViewChange) {
-			onViewChange(newView);
-		} else {
-			setInternalView(newView);
-		}
-	};
-
-	const handleEventSelect = (event: CalendarEvent) => {
-		if (onEventClick) {
-			onEventClick(event);
-			return;
-		}
-		// Default behavior: open built-in dialog
-		setSelectedEvent(event);
-	};
-
-	const handleEventCreate = (startTime: Date) => {
-		console.log("Creating new event at:", startTime); // Debug log
-
-		// Snap to 15-minute intervals
-		const minutes = startTime.getMinutes();
-		const remainder = minutes % 15;
-		if (remainder !== 0) {
-			if (remainder < 7.5) {
-				// Round down to nearest 15 min
-				startTime.setMinutes(minutes - remainder);
-			} else {
-				// Round up to nearest 15 min
-				startTime.setMinutes(minutes + (15 - remainder));
+	// Event handlers - simplified, no creation
+	const handleEventSelect = useCallback(
+		(event: CalendarEvent) => {
+			if (onEventClick) {
+				onEventClick(event);
 			}
-			startTime.setSeconds(0);
-			startTime.setMilliseconds(0);
-		}
+		},
+		[onEventClick]
+	);
 
-		// Store the clicked date/time for the dialog
-		setClickedDateTime(new Date(startTime));
+	const handleEventCreate = useCallback(
+		(startTime: Date) => {
+			// Event creation removed - just log for now
+			console.log("Event creation disabled - clicked at:", startTime);
+		},
+		[]
+	);
 
-		const newEvent: CalendarEvent = {
-			id: "",
-			title: "",
-			start: startTime,
-			end: addHoursToDate(startTime, 1),
-			allDay: false,
-			staff: {
-				id: "",
-				name: "",
-				avatar: "",
-			},
-		};
-		setSelectedEvent(newEvent);
-	};
+	const handleEventUpdate = useCallback(
+		(updatedEvent: CalendarEvent) => {
+			onEventUpdate?.(updatedEvent);
 
-	const handleEventDelete = (eventId: string) => {
-		const deletedEvent = events.find((e) => e.id === eventId);
-		onEventDelete?.(eventId);
-		setSelectedEvent(null);
-
-		// Show toast notification when an event is deleted
-		if (deletedEvent) {
 			toast.success(
-				`Event "${deletedEvent.title}" deleted from ${format(
-					new Date(deletedEvent.start),
-					"MMM d, yyyy",
-				)}`,
+				`Event "${updatedEvent.title}" moved to ${format(
+					new Date(updatedEvent.start),
+					"MMM d, yyyy"
+				)}`
 			);
-		}
-	};
+		},
+		[onEventUpdate]
+	);
 
-	const handleEventUpdate = (updatedEvent: CalendarEvent) => {
-		onEventUpdate?.(updatedEvent);
-
-		// Show toast notification when an event is updated via drag and drop
-		toast.success(
-			`Event "${updatedEvent.title}" moved to ${format(
-				new Date(updatedEvent.start),
-				"MMM d, yyyy",
-			)}`,
-		);
-	};
-
+	// Compute view title
 	const viewTitle = useMemo(() => {
 		if (view === "month") {
 			return format(currentDate, "MMMM yyyy");
@@ -295,7 +210,6 @@ export function EventCalendar({
 				</>
 			);
 		} else if (view === "agenda") {
-			// Show the month range for agenda view
 			const start = currentDate;
 			const end = addDays(currentDate, AgendaDaysToShow - 1);
 
@@ -311,138 +225,36 @@ export function EventCalendar({
 
 	return (
 		<div
-			className={cn("flex flex-col rounded-lg max-h-full", view === "month" ? "h-full" : "")}
-			style={{
-				"--event-height": `${EventHeight}px`,
-				"--event-gap": `${EventGap}px`,
-				"--week-cells-height": `${WeekCellsHeight}px`,
-			} as React.CSSProperties}
+			className={cn(
+				"flex flex-col rounded-lg max-h-full",
+				view === "month" ? "h-full" : ""
+			)}
+			style={
+				{
+					"--event-height": `${EventHeight}px`,
+					"--event-gap": `${EventGap}px`,
+					"--week-cells-height": `${WeekCellsHeight}px`,
+				} as React.CSSProperties
+			}
 		>
 			<CalendarDndProvider onEventUpdate={handleEventUpdate}>
-				<div
-					className={cn("flex items-center justify-between pb-2", className)}
-				>
-					<div className="flex items-center gap-1 sm:gap-4">
+				<CalendarToolbar
+					viewTitle={viewTitle}
+					view={view}
+					onPrevious={handlePrevious}
+					onNext={handleNext}
+					onToday={handleToday}
+					onViewChange={handleViewChange}
+					className={className}
+				/>
 
-
-						<ButtonGroup>
-							<div className={cn(
-								"bg-foreground/5 rounded-lg px-4 h-10 flex items-center justify-center",
-								"border border-foreground/10 text-sm font-semibold"
-							)}>
-								{viewTitle}
-							</div>
-							<Button
-								variant="outline"
-								size="icon"
-								onClick={handlePrevious}
-								className="border-foreground/10 size-10"
-								aria-label="Previous"
-							>
-								<ChevronLeftIcon size={16} aria-hidden="true" />
-							</Button>
-							<Button
-								variant="outline"
-								size="icon"
-								onClick={handleNext}
-								className="border-foreground/10 size-10"
-								aria-label="Next"
-							>
-								<ChevronRightIcon size={16} aria-hidden="true" />
-							</Button>
-						</ButtonGroup>
-					</div>
-					<ButtonGroup>
-						<Button
-							variant="outline"
-							onClick={handleToday}
-							className="border-foreground/10"
-						>
-
-							<span className=" max-[479px]:sr-only">Today</span>
-						</Button>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" className="border-foreground/10 flex flex-row items-center gap-2">
-									<span>
-										{view.charAt(0).toUpperCase() + view.slice(1)}
-									</span>
-									<ChevronDownIcon
-										className="text-muted-foreground size-4 -mt-0.5"
-
-										aria-hidden="true"
-									/>
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end" className="min-w-32 border-border/20"	>
-								<DropdownMenuItem onClick={() => handleViewChange("month")}>
-									Month <DropdownMenuShortcut>M</DropdownMenuShortcut>
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => handleViewChange("week")}>
-									Week <DropdownMenuShortcut>W</DropdownMenuShortcut>
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => handleViewChange("day")}>
-									Day <DropdownMenuShortcut>D</DropdownMenuShortcut>
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => handleViewChange("agenda")}>
-									Agenda <DropdownMenuShortcut>A</DropdownMenuShortcut>
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</ButtonGroup>
-					{/* <Button
-						variant="outline"
-						className="border-foreground/10 flex flex-row items-center gap-2"
-						onClick={() => {
-							setSelectedEvent(null); // Ensure we're creating a new event
-							setClickedDateTime(undefined);
-						}}
-					>
-						<span >New event</span>
-						<PlusIcon className="size-4" />
-
-					</Button> */}
-				</div>
-
-				<div className={cn(
-					"flex flex-1 flex-col bg-muted/50 rounded-lg overflow-hidden", view === "month" ? "h-full min-h-0" : "",
-				)}>
-					<ScrollArea>
-						{view === "month" && (
-							<MonthView
-								currentDate={currentDate}
-								events={events}
-								onEventSelect={handleEventSelect}
-								onEventCreate={handleEventCreate}
-							/>
-						)}
-						{view === "week" && (
-							<WeekView
-								currentDate={currentDate}
-								events={events}
-								onEventSelect={handleEventSelect}
-								onEventCreate={handleEventCreate}
-							/>
-						)}
-						{view === "day" && (
-							<DayView
-								currentDate={currentDate}
-								events={events}
-								onEventSelect={handleEventSelect}
-								onEventCreate={handleEventCreate}
-							/>
-						)}
-						{view === "agenda" && (
-							<AgendaView
-								currentDate={currentDate}
-								events={events}
-								onEventSelect={handleEventSelect}
-							/>
-						)}
-					</ScrollArea>
-				</div>
-
-
+				<CalendarViewRenderer
+					view={view}
+					currentDate={currentDate}
+					events={events}
+					onEventSelect={handleEventSelect}
+					onEventCreate={handleEventCreate}
+				/>
 			</CalendarDndProvider>
 		</div>
 	);
