@@ -5,7 +5,6 @@ import {
 	ChevronDownIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
-	PlusIcon,
 } from "lucide-react";
 
 import type { CalendarView } from "@/types";
@@ -27,7 +26,6 @@ interface CalendarToolbarProps {
 	onNext: () => void;
 	onToday: () => void;
 	onViewChange: (view: CalendarView) => void;
-	onCreateEvent: () => void;
 	className?: string;
 }
 
@@ -38,7 +36,6 @@ export const CalendarToolbar = React.memo(function CalendarToolbar({
 	onNext,
 	onToday,
 	onViewChange,
-	onCreateEvent,
 	className,
 }: CalendarToolbarProps) {
 	return (
@@ -110,17 +107,8 @@ export const CalendarToolbar = React.memo(function CalendarToolbar({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</ButtonGroup>
-			<Button
-				variant="outline"
-				className="border-foreground/10 flex flex-row items-center gap-2"
-				onClick={onCreateEvent}
-			>
-				<span>New event</span>
-				<PlusIcon className="size-4" />
-			</Button>
 		</div>
 	);
 });
 
 CalendarToolbar.displayName = "CalendarToolbar";
-
