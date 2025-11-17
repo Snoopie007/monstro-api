@@ -16,15 +16,15 @@ interface Message {
 }
 
 interface UseSocialChatOptions {
-  fromMemberId: string | null;     // The member sending (or admin masquerading as)
-  toMemberId: string | null;        // The member receiving
+  fromUserId: string | null;        // The user sending (or admin masquerading as)
+  toUserId: string | null;          // The user receiving
   locationId: string;               // Current location context
   enabled?: boolean;                // Whether to start the connection
 }
 
 export const useSocialChat = ({ 
-  fromMemberId, 
-  toMemberId,
+  fromUserId, 
+  toUserId,
   locationId,
   enabled = true
 }: UseSocialChatOptions) => {
@@ -36,22 +36,22 @@ export const useSocialChat = ({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Function to find or create a chat between two members
+  // Function to find or create a chat between two users
   const findOrCreateChat = useCallback(async () => {
-    if (!fromMemberId || !toMemberId) {
+    if (!fromUserId || !toUserId) {
       return null;
     }
 
     try {
-      // First, check if a chat already exists between these two members
+      // First, check if a chat already exists between these two users
       const { data: existingChats, error: searchError } = await supabase
         .from('chat_members')
         .select('chat_id')
-        .in('member_id', [fromMemberId, toMemberId]);
+        .in('user_id', [fromUserId, toUserId]);
 
       if (searchError) throw searchError;
 
-      // Find a chat where both members are present
+      // Find a chat where both users are present
       if (existingChats && existingChats.length > 0) {
         const chatIds = existingChats.map(c => c.chat_id);
         const chatCounts = chatIds.reduce((acc, id) => {
@@ -59,12 +59,12 @@ export const useSocialChat = ({
           return acc;
         }, {} as Record<string, number>);
 
-        // Find chat with exactly 2 members (both fromMember and toMember)
+        // Find chat with exactly 2 users (both fromUser and toUser)
         const existingChatId = Object.entries(chatCounts)
           .find(([_, count]) => count === 2)?.[0];
 
         if (existingChatId) {
-          // Verify it's a direct chat (only 2 members total)
+          // Verify it's a direct chat (only 2 users total)
           const { count } = await supabase
             .from('chat_members')
             .select('*', { count: 'exact', head: true })
@@ -80,7 +80,7 @@ export const useSocialChat = ({
       const { data: newChat, error: chatError } = await supabase
         .from('chats')
         .insert({
-          started_by: fromMemberId,
+          started_by: fromUserId,
           name: null, // Direct chats don't need names
         })
         .select()
@@ -88,12 +88,12 @@ export const useSocialChat = ({
 
       if (chatError) throw chatError;
 
-      // Add both members to the chat
+      // Add both users to the chat
       const { error: membersError } = await supabase
         .from('chat_members')
         .insert([
-          { chat_id: newChat.id, member_id: fromMemberId },
-          { chat_id: newChat.id, member_id: toMemberId },
+          { chat_id: newChat.id, user_id: fromUserId },
+          { chat_id: newChat.id, user_id: toUserId },
         ]);
 
       if (membersError) throw membersError;
@@ -104,7 +104,7 @@ export const useSocialChat = ({
       setError('Failed to initialize chat');
       return null;
     }
-  }, [fromMemberId, toMemberId]);
+  }, [fromUserId, toUserId]);
 
   // Load messages for the current chat
   const loadMessages = useCallback(async (currentChatId: string) => {
@@ -133,7 +133,7 @@ export const useSocialChat = ({
     content: string, 
     attachments?: any[]
   ) => {
-    if (!chatId || !fromMemberId) {
+    if (!chatId || !fromUserId) {
       throw new Error('Chat not initialized or sender not set');
     }
 
@@ -143,10 +143,10 @@ export const useSocialChat = ({
         .from('messages')
         .insert({
           chat_id: chatId,
-          sender_id: fromMemberId,
+          sender_id: fromUserId,
           content,
           attachments: attachments || [],
-          read_by: [fromMemberId],
+          read_by: [fromUserId],
         })
         .select()
         .single();
@@ -170,11 +170,11 @@ export const useSocialChat = ({
       console.error('Error sending message:', err);
       throw err;
     }
-  }, [chatId, fromMemberId]);
+  }, [chatId, fromUserId]);
 
   // Initialize chat and set up realtime subscription
   useEffect(() => {
-    if (!enabled || !session || !fromMemberId || !toMemberId) {
+    if (!enabled || !session || !fromUserId || !toUserId) {
       setChatId(null);
       setMessages([]);
       setIsConnected(false);
@@ -268,7 +268,7 @@ export const useSocialChat = ({
         supabase.removeChannel(channel);
       }
     };
-  }, [enabled, session, fromMemberId, toMemberId, findOrCreateChat, loadMessages]);
+  }, [enabled, session, fromUserId, toUserId, findOrCreateChat, loadMessages]);
 
   return {
     messages,

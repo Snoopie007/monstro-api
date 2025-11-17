@@ -1,51 +1,32 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { MemberChatInput } from "./MemberChatInput";
 import { useSocialChat } from "@/hooks/useSocialChat";
 import { useSession } from "@/hooks/useSession";
 import { ScrollArea } from "@/components/ui/";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/forms";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-
-interface Member {
-  id: string;
-  firstName: string;
-  lastName: string;
-  avatar?: string | null;
-  email?: string | null;
-}
+import { Member } from "@/types";
 
 interface MemberChatViewProps {
   locationId: string;
   currentMemberId: string; // The member page we're viewing
+  currentMember: Member;
 }
 
-export function MemberChatView({ locationId, currentMemberId }: MemberChatViewProps) {
+export function MemberChatView({ locationId, currentMemberId, currentMember }: MemberChatViewProps) {
   const { data: session } = useSession();
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loadingMembers, setLoadingMembers] = useState(false);
-  
-  // Admin can masquerade as a member
-  const [masqueradeAsMemberId, setMasqueradeAsMemberId] = useState<string | null>(null);
-  
-  // Admin can choose which member to chat with
-  const [chatWithMemberId, setChatWithMemberId] = useState<string | null>(currentMemberId);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Determine who is sending the message (masqueraded or current admin's member)
-  const fromMemberId = masqueradeAsMemberId || session?.user?.memberId || null;
+  const fromUserId = session?.user?.id || null;
+  const toUserId = currentMember?.userId || null;
+  console.log(currentMember)
+  console.log(toUserId);
 
-  // Use the chat hook
+  // Use the chat hook with user IDs
   const {
     messages,
     isConnected,
@@ -54,33 +35,11 @@ export function MemberChatView({ locationId, currentMemberId }: MemberChatViewPr
     error,
     sendMessage
   } = useSocialChat({
-    fromMemberId,
-    toMemberId: chatWithMemberId,
+    fromUserId,
+    toUserId,
     locationId,
-    enabled: !!fromMemberId && !!chatWithMemberId && fromMemberId !== chatWithMemberId,
+    enabled: !!fromUserId && !!toUserId && fromUserId !== toUserId,
   });
-
-  // Load members for the dropdowns
-  useEffect(() => {
-    const loadMembers = async () => {
-      setLoadingMembers(true);
-      try {
-        const response = await fetch(
-          `/api/protected/loc/${locationId}/members?size=1000`
-        );
-        const data = await response.json();
-        setMembers(data.members || []);
-      } catch (err) {
-        console.error('Failed to load members:', err);
-      } finally {
-        setLoadingMembers(false);
-      }
-    };
-
-    if (locationId) {
-      loadMembers();
-    }
-  }, [locationId]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -97,23 +56,20 @@ export function MemberChatView({ locationId, currentMemberId }: MemberChatViewPr
     }
   };
 
-  const getMemberName = (memberId: string) => {
-    const member = members.find(m => m.id === memberId);
-    return member ? `${member.firstName} ${member.lastName}` : 'Unknown';
-  };
+  const canChat = fromUserId && toUserId && fromUserId !== toUserId;
 
-  const getMemberInitials = (memberId: string) => {
-    const member = members.find(m => m.id === memberId);
-    if (!member) return '?';
-    return `${member.firstName[0]}${member.lastName[0]}`.toUpperCase();
-  };
+  const currentMemberName = `${currentMember?.firstName ?? ""} ${currentMember?.lastName ?? ""}`.trim() || "Member";
+  const currentMemberInitials = `${currentMember?.firstName?.[0] ?? ""}${currentMember?.lastName?.[0] ?? ""}`.trim() || "?";
+  const currentMemberAvatar = currentMember?.avatar || undefined;
 
-  const getMemberAvatar = (memberId: string) => {
-    const member = members.find(m => m.id === memberId);
-    return member?.avatar;
-  };
-
-  const canChat = fromMemberId && chatWithMemberId && fromMemberId !== chatWithMemberId;
+  const currentUserName = session?.user?.name || session?.user?.member?.firstName || "You";
+  const currentUserAvatar = session?.user?.image || session?.user?.member?.avatar || undefined;
+  const currentUserInitials = (currentUserName || "?")
+    .split(" ")
+    .map((part: string) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "?";
 
   return (
     <div className="bg-muted/50 rounded-lg flex-1 h-full flex flex-col min-h-0">
@@ -124,7 +80,8 @@ export function MemberChatView({ locationId, currentMemberId }: MemberChatViewPr
             {isConnected && (
               <Badge variant="outline" className="text-xs">
                 <span className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></span>
-                Connected
+                {/* TODO: add back in when we have integrated supabase presence */}
+                {/* Connected */}
               </Badge>
             )}
             {error && (
@@ -135,64 +92,6 @@ export function MemberChatView({ locationId, currentMemberId }: MemberChatViewPr
           </div>
         </div>
 
-        {/* Admin Controls */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">
-              Send messages as:
-            </label>
-            <Select
-              value={masqueradeAsMemberId || ""}
-              onValueChange={(value) => setMasqueradeAsMemberId(value || null)}
-            >
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder="Select member..." />
-              </SelectTrigger>
-              <SelectContent>
-                {loadingMembers ? (
-                  <div className="flex items-center justify-center p-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-                ) : (
-                  members.map((member) => (
-                    <SelectItem key={member.id} value={member.id} className="text-xs">
-                      {member.firstName} {member.lastName}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">
-              Chat with:
-            </label>
-            <Select
-              value={chatWithMemberId || ""}
-              onValueChange={(value) => setChatWithMemberId(value || null)}
-            >
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder="Select member..." />
-              </SelectTrigger>
-              <SelectContent>
-                {loadingMembers ? (
-                  <div className="flex items-center justify-center p-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-                ) : (
-                  members
-                    .filter(m => m.id !== masqueradeAsMemberId)
-                    .map((member) => (
-                      <SelectItem key={member.id} value={member.id} className="text-xs">
-                        {member.firstName} {member.lastName}
-                      </SelectItem>
-                    ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
       </div>
 
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
@@ -200,10 +99,10 @@ export function MemberChatView({ locationId, currentMemberId }: MemberChatViewPr
           <div className="h-full flex items-center justify-center text-center px-4">
             <div className="space-y-2">
               <span className="text-sm text-muted-foreground block">
-                {!masqueradeAsMemberId
-                  ? "Select a member to send messages as"
-                  : !chatWithMemberId
-                  ? "Select a member to chat with"
+                {!fromUserId
+                  ? "You must be logged in to chat"
+                  : !toUserId
+                  ? "This member cannot be reached right now"
                   : "Cannot chat with yourself"}
               </span>
             </div>
@@ -222,7 +121,11 @@ export function MemberChatView({ locationId, currentMemberId }: MemberChatViewPr
                   </div>
                 ) : (
                   messages.map((message) => {
-                    const isFromCurrentUser = message.sender_id === fromMemberId;
+                    const isFromCurrentUser = message.sender_id === fromUserId;
+                    const displayName = isFromCurrentUser ? currentUserName : currentMemberName;
+                    const avatarSrc = isFromCurrentUser ? currentUserAvatar : currentMemberAvatar;
+                    const fallbackInitials = isFromCurrentUser ? currentUserInitials : currentMemberInitials;
+
                     return (
                       <div
                         key={message.id}
@@ -231,9 +134,9 @@ export function MemberChatView({ locationId, currentMemberId }: MemberChatViewPr
                         }`}
                       >
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={getMemberAvatar(message.sender_id) || undefined} />
+                          <AvatarImage src={avatarSrc} />
                           <AvatarFallback className="text-xs">
-                            {getMemberInitials(message.sender_id)}
+                            {fallbackInitials || "?"}
                           </AvatarFallback>
                         </Avatar>
                         <div
@@ -242,7 +145,7 @@ export function MemberChatView({ locationId, currentMemberId }: MemberChatViewPr
                           }`}
                         >
                           <span className="text-xs text-muted-foreground">
-                            {getMemberName(message.sender_id)}
+                            {displayName}
                           </span>
                           <div
                             className={`rounded-lg px-3 py-2 text-sm ${
