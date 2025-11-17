@@ -1,63 +1,62 @@
 "use client";
 
+import { useState } from "react";
 import {
 	InputGroup,
 	InputGroupAddon,
 	InputGroupButton,
-	InputGroupText,
 	InputGroupTextarea,
 } from "@/components/forms";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-	Separator,
-} from "@/components/ui";
-import { ArrowUpIcon, Plus } from "lucide-react";
+import { ArrowUpIcon } from "lucide-react";
 
-export function MemberChatInput() {
+interface MemberChatInputProps {
+	onSend: (message: string) => Promise<void>;
+	disabled?: boolean;
+}
+
+export function MemberChatInput({ onSend, disabled = false }: MemberChatInputProps) {
+	const [message, setMessage] = useState("");
+	const [sending, setSending] = useState(false);
+
+	const handleSend = async () => {
+		if (!message.trim() || sending || disabled) return;
+
+		setSending(true);
+		try {
+			await onSend(message);
+			setMessage("");
+		} catch (err) {
+			console.error('Failed to send message:', err);
+		} finally {
+			setSending(false);
+		}
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault();
+			handleSend();
+		}
+	};
+
 	return (
 		<div>
-			{/* TODO: Disabled for now since chat isn't implemented yet */}
 			<InputGroup>
-				<InputGroupTextarea disabled placeholder="Type your message here..." />
+				<InputGroupTextarea
+					disabled={disabled || sending}
+					placeholder={disabled ? "Select members to start chatting..." : "Type your message here..."}
+					value={message}
+					onChange={(e) => setMessage(e.target.value)}
+					onKeyDown={handleKeyDown}
+					rows={2}
+				/>
 				<InputGroupAddon align="block-end">
-					<InputGroupButton
-						variant="ghost"
-						disabled
-						className="rounded-full bg-foreground/10"
-						size="icon-xs"
-					>
-						<Plus className="size-4" />
-					</InputGroupButton>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<InputGroupButton
-								variant="ghost"
-								disabled
-								className=" text-xs rounded-lg bg-foreground/10"
-							>
-								Auto
-							</InputGroupButton>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent
-							side="top"
-							align="start"
-							className="[--radius:0.95rem]"
-						>
-							{["Auto", "Agent", "Manual"].map((item) => (
-								<DropdownMenuItem key={item}>{item}</DropdownMenuItem>
-							))}
-						</DropdownMenuContent>
-					</DropdownMenu>
-					<InputGroupText className="ml-auto">0% used</InputGroupText>
-					<Separator orientation="vertical" className="!h-4 bg-foreground/10" />
 					<InputGroupButton
 						variant="default"
 						className="rounded-full"
 						size="icon-xs"
-						disabled
+						disabled={disabled || sending || !message.trim()}
+						onClick={handleSend}
 					>
 						<ArrowUpIcon className="size-4" />
 						<span className="sr-only">Send</span>
