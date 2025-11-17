@@ -62,13 +62,8 @@ export interface MemberWithValidation extends Member {
   accessDetails?: string;
 }
 
-// Extend CalendarEvent to include attendance data
-export interface ExtendedCalendarEvent extends CalendarEvent {
-  __originalData?: CalendarEventData;
-}
-
-export interface EnhancedEventDialogProps {
-  event: ExtendedCalendarEvent | null;
+export interface SessionManagementDialogProps {
+  event: CalendarEvent | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (event: CalendarEvent) => void;

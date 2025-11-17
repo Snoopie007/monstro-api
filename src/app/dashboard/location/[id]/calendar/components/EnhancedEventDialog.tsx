@@ -19,7 +19,7 @@ import {
 	Empty
 } from "@/components/ui";
 import { CalendarEvent } from "@/types/calendar";
-import { EnhancedEventDialogProps, Member, MemberWithValidation } from "@/types";
+import { SessionManagementDialogProps, Member, MemberWithValidation } from "@/types";
 
 import { Input } from "@/components/forms/";
 import {
@@ -56,7 +56,16 @@ function debounce<T extends (...args: any[]) => any>(
 	};
 }
 
-export function EnhancedEventDialog({
+/**
+ * SessionManagementDialog - Dialog for managing members, check-ins, and reservations for existing sessions
+ * 
+ * This dialog provides member management functionality including:
+ * - Adding members to sessions
+ * - Removing members from sessions
+ * - Check-in management
+ * - Viewing session details
+ */
+export function SessionManagementDialog({
 	event,
 	isOpen,
 	onClose,
@@ -66,7 +75,7 @@ export function EnhancedEventDialog({
 	onRemoveReservation,
 	onRefreshEvents,
 	onMemberUpdate,
-}: EnhancedEventDialogProps) {
+}: SessionManagementDialogProps) {
 	// Add member dialog state
 	const [showAddMember, setShowAddMember] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -83,16 +92,16 @@ export function EnhancedEventDialog({
 
 	// Add local state for members from original data
 	const [localMembers, setLocalMembers] = useState(
-		event?.__originalData?.members || []
+		event?.data?.members || []
 	);
 
 	// Sync local members when prop changes
 	useEffect(() => {
-		setLocalMembers(event?.__originalData?.members || []);
-	}, [event?.__originalData?.members]);
+		setLocalMembers(event?.data?.members || []);
+	}, [event?.data?.members]);
 
 	const canManage = lid && (onRemoveReservation || onRefreshEvents);
-	const originalData = event?.__originalData;
+	const originalData = event?.data;
 	const rid = originalData?.reservationId || originalData?.recurringId || "";
 	const sessionId = originalData?.sessionId;
 

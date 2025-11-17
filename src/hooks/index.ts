@@ -8,3 +8,6 @@ export * from "./useDebounce";
 export * from "./useMemberAttendance";
 export * from './useCurrentTimeIndicator'
 export * from './useEventVisibility'
+export * from './useDateNavigation'
+export * from './useEventDialog'
+export * from './useCalendarKeyboardShortcuts'

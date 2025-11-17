@@ -46,15 +46,15 @@ export function DroppableCell({
       onClick={onClick}
       className={cn(
         "group relative rounded-[4px] data-dragging:bg-accent flex h-full flex-col overflow-hidden sm:px-1 cursor-pointer",
-        "bg-transparent dark:bg-inherit dark:hover:bg-foreground/10 hover:bg-foreground/10 transition-colors duration-200 ease-out",
+        "bg-transparent dark:bg-inherit dark:hover:bg-foreground/10 hover:bg-foreground/10 transition-colors duration-200 ease-out pt-4",
         className
       )}
       title={formattedTime ? `${formattedTime}` : undefined}
       data-dragging={isOver && activeEvent ? true : undefined}
     >
-      <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out h-full w-full flex items-center justify-center text-muted-foreground">
+      {/* <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out h-full w-full flex items-center justify-center text-muted-foreground">
         +
-      </span>
+      </span> */}
       {children}
     </div>
   );
