@@ -49,7 +49,13 @@ interface ProgramDialogProps {
 	initialDateTime?: Date; // Optional initial date/time from clicked time slot
 }
 
-export function EventDialog({
+/**
+ * ProgramDialog - Dialog for creating and editing programs and their recurring sessions
+ * 
+ * This dialog handles program creation with session configuration.
+ * Used when creating new calendar events from the calendar interface.
+ */
+export function ProgramDialog({
 	program,
 	isOpen,
 	onClose,

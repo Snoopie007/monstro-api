@@ -10,21 +10,27 @@ import {
 	DialogSlide,
 	DialogBody,
 	MultiDialogContent,
-	Avatar, AvatarImage, Button, Badge
+	Avatar, AvatarImage, Button, Badge,
+	EmptyContent,
+	EmptyHeader,
+	EmptyTitle,
+	EmptyDescription,
+	EmptyMedia,
+	Empty
 } from "@/components/ui";
 import { CalendarEvent } from "@/types/calendar";
-import { EnhancedEventDialogProps, Member, MemberWithValidation } from "@/types";
+import { SessionManagementDialogProps, Member, MemberWithValidation } from "@/types";
 
 import { Input } from "@/components/forms/";
 import {
 	Clock,
 	Users,
-	CalendarIcon,
 	UserPlus,
 	Search,
 	Loader2,
 	X,
 	User,
+	Plus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/ScrollArea";
@@ -50,7 +56,16 @@ function debounce<T extends (...args: any[]) => any>(
 	};
 }
 
-export function EnhancedEventDialog({
+/**
+ * SessionManagementDialog - Dialog for managing members, check-ins, and reservations for existing sessions
+ * 
+ * This dialog provides member management functionality including:
+ * - Adding members to sessions
+ * - Removing members from sessions
+ * - Check-in management
+ * - Viewing session details
+ */
+export function SessionManagementDialog({
 	event,
 	isOpen,
 	onClose,
@@ -60,7 +75,7 @@ export function EnhancedEventDialog({
 	onRemoveReservation,
 	onRefreshEvents,
 	onMemberUpdate,
-}: EnhancedEventDialogProps) {
+}: SessionManagementDialogProps) {
 	// Add member dialog state
 	const [showAddMember, setShowAddMember] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -77,16 +92,16 @@ export function EnhancedEventDialog({
 
 	// Add local state for members from original data
 	const [localMembers, setLocalMembers] = useState(
-		event?.__originalData?.members || []
+		event?.data?.members || []
 	);
 
 	// Sync local members when prop changes
 	useEffect(() => {
-		setLocalMembers(event?.__originalData?.members || []);
-	}, [event?.__originalData?.members]);
+		setLocalMembers(event?.data?.members || []);
+	}, [event?.data?.members]);
 
 	const canManage = lid && (onRemoveReservation || onRefreshEvents);
-	const originalData = event?.__originalData;
+	const originalData = event?.data;
 	const rid = originalData?.reservationId || originalData?.recurringId || "";
 	const sessionId = originalData?.sessionId;
 
@@ -390,88 +405,65 @@ export function EnhancedEventDialog({
 			<MultiDialogContent>
 				<DialogSlide
 					show={!showAddMember}
-					className="border-gray-200 dark:border-foreground/5 sm:max-w-md"
+					className=""
 				>
 					<DialogHeader>
 						<DialogTitle className="flex items-center gap-2">
-							<CalendarIcon className="h-5 w-5" />
-							{event.title}
+							Manage Reservation
 						</DialogTitle>
 					</DialogHeader>
 
-					<div className="space-y-6 px-4 pb-4">
-						{/* Event Info */}
-						<div className="space-y-3">
-							<div className="flex items-center gap-2 text-sm text-gray-600 dark:text-muted-foreground">
-								<Clock className="h-4 w-4" />
+					<div className="space-y-6 px-4">
+						<div className="space-y-3 bg-muted/50 py-3 px-4 rounded-lg">
+							<div className="flex items-center justify-between text-xs">
+								<span className="font-medium">Program:</span>
 								<span>
-									{format(new Date(event.start), "EEEE, MMMM d, yyyy")} •{" "}
+									{event.title}
+								</span>
+							</div>
+							<div className="flex items-center justify-between text-xs">
+								<span className="font-medium">Date:</span>
+								<span>
+									{format(new Date(event.start), "EEEE, MMMM d, yyyy")}
+								</span>
+
+							</div>
+							<div className="flex items-center justify-between text-xs">
+								<span className="font-medium">Time:</span>
+								<span>
 									{format(new Date(event.start), "h:mm a")} -{" "}
 									{format(new Date(event.end), "h:mm a")}
 								</span>
 							</div>
-
-							<div className="flex items-center gap-2 text-sm text-gray-600 dark:text-muted-foreground">
-								<Users className="h-4 w-4" />
+							<div className="flex items-center justify-between text-xs">
+								<span className="font-medium">Members:</span>
 								<span>
 									{localMembers.length} member
 									{localMembers.length !== 1 ? "s" : ""}
 								</span>
 							</div>
 
+
 							{event.staff.id !== '' && (
 								<div className="flex items-center gap-2 text-sm text-gray-600 dark:text-muted-foreground">
-									<User className="h-4 w-4" />
-									<span>
-										{event.staff.name}
-									</span>
+									<span className="font-medium">Staff:</span>
+									<span>{event.staff.name}</span>
 								</div>
-							)}
-
-							{originalData.isRecurring && (
-								<Badge variant="secondary" className="w-fit">
-									Recurring Reservation
-								</Badge>
 							)}
 						</div>
 
-						{/* Members List */}
-						{isUpdating ? (
-							<div className="space-y-3">
-								<div className="flex items-center justify-between">
-									<h4 className="font-medium text-sm">Members</h4>
-								</div>
-								<ScrollArea className="max-h-60">
-									<div className="space-y-2">
-										{Array.from({ length: 3 }).map((_, i) => (
-											<div
-												key={`skeleton-${i}`}
-												className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-muted/50"
-											>
-												<Skeleton className="h-8 w-8 rounded-full" />
-												<div className="flex-1 space-y-2">
-													<Skeleton className="h-4 w-[150px]" />
-													<Skeleton className="h-3 w-[100px]" />
-												</div>
-											</div>
-										))}
-									</div>
-								</ScrollArea>
-
-								<Button
-									variant="ghost"
-									className="w-full"
-									onClick={() => setShowAddMember(true)}
-								>
-									<UserPlus className="h-4 w-4 mr-2" />
-									Add Member
-								</Button>
+						<div className="space-y-2">
+							<div className="flex items-center justify-between">
+								<div className="font-medium text-sm">Active Members</div>
 							</div>
-						) : localMembers.length > 0 ? (
-							<div className="space-y-3">
-								<div className="flex items-center justify-between">
-									<h4 className="font-medium text-sm">Members</h4>
+
+							{isUpdating ? (
+								<div className="space-y-2">
+									{Array.from({ length: 2 }).map((_, i) => (
+										<SkeletonMember key={i} />
+									))}
 								</div>
+							) : localMembers.length > 0 ? (
 								<ScrollArea className="max-h-60">
 									<div className="space-y-2">
 										{localMembers.map((member) => (
@@ -531,58 +523,43 @@ export function EnhancedEventDialog({
 										))}
 									</div>
 								</ScrollArea>
+							) : (
+								<Empty variant="border">
+									<EmptyHeader>
+										<EmptyMedia variant="icon">
+											<Users className="size-6" />
+										</EmptyMedia>
+										<EmptyTitle>No members in this reservation</EmptyTitle>
+									</EmptyHeader>
+								</Empty>
 
-								<Button
-									variant="ghost"
-									className="w-full"
-									onClick={() => setShowAddMember(true)}
-								>
-									<UserPlus className="h-4 w-4 mr-2" />
-									Add Member
-								</Button>
-							</div>
-						) : (
-							<div className="space-y-3">
-								<div className="flex items-center justify-between">
-									<h4 className="font-medium text-sm">Members</h4>
-								</div>
-								<div className="p-4 text-center bg-gray-50 dark:bg-muted/50 rounded-lg">
-									<Users className="h-8 w-8 mx-auto text-gray-500 dark:text-muted-foreground mb-2" />
-									<p className="text-sm text-gray-600 dark:text-muted-foreground">
-										No members in this reservation
-									</p>
-									{canManage && (
-										<Button
-											size="sm"
-											className="mt-2 dark:bg-foreground/10 dark:hover:bg-foreground/20"
-											onClick={() => setShowAddMember(true)}
-										>
-											<UserPlus className="h-4 w-4 mr-2" />
-											Add Member
-										</Button>
-									)}
-								</div>
-							</div>
-						)}
+							)}
+						</div>
+
+
 					</div>
 
 					{/* Footer with actions when managing */}
-					<DialogFooter className="px-6 py-4 bg-gray-50 dark:bg-muted/20">
-						<div className="flex items-center justify-between w-full">
-							<p className="text-xs text-gray-500 dark:text-muted-foreground">
-								Managing {localMembers.length} member
-								{localMembers.length !== 1 ? "s" : ""}
-							</p>
-							<div className="flex gap-2">
-								<Button
-									size="sm"
-									className="dark:bg-foreground/10 dark:hover:bg-foreground/20"
-									onClick={onClose}
-								>
-									Close
-								</Button>
-							</div>
-						</div>
+					<DialogFooter className="flex items-center sm:justify-between w-full">
+						{canManage && (
+
+							<Button variant="primary"
+								onClick={() => setShowAddMember(true)}
+								className="flex items-center gap-2"
+							>
+								<span > Member</span>
+								<Plus className="size-3" />
+							</Button>
+						)}
+
+						<Button
+							variant="outline"
+							className="border-foreground/10"
+							onClick={() => setShowAddMember(false)}
+						>
+							Cancel
+						</Button>
+
 					</DialogFooter>
 				</DialogSlide>
 
@@ -728,9 +705,8 @@ export function EnhancedEventDialog({
 					<DialogFooter>
 						<Button
 							type="button"
-							variant="default"
-							size="sm"
-							className="bg-primary/70 hover:bg-primary/80"
+							variant="outline"
+							className="border-foreground/10"
 							onClick={handleCloseAddMember}
 							disabled={addingMembers}
 						>
@@ -738,25 +714,30 @@ export function EnhancedEventDialog({
 						</Button>
 						<Button
 							type="button"
-							variant="default"
-							size="sm"
+							variant="primary"
 							onClick={handleAddMembers}
 							disabled={selectedMembers.length === 0 || addingMembers}
-							className={cn(
-								"border-gray-300 bg-gray-200 hover:bg-gray-300 dark:border-foreground/10 dark:bg-foreground/10 dark:hover:bg-foreground/20 children:hidden",
-								{
-									"children:inline-flex": addingMembers,
-								}
-							)}
+
 						>
-							<Loader2 className="mr-2 h-4 w-4 hidden animate-spin" />
-							Add{" "}
-							{selectedMembers.length > 0 ? `${selectedMembers.length} ` : ""}
-							Member{selectedMembers.length !== 1 ? "s" : ""}
+							{addingMembers ? <Loader2 className="size-4 animate-spin" /> : "Add Members"}
+
 						</Button>
 					</DialogFooter>
 				</DialogSlide>
 			</MultiDialogContent>
 		</Dialog>
+	);
+}
+
+
+function SkeletonMember() {
+	return (
+		<div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+			<Skeleton className="h-8 w-8 rounded-full" />
+			<div className="flex-1 space-y-2">
+				<Skeleton className="h-4 w-[150px]" />
+				<Skeleton className="h-3 w-[100px]" />
+			</div>
+		</div>
 	);
 }

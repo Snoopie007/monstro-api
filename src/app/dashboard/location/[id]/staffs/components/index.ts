@@ -1,1 +1,1 @@
-export * from '../[stid]/StaffProfile';
+export * from './InviteStaff';

@@ -28,7 +28,7 @@ import { toast } from 'react-toastify';
 import { VisuallyHidden } from 'react-aria';
 import { Loader2, PlusIcon } from 'lucide-react';
 
-export default function InviteStaff({ roles, lid }: { roles: Array<Role>, lid: string }) {
+export function InviteStaff({ roles, lid }: { roles: Array<Role>, lid: string }) {
     const [open, setOpen] = useState<boolean>(false);
     const form = useForm<z.infer<typeof InviteStaffSchema>>({
         resolver: zodResolver(InviteStaffSchema),
