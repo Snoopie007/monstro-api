@@ -52,8 +52,7 @@ export function MemberChatView({ locationId, currentMemberId }: MemberChatViewPr
     isLoading,
     chatId,
     error,
-    sendMessage,
-    markAsRead,
+    sendMessage
   } = useSocialChat({
     fromMemberId,
     toMemberId: chatWithMemberId,
@@ -87,13 +86,6 @@ export function MemberChatView({ locationId, currentMemberId }: MemberChatViewPr
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Mark messages as read when chat is viewed
-  useEffect(() => {
-    if (messages.length > 0 && isConnected) {
-      markAsRead();
-    }
-  }, [messages.length, isConnected, markAsRead]);
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim()) return;

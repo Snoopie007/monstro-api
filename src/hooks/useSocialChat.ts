@@ -172,37 +172,6 @@ export const useSocialChat = ({
     }
   }, [chatId, fromMemberId]);
 
-  // Mark messages as read
-  const markAsRead = useCallback(async () => {
-    if (!chatId || !fromMemberId) return;
-
-    try {
-      const unreadMessages = messages
-        .filter(m => !m.read_by?.includes(fromMemberId))
-        .map(m => m.id);
-
-      if (unreadMessages.length === 0) return;
-
-      const { error } = await supabase.rpc('mark_messages_read', {
-        message_ids: unreadMessages,
-        user_id: fromMemberId
-      });
-
-      if (error) throw error;
-
-      // Update local state
-      setMessages(prev => 
-        prev.map(m => 
-          unreadMessages.includes(m.id)
-            ? { ...m, read_by: [...(m.read_by || []), fromMemberId] }
-            : m
-        )
-      );
-    } catch (err) {
-      console.error('Error marking messages as read:', err);
-    }
-  }, [chatId, fromMemberId, messages]);
-
   // Initialize chat and set up realtime subscription
   useEffect(() => {
     if (!enabled || !session || !fromMemberId || !toMemberId) {
@@ -218,7 +187,7 @@ export const useSocialChat = ({
     const initializeChat = async () => {
       // Find or create the chat
       const foundChatId = await findOrCreateChat();
-      
+      console.log('foundChatId', foundChatId);
       if (!mounted || !foundChatId) {
         return;
       }
@@ -308,7 +277,6 @@ export const useSocialChat = ({
     chatId,
     error,
     sendMessage,
-    markAsRead,
     refresh: () => chatId ? loadMessages(chatId) : Promise.resolve()
   };
 };
