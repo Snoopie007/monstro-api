@@ -194,11 +194,7 @@ export default function CalendarPageClient({
             view={view}
             onDateChange={setCurrentDate}
             onViewChange={setView}
-            onEventAdd={handleEventAdd}
             onEventUpdate={handleEventUpdate}
-            onEventDelete={handleEventDelete}
-            onEventClick={handleEventSelect}
-            lid={id}
           />
         </div>
       </CalendarDndProvider>

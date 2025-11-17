@@ -5,7 +5,7 @@ export { AgendaView } from "./AgendaView";
 export { DayView } from "./DayView";
 export { DraggableEvent } from "./DraggableEvent";
 export { DroppableCell } from "./DroppableCell";
-export { ProgramDialog } from "./EventDialog";
+// ProgramDialog removed - program creation handled elsewhere
 export { EventItem } from "./EventItem";
 export { EventsPopup } from "./EventsPopup";
 export { EventCalendar, type EventCalendarProps } from "./EventCalendar";
