@@ -3,13 +3,14 @@ import { db } from "@/db/db";
 import { supportConversations } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { jwtVerify } from "jose";
-import { ConnectionManager, DatabaseListener } from "@/libs/ws/";
+import { ConnectionManager, DatabaseListener, GroupsListener } from "@/libs/ws/";
 import { setHealthCheckInstances } from "./health";
 
 
 // Initialize managers
 const connectionManager = new ConnectionManager();
 const databaseListener = new DatabaseListener(connectionManager);
+const groupsListener = new GroupsListener();
 
 // Set up health check instances
 setHealthCheckInstances(connectionManager, databaseListener);
@@ -159,6 +160,7 @@ async function handleWebSocketMessage(
 }
 
 databaseListener.start();
+groupsListener.start();
 connectionManager.startPeriodicCleanup();
 
 console.log("🚀 Realtime WebSocket system initialized");

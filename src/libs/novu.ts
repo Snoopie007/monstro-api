@@ -15,7 +15,10 @@ type NovuTriggerPayload = {
 }
 
 type NotifyUsersParams = {
-    userIds: string[]
+    users: {
+        id: string,
+        email: string,
+    }[]
     memberName: string
     locationName: string
     locationId: string
@@ -63,7 +66,7 @@ async function triggerNovuWorkflow(
 }
 
 export async function notifyUsersNewSupportConversation({
-    userIds,
+    users,
     memberName,
     locationName,
     locationId,
@@ -71,20 +74,146 @@ export async function notifyUsersNewSupportConversation({
     const WORKFLOW_ID = 'vendor-new-support-conversation'
     const notifications: Promise<{ success: boolean; error?: any }>[] = []
 
-    if (userIds.length === 0) {
+    if (users.length === 0) {
         return { success: true, error: 'No users to notify' }
     }
 
-    userIds.forEach((staffUserId) => {
+    users.forEach((user) => {
         notifications.push(
             triggerNovuWorkflow(WORKFLOW_ID, {
                 to: {
-                    subscriberId: staffUserId,
+                    subscriberId: user.id,
+                    email: user.email,
                 },
                 payload: {
                     memberName,
                     locationName,
                     url: `/dashboard/location/${locationId}/support/`,
+                    timestamp: new Date().toISOString(),
+                },
+            })
+        )
+    })
+
+    const results = await Promise.allSettled(notifications)
+    const success = results.filter(
+        (r) => r.status === 'fulfilled' && r.value.success
+    ).length
+    const failed = results.length - success
+    const errors = results
+        .filter((r) => r.status === 'rejected' || !r.value.success)
+        .map((r) => (r.status === 'rejected' ? r.reason : r.value.error))
+
+    return { success, failed, errors }
+}
+
+export async function notifyUsersNewGroupPost({
+    users,
+    memberName,
+    locationName,
+    locationId,
+}: NotifyUsersParams) {
+    const WORKFLOW_ID = 'new-group-post'
+    const notifications: Promise<{ success: boolean; error?: any }>[] = []
+    if (users.length === 0) {
+        return { success: true, error: 'No users to notify' }
+    }
+
+    users.forEach((user) => {
+        notifications.push(
+            triggerNovuWorkflow(WORKFLOW_ID, {
+                to: {
+                    subscriberId: user.id,
+                    email: user.email,
+                },
+                payload: {
+                    memberName,
+                    locationName,
+                    url: `https://app.monstro-x.com/dashboard/location/${locationId}/groups/`,
+                    timestamp: new Date().toISOString(),
+                },
+            })
+        )
+    })
+
+    const results = await Promise.allSettled(notifications)
+    const success = results.filter(
+        (r) => r.status === 'fulfilled' && r.value.success
+    ).length
+    const failed = results.length - success
+    const errors = results
+        .filter((r) => r.status === 'rejected' || !r.value.success)
+        .map((r) => (r.status === 'rejected' ? r.reason : r.value.error))
+
+    return { success, failed, errors }
+}
+
+export async function notifyUsersNewGroupChatMessage({
+    users,
+    memberName,
+    locationName,
+    locationId,
+}: NotifyUsersParams) {
+    const WORKFLOW_ID = 'new-group-chat-message'
+    const notifications: Promise<{ success: boolean; error?: any }>[] = []
+
+    if (users.length === 0) {
+        return { success: true, error: 'No users to notify' }
+    }
+
+    users.forEach((user) => {
+        notifications.push(
+            triggerNovuWorkflow(WORKFLOW_ID, {
+                to: {
+                    subscriberId: user.id,
+                    email: user.email,
+                },
+                payload: {
+                    memberName,
+                    locationName,
+                    url: `https://app.monstro-x.com/dashboard/location/${locationId}/groups/`,
+                    timestamp: new Date().toISOString(),
+                },
+            })
+        )
+    })
+ 
+    const results = await Promise.allSettled(notifications)
+    const success = results.filter(
+        (r) => r.status === 'fulfilled' && r.value.success
+    ).length
+    const failed = results.length - success
+    const errors = results
+        .filter((r) => r.status === 'rejected' || !r.value.success)
+        .map((r) => (r.status === 'rejected' ? r.reason : r.value.error))
+
+    return { success, failed, errors }
+}
+
+export async function notifyUsersNewPostComment({
+    users,
+    memberName,
+    locationName,
+    locationId,
+}: NotifyUsersParams) {
+    const WORKFLOW_ID = 'new-post-comment'
+    const notifications: Promise<{ success: boolean; error?: any }>[] = []
+
+    if (users.length === 0) {
+        return { success: true, error: 'No users to notify' }
+    }
+
+    users.forEach((user) => {
+        notifications.push(
+            triggerNovuWorkflow(WORKFLOW_ID, {
+                to: {
+                    subscriberId: user.id,
+                    email: user.email,
+                },
+                payload: {
+                    memberName,
+                    locationName,
+                    url: `https://app.monstro-x.com/dashboard/location/${locationId}/groups/`,
                     timestamp: new Date().toISOString(),
                 },
             })
