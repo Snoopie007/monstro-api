@@ -1,6 +1,6 @@
 import { db } from '@/db/db';
 import bcrypt from 'bcryptjs';
-import { customSession } from "better-auth/plugins";
+import { customSession, multiSession } from "better-auth/plugins";
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
@@ -21,6 +21,7 @@ export const auth = betterAuth({
       },
     }),
     plugins: [
+      multiSession(),
       customSession(async ({user, session}) => {
         // Fetch vendor with their locations in a single optimized query
         const userWithVendor = await db.query.users.findFirst({
@@ -98,7 +99,7 @@ export const auth = betterAuth({
   
     session: {
       // Note: Field mappings are handled by the Drizzle schema
-      expiresIn: 60 * 60 * 24, // 1 day
+      expiresIn: 60 * 60 * 24 * 365, // 1 year
       updateAge: 60 * 60, // Update every hour
     },
   
