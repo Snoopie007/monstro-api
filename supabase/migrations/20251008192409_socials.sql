@@ -111,10 +111,14 @@ CREATE TABLE IF NOT EXISTS post_comments (
   post_id text REFERENCES group_posts (id) ON DELETE CASCADE NOT NULL,
   user_id text REFERENCES users (id) ON DELETE SET NULL,
   content text NOT NULL,
+  likes integer NOT NULL DEFAULT 0,
+  parent_id text REFERENCES post_comments (id) ON DELETE SET NULL,
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
+
+
 
 
 -- ========================
