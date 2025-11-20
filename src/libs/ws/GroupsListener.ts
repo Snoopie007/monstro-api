@@ -1,9 +1,9 @@
 import { createClient, RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { db } from "@/db/db";
-import { groupMembers, chatMembers, users, groupPosts, postComments, groups, staffsLocations, vendors } from "@/db/schemas";
-import { eq } from "drizzle-orm";
-import { 
-	notifyUsersNewGroupPost, 
+import { groupMembers, chatMembers, users, groupPosts, groups, staffsLocations } from "@/db/schemas";
+import { eq, and } from "drizzle-orm";
+import {
+	notifyUsersNewGroupPost,
 	notifyUsersNewGroupChatMessage,
 	notifyUsersNewPostComment
 } from "@/libs/novu";
@@ -135,13 +135,13 @@ export class GroupsListener {
 			// Query group members to get userIds
 			const members = await db.query.groupMembers.findMany({
 				where: eq(groupMembers.groupId, post.group_id),
-                with: {
-                    user: {
-                        columns: {
-                            email: true
-                        }
-                    }
-                }
+				with: {
+					user: {
+						columns: {
+							email: true
+						}
+					}
+				}
 			});
 
 			// Get group and location info
@@ -149,40 +149,40 @@ export class GroupsListener {
 				where: eq(groups.id, post.group_id),
 				with: {
 					location: {
-                        with: {
-                            vendor: {
-                                with: {
-                                    user: {
-                                        columns: {
-                                            id: true,
-                                            email: true
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
+						with: {
+							vendor: {
+								with: {
+									user: {
+										columns: {
+											id: true,
+											email: true
+										}
+									}
+								}
+							}
+						}
+					},
 				},
 			});
 
-            const staffUsers = await db.query.staffsLocations.findMany({
-                where: eq(staffsLocations.locationId, group?.locationId || ""),
-                with: {
-                    staff: {
-                        with: {
-                        user: {
-                            columns: {
-                                id: true,
-                                email: true
-                            }
-                        }
-                        }
-                    }
-                }
-            });
+			const staffUsers = await db.query.staffsLocations.findMany({
+				where: eq(staffsLocations.locationId, group?.locationId || ""),
+				with: {
+					staff: {
+						with: {
+							user: {
+								columns: {
+									id: true,
+									email: true
+								}
+							}
+						}
+					}
+				}
+			});
 
-            const vendorUser = group?.location?.vendor?.user;
-            const allStaffs = [...staffUsers.map(staff => staff.staff?.user), vendorUser];
+			const vendorUser = group?.location?.vendor?.user;
+			const allStaffs = [...staffUsers.map(staff => staff.staff?.user), vendorUser];
 
 			// Get post author info
 			const poster = await db.query.users.findFirst({
@@ -221,13 +221,13 @@ export class GroupsListener {
 			// Query chat members
 			const members = await db.query.chatMembers.findMany({
 				where: eq(chatMembers.chatId, message.chat_id),
-                with: {
-                    user: {
-                        columns: {
-                            email: true
-                        }
-                    }
-                }
+				with: {
+					user: {
+						columns: {
+							email: true
+						}
+					}
+				}
 			});
 
 			// Get sender info
@@ -257,20 +257,20 @@ export class GroupsListener {
 	}
 
 	private async handlePostCommentInsert(payload: Record<string, any>) {
-        console.log('Handling post comment insert: ', payload);
+		console.log('Handling post comment insert: ', payload);
 		try {
 			const comment = payload.new;
-            
+
 			// Get the post and its author
 			const post = await db.query.groupPosts.findFirst({
 				where: eq(groupPosts.id, comment.post_id),
-                with: {
-                    user: {
-                        columns: {
-                            email: true
-                        }
-                    }
-                }
+				with: {
+					user: {
+						columns: {
+							email: true
+						}
+					}
+				}
 			});
 
 			if (!post) return;
@@ -284,15 +284,18 @@ export class GroupsListener {
 			});
 
 			// Get all unique users who have commented on this post
-			const existingComments = await db.query.postComments.findMany({
-				where: eq(postComments.postId, comment.post_id),
-                with: {
-                    user: {
-                        columns: {
-                            email: true
-                        }
-                    }
-                }
+			const existingComments = await db.query.comments.findMany({
+				where: (postComments, { eq, and }) => and(
+					eq(postComments.ownerId, comment.post_id),
+					eq(postComments.ownerType, "post")
+				),
+				with: {
+					user: {
+						columns: {
+							email: true
+						}
+					}
+				}
 			});
 
 			const commenters = new Set<{
