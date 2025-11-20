@@ -8,8 +8,8 @@ import {
     primaryKey,
 } from "drizzle-orm/pg-core";
 import { members } from "../members";
-import { groupPosts, groups } from "./groups";
 import { users } from "../users";
+import { groupPosts, groups } from "./groups";
 import { memories } from "./memories";
 
 export const chats = pgTable("chats", {

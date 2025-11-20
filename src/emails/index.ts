@@ -3,6 +3,7 @@ import InvoiceReminderEmail from "./InvoiceReminderEmail";
 import MemberInviteEmail from "./MemberInviteEmail";
 import MissedClassEmail from "./MissedClassEmail";
 import OTPEmailTemplate from "./OTPEmailTemplate";
+import OverdueInvoiceEmail from "./OverdueInvoiceEmail";
 import PaymentSuccessEmail from "./PaymentSuccessEmail";
 import ResetPasswordEmail from "./ResetPasswordEmail";
 import ResetSuccessEmail from "./ResetSuccessEmail";
@@ -17,6 +18,7 @@ export const EmailTemplates = {
     MemberInviteEmail,
     MissedClassEmail,
     OTPEmailTemplate,
+    OverdueInvoiceEmail,
     PaymentSuccessEmail,
     ResetPasswordEmail,
     ResetSuccessEmail,

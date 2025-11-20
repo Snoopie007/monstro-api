@@ -10,12 +10,15 @@ import {
 } from '@react-email/components';
 
 interface MissedClassEmailProps {
-  member: { firstName: string; lastName: string };
-  session: {
-    programName: string;
-    dayTime: string;
+  member: { firstName: string; lastName: string; email: string };
+  class: {
+    name: string;
+    description?: string;
+    startTime: string;
+    endTime: string;
+    instructor?: { firstName: string; lastName: string } | null;
   };
-  location: { name: string; address: string };
+  location: { name: string; address: string; email?: string; phone?: string };
   monstro?: {
     fullAddress?: string;
     privacyUrl?: string;
@@ -25,10 +28,29 @@ interface MissedClassEmailProps {
 
 export default function MissedClassEmail({
   member,
-  session,
+  class: classData,
   location,
   monstro,
 }: MissedClassEmailProps) {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  const classDate = formatDate(classData.startTime);
+  const classTime = formatTime(classData.startTime);
+
   return (
     <Html>
       <Head />
@@ -38,8 +60,8 @@ export default function MissedClassEmail({
             <Text style={greetingStyle}>Hi {member.firstName},</Text>
 
             <Text style={messageStyle}>
-              We noticed you missed your <strong>{session.programName}</strong>{' '}
-              class scheduled for <strong>{session.dayTime}</strong>.
+              We noticed you missed your <strong>{classData.name}</strong>{' '}
+              class scheduled for <strong>{classDate}</strong> at <strong>{classTime}</strong>.
             </Text>
 
             <Text style={messageStyle}>
@@ -186,10 +208,17 @@ MissedClassEmail.PreviewProps = {
   member: {
     firstName: 'John',
     lastName: 'Doe',
+    email: 'john@example.com',
   },
-  session: {
-    programName: 'Morning Yoga',
-    dayTime: 'Monday, November 3 at 8:00 AM',
+  class: {
+    name: 'Morning Yoga',
+    description: 'Start your day with a relaxing yoga session',
+    startTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    endTime: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(),
+    instructor: {
+      firstName: 'Jane',
+      lastName: 'Smith',
+    },
   },
   location: {
     name: 'Monstro Studio',

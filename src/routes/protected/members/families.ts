@@ -4,8 +4,11 @@ import { familyMembers, members, users } from "@/db/schemas";
 import type { FamilyMember } from "@/types";
 import { generateReferralCode } from "@/libs/utils";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
-import { emailQueue } from "@/libs/queues";
 
+import { EmailSender } from "@/libs/email";
+import { MonstroData } from "@/libs/data";
+
+const emailSender = new EmailSender();
 
 export async function memberFamilies(app: Elysia) {
     return app.get("/families", async ({ status, params }) => {
@@ -101,8 +104,13 @@ export async function memberFamilies(app: Elysia) {
 
                 const memberLocation = await db.query.memberLocations.findFirst({
                     where: (memberLocations, { eq }) => eq(memberLocations.memberId, mid),
-                    columns: {
-                        locationId: true,
+                    with: {
+                        location: {
+                            columns:{
+                                name: true,
+                                id: true,
+                            }
+                        },
                     },
                 });
 
@@ -163,6 +171,23 @@ export async function memberFamilies(app: Elysia) {
                         relationship: inverseRelationship,
                     }).onConflictDoNothing({
                         target: [familyMembers.memberId, familyMembers.relatedMemberId],
+                    });
+
+                    await emailSender.send({
+                        options: {
+                            to: member.email,
+                            subject: `You've been added to ${memberLocation.location.name}`,
+                        },
+                        template: 'MemberInviteEmail',
+                        data: {
+                            member: { firstName: member.firstName },
+                            location: { name: memberLocation.location.name },
+                            ui: {
+                                btnUrl: `https://m.monstro-x.com/invite/${memberLocation.location.id}?email=${member.email}`,
+                                btnText: 'Accept Invite'
+                            },
+                            monstro: MonstroData
+                        }
                     });
 
                     return {

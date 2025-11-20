@@ -3,16 +3,13 @@ import { redisConfig } from "@/config";
 import { EmailSender } from "@/libs/email";
 import { MonstroData } from "@/libs/data";
 import { shouldSendMissedClassEmail } from "@/libs/emailValidation";
+import { invoiceWorker } from "./invoices";
+import { classWorker } from "./classes";
 
 
 const emailSender = new EmailSender();
 const worker = new Worker('email', async (job) => {
     const { name, data } = job;
-    console.log(`📧 Processing job [${job.id}] - ${name}`);
-    console.log(`📧 Template: ${data.template}`);
-    console.log(`📧 Recipient: ${data.to}`);
-    console.log(`📧 Metadata:`, JSON.stringify(data.metadata, null, 2));
-
     // pull
     // Check if this is a missed class email that should be validated
     if (data.template === 'MissedClassEmail') {
@@ -52,4 +49,12 @@ const worker = new Worker('email', async (job) => {
 
 worker.on('failed', (job, err) => {
     console.error(`❌ Job ${job?.id} failed:`, err);
+});
+
+invoiceWorker.on('failed', (job, err) => {
+    console.error(`❌ Invoice job ${job?.id} failed:`, err);
+});
+
+classWorker.on('failed', (job, err) => {
+    console.error(`❌ Class reminder job ${job?.id} failed:`, err);
 });
