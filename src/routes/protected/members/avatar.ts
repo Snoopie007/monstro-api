@@ -20,6 +20,8 @@ export async function memberAvatar(app: Elysia) {
 
 
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+
+
         if (!allowedTypes.includes(file.type)) {
             return status(400, {
                 message: 'Invalid file type. Only JPEG and PNG are allowed.'

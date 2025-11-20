@@ -8,10 +8,14 @@ import {
     primaryKey,
 } from "drizzle-orm/pg-core";
 import { members } from "../members";
+import { groupPosts, groups } from "./groups";
+import { users } from "../users";
+import { memories } from "./memories";
 
 export const chats = pgTable("chats", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('cht_')`),
-    startedBy: text("started_by").notNull().references(() => members.id, { onDelete: "cascade" }),
+    startedBy: text("started_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+    groupId: text("group_id").references(() => groups.id, { onDelete: "cascade" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
@@ -20,20 +24,18 @@ export const chats = pgTable("chats", {
 
 export const chatMembers = pgTable("chat_members", {
     chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
-    memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     joined: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
-    primaryKey({ columns: [t.chatId, t.memberId] }),
-    index("idx_chat_members_member_id").on(t.memberId),
+    primaryKey({ columns: [t.chatId, t.userId] }),
+    index("idx_chat_members_user_id").on(t.userId),
 ]);
 
 export const messages = pgTable("messages", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('msg_')`),
     chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
-    senderId: text("sender_id").references(() => members.id, { onDelete: "set null" }),
+    senderId: text("sender_id").references(() => users.id, { onDelete: "set null" }),
     content: text("content").notNull(),
-    attachments: jsonb("attachments").$type<Array<Record<string, any>>>().default(sql`'[]'::jsonb`),
-    readBy: text("read_by").array().default(sql`'{}'`),
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
@@ -42,11 +44,33 @@ export const messages = pgTable("messages", {
     index("idx_messages_sender_id").on(t.senderId),
 ]);
 
+export const media = pgTable("media", {
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62('med_')`),
+    ownerId: text("owner_id").notNull(),
+    ownerType: text("owner_type", { enum: ["post", "message", "memory"] }).notNull(),
+    fileName: text("file_name").notNull(),
+    fileType: text("file_type", { enum: ["image", "video", "audio", "document", "other"] }).notNull(),
+    fileSize: text("file_size"), // Using text instead of bigint for compatibility
+    mimeType: text("mime_type"),
+    url: text("url").notNull(),
+    thumbnailUrl: text("thumbnail_url"),
+    altText: text("alt_text"),
+    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
+});
+
+
+
 export const chatsRelations = relations(chats, ({ one, many }) => ({
     started: one(members, {
         fields: [chats.startedBy],
         references: [members.id],
         relationName: "chatStartedBy",
+    }),
+    group: one(groups, {
+        fields: [chats.groupId],
+        references: [groups.id],
     }),
     chatMembers: many(chatMembers),
     messages: many(messages),
@@ -58,20 +82,36 @@ export const chatMembersRelations = relations(chatMembers, ({ one }) => ({
         references: [chats.id],
         relationName: "chatChatMembers",
     }),
-    member: one(members, {
-        fields: [chatMembers.memberId],
-        references: [members.id],
+    user: one(users, {
+        fields: [chatMembers.userId],
+        references: [users.id],
         relationName: "chatMemberMember",
     }),
 }));
 
-export const messagesRelations = relations(messages, ({ one }) => ({
+export const messagesRelations = relations(messages, ({ one, many }) => ({
     chat: one(chats, {
         fields: [messages.chatId],
         references: [chats.id],
     }),
-    sender: one(members, {
+    sender: one(users, {
         fields: [messages.senderId],
-        references: [members.id],
+        references: [users.id],
+    }),
+    medias: many(media),
+}));
+
+export const mediaRelations = relations(media, ({ one }) => ({
+    message: one(messages, {
+        fields: [media.ownerId],
+        references: [messages.id],
+    }),
+    post: one(groupPosts, {
+        fields: [media.ownerId],
+        references: [groupPosts.id],
+    }),
+    memory: one(memories, {
+        fields: [media.ownerId],
+        references: [memories.id],
     }),
 }));

@@ -25,13 +25,15 @@ import {
     locationEmail
 } from './locations';
 import {
-    groupRoutes
+    groupRoutes,
+    groupPostRoutes
 } from './groups';
 
 export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(AuthMiddleware)
     .group('/groups/:gid', (app) => {
         app.use(groupRoutes);
+        app.use(groupPostRoutes);
         return app;
     })
     .group('/member/:mid', (app) => {

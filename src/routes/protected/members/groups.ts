@@ -36,7 +36,6 @@ export function memberGroups(app: Elysia) {
                     postCount: sql`(select count(*) from "group_posts" where "group_posts"."group_id" = "groups"."id")`.as('post_count'),
                 })
             });
-
             return status(200, groups);
         } catch (error) {
             console.error(error);

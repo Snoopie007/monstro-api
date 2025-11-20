@@ -16,8 +16,12 @@ export const memberChats = new Elysia({ prefix: '/chats' })
 
         try {
 
+            const member = await db.query.members.findFirst({
+                where: (members, { eq }) => eq(members.id, params.mid!),
+            })
+
             const cms = await db.query.chatMembers.findMany({
-                where: (chatMembers, { eq }) => eq(chatMembers.memberId, params.mid!),
+                where: (chatMembers, { eq }) => eq(chatMembers.userId, member?.userId!),
             })
 
             const chatIds = [...new Set(cms.map((cm) => cm.chatId))];
@@ -26,9 +30,10 @@ export const memberChats = new Elysia({ prefix: '/chats' })
                 with: {
                     chatMembers: {
                         with: {
-                            member: true,
+                            user: true,
                         },
                     },
+                    group: true,
                     messages: {
                         orderBy: (messages, { desc }) => desc(messages.created),
                         limit: 1,
@@ -52,8 +57,21 @@ export const memberChats = new Elysia({ prefix: '/chats' })
             const { cid, mid } = params;
 
             try {
+                const chat = await db.query.chats.findFirst({
+                    where: (chats, { eq }) => eq(chats.id, cid),
+                    with: {
+                        group: true,
+                        messages: {
+                            orderBy: (messages, { desc }) => desc(messages.created),
+                            limit: 100,
+                            with: {
+                                sender: true,
+                            },
+                        },
+                    },
+                })
 
-                return status(200, []);
+                return status(200, chat);
             } catch (error) {
                 console.error(error);
                 status(500, { error: 'Internal server error' });
