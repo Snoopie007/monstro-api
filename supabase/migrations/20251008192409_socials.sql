@@ -53,7 +53,6 @@ CREATE TABLE IF NOT EXISTS messages (
   chat_id text REFERENCES chats (id) ON DELETE CASCADE NOT NULL,
   sender_id text REFERENCES members (id) ON DELETE SET NULL,
   content text NOT NULL,
-  read_by text[] DEFAULT '{}',
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
