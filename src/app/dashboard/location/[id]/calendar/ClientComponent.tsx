@@ -15,39 +15,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { CalendarFilters } from "./components/CalendarFilters";
 import { tryCatch } from "@/libs/utils";
-import { EnhancedEventDialog } from "./components/EnhancedEventDialog";
+import { SessionManagementDialog } from "./components/EnhancedEventDialog";
 
 import {
   EventCalendar,
   CalendarDndProvider
 } from "@/components/event-calendar";
 import LoaderOverlay from "@/components/ui/loader-overlay";
-import { CalendarEvent, ExtendedCalendarEvent, CalendarView } from "@/types";
-
-// Data adapter to convert attendance-specific CalendarEvent to ExtendedCalendarEvent format for UI
-function convertToNewCalendarEvent(
-  oldEvent: CalendarEvent
-): ExtendedCalendarEvent {
-  return {
-    id: oldEvent.id,
-    title: oldEvent.title,
-    description: oldEvent.data
-      ? `Session: ${oldEvent.data.sessionId}${
-          oldEvent.data.members.length > 0
-            ? ` | ${oldEvent.data.members.length} member(s)`
-            : ""
-        }`
-      : undefined,
-    start: oldEvent.start,
-    end: oldEvent.end,
-    allDay: false,
-    color: "sky" as const, // Default color for all events
-    location: undefined,
-    staff: oldEvent.staff,
-    // Store original event data for dialog functionality
-    __originalData: oldEvent.data,
-  };
-}
+import { CalendarEvent, CalendarView } from "@/types";
 
 interface CalendarPageClientProps {
   params: Promise<{ id: string }>;
@@ -62,10 +37,10 @@ export default function CalendarPageClient({
 
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
 
-  // State for enhanced dialog
-  const [isEnhancedDialogOpen, setIsEnhancedDialogOpen] = useState(false);
+  // State for session management dialog
+  const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] =
-    useState<ExtendedCalendarEvent | null>(null);
+    useState<CalendarEvent | null>(null);
 
   // State to track cached date range - only update when navigation goes outside this range
   const [cachedDateRange, setCachedDateRange] = useState(() => ({
@@ -121,7 +96,7 @@ export default function CalendarPageClient({
 
   // Use the existing hook to fetch events
   const {
-    events: oldEvents,
+    events,
     isLoading,
     mutate,
   } = useCalendarEvents({
@@ -130,12 +105,6 @@ export default function CalendarPageClient({
     endDate: format(endDate, "yyyy-MM-dd"),
     planIds: selectedPlanIds.length > 0 ? selectedPlanIds : undefined,
   });
-
-  // Convert old events to new format
-  const newEvents = useMemo<ExtendedCalendarEvent[]>(() => {
-    if (!oldEvents) return [];
-    return oldEvents.map(convertToNewCalendarEvent);
-  }, [oldEvents]);
 
   // Handle calendar date selection - navigates to day view of selected date
   const handleDateSelect = (date: Date) => {
@@ -185,10 +154,10 @@ export default function CalendarPageClient({
     }
   };
 
-  // Handle event selection to open enhanced dialog
-  const handleEventSelect = (event: ExtendedCalendarEvent) => {
+  // Handle event selection to open session management dialog
+  const handleEventSelect = (event: CalendarEvent) => {
     setSelectedEvent(event);
-    setIsEnhancedDialogOpen(true);
+    setIsSessionDialogOpen(true);
   };
 
   // Event handlers for the new calendar
@@ -220,16 +189,13 @@ export default function CalendarPageClient({
             </div>
           )}
           <EventCalendar
-            events={newEvents}
+            events={events}
             currentDate={currentDate}
             view={view}
             onDateChange={setCurrentDate}
             onViewChange={setView}
-            onEventAdd={handleEventAdd}
             onEventUpdate={handleEventUpdate}
-            onEventDelete={handleEventDelete}
             onEventClick={handleEventSelect}
-            lid={id}
           />
         </div>
       </CalendarDndProvider>
@@ -254,11 +220,11 @@ export default function CalendarPageClient({
           onFilterChange={setSelectedPlanIds}
         />
       </div>
-      <EnhancedEventDialog
+      <SessionManagementDialog
         event={selectedEvent}
-        isOpen={isEnhancedDialogOpen}
+        isOpen={isSessionDialogOpen}
         onClose={() => {
-          setIsEnhancedDialogOpen(false);
+          setIsSessionDialogOpen(false);
           setSelectedEvent(null);
         }}
         onSave={handleEventUpdate}

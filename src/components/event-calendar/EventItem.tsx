@@ -66,15 +66,17 @@ function EventWrapper({
 				"focus-visible:border-ring focus-visible:ring-ring/50 flex size-full overflow-hidden px-1 text-left font-medium backdrop-blur-md transition outline-none select-none focus-visible:ring-[3px] data-dragging:cursor-grabbing data-dragging:shadow-lg data-past-event:line-through sm:px-2",
 				getEventColorClasses(event.color),
 				getBorderRadiusClasses(isFirstDay, isLastDay),
+				isEventInPast ? "cursor-not-allowed opacity-60" : "cursor-pointer",
 				className
 			)}
 			data-dragging={isDragging || undefined}
 			data-past-event={isEventInPast || undefined}
-			onClick={onClick}
-			onMouseDown={onMouseDown}
-			onTouchStart={onTouchStart}
-			{...dndListeners}
-			{...dndAttributes}
+			onClick={isEventInPast ? undefined : onClick}
+			onMouseDown={isEventInPast ? undefined : onMouseDown}
+			onTouchStart={isEventInPast ? undefined : onTouchStart}
+			{...(isEventInPast ? {} : dndListeners)}
+			{...(isEventInPast ? {} : dndAttributes)}
+			disabled={isEventInPast}
 		>
 			{children}
 		</button>
@@ -225,19 +227,23 @@ export function EventItem({
 	}
 
 	// Agenda view - kept separate since it's significantly different
+	const isEventInPast = isPast(new Date(event.end));
+	
 	return (
 		<button
 			className={cn(
-				"cursor-pointer focus-visible:border-ring focus-visible:ring-ring/50 flex w-full flex-col gap-1 rounded p-2 text-left transition outline-none focus-visible:ring-[3px] data-past-event:line-through data-past-event:opacity-90",
+				"focus-visible:border-ring focus-visible:ring-ring/50 flex w-full flex-col gap-1 rounded p-2 text-left transition outline-none focus-visible:ring-[3px] data-past-event:line-through data-past-event:opacity-90",
 				getEventColorClasses(eventColor),
+				isEventInPast ? "cursor-not-allowed opacity-60" : "cursor-pointer",
 				className
 			)}
-			data-past-event={isPast(new Date(event.end)) || undefined}
-			onClick={onClick}
-			onMouseDown={onMouseDown}
-			onTouchStart={onTouchStart}
-			{...dndListeners}
-			{...dndAttributes}
+			data-past-event={isEventInPast || undefined}
+			onClick={isEventInPast ? undefined : onClick}
+			onMouseDown={isEventInPast ? undefined : onMouseDown}
+			onTouchStart={isEventInPast ? undefined : onTouchStart}
+			{...(isEventInPast ? {} : dndListeners)}
+			{...(isEventInPast ? {} : dndAttributes)}
+			disabled={isEventInPast}
 		>
 			<div className="text-sm font-medium">{event.title}</div>
 			<div className="text-xs opacity-70">

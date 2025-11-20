@@ -192,6 +192,7 @@ export async function GET(
         const membersResult = await db
             .select({
                 id: members.id,
+                userId: members.userId,
                 firstName: members.firstName,
                 lastName: members.lastName,
                 email: members.email,
