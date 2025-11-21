@@ -125,17 +125,6 @@ export async function broadcastMessage(chatId: string, enrichedMessage: Enriched
 
   try {
     const channel = supabase.channel(`chat:${chatId}`);
-    
-    // Subscribe to the channel
-    await new Promise<void>((resolve, reject) => {
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          resolve();
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          reject(new Error(`Failed to subscribe: ${status}`));
-        }
-      });
-    });
 
     // Broadcast the enriched message
     await channel.send({
@@ -144,8 +133,6 @@ export async function broadcastMessage(chatId: string, enrichedMessage: Enriched
       payload: enrichedMessage,
     });
 
-    // Unsubscribe after broadcasting
-    await channel.unsubscribe();
     supabase.removeChannel(channel);
   } catch (error) {
     console.error('Error broadcasting message:', error);
