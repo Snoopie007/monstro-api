@@ -28,15 +28,45 @@ export const useGroupChat = ({
     try {
       setIsLoading(true);
       setError(null);
-      const { data, error } = await supabase
+      const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
         .select('*,sender:users!sender_id(image, name)')
         .eq('chat_id', currentChatId)
         .order('created_at', { ascending: true });
 
+      if (messagesError) throw messagesError;
 
+      // Fetch media for these messages
+      const messageIds = messagesData?.map(m => m.id) || [];
+      let mediaMap: Record<string, any[]> = {};
       
-      const mapped = data?.map((message) => {
+      // TODO: Move in api route instead -- loadMessages should be an api route
+      if (messageIds.length > 0) {
+        const { data: mediaData, error: mediaError } = await supabase
+            .from('media')
+            .select('*')
+            .in('owner_id', messageIds)
+            .eq('owner_type', 'message');
+            
+        if (!mediaError && mediaData) {
+            mediaData.forEach(item => {
+                if (!mediaMap[item.owner_id]) {
+                    mediaMap[item.owner_id] = [];
+                }
+                mediaMap[item.owner_id].push({
+                    id: item.id,
+                    url: item.url,
+                    thumbnailUrl: item.thumbnail_url,
+                    fileName: item.file_name,
+                    fileType: item.file_type,
+                    mimeType: item.mime_type,
+                    altText: item.alt_text
+                });
+            });
+        }
+      }
+
+      const mapped = messagesData?.map((message) => {
         return {
           ...message,
           chatId: message.chat_id,
@@ -44,10 +74,10 @@ export const useGroupChat = ({
           readBy: message.read_by,
           created: message.created_at,
           updated: message.updated_at,
+          media: mediaMap[message.id] || []
         }
       }) || [];
 
-      if (error) throw error;
       setMessages(mapped || []);
     } catch (err) {
       console.error('Error loading messages:', err);

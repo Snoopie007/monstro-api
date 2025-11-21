@@ -22,7 +22,7 @@ export function GroupPostsView({ lid }: { lid: string }) {
 
     return (
         <ScrollArea className="h-full w-full">
-            <div className="flex h-full mx-auto flex-col gap-6 bg-muted/10 p-6">
+            <div className="flex min-h-full mx-auto flex-col gap-6 bg-muted/10 p-6">
                 <GroupHeader group={currentChat.group} />
                 <PostsFeed id={lid} gid={currentChat.group.id} />
             </div>
