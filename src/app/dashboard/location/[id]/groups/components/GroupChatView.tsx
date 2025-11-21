@@ -18,8 +18,8 @@ export function GroupChatView({ lid }: { lid: string }) {
         fromUserId: session?.user?.id ?? null,
     })
 
-    const handleSendMessage = async (content: string) => {
-        await sendMessage(content);
+    const handleSendMessage = async (content: string, files: File[]) => {
+        await sendMessage(content, files);
     };
 
     if (!currentChat){
@@ -114,6 +114,32 @@ export function GroupChatView({ lid }: { lid: string }) {
                                                 >
                                                 {message.content}
                                                 </div>
+                                                
+                                                {message.media && message.media.length > 0 && (
+                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                        {message.media.map((mediaItem) => (
+                                                            <div key={mediaItem.id} className="relative rounded-md overflow-hidden border border-border/50 max-w-[300px]">
+                                                                {mediaItem.fileType === 'image' || mediaItem.mimeType?.startsWith('image/') ? (
+                                                                    <img 
+                                                                        src={mediaItem.url} 
+                                                                        alt={mediaItem.fileName || 'Attachment'}
+                                                                        className="w-full h-auto max-h-[300px] object-cover block"
+                                                                        loading="lazy"
+                                                                    />
+                                                                ) : (
+                                                                    <a 
+                                                                        href={mediaItem.url}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="flex items-center p-3 bg-muted/50 gap-2 min-w-[150px] hover:bg-muted transition-colors"
+                                                                    >
+                                                                        <span className="text-xs truncate max-w-[120px]">{mediaItem.fileName}</span>
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                                 
                                             </div>
                                         </div>
