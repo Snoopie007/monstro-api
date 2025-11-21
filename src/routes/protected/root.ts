@@ -11,7 +11,8 @@ import {
     memberPlans,
     memberFriends,
     memberGroups,
-    memberChats
+    memberChats,
+    sendRoutes
 } from './members';
 import {
     locationAchievements,
@@ -31,6 +32,7 @@ import {
 
 export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(AuthMiddleware)
+    .use(sendRoutes)
     .group('/groups/:gid', (app) => {
         app.use(groupRoutes);
         app.use(groupPostRoutes);
