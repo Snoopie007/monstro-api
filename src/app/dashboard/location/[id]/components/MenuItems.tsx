@@ -61,7 +61,7 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
     ],
 },
 {
-    name: "Groups & Community",
+    name: "Community",
     path: 'groups',
     icon: <Users size={16} />,
 },
