@@ -1,8 +1,12 @@
+
+CREATE TYPE GROUP_TYPE AS ENUM('public', 'private');
+
+
 -- ========================
 -- FRIENDSHIPS (many-to-many)
 -- ========================
 CREATE TABLE IF NOT EXISTS friends (
-  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('frn_'),
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   requester_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
   addressee_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
   status text CHECK (status IN ('pending', 'accepted', 'blocked')) NOT NULL DEFAULT 'pending',
@@ -20,7 +24,7 @@ CREATE INDEX IF NOT EXISTS idx_friends_status ON friends (status);
 -- ========================
 CREATE TABLE IF NOT EXISTS chats (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('cht_'),
-  -- type chat_type NOT NULL DEFAULT 'private',
+  type CHAT_TYPE NOT NULL DEFAULT 'private',
   name text,
   started_by text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -49,8 +53,6 @@ CREATE TABLE IF NOT EXISTS messages (
   chat_id text REFERENCES chats (id) ON DELETE CASCADE NOT NULL,
   sender_id text REFERENCES members (id) ON DELETE SET NULL,
   content text NOT NULL,
-  attachments jsonb DEFAULT '[]'::jsonb,
-  read_by text[] DEFAULT '{}',
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
@@ -66,8 +68,9 @@ CREATE TABLE IF NOT EXISTS groups (
   name text NOT NULL,
   description text,
   location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
-  icon text,
   cover_image text,
+  type group_type NOT NULL DEFAULT 'public',
+  handle text UNIQUE NOT NULL,
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
@@ -97,7 +100,6 @@ CREATE TABLE IF NOT EXISTS group_posts (
   pinned boolean NOT NULL DEFAULT false,
   status text CHECK (status IN ('draft', 'published', 'archived')) NOT NULL DEFAULT 'draft',
   content text NOT NULL,
-  attachments jsonb DEFAULT '[]'::jsonb,
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
@@ -106,15 +108,28 @@ CREATE TABLE IF NOT EXISTS group_posts (
 -- ========================
 -- POST COMMENTS
 -- ========================
-CREATE TABLE IF NOT EXISTS post_comments (
-  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('cmt_'),
-  post_id text REFERENCES group_posts (id) ON DELETE CASCADE NOT NULL,
+CREATE TABLE IF NOT EXISTS comments (
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  owner_type OWNER_TYPE NOT NULL,
+  owner_id text NOT NULL,
   user_id text REFERENCES users (id) ON DELETE SET NULL,
   content text NOT NULL,
+  likes integer NOT NULL DEFAULT 0,
+  pinned boolean NOT NULL DEFAULT false,
+  parent_id text REFERENCES comments (id) ON DELETE SET NULL,
   metadata jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
+
+-- Indexes for comments table
+CREATE INDEX IF NOT EXISTS idx_comments_owner ON comments (owner_id, owner_type);
+CREATE INDEX IF NOT EXISTS idx_comments_owner_type ON comments (owner_type);
+CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments (user_id);
+CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments (parent_id);
+CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments (created_at);
+
+
 
 
 -- ========================
@@ -122,10 +137,8 @@ CREATE TABLE IF NOT EXISTS post_comments (
 -- ========================
 CREATE TABLE IF NOT EXISTS memories (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('mem_'),
-  title text NOT NULL,
-  description text,
+  content text,
   member_id text REFERENCES members (id) ON DELETE SET NULL,
-  attachments jsonb DEFAULT '[]'::jsonb,
   tags text[] DEFAULT '{}',
   is_public boolean NOT NULL DEFAULT true,
   metadata jsonb DEFAULT '{}'::jsonb,
@@ -134,27 +147,40 @@ CREATE TABLE IF NOT EXISTS memories (
 );
 
 
--- ========================
--- MEMORY COMMENTS
--- ========================
-CREATE TABLE IF NOT EXISTS memory_comments (
-  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('mcm_'),
-  memory_id text REFERENCES memories (id) ON DELETE CASCADE NOT NULL,
-  member_id text REFERENCES members (id) ON DELETE SET NULL,
-  content text NOT NULL,
-  metadata jsonb DEFAULT '{}'::jsonb,
-  created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone
-);
 
 -- ========================
 -- MEMORY LIKES
 -- ========================
 CREATE TABLE IF NOT EXISTS memory_likes (
-  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('mlk_'),
   memory_id text REFERENCES memories (id) ON DELETE CASCADE NOT NULL,
   member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   UNIQUE (memory_id, member_id)
 );
+
+
+
+
+-- ========================
+-- POLYMORPHIC MEDIA TABLE
+-- ========================
+CREATE TABLE IF NOT EXISTS media (
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('med_'),
+  owner_id text NOT NULL,
+  owner_type text CHECK (owner_type IN ('post', 'message', 'memory')) NOT NULL,
+  file_name text NOT NULL,
+  file_type text CHECK (file_type IN ('image', 'video', 'audio', 'document', 'other')) NOT NULL,
+  file_size bigint,
+  mime_type text,
+  url text NOT NULL,
+  thumbnail_url text,
+  alt_text text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone
+);
+
+CREATE INDEX IF NOT EXISTS idx_media_owner ON media (owner_id, owner_type);
+CREATE INDEX IF NOT EXISTS idx_media_owner_type ON media (owner_type);
+CREATE INDEX IF NOT EXISTS idx_media_created_at ON media (created_at);
 
