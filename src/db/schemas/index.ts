@@ -26,3 +26,7 @@ export * from "./SupportLogs";
 export * from "./SupportBotEnums";
 export * from "./tax";
 export * from "./PaymentMethods";
+export * from "./groups";
+export * from "./chats";
+export * from "./friends";
+export * from "./memories";
