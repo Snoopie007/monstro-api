@@ -1,19 +1,13 @@
 'use client'
 import { Input } from "@/components/forms"
 import { Avatar, AvatarFallback, ScrollArea } from "@/components/ui"
-import { Button } from "@/components/ui"
-import { GroupCommunity } from "@/types/groups"
 import { useState } from "react"
 import { useGroups } from "./GroupsProvider"
 import { Chat } from "@/types/chats"
-
+import { CreateGroupModal } from "./CreateGroupModal"
 export function GroupsList({ lid }: { lid: string }) {
     const [search, setSearch] = useState<string>('')
-    const { chats, setCurrentChat } = useGroups();
-
-    const handleCreateGroup = () => {
-        console.log('Create Group')
-    }
+    const { chats } = useGroups();
 
     return (
         <div className="flex flex-col bg-muted/50 rounded-lg h-full min-h-0">
@@ -42,9 +36,7 @@ export function GroupsList({ lid }: { lid: string }) {
                         {chats.length === 0 ? (
                             <div className="text-center pt-8 text-muted-foreground">
                                 <p>Your Community doesn't have any groups yet</p>
-                                <Button variant="primary" className="rounded-full mt-4" onClick={handleCreateGroup}>
-                                    Create One Now!
-                                </Button>
+                                <CreateGroupModal />
                             </div>
                         ) : (
                             <div className="space-y-2">

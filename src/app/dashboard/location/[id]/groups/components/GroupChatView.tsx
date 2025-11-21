@@ -6,8 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage, ScrollArea } from "@/components/ui
 import { useGroupChat } from "@/hooks/useGroupChat";
 import { useSession } from "@/hooks/useSession";
 import { useRef } from "react";
-import { formatTime } from "@/libs/utils";
-import { format } from "date-fns";
+import { formatMessageTimestamp, getDateLabel } from "@/libs/utils";
+import { isSameDay } from "date-fns";
 
 export function GroupChatView({ lid }: { lid: string }) {
     const {currentChat} = useGroups()
@@ -58,54 +58,67 @@ export function GroupChatView({ lid }: { lid: string }) {
                 ) : (
                 <>
                     <ScrollArea className="flex-1 w-full px-4">
-                        <div className="space-y-4 py-4">
-                        {currentChat?.messages?.length === 0 ? (
+                        <div className="space-y-6 py-4">
+                        {messages?.length === 0 ? (
                             <div className="text-center text-sm text-muted-foreground py-8">
                             No messages yet. Start the conversation!
                             </div>
                         ) : (
-                            messages.map((message) => {
-                            const isFromCurrentUser = message.senderId === session?.user?.id;
-                            const displayName = message.sender?.name ?? "Unknown";
-                            const avatarSrc = message.sender?.image ?? undefined;
-                            const fallbackInitials = displayName.charAt(0) ?? "?";
-        
-                            return (
-                                <div
-                                key={message.id}
-                                className={`flex gap-3 ${
-                                    isFromCurrentUser ? 'flex-row-reverse' : 'flex-row'
-                                }`}
-                                >
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={avatarSrc} />
-                                    <AvatarFallback className="text-xs">
-                                    {fallbackInitials || "?"}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div
-                                    className={`flex flex-col gap-1 max-w-[70%] ${
-                                    isFromCurrentUser ? 'items-end' : 'items-start'
-                                    }`}
-                                >
-                                    <span className="text-xs text-muted-foreground">
-                                    {displayName}
-                                    </span>
-                                    <div
-                                    className={`rounded-lg px-3 py-2 text-sm ${
-                                        isFromCurrentUser
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-muted'
-                                    }`}
-                                    >
-                                    {message.content}
+                            messages.map((message, index) => {
+                                const isFromCurrentUser = message.senderId === session?.user?.id;
+                                const displayName = message.sender?.name ?? "Unknown";
+                                const avatarSrc = message.sender?.image ?? undefined;
+                                const fallbackInitials = displayName.charAt(0) ?? "?";
+                                
+                                const prevMessage = messages[index - 1];
+                                const isNewDay = !prevMessage || !isSameDay(new Date(prevMessage.created), new Date(message.created));
+            
+                                return (
+                                    <div key={message.id}>
+                                        {isNewDay && (
+                                            <div className="relative flex items-center justify-center my-6">
+                                                <div className="absolute inset-0 flex items-center">
+                                                    <span className="w-full border-t border-muted-foreground/20" />
+                                                </div>
+                                                <span className="relative bg-muted px-2 text-xs text-muted-foreground rounded-full">
+                                                    {getDateLabel(new Date(message.created))}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div
+                                            className={`flex gap-3 flex-row`}
+                                        >
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={avatarSrc} />
+                                                <AvatarFallback className="text-xs">
+                                                {fallbackInitials || "?"}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div
+                                                className={`flex flex-col gap-1 max-w-[70%] items-start`}
+                                            >
+                                                <div className="flex flex-row items-center gap-2">
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {isFromCurrentUser ? "You" : displayName}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground/60">
+                                                        {formatMessageTimestamp(message.created)}
+                                                    </span>
+                                                </div>
+                                                <div
+                                                className={`rounded-lg px-3 py-2 text-sm ${
+                                                    isFromCurrentUser
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-muted'
+                                                }`}
+                                                >
+                                                {message.content}
+                                                </div>
+                                                
+                                            </div>
+                                        </div>
                                     </div>
-                                    <span className="text-xs text-muted-foreground">
-                                    {format(new Date(message.created), 'MMM d, yyyy h:mm a')}
-                                    </span>
-                                </div>
-                                </div>
-                            );
+                                );
                             })
                         )}
                         <div ref={messagesEndRef} />

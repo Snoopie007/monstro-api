@@ -3,6 +3,7 @@ import supabase from '@/libs/client/supabase';
 import { useSession } from './useSession';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { Message } from '@/types/chats';
+import { clientsideApiClient } from '@/libs/api/client';
 
 interface UseGroupChatOptions {
   chatId: string | null;
@@ -38,6 +39,9 @@ export const useGroupChat = ({
       const mapped = data?.map((message) => {
         return {
           ...message,
+          chatId: message.chat_id,
+          senderId: message.sender_id,
+          readBy: message.read_by,
           created: message.created_at,
           updated: message.updated_at,
         }
@@ -56,59 +60,59 @@ export const useGroupChat = ({
   // Send a message
   const sendMessage = useCallback(async (
     content: string, 
-    attachments?: any[]
+    files?: File[]
   ) => {
     if (!chatId || !fromUserId) {
       throw new Error('Chat not initialized or sender not set');
     }
 
+    if (!session?.user?.sbToken) {
+      throw new Error('No authentication token available');
+    }
+
     try {
-      // 1. Store message in database
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          chat_id: chatId,
-          sender_id: fromUserId,
-          content,
-          metadata: {
-            image: session?.user?.image,
-            name: session?.user?.name,
-          },
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // 2. Manually broadcast to all connected clients via the channel
-      if (channelRef.current) {
-        await channelRef.current.send({
-          type: 'broadcast',
-          event: 'new_message',
-          payload: data,
+      // Build FormData with message content and files
+      const formData = new FormData();
+      formData.append('content', content);
+      
+      if (files && files.length > 0) {
+        files.forEach(file => {
+          formData.append('files', file);
         });
       }
+      
+      // Use API client with the Supabase token from session
+      const api = clientsideApiClient(session.user.sbToken);
+      const enrichedMessage = await api.post(`/protected/chats/${chatId}/messages`, formData) as any;
+      
+      // Since we have self: false, we won't receive our own messages via broadcast
+      // So we need to manually add it to the local state
       const mapped: Message = {
-        ...data,
-        sender: {
-          id: fromUserId,
-          image: session?.user?.image,
-          name: session?.user?.name,
-        },
-        created: data.created_at
-      }
-      // Optimistically add to local state
+        id: enrichedMessage.id,
+        chatId: enrichedMessage.chatId,
+        senderId: enrichedMessage.senderId,
+        content: enrichedMessage.content,
+        metadata: enrichedMessage.metadata,
+        attachments: enrichedMessage.attachments || [],
+        readBy: enrichedMessage.metadata?.readBy || [],
+        sender: enrichedMessage.sender,
+        media: enrichedMessage.media,
+        created: enrichedMessage.created,
+        updated: enrichedMessage.updated,
+      };
+
       setMessages(prev => [...prev, mapped]);
       
-      return data;
+      return enrichedMessage;
     } catch (err) {
       console.error('Error sending message:', err);
       throw err;
     }
-  }, [chatId, fromUserId]);
+  }, [chatId, fromUserId, session?.user?.sbToken]);
 
   // Initialize chat and set up realtime subscription
   useEffect(() => {
+
     if (!enabled || !session || !chatId || !fromUserId) {
       setMessages([]);
       setIsConnected(false);
@@ -120,7 +124,7 @@ export const useGroupChat = ({
 
     const initializeChat = async () => {
       if (!mounted) return;
-
+      loadMessages(chatId);
       // Set up realtime channel with Broadcast Replay
       const replayTimestamp = Date.now() - (10 * 60 * 1000); // Last 10 minutes
 
@@ -141,61 +145,40 @@ export const useGroupChat = ({
       });
 
       // Listen for new messages
-      channel.on('broadcast', { event: 'new_message' }, async (payload) => {
+      channel.on('broadcast', { event: 'new_message' }, (payload) => {
         if (!mounted) return;
-        const newMessage = payload.payload;
+        const enrichedMessage = payload.payload;
         
         // Check if this is a replayed message
         const isReplayed = payload.meta?.replayed;
         
+        // Messages are now enriched by the API with sender and media data
+        const mapped: Message = {
+          id: enrichedMessage.id,
+          chatId: enrichedMessage.chatId,
+          senderId: enrichedMessage.senderId,
+          content: enrichedMessage.content,
+          metadata: enrichedMessage.metadata,
+          attachments: enrichedMessage.attachments || [],
+          readBy: enrichedMessage.metadata?.readBy || [],
+          sender: enrichedMessage.sender,
+          media: enrichedMessage.media,
+          created: enrichedMessage.created,
+          updated: enrichedMessage.updated,
+        };
+        
         if (isReplayed) {
-          let sender = null;
-
-          const {data, error} = await supabase.from('users').select('image, name').eq('id', newMessage.sender_id).single();
-
-          if (data) {
-            sender = {
-              id: newMessage.sender_id,
-              image: data.image,
-              name: data.name,
-            }
-          }
-
           // Add replayed messages to state, avoiding duplicates
           setMessages((prev) => {
-            if (prev.some(m => m.id === newMessage.id)) return prev;
-            const mapped: Message = {
-              ...newMessage,
-              sender,
-              created: newMessage.created_at,
-              updated: newMessage.updated_at,
-            }
+            if (prev.some(m => m.id === mapped.id)) return prev;
             return [...prev, mapped].sort(
               (a, b) => new Date(a.created).getTime() - new Date(b.created).getTime()
             );
           });
         } else {
-          let sender = null;
-
-          const {data, error} = await supabase.from('users').select('image, name').eq('id', newMessage.sender_id).single();
-
-          if (data) {
-            sender = {
-              id: newMessage.sender_id,
-              image: data.image,
-              name: data.name,
-            }
-          }
-
           // New message (not replayed)
           setMessages((prev) => {
-            if (prev.some(m => m.id === newMessage.id)) return prev;
-            const mapped: Message = {
-              ...newMessage,
-              sender,
-              created: newMessage.created_at,
-              updated: newMessage.updated_at,
-            }
+            if (prev.some(m => m.id === mapped.id)) return prev;
             return [...prev, mapped];
           });
         }

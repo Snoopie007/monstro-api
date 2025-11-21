@@ -7,6 +7,7 @@ import { Chat } from "@/types/chats";
 import { GroupsProvider } from "./components/GroupsProvider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui";
 import { GroupPostsView } from "./components/GroupPostsView";
+import { memo } from "react";
 
 type GroupsPageProps = {
   params: Promise<{ id: string }>;
@@ -38,15 +39,6 @@ export default async function GroupsPage(props: GroupsPageProps) {
   const params = await props.params;
   const { chats } = await getChatsData(params.id);
 
-
-  // return (
-  //   <ScrollArea className="h-[calc(100vh-58px)] overflow-hidden">
-  //     <div className="flex h-full max-w-6xl mx-auto flex-col gap-6 bg-muted/10 p-6">
-  //       <GroupHeader group={group} />
-  //       <PostsFeed id={params.id} gid={group.id!} />
-  //     </div>
-  //   </ScrollArea>
-  // );
   return (
     <div className="w-full h-full pb-2 pr-2">
         <GroupsProvider chats={chats}>
@@ -64,10 +56,10 @@ export default async function GroupsPage(props: GroupsPageProps) {
                         </div>
                          <div className="flex-1 min-h-0">
                             <TabsContent value="chat" className="h-full m-0 data-[state=active]:flex flex-col">
-                     <GroupChatView lid={params.id} />
+                                <GroupChatMemo lid={params.id} />
                             </TabsContent>
                             <TabsContent value="posts" className="h-full m-0 data-[state=active]:flex flex-col">
-                                <GroupPostsView lid={params.id} />
+                                <GroupPostsMemo lid={params.id} />
                             </TabsContent>
                         </div>
                     </Tabs>
@@ -75,5 +67,8 @@ export default async function GroupsPage(props: GroupsPageProps) {
             </div>
           </GroupsProvider>
     </div>
-)
+  )
 }
+
+const GroupChatMemo = memo(GroupChatView);
+const GroupPostsMemo = memo(GroupPostsView);

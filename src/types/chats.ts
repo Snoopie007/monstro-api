@@ -32,4 +32,13 @@ export type Message = {
     sender?: User;
     created: Date;
     updated?: Date | null;
+    media?: Array<{
+        id: string;
+        url: string;
+        thumbnailUrl: string | null;
+        fileName: string;
+        fileType: string;
+        mimeType: string | null;
+        altText: string | null;
+    }>;
 }

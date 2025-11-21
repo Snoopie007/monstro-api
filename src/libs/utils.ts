@@ -4,7 +4,7 @@ import { Time } from '@internationalized/date';
 import { NextRequest } from "next/server";
 import { ExtendedAttendance, Member } from "@/types";
 import { decodeJwt } from "jose";
-import { addDays, subDays } from "date-fns";
+import { addDays, subDays, isToday, isYesterday, format } from "date-fns";
 import { DEFAULT_SUPPORT_TOOLS } from "./SupportDefaults";
 
 export function stringToTime(time: string) {
@@ -348,5 +348,24 @@ export function getDefaultAssistantSettings() {
             document: null,
         },
         availableTools: DEFAULT_SUPPORT_TOOLS,
+    }
+}
+
+// If a timestamp string given is within the client's day -- it should just show the time. If it is more than a day -- it should show the date in this format "11/18/25 10:00 AM"
+export function formatMessageTimestamp(timestamp: string | Date | number) {
+    const date = new Date(timestamp);
+    if (isToday(date)) {
+        return format(date, 'h:mm a');
+    }
+    return format(date, 'MM/dd/yy h:mm a');
+}
+
+export function getDateLabel(date: Date): string {
+    if (isToday(date)) {
+        return 'Today';
+    } else if (isYesterday(date)) {
+        return 'Yesterday';
+    } else {
+        return format(date, 'MMMM d, yyyy');
     }
 }
