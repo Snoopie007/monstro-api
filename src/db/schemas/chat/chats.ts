@@ -10,7 +10,7 @@ import {
 import { members } from "../members";
 import { users } from "../users";
 import { groupPosts, groups } from "./groups";
-import { memories } from "./memories";
+import { moments } from "./moments";
 
 export const chats = pgTable("chats", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('cht_')`),
@@ -110,8 +110,8 @@ export const mediaRelations = relations(media, ({ one }) => ({
         fields: [media.ownerId],
         references: [groupPosts.id],
     }),
-    memory: one(memories, {
+    moment: one(moments, {
         fields: [media.ownerId],
-        references: [memories.id],
+        references: [moments.id],
     }),
 }));

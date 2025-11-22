@@ -1,6 +1,8 @@
 import { Elysia } from 'elysia';
 import { db } from '@/db/db';
-type Props = {
+
+
+type ChatProps = {
     memberId: string
     params: {
         mid: string
@@ -11,8 +13,8 @@ type Props = {
 
 
 
-export const memberChats = new Elysia({ prefix: '/chats' })
-    .get('/', async ({ params, status }: Props) => {
+export function memberChats(app: Elysia) {
+    return app.get('/chats', async ({ params, status }: ChatProps) => {
 
         try {
 
@@ -44,16 +46,14 @@ export const memberChats = new Elysia({ prefix: '/chats' })
                 },
             })
 
-
             return status(200, chats);
         } catch (error) {
             console.error(error);
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }
-    })
-    .group('/:cid', (app) => {
-        app.get('/', async ({ params, status }: Props) => {
+    }).group('/chats/:cid', (app) => {
+        app.get('/', async ({ params, status }: ChatProps) => {
             const { cid, mid } = params;
 
             try {
@@ -81,3 +81,5 @@ export const memberChats = new Elysia({ prefix: '/chats' })
         return app;
 
     })
+}
+

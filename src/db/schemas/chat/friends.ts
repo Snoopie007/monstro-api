@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { text, timestamp, pgTable, uuid, unique, index } from "drizzle-orm/pg-core";
+import { text, timestamp, pgTable, unique, index } from "drizzle-orm/pg-core";
 import { members } from "../members";
 
 export const friends = pgTable("friends", {

@@ -18,5 +18,5 @@ export type MessageRole = "human" | "ai" | "staff" | "system" | "tool" | "tool_m
 export type ConversationStatus = "open" | "in_progress" | "resolved" | "closed";
 export type TriggerType = "keyword" | "intent" | "condition";
 export type BotModel = "gpt" | "anthropic" | "gemini";
-export type OwnerType = "post" | "message" | "memory";
+export type OwnerType = "post" | "message" | "moment";
 export type FileType = "image" | "video" | "audio" | "document" | "other";

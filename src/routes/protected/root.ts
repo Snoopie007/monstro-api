@@ -25,19 +25,11 @@ import {
     locationSupport,
     locationEmail
 } from './locations';
-import {
-    groupRoutes,
-    groupPostRoutes
-} from './groups';
+import { commentRoutes } from './comments';
 
 export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(AuthMiddleware)
     .use(sendRoutes)
-    .group('/groups/:gid', (app) => {
-        app.use(groupRoutes);
-        app.use(groupPostRoutes);
-        return app;
-    })
     .group('/member/:mid', (app) => {
         app.use(membersLocations);
         app.use(memberAccounts);
@@ -67,3 +59,4 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(locationLeaderboard);
         return app;
     })
+    .use(commentRoutes)

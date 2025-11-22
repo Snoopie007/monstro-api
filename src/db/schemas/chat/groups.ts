@@ -2,8 +2,8 @@ import { relations, sql } from "drizzle-orm";
 import { text, timestamp, pgTable, jsonb, boolean, index, primaryKey, integer } from "drizzle-orm/pg-core";
 import { locations } from "../locations";
 import { users } from "../users";
-import { memories } from "./memories";
 import { media } from "./chats";
+import { comments } from "./comments";
 
 export const groups = pgTable("groups", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('grp_')`),
@@ -34,6 +34,8 @@ export const groupPosts = pgTable("group_posts", {
     title: text("title").notNull(),
     groupId: text("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    comments: integer("comments").notNull().default(0),
+    likes: integer("likes").notNull().default(0),
     pinned: boolean("pinned").notNull().default(false),
     status: text("status", { enum: ["draft", "published", "archived"] }).notNull().default("draft"),
     content: text("content").notNull(),
@@ -42,22 +44,6 @@ export const groupPosts = pgTable("group_posts", {
     updated: timestamp("updated_at", { withTimezone: true }),
 });
 
-export const comments = pgTable("comments", {
-    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
-    ownerId: text("owner_id").notNull(),
-    ownerType: text("owner_type").notNull(),
-    parentId: text("parent_id"),
-    likes: integer("likes").notNull().default(0),
-    pinned: boolean("pinned").notNull().default(false),
-    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
-    content: text("content").notNull(),
-    depth: integer("depth").notNull().default(0),
-    replyCounts: integer("reply_counts").notNull().default(0),
-    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
-    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    deletedOn: timestamp("deleted_on", { withTimezone: true }),
-    updated: timestamp("updated_at", { withTimezone: true }),
-});
 
 export const groupsRelations = relations(groups, ({ one, many }) => ({
     location: one(locations, {
@@ -90,26 +76,4 @@ export const groupPostsRelations = relations(groupPosts, ({ one, many }) => ({
     }),
     comments: many(comments),
     medias: many(media),
-}));
-
-export const commentsRelations = relations(comments, ({ one, many }) => ({
-    post: one(groupPosts, {
-        fields: [comments.ownerId],
-        references: [groupPosts.id],
-    }),
-    memory: one(memories, {
-        fields: [comments.ownerId],
-        references: [memories.id],
-    }),
-    parent: one(comments, {
-        fields: [comments.parentId],
-        references: [comments.id],
-    }),
-    user: one(users, {
-        fields: [comments.userId],
-        references: [users.id],
-    }),
-    replies: many(comments, {
-        relationName: "replies",
-    }),
 }));
