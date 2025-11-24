@@ -26,10 +26,12 @@ import {
     locationEmail
 } from './locations';
 import { commentRoutes } from './comments';
+import { groupPostsRoutes } from './posts';
 
 export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(AuthMiddleware)
     .use(sendRoutes)
+    .use(commentRoutes)
     .group('/member/:mid', (app) => {
         app.use(membersLocations);
         app.use(memberAccounts);

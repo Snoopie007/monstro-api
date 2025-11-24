@@ -1,13 +1,14 @@
 import { db } from "@/db/db";
-import type { Elysia } from "elysia";
-import { sql } from "drizzle-orm";
+import { Elysia } from "elysia";
+import { eq, sql } from "drizzle-orm";
+import { comments, groupPosts } from "@/db/schemas";
 
 type Props = {
     memberId: string
     status: any
 }
 
-type GetParams = Props & {
+type GetGroupsParams = Props & {
     params: {
         mid: string
     }
@@ -20,8 +21,8 @@ type GetGroupParams = Props & {
     }
 }
 
-export function memberGroups(app: Elysia) {
-    return app.get('/groups', async ({ params, status }: GetParams) => {
+export const memberGroups = new Elysia({ prefix: '/groups' })
+    .get('/', async ({ params, status }: GetGroupsParams) => {
         const { mid } = params;
 
         try {
@@ -48,7 +49,7 @@ export function memberGroups(app: Elysia) {
             console.error(error);
             return status(500, { error: "Failed to fetch groups" });
         }
-    }).get('/groups/:gid', async ({ params, status }: GetGroupParams) => {
+    }).get('/:gid', async ({ params, status }: GetGroupParams) => {
         try {
             const group = await db.query.groups.findFirst({
                 where: (groups, { eq }) => eq(groups.id, params.gid),
@@ -78,5 +79,4 @@ export function memberGroups(app: Elysia) {
             console.error(error);
             return status(500, { error: "Failed to fetch group" });
         }
-    });
-}
+    })
