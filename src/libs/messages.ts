@@ -1,7 +1,7 @@
 import { db } from '@/db/db';
-import { messages, media } from '@/db/schemas';
-import { eq } from 'drizzle-orm';
+import { chatMembers, messages } from '@/db/schemas';
 import { createClient } from '@supabase/supabase-js';
+import { eq } from 'drizzle-orm';
 
 interface EnrichedMessage {
   id: string;
@@ -124,6 +124,7 @@ export async function broadcastMessage(chatId: string, enrichedMessage: Enriched
   });
 
   try {
+    // Broadcast to the specific chat channel
     const channel = supabase.channel(`chat:${chatId}`);
 
     // Broadcast the enriched message
@@ -134,9 +135,41 @@ export async function broadcastMessage(chatId: string, enrichedMessage: Enriched
     });
 
     supabase.removeChannel(channel);
+
+    // Fetch members of this chat
+    const participants = await db.query.chatMembers.findMany({
+        where: eq(chatMembers.chatId, chatId),
+        with: {
+          user: {
+            columns: {
+              id: true,
+              name: true,
+            },
+          },
+        }
+    });
+
+    // Broadcast "chat_updated" to each user's personal channel
+    await Promise.all(participants.map(async (member) => {
+      try {
+        const userChannel = supabase.channel(`chats:${member.user.id}`);
+        await userChannel.send({
+          type: 'broadcast',
+          event: 'chat_updated',
+          payload: {
+            chatId: chatId,
+            userId: enrichedMessage.sender?.id,
+            userName: enrichedMessage.sender?.name,
+            message: enrichedMessage,
+          },
+        });
+        supabase.removeChannel(userChannel);
+      } catch (err) {
+        console.error(`Failed to broadcast to user ${member.user.id}:`, err);
+      }
+    }));
   } catch (error) {
     console.error('Error broadcasting message:', error);
     throw error;
   }
 }
-
