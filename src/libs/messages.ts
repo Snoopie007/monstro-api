@@ -54,7 +54,7 @@ export async function enrichMessage(messageId: string): Promise<EnrichedMessage 
 
     // Fetch associated media
     const mediaFiles = await db.query.media.findMany({
-      where: (media, { and, eq }) => 
+      where: (media, { and, eq }) =>
         and(
           eq(media.ownerId, messageId),
           eq(media.ownerType, 'message')

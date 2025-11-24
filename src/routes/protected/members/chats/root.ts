@@ -63,8 +63,9 @@ export function memberChats(app: Elysia) {
                         group: true,
                         messages: {
                             orderBy: (messages, { desc }) => desc(messages.created),
-                            limit: 100,
+                            limit: 50,
                             with: {
+                                medias: true,
                                 sender: true,
                             },
                         },
