@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/libs/utils";
 import { Industries } from "@/libs/data";
-
+import { useRouter } from 'next/navigation';
 import { signIn } from '@/hooks/useSession'
 import { useJoin } from '../providers/JoinProvider';
 import { toast } from 'react-toastify';
@@ -83,7 +83,7 @@ export function QuizForm() {
     const [step, setStep] = useState(1);
     const { user } = useJoin();
     const [loading, setLoading] = useState(false);
-
+    const router = useRouter();
     const form = useForm<QuizFormData>({
         resolver: zodResolver(QuizSchema),
         defaultValues: {
@@ -97,14 +97,16 @@ export function QuizForm() {
     async function onSubmit(v: z.infer<typeof QuizSchema>) {
         try {
             setLoading(true);
-            await signIn("credentials", {
+            const res = await signIn("credentials", {
                 email: user?.email || "",
                 password: user?.password || "",
-                redirect: true,
-                callbackUrl: "/dashboard/locations/new"
+                skipVerification: true,
             })
-        } catch (error) {
-            toast.error("Error signing in");
+            if (res?.ok) {
+                router.push('/dashboard/locations/new');
+            }
+        } catch (error: unknown) {
+            toast.error((error as Error).message || "Error signing in");
         } finally {
             setLoading(false);
         }
@@ -166,14 +168,10 @@ export function QuizForm() {
                                     onClick={
                                         question.step < 4 ? handleNext : form.handleSubmit(onSubmit)
                                     }
-                                    className={cn("children:hidden bg-indigo-600 text-white ", { "children:inline-block": loading })}
+
                                 >
-                                    <Loader2 className="mr-2 size-4 animate-spin" />
-                                    {question.step < 4 ? "Next" : "Let's go"}
-
+                                    {loading ? <Loader2 className="size-4 animate-spin" /> : question.step < 4 ? "Next" : "Let's go"}
                                 </Button>
-
-
                             </div>
                         </fieldset>
                     ))}
