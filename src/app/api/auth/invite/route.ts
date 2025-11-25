@@ -13,9 +13,11 @@ export async function POST(req: NextRequest) {
     if (!agreeToTerms) {
         return NextResponse.json({ error: "You must agree to the terms and conditions" }, { status: 400 })
     }
+
+    const normalizedEmail = data.email.toLowerCase();
     try {
         const user = await db.query.users.findFirst({
-            where: (user, { eq }) => eq(user.email, data.email)
+            where: (user, { eq }) => eq(user.email, normalizedEmail)
         })
         if (user) {
             return NextResponse.json({ error: "User already exists" }, { status: 400 })

@@ -58,9 +58,9 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
 	const { email } = await req.json()
-
+	const normalizedEmail = email.toLowerCase();
 	try {
-		const user = await findUser(email)
+		const user = await findUser(normalizedEmail)
 		const RedisKey = `reset:${user.id}`;
 		// Remove the old OTP
 		await redis.del(RedisKey);
