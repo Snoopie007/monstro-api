@@ -138,15 +138,15 @@ export async function broadcastMessage(chatId: string, enrichedMessage: Enriched
 
     // Fetch members of this chat
     const participants = await db.query.chatMembers.findMany({
-        where: eq(chatMembers.chatId, chatId),
-        with: {
-          user: {
-            columns: {
-              id: true,
-              name: true,
-            },
+      where: eq(chatMembers.chatId, chatId),
+      with: {
+        user: {
+          columns: {
+            id: true,
+            name: true,
           },
-        }
+        },
+      }
     });
 
     // Broadcast "chat_updated" to each user's personal channel
