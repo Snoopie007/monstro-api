@@ -43,12 +43,6 @@ export default async function PlanSelectionPage(props: {
 }) {
 	const { lid } = await props.params;
 
-	const session = await auth();
-
-	if (!session || session.user.locations.length === 0) {
-		return redirect("/login");
-	}
-
 	const locationState = await getLocationState(lid);
 	if (!locationState) {
 		return redirect("/dashboard/locations/new");

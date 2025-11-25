@@ -55,19 +55,19 @@ type QuizFormData = z.infer<typeof QuizSchema>;
 const questions = [
     {
         step: 1,
-        title: "Tell us how you plan to use Monstro?",
+        title: "How many active members do you have?",
         fieldName: "members" as keyof QuizFormData,
         options: MemberCount,
     },
     {
         step: 2,
-        title: "What kind of group classes do you offer?",
+        title: "What is your primary business niche?",
         fieldName: "niche" as keyof QuizFormData,
         options: Industries,
     },
     {
         step: 3,
-        title: "How long have you been in business?",
+        title: "How long have you been in the business?",
         fieldName: "years" as keyof QuizFormData,
         options: Years,
     },
