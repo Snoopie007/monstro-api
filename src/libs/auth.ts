@@ -49,7 +49,7 @@ export async function generateMobileToken(m: TokenPayload): Promise<MobileToken>
 
     const accessToken = await new SignJWT(supabasePayload)
         .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-        .setIssuer(process.env.SUPABASE_URL || "http://localhost:54321")  // ← Add this line!
+        .setIssuer(`${process.env.SUPABASE_URL}/auth/v1`)  // ← Add /auth/v1
         .sign(supabaseSecret);
 
     return { accessToken, refreshToken, expires };
