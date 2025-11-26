@@ -1,7 +1,8 @@
 import { Elysia } from 'elysia';
 import { db } from '@/db/db';
 import { sendMessageRoute } from './send';
-import { sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
+import { reactionCounts } from '@/db/schemas/chat/reactions';
 
 
 type ChatProps = {
@@ -75,22 +76,31 @@ export const userChats = new Elysia({ prefix: '/chats' })
                 // Get all message IDs
                 const messageIds = chat?.messages.map(m => m.id) || [];
 
-                // Single query to get ALL reactions for ALL messages
-                const reactions = await db.execute(
-                    sql`  SELECT * FROM get_reaction_summary_bulk('message', ${messageIds})
-       `
-                );
-
+                // Multiple messages (bulk)
+                const reactions = await db.select().from(reactionCounts).where(and(
+                    eq(reactionCounts.ownerType, 'message'),
+                    inArray(reactionCounts.ownerId, messageIds)
+                ));
                 console.log(reactions);
-                // Group reactions by message ID
-                // const reactionsByMessage = reactions.reduce((acc, reaction) => {
-                //     const messageId = reaction.owner_id;
-                //     if (!acc[messageId]) acc[messageId] = [];
-                //     acc[messageId].push(reaction);
-                //     return acc;
-                // }, {} as Record<string, any[]>);
 
-                return status(200, chat);
+                // Group reactions by message ID
+                const reactionsByMessage = reactions.reduce((acc, reaction) => {
+                    const messageId = reaction.ownerId; // Updated field name
+                    if (!acc[messageId]) acc[messageId] = [];
+                    acc[messageId].push(reaction);
+                    return acc;
+                }, {} as Record<string, any[]>);
+
+                // Add reactions to each message
+                const messagesWithReactions = chat?.messages.map(message => ({
+                    ...message,
+                    reactions: reactionsByMessage[message.id] || []
+                }));
+
+                return status(200, {
+                    ...chat,
+                    messages: messagesWithReactions
+                });
             } catch (error) {
                 console.error(error);
                 status(500, { error: 'Internal server error' });

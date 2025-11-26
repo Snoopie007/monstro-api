@@ -16,7 +16,7 @@ export const reactions = pgTable('reactions', {
 	created: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
 	unique('unique_reaction').on(t.userId, t.ownerType, t.ownerId, t.emoji),
-	check('owner_type_check', sql`owner_type IN ('message', 'post', 'moment', 'comment')`),
+	check('owner_type_check', sql`owner_type IN ('message', 'post', 'moment')`),
 	index('idx_reactions_owner').on(t.ownerId, t.ownerType),
 	index('idx_reactions_user_id').on(t.userId),
 	index('idx_reactions_emoji').using('gin', t.emoji),
@@ -28,10 +28,9 @@ export const reactionCounts = pgView('reaction_counts').as((qb) =>
 	qb.select({
 		ownerType: reactions.ownerType,
 		ownerId: reactions.ownerId,
-		emoji: reactions.emoji,
-		emojiDisplay: sql<string>`emoji->>'value'`.as('emoji_display'),
-		emojiName: sql<string>`emoji->>'name'`.as('emoji_name'),
-		emojiType: sql<string>`emoji->>'type'`.as('emoji_type'),
+		display: sql<string>`emoji->>'value'`.as('display'),
+		name: sql<string>`emoji->>'name'`.as('name'),
+		type: sql<string>`emoji->>'type'`.as('type'),
 		count: sql<number>`count(*)`.as('count'),
 		userNames: sql<string[]>`array_agg(u.name order by r.created_at)`.as('user_names'),
 		userIds: sql<string[]>`array_agg(r.user_id order by r.created_at)`.as('user_ids'),
@@ -47,10 +46,9 @@ export const userReactions = pgView('user_reactions').as((qb) =>
 		userId: reactions.userId,
 		ownerType: reactions.ownerType,
 		ownerId: reactions.ownerId,
-		emoji: reactions.emoji,
-		emojiDisplay: sql<string>`emoji->>'value'`.as('emoji_display'),
-		emojiName: sql<string>`emoji->>'name'`.as('emoji_name'),
-		emojiType: sql<string>`emoji->>'type'`.as('emoji_type'),
+		display: sql<string>`emoji->>'value'`.as('display'),
+		name: sql<string>`emoji->>'name'`.as('name'),
+		type: sql<string>`emoji->>'type'`.as('type'),
 		created: reactions.created,
 	}).from(reactions)
 );
