@@ -125,13 +125,22 @@ export async function broadcastMessage(chatId: string, enrichedMessage: Enriched
 
   try {
     // Broadcast to the specific chat channel
-    const channel = supabase.channel(`chat:${chatId}`);
+    const channel = supabase.channel(`chat:${chatId}`, {
+      config: {
+        private: true, // Requires authentication
+        broadcast: { 
+          ack: false,
+        }
+      }
+    });
 
     // Broadcast the enriched message
     await channel.send({
       type: 'broadcast',
       event: 'new_message',
-      payload: enrichedMessage,
+      payload: {
+        message: enrichedMessage
+      },
     });
 
     supabase.removeChannel(channel);
@@ -152,14 +161,18 @@ export async function broadcastMessage(chatId: string, enrichedMessage: Enriched
     // Broadcast "chat_updated" to each user's personal channel
     await Promise.all(participants.map(async (member) => {
       try {
-        const userChannel = supabase.channel(`chats:${member.user.id}`);
+        const userChannel = supabase.channel(`chats:${member.user.id}`, {
+          config: {
+            private: true, // Requires authentication
+            broadcast: { 
+              ack: false,
+            }
+          }
+        });
         await userChannel.send({
           type: 'broadcast',
           event: 'chat_updated',
           payload: {
-            chatId: chatId,
-            userId: enrichedMessage.sender?.id,
-            userName: enrichedMessage.sender?.name,
             message: enrichedMessage,
           },
         });
