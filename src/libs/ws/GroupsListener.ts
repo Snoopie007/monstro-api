@@ -49,7 +49,7 @@ export class GroupsListener {
 		try {
 			// Listen for new group posts
 			const groupPostsChannel = this.supabase
-				.channel("group_posts_changes")
+				.channel("group_posts_changes", { config: { private: true } })
 				.on("postgres_changes", {
 					event: "INSERT",
 					schema: "public",
@@ -66,7 +66,7 @@ export class GroupsListener {
 
 			// Listen for new chat messages
 			const messagesChannel = this.supabase
-				.channel("messages_changes")
+				.channel("messages_changes", { config: { private: true } })
 				.on("postgres_changes", {
 					event: "INSERT",
 					schema: "public",
@@ -83,7 +83,7 @@ export class GroupsListener {
 
 			// Listen for new post comments
 			const postCommentsChannel = this.supabase
-				.channel("post_comments_changes")
+				.channel("post_comments_changes", { config: { private: true } })
 				.on("postgres_changes", {
 					event: "INSERT",
 					schema: "public",

@@ -6,7 +6,6 @@ export * from './payments';
 export * from './profile';
 export * from './avatar';
 export * from './plans';
-export * from './chats';
+export * from '../chats';
 export * from './friends';
 export * from './groups';
-export * from './chats';

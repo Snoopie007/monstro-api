@@ -44,7 +44,7 @@ export class DatabaseListener {
 
 		try {
 			const messagesChannel = this.supabase
-				.channel("support_messages_changes")
+				.channel("support_messages_changes", { config: { private: true } })
 				.on("postgres_changes", {
 					event: "INSERT",
 					schema: "public",
@@ -60,7 +60,7 @@ export class DatabaseListener {
 				});
 
 			const conversationsChannel = this.supabase
-				.channel("support_conversations_changes")
+				.channel("support_conversations_changes", { config: { private: true } })
 				.on("postgres_changes", {
 					event: "UPDATE",
 					schema: "public",

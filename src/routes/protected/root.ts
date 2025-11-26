@@ -11,8 +11,6 @@ import {
     memberPlans,
     memberFriends,
     memberGroups,
-    memberChats,
-    sendRoutes
 } from './members';
 import {
     locationAchievements,
@@ -25,13 +23,13 @@ import {
     locationSupport,
     locationEmail
 } from './locations';
-import { commentRoutes } from './comments';
-import { groupPostsRoutes } from './posts';
+import { commentRoutes } from './comments';;
+import { userChats } from './chats'
 
 export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(AuthMiddleware)
-    .use(sendRoutes)
     .use(commentRoutes)
+    .use(userChats)
     .group('/member/:mid', (app) => {
         app.use(membersLocations);
         app.use(memberAccounts);
@@ -43,7 +41,6 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(memberFriends);
         app.use(memberGroups);
         app.use(memberPlans);
-        app.use(memberChats);
         return app;
     })
     .group('/locations', (app) => {

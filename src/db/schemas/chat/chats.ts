@@ -11,6 +11,7 @@ import { members } from "../members";
 import { users } from "../users";
 import { groupPosts, groups } from "./groups";
 import { moments } from "./moments";
+import { reactions } from "./reactions";
 
 export const chats = pgTable("chats", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('cht_')`),
@@ -99,6 +100,7 @@ export const messagesRelations = relations(messages, ({ one, many }) => ({
         references: [users.id],
     }),
     medias: many(media),
+    reactions: many(reactions, { relationName: 'messageReactions' }),
 }));
 
 export const mediaRelations = relations(media, ({ one }) => ({

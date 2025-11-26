@@ -1,29 +1,29 @@
 import { Elysia } from 'elysia';
 import { db } from '@/db/db';
+import { sendMessageRoute } from './send';
+import { sql } from 'drizzle-orm';
 
 
 type ChatProps = {
     memberId: string
+    userId: string
     params: {
-        mid: string
+        uid: string
         cid: string
-    },
+    }
     status: any
 }
 
 
-
-export function memberChats(app: Elysia) {
-    return app.get('/chats', async ({ params, status }: ChatProps) => {
-
+export const userChats = new Elysia({ prefix: '/chats' })
+    .get('/', async ({ status, memberId, userId }: ChatProps) => {
+        if (!memberId || !userId) {
+            return status(401, { error: 'Unauthorized' });
+        }
         try {
 
-            const member = await db.query.members.findFirst({
-                where: (members, { eq }) => eq(members.id, params.mid!),
-            })
-
             const cms = await db.query.chatMembers.findMany({
-                where: (chatMembers, { eq }) => eq(chatMembers.userId, member?.userId!),
+                where: (chatMembers, { eq }) => eq(chatMembers.userId, userId!),
             })
 
             const chatIds = [...new Set(cms.map((cm) => cm.chatId))];
@@ -52,9 +52,9 @@ export function memberChats(app: Elysia) {
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }
-    }).group('/chats/:cid', (app) => {
+    }).group('/:cid', (app) => {
         app.get('/', async ({ params, status }: ChatProps) => {
-            const { cid, mid } = params;
+            const { cid } = params;
 
             try {
                 const chat = await db.query.chats.findFirst({
@@ -72,6 +72,24 @@ export function memberChats(app: Elysia) {
                     },
                 })
 
+                // Get all message IDs
+                const messageIds = chat?.messages.map(m => m.id) || [];
+
+                // Single query to get ALL reactions for ALL messages
+                const reactions = await db.execute(
+                    sql`  SELECT * FROM get_reaction_summary_bulk('message', ${messageIds})
+       `
+                );
+
+                console.log(reactions);
+                // Group reactions by message ID
+                // const reactionsByMessage = reactions.reduce((acc, reaction) => {
+                //     const messageId = reaction.owner_id;
+                //     if (!acc[messageId]) acc[messageId] = [];
+                //     acc[messageId].push(reaction);
+                //     return acc;
+                // }, {} as Record<string, any[]>);
+
                 return status(200, chat);
             } catch (error) {
                 console.error(error);
@@ -79,8 +97,8 @@ export function memberChats(app: Elysia) {
                 return { error: 'Internal server error' }
             }
         })
+        app.use(sendMessageRoute);
         return app;
 
     })
-}
 
