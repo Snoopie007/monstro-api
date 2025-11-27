@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useCallback, useRef, useState } from 'react'
 import { useSession } from '@/hooks/useSession'
-import { createClient } from '@supabase/supabase-js'
 import { SupportConversation, SupportMessage } from '@/types'
+import { createClient } from '@supabase/supabase-js'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface UseSupportRealtimeOptions {
     locationId: string
@@ -207,7 +207,11 @@ export function useSupportRealtime({
         try {
             // Messages channel - listen to all support_messages inserts
             const messagesChannel = supabaseRef.current
-                .channel('support_messages_changes')
+                .channel('support_messages_changes', {
+                    config: {
+                        private: true,
+                    }
+                })
                 .on(
                     'postgres_changes',
                     {
@@ -234,7 +238,11 @@ export function useSupportRealtime({
 
             // Conversations channel - listen to all support_conversations updates
             const conversationsChannel = supabaseRef.current
-                .channel('support_conversations_changes')
+                .channel('support_conversations_changes', {
+                    config: {
+                        private: true,
+                    }
+                })
                 .on(
                     'postgres_changes',
                     {

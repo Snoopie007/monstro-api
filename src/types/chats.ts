@@ -19,6 +19,7 @@ export type ChatMember = {
     userId: string;
     joined: Date;
     member?: Member;
+    user?: User;
 }
 
 export type Message = {

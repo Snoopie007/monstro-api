@@ -1,10 +1,10 @@
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-import { Time } from '@internationalized/date';
-import { NextRequest } from "next/server";
 import { ExtendedAttendance, Member } from "@/types";
+import { Time } from '@internationalized/date';
+import { type ClassValue, clsx } from "clsx";
+import { addDays, format, isToday, isYesterday, subDays } from "date-fns";
 import { decodeJwt } from "jose";
-import { addDays, subDays, isToday, isYesterday, format } from "date-fns";
+import { NextRequest } from "next/server";
+import { twMerge } from "tailwind-merge";
 import { DEFAULT_SUPPORT_TOOLS } from "./SupportDefaults";
 
 export function stringToTime(time: string) {
@@ -291,20 +291,34 @@ const generateTestAttendanceData = (): ExtendedAttendance[] => {
     return attendances
 }
 
-export {
-	sleep,
-	tryCatch,
-	formatAmountForDisplay,
-  	cn,	
-	formatTime,
-	formatEmail,
-	formatPhone,
-	interEmailsAndText,
-	authenticateMember,
-	interpolate,
-	getTimezoneOffset,
-    generateTestAttendanceData
+
+// If a timestamp string given is within the client's day -- it should just show the time. If it is more than a day -- it should show the date in this format "11/18/25 10:00 AM"
+function formatMessageTimestamp(timestamp: string | Date | number) {
+    const date = new Date(timestamp);
+    if (isToday(date)) {
+        return format(date, 'h:mm a');
+    }
+    return format(date, 'MM/dd/yy h:mm a');
 }
+
+function getDateLabel(date: Date): string {
+    // Handle invalid dates
+    if (!date || isNaN(date.getTime())) {
+        return 'Unknown date';
+    }
+    if (isToday(date)) {
+        return 'Today';
+    } else if (isYesterday(date)) {
+        return 'Yesterday';
+    } else {
+        return format(date, 'MMMM d, yyyy');
+    }
+}
+
+export {
+    authenticateMember, cn, formatAmountForDisplay, formatEmail, formatMessageTimestamp, formatPhone, formatTime, generateTestAttendanceData, getDateLabel, getTimezoneOffset, interEmailsAndText, interpolate, sleep,
+    tryCatch
+};
 
 
 // export const zPhone = z.string().transform((arg, ctx) => {
@@ -348,24 +362,5 @@ export function getDefaultAssistantSettings() {
             document: null,
         },
         availableTools: DEFAULT_SUPPORT_TOOLS,
-    }
-}
-
-// If a timestamp string given is within the client's day -- it should just show the time. If it is more than a day -- it should show the date in this format "11/18/25 10:00 AM"
-export function formatMessageTimestamp(timestamp: string | Date | number) {
-    const date = new Date(timestamp);
-    if (isToday(date)) {
-        return format(date, 'h:mm a');
-    }
-    return format(date, 'MM/dd/yy h:mm a');
-}
-
-export function getDateLabel(date: Date): string {
-    if (isToday(date)) {
-        return 'Today';
-    } else if (isYesterday(date)) {
-        return 'Yesterday';
-    } else {
-        return format(date, 'MMMM d, yyyy');
     }
 }

@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import supabase from '@/libs/client/supabase';
-import { useSession } from './useSession';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 import { clientsideApiClient } from '@/libs/api/client';
+import supabase from '@/libs/client/supabase';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSession } from './useSession';
 
 interface Message {
   id: string;
@@ -202,22 +202,17 @@ export const useSocialChat = ({
         return;
       }
 
+      // Set auth token for private channels
+      if (session?.user?.sbToken) {
+        supabase.realtime.setAuth(session.user.sbToken);
+      } 
       setChatId(foundChatId);
-
-      // Set up realtime channel with Broadcast Replay
-      const replayTimestamp = Date.now() - (10 * 60 * 1000); // Last 10 minutes
 
       channel = supabase.channel(`chat:${foundChatId}`, {
         config: {
           private: true, // Requires authentication
           broadcast: { 
-            self: false, // Don't receive own messages via broadcast
             ack: false,
-            // @ts-expect-error - replay is available in Supabase client 2.74.0+ but not yet in type definitions
-            replay: {
-              since: replayTimestamp,
-              limit: 25 // Get up to 25 recent messages
-            }
           }
         }
       });
@@ -226,10 +221,7 @@ export const useSocialChat = ({
       channel.on('broadcast', { event: 'new_message' }, (payload) => {
         if (!mounted) return;
 
-        const enrichedMessage = payload.payload;
-        
-        // Check if this is a replayed message
-        const isReplayed = payload.meta?.replayed;
+        const enrichedMessage = payload.payload
         
         // Messages are now enriched by the API with sender and media data
         const message: Message = {
@@ -243,22 +235,11 @@ export const useSocialChat = ({
           created_at: enrichedMessage.created,
           updated_at: enrichedMessage.updated,
         };
-        
-        if (isReplayed) {
-          // Add replayed messages to state, avoiding duplicates
-          setMessages((prev) => {
-            if (prev.some(m => m.id === message.id)) return prev;
-            return [...prev, message].sort(
-              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-            );
-          });
-        } else {
-          // New message (not replayed)
-          setMessages((prev) => {
-            if (prev.some(m => m.id === message.id)) return prev;
-            return [...prev, message];
-          });
-        }
+        // New message (not replayed)
+        setMessages((prev) => {
+          if (prev.some(m => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
       });
 
       // Subscribe to the channel

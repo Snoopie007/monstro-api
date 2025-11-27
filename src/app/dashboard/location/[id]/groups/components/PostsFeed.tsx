@@ -1,13 +1,20 @@
 "use client";
 
 import { Button, Card, CardContent, Empty, EmptyDescription, EmptyHeader, EmptyTitle, Skeleton } from "@/components/ui";
-import { Filter, Loader2, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { PostCard } from "./PostCard";
 import { GroupPost } from "@/types/groups";
 import { useCommunityPosts } from "@/hooks/useCommunityPosts";
+import { CreatePostDialog } from "./CreatePostDialog";
 
-export function PostsFeed({ id, gid }: { id: string, gid: string }) {
-  const { posts, error, isLoading } = useCommunityPosts({ id, gid });
+interface PostsFeedProps {
+  id: string;
+  gid: string;
+  groupName: string;
+}
+
+export function PostsFeed({ id, gid, groupName }: PostsFeedProps) {
+  const { posts, error, isLoading, refetch } = useCommunityPosts({ id, gid });
   const hasPosts = posts?.length > 0;
 
   return (
@@ -22,10 +29,17 @@ export function PostsFeed({ id, gid }: { id: string, gid: string }) {
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="primary" size="sm" className="gap-2 rounded-full">
-            <Pencil size={16} />
-            Create post
-          </Button>
+          <CreatePostDialog 
+            groupId={gid} 
+            groupName={groupName}
+            onSuccess={refetch}
+            trigger={
+              <Button variant="primary" size="sm" className="gap-2 rounded-full">
+                <Pencil size={16} />
+                Create post
+              </Button>
+            }
+          />
         </div>
       </header>
 
@@ -46,9 +60,16 @@ export function PostsFeed({ id, gid }: { id: string, gid: string }) {
               follow.
             </EmptyDescription>
           </EmptyHeader>
-          <Button variant="primary" className="rounded-full">
-            Create the first post
-          </Button>
+          <CreatePostDialog 
+            groupId={gid} 
+            groupName={groupName}
+            onSuccess={refetch}
+            trigger={
+              <Button variant="primary" className="rounded-full">
+                Create the first post
+              </Button>
+            }
+          />
         </Empty>
       )}
     </section>
@@ -77,5 +98,3 @@ function LoadingState() {
     </div>
   );
 }
-
-

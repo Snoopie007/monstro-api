@@ -6,7 +6,7 @@ const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export const useCommunityPosts = ({ id, gid }: { id: string, gid: string }) => {
 
-    const { data, error, isLoading } = useQuery({
+    const { data, error, isLoading, refetch } = useQuery({
         queryKey: ['communityPosts', id, gid],
         queryFn: () => fetcher(`/api/protected/loc/${id}/groups/${gid}/posts`),
     });
@@ -24,5 +24,5 @@ export const useCommunityPosts = ({ id, gid }: { id: string, gid: string }) => {
         });
     }, [data?.posts]);
 
-    return { posts, error, isLoading };
+    return { posts, error, isLoading, refetch };
 }

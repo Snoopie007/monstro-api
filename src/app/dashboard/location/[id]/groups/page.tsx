@@ -1,13 +1,15 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
 import { db } from "@/db/db";
-import { chats, groups } from "@/db/schemas";
-import { and, eq, inArray, isNotNull } from "drizzle-orm";
-import { GroupsList } from "./components/GroupsList";
-import { GroupChatView } from "./components/GroupChatView";
+import { chatMembers, chats, groups } from "@/db/schemas";
+import { auth } from "@/libs/auth/server";
 import { Chat } from "@/types/chats";
-import { GroupsProvider } from "./components/GroupsProvider";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui";
-import { GroupPostsView } from "./components/GroupPostsView";
+import { and, eq, exists, inArray, isNotNull } from "drizzle-orm";
+import { redirect } from "next/navigation";
 import { memo } from "react";
+import { GroupChatView } from "./components/GroupChatView";
+import { GroupPostsView } from "./components/GroupPostsView";
+import { GroupsList } from "./components/GroupsList";
+import { GroupsProvider } from "./components/GroupsProvider";
 
 type GroupsPageProps = {
   params: Promise<{ id: string }>;
@@ -15,7 +17,8 @@ type GroupsPageProps = {
 
 
 async function getChatsData(
-  locationId: string
+  locationId: string,
+  userId: string
 ): Promise<{ chats: Chat[]}> {
 
   const groupsInLocation = await db.query.groups.findMany({
@@ -25,19 +28,41 @@ async function getChatsData(
     }
   });
 
+  if (groupsInLocation.length === 0) {
+    return { chats: [] };
+  }
+
   const chatsWithGroupId = await db.query.chats.findMany({
-    where: and(isNotNull(chats.groupId), inArray(chats.groupId, groupsInLocation.map((g) => g.id))),
+    where: and(
+      isNotNull(chats.groupId),
+      inArray(chats.groupId, groupsInLocation.map((g) => g.id)),
+      exists(
+        db.select()
+          .from(chatMembers)
+          .where(and(
+            eq(chatMembers.chatId, chats.id),
+            eq(chatMembers.userId, userId)
+          ))
+      )
+    ),
     with: {
       group: true,
-      chatMembers: true,
+      chatMembers: {
+        with: {
+          user: true,
+        }
+      },
     }
-  });
+  }); 
   return { chats: chatsWithGroupId as Chat[] };
 }
 
 export default async function GroupsPage(props: GroupsPageProps) {
+  const session = await auth();
+  if (!session) redirect("/login");
+
   const params = await props.params;
-  const { chats } = await getChatsData(params.id);
+  const { chats } = await getChatsData(params.id, session.user.id);
 
   return (
     <div className="w-full h-full pb-2 pr-2">
@@ -54,7 +79,7 @@ export default async function GroupsPage(props: GroupsPageProps) {
                                 <TabsTrigger value="posts" className="bg-foreground/5 text-xs capitalize rounded-full">Posts</TabsTrigger>
                             </TabsList>
                         </div>
-                         <div className="flex-1 min-h-0">
+                         <div className="flex-1 min-h-0 flex flex-col">
                             <TabsContent value="chat" className="h-full m-0 data-[state=active]:flex flex-col">
                                 <GroupChatMemo lid={params.id} />
                             </TabsContent>

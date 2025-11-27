@@ -1,10 +1,14 @@
 'use client'
 import supabase from "@/libs/client/supabase";
-import {
-    createContext, useContext, ReactElement,
-    ReactNode, useEffect, useReducer, Dispatch
-} from "react";
 import { LocationState } from "@/types/location";
+import {
+    createContext,
+    Dispatch,
+    ReactElement,
+    ReactNode,
+    useContext,
+    useEffect, useReducer
+} from "react";
 
 type StateType = {
     locationState: LocationState;
@@ -44,7 +48,11 @@ export const AccountStatusProvider = ({
 
     useEffect(() => {
         if (!locationState) return;
-        const channel = supabase.channel('LocationChanges')
+        const channel = supabase.channel('LocationChanges' , {
+            config: {
+                private: true,
+            }
+        })
             .on('postgres_changes', {
                 event: 'UPDATE',
                 schema: 'public',

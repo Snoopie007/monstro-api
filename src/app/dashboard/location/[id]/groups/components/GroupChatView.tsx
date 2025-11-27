@@ -1,13 +1,15 @@
 'use client'
 
-import { useGroups } from "./GroupsProvider";
-import { GroupChatInput } from "./GroupChatInput";
 import { Avatar, AvatarFallback, AvatarImage, ScrollArea } from "@/components/ui";
 import { useGroupChat } from "@/hooks/useGroupChat";
 import { useSession } from "@/hooks/useSession";
-import { useRef } from "react";
 import { formatMessageTimestamp, getDateLabel } from "@/libs/utils";
 import { isSameDay } from "date-fns";
+import { useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import { ChatActions } from "./ChatActions";
+import { GroupChatInput } from "./GroupChatInput";
+import { useGroups } from "./GroupsProvider";
 
 export function GroupChatView({ lid }: { lid: string }) {
     const {currentChat} = useGroups()
@@ -41,6 +43,11 @@ export function GroupChatView({ lid }: { lid: string }) {
               <div className="flex flex-row items-center gap-2">
                 <span className="text-sm font-bold">{currentChat?.name ?? currentChat?.group?.name}</span>
               </div>
+              <ChatActions 
+                lid={lid} 
+                chatId={currentChat.id} 
+                chatMembers={currentChat.chatMembers}
+              />
             </div>
     
           </div>
@@ -54,7 +61,7 @@ export function GroupChatView({ lid }: { lid: string }) {
                         This group has no members yet.
                     </span>
                     </div>
-                </div>
+                </div>  
                 ) : (
                 <>
                     <ScrollArea className="flex-1 w-full px-4">
@@ -72,10 +79,9 @@ export function GroupChatView({ lid }: { lid: string }) {
                                 
                                 const prevMessage = messages[index - 1];
                                 const isNewDay = !prevMessage || !isSameDay(new Date(prevMessage.created), new Date(message.created));
-            
                                 return (
                                     <div key={message.id}>
-                                        {isNewDay && (
+                                        {isNewDay && message.created && (
                                             <div className="relative flex items-center justify-center my-6">
                                                 <div className="absolute inset-0 flex items-center">
                                                     <span className="w-full border-t border-muted-foreground/20" />
@@ -102,17 +108,13 @@ export function GroupChatView({ lid }: { lid: string }) {
                                                         {isFromCurrentUser ? "You" : displayName}
                                                     </span>
                                                     <span className="text-xs text-muted-foreground/60">
-                                                        {formatMessageTimestamp(message.created)}
+                                                        {message.created ? formatMessageTimestamp(message.created) : "Unknown time"}
                                                     </span>
                                                 </div>
-                                                <div
-                                                className={`rounded-lg px-3 py-2 text-sm ${
-                                                    isFromCurrentUser
-                                                    ? 'bg-primary text-primary-foreground'
-                                                    : 'bg-muted'
-                                                }`}
-                                                >
-                                                {message.content}
+                                                <div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
+                                                    <ReactMarkdown>
+                                                        {message.content}
+                                                    </ReactMarkdown>
                                                 </div>
                                                 
                                                 {/* Separate images from other files */}

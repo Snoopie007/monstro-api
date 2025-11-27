@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import supabase from '@/libs/client/supabase';
-import { useSession } from './useSession';
-import type { RealtimeChannel } from '@supabase/supabase-js';
-import { Message } from '@/types/chats';
 import { clientsideApiClient } from '@/libs/api/client';
+import supabase from '@/libs/client/supabase';
+import { Message } from '@/types/chats';
+import { createClient, RealtimeChannel } from '@supabase/supabase-js';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSession } from './useSession';
 
 interface UseGroupChatOptions {
   chatId: string | null;
@@ -22,6 +22,28 @@ export const useGroupChat = ({
   const [isLoading, setIsLoading] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Create authenticated Supabase client like mobile does
+  // This ensures the WebSocket connection has the token from the start
+  const authenticatedSupabase = useMemo(() => {
+    if (!session?.user?.sbToken) return null;
+    return createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${session.user.sbToken}`
+          }
+        },
+        realtime: {
+          params: {
+            eventsPerSecond: 500,
+          },
+        },
+      }
+    );
+  }, [session?.user?.sbToken]);
 
   // Load messages for the current chat
   const loadMessages = useCallback(async (currentChatId: string) => {
@@ -110,11 +132,11 @@ export const useGroupChat = ({
           formData.append('files', file);
         });
       }
-      
+
       // Use API client with the Supabase token from session
+      // The API saves the message and broadcasts it to other clients
       const api = clientsideApiClient(session.user.sbToken);
       const enrichedMessage = await api.post(`/protected/chats/${chatId}/messages`, formData) as any;
-      
       // Since we have self: false, we won't receive our own messages via broadcast
       // So we need to manually add it to the local state
       const mapped: Message = {
@@ -143,7 +165,7 @@ export const useGroupChat = ({
   // Initialize chat and set up realtime subscription
   useEffect(() => {
 
-    if (!enabled || !session || !chatId || !fromUserId) {
+    if (!enabled || !session || !chatId || !fromUserId || !authenticatedSupabase) {
       setMessages([]);
       setIsConnected(false);
       return;
@@ -153,23 +175,23 @@ export const useGroupChat = ({
     let mounted = true;
 
     const initializeChat = async () => {
-      if (!mounted) return;
+      if (!mounted || !authenticatedSupabase) return;
+      
+      if (session?.user?.sbToken) {
+        // Set auth token for realtime (like mobile does)
+        await authenticatedSupabase.realtime.setAuth(session.user.sbToken);
+      } else {
+        console.error('No sbToken available - cannot authenticate realtime');
+        return;
+      }
+      
       loadMessages(chatId);
-      // Set up realtime channel with Broadcast Replay
-      const replayTimestamp = Date.now() - (10 * 60 * 1000); // Last 10 minutes
-
-      channel = supabase.channel(`chat:${chatId}`, {
+      // Use authenticated client for realtime
+      channel = authenticatedSupabase.channel(`chat:${chatId}`, {
         config: {
           private: true, // Requires authentication
           broadcast: { 
-            self: false, // Don't receive own messages via broadcast
             ack: false,
-            // @ts-expect-error - replay is available in Supabase client 2.74.0+ but not yet in type definitions
-            replay: {
-              since: replayTimestamp,
-              limit: 25 // Get up to 25 recent messages
-
-            }
           }
         }
       });
@@ -177,10 +199,14 @@ export const useGroupChat = ({
       // Listen for new messages
       channel.on('broadcast', { event: 'new_message' }, (payload) => {
         if (!mounted) return;
-        const enrichedMessage = payload.payload;
+        // The message is nested: payload.payload.message
+        const enrichedMessage = payload.payload?.message;
         
-        // Check if this is a replayed message
-        const isReplayed = payload.meta?.replayed;
+        // Skip if no valid message
+        if (!enrichedMessage?.id) {
+          console.warn('Invalid message received:', enrichedMessage);
+          return;
+        }
         
         // Messages are now enriched by the API with sender and media data
         const mapped: Message = {
@@ -197,21 +223,11 @@ export const useGroupChat = ({
           updated: enrichedMessage.updated,
         };
         
-        if (isReplayed) {
-          // Add replayed messages to state, avoiding duplicates
-          setMessages((prev) => {
-            if (prev.some(m => m.id === mapped.id)) return prev;
-            return [...prev, mapped].sort(
-              (a, b) => new Date(a.created).getTime() - new Date(b.created).getTime()
-            );
-          });
-        } else {
-          // New message (not replayed)
-          setMessages((prev) => {
-            if (prev.some(m => m.id === mapped.id)) return prev;
-            return [...prev, mapped];
-          });
-        }
+        // New message (not replayed)
+        setMessages((prev) => {
+          if (prev.some(m => m.id === mapped.id)) return prev;
+          return [...prev, mapped];
+        });
       });
 
       // Subscribe to the channel
@@ -232,18 +248,17 @@ export const useGroupChat = ({
 
       channelRef.current = channel;
     };
-
     initializeChat();
 
     // Cleanup
     return () => {
       mounted = false;
-      if (channel) {
+      if (channel && authenticatedSupabase) {
         channel.unsubscribe();
-        supabase.removeChannel(channel);
+        authenticatedSupabase.removeChannel(channel);
       }
     };
-  }, [enabled, session, chatId, fromUserId, loadMessages]);
+  }, [enabled, session, chatId, fromUserId, loadMessages, authenticatedSupabase]);
 
   return {
     messages,
