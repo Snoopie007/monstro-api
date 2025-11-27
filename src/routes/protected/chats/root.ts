@@ -1,8 +1,8 @@
-import { Elysia } from 'elysia';
 import { db } from '@/db/db';
-import { sendMessageRoute } from './send';
-import { and, eq, inArray, sql } from 'drizzle-orm';
 import { reactionCounts } from '@/db/schemas/chat/reactions';
+import { and, eq, inArray } from 'drizzle-orm';
+import { Elysia } from 'elysia';
+import { sendMessageRoute } from './send';
 
 
 type ChatProps = {
@@ -68,7 +68,7 @@ export const userChats = new Elysia({ prefix: '/chats' })
                             with: {
                                 medias: true,
                                 sender: true,
-                            },
+                                                            },
                         },
                     },
                 })

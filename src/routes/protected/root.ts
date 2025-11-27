@@ -1,30 +1,30 @@
-import { Elysia } from 'elysia';
 import { AuthMiddleware } from '@/middlewares';
-import {
-    membersLocations,
-    memberAccounts,
-    resetPassword,
-    memberFamilies,
-    memberPayments,
-    memberProfile,
-    memberAvatar,
-    memberPlans,
-    memberFriends,
-    memberGroups,
-} from './members';
+import { Elysia } from 'elysia';
+import { userChats } from './chats';
+import { commentRoutes } from './comments';
 import {
     locationAchievements,
     locationCheckin,
     locationDocs,
-    locationReservations,
+    locationEmail,
     locationLeaderboard,
+    locationReservations,
     locationRewards,
     locationSessions,
-    locationSupport,
-    locationEmail
+    locationSupport
 } from './locations';
-import { commentRoutes } from './comments';;
-import { userChats } from './chats'
+import {
+    memberAccounts,
+    memberAvatar,
+    memberFamilies,
+    memberFriends,
+    memberGroups,
+    memberPayments,
+    memberPlans,
+    memberProfile,
+    membersLocations,
+    resetPassword,
+} from './members';
 
 export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(AuthMiddleware)
