@@ -81,7 +81,6 @@ export const userChats = new Elysia({ prefix: '/chats' })
                     eq(reactionCounts.ownerType, 'message'),
                     inArray(reactionCounts.ownerId, messageIds)
                 ));
-                console.log(reactions);
 
                 // Group reactions by message ID
                 const reactionsByMessage = reactions.reduce((acc, reaction) => {

@@ -8,7 +8,7 @@ import { moments } from './moments';
 import { comments } from './comments';
 // Main reactions table
 export const reactions = pgTable('reactions', {
-	id: text('id').primaryKey().default(sql`uuid_base62('')`),
+	id: text('id').primaryKey().default(sql`uuid_base62()`),
 	userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
 	ownerType: text('owner_type').notNull(),
 	ownerId: text('owner_id').notNull(),
