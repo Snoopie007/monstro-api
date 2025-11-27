@@ -61,6 +61,7 @@ export async function POST(
 				lastRenewalDate: today,
 				updated: today,
 			}).where(eq(locationState.locationId, lid));
+
 		});
 
 		return NextResponse.json({ success: true }, { status: 200 });

@@ -83,7 +83,24 @@ export async function POST(
 				updated: today,
 			}).where(eq(vendors.id, vendorId));
 		});
-
+		try {
+			await fetch('https://api.mymonstroapp.com/api/public/signup', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer 4087c1d6-5bb9-47a5-8598-c2a0868c6a78`
+				},
+				body: JSON.stringify({
+					email: vendor.email!,
+					firstName: vendor.firstName,
+					lastName: vendor.lastName!,
+					phone: vendor.phone!,
+					lid: lid,
+				})
+			})
+		} catch (error) {
+			console.log(error);
+		}
 		return NextResponse.json({ success: true }, { status: 200 });
 	} catch (err) {
 		console.log(err);
