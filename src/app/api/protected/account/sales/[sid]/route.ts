@@ -57,25 +57,24 @@ export async function POST(req: Request) {
             throw new Error("Failed to create location")
         }
 
-        let plan: MonstroPlan | null = null;
-        if (sale.planId) {
-            plan = await getPlan(3)
-        }
+        const plan = await getPlan(sale.planId)
 
         const metadata = { vendorId, locationId: location.id }
 
         stripe.setCustomer(sale.stripeCustomerId)
 
-        if (plan) {
+
+        if ([2, 3].includes(plan.id)) {
             await Promise.all([
                 stripe.createSubscription(plan, metadata, 0),
                 stripe.createGHLSubscription(metadata),
             ]);
 
-            if (sale.packageId === 6) {
+            if (sale.upgradeToScale && plan.id === 3) {
                 await stripe.createScaleUpgrade(metadata)
             }
         }
+
 
         await db.transaction(async (tx) => {
             await tx.insert(locationState).values({

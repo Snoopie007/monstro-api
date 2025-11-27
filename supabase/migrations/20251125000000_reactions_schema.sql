@@ -6,7 +6,7 @@
 -- REACTIONS TABLE
 -- ========================
 CREATE TABLE IF NOT EXISTS reactions (
-  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('rxn_'),
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(''),
   user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
   owner_type text CHECK (owner_type IN ('message', 'post', 'moment', 'comment')) NOT NULL,
   owner_id text NOT NULL,
@@ -30,10 +30,9 @@ CREATE OR REPLACE VIEW reaction_counts AS
 SELECT 
   r.owner_type,
   r.owner_id,
-  r.emoji,
-  r.emoji->>'value' as emoji_display,
-  r.emoji->>'name' as emoji_name,
-  r.emoji->>'type' as emoji_type,
+  r.emoji->>'value' as display,
+  r.emoji->>'name' as name,
+  r.emoji->>'type' as type,
   COUNT(*) as count,
   array_agg(u.name ORDER BY r.created_at) as user_names,
   array_agg(r.user_id ORDER BY r.created_at) as user_ids
@@ -51,10 +50,9 @@ SELECT
   r.user_id,
   r.owner_type,
   r.owner_id,
-  r.emoji,
-  r.emoji->>'value' as emoji_display,
-  r.emoji->>'name' as emoji_name,
-  r.emoji->>'type' as emoji_type,
+  r.emoji->>'value' as display,
+  r.emoji->>'name' as name,
+  r.emoji->>'type' as type,
   r.created_at
 FROM reactions r;
 
@@ -134,31 +132,29 @@ CREATE OR REPLACE FUNCTION get_reaction_summary(
   p_owner_type text,
   p_owner_id text
 )
-RETURNS TABLE(
-  emoji jsonb,
-  emoji_display text,
-  emoji_name text,
-  emoji_type text,
-  count bigint,
-  user_names text[],
-  user_ids text[]
+RETURNS TABLE (
+    display text,
+    name text,
+    type text,
+    count bigint,
+    user_names text[],
+    user_ids text[]
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
   RETURN QUERY
   SELECT 
-    rc.emoji,
-    rc.emoji_display,
-    rc.emoji_name,
-    rc.emoji_type,
+    rc.display,
+    rc.name,
+    rc.type,
     rc.count,
     rc.user_names,
     rc.user_ids
   FROM reaction_counts rc
   WHERE rc.owner_type = p_owner_type 
   AND rc.owner_id = p_owner_id
-  ORDER BY rc.count DESC, rc.emoji_display;
+  ORDER BY rc.count DESC, rc.display;
 END;
 $$;
 
@@ -199,8 +195,8 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    -- Update reaction count based on reactable_type
-    CASE NEW.reactable_type
+    -- Update reaction count based on owner_type
+    CASE NEW.owner_type
       WHEN 'message' THEN
         UPDATE messages 
         SET metadata = jsonb_set(
@@ -208,7 +204,7 @@ BEGIN
           '{reaction_count}',
           to_jsonb(COALESCE((metadata->>'reaction_count')::int, 0) + 1)
         )
-        WHERE id = NEW.reactable_id;
+        WHERE id = NEW.owner_id;
       WHEN 'post' THEN
         UPDATE group_posts 
         SET metadata = jsonb_set(
@@ -216,7 +212,7 @@ BEGIN
           '{reaction_count}',
           to_jsonb(COALESCE((metadata->>'reaction_count')::int, 0) + 1)
         )
-        WHERE id = NEW.reactable_id;
+        WHERE id = NEW.owner_id;
       WHEN 'moment' THEN
         UPDATE moments 
         SET metadata = jsonb_set(
@@ -224,11 +220,11 @@ BEGIN
           '{reaction_count}',
           to_jsonb(COALESCE((metadata->>'reaction_count')::int, 0) + 1)
         )
-        WHERE id = NEW.reactable_id;
+        WHERE id = NEW.owner_id;
     END CASE;
   ELSIF TG_OP = 'DELETE' THEN
-    -- Decrease reaction count based on reactable_type
-    CASE OLD.reactable_type
+    -- Decrease reaction count based on owner_type
+    CASE OLD.owner_type
       WHEN 'message' THEN
         UPDATE messages 
         SET metadata = jsonb_set(
@@ -236,7 +232,7 @@ BEGIN
           '{reaction_count}',
           to_jsonb(GREATEST(COALESCE((metadata->>'reaction_count')::int, 0) - 1, 0))
         )
-        WHERE id = OLD.reactable_id;
+        WHERE id = OLD.owner_id;
       WHEN 'post' THEN
         UPDATE group_posts 
         SET metadata = jsonb_set(
@@ -244,7 +240,7 @@ BEGIN
           '{reaction_count}',
           to_jsonb(GREATEST(COALESCE((metadata->>'reaction_count')::int, 0) - 1, 0))
         )
-        WHERE id = OLD.reactable_id;
+        WHERE id = OLD.owner_id;
       WHEN 'moment' THEN
         UPDATE moments 
         SET metadata = jsonb_set(
@@ -252,7 +248,7 @@ BEGIN
           '{reaction_count}',
           to_jsonb(GREATEST(COALESCE((metadata->>'reaction_count')::int, 0) - 1, 0))
         )
-        WHERE id = OLD.reactable_id;
+        WHERE id = OLD.owner_id;
     END CASE;
   END IF;
   
@@ -305,3 +301,6 @@ CREATE TRIGGER trigger_update_reaction_count
 -- WHERE emoji->>'type' = 'unicode'
 -- GROUP BY emoji->>'value'
 -- ORDER BY usage_count DESC;
+-- ========================
+-- REMOVE REACTIONS SCHEMA
+-- ========================
