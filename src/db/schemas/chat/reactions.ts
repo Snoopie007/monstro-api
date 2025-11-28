@@ -30,6 +30,7 @@ export const reactionCounts = pgView('reaction_counts').as((qb) =>
 		ownerType: reactions.ownerType,
 		ownerId: reactions.ownerId,
 		display: sql<string>`emoji->>'value'`.as('display'),
+		name: sql<string>`emoji->>'name'`.as('name'),
 		type: sql<string>`emoji->>'type'`.as('type'),
 		count: sql<number>`count(*)`.as('count'),
 		userNames: sql<string[]>`array_agg(u.name order by r.created_at)`.as('user_names'),
@@ -47,6 +48,7 @@ export const userReactions = pgView('user_reactions').as((qb) =>
 		ownerType: reactions.ownerType,
 		ownerId: reactions.ownerId,
 		display: sql<string>`emoji->>'value'`.as('display'),
+		name: sql<string>`emoji->>'name'`.as('name'),
 		type: sql<string>`emoji->>'type'`.as('type'),
 		created: reactions.created,
 	}).from(reactions)
