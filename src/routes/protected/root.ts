@@ -2,6 +2,7 @@ import { AuthMiddleware } from '@/middlewares';
 import { Elysia } from 'elysia';
 import { userChats } from './chats';
 import { commentRoutes } from './comments';
+import { reactionRoutes } from './reactions';
 import {
     locationAchievements,
     locationCheckin,
@@ -29,6 +30,7 @@ import {
 export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(AuthMiddleware)
     .use(commentRoutes)
+    .use(reactionRoutes)
     .use(userChats)
     .group('/member/:mid', (app) => {
         app.use(membersLocations);

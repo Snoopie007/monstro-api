@@ -6,13 +6,14 @@ import { messages } from './chats';
 import { groupPosts } from './groups';
 import { moments } from './moments';
 import { comments } from './comments';
+import type { ReactionEmoji } from '@/types';
 // Main reactions table
 export const reactions = pgTable('reactions', {
 	id: text('id').primaryKey().default(sql`uuid_base62()`),
 	userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
 	ownerType: text('owner_type').notNull(),
 	ownerId: text('owner_id').notNull(),
-	emoji: jsonb('emoji').notNull(),
+	emoji: jsonb('emoji').$type<ReactionEmoji>().notNull(),
 	created: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
 	unique('unique_reaction').on(t.userId, t.ownerType, t.ownerId, t.emoji),
@@ -29,7 +30,6 @@ export const reactionCounts = pgView('reaction_counts').as((qb) =>
 		ownerType: reactions.ownerType,
 		ownerId: reactions.ownerId,
 		display: sql<string>`emoji->>'value'`.as('display'),
-		name: sql<string>`emoji->>'name'`.as('name'),
 		type: sql<string>`emoji->>'type'`.as('type'),
 		count: sql<number>`count(*)`.as('count'),
 		userNames: sql<string[]>`array_agg(u.name order by r.created_at)`.as('user_names'),
@@ -47,7 +47,6 @@ export const userReactions = pgView('user_reactions').as((qb) =>
 		ownerType: reactions.ownerType,
 		ownerId: reactions.ownerId,
 		display: sql<string>`emoji->>'value'`.as('display'),
-		name: sql<string>`emoji->>'name'`.as('name'),
 		type: sql<string>`emoji->>'type'`.as('type'),
 		created: reactions.created,
 	}).from(reactions)
