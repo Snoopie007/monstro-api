@@ -1,11 +1,11 @@
 import { relations, sql } from "drizzle-orm";
 import { text, timestamp, pgTable, unique, index } from "drizzle-orm/pg-core";
-import { members } from "../members";
+import { users } from "../users";
 
 export const friends = pgTable("friends", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('frn_')`),
-    requesterId: text("requester_id").notNull().references(() => members.id, { onDelete: "cascade" }),
-    addresseeId: text("addressee_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+    requesterId: text("requester_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    addresseeId: text("addressee_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     status: text("status", { enum: ["pending", "accepted", "blocked"] }).notNull().default("pending"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
@@ -17,14 +17,14 @@ export const friends = pgTable("friends", {
 ]);
 
 export const friendsRelations = relations(friends, ({ one }) => ({
-    requester: one(members, {
+    requester: one(users, {
         fields: [friends.requesterId],
-        references: [members.id],
+        references: [users.id],
         relationName: "friendRequester",
     }),
-    addressee: one(members, {
+    addressee: one(users, {
         fields: [friends.addresseeId],
-        references: [members.id],
+        references: [users.id],
         relationName: "friendAddressee",
     }),
 }));

@@ -3,6 +3,7 @@ import { Elysia } from 'elysia';
 import { userChats } from './chats';
 import { commentRoutes } from './comments';
 import { reactionRoutes } from './reactions';
+import { userFriends } from './friends';
 import {
     locationAchievements,
     locationCheckin,
@@ -18,7 +19,6 @@ import {
     memberAccounts,
     memberAvatar,
     memberFamilies,
-    memberFriends,
     memberGroups,
     memberPayments,
     memberPlans,
@@ -32,6 +32,7 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(commentRoutes)
     .use(reactionRoutes)
     .use(userChats)
+    .use(userFriends)
     .group('/member/:mid', (app) => {
         app.use(membersLocations);
         app.use(memberAccounts);
@@ -40,7 +41,6 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(memberPayments);
         app.use(memberProfile);
         app.use(memberAvatar);
-        app.use(memberFriends);
         app.use(memberGroups);
         app.use(memberPlans);
         return app;
