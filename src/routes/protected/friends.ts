@@ -11,7 +11,6 @@ export const userFriends = new Elysia({ prefix: '/friends' })
         if (!userId) {
             return status(401, { error: "Unauthorized" });
         }
-        console.log('userId', userId);
         try {
             const friends = await db.query.friends.findMany({
                 where: (a, { eq, and }) => and(eq(a.requesterId, userId)),
@@ -20,7 +19,6 @@ export const userFriends = new Elysia({ prefix: '/friends' })
                 },
             });
 
-            console.log('friends', friends);
             return status(200, friends);
         } catch (error) {
             console.error(error);

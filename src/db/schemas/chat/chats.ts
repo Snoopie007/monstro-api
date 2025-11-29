@@ -12,10 +12,13 @@ import { users } from "../users";
 import { groupPosts, groups } from "./groups";
 import { moments } from "./moments";
 import { reactions } from "./reactions";
+import { locations } from "../locations";
 
 export const chats = pgTable("chats", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('cht_')`),
     startedBy: text("started_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull().default('New Chat'),
+    locationId: text("location_id").references(() => locations.id, { onDelete: "cascade" }),
     groupId: text("group_id").references(() => groups.id, { onDelete: "cascade" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
@@ -68,6 +71,10 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
         fields: [chats.startedBy],
         references: [members.id],
         relationName: "chatStartedBy",
+    }),
+    location: one(locations, {
+        fields: [chats.locationId],
+        references: [locations.id],
     }),
     group: one(groups, {
         fields: [chats.groupId],

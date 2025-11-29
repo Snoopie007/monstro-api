@@ -2,8 +2,14 @@ import { db } from '@/db/db';
 import { reactionCounts } from '@/db/schemas/chat/reactions';
 import { and, eq, inArray } from 'drizzle-orm';
 import { Elysia } from 'elysia';
-import { sendMessageRoute } from './send';
+import { chatMembers, chats } from '@/db/schemas/chat/chats';
+import { sendMessageRoute } from './messages';
 
+
+type PostChatProps = {
+    userId: string
+    status: any
+}
 
 type ChatProps = {
     memberId: string
@@ -33,17 +39,38 @@ export const userChats = new Elysia({ prefix: '/chats' })
                 with: {
                     chatMembers: {
                         with: {
-                            user: true,
+                            user: {
+                                columns: {
+                                    id: true,
+                                    name: true,
+                                    image: true,
+                                },
+                            },
                         },
                     },
-                    group: true,
+                    group: {
+                        columns: {
+                            id: true,
+                            name: true,
+                            coverImage: true,
+                        },
+                    },
+                    location: {
+                        columns: {
+                            id: true,
+                            name: true,
+                            logoUrl: true,
+                        },
+                    },
                     messages: {
                         orderBy: (messages, { desc }) => desc(messages.created),
                         limit: 1,
-                        with: {
-                            sender: true,
+                        columns: {
+                            id: true,
+                            content: true,
+                            created: true,
                         },
-                    },
+                    }
                 },
             })
 
@@ -53,7 +80,78 @@ export const userChats = new Elysia({ prefix: '/chats' })
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }
-    }).group('/:cid', (app) => {
+    })
+    .post('/', async ({ body, status, userId }: PostChatProps & { body: { addresseeId: string, groupId: string } }) => {
+        const { addresseeId } = body;
+        try {
+
+            const user = await db.query.users.findFirst({
+                where: (users, { eq }) => eq(users.id, userId),
+                columns: {
+                    id: true,
+                    name: true,
+                    image: true,
+                },
+            });
+            if (!user) {
+                return status(404, { error: 'User not found' });
+            }
+
+            const addressee = await db.query.users.findFirst({
+                where: (users, { eq }) => eq(users.id, addresseeId),
+                columns: {
+                    id: true,
+                    name: true,
+                    image: true,
+                },
+            });
+            if (!addressee) {
+                return status(404, { error: 'Addressee not found' });
+            }
+
+            const chat = await db.transaction(async (tx) => {
+                const [chat] = await tx.insert(chats).values({
+                    startedBy: userId,
+                    name: addressee.name,
+                }).returning();
+
+                if (!chat) {
+                    return await tx.rollback();
+                }
+
+                await tx.insert(chatMembers).values([{
+                    chatId: chat.id,
+                    userId: userId,
+                }, {
+                    chatId: chat.id,
+                    userId: addresseeId,
+                }]);
+                return {
+                    ...chat,
+                    chatMembers: [
+                        {
+                            chatId: chat.id,
+                            userId: userId,
+                            user: user,
+                        },
+                        {
+                            chatId: chat.id,
+                            userId: addresseeId,
+                            user: addressee,
+                        },
+                    ],
+                    messages: [],
+                };
+            });
+
+            return status(200, chat);
+        } catch (error) {
+            console.error(error);
+            status(500, { error: 'Internal server error' });
+            return { error: 'Internal server error' }
+        }
+    })
+    .group('/:cid', (app) => {
         app.get('/', async ({ params, status }: ChatProps) => {
             const { cid } = params;
 
@@ -62,13 +160,25 @@ export const userChats = new Elysia({ prefix: '/chats' })
                     where: (chats, { eq }) => eq(chats.id, cid),
                     with: {
                         group: true,
+                        chatMembers: {
+                            with: {
+                                user: {
+                                    columns: {
+                                        id: true,
+                                        name: true,
+                                        email: true,
+                                        image: true,
+                                    },
+                                },
+                            },
+                        },
                         messages: {
                             orderBy: (messages, { desc }) => desc(messages.created),
                             limit: 50,
                             with: {
                                 medias: true,
                                 sender: true,
-                                                            },
+                            },
                         },
                     },
                 })
@@ -110,4 +220,3 @@ export const userChats = new Elysia({ prefix: '/chats' })
         return app;
 
     })
-

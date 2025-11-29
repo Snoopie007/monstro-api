@@ -1,9 +1,9 @@
 import { db } from "@/db/db";
-import { messages, media } from "@/db/schemas";
+import { messages, media, reactionCounts } from "@/db/schemas";
 import { enrichMessage, broadcastMessage } from "@/libs/messages";
 import { Elysia } from "elysia";
 import S3Bucket from "@/libs/s3";
-import { nanoid } from "nanoid";
+import { and, eq, inArray } from "drizzle-orm";
 
 const s3 = new S3Bucket();
 
@@ -38,9 +38,58 @@ function getFileTypeCategory(mimeType: string): 'image' | 'video' | 'audio' | 'd
 }
 
 export function sendMessageRoute(app: Elysia) {
-    app.post('/messages', async ({ params, body, status, userId }: PostMessageProps) => {
+    app.get('/messages', async ({ params, status }: PostMessageProps) => {
         const { cid } = params;
 
+        //fail safe
+        if (cid.startsWith('temp')) {
+            console.log('temp chat', cid);
+            return status(200, []);
+        }
+
+        try {
+            const messages = await db.query.messages.findMany({
+                where: (messages, { eq }) => eq(messages.chatId, cid),
+                with: {
+                    medias: true,
+                },
+                orderBy: (messages, { desc }) => desc(messages.created),
+
+            });
+
+            if (messages.length === 0) {
+                return status(200, []);
+            }
+            // Get all message IDs
+            const messageIds = messages.map(m => m.id) || [];
+
+            // Multiple messages (bulk)
+            const reactions = await db.select().from(reactionCounts).where(and(
+                eq(reactionCounts.ownerType, 'message'),
+                inArray(reactionCounts.ownerId, messageIds)
+            ));
+
+            // Group reactions by message ID
+            const reactionsByMessage = reactions.reduce((acc, reaction) => {
+                const messageId = reaction.ownerId; // Updated field name
+                if (!acc[messageId]) acc[messageId] = [];
+                acc[messageId].push(reaction);
+                return acc;
+            }, {} as Record<string, any[]>);
+
+            // Add reactions to each message
+            const messagesWithReactions = messages.map(message => ({
+                ...message,
+                reactions: reactionsByMessage[message.id] || []
+            }));
+            return status(200, messagesWithReactions);
+        } catch (error) {
+            console.error(error);
+            return status(500, { error: 'Internal server error' });
+        }
+    }).post('/messages', async ({ params, body, status, userId }: PostMessageProps) => {
+        const { cid } = params;
+        console.log('send message', cid);
         if (!userId) {
             return status(401, { error: 'User not authenticated' });
         }
