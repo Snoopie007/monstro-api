@@ -4,14 +4,9 @@ import { Button } from "@/components/ui";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { POST_REACTIONS, POST_QUICK_REACTIONS, toEmojiData } from "@/constants/emojis";
 import { cn } from "@/libs/utils";
+import { EmojiData } from "@/types/chats";
 import { SmilePlus } from "lucide-react";
 import { useState } from "react";
-
-type EmojiData = {
-    value: string;
-    name: string;
-    type: string;
-};
 
 type ReactionPickerProps = {
     onSelect: (emoji: EmojiData) => void;

@@ -1,13 +1,8 @@
 "use client";
 
 import { ReactionCount } from "@/types/groups";
+import { EmojiData } from "@/types/chats";
 import { cn } from "@/libs/utils";
-
-type EmojiData = {
-    value: string;
-    name: string;
-    type: string;
-};
 
 type ReactionBarProps = {
     reactions: ReactionCount[];

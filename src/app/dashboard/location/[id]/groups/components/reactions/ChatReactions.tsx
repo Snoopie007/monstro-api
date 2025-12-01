@@ -1,15 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui";
-import { MessageReaction } from "@/types/chats";
+import { MessageReaction, EmojiData } from "@/types/chats";
 import { cn } from "@/libs/utils";
 import { SmilePlus } from "lucide-react";
-
-type EmojiData = {
-  value: string;
-  name: string;
-  type: string;
-};
 
 type ChatReactionsProps = {
   reactions?: MessageReaction[];

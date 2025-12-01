@@ -9,13 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { CHAT_QUICK_REACTIONS, EMOJI_CATEGORIES, toEmojiData } from "@/constants/emojis";
 import { cn } from "@/libs/utils";
+import { EmojiData } from "@/types/chats";
 import { X } from "lucide-react";
-
-type EmojiData = {
-  value: string;
-  name: string;
-  type: string;
-};
 
 type ChatReactionSheetProps = {
   open: boolean;
