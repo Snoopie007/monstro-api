@@ -14,7 +14,7 @@ const emailSender = new EmailSender();
 
 
 export function memberProfile(app: Elysia) {
-    return app.patch("/profile", async ({ status, params, body }) => {
+    return app.patch("/", async ({ status, params, body }) => {
         const { mid } = params as { mid: string };
         const data = body as any;
 
@@ -34,7 +34,7 @@ export function memberProfile(app: Elysia) {
         } catch (error) {
             return status(401, { error: "Unauthorized" });
         }
-    }).patch("/profile/email", async ({ status, body, params }) => {
+    }).patch("/email", async ({ status, body, params }) => {
         const { email } = body as { email: string };
         const { mid } = params as { mid: string };
         try {

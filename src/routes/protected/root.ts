@@ -39,10 +39,13 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(resetPassword);
         app.use(memberFamilies);
         app.use(memberPayments);
-        app.use(memberProfile);
-        app.use(memberAvatar);
         app.use(memberGroups);
         app.use(memberPlans);
+        app.group('/profile', (app) => {
+            app.use(memberProfile);
+            app.use(memberAvatar);
+            return app;
+        })
         return app;
     })
     .group('/locations', (app) => {

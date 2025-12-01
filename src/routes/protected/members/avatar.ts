@@ -8,16 +8,26 @@ import { members } from "@/db/schemas";
 const s3 = new S3Bucket();
 
 
-export async function memberAvatar(app: Elysia) {
-    return app.patch("/profile/avatar", async ({ status, body, params }) => {
-        const { mid } = params as { mid: string };
-        const form = body as FormData;
-        const file = form.get('file') as File;
+type Props = {
+    status: any;
+    body: {
+        file: File;
+    };
+    params: {
+        mid: string;
+    };
+}
 
+
+
+export async function memberAvatar(app: Elysia) {
+    return app.patch("/avatar", async ({ status, body, params }: Props) => {
+
+        const { mid } = params as { mid: string };
+        const { file } = body;
         if (!file) {
             return status(400, { message: 'No file uploaded' });
         }
-
 
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
 
@@ -37,7 +47,6 @@ export async function memberAvatar(app: Elysia) {
         }
 
         try {
-
             const member = await db.query.members.findFirst({
                 where: (members, { eq }) => eq(members.id, mid),
             })
@@ -47,16 +56,14 @@ export async function memberAvatar(app: Elysia) {
             }
 
 
+
             if (member.avatar) {
                 const fileName = member.avatar?.split('/').pop() || '';
                 await s3.removeFile(`members/${member.id}/avatars`, fileName);
             }
 
-
             const res = await s3.uploadFile(file, `members/${member.id}/avatars`);
-
             const url = res?.url || null;
-
             if (!url) {
                 return status(500, { message: 'Failed to upload file' });
             }
@@ -80,6 +87,25 @@ export async function memberAvatar(app: Elysia) {
 
 
             return status(200, { url });
+        } catch (error) {
+            console.error(error);
+            return status(500, { message: 'Something went wrong' });
+        }
+    }).delete("/avatar", async ({ status, params }) => {
+        const { mid } = params as { mid: string };
+        try {
+            const member = await db.query.members.findFirst({
+                where: eq(members.id, mid),
+            })
+            if (!member) {
+                return status(404, { message: 'Member not found' });
+            }
+            if (member.avatar) {
+                const fileName = member.avatar?.split('/').pop() || '';
+                await s3.removeFile(`members/${member.id}/avatars`, fileName);
+            }
+            await db.update(members).set({ avatar: null }).where(eq(members.id, mid));
+            return status(200, { success: true });
         } catch (error) {
             console.error(error);
             return status(500, { message: 'Something went wrong' });
