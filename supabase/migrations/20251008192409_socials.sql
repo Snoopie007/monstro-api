@@ -96,8 +96,10 @@ CREATE INDEX IF NOT EXISTS idx_group_members_role ON group_members (role);
 CREATE TABLE IF NOT EXISTS group_posts (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('pst_'),
   group_id text REFERENCES groups (id) ON DELETE CASCADE NOT NULL,
-  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
+  user_id text NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   pinned boolean NOT NULL DEFAULT false,
+  likes integer NOT NULL DEFAULT 0,
+  comments integer NOT NULL DEFAULT 0,
   status text CHECK (status IN ('draft', 'published', 'archived')) NOT NULL DEFAULT 'draft',
   content text NOT NULL,
   metadata jsonb DEFAULT '{}'::jsonb,
@@ -110,7 +112,7 @@ CREATE TABLE IF NOT EXISTS group_posts (
 -- ========================
 CREATE TABLE IF NOT EXISTS comments (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
-  owner_type OWNER_TYPE NOT NULL,
+  owner_type text CHECK (owner_type IN ('post', 'message', 'moment')) NOT NULL,
   owner_id text NOT NULL,
   user_id text REFERENCES users (id) ON DELETE SET NULL,
   content text NOT NULL,
@@ -135,10 +137,12 @@ CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments (created_at);
 -- ========================
 -- MEMORIES (social moments) Later
 -- ========================
-CREATE TABLE IF NOT EXISTS memories (
+CREATE TABLE IF NOT EXISTS moments (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('mem_'),
   content text,
-  member_id text REFERENCES members (id) ON DELETE SET NULL,
+  user_id text NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  likes integer NOT NULL DEFAULT 0,
+  comments integer NOT NULL DEFAULT 0,
   tags text[] DEFAULT '{}',
   is_public boolean NOT NULL DEFAULT true,
   metadata jsonb DEFAULT '{}'::jsonb,
@@ -151,11 +155,11 @@ CREATE TABLE IF NOT EXISTS memories (
 -- ========================
 -- MEMORY LIKES
 -- ========================
-CREATE TABLE IF NOT EXISTS memory_likes (
-  memory_id text REFERENCES memories (id) ON DELETE CASCADE NOT NULL,
-  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
+CREATE TABLE IF NOT EXISTS moment_likes (
+  moment_id text REFERENCES moments (id) ON DELETE CASCADE NOT NULL,
+  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  UNIQUE (memory_id, member_id)
+  UNIQUE (moment_id, user_id)
 );
 
 
@@ -167,7 +171,7 @@ CREATE TABLE IF NOT EXISTS memory_likes (
 CREATE TABLE IF NOT EXISTS media (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('med_'),
   owner_id text NOT NULL,
-  owner_type text CHECK (owner_type IN ('post', 'message', 'memory')) NOT NULL,
+  owner_type text CHECK (owner_type IN ('post', 'message', 'moment')) NOT NULL,
   file_name text NOT NULL,
   file_type text CHECK (file_type IN ('image', 'video', 'audio', 'document', 'other')) NOT NULL,
   file_size bigint,

@@ -1,5 +1,5 @@
 "use client";
-import { useForm } from "react-hook-form";
+import { useForm, UseFormReturn } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -9,12 +9,12 @@ import {
 } from "@/components/forms";
 import { useSearchParams } from "next/navigation";
 import { cn, sleep } from "@/libs/utils";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
-import { RegisterSchema } from "@/libs/FormSchemas/schemas";
+import { Loader2, Check, X } from "lucide-react";
+import { RegisterSchema, PasswordSchema } from "@/libs/FormSchemas/schemas";
 import PhoneInput from 'react-phone-number-input/input'
 import { CountryCodes } from "@/libs/data";
 import { CountryCode } from "@/types";
@@ -25,8 +25,8 @@ const InputStyle = "bg-white border border-gray-200 text-base ";
 export function RegisterForm() {
     const searchParams = useSearchParams();
     const emailParam = searchParams.get("email");
-    const [loading, setLoading] = useState<boolean>(false);
     const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
+    const [consented, setConsented] = useState<boolean>(false);
     const { user, setUser } = useJoin();
 
     const form = useForm<z.infer<typeof RegisterSchema>>({
@@ -56,14 +56,15 @@ export function RegisterForm() {
     }
 
     async function registerUser(v: z.infer<typeof RegisterSchema>) {
-        setLoading(true);
+        if (!consented) {
+            return toast.error("You must consent to the terms and conditions to create an account.");
+        }
         try {
             const res = await fetch("/api/auth/register", {
                 method: "POST",
                 body: JSON.stringify(v),
             });
             await sleep(1000);
-            setLoading(false);
 
             if (res.ok) {
                 setUser({ email: v.email, password: v.password });
@@ -72,7 +73,6 @@ export function RegisterForm() {
             }
         } catch (error) {
             console.log(error);
-            setLoading(false);
             return toast.error("Something went wrong");
         }
     }
@@ -229,47 +229,47 @@ export function RegisterForm() {
                         <FormField
                             control={form.control}
                             name="password"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormControl>
-                                        <Input
-                                            type="password"
-                                            className={InputStyle}
-                                            placeholder="Password"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormMessage className="text-xs" />
-                                </FormItem>
-                            )}
+                            render={({ field }) => {
+                                const password = field.value || "";
+
+                                // Define all requirements with their corresponding error messages from Zod
+
+
+                                return (
+                                    <FormItem className="space-y-2">
+                                        <FormControl>
+                                            <Input
+                                                type="password"
+                                                className={InputStyle}
+                                                placeholder="Password"
+                                                {...field}
+                                            />
+                                        </FormControl>
+
+                                        {password && (
+                                            <PasswordRequirements form={form} />
+                                        )}
+                                    </FormItem>
+                                );
+                            }}
                         />
                     </fieldset>
                     <fieldset>
                         <div className="flex flex-row items-start space-x-3 space-y-0">
-                            <Checkbox className="border-gray-300" />
+                            <Checkbox className="border-gray-300" checked={consented} onCheckedChange={(checked) => setConsented(checked === "indeterminate" ? false : checked)} />
                             <label className="leading-6 -mt-1">
                                 I consent to collection and use of my personal
                                 information in accordance with the{" "}
-                                <Link
-                                    href={
-                                        "https://www.monstro-x.com/legal/term-of-use"
-                                    }
-                                    className={
-                                        " text-indigo-500 inline-block"
-                                    }
+                                <Link href={"https://www.monstro-x.com/legal/term-of-use"}
+                                    className={" text-indigo-500 inline-block"}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
                                     Terms of service
                                 </Link>{" "}
                                 and{" "}
-                                <Link
-                                    href={
-                                        "https://www.monstro-x.com/legal/privacy-policy"
-                                    }
-                                    className={
-                                        " text-indigo-500 inline-block"
-                                    }
+                                <Link href={"https://www.monstro-x.com/legal/privacy-policy"}
+                                    className={" text-indigo-500 inline-block"}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                 >
@@ -282,19 +282,83 @@ export function RegisterForm() {
                     <div className="flex ">
                         <Button
                             size="lg"
-                            className={cn(
-                                "children:hidden bg-indigo-600 text-white ",
-                                { "children:inline-block": loading }
-                            )}
+
                             type="submit"
-                            disabled={loading}
+                            disabled={form.formState.isSubmitting || !form.formState.isValid || !consented}
                         >
-                            <Loader2 className="mr-2 size-4 animate-spin" />
-                            {loading ? "Creating account..." : "Create account"}
+                            {form.formState.isSubmitting ? <Loader2 className=" size-4 animate-spin" /> : "Create account"}
                         </Button>
                     </div>
                 </form>
             </Form>
+        </div>
+    );
+}
+const PASSWORD_REQUIREMENTS = [
+    {
+        text: "At least 8 characters long",
+        errorText: "password must be atleast 8 characters long."
+    },
+    {
+        text: "Contains at least one symbol (!@#$&)",
+        errorText: "password must contain atleast one symbol !@#$&."
+    },
+    {
+        text: "Contains at least one UPPERCASE letter",
+        errorText: "password must contain atleast one UPPERCASE letter."
+    },
+    {
+        text: "Contains at least one number",
+        errorText: "password must contain atleast one number."
+    },
+    {
+        text: "No invalid characters",
+        errorText: "password contains invalid characters."
+    }
+];
+
+function PasswordRequirements({ form }: { form: UseFormReturn<z.infer<typeof RegisterSchema>> }) {
+    const password = form.watch("password") || "";
+
+    const isPassed = useCallback((errorText: string) => {
+        // Check if this specific validation passes by testing the password directly
+        switch (errorText) {
+            case "password must be atleast 8 characters long.":
+                return password.length >= 8;
+            case "password must contain atleast one symbol !@#$&.":
+                return /[!@#$&]/.test(password);
+            case "password must contain atleast one UPPERCASE letter.":
+                return /[A-Z]/.test(password);
+            case "password must contain atleast one number.":
+                return /[0-9]/.test(password);
+            case "password contains invalid characters.":
+                return !/[()*+\-[\]{}|`~<>,.\/?^]/.test(password);
+            default:
+                return true;
+        }
+    }, [password]);
+
+    return (
+        <div className="bg-gray-50 p-3 rounded-lg space-y-1.5">
+            {PASSWORD_REQUIREMENTS.map((req, i) => {
+
+                return (
+                    <div className="flex items-center gap-2 text-sm"
+                        key={i}
+                    >
+                        {isPassed(req.errorText) ? (
+                            <Check className="size-4 text-green-600 flex-shrink-0" />
+                        ) : (
+                            <X className="size-4 text-red-500 flex-shrink-0" />
+                        )}
+                        <span className={cn(
+                            isPassed(req.errorText) ? "text-green-700" : "text-red-600"
+                        )}>
+                            {req.text}
+                        </span>
+                    </div>
+                );
+            })}
         </div>
     );
 }

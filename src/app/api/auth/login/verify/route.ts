@@ -35,10 +35,10 @@ async function validateToken(token: string, userId: string, type: string) {
 export async function POST(req: NextRequest) {
   try {
     const { email, token, type } = await req.json();
-
+    const normalizedEmail = email.toLowerCase();
     // 1. Find user by email
     const user = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.email, email),
+      where: (users, { eq }) => eq(users.email, normalizedEmail),
       columns: {
         id: true,
         email: true,

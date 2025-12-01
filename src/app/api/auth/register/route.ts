@@ -9,9 +9,15 @@ import bcrypt from "bcryptjs";
 export async function POST(req: NextRequest) {
     const data = await req.json();
 
+    if (!data.email || !data.password) {
+        return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
+    }
+
+    const normalizedEmail = data.email.toLowerCase();
+
     try {
         const user = await db.query.users.findFirst({
-            where: (user, { eq }) => eq(user.email, data.email)
+            where: (user, { eq }) => eq(user.email, normalizedEmail)
         })
         if (user) {
             return NextResponse.json({ error: "User already exists" }, { status: 400 })
@@ -21,7 +27,7 @@ export async function POST(req: NextRequest) {
         await db.transaction(async (tx) => {
             const [{ id }] = await tx.insert(users).values({
                 name: `${data.firstName} ${data.lastName}`,
-                email: data.email,
+                email: normalizedEmail,
                 password: hashedPassword,
             }).returning({ id: users.id })
 

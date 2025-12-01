@@ -1,11 +1,11 @@
 import { db } from '@/db/db';
 import { accounts, sessions, users } from '@/db/schemas';
 import bcrypt from 'bcryptjs';
+import { customSession, multiSession } from "better-auth/plugins";
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
 import { toNextJsHandler } from "better-auth/next-js";
-import { customSession } from "better-auth/plugins";
 
 const isProduction = process.env.NODE_ENV === "production";
 const isPreview = process.env.VERCEL_ENV === "preview";
@@ -21,6 +21,7 @@ export const auth = betterAuth({
       },
     }),
     plugins: [
+      multiSession(),
       customSession(async ({user, session}) => {
         // Fetch vendor with their locations in a single optimized query
         const userWithVendor = await db.query.users.findFirst({
@@ -98,7 +99,7 @@ export const auth = betterAuth({
   
     session: {
       // Note: Field mappings are handled by the Drizzle schema
-      expiresIn: 60 * 60 * 24, // 1 day
+      expiresIn: 60 * 60 * 24 * 365, // 1 year
       updateAge: 60 * 60, // Update every hour
     },
   

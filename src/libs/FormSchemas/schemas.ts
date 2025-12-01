@@ -18,13 +18,9 @@ export const UserInfoSchema = z.object({
     phone: z.string().min(11, { message: 'Invalid phone number' }),
     referralCode: z.string().optional()
 }).merge(EmailSchema);
-
 export const PasswordSchema = z.object({
-    password: z.string().min(8, { message: "password must be atleast 8 characters long." }).refine(
-        (v) => /[!@#$&]/.test(v), "password must contain atleast one symbol !@#$&*.")
-        .refine((v) => /[A-Z]/.test(v), "password must contain atleast one UPPERCASE letter.")
-        .refine((v) => /[0-9]/.test(v), "password must contain atleast one number.")
-        .refine((v) => !/[()*+\-[\]{}|`~<>,.\/?^]/.test(v), "password contains invalid characters."),
+    password: z.string()
+        .min(8, { message: "password must be atleast 8 characters long." })
 });
 
 export const RegisterSchema = z.object({

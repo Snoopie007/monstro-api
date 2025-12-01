@@ -2,7 +2,6 @@
 import { NextResponse } from 'next/server';
 import { admindb, db } from '@/db/db';
 import { locations, locationState, wallets } from '@/db/schemas';
-import { MonstroPlan } from '@/types/admin';
 import { VendorStripePayments } from '@/libs/server/stripe';
 import { getPlan } from '../../utils';
 import { eq } from 'drizzle-orm';
@@ -48,7 +47,7 @@ export async function POST(req: Request) {
                 ...data,
                 vendorId,
                 phone: parsePhoneNumberFromString(data.phone)?.number,
-                slug: data.slug
+                slug: data.name.toLowerCase().replace(/ /g, "")
             }).returning()
             location = loc;
         }
@@ -57,25 +56,24 @@ export async function POST(req: Request) {
             throw new Error("Failed to create location")
         }
 
-        let plan: MonstroPlan | null = null;
-        if (sale.planId) {
-            plan = await getPlan(3)
-        }
+        const plan = await getPlan(sale.planId)
 
         const metadata = { vendorId, locationId: location.id }
 
         stripe.setCustomer(sale.stripeCustomerId)
 
-        if (plan) {
+
+        if ([2, 3].includes(plan.id)) {
             await Promise.all([
                 stripe.createSubscription(plan, metadata, 0),
                 stripe.createGHLSubscription(metadata),
             ]);
 
-            if (sale.packageId === 6) {
+            if (sale.upgradeToScale && plan.id === 3) {
                 await stripe.createScaleUpgrade(metadata)
             }
         }
+
 
         await db.transaction(async (tx) => {
             await tx.insert(locationState).values({
@@ -101,6 +99,24 @@ export async function POST(req: Request) {
             updated: today
         }).where(eq(sales.id, saleId));
 
+        try {
+            await fetch('https://api.mymonstroapp.com/api/public/signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer 4087c1d6-5bb9-47a5-8598-c2a0868c6a78`
+                },
+                body: JSON.stringify({
+                    email: sale.email,
+                    firstName: sale.firstName,
+                    lastName: sale.lastName,
+                    phone: sale.phone,
+                    lid: location.id,
+                })
+            })
+        } catch (error) {
+            console.log(error);
+        }
 
         return NextResponse.json({ ...location, id: location.id, status: "active" }, { status: 200 })
     } catch (err) {
