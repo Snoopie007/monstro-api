@@ -38,8 +38,9 @@ async function verifyTokenX(token: string) {
 
         const { payload } = await jwtVerify(token, secret, { clockTolerance: '999y' });
         const user = payload as ExtendedVendorUser;
+        const userId = payload.sub as string; // Extract userId from sub field
 
-        return { vendorId: user.vendorId };
+        return { vendorId: user.vendorId, userId };
     } catch (error) {
         console.log("Token verification error", error);
         return null;
@@ -94,7 +95,7 @@ export async function AuthXMiddleware(app: Elysia) {
 
         if (!result) return status(401, { error: "Unauthorized" })
 
-        return { vendorId: result.vendorId }
+        return { vendorId: result.vendorId, userId: result.userId }
 
     })
 }
