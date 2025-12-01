@@ -2,6 +2,28 @@ import { GroupCommunity } from "./groups";
 import { Member } from "./member";
 import { User } from "./user";
 
+export type MessageSender = {
+    id: string;
+    name: string | null;
+    image: string | null;
+};
+
+export type MessageMedia = {
+    id: string;
+    url: string;
+    thumbnailUrl?: string | null;
+    fileName: string;
+    fileType: string;
+    mimeType?: string | null;
+    altText?: string | null;
+};
+
+export type EmojiData = {
+    value: string;
+    name: string;
+    type: string;
+};
+
 export type Chat = {
     id: string;
     startedBy: string;

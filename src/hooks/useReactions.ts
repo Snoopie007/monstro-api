@@ -13,17 +13,19 @@ type UseReactionsParams = {
     ownerType: "post" | "comment" | "message";
     ownerId: string;
     enabled?: boolean;
+    initialData?: ReactionCount[];
 };
 
-export function useReactions({ ownerType, ownerId, enabled = true }: UseReactionsParams) {
+export function useReactions({ ownerType, ownerId, enabled = true, initialData }: UseReactionsParams) {
     const queryClient = useQueryClient();
     const queryKey = ["reactions", ownerType, ownerId];
 
-    // Fetch reactions
+    // Fetch reactions - skip if initialData is provided
     const { data, error, isLoading, refetch } = useQuery({
         queryKey,
         queryFn: () => fetcher(`/api/protected/reactions/${ownerType}/${ownerId}`),
-        enabled: enabled && !!ownerId,
+        enabled: enabled && !!ownerId && !initialData,
+        initialData: initialData ? { reactions: initialData } : undefined,
     });
 
     // Toggle reaction mutation - server handles add/remove logic
@@ -52,7 +54,7 @@ export function useReactions({ ownerType, ownerId, enabled = true }: UseReaction
     };
 
     return {
-        reactions: (data?.reactions ?? []) as ReactionCount[],
+        reactions: (data?.reactions ?? initialData ?? []) as ReactionCount[],
         error,
         isLoading,
         refetch,

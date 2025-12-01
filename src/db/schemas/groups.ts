@@ -32,6 +32,8 @@ export const groupPosts = pgTable("group_posts", {
     title: text("title").notNull(),
     groupId: text("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    comments: integer("comments").notNull().default(0),
+    likes: integer("likes").notNull().default(0),
     pinned: boolean("pinned").notNull().default(false),
     status: text("status", { enum: ["draft", "published", "archived"] }).notNull().default("draft"),
     content: text("content").notNull(),

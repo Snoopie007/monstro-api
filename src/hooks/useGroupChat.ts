@@ -1,15 +1,9 @@
 import { clientsideApiClient } from '@/libs/api/client';
 import supabase from '@/libs/client/supabase';
-import { Message, MessageReaction } from '@/types/chats';
+import { Message, MessageReaction, EmojiData } from '@/types/chats';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from './useSession';
-
-type EmojiData = {
-  value: string;
-  name: string;
-  type: string;
-};
 
 interface UseGroupChatOptions {
   chatId: string | null;

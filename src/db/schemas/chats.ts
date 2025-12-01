@@ -10,6 +10,7 @@ import {
 import { members } from "./members";
 import { users } from "./users";
 import { groups } from "./groups";
+import { locations } from "./locations";
 
 export const chats = pgTable("chats", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('cht_')`),
@@ -18,9 +19,11 @@ export const chats = pgTable("chats", {
     updated: timestamp("updated_at", { withTimezone: true }),
     name: text("name"),
     groupId: text("group_id").references(() => groups.id, { onDelete: "set null" }),
+    locationId: text("location_id").references(() => locations.id, { onDelete: "cascade" }),
 }, (t) => [
     index("idx_chats_started_by").on(t.startedBy),
     index("idx_chats_group_id").on(t.groupId),
+    index("idx_chats_location_id").on(t.locationId),
 ]);
 
 export const chatMembers = pgTable("chat_members", {
@@ -57,6 +60,11 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
         fields: [chats.groupId],
         references: [groups.id],
         relationName: "chatGroup",
+    }),
+    location: one(locations, {
+        fields: [chats.locationId],
+        references: [locations.id],
+        relationName: "chatLocation",
     }),
     chatMembers: many(chatMembers),
     messages: many(messages),

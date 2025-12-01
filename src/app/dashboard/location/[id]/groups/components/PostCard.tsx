@@ -38,6 +38,7 @@ export function PostCard({ post, onOpenDetail }: PostCardProps) {
   } = useReactions({
     ownerType: "post",
     ownerId: post.id,
+    initialData: post.reactions,  // Use pre-fetched reactions
   });
 
   const handleToggleReaction = (emoji: { value: string; name: string; type: string }) => {
@@ -163,7 +164,7 @@ export function PostCard({ post, onOpenDetail }: PostCardProps) {
           onClick={handleCardClick}
         >
           <MessageCircle size={16} />
-          {post.metadata?.comments ?? 0} comments
+          {post.comments ?? 0} comments
         </Button>
       </CardFooter>
     </Card>

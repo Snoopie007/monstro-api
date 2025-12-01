@@ -35,6 +35,7 @@ export type GroupPostAuthor = {
 export type GroupPost = typeof groupPosts.$inferSelect & {
     user: User;
     media?: GroupPostMedia[];
+    reactions?: ReactionCount[];
 };
 
 export type PostComment = typeof comments.$inferSelect & {

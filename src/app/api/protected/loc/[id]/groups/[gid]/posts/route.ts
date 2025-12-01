@@ -1,4 +1,4 @@
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/db";
 import { groupPosts, media } from "@/db/schemas";
 import { NextResponse } from "next/server";
@@ -20,6 +20,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string, g
                 metadata: true,
                 created: true,
                 groupId: true,
+                comments: true,
             },
             with: {
                 user: {
@@ -32,8 +33,33 @@ export async function GET(req: Request, props: { params: Promise<{ id: string, g
             },
         });
 
-        // Fetch media separately to avoid circular import issues
         const postIds = posts.map(p => p.id);
+
+        // Batch fetch reactions from reaction_counts view
+        const reactions = postIds.length > 0
+            ? await db.execute(sql`
+                SELECT owner_id, display, name, type, count, user_names, user_ids
+                FROM reaction_counts
+                WHERE owner_type = 'post' AND owner_id = ANY(ARRAY[${sql.join(postIds.map(id => sql`${id}`), sql`, `)}])
+            `)
+            : [];
+
+        // Group reactions by post ID
+        const reactionsByPost = (reactions as any[]).reduce((acc, reaction) => {
+            const postId = reaction.owner_id;
+            if (!acc[postId]) acc[postId] = [];
+            acc[postId].push({
+                display: reaction.display,
+                name: reaction.name,
+                type: reaction.type,
+                count: reaction.count,
+                userNames: reaction.user_names,
+                userIds: reaction.user_ids,
+            });
+            return acc;
+        }, {} as Record<string, any[]>);
+
+        // Fetch media separately to avoid circular import issues
         const postMedia = postIds.length > 0 
             ? await db.select({
                 id: media.id,
@@ -53,11 +79,12 @@ export async function GET(req: Request, props: { params: Promise<{ id: string, g
             return acc;
         }, {} as Record<string, typeof postMedia>);
 
-        // Transform posts to include media in the expected format for UI components
+        // Transform posts to include media and reactions
         const transformedPosts = posts.map(post => {
             const postMediaItems = mediaByPostId[post.id] || [];
             return {
                 ...post,
+                reactions: reactionsByPost[post.id] || [],
                 media: postMediaItems,
                 metadata: {
                     ...post.metadata,

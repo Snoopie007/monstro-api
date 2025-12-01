@@ -13,7 +13,9 @@ export const clientsideApiClient = (token?: string): ApiClient => {
 
     return {
         get: async (endpoint: string, params?: Record<string, string | number | boolean | string[]>) => {
-            const url = new URL(`${baseUrl}${endpoint}`)
+            // For XRoutes, strip /api from baseUrl
+            const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+            const url = new URL(`${finalBaseUrl}${endpoint}`)
 
             if (params) {
                 Object.entries(params).forEach(([key, value]) => {
@@ -44,7 +46,9 @@ export const clientsideApiClient = (token?: string): ApiClient => {
             return response.json()
         },
         post: async (endpoint: string, data?: Record<string, unknown> | FormData) => {
-            const url = new URL(`${baseUrl}${endpoint}`)
+            // For XRoutes, strip /api from baseUrl
+            const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+            const url = new URL(`${finalBaseUrl}${endpoint}`)
             
             const headers: HeadersInit = {};
 
