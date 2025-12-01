@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { text, timestamp, pgTable, jsonb, boolean, index, primaryKey } from "drizzle-orm/pg-core";
+import { text, timestamp, pgTable, jsonb, boolean, index, primaryKey, integer } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { users } from "./users";
 
@@ -38,16 +38,27 @@ export const groupPosts = pgTable("group_posts", {
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
-});
+}, (t) => [
+    index("idx_group_posts_group_id").on(t.groupId),
+    index("idx_group_posts_group_pinned_created").on(t.groupId, t.pinned, t.created),
+]);
 
-export const postComments = pgTable("post_comments", {
-    id: text("id").primaryKey().notNull().default(sql`uuid_base62('cmt_')`),
-    postId: text("post_id").notNull().references(() => groupPosts.id, { onDelete: "cascade" }),
+// Polymorphic comments table - used for posts, memories, etc.
+export const comments = pgTable("comments", {
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
+    ownerType: text("owner_type").notNull(), // 'post', 'memory', etc.
+    ownerId: text("owner_id").notNull(),
+    parentId: text("parent_id"),
     userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
     content: text("content").notNull(),
+    depth: integer("depth").notNull().default(0),
+    replyCounts: integer("reply_counts").notNull().default(0),
+    likes: integer("likes").notNull().default(0),
+    pinned: boolean("pinned").notNull().default(false),
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
+    deletedOn: timestamp("deleted_on", { withTimezone: true }),
 });
 
 export const groupsRelations = relations(groups, ({ one, many }) => ({
@@ -70,7 +81,7 @@ export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
     }),
 }));
 
-export const groupPostsRelations = relations(groupPosts, ({ one, many }) => ({
+export const groupPostsRelations = relations(groupPosts, ({ one }) => ({
     group: one(groups, {
         fields: [groupPosts.groupId],
         references: [groups.id],
@@ -79,17 +90,20 @@ export const groupPostsRelations = relations(groupPosts, ({ one, many }) => ({
         fields: [groupPosts.userId],
         references: [users.id],
     }),
-    comments: many(postComments),
 }));
 
-export const postCommentsRelations = relations(postComments, ({ one }) => ({
-    post: one(groupPosts, {
-        fields: [postComments.postId],
-        references: [groupPosts.id],
-    }),
+export const commentsRelations = relations(comments, ({ one, many }) => ({
     user: one(users, {
-        fields: [postComments.userId],
+        fields: [comments.userId],
         references: [users.id],
+    }),
+    parent: one(comments, {
+        fields: [comments.parentId],
+        references: [comments.id],
+        relationName: "replies",
+    }),
+    replies: many(comments, {
+        relationName: "replies",
     }),
 }));
 

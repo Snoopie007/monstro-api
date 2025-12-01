@@ -66,7 +66,7 @@ export function GroupHeader({ group }: GroupHeaderProps) {
             <div className="flex items-center gap-2">
               <Users size={16} />
               <span className="font-semibold text-foreground">
-                {Intl.NumberFormat().format(group.memberCount)}
+                {Intl.NumberFormat().format(group.memberCount ?? 0)}
               </span>
               members
             </div>

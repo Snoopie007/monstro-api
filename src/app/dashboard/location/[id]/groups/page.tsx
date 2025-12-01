@@ -1,15 +1,18 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
 import { db } from "@/db/db";
-import { chatMembers, chats, groups } from "@/db/schemas";
+import { chatMembers, chats, groups, groupMembers } from "@/db/schemas";
 import { auth } from "@/libs/auth/server";
 import { Chat } from "@/types/chats";
-import { and, eq, exists, inArray, isNotNull } from "drizzle-orm";
+import { and, eq, exists, inArray, isNotNull, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { memo } from "react";
 import { GroupChatView } from "./components/GroupChatView";
 import { GroupPostsView } from "./components/GroupPostsView";
 import { GroupsList } from "./components/GroupsList";
 import { GroupsProvider } from "./components/GroupsProvider";
+
+// Force dynamic rendering to ensure fresh data
+export const dynamic = 'force-dynamic';
 
 type GroupsPageProps = {
   params: Promise<{ id: string }>;
@@ -53,8 +56,36 @@ async function getChatsData(
         }
       },
     }
-  }); 
-  return { chats: chatsWithGroupId as Chat[] };
+  });
+
+  // Get member counts for all groups
+  const groupIds = chatsWithGroupId.map(c => c.groupId).filter(Boolean) as string[];
+  const memberCounts = groupIds.length > 0 
+    ? await db
+        .select({
+          groupId: groupMembers.groupId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(groupMembers)
+        .where(inArray(groupMembers.groupId, groupIds))
+        .groupBy(groupMembers.groupId)
+    : [];
+
+  const memberCountMap = Object.fromEntries(
+    memberCounts.map(mc => [mc.groupId, mc.count])
+  );
+
+  // Enrich groups with memberCount
+  const enrichedChats = chatsWithGroupId.map(chat => ({
+    ...chat,
+    group: chat.group ? {
+      ...chat.group,
+      memberCount: memberCountMap[chat.group.id] ?? 0,
+      membersPreview: [],
+    } : undefined,
+  }));
+
+  return { chats: enrichedChats as Chat[] };
 }
 
 export default async function GroupsPage(props: GroupsPageProps) {

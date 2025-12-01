@@ -4,25 +4,55 @@ import { Avatar, AvatarFallback, AvatarImage, ScrollArea } from "@/components/ui
 import { useGroupChat } from "@/hooks/useGroupChat";
 import { useSession } from "@/hooks/useSession";
 import { formatMessageTimestamp, getDateLabel } from "@/libs/utils";
+import { Message } from "@/types/chats";
 import { isSameDay } from "date-fns";
-import { useRef } from "react";
+import { useRef, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { ChatActions } from "./ChatActions";
 import { GroupChatInput } from "./GroupChatInput";
 import { useGroups } from "./GroupsProvider";
+import { ChatReactions, ChatReactionSheet } from "./reactions";
 
 export function GroupChatView({ lid }: { lid: string }) {
     const {currentChat} = useGroups()
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { data: session } = useSession();
-    const { messages, sendMessage, isLoading } = useGroupChat({
+    const { messages, sendMessage, toggleReaction, isLoading } = useGroupChat({
         chatId: currentChat?.id ?? null,
         fromUserId: session?.user?.id ?? null,
-    })
+    });
+    
+    // State for reaction picker
+    const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+    const [selectedMessageForReaction, setSelectedMessageForReaction] = useState<Message | null>(null);
 
     const handleSendMessage = async (content: string, files: File[]) => {
         await sendMessage(content, files);
     };
+    
+    const handleOpenReactionPicker = useCallback((message: Message) => {
+        setSelectedMessageForReaction(message);
+        setReactionPickerOpen(true);
+    }, []);
+    
+    const handleToggleReaction = useCallback(async (
+        messageId: string,
+        emoji: { value: string; name: string; type: string }
+    ) => {
+        try {
+            await toggleReaction(messageId, emoji);
+        } catch (err) {
+            console.error('Failed to toggle reaction:', err);
+        }
+    }, [toggleReaction]);
+    
+    const handleReactionSelect = useCallback((emoji: { value: string; name: string; type: string }) => {
+        if (selectedMessageForReaction && session?.user?.id) {
+            handleToggleReaction(selectedMessageForReaction.id, emoji);
+        }
+        setReactionPickerOpen(false);
+        setSelectedMessageForReaction(null);
+    }, [selectedMessageForReaction, session?.user?.id, handleToggleReaction]);
 
     if (!currentChat){
         return (
@@ -92,7 +122,7 @@ export function GroupChatView({ lid }: { lid: string }) {
                                             </div>
                                         )}
                                         <div
-                                            className={`flex gap-3 flex-row`}
+                                            className={`flex gap-3 flex-row group`}
                                         >
                                             <Avatar className="h-8 w-8">
                                                 <AvatarImage src={avatarSrc} />
@@ -187,6 +217,13 @@ export function GroupChatView({ lid }: { lid: string }) {
                                                     );
                                                 })()}
                                                 
+                                                {/* Reactions */}
+                                                <ChatReactions
+                                                    reactions={message.reactions}
+                                                    currentUserId={session?.user?.id}
+                                                    onToggleReaction={(emoji) => handleToggleReaction(message.id, emoji)}
+                                                    onOpenPicker={() => handleOpenReactionPicker(message)}
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -203,6 +240,16 @@ export function GroupChatView({ lid }: { lid: string }) {
                 )}
             </div>
           </div>
+          
+          {/* Reaction Picker Sheet */}
+          <ChatReactionSheet
+            open={reactionPickerOpen}
+            onOpenChange={(open) => {
+              setReactionPickerOpen(open);
+              if (!open) setSelectedMessageForReaction(null);
+            }}
+            onSelect={handleReactionSelect}
+          />
         </div>
       );
 }

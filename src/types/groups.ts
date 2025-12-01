@@ -1,4 +1,4 @@
-import { groups, groupPosts, postComments, groupMembers } from "@/db/schemas/groups";
+import { groups, groupPosts, comments, groupMembers } from "@/db/schemas/groups";
 import { users } from "@/db/schemas/users";
 import { User } from "./user";
 
@@ -16,7 +16,14 @@ export type GroupCommunity = typeof groups.$inferSelect & {
 export type GroupPostAttachment = {
     id: string;
     url: string;
-    type: "image" | "video";
+    type: "image" | "video" | "audio" | "document" | "other";
+};
+
+export type GroupPostMedia = {
+    id: string;
+    url: string;
+    fileType: string;
+    fileName: string;
 };
 
 export type GroupPostAuthor = {
@@ -26,17 +33,23 @@ export type GroupPostAuthor = {
 };
 
 export type GroupPost = typeof groupPosts.$inferSelect & {
-    // attachments?: GroupPostAttachment[];
     user: User;
-    // commentCount: number;
-    // reactions: {
-    //     total: number;
-    //     viewerHasReacted: boolean;
-    // };
+    media?: GroupPostMedia[];
 };
 
-export type PostComment = typeof postComments.$inferSelect & {
-    author: GroupPostAuthor;
+export type PostComment = typeof comments.$inferSelect & {
+    user: User | null;
+    replies?: PostComment[];
+    parent?: PostComment | null;
 };
 
-  
+export type ReactionCount = {
+    ownerType: string;
+    ownerId: string;
+    display: string;
+    name: string;
+    type: string;
+    count: number;
+    userNames: string[];
+    userIds: string[];
+};

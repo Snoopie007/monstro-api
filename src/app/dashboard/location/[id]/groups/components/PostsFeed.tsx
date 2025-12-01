@@ -3,9 +3,11 @@
 import { Button, Card, CardContent, Empty, EmptyDescription, EmptyHeader, EmptyTitle, Skeleton } from "@/components/ui";
 import { Pencil } from "lucide-react";
 import { PostCard } from "./PostCard";
+import { PostDetailModal } from "./PostDetailModal";
 import { GroupPost } from "@/types/groups";
 import { useCommunityPosts } from "@/hooks/useCommunityPosts";
 import { CreatePostDialog } from "./CreatePostDialog";
+import { useState } from "react";
 
 interface PostsFeedProps {
   id: string;
@@ -16,6 +18,21 @@ interface PostsFeedProps {
 export function PostsFeed({ id, gid, groupName }: PostsFeedProps) {
   const { posts, error, isLoading, refetch } = useCommunityPosts({ id, gid });
   const hasPosts = posts?.length > 0;
+  
+  const [selectedPost, setSelectedPost] = useState<GroupPost | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenPostDetail = (post: GroupPost) => {
+    setSelectedPost(post);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = (open: boolean) => {
+    setIsModalOpen(open);
+    if (!open) {
+      setSelectedPost(null);
+    }
+  };
 
   return (
     <section className="space-y-6">
@@ -48,7 +65,11 @@ export function PostsFeed({ id, gid, groupName }: PostsFeedProps) {
       ) : hasPosts ? (
         <div className="space-y-4">
           {posts.map((post: GroupPost) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard 
+              key={post.id} 
+              post={post} 
+              onOpenDetail={handleOpenPostDetail}
+            />
           ))}
         </div>
       ) : (
@@ -71,6 +92,17 @@ export function PostsFeed({ id, gid, groupName }: PostsFeedProps) {
             }
           />
         </Empty>
+      )}
+
+      {/* Post Detail Modal - only render when a post is selected */}
+      {selectedPost && (
+        <PostDetailModal
+          post={selectedPost}
+          locationId={id}
+          groupId={gid}
+          open={isModalOpen}
+          onOpenChange={handleCloseModal}
+        />
       )}
     </section>
   );

@@ -1,9 +1,15 @@
 import { clientsideApiClient } from '@/libs/api/client';
 import supabase from '@/libs/client/supabase';
-import { Message } from '@/types/chats';
+import { Message, MessageReaction } from '@/types/chats';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from './useSession';
+
+type EmojiData = {
+  value: string;
+  name: string;
+  type: string;
+};
 
 interface UseGroupChatOptions {
   chatId: string | null;
@@ -52,7 +58,7 @@ export const useGroupChat = ({
       setError(null);
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
-        .select('*,sender:users!sender_id(image, name)')
+        .select('*,sender:users!sender_id(id, image, name)')
         .eq('chat_id', currentChatId)
         .order('created_at', { ascending: true });
 
@@ -61,9 +67,11 @@ export const useGroupChat = ({
       // Fetch media for these messages
       const messageIds = messagesData?.map(m => m.id) || [];
       let mediaMap: Record<string, any[]> = {};
+      let reactionsMap: Record<string, MessageReaction[]> = {};
       
       // TODO: Move in api route instead -- loadMessages should be an api route
       if (messageIds.length > 0) {
+        // Fetch media
         const { data: mediaData, error: mediaError } = await supabase
             .from('media')
             .select('*')
@@ -86,6 +94,28 @@ export const useGroupChat = ({
                 });
             });
         }
+
+        // Batch fetch reactions from reaction_counts view
+        const { data: reactionsData, error: reactionsError } = await supabase
+            .from('reaction_counts')
+            .select('*')
+            .eq('owner_type', 'message')
+            .in('owner_id', messageIds);
+        
+        if (!reactionsError && reactionsData) {
+            reactionsData.forEach((reaction: any) => {
+                if (!reactionsMap[reaction.owner_id]) {
+                    reactionsMap[reaction.owner_id] = [];
+                }
+                reactionsMap[reaction.owner_id].push({
+                    display: reaction.display,
+                    name: reaction.name,
+                    count: reaction.count,
+                    userIds: reaction.user_ids || [],
+                    userNames: reaction.user_names || []
+                });
+            });
+        }
       }
 
       const mapped = messagesData?.map((message) => {
@@ -96,7 +126,8 @@ export const useGroupChat = ({
           readBy: message.read_by,
           created: message.created_at,
           updated: message.updated_at,
-          media: mediaMap[message.id] || []
+          media: mediaMap[message.id] || [],
+          reactions: reactionsMap[message.id] || []
         }
       }) || [];
 
@@ -151,6 +182,7 @@ export const useGroupChat = ({
         media: enrichedMessage.media,
         created: enrichedMessage.created,
         updated: enrichedMessage.updated,
+        reactions: [], // New messages start with no reactions
       };
 
       setMessages(prev => [...prev, mapped]);
@@ -221,6 +253,7 @@ export const useGroupChat = ({
           media: enrichedMessage.media,
           created: enrichedMessage.created,
           updated: enrichedMessage.updated,
+          reactions: enrichedMessage.reactions || [],
         };
         
         // New message (not replayed)
@@ -260,12 +293,102 @@ export const useGroupChat = ({
     };
   }, [enabled, session, chatId, fromUserId, loadMessages, authenticatedSupabase]);
 
+  // Toggle reaction on a message (optimistic update)
+  const toggleReaction = useCallback(async (
+    messageId: string,
+    emoji: EmojiData
+  ) => {
+    if (!session?.user?.sbToken || !session?.user?.id) {
+      throw new Error('No authentication token available');
+    }
+
+    const currentUserId = session.user.id;
+
+    // Find the message and check if user already reacted with this emoji
+    const message = messages.find(m => m.id === messageId);
+    const existingReaction = message?.reactions?.find(
+      r => r.display === emoji.value && r.userIds?.includes(currentUserId)
+    );
+
+    // Optimistically update local state
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId) return m;
+      
+      const currentReactions = m.reactions || [];
+      
+      if (existingReaction) {
+        // Remove user's reaction
+        const updatedReactions = currentReactions.map(r => {
+          if (r.display !== emoji.value) return r;
+          return {
+            ...r,
+            count: r.count - 1,
+            userIds: r.userIds.filter(id => id !== currentUserId),
+            userNames: r.userNames.filter((_, idx) => r.userIds[idx] !== currentUserId)
+          };
+        }).filter(r => r.count > 0);
+        
+        return { ...m, reactions: updatedReactions };
+      } else {
+        // Add user's reaction
+        const existingEmojiReaction = currentReactions.find(r => r.display === emoji.value);
+        
+        if (existingEmojiReaction) {
+          return {
+            ...m,
+            reactions: currentReactions.map(r => {
+              if (r.display !== emoji.value) return r;
+              return {
+                ...r,
+                count: r.count + 1,
+                userIds: [...r.userIds, currentUserId],
+                userNames: [...r.userNames, session?.user?.name || 'You']
+              };
+            })
+          };
+        } else {
+          return {
+            ...m,
+            reactions: [...currentReactions, {
+              display: emoji.value,
+              name: emoji.name,
+              count: 1,
+              userIds: [currentUserId],
+              userNames: [session?.user?.name || 'You']
+            }]
+          };
+        }
+      }
+    }));
+
+    // Make API call - server handles toggle logic
+    try {
+      const response = await fetch(`/api/protected/reactions/message/${messageId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update reaction');
+      }
+    } catch (err) {
+      console.error('Error toggling reaction:', err);
+      // Revert optimistic update on error by reloading
+      if (chatId) {
+        loadMessages(chatId);
+      }
+      throw err;
+    }
+  }, [messages, session?.user?.sbToken, session?.user?.name, chatId, loadMessages]);
+
   return {
     messages,
     isConnected,
     isLoading,
     error,
     sendMessage,
+    toggleReaction,
     refresh: () => chatId ? loadMessages(chatId) : Promise.resolve()
   };
 };

@@ -22,6 +22,14 @@ export type ChatMember = {
     user?: User;
 }
 
+export type MessageReaction = {
+    display: string;
+    name: string;
+    count: number;
+    userIds: string[];
+    userNames: string[];
+};
+
 export type Message = {
     id: string;
     chatId: string;
@@ -42,4 +50,5 @@ export type Message = {
         mimeType: string | null;
         altText: string | null;
     }>;
+    reactions?: MessageReaction[];
 }
