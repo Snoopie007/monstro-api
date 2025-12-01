@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { members } from "../members";
 import { users } from "../users";
+import { locations } from "../locations";
 import { groupPosts, groups } from "./groups";
 import { moments } from "./moments";
 import { reactions } from "./reactions";
@@ -20,10 +21,13 @@ export const chats = pgTable("chats", {
     name: text("name").notNull().default('New Chat'),
     locationId: text("location_id").references(() => locations.id, { onDelete: "cascade" }),
     groupId: text("group_id").references(() => groups.id, { onDelete: "cascade" }),
+    locationId: text("location_id").references(() => locations.id, { onDelete: "cascade" }),
+    name: text("name"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
     index("idx_chats_started_by").on(t.startedBy),
+    index("idx_chats_location_id").on(t.locationId),
 ]);
 
 export const chatMembers = pgTable("chat_members", {
@@ -79,6 +83,11 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
     group: one(groups, {
         fields: [chats.groupId],
         references: [groups.id],
+    }),
+    location: one(locations, {
+        fields: [chats.locationId],
+        references: [locations.id],
+        relationName: "chatLocation",
     }),
     chatMembers: many(chatMembers),
     messages: many(messages),

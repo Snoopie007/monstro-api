@@ -1,9 +1,9 @@
 import { db } from "@/db/db";
-import { messages, media, reactionCounts } from "@/db/schemas";
+import { and, eq, inArray } from "drizzle-orm";
+import { messages, media, chats, chatMembers, reactionCounts } from "@/db/schemas";
 import { enrichMessage, broadcastMessage } from "@/libs/messages";
 import { Elysia } from "elysia";
 import S3Bucket from "@/libs/s3";
-import { and, eq, inArray } from "drizzle-orm";
 
 const s3 = new S3Bucket();
 
@@ -101,6 +101,30 @@ export function sendMessageRoute(app: Elysia) {
 
             if (!content || content.trim().length === 0) {
                 return status(400, { error: 'Message content is required' });
+            }
+
+            // For location chats, auto-add sender to chat_members if not already present
+            // This allows staff to join the chat on their first message
+            const chat = await db.query.chats.findFirst({
+                where: eq(chats.id, cid),
+            });
+
+            if (chat?.locationId) {
+                // This is a location chat - check if sender is already a member
+                const existingMembership = await db.query.chatMembers.findFirst({
+                    where: and(
+                        eq(chatMembers.chatId, cid),
+                        eq(chatMembers.userId, userId)
+                    ),
+                });
+
+                if (!existingMembership) {
+                    // Add sender as a chat member
+                    await db.insert(chatMembers).values({
+                        chatId: cid,
+                        userId: userId,
+                    });
+                }
             }
 
             // Insert the message first
