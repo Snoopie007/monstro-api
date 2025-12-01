@@ -1,8 +1,8 @@
-import { ColumnFiltersState } from '@tanstack/react-table'
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { toast } from 'react-toastify'
 import { CustomFieldDefinition } from '@/app/dashboard/location/[id]/members/[mid]/components/CustomFields'
 import { ApiClient, clientsideApiClient } from '@/libs/api/client'
+import { ColumnFiltersState } from '@tanstack/react-table'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'react-toastify'
 
 interface TableState {
     page: number
@@ -89,7 +89,7 @@ export function useMemberTabData(locationId: string, memberId?: string) {
         // Fetch data asynchronously
         try {
             // Fetch all members for this location
-            const response: Record<string, any> | undefined = await apiRef.current?.get(`/api/protected/loc/${locationId}/members`, {
+            const response: Record<string, any> | undefined = await apiRef.current?.get(`/protected/loc/${locationId}/members`, {
                 size: 25,
                 page: 1,
             })
@@ -265,7 +265,7 @@ export function useMemberTabData(locationId: string, memberId?: string) {
 
                 // Fetch members and custom fields from API
                 const response: Record<string, any> | undefined = await apiRef.current?.get(
-                    `/api/protected/loc/${currentTab.locationId}/members`,
+                    `/protected/loc/${currentTab.locationId}/members`,
                     params
                 )
 

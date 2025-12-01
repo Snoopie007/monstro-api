@@ -1,11 +1,11 @@
 import { db } from '@/db/db';
+import { accounts, sessions, users } from '@/db/schemas';
 import bcrypt from 'bcryptjs';
 import { customSession, multiSession } from "better-auth/plugins";
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
 import { toNextJsHandler } from "better-auth/next-js";
-import { accounts, users, sessions } from '@/db/schemas';
 
 const isProduction = process.env.NODE_ENV === "production";
 const isPreview = process.env.VERCEL_ENV === "preview";

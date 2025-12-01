@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@/libs/utils";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import * as React from "react";
 
 function Dialog({
   ...props
@@ -23,7 +23,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:pointer-events-none",
+      "fixed inset-0 z-50 bg-black/80 pointer-events-none data-[state=open]:pointer-events-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -170,17 +170,5 @@ const DialogSlide = React.forwardRef<
 DialogSlide.displayName = DialogPrimitive.Content.displayName;
 
 export {
-  Dialog,
-  DialogPortal,
-  DialogBody,
-  DialogOverlay,
-  DialogClose,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-  DialogSlide,
-  MultiDialogContent,
+  Dialog, DialogBody, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogPortal, DialogSlide, DialogTitle, DialogTrigger, MultiDialogContent
 };

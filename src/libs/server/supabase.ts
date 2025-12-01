@@ -48,8 +48,8 @@ export async function signSupabaseJWT(
   const jwt = await new SignJWT(jwtPayload)
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setIssuedAt()
-    .setExpirationTime("24h") // Match Supabase default
-    .setIssuer(process.env.NEXT_PUBLIC_SUPABASE_URL || "http://localhost:54321")
+    .setExpirationTime("24h")
+    .setIssuer(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1`)  // ← Add /auth/v1
     .setAudience("authenticated")
     .sign(secret);
 

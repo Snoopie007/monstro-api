@@ -61,6 +61,11 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
     ],
 },
 {
+    name: "Community",
+    path: 'groups',
+    icon: <Users size={16} />,
+},
+{
     name: 'Achievements & Rewards',
     icon: <Medal size={16} />,
     subMenu: [
