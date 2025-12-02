@@ -1,5 +1,6 @@
 import sendgrid from '@sendgrid/mail';
 import { render } from '@react-email/render';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 import { EmailTemplates } from '@/emails';
 
@@ -44,7 +45,7 @@ export class EmailSender {
 
     public async send(props: EmailOptions) {
         const TemplateComponent = EmailTemplates[props.template] as any;
-        const html = await render(TemplateComponent(props.data));
+        const html = '<!DOCTYPE html>' + renderToStaticMarkup(TemplateComponent(props.data));
 
         await this._sender.send({
             ...props.options,
