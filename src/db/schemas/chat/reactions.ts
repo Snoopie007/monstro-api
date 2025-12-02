@@ -1,12 +1,14 @@
 // schema/reactions.ts
-import { pgTable, text, jsonb, timestamp, unique, pgView, check, index } from 'drizzle-orm/pg-core';
-import { users } from '../users';
-import { eq, relations, sql } from 'drizzle-orm';
+import type { ReactionEmoji } from '@/types';
+import { relations, sql } from 'drizzle-orm';
+import { check, index, jsonb, pgTable, pgView, text, timestamp, unique } from 'drizzle-orm/pg-core';
 import { messages } from './chats';
+import { comments } from './comments';
 import { groupPosts } from './groups';
 import { moments } from './moments';
-import { comments } from './comments';
-import type { ReactionEmoji } from '@/types';
+
+import { users } from '../users';
+
 // Main reactions table
 export const reactions = pgTable('reactions', {
 	id: text('id').primaryKey().default(sql`uuid_base62()`),
@@ -24,22 +26,17 @@ export const reactions = pgTable('reactions', {
 	index('idx_reactions_created_at').on(t.created)
 ]);
 
-// Views as Drizzle schemas
-export const reactionCounts = pgView('reaction_counts').as((qb) =>
-	qb.select({
-		ownerType: reactions.ownerType,
-		ownerId: reactions.ownerId,
-		display: sql<string>`emoji->>'value'`.as('display'),
-		name: sql<string>`emoji->>'name'`.as('name'),
-		type: sql<string>`emoji->>'type'`.as('type'),
-		count: sql<number>`count(*)`.as('count'),
-		userNames: sql<string[]>`array_agg(u.name order by r.created_at)`.as('user_names'),
-		userIds: sql<string[]>`array_agg(r.user_id order by r.created_at)`.as('user_ids'),
-	})
-		.from(reactions)
-		.innerJoin(users, eq(reactions.userId, users.id))
-		.groupBy(reactions.ownerType, reactions.ownerId, reactions.emoji)
-);
+// Views as Drizzle schemas - using existing SQL view definition
+export const reactionCounts = pgView('reaction_counts', {
+	ownerType: text('owner_type'),
+	ownerId: text('owner_id'),
+	display: text('display'),
+	name: text('name'),
+	type: text('type'),
+	count: text('count'),
+	userNames: text('user_names').array(),
+	userIds: text('user_ids').array(),
+}).existing();
 
 export const userReactions = pgView('user_reactions').as((qb) =>
 	qb.select({

@@ -1,28 +1,29 @@
+import { relations, sql } from "drizzle-orm";
 import {
-	integer,
 	boolean,
+	foreignKey,
+	integer,
+	jsonb,
+	pgTable,
 	text,
 	timestamp,
-	pgTable,
-	jsonb,
-	foreignKey,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { planPrograms } from "./programs";
 import { contractTemplates } from "./contracts";
-import { relations, sql } from "drizzle-orm";
+import { planPrograms } from "./programs";
 
-import { memberInvoices, members, memberContracts } from "./members";
-import { locations } from "./locations";
-import { recurringReservations, reservations } from "./reservations";
 import type { BillingCycleAnchorConfig } from "@/types";
+import { groups } from "./chat/groups";
 import {
+	IntervalType,
 	LocationStatusEnum,
 	PackageStatusEnum,
 	PaymentTypeEnum,
-	IntervalType,
 	PlanType,
 } from "./DatabaseEnums";
+import { locations } from "./locations";
+import { memberContracts, memberInvoices, members } from "./members";
+import { recurringReservations, reservations } from "./reservations";
 
 export const memberPlans = pgTable("member_plans", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -45,6 +46,7 @@ export const memberPlans = pgTable("member_plans", {
 	expireThreshold: integer("expire_threshold"),
 	billingAnchorConfig: jsonb("billing_anchor_config").$type<BillingCycleAnchorConfig>().default(sql`'{}'::jsonb`),
 	allowProration: boolean("allow_proration").notNull().default(false),
+	groupId: text("group_id").references(() => groups.id, { onDelete: "set null" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
@@ -111,6 +113,10 @@ export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
 	location: one(locations, {
 		fields: [memberPlans.locationId],
 		references: [locations.id],
+	}),
+	group: one(groups, {
+		fields: [memberPlans.groupId],
+		references: [groups.id],
 	}),
 	planPrograms: many(planPrograms),
 	packages: many(memberPackages),

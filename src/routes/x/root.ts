@@ -5,6 +5,7 @@ import { xInvoices } from './loc/invoices/root';
 import { xClass } from './loc/class/root';
 import { xEmail } from './loc/email/root';
 import { xChat } from './loc/chat/root';
+import { xGroups } from './loc/groups/root';
 
 export const XRoutes = new Elysia()
     .use(AuthXMiddleware)
@@ -14,6 +15,7 @@ export const XRoutes = new Elysia()
         app.use(xInvoices);
         app.use(xClass);
         app.use(xChat);
+        app.use(xGroups);
         return app;
     })
 
