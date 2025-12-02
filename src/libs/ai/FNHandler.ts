@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { supportConversations } from '@/db/schemas';
 import type { SupportConversation } from '@/types';
 import type { MemberLocation } from '@/types/member';
+import { broadcastSupportConversation, formatSupportConversationPayload } from '@/libs/support-broadcast';
 
 type ToolCall = {
 	id?: string;
@@ -25,9 +26,23 @@ async function EscalateToHuman(toolCall: ToolCall, context: Context): Promise<st
 
 	try {
 		// Mark conversation for human takeover
-		await db.update(supportConversations).set({
+		const [updatedConversation] = await db.update(supportConversations).set({
 			isVendorActive: true,
-		}).where(eq(supportConversations.id, context.conversation.id));
+			updated: new Date(),
+		}).where(eq(supportConversations.id, context.conversation.id)).returning();
+
+		if (updatedConversation) {
+			// Broadcast to Supabase Realtime (for dashboard and mobile)
+			try {
+				await broadcastSupportConversation(
+					updatedConversation.locationId,
+					formatSupportConversationPayload(updatedConversation as SupportConversation),
+					'conversation_updated'
+				);
+			} catch (broadcastError) {
+				console.error('Failed to broadcast escalation:', broadcastError);
+			}
+		}
 
 	} catch (error) {
 		console.error('Error escalating to human:', error);

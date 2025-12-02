@@ -1,7 +1,9 @@
 import { db } from '@/db/db'
-import { Elysia } from 'elysia'
-import { supportAssistants, supportConversations } from '@/db/schemas/'
+import { supportConversations } from '@/db/schemas/'
 import { notifyUsersNewSupportConversation } from '@/libs/novu'
+import { broadcastSupportConversation, formatSupportConversationPayload } from '@/libs/support-broadcast'
+import type { SupportConversation } from '@/types'
+import { Elysia } from 'elysia'
 
 type Props = {
     memberId: string
@@ -104,6 +106,17 @@ export function mlSupportRoutes(app: Elysia) {
                         .returning()
 
                     if (conversation) {
+                        // Broadcast new conversation to Supabase Realtime (for dashboard)
+                        try {
+                            await broadcastSupportConversation(
+                                lid,
+                                formatSupportConversationPayload(conversation as SupportConversation),
+                                'conversation_inserted'
+                            )
+                        } catch (broadcastError) {
+                            console.error('Failed to broadcast new conversation:', broadcastError)
+                        }
+
                         // Fetch all active staff members for this location
                         const staffMembers =
                             await db.query.staffsLocations.findMany({

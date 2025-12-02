@@ -1,15 +1,16 @@
-import type { Elysia } from "elysia";
-import { getModel, calculateAICost, DEFAULT_SUPPORT_TOOLS, formatHistory } from "@/libs/ai";
 import { db } from "@/db/db";
 import { supportConversations, supportMessages } from "@/db/schemas";
-import { eq } from "drizzle-orm";
-import { formattedPrompt } from "@/libs/ai/Prompts";
-import { ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
-import { AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
+import { calculateAICost, DEFAULT_SUPPORT_TOOLS, formatHistory, getModel } from "@/libs/ai";
 import { ToolFunctions } from "@/libs/ai/FNHandler";
-import type { SupportConversation, MemberLocation, NewSupportMessage, SupportMessage } from "@/types";
-import { Runnable } from "@langchain/core/runnables";
+import { formattedPrompt } from "@/libs/ai/Prompts";
+import { broadcastSupportMessage, formatSupportMessagePayload } from "@/libs/support-broadcast";
 import { chargeWallet, checkWalletBalance } from "@/libs/wallet";
+import type { MemberLocation, NewSupportMessage, SupportConversation, SupportMessage } from "@/types";
+import { AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
+import { ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from "@langchain/core/prompts";
+import { Runnable } from "@langchain/core/runnables";
+import { eq } from "drizzle-orm";
+import type { Elysia } from "elysia";
 
 type Props = {
     params: {
@@ -206,5 +207,17 @@ async function saveMessage(newMessage: NewSupportMessage): Promise<SupportMessag
         throw new Error('Failed to save message');
     }
 
-    return savedMessage as SupportMessage;
+    const message = savedMessage as SupportMessage;
+
+    // Broadcast to Supabase Realtime (for dashboard and mobile)
+    try {
+        await broadcastSupportMessage(
+            message.conversationId,
+            formatSupportMessagePayload(message)
+        );
+    } catch (error) {
+        console.error('Failed to broadcast support message:', error);
+    }
+
+    return message;
 }

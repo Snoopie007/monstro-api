@@ -1,9 +1,10 @@
 import { db } from "@/db/db";
 import { supportConversations } from "@/db/schemas";
+import { broadcastSupportConversation, formatSupportConversationPayload } from "@/libs/support-broadcast";
 import type { SupportConversation } from "@/types/support";
-import { OpenAI } from "openai";
 import { eq } from "drizzle-orm";
 import type { Elysia } from "elysia";
+import { OpenAI } from "openai";
 
 
 const NamePrompt = (message: string, category: string) => {
@@ -39,9 +40,23 @@ export async function supportConversation(app: Elysia) {
         const { cid } = params as { cid: string };
 
         try {
+            const [updatedConversation] = await db.update(supportConversations)
+                .set({ ...(body as Partial<SupportConversation>), updated: new Date() })
+                .where(eq(supportConversations.id, cid))
+                .returning();
 
-            await db.update(supportConversations).set(body as Partial<SupportConversation>)
-                .where(eq(supportConversations.id, cid));
+            if (updatedConversation) {
+                // Broadcast to Supabase Realtime (for dashboard and mobile)
+                try {
+                    await broadcastSupportConversation(
+                        updatedConversation.locationId,
+                        formatSupportConversationPayload(updatedConversation as SupportConversation),
+                        'conversation_updated'
+                    );
+                } catch (broadcastError) {
+                    console.error('Failed to broadcast conversation update:', broadcastError);
+                }
+            }
 
             return status(200, { success: true });
         } catch (error) {
@@ -62,7 +77,24 @@ export async function supportConversation(app: Elysia) {
             });
             const conversationName = res.choices[0]?.message?.content?.toString() || 'Unknown';
 
-            await db.update(supportConversations).set({ title: conversationName }).where(eq(supportConversations.id, cid));
+            const [updatedConversation] = await db.update(supportConversations)
+                .set({ title: conversationName, updated: new Date() })
+                .where(eq(supportConversations.id, cid))
+                .returning();
+
+            if (updatedConversation) {
+                // Broadcast title update to Supabase Realtime (for dashboard and mobile)
+                try {
+                    await broadcastSupportConversation(
+                        updatedConversation.locationId,
+                        formatSupportConversationPayload(updatedConversation as SupportConversation),
+                        'conversation_updated'
+                    );
+                } catch (broadcastError) {
+                    console.error('Failed to broadcast title update:', broadcastError);
+                }
+            }
+
             return status(200, { name: conversationName });
         } catch (error) {
             console.error(error);
