@@ -1,6 +1,14 @@
-import { groups, groupPosts, comments, groupMembers } from "@/db/schemas/groups";
-import { users } from "@/db/schemas/users";
+import { comments, groupPosts, groups } from "@/db/schemas/groups";
 import { User } from "./user";
+
+export type Group = {
+    id: string;
+    name: string;
+    description?: string | null;
+    type: string;
+    handle: string;
+    coverImage?: string | null;
+};
 
 export type GroupMemberPreview = {
     id: string;

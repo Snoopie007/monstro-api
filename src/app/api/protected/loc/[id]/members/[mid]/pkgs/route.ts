@@ -2,9 +2,9 @@ import { db } from "@/db/db";
 import { memberPackages, transactions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 
-import { NextRequest, NextResponse } from "next/server";
-import { calculatePeriodEnd, calculateStripeFeeAmount, calculateTax } from "../../utils";
 import { PaymentType } from "@/types";
+import { NextRequest, NextResponse } from "next/server";
+import { addUserToGroup, calculatePeriodEnd, calculateStripeFeeAmount, calculateTax } from "../../utils";
 
 type Props = {
 	params: Promise<{
@@ -184,6 +184,10 @@ export async function POST(req: NextRequest, props: Props) {
 			return pkg;
 		});
 
+		// Add user to group if plan has a groupId
+		if (plan.groupId && member.userId) {
+			await addUserToGroup({ groupId: plan.groupId, userId: member.userId });
+		}
 
 		return NextResponse.json({ ...pkg, plan }, { status: 200 });
 	} catch (err) {

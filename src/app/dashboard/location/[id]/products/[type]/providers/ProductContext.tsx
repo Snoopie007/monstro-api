@@ -1,10 +1,11 @@
 'use client'
-import { Program } from "@/types";
+import { Group, Program } from "@/types";
 import { createContext, useReducer, ReactElement, useCallback, useContext } from "react"
 
 type StateType = {
     filters: Record<string, string>,
-    programs: Program[]
+    programs: Program[],
+    groups: Group[]
 }
 
 const enum REDUCER_ACTION_TYPE {
@@ -44,17 +45,19 @@ export const ProductsContext = createContext<UseProductsContextType | null>(null
 
 type ProductsProviderType = {
     programs: Program[],
+    groups: Group[],
     initialFilters?: Record<string, string>,
     children?: ReactElement | ReactElement[] | undefined
 }
 
 export const ProductsProvider = ({
     programs,
+    groups,
     initialFilters = {},
     children
 }: ProductsProviderType): ReactElement => {
     return (
-        <ProductsContext.Provider value={useProductsContext({ programs, filters: initialFilters })} >
+        <ProductsContext.Provider value={useProductsContext({ programs, groups, filters: initialFilters })} >
             {children}
         </ProductsContext.Provider>
     )
@@ -63,7 +66,8 @@ export const ProductsProvider = ({
 type UseProductsHookType = {
     filters: Record<string, string>,
     updateFilters: (filters: Record<string, string>) => void,
-    programs: Program[]
+    programs: Program[],
+    groups: Group[]
 }
 
 export const useProducts = (): UseProductsHookType => {
@@ -71,6 +75,6 @@ export const useProducts = (): UseProductsHookType => {
     if (!context) {
         throw new Error('useProducts must be used within a ProductsProvider')
     }
-    const { state: { filters, programs }, updateFilters } = context
-    return { filters, updateFilters, programs }
+    const { state: { filters, programs, groups }, updateFilters } = context
+    return { filters, updateFilters, programs, groups }
 }

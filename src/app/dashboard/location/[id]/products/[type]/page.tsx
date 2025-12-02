@@ -3,13 +3,11 @@
 import { CreatePlan, SubscriptionList, PackageList } from "./components";
 import { db } from "@/db/db";
 import { ProductsProvider } from "./providers";
-import { Program } from "@/types";
+import { Group, Program } from "@/types";
 
 
 async function getPrograms(lid: string): Promise<Program[]> {
-
     try {
-
         const programs = await db.query.programs.findMany({
             where: (program, { eq }) => eq(program.locationId, lid)
         })
@@ -20,14 +18,29 @@ async function getPrograms(lid: string): Promise<Program[]> {
     }
 }
 
+async function getGroups(lid: string): Promise<Group[]> {
+    try {
+        const groups = await db.query.groups.findMany({
+            where: (group, { eq }) => eq(group.locationId, lid)
+        })
+        return groups;
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+}
+
 
 export default async function Products(props: { params: Promise<{ id: string, type: 'subs' | 'pkgs' }> }) {
 
     const params = await props.params;
-    const programs = await getPrograms(params.id);
+    const [programs, groups] = await Promise.all([
+        getPrograms(params.id),
+        getGroups(params.id)
+    ]);
 
     return (
-        <ProductsProvider programs={programs}>
+        <ProductsProvider programs={programs} groups={groups}>
 
             <div className="flex flex-col gap-4">
                 <div className="max-w-4xl mx-auto w-full space-y-4">

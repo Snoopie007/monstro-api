@@ -1,10 +1,11 @@
 import { db } from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
+import { NextResponse } from "next/server";
 import {
+    addUserToGroup,
     calculatePeriodEnd,
     scheduleRecurringInvoiceReminders,
 } from "../../../utils";
-import { NextResponse } from "next/server";
 
 
 type Props = {
@@ -76,6 +77,11 @@ export async function POST(req: Request, props: Props) {
                 locationId: id
             }
         }).returning()
+
+        // Add user to group if plan has a groupId
+        if (plan.groupId && member.userId) {
+            await addUserToGroup({ groupId: plan.groupId, userId: member.userId });
+        }
 
         // const tx = await db.transaction(async (tx) => {
         // TODO: uncomment and refine when invoices are being done

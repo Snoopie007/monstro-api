@@ -10,6 +10,7 @@ const NewPlanSchema = z
     familyMemberLimit: z.number().optional(),
     contractId: z.string().optional(),
     intervalClassLimit: z.number().optional(),
+    groupId: z.string().optional(),
     programs: z
       .array(z.string())
       .min(1, { message: "Select at least one program." }),
@@ -68,6 +69,7 @@ const UpdateSubPlanSchema = z
     name: z.string().min(2, { message: "Required" }),
     description: z.string().min(2, { message: "Required" }),
     intervalClassLimit: z.number().optional(),
+    groupId: z.string().optional().nullable(),
     programs: z
       .array(z.string())
       .min(1, { message: "Select at least one program." }),
@@ -90,6 +92,7 @@ const UpdatePkgPlanSchema = z
   .object({
     name: z.string().min(2, { message: "Required" }),
     description: z.string().min(2, { message: "Required" }),
+    groupId: z.string().optional().nullable(),
     programs: z
       .array(z.string())
       .min(1, { message: "Select at least one program." }),
@@ -138,11 +141,7 @@ const BillingAnchorConfigSchema = [
 ];
 
 export {
-  type PresetInterval,
-  PresetIntervals,
-  PlanType,
   BillingAnchorConfigSchema,
-  NewPlanSchema,
-  UpdateSubPlanSchema,
-  UpdatePkgPlanSchema,
+  NewPlanSchema, PlanType, PresetIntervals, UpdatePkgPlanSchema, UpdateSubPlanSchema, type PresetInterval
 };
+

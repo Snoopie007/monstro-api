@@ -1,34 +1,36 @@
 'use client'
 import {
-    Button,
-    DialogBody,
-    DialogFooter,
-    DialogClose,
-    Switch,
-} from "@/components/ui";
-import {
-    Form, FormControl, FormField, FormMessage, FormItem, FormLabel,
+    Form, FormControl,
+    FormDescription,
+    FormField,
+    FormItem, FormLabel,
+    FormMessage,
+    Input,
     Select,
-    SelectTrigger,
-    SelectValue,
     SelectContent,
     SelectItem,
-    Input,
-    FormDescription,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/forms';
+import {
+    Button,
+    DialogBody,
+    DialogClose,
+    DialogFooter,
+    Switch,
+} from "@/components/ui";
 
-import { useState } from "react";
-import { NewSubscriptionSchema } from "../../../schema";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Loader2 } from "lucide-react";
-import { cn, sleep, tryCatch } from "@/libs/utils";
-import { useMemberStatus } from "../../../providers";
-import React from "react";
+import { sleep, tryCatch } from "@/libs/utils";
 import { MemberPlan, MemberSubscription, PaymentMethod } from "@/types";
-import { DurationPicker } from ".";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
+import { z } from "zod";
+import { DurationPicker } from ".";
+import { useMemberStatus } from "../../../providers";
+import { NewSubscriptionSchema } from "../../../schema";
 import { PMSelect } from "../../PMSelect";
 
 type SubFormProps = {
@@ -68,7 +70,7 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,
-                    paymentMethod: paymentMethod
+                    paymentMethod: paymentMethod,
                 })
             })
         )
@@ -117,7 +119,6 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                             />
 
                         </fieldset>
-
 
                         <fieldset className="grid grid-cols-8 gap-2">
                             <div className="col-span-3">
