@@ -22,8 +22,7 @@ type Props = {
 
 export async function memberAvatar(app: Elysia) {
     return app.patch("/avatar", async ({ status, body, params }: Props) => {
-
-        const { mid } = params as { mid: string };
+        const { mid } = params;
         const { file } = body;
         if (!file) {
             return status(400, { message: 'No file uploaded' });
