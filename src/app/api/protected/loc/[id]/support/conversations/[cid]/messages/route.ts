@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
-import { eq, and, desc } from "drizzle-orm";
 import { supportConversations, supportMessages } from "@/db/schemas";
+import { auth } from "@/libs/auth/server";
+import { broadcastSupportMessage, SupportMessagePayload } from "@/libs/server/broadcast";
+import { desc, eq } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
 
 type Params = {
 	id: string;
@@ -103,6 +104,25 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
 		await db.update(supportConversations).set({
 			updated: new Date(),
 		}).where(eq(supportConversations.id, params.cid));
+
+		// Broadcast the message to Supabase Realtime (for dashboard)
+		try {
+			const messagePayload: SupportMessagePayload = {
+				id: newMessage.id,
+				conversationId: newMessage.conversationId,
+				content: newMessage.content,
+				role: newMessage.role,
+				channel: newMessage.channel,
+				agentId: newMessage.agentId,
+				agentName: newMessage.agentName,
+				metadata: newMessage.metadata || {},
+				created: newMessage.created,
+			};
+			await broadcastSupportMessage(params.cid, messagePayload);
+		} catch (broadcastError) {
+			console.error("Failed to broadcast staff message:", broadcastError);
+			// Don't fail the request if broadcast fails
+		}
 
 		return NextResponse.json(newMessage, { status: 200 });
 	} catch (error) {
