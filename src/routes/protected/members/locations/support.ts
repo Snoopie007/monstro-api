@@ -4,7 +4,7 @@ import { notifyUsersNewSupportConversation } from '@/libs/novu'
 import { broadcastSupportConversation, formatSupportConversationPayload } from '@/libs/support-broadcast'
 import type { SupportConversation } from '@/types'
 import { Elysia } from 'elysia'
-import { z } from "zod";
+import { z } from "zod"
 
 const MemberLocationSupportProps = {
     params: z.object({
@@ -124,20 +124,26 @@ export function mlSupportRoutes(app: Elysia) {
                             },
                         })
 
-                    const staffUserIds = staffMembers
-                        .map((sl) => sl.staff.user?.id)
-                        .filter((id): id is string => !!id)
+                        const staffUserIds = staffMembers
+                        .map((sl) => ({
+                            id: sl.staff.user?.id || '',
+                            email: sl.staff.user?.email || '',
+                        }))
+                        .filter((user): user is { id: string; email: string } => !!user)
 
                     if (location.vendor?.userId) {
-                        const vendorAndStaffIds = [
-                            location.vendor.userId,
+                        const vendorAndStaffUsers = [
+                            {
+                                id: location.vendor.userId,
+                                email: location.vendor.user?.email || '',
+                            },
                             ...staffUserIds,
                         ]
 
 
 
                         const result = await notifyUsersNewSupportConversation({
-                            users: vendorAndStaffIds,
+                            users: vendorAndStaffUsers,
                             memberName: `${member.firstName} ${member.lastName || ''
                                 }`.trim(),
                             locationName: location.name,
@@ -153,7 +159,7 @@ export function mlSupportRoutes(app: Elysia) {
 
                         console.log(
                             '🔔 Notification queued for users:',
-                            vendorAndStaffIds
+                            vendorAndStaffUsers
                         )
                     }
                 }
