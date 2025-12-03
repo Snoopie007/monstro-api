@@ -2,24 +2,23 @@ import { db } from "@/db/db";
 import { comments, groupPosts } from "@/db/schemas";
 import type { Elysia } from "elysia";
 import { eq, sql } from "drizzle-orm";
+import { z } from "zod";
 
-type GetPostCommentsParams = {
-    params: {
-        pid: string
-    }
-    status: any
-}
-
-type PostCommentParams = {
-    params: {
-        pid: string
-    }
-    body: Record<string, any>
-    status: any
-}
+const CommentPostsProps = {
+    params: z.object({
+        pid: z.string(),
+    }),
+    body: z.object({
+        content: z.string(),
+        depth: z.number(),
+        type: z.string(),
+        userId: z.string(),
+        parentId: z.string(),
+    }),
+};
 
 export function commentPosts(app: Elysia) {
-    app.get('/', async ({ params, status }: GetPostCommentsParams) => {
+    app.get('/', async ({ params, status }) => {
         const { pid } = params;
 
         try {
@@ -44,7 +43,7 @@ export function commentPosts(app: Elysia) {
             console.error(error);
             return status(500, { error: "Failed to fetch post comments" });
         }
-    }).post('/', async ({ params, body, status }: PostCommentParams) => {
+    }, CommentPostsProps).post('/', async ({ params, body, status }) => {
         const { pid } = params;
 
         const { content, depth, type, userId, parentId } = body;
@@ -120,6 +119,6 @@ export function commentPosts(app: Elysia) {
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }
-    })
+    }, CommentPostsProps)
     return app;
 }

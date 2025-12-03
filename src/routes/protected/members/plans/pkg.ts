@@ -5,10 +5,7 @@ import { memberLocations, memberPackages } from "@/db/schemas";
 import { and } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { EmailSender } from "@/libs/email";
-import { MonstroData } from "@/libs/data";
 
-
-const emailSender = new EmailSender();
 
 
 export function memberPlansPkgRoutes(app: Elysia) {
@@ -120,7 +117,7 @@ export function memberPlansPkgRoutes(app: Elysia) {
 
 
             /// Send Email to notify family member and have them download the app
-    
+
 
             return status(200, {
                 ...familyPackage,

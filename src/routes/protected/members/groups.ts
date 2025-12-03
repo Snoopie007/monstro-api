@@ -1,28 +1,23 @@
 import { db } from "@/db/db";
 import { Elysia } from "elysia";
 import { eq, sql } from "drizzle-orm";
-import { comments, groupPosts } from "@/db/schemas";
+import { z } from "zod";
 
-type Props = {
-    memberId: string
-    status: any
-}
+const MemberGroupsProps = {
+    params: z.object({
+        mid: z.string(),
+    }),
+};
 
-type GetGroupsParams = Props & {
-    params: {
-        mid: string
-    }
-}
 
-type GetGroupParams = Props & {
-    params: {
-        mid: string
-        gid: string
-    }
-}
-
+const MemberGroupProps = {
+    params: z.object({
+        mid: z.string(),
+        gid: z.string(),
+    }),
+};
 export const memberGroups = new Elysia({ prefix: '/groups' })
-    .get('/', async ({ params, status }: GetGroupsParams) => {
+    .get('/', async ({ params, status }) => {
         const { mid } = params;
 
         try {
@@ -49,10 +44,11 @@ export const memberGroups = new Elysia({ prefix: '/groups' })
             console.error(error);
             return status(500, { error: "Failed to fetch groups" });
         }
-    }).get('/:gid', async ({ params, status }: GetGroupParams) => {
+    }, MemberGroupsProps).get('/:gid', async ({ params, status }) => {
+        const { gid } = params;
         try {
             const group = await db.query.groups.findFirst({
-                where: (groups, { eq }) => eq(groups.id, params.gid),
+                where: (groups, { eq }) => eq(groups.id, gid),
                 with: {
                     location: true,
                     posts: {
@@ -79,4 +75,4 @@ export const memberGroups = new Elysia({ prefix: '/groups' })
             console.error(error);
             return status(500, { error: "Failed to fetch group" });
         }
-    })
+    }, MemberGroupProps)

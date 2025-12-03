@@ -1,17 +1,27 @@
 import { db } from "@/db/db";
 import { eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
-import { memberLocations, memberPackages, memberSubscriptions } from "@/db/schemas";
+import { memberLocations, memberSubscriptions } from "@/db/schemas";
 import { and } from "drizzle-orm";
 import { Elysia } from "elysia";
-import { EmailSender } from "@/libs/email";
-import { MonstroData } from "@/libs/data";
+import { z } from "zod";
 
-const emailSender = new EmailSender();
+
+
+const MemberPlansSubProps = {
+    params: z.object({
+        pid: z.string(),
+    }),
+    body: z.object({
+        familyMemberId: z.string(),
+    }),
+};
+
+
 
 export function memberPlansSubRoutes(app: Elysia) {
     return app.post('/sub', async ({ status, params, body }) => {
-        const { pid } = params as { pid: string };
+        const { pid } = params;
 
         const { familyMemberId } = body as { familyMemberId: string };
         try {
@@ -134,8 +144,8 @@ export function memberPlansSubRoutes(app: Elysia) {
             console.error(error);
             return status(500, { error: "An error occurred" });
         }
-    }).patch('/sub', async ({ status, params, body }) => {
-        const { pid } = params as { pid: string };
+    }, MemberPlansSubProps).patch('/sub', async ({ status, params, body }) => {
+        const { pid } = params;
         const data = body as Record<string, any>;
 
         if (data.status === "active") {
@@ -165,5 +175,5 @@ export function memberPlansSubRoutes(app: Elysia) {
             console.error(error);
             return status(500, { error: "An error occurred" });
         }
-    })
+    }, MemberPlansSubProps)
 }

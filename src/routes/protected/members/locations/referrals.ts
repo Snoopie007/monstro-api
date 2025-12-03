@@ -1,18 +1,16 @@
 import { db } from "@/db/db"
-import { getTableColumns } from "drizzle-orm"
 import { Elysia } from "elysia"
+import { z } from "zod";
+const MemberLocationReferralsProps = {
+    params: z.object({
+        mid: z.string(),
+        lid: z.string(),
+    }),
+};
 
-type Props = {
-    memberId: string
-    params: {
-        mid: string
-        lid: string
-    },
-    status: any
-}
 
 export function mlReferralsRoutes(app: Elysia) {
-    return app.get('/referrals', async ({ params, status }: Props) => {
+    return app.get('/referrals', async ({ params, status }) => {
         const { mid, lid } = params;
         try {
 
@@ -40,5 +38,5 @@ export function mlReferralsRoutes(app: Elysia) {
             console.error(error);
             return status(500, { error: "Failed to fetch achievements" });
         }
-    })
+    }, MemberLocationReferralsProps)
 }

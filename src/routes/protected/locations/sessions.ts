@@ -3,10 +3,16 @@ import type { ExtendedProgramSession } from "@/types/program";
 import { addDays, addMinutes } from "date-fns";
 import Elysia from "elysia";
 import { generateVRs } from "@/libs/utils";
-
+import { z } from "zod";
+const LocationSessionsProps = {
+    query: z.object({
+        planId: z.string(),
+        date: z.string(),
+    }),
+};
 export async function locationSessions(app: Elysia) {
     return app.get('/sessions', async ({ params, status, query }) => {
-        const { planId, date } = await query as { planId: string, date: string };
+        const { planId, date } = query;
 
         if (!date) {
             return status(400, { error: "Invalid request" });
@@ -79,5 +85,5 @@ export async function locationSessions(app: Elysia) {
             console.error(error);
             return status(500, { error: "Internal server error" });
         }
-    })
+    }, LocationSessionsProps)
 }

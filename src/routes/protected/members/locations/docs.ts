@@ -8,29 +8,29 @@ import {
 import S3Bucket from "@/libs/s3";
 import { and, eq } from "drizzle-orm";
 import { Elysia } from "elysia";
-import type { MemberPlan } from "@/types";
 import { generatePDFBuffer } from "@/libs/PDFGenerator";
+import { z } from "zod";
 
 const s3 = new S3Bucket();
-
-type Props = {
-	memberId: string;
-	params: {
-		mid: string;
-		lid: string;
-	};
-	status: any;
+const MemberLocationDocsProps = {
+	params: z.object({
+		mid: z.string(),
+		lid: z.string(),
+	}),
+	body: z.object({
+		plan: z.object({
+			id: z.string(),
+		}),
+		signature: z.string(),
+		templateId: z.string(),
+	}),
 };
 
-type PostBody = {
-	plan: MemberPlan;
-	signature: string;
-	templateId: string;
-};
+
 
 
 export function mlDocsRoutes(app: Elysia) {
-	return app.get("/docs", async ({ memberId, params, status }: Props) => {
+	return app.get("/docs", async ({ params, status }) => {
 		const { mid, lid } = params;
 		try {
 			const member = await db.query.members.findFirst({
@@ -89,7 +89,7 @@ export function mlDocsRoutes(app: Elysia) {
 			console.log(err);
 			return status(500, { error: err });
 		}
-	}).post("/docs", async ({ memberId, params, status, body }: Props & { body: PostBody }) => {
+	}, MemberLocationDocsProps).post("/docs", async ({ params, status, body }) => {
 		const { lid, mid } = params;
 		const { plan, signature, templateId } = body;
 
@@ -174,6 +174,5 @@ export function mlDocsRoutes(app: Elysia) {
 			console.error("Subscription contract processing error:", err);
 			return status(500, { error: err });
 		}
-	}
-	)
+	}, MemberLocationDocsProps)
 }

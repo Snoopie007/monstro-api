@@ -6,21 +6,22 @@ import { recurringReservations, recurringReservationsExceptions, reservations } 
 import { isSessionPasted, getSessionState } from "@/libs/utils";
 import { eq } from "drizzle-orm";
 import { emailQueue, classQueue } from "@/libs/queues";
-
-type ReservationBody = {
-    type: "pkg" | "sub";
-    planId: string;
-    sessionId: string;
-    date: string;
-    memberId: string;
-    recurring: boolean;
-    interval: "day" | "week" | "month" | "year";
-    intervalThreshold: number;
-}
-
+import { z } from "zod";
+const LocationReservationsProps = {
+    body: z.object({
+        type: z.enum(["pkg", "sub"]),
+        planId: z.string(),
+        sessionId: z.string(),
+        date: z.string(),
+        memberId: z.string(),
+        recurring: z.boolean(),
+        interval: z.enum(["day", "week", "month", "year"]),
+        intervalThreshold: z.number(),
+    }),
+};
 export async function locationReservations(app: Elysia) {
     return app.post('/reservations', async ({ body, params, status }) => {
-        const { type, planId, sessionId, date, memberId, ...rest } = body as ReservationBody;
+        const { type, planId, sessionId, date, memberId, ...rest } = body;
         const { lid } = params as { lid: string }
 
         try {
@@ -209,8 +210,8 @@ export async function locationReservations(app: Elysia) {
             console.error(err);
             return status(500, { error: err });
         }
-    }).delete('/reservations/:rid', async ({ params, status }) => {
-        const { rid } = params as { rid: string }
+    }, LocationReservationsProps).delete('/reservations/:rid', async ({ params, status }) => {
+        const { rid } = params;
 
         try {
 
@@ -231,7 +232,7 @@ export async function locationReservations(app: Elysia) {
                 try {
                     const classReminderJob = await emailQueue.getJob(`class-reminder-${rid}`);
                     const missedClassJob = await emailQueue.getJob(`missed-class-${rid}`);
-                    
+
                     await Promise.allSettled([
                         classReminderJob?.remove(),
                         missedClassJob?.remove()
@@ -268,7 +269,7 @@ export async function locationReservations(app: Elysia) {
                 try {
                     const classReminderJob = await emailQueue.getJob(`class-reminder-${rid}`);
                     const missedClassJob = await emailQueue.getJob(`missed-class-${rid}`);
-                    
+
                     await Promise.allSettled([
                         classReminderJob?.remove(),
                         missedClassJob?.remove()
@@ -286,5 +287,5 @@ export async function locationReservations(app: Elysia) {
             console.error(error)
             return status(500, { error: "Internal server error" })
         }
-    })
+    }, LocationReservationsProps)
 }   

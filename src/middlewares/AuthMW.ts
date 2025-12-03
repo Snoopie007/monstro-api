@@ -16,7 +16,7 @@ async function verifyToken(token: string) {
             // Service role token - valid for internal operations
             return { mid: 'service', userId: null, isServiceRole: true };
         }
-        
+
         // Regular user token
         const { user_metadata } = payload as { user_metadata: { member_id: string } };
         const userId = payload.sub as string; // Extract userId from sub field
@@ -48,10 +48,10 @@ async function verifyTokenX(token: string) {
 }
 
 export async function AuthMiddleware(app: Elysia) {
-    return app.derive(async ({ headers, status }) => {
+    return app.resolve(async ({ headers, status }) => {
         // Get token from Authorization header
         const auth = headers['authorization'];
-        
+
         if (!auth) {
             console.log('AuthMiddleware: No Authorization header');
             return status(401, { error: "Unauthorized - No token provided" });
@@ -71,17 +71,16 @@ export async function AuthMiddleware(app: Elysia) {
             return status(401, { error: "Unauthorized - Invalid token" });
         }
 
-        return { 
+        return {
             memberId: result.mid,
             userId: result.userId,
-            isServiceRole: result.isServiceRole 
-        }
+            isServiceRole: result.isServiceRole
+        };
     })
-
 }
 
 export async function AuthXMiddleware(app: Elysia) {
-    return app.derive(async ({ headers, status }) => {
+    return app.resolve(async ({ headers, status }) => {
 
         const auth = headers['authorization']
 
@@ -95,7 +94,7 @@ export async function AuthXMiddleware(app: Elysia) {
 
         if (!result) return status(401, { error: "Unauthorized" })
 
-        return { vendorId: result.vendorId, userId: result.userId }
+        return { vendorId: result.vendorId, userId: result.userId };
 
     })
 }

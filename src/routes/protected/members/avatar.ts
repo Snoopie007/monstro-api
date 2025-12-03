@@ -4,24 +4,23 @@ import { db } from "@/db/db";
 import { users } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { members } from "@/db/schemas";
-
+import { z } from "zod";
 const s3 = new S3Bucket();
 
 
-type Props = {
-    status: any;
-    body: {
-        file: File;
-    };
-    params: {
-        mid: string;
-    };
-}
+const MemberAvatarProps = {
+    params: z.object({
+        mid: z.string(),
+    }),
+    body: z.object({
+        file: z.instanceof(File),
+    }),
+};
 
 
 
 export async function memberAvatar(app: Elysia) {
-    return app.patch("/avatar", async ({ status, body, params }: Props) => {
+    return app.patch("/avatar", async ({ status, body, params }) => {
         const { mid } = params;
         const { file } = body;
         if (!file) {
@@ -90,8 +89,8 @@ export async function memberAvatar(app: Elysia) {
             console.error(error);
             return status(500, { message: 'Something went wrong' });
         }
-    }).delete("/avatar", async ({ status, params }) => {
-        const { mid } = params as { mid: string };
+    }, MemberAvatarProps).delete("/avatar", async ({ status, params }) => {
+        const { mid } = params;
         try {
             const member = await db.query.members.findFirst({
                 where: eq(members.id, mid),
@@ -109,5 +108,5 @@ export async function memberAvatar(app: Elysia) {
             console.error(error);
             return status(500, { message: 'Something went wrong' });
         }
-    })
+    }, MemberAvatarProps)
 }

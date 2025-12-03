@@ -1,15 +1,13 @@
 import { db } from "@/db/db";
 import { Elysia } from "elysia";
-
-type Props = {
-    memberId: string
-    status: any
-    params: {
-        mid: string
-    }
-}
+import { z } from "zod";
+const MemberAccountsProps = {
+    params: z.object({
+        mid: z.string(),
+    }),
+};
 export async function memberAccounts(app: Elysia) {
-    return app.get('/accounts', async ({ memberId, params, status }: Props) => {
+    return app.get('/accounts', async ({ params, status }) => {
         const { mid } = params;
         try {
             const member = await db.query.members.findFirst({
@@ -34,5 +32,5 @@ export async function memberAccounts(app: Elysia) {
         } catch (error) {
             return status(401, { error: "Unauthorized" });
         }
-    })
+    }, MemberAccountsProps)
 }

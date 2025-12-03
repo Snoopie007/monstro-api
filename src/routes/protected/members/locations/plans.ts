@@ -3,18 +3,16 @@ import { getTableColumns } from "drizzle-orm"
 import { Elysia } from "elysia"
 import { memberPackages, memberPlans, memberSubscriptions, reservations } from "@/db/schemas"
 import { and, eq, sql } from "drizzle-orm"
-
-type Props = {
-    memberId: string
-    params: {
-        mid: string
-        lid: string
-    },
-    status: any
-}
+import { z } from "zod";
+const MemberLocationPlansProps = {
+    params: z.object({
+        mid: z.string(),
+        lid: z.string(),
+    }),
+};
 
 export function mlPlansRoutes(app: Elysia) {
-    return app.get('/plans', async ({ memberId, params, status }: Props) => {
+    return app.get('/plans', async ({ params, status }) => {
         const { mid, lid } = params;
         try {
             const pkgs = await db.select({
@@ -51,6 +49,6 @@ export function mlPlansRoutes(app: Elysia) {
             console.error(error);
             return status(500, { error: "Internal Server Error" });
         }
-    })
+    }, MemberLocationPlansProps)
 
 }

@@ -2,26 +2,23 @@ import { db } from "@/db/db";
 import Elysia from "elysia";
 import type { ReactionEmoji } from "@/types";
 import { sql } from "drizzle-orm";
+import { z } from "zod";
+const ReactionProps = {
+    params: z.object({
+        ownerType: z.string(),
+        ownerId: z.string(),
+    }),
+    body: z.object({
+        display: z.string(),
+        type: z.string(),
+        name: z.string(),
+        userId: z.string(),
+        userName: z.string(),
+    }),
+};
 
-type ReactionProps = {
-    memberId: string
-    userId: string
-    params: {
-        ownerType: string
-        ownerId: string
-    }
-    status: any
-}
-
-type PostBody = {
-    display: string,
-    type: string,
-    name: string,
-    userId: string,
-    userName: string,
-}
 export const reactionRoutes = new Elysia({ prefix: '/reactions/:ownerType/:ownerId' })
-    .post('/', async ({ status, params, body }: ReactionProps & { body: PostBody }) => {
+    .post('/', async ({ status, params, body }) => {
 
         const { ownerId, ownerType } = params;
         const { display, type, name, userId, userName } = body;
@@ -70,4 +67,4 @@ export const reactionRoutes = new Elysia({ prefix: '/reactions/:ownerType/:owner
             console.error(error);
             return status(500, { error: 'Internal server error' });
         }
-    })
+    }, ReactionProps)

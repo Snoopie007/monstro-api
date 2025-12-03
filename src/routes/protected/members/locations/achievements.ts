@@ -1,18 +1,15 @@
 import { db } from "@/db/db"
-import { getTableColumns } from "drizzle-orm"
 import { Elysia } from "elysia"
-
-type Props = {
-    memberId: string
-    params: {
-        mid: string
-        lid: string
-    },
-    status: any
-}
+import { z } from "zod";
+const MemberLocationAchievementsProps = {
+    params: z.object({
+        mid: z.string(),
+        lid: z.string(),
+    }),
+};
 
 export function mlAchievementsRoutes(app: Elysia) {
-    return app.get('/achievements', async ({ memberId, params, status }: Props) => {
+    return app.get('/achievements', async ({ params, status }) => {
         const { mid, lid } = params;
         try {
 
@@ -32,6 +29,6 @@ export function mlAchievementsRoutes(app: Elysia) {
             console.error(error);
             return status(500, { error: "Failed to fetch achievements" });
         }
-    })
+    }, MemberLocationAchievementsProps)
 }
 

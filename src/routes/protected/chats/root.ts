@@ -4,26 +4,22 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { Elysia } from 'elysia';
 import { chatMembers, chats } from '@/db/schemas/chat/chats';
 import { sendMessageRoute } from './messages';
+import type { Context } from 'elysia';
+import { z } from 'zod';
 
-
-type PostChatProps = {
-    userId: string
-    status: any
-}
-
-type ChatProps = {
-    memberId: string
-    userId: string
-    params: {
-        uid: string
-        cid: string
-    }
-    status: any
-}
-
+const ChatProps = {
+    params: z.object({
+        uid: z.string(),
+        cid: z.string(),
+    }),
+    body: z.object({
+        addresseeId: z.string(),
+    }),
+};
 
 export const userChats = new Elysia({ prefix: '/chats' })
-    .get('/', async ({ status, memberId, userId }: ChatProps) => {
+    .get('/', async ({ status, ...ctx }) => {
+        const { memberId, userId } = ctx as Context & { memberId: string, userId: string };
         if (!memberId || !userId) {
             return status(401, { error: 'Unauthorized' });
         }
@@ -80,8 +76,8 @@ export const userChats = new Elysia({ prefix: '/chats' })
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }
-    })
-    .post('/', async ({ body, status, userId }: PostChatProps & { body: { addresseeId: string, groupId: string } }) => {
+    }).post('/', async ({ body, params, status, ...ctx }) => {
+        const { userId } = ctx as Context & { userId: string };
         const { addresseeId } = body;
         try {
 
@@ -150,9 +146,9 @@ export const userChats = new Elysia({ prefix: '/chats' })
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }
-    })
+    }, ChatProps)
     .group('/:cid', (app) => {
-        app.get('/', async ({ params, status }: ChatProps) => {
+        app.get('/', async ({ params, status }) => {
             const { cid } = params;
 
             try {
@@ -195,6 +191,7 @@ export const userChats = new Elysia({ prefix: '/chats' })
                 // Group reactions by message ID
                 const reactionsByMessage = reactions.reduce((acc, reaction) => {
                     const messageId = reaction.ownerId; // Updated field name
+                    if (!messageId) return acc;
                     if (!acc[messageId]) acc[messageId] = [];
                     acc[messageId].push(reaction);
                     return acc;

@@ -2,17 +2,20 @@ import { Elysia } from 'elysia';
 import { db } from '@/db/db';
 import { addDays, isAfter } from 'date-fns';
 import { generateVRs } from '@/libs/utils';
-type Props = {
-    memberId: string
-    params: {
-        mid: string
-        lid: string
-    },
-    status: any
-}
+import { z } from 'zod';
+
+const MemberLocationReservationsProps = {
+    params: z.object({
+        mid: z.string(),
+        lid: z.string(),
+    }),
+    query: z.object({
+        limit: z.string(),
+    }),
+};
 
 export function mlReservationsRoutes(app: Elysia) {
-    return app.get('/reservations', async ({ memberId, params, query, status }: Props & { query: { limit: string } }) => {
+    return app.get('/reservations', async ({ params, query, status }) => {
         const { mid, lid } = params;
 
         const limit = parseInt(query.limit || "5");
@@ -68,7 +71,7 @@ export function mlReservationsRoutes(app: Elysia) {
             console.error(error);
             return status(500, { error: "Internal server error" });
         }
-    }).get('/reservations/next', async ({ memberId, params, status }: Props) => {
+    }, MemberLocationReservationsProps).get('/reservations/next', async ({ params, status }) => {
         const { mid, lid } = params;
 
         const startDate = new Date();
@@ -135,5 +138,5 @@ export function mlReservationsRoutes(app: Elysia) {
             console.error(error);
             return status(500, { error: "Internal server error" });
         }
-    })
+    }, MemberLocationReservationsProps)
 }

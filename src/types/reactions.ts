@@ -17,3 +17,14 @@ export type ReactionEmoji = {
     name: string;
     type: string;
 }
+
+export type ReactionCounts = {
+    ownerType: string;
+    ownerId: string;
+    display: string;
+    name: string;
+    type: string;
+    count: number;
+    userNames: string[];
+    userIds: string[];
+}

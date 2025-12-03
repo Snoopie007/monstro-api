@@ -5,21 +5,23 @@ import { isSameHour } from "date-fns";
 import Elysia from "elysia";
 import { eq } from "drizzle-orm";
 import { emailQueue, classQueue } from "@/libs/queues";
+import { z } from "zod";
+const LocationCheckinProps = {
+    body: z.object({
+        reservationId: z.string(),
+        isRecurring: z.boolean(),
+        recurringId: z.string(),
+        startOn: z.date(),
+        endOn: z.date(),
+        memberSubscriptionId: z.string(),
+        memberPackageId: z.string(),
+    }),
+};
 
-
-type CheckinBody = {
-    reservationId: string;
-    isRecurring: boolean;
-    recurringId: string;
-    startOn: Date;
-    endOn: Date;
-    memberSubscriptionId: string;
-    memberPackageId: string;
-}
 
 export async function locationCheckin(app: Elysia) {
     return app.post('/checkin', async ({ body, status }) => {
-        const { reservationId, isRecurring, recurringId, startOn, endOn, ...rest } = body as CheckinBody;
+        const { reservationId, isRecurring, recurringId, startOn, endOn, ...rest } = body;
 
         try {
             let reservation: Reservation | undefined = undefined;
@@ -146,5 +148,5 @@ export async function locationCheckin(app: Elysia) {
             console.log(err);
             return status(500, { error: err });
         }
-    })
+    }, LocationCheckinProps)
 }

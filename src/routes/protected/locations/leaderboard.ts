@@ -1,6 +1,17 @@
 import { db } from "@/db/db";
 import { endOfDay, startOfMonth, startOfYear } from "date-fns";
 import Elysia from "elysia";
+import { z } from "zod";
+
+const LocationLeaderboardProps = {
+    params: z.object({
+        lid: z.string(),
+    }),
+    query: z.object({
+        range: z.enum(["YTD", "Current"]),
+    }),
+};
+
 const DUMMY_DATA = [
     { id: "1", firstName: "Michael", lastName: "Brown", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=michael", points: 2847 },
     { id: "2", firstName: "Sarah", lastName: "Davis", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=sarah", points: 2156 },
@@ -16,8 +27,8 @@ const DUMMY_DATA = [
 
 export async function locationLeaderboard(app: Elysia) {
     return app.get('/leaderboard', async ({ params, status, query }) => {
-        const { lid } = await params as { lid: string };
-        const { range } = await query as { range: string };
+        const { lid } = params;
+        const { range } = query;
 
         if (lid === 'acc_BpT7jEb3Q16nOPL3vo7qlw') {
             return status(200, DUMMY_DATA);
@@ -98,5 +109,5 @@ export async function locationLeaderboard(app: Elysia) {
             console.error(error);
             return status(500, "Failed to fetch achievements");
         }
-    })
+    }, LocationLeaderboardProps)
 }

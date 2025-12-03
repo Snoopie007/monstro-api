@@ -7,8 +7,24 @@ import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 import { EmailSender } from "@/libs/email";
 import { MonstroData } from "@/libs/data";
+import { z } from "zod";
 
 const emailSender = new EmailSender();
+
+
+
+const MemberFamiliesProps = {
+    params: z.object({
+        mid: z.string(),
+    }),
+    body: z.object({
+        relationship: z.enum(["parent", "child"]),
+        firstName: z.string(),
+        lastName: z.string(),
+        email: z.string(),
+        phone: z.string(),
+    }),
+};
 
 export async function memberFamilies(app: Elysia) {
     return app.get("/families", async ({ status, params }) => {
@@ -106,7 +122,7 @@ export async function memberFamilies(app: Elysia) {
                     where: (memberLocations, { eq }) => eq(memberLocations.memberId, mid),
                     with: {
                         location: {
-                            columns:{
+                            columns: {
                                 name: true,
                                 id: true,
                             }
@@ -173,22 +189,22 @@ export async function memberFamilies(app: Elysia) {
                         target: [familyMembers.memberId, familyMembers.relatedMemberId],
                     });
 
-                    await emailSender.send({
-                        options: {
-                            to: member.email,
-                            subject: `You've been added to ${memberLocation.location.name}`,
-                        },
-                        template: 'MemberInviteEmail',
-                        data: {
-                            member: { firstName: member.firstName },
-                            location: { name: memberLocation.location.name },
-                            ui: {
-                                btnUrl: `https://m.monstro-x.com/invite/${memberLocation.location.id}?email=${member.email}`,
-                                btnText: 'Accept Invite'
-                            },
-                            monstro: MonstroData
-                        }
-                    });
+                    // await emailSender.send({
+                    //     options: {
+                    //         to: member.email,
+                    //         subject: `You've been added to ${memberLocation.location.name}`,
+                    //     },
+                    //     template: 'MemberInviteEmail',
+                    //     data: {
+                    //         member: { firstName: member.firstName },
+                    //         location: { name: memberLocation.location.name },
+                    //         ui: {
+                    //             btnUrl: `https://m.monstro-x.com/invite/${memberLocation.location.id}?email=${member.email}`,
+                    //             btnText: 'Accept Invite'
+                    //         },
+                    //         monstro: MonstroData
+                    //     }
+                    // });
 
                     return {
                         ...familyMember,
@@ -206,5 +222,5 @@ export async function memberFamilies(app: Elysia) {
             const msg = error instanceof Error ? error.message : "Failed to create family member";
             return status(500, { error: msg });
         }
-    });
+    }, MemberFamiliesProps);
 }

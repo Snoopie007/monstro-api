@@ -1,15 +1,24 @@
 
 import type { Elysia } from "elysia";
 import S3Bucket from "@/libs/s3";
-
+import { z } from "zod";
 const s3 = new S3Bucket();
 
+const LocationDocsProps = {
+    params: z.object({
+        file: z.string(),
+        lid: z.string(),
+    }),
+    query: z.object({
+        mid: z.string(),
+    }),
+};
 
 export async function locationDocs(app: Elysia) {
     return app.get('/docs/:file', async ({ params, status, query, set }) => {
-        const { file, lid } = params as { file: string, lid: string };
+        const { file, lid } = params;
 
-        const { mid } = query as { mid: string };
+        const { mid } = query;
 
         if (!mid || !lid) {
             return status(400, { error: "Member ID and Location ID are required" });
@@ -59,5 +68,5 @@ export async function locationDocs(app: Elysia) {
             console.error("Error generating signed URL:", err);
             return status(500, { error: "Failed to generate signed URL" });
         }
-    })
+    }, LocationDocsProps)
 }   

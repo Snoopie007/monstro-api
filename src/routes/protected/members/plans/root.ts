@@ -3,11 +3,15 @@ import type { MemberPackage, MemberSubscription } from "@/types/member";
 import { Elysia } from "elysia";
 import { memberPlansPkgRoutes } from "./pkg";
 import { memberPlansSubRoutes } from "./sub";
-
-
+import { z } from "zod";
+const MemberPlansRootProps = {
+    params: z.object({
+        pid: z.string(),
+    }),
+};
 export const memberPlans = new Elysia({ prefix: '/plans/:pid' })
     .get('/', async ({ status, params }) => {
-        const { pid } = params as { pid: string };
+        const { pid } = params;
 
         try {
             let plans: MemberSubscription | MemberPackage | undefined;
@@ -49,13 +53,13 @@ export const memberPlans = new Elysia({ prefix: '/plans/:pid' })
             console.error(error);
             return status(500, { error: "Internal Server Error" });
         }
-    })
+    }, MemberPlansRootProps)
     .group('/family', (app) => {
-        return app.get('/', async ({ status, params }) => {
-            const { pid } = params as { pid: string };
+        app.get('/', async ({ status, params }) => {
+            const { pid } = params;
             try {
                 let plans: { memberId: string }[] | undefined;
-                if (params.pid.startsWith("sub")) {
+                if (pid.startsWith("sub")) {
                     plans = await db.query.memberSubscriptions.findMany({
                         where: (ms, { eq }) => eq(ms.parentId, pid),
                         with: {
@@ -79,6 +83,9 @@ export const memberPlans = new Elysia({ prefix: '/plans/:pid' })
                 console.error(error);
                 return status(500, { error: "An error occurred" });
             }
-        }).use(memberPlansPkgRoutes).use(memberPlansSubRoutes);
+        }, MemberPlansRootProps)
+            .use(memberPlansPkgRoutes)
+            .use(memberPlansSubRoutes)
+        return app;
 
     })

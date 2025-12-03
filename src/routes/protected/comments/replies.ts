@@ -1,16 +1,16 @@
 import { db } from "@/db/db";
 import type { Elysia } from "elysia";
+import { z } from "zod";
 
+const CommentRepliesProps = {
+    params: z.object({
+        cid: z.string(),
+    }),
+};
 
-type CommentParams = {
-    params: {
-        cid: string
-    }
-    status: any
-}
 
 export function commentReplies(app: Elysia) {
-    return app.get('/replies', async ({ params, status }: CommentParams) => {
+    return app.get('/replies', async ({ params, status }) => {
         const { cid } = params;
 
         // Be cause this is replies the ownerId is the parentId
@@ -38,5 +38,5 @@ export function commentReplies(app: Elysia) {
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }
-    })
+    }, CommentRepliesProps)
 }

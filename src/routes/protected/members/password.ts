@@ -3,15 +3,19 @@ import { users } from '@/db/schemas';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import Elysia from 'elysia';
-type ResetPasswordBody = {
-    currentPassword: string;
-    newPassword: string;
-    mid: string;
-    uid: string;
-}
+import { z } from 'zod';
+
+const ResetPasswordProps = {
+    body: z.object({
+        currentPassword: z.string(),
+        newPassword: z.string(),
+        mid: z.string(),
+        uid: z.string(),
+    }),
+};
 export async function resetPassword(app: Elysia) {
     return app.post("/password", async ({ body, status }) => {
-        const { currentPassword, newPassword, mid, uid } = body as ResetPasswordBody;
+        const { currentPassword, newPassword, mid, uid } = body;
 
 
         const member = await db.query.members.findFirst({
@@ -49,5 +53,5 @@ export async function resetPassword(app: Elysia) {
             console.log(err)
             return status(500, { error: err })
         }
-    });
+    }, ResetPasswordProps);
 }

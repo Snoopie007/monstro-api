@@ -4,9 +4,21 @@ import { broadcastMessage } from "@/libs/messages";
 import S3Bucket from "@/libs/s3";
 import type { Media, Message } from "@/types";
 import { and, eq, inArray } from "drizzle-orm";
-import { Elysia } from "elysia";
+import { Elysia, type Context } from "elysia";
+import { z } from "zod";
 
 const s3 = new S3Bucket();
+
+
+const PostMessageProps = {
+    params: z.object({
+        cid: z.string(),
+    }),
+    body: z.object({
+        content: z.string(),
+        files: z.array(z.instanceof(File)).optional(),
+    }),
+};
 
 // Allowed media types
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
@@ -78,13 +90,12 @@ export function sendMessageRoute(app: Elysia) {
             console.error(error);
             return status(500, { error: 'Internal server error' });
         }
-    }).post('/messages', async (ctx) => {
-        const { params, body, status } = ctx;
-        const userId = (ctx as any).userId as string | null;
-        
+    }).post('/messages', async ({ params, body, status, ...ctx }) => {
+        const { userId } = ctx as Context & { userId: string };
+
         console.log("post message");
-        const { cid } = params as { cid: string };
-        const { content, files } = body as { content: string; files?: File | File[] };
+        const { cid } = params;
+        const { content, files } = body;
 
 
         if (!content || content.trim().length === 0) {
@@ -181,6 +192,6 @@ export function sendMessageRoute(app: Elysia) {
             console.error('Error sending message:', error);
             return status(500, { error: 'Internal server error' });
         }
-    })
+    }, PostMessageProps)
     return app;
 }

@@ -1,13 +1,10 @@
 import { db } from "@/db/db"
-import { Elysia } from "elysia"
-
-type Props = {
-    userId: string
-    status: any
-}
+import { Elysia, type Context } from "elysia"
+import { z } from "zod";
 
 export const userFriends = new Elysia({ prefix: '/friends' })
-    .get('/', async ({ userId, status }: Props) => {
+    .get('/', async ({ params, body, status, ...ctx }) => {
+        const { userId } = ctx as Context & { userId: string };
         if (!userId) {
             return status(401, { error: "Unauthorized" });
         }
