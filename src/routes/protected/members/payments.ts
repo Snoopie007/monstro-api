@@ -1,15 +1,25 @@
 import { VendorStripePayments } from "@/libs/stripe";
 import Elysia from "elysia";
 import { db } from "@/db/db";
+import { z } from "zod";
 
-
+const MemberPaymentsProps = {
+    params: z.object({
+        mid: z.string(),
+    }),
+    body: z.object({
+        token: z.string(),
+        default: z.boolean(),
+        paymentMethodId: z.string(),
+    }),
+};
 
 const liveStripe = new VendorStripePayments();
 
 
 export function memberPayments(app: Elysia) {
     return app.get("/payments", async ({ status, params }) => {
-        const { mid } = params as { mid: string };
+        const { mid } = params;
         try {
             const member = await db.query.members.findFirst({
                 where: (member, { eq }) => eq(member.id, mid)
@@ -50,9 +60,9 @@ export function memberPayments(app: Elysia) {
             console.log(err)
             return status(500, { error: err })
         }
-    }).post("/payments", async ({ status, body, params }) => {
+    }, MemberPaymentsProps).post("/payments", async ({ status, body, params }) => {
 
-        const { token, default: isDefault } = body as { token: string, default: boolean };
+        const { token, default: isDefault } = body;
 
         try {
 
@@ -67,9 +77,9 @@ export function memberPayments(app: Elysia) {
             console.log(err)
             return status(500, { error: err })
         }
-    }).delete("/payments", async ({ status, body, params }) => {
+    }, MemberPaymentsProps).delete("/payments", async ({ status, body, params }) => {
 
-        const { paymentMethodId } = body as { paymentMethodId: string };
+        const { paymentMethodId } = body;
 
         try {
 
@@ -79,9 +89,9 @@ export function memberPayments(app: Elysia) {
             console.log(err)
             return status(500, { error: err })
         }
-    }).put("/payments/default", async ({ status, body, params }) => {
-        const { paymentMethodId } = body as { paymentMethodId: string };
-        const { mid } = params as { mid: string };
+    }, MemberPaymentsProps).put("/payments/default", async ({ status, body, params }) => {
+        const { paymentMethodId } = body;
+        const { mid } = params;
 
         try {
 
@@ -106,7 +116,7 @@ export function memberPayments(app: Elysia) {
             console.log(err)
             return status(500, { error: err })
         }
-    })
+    }, MemberPaymentsProps)
 }
 
 

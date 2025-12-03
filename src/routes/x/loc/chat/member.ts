@@ -1,29 +1,29 @@
 import { db } from "@/db/db";
 import { chatMembers, chats, locations } from "@/db/schemas";
 import { and, eq, isNull } from "drizzle-orm";
-import type { Elysia } from "elysia";
+import type { Context, Elysia } from "elysia";
+import { z } from "zod";
 
-type PostProps = {
-    userId: string | null;
-    params: { lid: string };
-    body: { memberId: string };
-    status: any;
+
+const PostProps = {
+    params: z.object({
+        lid: z.string(),
+    }),
+    body: z.object({
+        memberId: z.string(),
+    }),
+    query: z.object({
+        memberId: z.string(),
+    }),
 };
 
-type GetProps = {
-    userId: string | null;
-    params: { lid: string };
-    query: { memberId: string };
-    status: any;
-};
+
 
 export function memberChatRoute(app: Elysia) {
     // Find existing location chat for a member (GET - doesn't create)
-    app.get('/member', async (ctx) => {
-        const { params, query, status } = ctx;
-        const userId = (ctx as any).userId as string | null;
-        const { lid } = params as { lid: string };
-        const { memberId } = query as { memberId: string };
+    app.get('/member', async ({ params, query, status, ...ctx }) => {
+        const { userId, memberId } = ctx as Context & { userId: string, memberId: string };
+        const { lid } = params;
 
         if (!userId) {
             return status(401, { error: 'User not authenticated' });
@@ -44,7 +44,7 @@ export function memberChatRoute(app: Elysia) {
                 }
             });
 
-            const existingChat = existingChats.find(chat => 
+            const existingChat = existingChats.find(chat =>
                 chat.chatMembers.some(cm => cm.userId === memberId)
             );
 
@@ -58,14 +58,9 @@ export function memberChatRoute(app: Elysia) {
             console.error('Error finding member chat:', error);
             return status(500, { error: 'Internal server error' });
         }
-    });
-
-    // Find or create location chat for a member (POST - creates if not found)
-    app.post('/member', async (ctx) => {
-        const { params, body, status } = ctx;
-        const userId = (ctx as any).userId as string | null;
-        const { lid } = params as { lid: string };
-        const { memberId } = body as { memberId: string };
+    }, PostProps).post('/member', async ({ params, body, query, status, ...ctx }) => {
+        const { userId, memberId } = ctx as Context & { userId: string, memberId: string };
+        const { lid } = params;
 
         if (!userId) {
             return status(401, { error: 'User not authenticated' });
@@ -92,7 +87,7 @@ export function memberChatRoute(app: Elysia) {
             });
 
             // Find a chat where the member is a participant
-            const existingChat = existingChats.find(chat => 
+            const existingChat = existingChats.find(chat =>
                 chat.chatMembers.some(cm => cm.userId === memberId)
             );
 
@@ -117,7 +112,7 @@ export function memberChatRoute(app: Elysia) {
                 locationId: lid,
                 name: location.name,
             }).returning();
-            
+
             const newChat = result[0];
             if (!newChat) {
                 return status(500, { error: 'Failed to create chat' });
@@ -134,7 +129,7 @@ export function memberChatRoute(app: Elysia) {
             console.error('Error finding/creating member chat:', error);
             return status(500, { error: 'Internal server error' });
         }
-    });
+    }, PostProps);
 
     return app;
 }
