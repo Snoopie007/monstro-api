@@ -124,7 +124,7 @@ export function mlSupportRoutes(app: Elysia) {
                             },
                         })
 
-                        const staffUserIds = staffMembers
+                    const staffUserIds = staffMembers
                         .map((sl) => ({
                             id: sl.staff.user?.id || '',
                             email: sl.staff.user?.email || '',

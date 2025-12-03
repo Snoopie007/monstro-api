@@ -6,6 +6,19 @@ import { getRedisClient } from "@/libs/redis";
 import { EmailSender } from "@/libs/email";
 import { generateOtp } from "@/libs/utils";
 import { MonstroData } from "@/libs/data";
+import { z } from "zod";
+
+
+const MemberProfileProps = {
+    params: z.object({
+        mid: z.string(),
+    }),
+    body: z.object({
+        firstName: z.string(),
+        lastName: z.string(),
+        email: z.string(),
+    }),
+};
 
 const redis = getRedisClient();
 
@@ -15,8 +28,8 @@ const emailSender = new EmailSender();
 
 export function memberProfile(app: Elysia) {
     return app.patch("/", async ({ status, params, body }) => {
-        const { mid } = params as { mid: string };
-        const data = body as any;
+        const { mid } = params;
+        const data = body as Record<string, any>;
 
         try {
             await db.transaction(async (tx) => {
@@ -34,9 +47,9 @@ export function memberProfile(app: Elysia) {
         } catch (error) {
             return status(401, { error: "Unauthorized" });
         }
-    }).patch("/email", async ({ status, body, params }) => {
-        const { email } = body as { email: string };
-        const { mid } = params as { mid: string };
+    }, MemberProfileProps).patch("/email", async ({ status, body, params }) => {
+        const { email } = body;
+        const { mid } = params;
         try {
             //validate email
             const member = await db.query.members.findFirst({
@@ -80,5 +93,5 @@ export function memberProfile(app: Elysia) {
             console.error(error);
             return status(422, { error: "Unprocessable Entity" })
         }
-    })
+    }, MemberProfileProps)
 }
