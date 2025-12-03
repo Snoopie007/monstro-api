@@ -8,11 +8,15 @@ import "./src/workers/worker"; // Import worker to start processing
 
 const CORS_CONFIG = {
   origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Key"],
 };
 
-const app = new Elysia();
+const app = new Elysia({
+  body: {
+    maxSize: 1024 * 1024 * 10, // 10MB
+  },
+});
 
 app.use(cors(CORS_CONFIG))
   .use(RateLimitMiddleware())
@@ -20,7 +24,7 @@ app.use(cors(CORS_CONFIG))
   .onRequest(({ request }) => {
     // Check if request came through HTTPS proxy
 
-    console.log(`🔍 ${request.url}`);
+    console.log(`🔍 ${request.method} ${request.url}`);
   })
   // Dedicated health check endpoint
   .get("/healthcheck", () => {

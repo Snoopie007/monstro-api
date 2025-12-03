@@ -1,7 +1,8 @@
 import { db } from "@/db/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { messages, media, chats, chatMembers, reactionCounts } from "@/db/schemas";
-import { enrichMessage, broadcastMessage } from "@/libs/messages";
+import { broadcastMessage } from "@/libs/messages";
+import type { Media, Message, NewMedia } from "@/types";
 import { Elysia } from "elysia";
 import S3Bucket from "@/libs/s3";
 
@@ -72,6 +73,7 @@ export function sendMessageRoute(app: Elysia) {
             // Group reactions by message ID
             const reactionsByMessage = reactions.reduce((acc, reaction) => {
                 const messageId = reaction.ownerId; // Updated field name
+                if (!messageId) return acc;
                 if (!acc[messageId]) acc[messageId] = [];
                 acc[messageId].push(reaction);
                 return acc;
@@ -88,20 +90,17 @@ export function sendMessageRoute(app: Elysia) {
             return status(500, { error: 'Internal server error' });
         }
     }).post('/messages', async ({ params, body, status, userId }: PostMessageProps) => {
+        console.log("post message");
         const { cid } = params;
-        console.log('send message', cid);
-        if (!userId) {
-            return status(401, { error: 'User not authenticated' });
+        const { content, files } = body;
+
+
+        if (!content || content.trim().length === 0) {
+            return status(400, { error: 'Message content is required' });
         }
 
-        try {
-            // In Elysia, multipart form data is automatically parsed
-            // and available directly on the body object
-            const { content, files } = body;
 
-            if (!content || content.trim().length === 0) {
-                return status(400, { error: 'Message content is required' });
-            }
+        try {
 
             // For location chats, auto-add sender to chat_members if not already present
             // This allows staff to join the chat on their first message
@@ -114,7 +113,7 @@ export function sendMessageRoute(app: Elysia) {
                 const existingMembership = await db.query.chatMembers.findFirst({
                     where: and(
                         eq(chatMembers.chatId, cid),
-                        eq(chatMembers.userId, userId)
+                        eq(chatMembers.userId, userId!)
                     ),
                 });
 
@@ -122,90 +121,65 @@ export function sendMessageRoute(app: Elysia) {
                     // Add sender as a chat member
                     await db.insert(chatMembers).values({
                         chatId: cid,
-                        userId: userId,
+                        userId: userId!,
                     });
                 }
             }
 
             // Insert the message first
-            const result = await db.insert(messages).values({
+            const [newMessage] = await db.insert(messages).values({
                 chatId: cid,
                 senderId: userId,
                 content: content.trim(),
-                metadata: {},
             }).returning();
 
-            const newMessage = result[0];
             if (!newMessage) {
                 return status(500, { error: 'Failed to create message' });
             }
 
-            // Process uploaded files (if any)
-            const uploadedMedia: any[] = [];
-
-            // Normalize files to array (could be single File or File[])
-            const fileArray = files ? (Array.isArray(files) ? files : [files]) : [];
-
-            if (fileArray.length > 0) {
-                for (const file of fileArray) {
-                    // Validate file
-                    if (!file || !file.name) continue;
-
-                    // Check file size
-                    if (file.size > MAX_FILE_SIZE) {
-                        console.warn(`File ${file.name} exceeds size limit, skipping`);
-                        continue;
-                    }
-
-                    // Check file type
-                    const allAllowedTypes = [
-                        ...ALLOWED_IMAGE_TYPES,
-                        // ...ALLOWED_VIDEO_TYPES,
-                        // ...ALLOWED_AUDIO_TYPES,
-                        // ...ALLOWED_DOCUMENT_TYPES
-                    ];
-
-                    if (!allAllowedTypes.includes(file.type)) {
-                        console.warn(`File ${file.name} has unsupported type, skipping`);
-                        continue;
-                    }
-
+            let medias: Media[] = [];
+            const uploadedFiles = Array.isArray(files) ? files : [files];
+            if (uploadedFiles.length > 0) {
+                const uploadPromises = uploadedFiles.filter(f => {
+                    if (!f || !f.name) return false;
+                    if (f.size > MAX_FILE_SIZE) return false;
+                    if (!ALLOWED_IMAGE_TYPES.includes(f.type)) return false;
+                    return true;
+                }).map(async (file) => {
+                    if (!file) return null;
                     try {
-                        // Upload to S3
-                        const s3Result = await s3.uploadFile(
-                            file,
-                            `chats/${cid}/messages/${newMessage.id}`
-                        );
-
-                        // Insert media record
-                        const [mediaRecord] = await db.insert(media).values({
+                        const s3Result = await s3.uploadFile(file, `chats/${cid}/medias`);
+                        return {
                             ownerId: newMessage.id,
-                            ownerType: 'message',
+                            ownerType: 'message' as const,
+                            url: s3Result.url,
                             fileName: file.name,
                             fileType: getFileTypeCategory(file.type),
                             fileSize: file.size.toString(),
                             mimeType: file.type,
-                            url: s3Result.url,
-                            thumbnailUrl: null, // Can be generated later for images/videos
-                            altText: null,
-                            metadata: {},
-                        }).returning();
-
-                        uploadedMedia.push(mediaRecord);
+                        };
                     } catch (uploadError) {
                         console.error(`Failed to upload file ${file.name}:`, uploadError);
-                        // Continue with other files
+                        return null;
                     }
+                });
+
+                const uploadedMedias = await Promise.all(uploadPromises);
+
+                const validMedias = uploadedMedias.filter((m) => m !== null);
+                if (validMedias.length > 0) {
+                    const newMedias = await db.insert(media).values(validMedias).returning();
+                    medias = newMedias as unknown as Media[];
                 }
             }
 
-            // Enrich the message with media and sender info
-            // This fetches sender details and media from the database
-            const enrichedMessage = await enrichMessage(newMessage.id);
 
-            if (!enrichedMessage) {
-                return status(500, { error: 'Failed to enrich message' });
-            }
+
+            const enrichedMessage: Message = {
+                ...newMessage,
+                medias,
+            };
+
 
             // Broadcast the enriched message to all subscribed clients
             await broadcastMessage(cid, enrichedMessage);
@@ -218,4 +192,3 @@ export function sendMessageRoute(app: Elysia) {
     })
     return app;
 }
-
