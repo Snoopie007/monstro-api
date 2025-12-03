@@ -1,24 +1,12 @@
 import { db } from "@/db/db";
-import { and, eq, inArray } from "drizzle-orm";
-import { messages, media, chats, chatMembers, reactionCounts } from "@/db/schemas";
+import { chatMembers, chats, media, messages, reactionCounts } from "@/db/schemas";
 import { broadcastMessage } from "@/libs/messages";
-import type { Media, Message, NewMedia } from "@/types";
-import { Elysia } from "elysia";
 import S3Bucket from "@/libs/s3";
+import type { Media, Message } from "@/types";
+import { and, eq, inArray } from "drizzle-orm";
+import { Elysia } from "elysia";
 
 const s3 = new S3Bucket();
-
-type PostMessageProps = {
-    userId: string | null;
-    params: {
-        cid: string;
-    };
-    status: any;
-    body: {
-        content: string;
-        files?: File | File[];
-    };
-}
 
 // Allowed media types
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
@@ -39,8 +27,9 @@ function getFileTypeCategory(mimeType: string): 'image' | 'video' | 'audio' | 'd
 }
 
 export function sendMessageRoute(app: Elysia) {
-    app.get('/messages', async ({ params, status }: PostMessageProps) => {
-        const { cid } = params;
+    app.get('/messages', async (ctx) => {
+        const { params, status } = ctx;
+        const { cid } = params as { cid: string };
 
         //fail safe
         if (cid.startsWith('temp')) {
@@ -89,10 +78,13 @@ export function sendMessageRoute(app: Elysia) {
             console.error(error);
             return status(500, { error: 'Internal server error' });
         }
-    }).post('/messages', async ({ params, body, status, userId }: PostMessageProps) => {
+    }).post('/messages', async (ctx) => {
+        const { params, body, status } = ctx;
+        const userId = (ctx as any).userId as string | null;
+        
         console.log("post message");
-        const { cid } = params;
-        const { content, files } = body;
+        const { cid } = params as { cid: string };
+        const { content, files } = body as { content: string; files?: File | File[] };
 
 
         if (!content || content.trim().length === 0) {

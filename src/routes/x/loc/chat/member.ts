@@ -1,7 +1,7 @@
-import type { Elysia } from "elysia";
 import { db } from "@/db/db";
-import { chats, chatMembers, locations } from "@/db/schemas";
-import { eq, and, isNull } from "drizzle-orm";
+import { chatMembers, chats, locations } from "@/db/schemas";
+import { and, eq, isNull } from "drizzle-orm";
+import type { Elysia } from "elysia";
 
 type PostProps = {
     userId: string | null;
@@ -19,9 +19,11 @@ type GetProps = {
 
 export function memberChatRoute(app: Elysia) {
     // Find existing location chat for a member (GET - doesn't create)
-    app.get('/member', async ({ params, query, status, userId }: GetProps) => {
-        const { lid } = params;
-        const { memberId } = query;
+    app.get('/member', async (ctx) => {
+        const { params, query, status } = ctx;
+        const userId = (ctx as any).userId as string | null;
+        const { lid } = params as { lid: string };
+        const { memberId } = query as { memberId: string };
 
         if (!userId) {
             return status(401, { error: 'User not authenticated' });
@@ -59,9 +61,11 @@ export function memberChatRoute(app: Elysia) {
     });
 
     // Find or create location chat for a member (POST - creates if not found)
-    app.post('/member', async ({ params, body, status, userId }: PostProps) => {
-        const { lid } = params;
-        const { memberId } = body;
+    app.post('/member', async (ctx) => {
+        const { params, body, status } = ctx;
+        const userId = (ctx as any).userId as string | null;
+        const { lid } = params as { lid: string };
+        const { memberId } = body as { memberId: string };
 
         if (!userId) {
             return status(401, { error: 'User not authenticated' });

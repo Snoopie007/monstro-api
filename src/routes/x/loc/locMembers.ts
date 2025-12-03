@@ -1,14 +1,14 @@
-import type { Elysia } from "elysia";
 import { db } from "@/db/db";
+import type { Elysia } from "elysia";
 
-import { eq, ilike, or, and, inArray, exists, sql } from "drizzle-orm";
 import {
-    members,
-    memberLocations,
-    memberTags,
-    memberHasTags,
     memberCustomFields,
+    memberHasTags,
+    memberLocations,
+    members,
+    memberTags,
 } from "@/db/schemas";
+import { and, eq, exists, ilike, inArray, or, sql } from "drizzle-orm";
 
 
 
@@ -39,10 +39,10 @@ function locMembers(app: Elysia) {
 
 
         return app;
-    }).get('/', async ({ params, status, query }: Props & { query: GetQuery }) => {
-        const { mid } = params;
-
-        const { size, page, tags, tagOperator } = query;
+    }).get('/', async (ctx) => {
+        const { params, status, query } = ctx;
+        const { mid } = params as { mid: string };
+        const { size, page, tags, tagOperator } = query as GetQuery;
 
         const pageSize = parseInt(size || "100");
         const pageNumber = parseInt(page || "1");
@@ -196,8 +196,6 @@ function locMembers(app: Elysia) {
             console.error(err);
             return status(500, { error: "Internal Server Error" });
         }
-    }).post('/', async ({ params, status, body }: Props & { body: PostBody }) => {
-
     });
 }
 

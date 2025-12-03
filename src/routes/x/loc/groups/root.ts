@@ -1,7 +1,7 @@
-import { Elysia } from "elysia";
 import { db } from "@/db/db";
-import { eq } from "drizzle-orm";
 import { groups } from "@/db/schemas";
+import { eq } from "drizzle-orm";
+import { Elysia } from "elysia";
 
 type Props = {
     params: {
@@ -13,8 +13,9 @@ type Props = {
 };
 
 export const xGroups = new Elysia({ prefix: "/groups" })
-    .get("/", async ({ params, set }: Props) => {
-        const { lid } = params;
+    .get("/", async (ctx) => {
+        const { params, set } = ctx;
+        const { lid } = params as { lid: string };
 
         try {
             const locationGroups = await db.query.groups.findMany({

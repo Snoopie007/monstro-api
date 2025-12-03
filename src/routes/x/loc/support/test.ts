@@ -1,18 +1,18 @@
-import type { Elysia } from "elysia";
-import { getModel, calculateAICost, chunkedStream } from "@/libs/ai";
 import { db } from "@/db/db";
 import { supportAssistants } from "@/db/schemas";
-import { eq } from "drizzle-orm";
+import { calculateAICost, chunkedStream, getModel } from "@/libs/ai";
 import { formattedPrompt } from "@/libs/ai/Prompts";
-import { BaseMessage } from "@langchain/core/messages";
-import { invokeTestBot, createMockConversation } from "@/libs/ai/TestChat";
-import { toUIMessageStream } from '@ai-sdk/langchain';
-import { createUIMessageStreamResponse } from 'ai';
+import { createMockConversation, invokeTestBot } from "@/libs/ai/TestChat";
+import { getRedisClient } from "@/libs/redis";
 import type {
     SupportConversation,
 } from "@/types";
-import { getRedisClient } from "@/libs/redis";
+import { toUIMessageStream } from '@ai-sdk/langchain';
 import { UpstashRedisChatMessageHistory } from "@langchain/community/stores/message/upstash_redis";
+import { BaseMessage } from "@langchain/core/messages";
+import { createUIMessageStreamResponse } from 'ai';
+import { eq } from "drizzle-orm";
+import type { Elysia } from "elysia";
 
 type Props = {
     params: {
@@ -30,9 +30,10 @@ export async function testChatRoute(app: Elysia) {
     const redis = getRedisClient();
     const TTL = 60 * 60 * 1; // 1 hours
 
-    return app.post("/test", async ({ body, status, params }: Props) => {
-        const { lid } = params;
-        const { message, memberId } = body;
+    return app.post("/test", async (ctx) => {
+        const { body, status, params } = ctx;
+        const { lid } = params as { lid: string };
+        const { message, memberId } = body as { message: BaseMessage; memberId?: string };
 
         if (!memberId || !message) {
             return status(400, { error: "Invalid request" });

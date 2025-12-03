@@ -12,24 +12,11 @@ import { Runnable } from "@langchain/core/runnables";
 import { eq } from "drizzle-orm";
 import type { Elysia } from "elysia";
 
-type Props = {
-    params: {
-        mid: string;
-        lid: string;
-        cid: string;
-    };
-    body: {
-        message: string;
-        mid: string;
-    };
-    status: any;
-};
-
 export async function supportMessagesRoute(app: Elysia) {
 
-    return app.post('/message', async ({ body, status, params }: Props) => {
-        const { lid, cid } = params;
-        const { message, mid } = body;
+    return app.post('/message', async ({ body, status, params }) => {
+        const { lid, cid } = params as { lid: string; cid: string };
+        const { message, mid } = body as { message: string; mid: string };
 
         try {
 
