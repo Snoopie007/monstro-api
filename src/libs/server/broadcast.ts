@@ -67,6 +67,8 @@ export async function broadcastSupportMessage(
   const supabase = getSupabaseServiceClient();
 
   try {
+    console.log('📡 Broadcasting support message:', { conversationId, messageId: message.id, role: message.role });
+    
     // Broadcast to the specific conversation channel
     const channel = supabase.channel(`support:${conversationId}`, {
       config: {
@@ -80,6 +82,7 @@ export async function broadcastSupportMessage(
     // Determine event type based on message role
     const eventType = message.role === 'system' ? 'system_message' : 'new_message';
 
+    console.log(`📤 Sending broadcast with event: ${eventType}`);
     await channel.send({
       type: 'broadcast',
       event: eventType,
@@ -88,9 +91,10 @@ export async function broadcastSupportMessage(
       },
     });
 
+    console.log('✅ Broadcast sent successfully');
     supabase.removeChannel(channel);
   } catch (error) {
-    console.error('Error broadcasting support message:', error);
+    console.error('❌ Error broadcasting support message:', error);
     throw error;
   }
 }

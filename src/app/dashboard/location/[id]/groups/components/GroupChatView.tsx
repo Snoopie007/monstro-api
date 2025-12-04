@@ -1,23 +1,25 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage, ScrollArea } from "@/components/ui";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Avatar, AvatarFallback, AvatarImage, ScrollArea } from "@/components/ui";
 import { useGroupChat } from "@/hooks/useGroupChat";
 import { useSession } from "@/hooks/useSession";
 import { formatMessageTimestamp, getDateLabel } from "@/libs/utils";
 import { Message } from "@/types/chats";
 import { isSameDay } from "date-fns";
-import { useRef, useState, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
+import { useCallback, useRef, useState } from "react";
+import { toast } from "react-toastify";
 import { ChatActions } from "./ChatActions";
+import { EditableMessage } from "./EditableMessage";
 import { GroupChatInput } from "./GroupChatInput";
 import { useGroups } from "./GroupsProvider";
+import { MessageActionsDropdown } from "./MessageActionsDropdown";
 import { ChatReactions, ChatReactionSheet } from "./reactions";
 
 export function GroupChatView({ lid }: { lid: string }) {
     const {currentChat} = useGroups()
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { data: session } = useSession();
-    const { messages, sendMessage, toggleReaction, isLoading } = useGroupChat({
+    const { messages, sendMessage, editMessage, deleteMessage, toggleReaction, isLoading } = useGroupChat({
         chatId: currentChat?.id ?? null,
         fromUserId: session?.user?.id ?? null,
     });
@@ -25,6 +27,13 @@ export function GroupChatView({ lid }: { lid: string }) {
     // State for reaction picker
     const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
     const [selectedMessageForReaction, setSelectedMessageForReaction] = useState<Message | null>(null);
+    
+    // State for editing
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    
+    // State for delete confirmation
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
 
     const handleSendMessage = async (content: string, files: File[]) => {
         await sendMessage(content, files);
@@ -53,6 +62,42 @@ export function GroupChatView({ lid }: { lid: string }) {
         setReactionPickerOpen(false);
         setSelectedMessageForReaction(null);
     }, [selectedMessageForReaction, session?.user?.id, handleToggleReaction]);
+    
+    const handleStartEdit = useCallback((messageId: string) => {
+        setEditingMessageId(messageId);
+    }, []);
+    
+    const handleSaveEdit = useCallback(async (messageId: string, content: string) => {
+        try {
+            await editMessage(messageId, content);
+            setEditingMessageId(null);
+        } catch (err) {
+            console.error('Failed to edit message:', err);
+            toast.error('Failed to edit message');
+        }
+    }, [editMessage]);
+    
+    const handleCancelEdit = useCallback(() => {
+        setEditingMessageId(null);
+    }, []);
+    
+    const handleRequestDelete = useCallback((message: Message) => {
+        setMessageToDelete(message);
+        setDeleteConfirmOpen(true);
+    }, []);
+    
+    const handleConfirmDelete = useCallback(async () => {
+        if (messageToDelete) {
+            try {
+                await deleteMessage(messageToDelete.id);
+                setDeleteConfirmOpen(false);
+                setMessageToDelete(null);
+            } catch (err) {
+                toast.error('Failed to delete message');
+                console.error('Failed to delete message:', err);
+            }
+        }
+    }, [messageToDelete, deleteMessage]);
 
     if (!currentChat){
         return (
@@ -122,9 +167,9 @@ export function GroupChatView({ lid }: { lid: string }) {
                                             </div>
                                         )}
                                         <div
-                                            className={`flex gap-3 flex-row group`}
+                                            className={`flex gap-3 flex-row group hover:bg-muted/30 rounded-lg px-4 py-2 -mx-2 transition-colors`}
                                         >
-                                            <Avatar className="h-8 w-8">
+                                            <Avatar className="h-8 w-8 flex-shrink-0">
                                                 <AvatarImage src={avatarSrc} />
                                                 <AvatarFallback className="text-xs">
                                                 {fallbackInitials || "?"}
@@ -140,12 +185,19 @@ export function GroupChatView({ lid }: { lid: string }) {
                                                     <span className="text-xs text-muted-foreground/60">
                                                         {message.created ? formatMessageTimestamp(message.created) : "Unknown time"}
                                                     </span>
+                                                    {message.updated && (
+                                                        <span className="text-xs text-muted-foreground/40 italic">
+                                                            (edited)
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
-                                                    <ReactMarkdown>
-                                                        {message.content}
-                                                    </ReactMarkdown>
-                                                </div>
+                                                <EditableMessage
+                                                    message={message}
+                                                    isEditing={editingMessageId === message.id}
+                                                    onStartEdit={() => handleStartEdit(message.id)}
+                                                    onSave={(content) => handleSaveEdit(message.id, content)}
+                                                    onCancel={handleCancelEdit}
+                                                />
                                                 
                                                 {/* Separate images from other files */}
                                                 {(() => {
@@ -225,6 +277,16 @@ export function GroupChatView({ lid }: { lid: string }) {
                                                     onOpenPicker={() => handleOpenReactionPicker(message)}
                                                 />
                                             </div>
+                                            {/* Actions dropdown - far right */}
+                                            {isFromCurrentUser && (
+                                                <div className="ml-auto flex-shrink-0 self-start pt-0.5">
+                                                    <MessageActionsDropdown
+                                                        message={message}
+                                                        onEdit={() => handleStartEdit(message.id)}
+                                                        onDelete={() => handleRequestDelete(message)}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -250,6 +312,27 @@ export function GroupChatView({ lid }: { lid: string }) {
             }}
             onSelect={handleReactionSelect}
           />
+          
+          {/* Delete Confirmation Dialog */}
+          <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Message</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this message? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setMessageToDelete(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleConfirmDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       );
 }

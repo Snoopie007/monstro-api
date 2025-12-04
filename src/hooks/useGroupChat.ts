@@ -1,6 +1,6 @@
 import { clientsideApiClient } from '@/libs/api/client';
 import supabase from '@/libs/client/supabase';
-import { Message, MessageReaction, EmojiData } from '@/types/chats';
+import { EmojiData, Message, MessageReaction } from '@/types/chats';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from './useSession';
@@ -257,6 +257,49 @@ export const useGroupChat = ({
         });
       });
 
+        // Listen for message updates
+      channel.on('broadcast', { event: 'message_updated' }, (payload) => {
+        if (!mounted) return;
+        const enrichedMessage = payload.payload?.message;
+        
+        if (!enrichedMessage?.id) {
+          console.warn('Invalid updated message received:', enrichedMessage);
+          return;
+        }
+        
+        const mapped: Message = {
+          id: enrichedMessage.id,
+          chatId: enrichedMessage.chatId,
+          senderId: enrichedMessage.senderId,
+          content: enrichedMessage.content,
+          metadata: enrichedMessage.metadata,
+          attachments: enrichedMessage.attachments || [],
+          readBy: enrichedMessage.metadata?.readBy || [],
+          sender: enrichedMessage.sender,
+          media: enrichedMessage.medias || [],
+          created: enrichedMessage.created,
+          updated: enrichedMessage.updated,
+          reactions: enrichedMessage.reactions || [],
+        };
+        
+        // Update existing message
+        setMessages((prev) => prev.map(m => m.id === mapped.id ? mapped : m));
+      });
+
+      // Listen for message deletions
+      channel.on('broadcast', { event: 'message_deleted' }, (payload) => {
+        if (!mounted) return;
+        const messageId = payload.payload?.messageId;
+        
+        if (!messageId) {
+          console.warn('Invalid deleted message ID received:', payload.payload);
+          return;
+        }
+        
+        // Remove message from local state
+        setMessages((prev) => prev.filter(m => m.id !== messageId));
+      });
+
       // Subscribe to the channel
       channel.subscribe(async (status) => {
         if (!mounted) return;
@@ -286,6 +329,84 @@ export const useGroupChat = ({
       }
     };
   }, [enabled, session, chatId, fromUserId, loadMessages, authenticatedSupabase]);
+
+  // Edit a message
+  const editMessage = useCallback(async (
+    messageId: string,
+    content: string
+  ) => {
+    if (!chatId || !session?.user?.sbToken) {
+      throw new Error('Chat not initialized or no authentication token');
+    }
+
+    // Optimistically update local state
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId) return m;
+      return {
+        ...m,
+        content: content.trim(),
+        updated: new Date(),
+      };
+    }));
+
+    try {
+      const api = clientsideApiClient(session.user.sbToken);
+      const updatedMessage = await api.put(`/protected/chats/${chatId}/messages/${messageId}`, {
+        content: content.trim(),
+      }) as any;
+
+      // Update with server response
+      setMessages(prev => prev.map(m => {
+        if (m.id !== messageId) return m;
+        return {
+          ...m,
+          content: updatedMessage.content,
+          updated: updatedMessage.updated,
+        };
+      }));
+
+      return updatedMessage;
+    } catch (err) {
+      console.error('Error editing message:', err);
+      // Revert optimistic update on error
+      if (chatId) {
+        loadMessages(chatId);
+      }
+      throw err;
+    }
+  }, [chatId, session?.user?.sbToken, loadMessages]);
+
+  // Delete a message
+  const deleteMessage = useCallback(async (
+    messageId: string
+  ) => {
+    if (!chatId || !session?.user?.sbToken) {
+      throw new Error('Chat not initialized or no authentication token');
+    }
+
+    // Optimistically remove from local state
+    const messageToDelete = messages.find(m => m.id === messageId);
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+
+    try {
+      const api = clientsideApiClient(session.user.sbToken);
+      await api.delete(`/protected/chats/${chatId}/messages/${messageId}`);
+
+      // Message already removed optimistically
+      return;
+    } catch (err) {
+      console.error('Error deleting message:', err);
+      // Revert optimistic update on error
+      if (messageToDelete) {
+        setMessages(prev => [...prev, messageToDelete].sort((a, b) => 
+          new Date(a.created).getTime() - new Date(b.created).getTime()
+        ));
+      } else if (chatId) {
+        loadMessages(chatId);
+      }
+      throw err;
+    }
+  }, [chatId, session?.user?.sbToken, messages, loadMessages]);
 
   // Toggle reaction on a message (optimistic update)
   const toggleReaction = useCallback(async (
@@ -382,6 +503,8 @@ export const useGroupChat = ({
     isLoading,
     error,
     sendMessage,
+    editMessage,
+    deleteMessage,
     toggleReaction,
     refresh: () => chatId ? loadMessages(chatId) : Promise.resolve()
   };

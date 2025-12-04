@@ -17,13 +17,16 @@ import Markdown from "react-markdown";
 import { ReactionBar, QuickReactions } from "./reactions";
 import { useReactions } from "@/hooks/useReactions";
 import { useSession } from "@/hooks/useSession";
+import { PostActionsDropdown } from "./PostActionsDropdown";
 
 type PostCardProps = {
   post: GroupPost;
   onOpenDetail?: (post: GroupPost) => void;
+  onDelete?: (post: GroupPost) => void;
+  canDelete?: boolean;
 };
 
-export function PostCard({ post, onOpenDetail }: PostCardProps) {
+export function PostCard({ post, onOpenDetail, onDelete, canDelete = false }: PostCardProps) {
   const timeAgo = formatDistanceToNow(new Date(post.created), {
     addSuffix: true,
   });
@@ -51,10 +54,16 @@ export function PostCard({ post, onOpenDetail }: PostCardProps) {
     }
   };
 
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete(post);
+    }
+  };
+
   return (
     <Card
       className={cn(
-        "border-foreground/10 bg-card/80 cursor-pointer transition-shadow hover:shadow-md",
+        "group border-foreground/10 bg-card/80 cursor-pointer transition-shadow hover:shadow-md",
         post.pinned && "ring-1 ring-amber-200/60"
       )}
       onClick={handleCardClick}
@@ -85,6 +94,16 @@ export function PostCard({ post, onOpenDetail }: PostCardProps) {
             {timeAgo}
           </p>
         </div>
+
+        {/* Actions dropdown - only show for users who can delete */}
+        {canDelete && (
+          <div className="flex-shrink-0">
+            <PostActionsDropdown
+              post={post}
+              onDelete={handleDelete}
+            />
+          </div>
+        )}
       </CardHeader>
 
       <CardContent>

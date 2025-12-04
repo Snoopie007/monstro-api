@@ -23,6 +23,7 @@ export function ChatInput({ lid }: { lid: string }) {
         }
 
         const messageContent = message.trim()
+        console.log('📤 Sending message:', { conversationId: current.id, content: messageContent })
         setMessage('')
         setLoading(true)
 
@@ -42,8 +43,9 @@ export function ChatInput({ lid }: { lid: string }) {
             )
 
             const data = await response.json()
+            console.log('✅ Message sent successfully:', { messageId: data.id, status: response.status })
         } catch (error) {
-            console.error('Failed to send message:', error)
+            console.error('❌ Failed to send message:', error)
             // Re-add the message to input on error
             setMessage(messageContent)
         } finally {

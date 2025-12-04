@@ -1,13 +1,31 @@
 "use client";
 
-import { Button, Card, CardContent, Empty, EmptyDescription, EmptyHeader, EmptyTitle, Skeleton } from "@/components/ui";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle,
+  Button, 
+  Card, 
+  CardContent, 
+  Empty, 
+  EmptyDescription, 
+  EmptyHeader, 
+  EmptyTitle, 
+  Skeleton 
+} from "@/components/ui";
 import { Pencil } from "lucide-react";
 import { PostCard } from "./PostCard";
 import { PostDetailModal } from "./PostDetailModal";
 import { GroupPost } from "@/types/groups";
 import { useCommunityPosts } from "@/hooks/useCommunityPosts";
 import { CreatePostDialog } from "./CreatePostDialog";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useSession } from "@/hooks/useSession";
 
 interface PostsFeedProps {
   id: string;
@@ -16,11 +34,16 @@ interface PostsFeedProps {
 }
 
 export function PostsFeed({ id, gid, groupName }: PostsFeedProps) {
-  const { posts, error, isLoading, refetch } = useCommunityPosts({ id, gid });
+  const { posts, error, isLoading, refetch, deletePost, isDeleting } = useCommunityPosts({ id, gid });
+  const { data: session } = useSession();
   const hasPosts = posts?.length > 0;
   
   const [selectedPost, setSelectedPost] = useState<GroupPost | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<GroupPost | null>(null);
 
   const handleOpenPostDetail = (post: GroupPost) => {
     setSelectedPost(post);
@@ -32,6 +55,34 @@ export function PostsFeed({ id, gid, groupName }: PostsFeedProps) {
     if (!open) {
       setSelectedPost(null);
     }
+  };
+  
+  const handleRequestDelete = useCallback((post: GroupPost) => {
+    setPostToDelete(post);
+    setDeleteConfirmOpen(true);
+  }, []);
+  
+  const handleConfirmDelete = useCallback(async () => {
+    if (postToDelete) {
+      try {
+        await deletePost(postToDelete.id);
+        setDeleteConfirmOpen(false);
+        setPostToDelete(null);
+        // If this post was open in the modal, close it
+        if (selectedPost?.id === postToDelete.id) {
+          setIsModalOpen(false);
+          setSelectedPost(null);
+        }
+      } catch (err) {
+        console.error('Failed to delete post:', err);
+      }
+    }
+  }, [postToDelete, deletePost, selectedPost]);
+  
+  // Check if user can delete a post (post owner or staff - staff check is on server)
+  // For now, we show the option to all logged-in users, server will validate
+  const canDeletePost = (post: GroupPost) => {
+    return !!session?.user?.id;
   };
 
   return (
@@ -69,6 +120,8 @@ export function PostsFeed({ id, gid, groupName }: PostsFeedProps) {
               key={post.id} 
               post={post} 
               onOpenDetail={handleOpenPostDetail}
+              onDelete={handleRequestDelete}
+              canDelete={canDeletePost(post)}
             />
           ))}
         </div>
@@ -102,8 +155,33 @@ export function PostsFeed({ id, gid, groupName }: PostsFeedProps) {
           groupId={gid}
           open={isModalOpen}
           onOpenChange={handleCloseModal}
+          onDelete={handleRequestDelete}
+          canDelete={canDeletePost(selectedPost)}
         />
       )}
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Post</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this post? This action cannot be undone.
+              All comments and reactions will also be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPostToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

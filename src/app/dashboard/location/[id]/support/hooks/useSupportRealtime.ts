@@ -86,8 +86,11 @@ export function useSupportRealtime({
         const setupChannels = async () => {
             if (!mounted) return
 
+            console.log('🔧 Setting up support realtime channels:', { locationId, conversationId })
             // Set auth token for realtime
+            console.log('🔐 Setting auth token for realtime...')
             await authenticatedSupabase.realtime.setAuth(session.user.sbToken)
+            console.log('✅ Auth token set')
 
             // 1. Subscribe to conversation-specific messages (if conversationId provided)
             if (conversationId) {
@@ -103,9 +106,11 @@ export function useSupportRealtime({
 
                 // Listen for new messages
                 messagesChannel.on('broadcast', { event: 'new_message' }, (payload) => {
+                    console.log('📨 Received new_message broadcast:', { payload, conversationId })
                     if (!mounted) return
                     const message = payload.payload?.message
                     if (message?.id) {
+                        console.log('✅ Processing new message:', { messageId: message.id, content: message.content })
                         const formattedMessage: SupportMessage = {
                             id: message.id,
                             conversationId: message.conversationId,
@@ -118,14 +123,18 @@ export function useSupportRealtime({
                             created: new Date(message.created),
                         }
                         callbacksRef.current.onNewMessage?.(formattedMessage)
+                    } else {
+                        console.warn('⚠️ Invalid message structure:', payload)
                     }
                 })
 
                 // Listen for system messages
                 messagesChannel.on('broadcast', { event: 'system_message' }, (payload) => {
+                    console.log('📨 Received system_message broadcast:', { payload, conversationId })
                     if (!mounted) return
                     const message = payload.payload?.message
                     if (message?.id) {
+                        console.log('✅ Processing system message:', { messageId: message.id, content: message.content })
                         const formattedMessage: SupportMessage = {
                             id: message.id,
                             conversationId: message.conversationId,
@@ -138,15 +147,20 @@ export function useSupportRealtime({
                             created: new Date(message.created),
                         }
                         callbacksRef.current.onNewMessage?.(formattedMessage)
+                    } else {
+                        console.warn('⚠️ Invalid system message structure:', payload)
                     }
                 })
 
                 messagesChannel.subscribe((status) => {
+                    console.log('📡 Messages channel status:', { status, conversationId })
                     if (!mounted) return
                     if (status === 'SUBSCRIBED') {
+                        console.log('✅ Subscribed to conversation messages:', conversationId)
                         setIsConnected(true)
                         setError(null)
                     } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        console.error('❌ Messages channel failed:', { status, conversationId })
                         setError(`Messages channel failed: ${status}`)
                     }
                 })
@@ -167,9 +181,11 @@ export function useSupportRealtime({
 
             // Listen for conversation updates
             locationChannel.on('broadcast', { event: 'conversation_updated' }, (payload) => {
+                console.log('📨 Received conversation_updated broadcast:', { payload, locationId })
                 if (!mounted) return
                 const conv = payload.payload?.conversation
                 if (conv?.id) {
+                    console.log('✅ Processing conversation update:', { conversationId: conv.id, title: conv.title })
                     const formattedConversation: SupportConversation = {
                         id: conv.id,
                         supportAssistantId: conv.supportAssistantId,
@@ -197,19 +213,24 @@ export function useSupportRealtime({
                         formattedConversation.isVendorActive &&
                         formattedConversation.id === prevConv.id
                     ) {
+                        console.log('📢 Vendor active state changed for conversation:', conv.id)
                         callbacksRef.current.onVendorActiveChange?.(
                             formattedConversation.id,
                             true
                         )
                     }
+                } else {
+                    console.warn('⚠️ Invalid conversation update structure:', payload)
                 }
             })
 
             // Listen for new conversations
             locationChannel.on('broadcast', { event: 'conversation_inserted' }, (payload) => {
+                console.log('📨 Received conversation_inserted broadcast:', { payload, locationId })
                 if (!mounted) return
                 const conv = payload.payload?.conversation
                 if (conv?.id) {
+                    console.log('✅ Processing new conversation:', { conversationId: conv.id, title: conv.title })
                     const formattedConversation: SupportConversation = {
                         id: conv.id,
                         supportAssistantId: conv.supportAssistantId,
@@ -227,12 +248,18 @@ export function useSupportRealtime({
                         priority: conv.priority || 0,
                     }
                     callbacksRef.current.onConversationInsert?.(formattedConversation)
+                } else {
+                    console.warn('⚠️ Invalid conversation insert structure:', payload)
                 }
             })
 
             locationChannel.subscribe((status) => {
+                console.log('📡 Location channel status:', { status, locationId })
                 if (!mounted) return
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Subscribed to location updates:', locationId)
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    console.error('❌ Location channel failed:', { status, locationId })
                     setError(`Location channel failed: ${status}`)
                 }
             })

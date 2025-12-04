@@ -22,6 +22,7 @@ import { cn } from "@/libs/utils";
 
 import { CommentList, CommentInput } from "./comments";
 import { ReactionBar, QuickReactions } from "./reactions";
+import { PostActionsDropdown } from "./PostActionsDropdown";
 
 type PostDetailModalProps = {
     post: GroupPost | null;
@@ -29,6 +30,8 @@ type PostDetailModalProps = {
     groupId: string;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onDelete?: (post: GroupPost) => void;
+    canDelete?: boolean;
 };
 
 export function PostDetailModal({
@@ -37,6 +40,8 @@ export function PostDetailModal({
     groupId,
     open,
     onOpenChange,
+    onDelete,
+    canDelete = false,
 }: PostDetailModalProps) {
     const { data: session } = useSession();
     const currentUserId = session?.user?.id;
@@ -91,6 +96,12 @@ export function PostDetailModal({
     const handleToggleReaction = (emoji: { value: string; name: string; type: string }) => {
         toggleReaction(emoji);
     };
+    
+    const handleDelete = () => {
+        if (onDelete && post) {
+            onDelete(post);
+        }
+    };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,11 +110,19 @@ export function PostDetailModal({
                 <DialogHeader className="flex-shrink-0 border-b border-foreground/5 px-4 py-3">
                     <div className="flex items-center justify-between">
                         <DialogTitle className="text-lg">Post Details</DialogTitle>
-                        <DialogClose asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </DialogClose>
+                        <div className="flex items-center gap-2">
+                            {canDelete && (
+                                <PostActionsDropdown
+                                    post={post}
+                                    onDelete={handleDelete}
+                                />
+                            )}
+                            <DialogClose asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </DialogClose>
+                        </div>
                     </div>
                 </DialogHeader>
 

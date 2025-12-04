@@ -32,7 +32,10 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
 	const params = await props.params;
 	const session = await auth();
 
+	console.log('📥 POST /messages - Received request:', { conversationId: params.cid, userId: session?.user?.id });
+
 	if (!session?.user?.id) {
+		console.error('❌ Unauthorized request to POST /messages');
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
@@ -40,6 +43,7 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
 
 		const body = await req.json();
 		const { content, role = "staff" } = body;
+		console.log('📝 Message content:', { role, contentLength: content?.length });
 
 		if (!content || !content.trim()) {
 			return NextResponse.json(
@@ -72,59 +76,68 @@ export async function POST(req: NextRequest, props: { params: Promise<Params> })
 			throw new Error("Unauthorized - you must take over the conversation to send staff messages");
 		}
 
-		// Create the message
-		const [newMessage] = await db
-			.insert(supportMessages)
-			.values({
-				conversationId: params.cid,
-				content: content.trim(),
-				role,
-				channel: "WebChat",
-				// Populate agentId and agentName when staff sends message
-				agentId: session.user.id,
-				agentName: session.user.name,
-				metadata: {
-					senderId: session.user.id,
-					senderName: session.user.name || "Support Agent",
-				},
-			})
-			.returning();
+	// Create the message
+	console.log('💾 Creating message in database...');
+	const [newMessage] = await db
+		.insert(supportMessages)
+		.values({
+			conversationId: params.cid,
+			content: content.trim(),
+			role,
+			channel: "WebChat",
+			// Populate agentId and agentName when staff sends message
+			agentId: session.user.id,
+			agentName: session.user.name,
+			metadata: {
+				senderId: session.user.id,
+				senderName: session.user.name || "Support Agent",
+			},
+		})
+		.returning();
 
-		// If agentId is not set in conversation metadata, assign current user as the agent
-		if (!agentId && conversation.isVendorActive) {
-			await db.update(supportConversations).set({
-				metadata: {
-					...(conversation.metadata as Record<string, any>),
-					agentId: session.user.id,
-				}
-			}).where(eq(supportConversations.id, params.cid));
-		}
+	console.log('✅ Message created:', { messageId: newMessage.id });
 
-		// Update conversation timestamp
+	// If agentId is not set in conversation metadata, assign current user as the agent
+	if (!agentId && conversation.isVendorActive) {
+		console.log('🔧 Assigning agentId to conversation...');
 		await db.update(supportConversations).set({
-			updated: new Date(),
+			metadata: {
+				...(conversation.metadata as Record<string, any>),
+				agentId: session.user.id,
+			}
 		}).where(eq(supportConversations.id, params.cid));
+	}
 
-		// Broadcast the message to Supabase Realtime (for dashboard)
-		try {
-			const messagePayload: SupportMessagePayload = {
-				id: newMessage.id,
-				conversationId: newMessage.conversationId,
-				content: newMessage.content,
-				role: newMessage.role,
-				channel: newMessage.channel,
-				agentId: newMessage.agentId,
-				agentName: newMessage.agentName,
-				metadata: newMessage.metadata || {},
-				created: newMessage.created,
-			};
-			await broadcastSupportMessage(params.cid, messagePayload);
-		} catch (broadcastError) {
-			console.error("Failed to broadcast staff message:", broadcastError);
-			// Don't fail the request if broadcast fails
-		}
+	// Update conversation timestamp
+	console.log('⏰ Updating conversation timestamp...');
+	await db.update(supportConversations).set({
+		updated: new Date(),
+	}).where(eq(supportConversations.id, params.cid));
 
-		return NextResponse.json(newMessage, { status: 200 });
+	// Broadcast the message to Supabase Realtime (for dashboard)
+	try {
+		console.log('📡 Preparing broadcast payload...');
+		const messagePayload: SupportMessagePayload = {
+			id: newMessage.id,
+			conversationId: newMessage.conversationId,
+			content: newMessage.content,
+			role: newMessage.role,
+			channel: newMessage.channel,
+			agentId: newMessage.agentId,
+			agentName: newMessage.agentName,
+			metadata: newMessage.metadata || {},
+			created: newMessage.created,
+		};
+		console.log('🚀 Calling broadcastSupportMessage...');
+		await broadcastSupportMessage(params.cid, messagePayload);
+		console.log('✅ Broadcast completed successfully');
+	} catch (broadcastError) {
+		console.error("❌ Failed to broadcast staff message:", broadcastError);
+		// Don't fail the request if broadcast fails
+	}
+
+	console.log('📤 Returning message response:', { messageId: newMessage.id });
+	return NextResponse.json(newMessage, { status: 200 });
 	} catch (error) {
 		console.error("Error sending staff message:", error);
 		return NextResponse.json({ error: "Internal server error" }, { status: 500 });

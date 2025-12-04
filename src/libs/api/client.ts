@@ -6,6 +6,8 @@
 export interface ApiClient {
     get: <T>(url: string, params?: Record<string, string | number | boolean | string[]>) => Promise<T>;
     post: (url: string, data?: any) => Promise<unknown>;
+    put: (url: string, data?: any) => Promise<unknown>;
+    delete: (url: string) => Promise<unknown>;
 }
 
 export const clientsideApiClient = (token?: string): ApiClient => {
@@ -77,6 +79,65 @@ export const clientsideApiClient = (token?: string): ApiClient => {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('[API Client] Error response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorText,
+                });
+                throw new Error(`API Error: ${response.status} - ${errorText}`)
+            }
+            return response.json()
+        },
+        put: async (endpoint: string, data?: Record<string, unknown>) => {
+            // For XRoutes, strip /api from baseUrl
+            const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+            const url = new URL(`${finalBaseUrl}${endpoint}`)
+            
+            const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(url.toString(), {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(data)
+            })
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[API Client] PUT Error response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorText,
+                });
+                throw new Error(`API Error: ${response.status} - ${errorText}`)
+            }
+            return response.json()
+        },
+        delete: async (endpoint: string) => {
+            // For XRoutes, strip /api from baseUrl
+            const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+            const url = new URL(`${finalBaseUrl}${endpoint}`)
+            
+            const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(url.toString(), {
+                method: 'DELETE',
+                headers,
+            })
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[API Client] DELETE Error response:', {
                     status: response.status,
                     statusText: response.statusText,
                     body: errorText,

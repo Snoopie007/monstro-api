@@ -17,11 +17,12 @@ export function ChatView({ lid }: { lid: string }) {
     const [messages, setMessages] = useState<SupportMessage[]>([])
     
     
-    const { isAiMode } = useSupportRealtime({
+    const { isAiMode, isConnected, error } = useSupportRealtime({
         locationId: lid,
         conversationId: current?.id,
         conversation: current || undefined,
         onNewMessage: (message) => {
+            console.log('🎯 ChatView received new message:', { messageId: message.id, content: message.content })
             setMessages((prev) => [...prev, message])
         },
         onConversationUpdate: async (conversation) => {
@@ -58,6 +59,15 @@ export function ChatView({ lid }: { lid: string }) {
             setMessages(current.messages || [])
         }
     }, [current])
+
+    useEffect(() => {
+        console.log('📊 ChatView connection status:', { 
+            isConnected, 
+            error, 
+            conversationId: current?.id,
+            messageCount: messages.length 
+        })
+    }, [isConnected, error, current?.id, messages.length])
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
