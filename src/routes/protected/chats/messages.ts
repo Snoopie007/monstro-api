@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { chatMembers, chats, media, messages, reactionCounts } from "@/db/schemas";
-import { broadcastMessage } from "@/libs/messages";
+import { broadcastMessage, broadcastMessageUpdate, broadcastMessageDelete } from "@/libs/messages";
 import S3Bucket from "@/libs/s3";
 import type { Media, Message } from "@/types";
 import { and, eq, inArray } from "drizzle-orm";
@@ -17,6 +17,23 @@ const PostMessageProps = {
     body: z.object({
         content: z.string(),
         files: z.array(z.instanceof(File)).optional(),
+    }),
+};
+
+const PutMessageProps = {
+    params: z.object({
+        cid: z.string(),
+        mid: z.string(),
+    }),
+    body: z.object({
+        content: z.string(),
+    }),
+};
+
+const DeleteMessageProps = {
+    params: z.object({
+        cid: z.string(),
+        mid: z.string(),
     }),
 };
 
@@ -193,5 +210,106 @@ export function sendMessageRoute(app: Elysia) {
             return status(500, { error: 'Internal server error' });
         }
     }, PostMessageProps)
+    .put('/messages/:mid', async ({ params, body, status, ...ctx }) => {
+        const { userId } = ctx as Context & { userId: string };
+        const { cid, mid } = params;
+        const { content } = body;
+
+        if (!content || content.trim().length === 0) {
+            return status(400, { error: 'Message content is required' });
+        }
+
+        try {
+            // Find the message and verify ownership
+            const message = await db.query.messages.findFirst({
+                where: (messages, { eq, and }) => and(
+                    eq(messages.id, mid),
+                    eq(messages.chatId, cid)
+                ),
+                with: {
+                    sender: true,
+                    medias: true,
+                },
+            });
+
+            if (!message) {
+                return status(404, { error: 'Message not found' });
+            }
+
+            if (message.senderId !== userId) {
+                return status(403, { error: 'You can only edit your own messages' });
+            }
+
+            // Update the message
+            const [updatedMessage] = await db.update(messages)
+                .set({
+                    content: content.trim(),
+                    updated: new Date(),
+                })
+                .where(eq(messages.id, mid))
+                .returning();
+
+            if (!updatedMessage) {
+                return status(500, { error: 'Failed to update message' });
+            }
+
+            // Fetch reactions for this message
+            const reactions = await db.select()
+                .from(reactionCounts)
+                .where(and(
+                    eq(reactionCounts.ownerType, 'message'),
+                    eq(reactionCounts.ownerId, mid)
+                ));
+
+            // Enrich the message
+            const enrichedMessage: Message = {
+                ...updatedMessage,
+                sender: message.sender,
+                medias: message.medias || [],
+                reactions: reactions || [],
+            };
+
+            // Broadcast the updated message
+            await broadcastMessageUpdate(cid, enrichedMessage);
+
+            return status(200, enrichedMessage);
+        } catch (error) {
+            console.error('Error updating message:', error);
+            return status(500, { error: 'Internal server error' });
+        }
+    }, PutMessageProps)
+    .delete('/messages/:mid', async ({ params, status, ...ctx }) => {
+        const { userId } = ctx as Context & { userId: string };
+        const { cid, mid } = params;
+
+        try {
+            // Find the message and verify ownership
+            const message = await db.query.messages.findFirst({
+                where: (messages, { eq, and }) => and(
+                    eq(messages.id, mid),
+                    eq(messages.chatId, cid)
+                ),
+            });
+
+            if (!message) {
+                return status(404, { error: 'Message not found' });
+            }
+
+            if (message.senderId !== userId) {
+                return status(403, { error: 'You can only delete your own messages' });
+            }
+
+            // Delete the message (cascade will handle media and reactions)
+            await db.delete(messages).where(eq(messages.id, mid));
+
+            // Broadcast the deletion
+            await broadcastMessageDelete(cid, mid);
+
+            return status(200, { success: true });
+        } catch (error) {
+            console.error('Error deleting message:', error);
+            return status(500, { error: 'Internal server error' });
+        }
+    }, DeleteMessageProps);
     return app;
 }

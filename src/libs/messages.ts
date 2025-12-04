@@ -90,3 +90,95 @@ export async function broadcastMessage(chatId: string, message: Message): Promis
     throw error;
   }
 }
+
+/**
+ * Broadcasts a message update to a Supabase Realtime channel
+ * @param chatId - The chat ID to broadcast to
+ * @param message - The updated message to broadcast
+ */
+export async function broadcastMessageUpdate(chatId: string, message: Message): Promise<void> {
+  const supabaseUrl = Bun.env.SUPABASE_URL;
+  const supabaseServiceKey = Bun.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase configuration');
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    realtime: {
+      params: {
+        eventsPerSecond: 100,
+      },
+    },
+  });
+
+  try {
+    const channel = supabase.channel(`chat:${chatId}`, {
+      config: {
+        private: true,
+        broadcast: {
+          ack: false,
+        }
+      }
+    });
+
+    await channel.send({
+      type: 'broadcast',
+      event: 'message_updated',
+      payload: {
+        message
+      },
+    });
+
+    supabase.removeChannel(channel);
+  } catch (error) {
+    console.error('Error broadcasting message update:', error);
+    throw error;
+  }
+}
+
+/**
+ * Broadcasts a message deletion to a Supabase Realtime channel
+ * @param chatId - The chat ID to broadcast to
+ * @param messageId - The ID of the deleted message
+ */
+export async function broadcastMessageDelete(chatId: string, messageId: string): Promise<void> {
+  const supabaseUrl = Bun.env.SUPABASE_URL;
+  const supabaseServiceKey = Bun.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase configuration');
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    realtime: {
+      params: {
+        eventsPerSecond: 100,
+      },
+    },
+  });
+
+  try {
+    const channel = supabase.channel(`chat:${chatId}`, {
+      config: {
+        private: true,
+        broadcast: {
+          ack: false,
+        }
+      }
+    });
+
+    await channel.send({
+      type: 'broadcast',
+      event: 'message_deleted',
+      payload: {
+        messageId
+      },
+    });
+
+    supabase.removeChannel(channel);
+  } catch (error) {
+    console.error('Error broadcasting message deletion:', error);
+    throw error;
+  }
+}
