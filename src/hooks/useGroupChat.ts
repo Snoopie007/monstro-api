@@ -244,7 +244,7 @@ export const useGroupChat = ({
           attachments: enrichedMessage.attachments || [],
           readBy: enrichedMessage.metadata?.readBy || [],
           sender: enrichedMessage.sender,
-          media: enrichedMessage.media,
+          media: enrichedMessage.medias || [],
           created: enrichedMessage.created,
           updated: enrichedMessage.updated,
           reactions: enrichedMessage.reactions || [],

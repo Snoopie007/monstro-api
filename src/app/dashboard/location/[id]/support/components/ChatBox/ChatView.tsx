@@ -1,16 +1,16 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
 import { ScrollArea } from '@/components/ui'
+import { useEffect, useRef, useState } from 'react'
 
+import { tryCatch } from '@/libs/utils'
 import { SupportMessage } from '@/types'
+import { format } from 'date-fns'
 import { toast } from 'react-toastify'
 import { useSupportRealtime } from '../../hooks/useSupportRealtime'
 import { useSupport } from '../../providers/SupportProvider'
-import { tryCatch } from '@/libs/utils'
-import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
-import { format } from 'date-fns'
+import { ChatMessage } from './ChatMessage'
 
 export function ChatView({ lid }: { lid: string }) {
     const { current, updateConversation, setConversations, conversations } = useSupport()
@@ -114,36 +114,6 @@ export function ChatView({ lid }: { lid: string }) {
                             {format(current.created, 'MMM d, yyyy')}
                         </div>
                     </div>
-                    {/* <div className="flex flex-row gap-1 items-center">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="size-8 rounded-lg border-foreground/10"
-                                >
-                                    <MoreHorizontal className="size-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                {current?.isVendorActive ? (
-                                    <DropdownMenuItem
-                                        onClick={handleHandBackToBot}
-                                    >
-                                        <Bot className="size-4 mr-2" />
-                                        Hand back to bot
-                                    </DropdownMenuItem>
-                                ) : (
-                                    <DropdownMenuItem
-                                        onClick={handleTakeOverConversation}
-                                    >
-                                        <User className="size-4 mr-2" />
-                                        Take over
-                                    </DropdownMenuItem>
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div> */}
                 </div>
             )}
 

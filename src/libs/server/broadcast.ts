@@ -89,8 +89,6 @@ export async function broadcastSupportMessage(
     });
 
     supabase.removeChannel(channel);
-
-    console.log(`📤 Broadcasted support message to conversation ${conversationId}`);
   } catch (error) {
     console.error('Error broadcasting support message:', error);
     throw error;

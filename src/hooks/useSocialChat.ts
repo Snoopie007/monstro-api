@@ -286,7 +286,7 @@ export const useSocialChat = ({
           created_at: enrichedMessage.created,
           updated_at: enrichedMessage.updated,
           sender: enrichedMessage.sender || null,
-          media: enrichedMessage.media || [],
+          media: enrichedMessage.medias || [],
           reactions: enrichedMessage.reactions || [],
         };
         // New message (not replayed)
