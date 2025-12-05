@@ -1,31 +1,47 @@
 import { db } from "@/db/db";
 import { chatMembers, chats, media, messages, reactionCounts } from "@/db/schemas";
 import { broadcastMessage } from "@/libs/messages";
-import S3Bucket from "@/libs/s3";
-import type { Media, Message } from "@/types";
+import type { Message, Media } from "@/types";
 import { and, eq, inArray } from "drizzle-orm";
 import { Elysia, type Context } from "elysia";
 import { z } from "zod";
+import { ALLOWED_IMAGE_TYPES } from "@/libs/data";
 
-const s3 = new S3Bucket();
 
-
-const PostMessageProps = {
+const GetProps = {
     params: z.object({
         cid: z.string(),
     }),
+};
+
+
+const PostProps = {
+    ...GetProps,
     body: z.object({
-        content: z.string(),
-        files: z.array(z.instanceof(File)).optional(),
+        content: z.string().optional(),
+        files: z.array(z.object({
+            fileName: z.string(),
+            mimeType: z.string(),
+            fileSize: z.number(),
+            url: z.string(),
+        })),
     }),
 };
 
-// Allowed media types
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-// const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
-// const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg'];
-// const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+const DeleteProps = {
+    params: z.object({
+        cid: z.string(),
+        mid: z.string(),
+    }),
+};
+const PatchProps = {
+    ...DeleteProps,
+    body: z.object({
+        content: z.string(),
+    }),
+};
+
 
 /**
  * Determines the file type category based on MIME type
@@ -38,71 +54,17 @@ function getFileTypeCategory(mimeType: string): 'image' | 'video' | 'audio' | 'd
     return 'other';
 }
 
+
 export function sendMessageRoute(app: Elysia) {
-    app.get('/messages', async (ctx) => {
-        const { params, status } = ctx;
-        const { cid } = params as { cid: string };
-
-        //fail safe
-        if (cid.startsWith('temp')) {
-            console.log('temp chat', cid);
-            return status(200, []);
-        }
-
-        try {
-            const messages = await db.query.messages.findMany({
-                where: (messages, { eq }) => eq(messages.chatId, cid),
-                with: {
-                    medias: true,
-                },
-                orderBy: (messages, { desc }) => desc(messages.created),
-
-            });
-
-            if (messages.length === 0) {
-                return status(200, []);
-            }
-            // Get all message IDs
-            const messageIds = messages.map(m => m.id) || [];
-
-            // Multiple messages (bulk)
-            const reactions = await db.select().from(reactionCounts).where(and(
-                eq(reactionCounts.ownerType, 'message'),
-                inArray(reactionCounts.ownerId, messageIds)
-            ));
-
-            // Group reactions by message ID
-            const reactionsByMessage = reactions.reduce((acc, reaction) => {
-                const messageId = reaction.ownerId; // Updated field name
-                if (!messageId) return acc;
-                if (!acc[messageId]) acc[messageId] = [];
-                acc[messageId].push(reaction);
-                return acc;
-            }, {} as Record<string, any[]>);
-
-            // Add reactions to each message
-            const messagesWithReactions = messages.map(message => ({
-                ...message,
-                reactions: reactionsByMessage[message.id] || []
-            }));
-            return status(200, messagesWithReactions);
-        } catch (error) {
-            console.error(error);
-            return status(500, { error: 'Internal server error' });
-        }
-    }).post('/messages', async ({ params, body, status, ...ctx }) => {
+    app.post('/messages', async ({ params, body, status, ...ctx }) => {
         const { userId } = ctx as Context & { userId: string };
 
-        console.log("post message");
         const { cid } = params;
         const { content, files } = body;
 
-
-        if (!content || content.trim().length === 0) {
-            return status(400, { error: 'Message content is required' });
+        if (!content && files.length == 0) {
+            return status(400, { error: 'Invalid message format. Either type something or attach a file.' });
         }
-
-
         try {
 
             // For location chats, auto-add sender to chat_members if not already present
@@ -133,56 +95,30 @@ export function sendMessageRoute(app: Elysia) {
             const [newMessage] = await db.insert(messages).values({
                 chatId: cid,
                 senderId: userId,
-                content: content.trim(),
+                content: content?.trim() || null,
             }).returning();
 
             if (!newMessage) {
                 return status(500, { error: 'Failed to create message' });
             }
 
+
+
             let medias: Media[] = [];
-            const uploadedFiles = Array.isArray(files) ? files : [files];
-            if (uploadedFiles.length > 0) {
-                const uploadPromises = uploadedFiles.filter(f => {
-                    if (!f || !f.name) return false;
-                    if (f.size > MAX_FILE_SIZE) return false;
-                    if (!ALLOWED_IMAGE_TYPES.includes(f.type)) return false;
-                    return true;
-                }).map(async (file) => {
-                    if (!file) return null;
-                    try {
-                        const s3Result = await s3.uploadFile(file, `chats/${cid}/medias`);
-                        return {
-                            ownerId: newMessage.id,
-                            ownerType: 'message' as const,
-                            url: s3Result.url,
-                            fileName: file.name,
-                            fileType: getFileTypeCategory(file.type),
-                            fileSize: file.size.toString(),
-                            mimeType: file.type,
-                        };
-                    } catch (uploadError) {
-                        console.error(`Failed to upload file ${file.name}:`, uploadError);
-                        return null;
-                    }
-                });
+            if (files.length > 0) {
 
-                const uploadedMedias = await Promise.all(uploadPromises);
-
-                const validMedias = uploadedMedias.filter((m) => m !== null);
-                if (validMedias.length > 0) {
-                    const newMedias = await db.insert(media).values(validMedias).returning();
-                    medias = newMedias as unknown as Media[];
-                }
+                medias = await db.insert(media).values(files.map(file => ({
+                    ...file,
+                    ownerId: newMessage.id,
+                    ownerType: 'message' as const,
+                    fileType: getFileTypeCategory(file.mimeType),
+                }))).returning();
             }
-
-
 
             const enrichedMessage: Message = {
                 ...newMessage,
                 medias,
             };
-
 
             // Broadcast the enriched message to all subscribed clients
             await broadcastMessage(cid, enrichedMessage);
@@ -192,6 +128,46 @@ export function sendMessageRoute(app: Elysia) {
             console.error('Error sending message:', error);
             return status(500, { error: 'Internal server error' });
         }
-    }, PostMessageProps)
+    }, PostProps);
+
+    app.group('/messages/:mid', (a) => {
+        a.patch('/', async ({ params, body, status }) => {
+            const { mid } = params;
+            const { content } = body;
+            if (!content || content.trim().length === 0) {
+                return status(400, { error: 'Message content is required' });
+            }
+            try {
+                const message = await db.query.messages.findFirst({
+                    where: eq(messages.id, mid),
+                });
+                if (!message) {
+                    return status(404, { error: 'Message not found' });
+                }
+                const [updatedMessage] = await db.update(messages)
+                    .set({ content: content.trim() }).where(eq(messages.id, mid)).returning();
+                return status(200, updatedMessage);
+            } catch (error) {
+                console.error('Error updating message:', error);
+                return status(500, { error: 'Internal server error' });
+            }
+        }, PatchProps).delete('/', async ({ params, status }) => {
+            const { mid } = params;
+            try {
+                const message = await db.query.messages.findFirst({
+                    where: eq(messages.id, mid),
+                });
+                if (!message) {
+                    return status(404, { error: 'Message not found' });
+                }
+                // await db.delete(messages).where(eq(messages.id, mid));
+                return status(200, { success: true });
+            } catch (error) {
+                console.error('Error deleting message:', error);
+                return status(500, { error: 'Internal server error' });
+            }
+        }, DeleteProps);
+        return a;
+    });
     return app;
 }

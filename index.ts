@@ -20,11 +20,9 @@ const app = new Elysia({
 
 app.use(cors(CORS_CONFIG))
 	.use(RateLimitMiddleware())
-
 	.onRequest(({ request }) => {
 		// Check if request came through HTTPS proxy
-
-		console.log(`🔍 ${request.method} ${request.url}`);
+		console.log(`🔥 ${request.method} ${request.url}`);
 	})
 	// Dedicated health check endpoint
 	.get("/healthcheck", () => {
@@ -67,6 +65,9 @@ app.use(cors(CORS_CONFIG))
 		set.status = 500;
 		return { error: "Internal server error" };
 	})
-	.listen(serverConfig.port);
+	.listen({
+		hostname: "0.0.0.0",
+		port: serverConfig.port
+	});
 
 console.log(`🚀 Bun server running on http://localhost:${serverConfig.port}`);

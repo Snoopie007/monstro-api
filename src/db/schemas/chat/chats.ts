@@ -6,6 +6,7 @@ import {
     jsonb,
     index,
     primaryKey,
+    integer,
 } from "drizzle-orm/pg-core";
 import { members } from "../members";
 import { users } from "../users";
@@ -13,7 +14,6 @@ import { locations } from "../locations";
 import { groupPosts, groups } from "./groups";
 import { moments } from "./moments";
 import { reactions } from "./reactions";
-import { locations } from "../locations";
 
 export const chats = pgTable("chats", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('cht_')`),
@@ -21,8 +21,6 @@ export const chats = pgTable("chats", {
     name: text("name").notNull().default('New Chat'),
     locationId: text("location_id").references(() => locations.id, { onDelete: "cascade" }),
     groupId: text("group_id").references(() => groups.id, { onDelete: "cascade" }),
-    locationId: text("location_id").references(() => locations.id, { onDelete: "cascade" }),
-    name: text("name"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [
@@ -43,7 +41,7 @@ export const messages = pgTable("messages", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('msg_')`),
     chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
     senderId: text("sender_id").references(() => users.id, { onDelete: "set null" }),
-    content: text("content").notNull(),
+    content: text("content"),
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
@@ -58,7 +56,7 @@ export const media = pgTable("media", {
     ownerType: text("owner_type", { enum: ["post", "message", "memory"] }).notNull(),
     fileName: text("file_name").notNull(),
     fileType: text("file_type", { enum: ["image", "video", "audio", "document", "other"] }).notNull(),
-    fileSize: text("file_size"), // Using text instead of bigint for compatibility
+    fileSize: integer("file_size"), // Using text instead of bigint for compatibility
     mimeType: text("mime_type"),
     url: text("url").notNull(),
     thumbnailUrl: text("thumbnail_url"),
@@ -83,11 +81,6 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
     group: one(groups, {
         fields: [chats.groupId],
         references: [groups.id],
-    }),
-    location: one(locations, {
-        fields: [chats.locationId],
-        references: [locations.id],
-        relationName: "chatLocation",
     }),
     chatMembers: many(chatMembers),
     messages: many(messages),

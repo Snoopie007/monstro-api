@@ -11,5 +11,3 @@ export function realtimeRoutes(app: Elysia) {
 
 // Start the groups listener for notifications
 groupsListener.start();
-
-console.log("🚀 Realtime system initialized (Groups listener active)");

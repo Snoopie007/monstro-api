@@ -4,6 +4,7 @@ import { userChats } from './chats';
 import { commentRoutes } from './comments';
 import { reactionRoutes } from './reactions';
 import { userFriends } from './friends';
+import { mediaRoutes } from './medias';
 import {
     locationAchievements,
     locationCheckin,
@@ -33,6 +34,7 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(reactionRoutes)
     .use(userChats)
     .use(userFriends)
+    .use(mediaRoutes)
     .group('/member/:mid', (app) => {
         app.use(membersLocations);
         app.use(memberAccounts);

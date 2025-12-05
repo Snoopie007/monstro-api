@@ -10,15 +10,23 @@ import { mlSupportRoutes } from './support';
 import { z } from "zod";
 
 
+const MemberLocationsRootProps = {
+    params: z.object({
+        mid: z.string(),
+    }),
+};
+
 const MemberLocationRootProps = {
     params: z.object({
         mid: z.string(),
         lid: z.string(),
-    }),
+    })
 };
 
 export const membersLocations = new Elysia({ prefix: '/locations' })
     .get('/', async ({ params, status }) => {
+        console.log(params);
+        const { mid } = params;
 
         try {
             const mls = await db.query.memberLocations.findMany({
@@ -32,7 +40,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }
-    }, MemberLocationRootProps)
+    }, MemberLocationsRootProps)
     .group('/:lid', (app) => {
         app.get('/', async ({ params, status }) => {
             const { lid, mid } = params;

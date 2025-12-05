@@ -20,10 +20,17 @@ const PaymentMethods: string[] = [
     "cheque"
 ]
 
-
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
+const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/ogg'];
+const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
 
 
 export {
     MonstroData,
-    PaymentMethods
+    PaymentMethods,
+    ALLOWED_IMAGE_TYPES,
+    ALLOWED_VIDEO_TYPES,
+    ALLOWED_AUDIO_TYPES,
+    ALLOWED_DOCUMENT_TYPES
 }

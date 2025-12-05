@@ -287,6 +287,9 @@ function getSessionState(session: ProgramSession, mid: string) {
     return { isReserved, isFull };
 }
 
+
+
+
 export {
     interEmailsAndText,
     generateReferralCode,

@@ -7,13 +7,16 @@ import { sendMessageRoute } from './messages';
 import type { Context } from 'elysia';
 import { z } from 'zod';
 
-const ChatProps = {
-    params: z.object({
-        uid: z.string(),
-        cid: z.string(),
-    }),
+const NewChatProps = {
+
     body: z.object({
         addresseeId: z.string(),
+    }),
+};
+
+const ChatProps = {
+    params: z.object({
+        cid: z.string(),
     }),
 };
 
@@ -146,7 +149,7 @@ export const userChats = new Elysia({ prefix: '/chats' })
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }
-    }, ChatProps)
+    }, NewChatProps)
     .group('/:cid', (app) => {
         app.get('/', async ({ params, status }) => {
             const { cid } = params;
@@ -167,20 +170,20 @@ export const userChats = new Elysia({ prefix: '/chats' })
                                     },
                                 },
                             },
-                        },
-                        messages: {
-                            orderBy: (messages, { desc }) => desc(messages.created),
-                            limit: 50,
-                            with: {
-                                medias: true,
-                                sender: true,
-                            },
-                        },
+                        }
                     },
                 })
+                const messages = await db.query.messages.findMany({
+                    where: (messages, { eq }) => eq(messages.chatId, cid),
+                    with: {
+                        medias: true,
+                    },
+                    orderBy: (messages, { desc }) => desc(messages.created),
+
+                });
 
                 // Get all message IDs
-                const messageIds = chat?.messages.map(m => m.id) || [];
+                const messageIds = messages.map(m => m.id) || [];
 
                 // Multiple messages (bulk)
                 const reactions = await db.select().from(reactionCounts).where(and(
@@ -198,10 +201,11 @@ export const userChats = new Elysia({ prefix: '/chats' })
                 }, {} as Record<string, any[]>);
 
                 // Add reactions to each message
-                const messagesWithReactions = chat?.messages.map(message => ({
+                const messagesWithReactions = messages.map(message => ({
                     ...message,
                     reactions: reactionsByMessage[message.id] || []
                 }));
+
 
                 return status(200, {
                     ...chat,
@@ -212,7 +216,7 @@ export const userChats = new Elysia({ prefix: '/chats' })
                 status(500, { error: 'Internal server error' });
                 return { error: 'Internal server error' }
             }
-        })
+        }, ChatProps)
         app.use(sendMessageRoute);
         return app;
 
