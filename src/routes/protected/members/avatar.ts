@@ -7,13 +7,16 @@ import { members } from "@/db/schemas";
 import { z } from "zod";
 const s3 = new S3Bucket();
 
-
-const MemberAvatarProps = {
+const DeleteProps = {
     params: z.object({
         mid: z.string(),
     }),
+};
+
+const PatchProps = {
+    ...DeleteProps,
     body: z.object({
-        file: z.instanceof(File),
+        url: z.string(),
     }),
 };
 
@@ -22,28 +25,7 @@ const MemberAvatarProps = {
 export async function memberAvatar(app: Elysia) {
     return app.patch("/avatar", async ({ status, body, params }) => {
         const { mid } = params;
-        const { file } = body;
-        if (!file) {
-            return status(400, { message: 'No file uploaded' });
-        }
-
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-
-
-        if (!allowedTypes.includes(file.type)) {
-            return status(400, {
-                message: 'Invalid file type. Only JPEG and PNG are allowed.'
-            });
-        }
-
-        // Validate file size (2.5MB max)
-        const maxSize = 2.5 * 1024 * 1024;
-        if (file.size > maxSize) {
-            return status(400, {
-                message: 'File too large. Maximum size is 2.5MB.'
-            });
-        }
-
+        const { url } = body;
         try {
             const member = await db.query.members.findFirst({
                 where: (members, { eq }) => eq(members.id, mid),
@@ -52,20 +34,6 @@ export async function memberAvatar(app: Elysia) {
             if (!member) {
                 return status(404, { message: 'Member not found' });
             }
-
-
-
-            if (member.avatar) {
-                const fileName = member.avatar?.split('/').pop() || '';
-                await s3.removeFile(`members/${member.id}/avatars`, fileName);
-            }
-
-            const res = await s3.uploadFile(file, `members/${member.id}/avatars`);
-            const url = res?.url || null;
-            if (!url) {
-                return status(500, { message: 'Failed to upload file' });
-            }
-
 
             if (!member.avatar) {
 
@@ -84,12 +52,12 @@ export async function memberAvatar(app: Elysia) {
 
 
 
-            return status(200, { url });
+            return status(200, { success: true });
         } catch (error) {
             console.error(error);
             return status(500, { message: 'Something went wrong' });
         }
-    }, MemberAvatarProps).delete("/avatar", async ({ status, params }) => {
+    }, PatchProps).delete("/avatar", async ({ status, params }) => {
         const { mid } = params;
         try {
             const member = await db.query.members.findFirst({
@@ -108,5 +76,5 @@ export async function memberAvatar(app: Elysia) {
             console.error(error);
             return status(500, { message: 'Something went wrong' });
         }
-    }, MemberAvatarProps)
+    }, DeleteProps)
 }

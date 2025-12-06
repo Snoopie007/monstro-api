@@ -18,6 +18,17 @@ const PostProps = {
     }),
 };
 
+const AvatarProps = {
+    body: z.object({
+        mid: z.string(),
+        file: z.object({
+            name: z.string(),
+            type: z.string(),
+            size: z.number(),
+        }),
+    }),
+};
+
 export function mediaRoutes(app: Elysia) {
     return app.post('/medias/presigned', async ({ params, body, status, ...ctx }) => {
         const { userId } = ctx as Context & { userId: string };
@@ -70,5 +81,15 @@ export function mediaRoutes(app: Elysia) {
                 message: error instanceof Error ? error.message : 'Unknown error'
             });
         }
-    }, PostProps);
+    }, PostProps).post('/medias/presigned/avatar', async ({ params, body, status, ...ctx }) => {
+
+        const { file, mid } = body;
+        const { uploadUrl, publicUrl } = await s3.getPresignedUploadUrl(
+            `members/${mid}/avatars`,
+            file.name,
+            file.type
+        );
+        return status(200, { uploadUrl, publicUrl });
+
+    }, AvatarProps)
 }
