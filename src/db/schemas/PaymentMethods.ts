@@ -13,6 +13,7 @@ export const paymentMethods = pgTable('payment_methods', {
     fingerprint: text('fingerprint').notNull().unique(),
     card: jsonb('card').$type<CardPaymentMethod>(),
     usBankAccount: jsonb('us_bank_account').$type<UsBankAccountPaymentMethod>(),
+    memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
     metadata: jsonb('metadata').$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),

@@ -5,6 +5,7 @@ import { commentRoutes } from './comments';
 import { reactionRoutes } from './reactions';
 import { userFriends } from './friends';
 import { mediaRoutes } from './medias';
+import { stripeRoutes } from './stripe';
 import {
     locationAchievements,
     locationCheckin,
@@ -30,6 +31,7 @@ import {
 
 export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(AuthMiddleware)
+    .use(stripeRoutes)
     .use(commentRoutes)
     .use(reactionRoutes)
     .use(userChats)

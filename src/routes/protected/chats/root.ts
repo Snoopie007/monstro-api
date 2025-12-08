@@ -173,13 +173,15 @@ export const userChats = new Elysia({ prefix: '/chats' })
                         }
                     },
                 })
+
+
                 const messages = await db.query.messages.findMany({
-                    where: (messages, { eq }) => eq(messages.chatId, cid),
+                    where: (messages, { eq, and, }) => and(eq(messages.chatId, cid)),
                     with: {
                         medias: true,
                     },
+                    limit: 50,
                     orderBy: (messages, { desc }) => desc(messages.created),
-
                 });
 
                 // Get all message IDs

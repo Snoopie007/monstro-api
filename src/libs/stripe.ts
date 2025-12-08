@@ -108,6 +108,44 @@ abstract class BaseStripePayments {
         return await this._stripe.setupIntents.create(option);
     }
 
+    async confirmSetupIntent(id: string, mandateData: {
+        ip: string;
+        userAgent: string;
+        acceptedAt: number;
+    }) {
+        return await this._stripe.setupIntents.confirm(id, {
+            mandate_data: {
+                customer_acceptance: {
+                    type: "online",
+                    accepted_at: mandateData.acceptedAt,
+                    online: {
+                        ip_address: mandateData.ip,
+                        user_agent: mandateData.userAgent,
+                    },
+                },
+            },
+            expand: ["payment_method"],
+        });
+    }
+
+    async createBankSetupIntent() {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        const option: Stripe.SetupIntentCreateParams = {
+            customer: this._customer,
+            payment_method_types: ["us_bank_account"],
+            payment_method_options: {
+                us_bank_account: {
+                    financial_connections: {
+                        permissions: ['payment_method', 'balances'],
+                    },
+                },
+            },
+        };
+        return await this._stripe.setupIntents.create(option);
+    }
+
     async getCustomer(customerId: string): Promise<Stripe.Customer | undefined> {
         const customer = await this._stripe.customers.retrieve(customerId);
 
