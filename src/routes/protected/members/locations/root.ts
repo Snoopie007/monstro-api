@@ -25,12 +25,12 @@ const MemberLocationRootProps = {
 
 export const membersLocations = new Elysia({ prefix: '/locations' })
     .get('/', async ({ params, status }) => {
-        console.log(params);
+
         const { mid } = params;
 
         try {
             const mls = await db.query.memberLocations.findMany({
-                where: (memberLocations, { eq }) => eq(memberLocations.memberId, params.mid!),
+                where: (memberLocations, { eq }) => eq(memberLocations.memberId, mid),
                 with: {
                     location: true
                 }

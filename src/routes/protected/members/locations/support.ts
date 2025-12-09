@@ -6,13 +6,10 @@ import type { SupportConversation } from '@/types'
 import { Elysia } from 'elysia'
 import { z } from "zod"
 
-const MemberLocationSupportProps = {
+const SupportProps = {
     params: z.object({
         mid: z.string(),
         lid: z.string(),
-    }),
-    body: z.object({
-        assistantId: z.string(),
     }),
 };
 
@@ -39,15 +36,11 @@ export function mlSupportRoutes(app: Elysia) {
                     error: 'Failed to fetch support conversations',
                 })
             }
-        }, MemberLocationSupportProps)
+        }, SupportProps)
         .post('/support', async ({ params, status, body }) => {
             const { mid, lid } = params
 
             try {
-                console.log(
-                    'Creating support conversation',
-                    JSON.stringify(body)
-                )
 
                 // Fetch location with vendor information
                 const location = await db.query.locations.findFirst({
@@ -74,11 +67,9 @@ export function mlSupportRoutes(app: Elysia) {
                     return status(404, { error: 'Member not found' })
                 }
 
-                const assistant =
-                    await db.query.supportAssistants.findFirst({
-                        where: (b, { eq, and }) =>
-                            and(eq(b.locationId, lid)),
-                    })
+                const assistant = await db.query.supportAssistants.findFirst({
+                    where: (b, { eq, and }) => and(eq(b.locationId, lid)),
+                })
 
                 if (!assistant) {
                     return status(404, {
@@ -171,5 +162,5 @@ export function mlSupportRoutes(app: Elysia) {
                     error: 'Failed to create support conversation',
                 })
             }
-        }, MemberLocationSupportProps)
+        }, SupportProps)
 }

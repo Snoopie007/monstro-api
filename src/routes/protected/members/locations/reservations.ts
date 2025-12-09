@@ -4,13 +4,10 @@ import { addDays, isAfter } from 'date-fns';
 import { generateVRs } from '@/libs/utils';
 import { z } from 'zod';
 
-const MemberLocationReservationsProps = {
+const ReservationsProps = {
     params: z.object({
         mid: z.string(),
         lid: z.string(),
-    }),
-    query: z.object({
-        limit: z.string(),
     }),
 };
 
@@ -71,7 +68,12 @@ export function mlReservationsRoutes(app: Elysia) {
             console.error(error);
             return status(500, { error: "Internal server error" });
         }
-    }, MemberLocationReservationsProps).get('/reservations/next', async ({ params, status }) => {
+    }, {
+        ...ReservationsProps,
+        query: z.object({
+            limit: z.string(),
+        }),
+    }).get('/reservations/next', async ({ params, status }) => {
         const { mid, lid } = params;
 
         const startDate = new Date();
@@ -138,5 +140,5 @@ export function mlReservationsRoutes(app: Elysia) {
             console.error(error);
             return status(500, { error: "Internal server error" });
         }
-    }, MemberLocationReservationsProps)
+    }, ReservationsProps)
 }
