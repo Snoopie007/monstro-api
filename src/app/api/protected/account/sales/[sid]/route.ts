@@ -90,15 +90,16 @@ export async function POST(req: Request) {
                 locationId: location.id,
                 lastCharged: today
             })
+
         });
 
-        await admindb.update(sales).set({
+        const [updatedSale] = await admindb.update(sales).set({
             status: "Completed",
             locationId: location.id,
             closedOn: today,
             updated: today
-        }).where(eq(sales.id, saleId));
-
+        }).where(eq(sales.id, saleId)).returning();
+        console.log('Updated sale to completed', updatedSale);
         try {
             await fetch('https://api.mymonstroapp.com/api/public/signup', {
                 method: 'POST',

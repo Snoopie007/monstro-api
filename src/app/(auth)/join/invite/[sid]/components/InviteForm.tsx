@@ -23,6 +23,7 @@ import { signIn } from "@/hooks/useSession";
 import { Sale } from "@/types/admin";
 import { TermsAndConditions } from "@/components/terms";
 import { MonstroLegal } from "@/libs/server/MDXParse";
+import PasswordStrength from "@/app/(auth)/components/PasswordStrength";
 
 interface InviteFormProps {
     sale: Sale;
@@ -32,8 +33,6 @@ interface InviteFormProps {
 const InputStyle = "bg-white border border-gray-200 rounded-lg h-12 text-base"
 
 export function InviteForm({ sale, tos }: InviteFormProps) {
-
-
     const [errors, setErrors] = useState<FieldErrors<z.infer<typeof VendorInviteSchema>> | null>(null);
     const [checked, setChecked] = useState<boolean>(true);
     const router = useRouter();
@@ -48,7 +47,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
         mode: "onChange",
     });
 
-
+    const password = form.watch('password');
 
     useEffect(() => {
         if (form.formState.errors) {
@@ -120,7 +119,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                             )} />
                         </fieldset>
 
-                        <fieldset>
+                        <fieldset className="space-y-2">
                             <FormField control={form.control} name="password" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel size="tiny">
@@ -132,6 +131,9 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                                     <FormMessage />
                                 </FormItem>
                             )} />
+                            {password && (
+                                <PasswordStrength password={password} />
+                            )}
                         </fieldset>
                         <TermsAndConditions checked={checked} tos={tos} setChecked={setChecked} className="border-gray-200" />
 
@@ -139,7 +141,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                             size="lg"
                             variant={"primary"}
                             onClick={form.handleSubmit(onSubmit)}
-                            disabled={form.formState.isSubmitting || !checked}
+                            disabled={form.formState.isSubmitting || !form.formState.isValid || !checked}
                         >
                             {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : "Create Account"}
                         </Button>

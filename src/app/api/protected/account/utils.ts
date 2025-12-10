@@ -35,11 +35,9 @@ async function getPlan(planId: number) {
   const p = await admindb.query.monstroPlans.findFirst({
     where: (plan, { eq }) => eq(plan.id, planId),
   });
-
   if (!p) {
-    throw new Error("Plan not found");
+    throw new Error("Plan not found, please contact your sales rep.")
   }
-
   return p;
 }
 

@@ -48,7 +48,7 @@ export const LoginSchema = z.object({
     token: z.string().min(6, "Invalid token."),
     type: z.enum(["email", "sms"]).optional(),
     email: z.string().min(8, "Email is required.").email("invalid email."),
-    password: z.string().min(8, "Password is required."),
+    password: z.string().min(8, "Password must be at least 8 characters long."),
 })
 
 
@@ -57,7 +57,7 @@ export const LoginSchema = z.object({
 export const ResetPasswordSchema = z.object({
     token: z.string(),
     confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters long."),
-    password: z.string().min(8, "Password is required."),
+    password: z.string().min(8, "Password must be at least 8 characters long."),
 }).refine(
     (data) => data.password === data.confirmPassword,
     {
@@ -90,8 +90,8 @@ export const VendorBillingSchema = z.object({
 
 export const VendorInviteSchema = z.object({
 
-    password: z.string().min(8, "Password is required."),
-}).merge(UserInfoSchema);
+    password: z.string().min(8, "Password must be at least 8 characters long."),
+}).merge(EmailSchema);
 
 
 
