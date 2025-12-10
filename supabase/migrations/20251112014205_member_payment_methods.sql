@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS payment_methods (
   type text NOT NULL,
   stripe_id text NOT NULL UNIQUE,
   fingerprint text NOT NULL UNIQUE,
+  member_id text REFERENCES members (id) ON DELETE CASCADE NOT NULL,
   card jsonb,
   us_bank_account jsonb,
   metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
