@@ -115,8 +115,8 @@ export function CommentItem({
                             onClick={handleLike}
                             disabled={isLiking}
                         >
-                            <Heart className={cn("h-3.5 w-3.5 mr-1", comment.likes > 0 && "fill-red-500 text-red-500")} />
-                            {comment.likes > 0 && <span className="text-xs">{comment.likes}</span>}
+                            <Heart className={cn("h-3.5 w-3.5 mr-1", comment.likeCounts > 0 && "fill-red-500 text-red-500")} />
+                            {comment.likeCounts > 0 && <span className="text-xs">{comment.likeCounts}</span>}
                         </Button>
                         <Button
                             variant="ghost"

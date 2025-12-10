@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         // Insert the post
         const [newPost] = await db.insert(groupPosts).values({
             groupId: groupId.trim(),
-            userId: session.user.id,
+            authorId: session.user.id,
             title: title.trim(),
             content: content.trim(),
             status: 'published',
