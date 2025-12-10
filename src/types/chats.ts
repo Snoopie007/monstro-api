@@ -52,6 +52,21 @@ export type MessageReaction = {
     userNames: string[];
 };
 
+export type PresignedUploadUrl = {
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    publicUrl: string;
+    uploadUrl: string;
+};
+
+export type FileUploadPayload = {
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    url: string;
+};
+
 export type Message = {
     id: string;
     chatId: string;

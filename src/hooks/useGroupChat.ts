@@ -1,6 +1,6 @@
 import { clientsideApiClient } from '@/libs/api/client';
 import supabase from '@/libs/client/supabase';
-import { EmojiData, Message, MessageReaction } from '@/types/chats';
+import { EmojiData, Message, MessageReaction, PresignedUploadUrl, FileUploadPayload } from '@/types/chats';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from './useSession';
@@ -148,20 +148,53 @@ export const useGroupChat = ({
     }
 
     try {
-      // Build FormData with message content and files
-      const formData = new FormData();
-      formData.append('content', content);
-      
+      let uploadedFiles: FileUploadPayload[] = [];
+
+      // Step 1: Get presigned URLs if files exist
       if (files && files.length > 0) {
-        files.forEach(file => {
-          formData.append('files', file);
-        });
+        const api = clientsideApiClient(session.user.sbToken);
+        const presignedUrls = await api.post(`/protected/medias/presigned`, {
+          chatId,
+          files: files.map(file => ({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+          })),
+        }) as PresignedUploadUrl[];
+
+        // Step 2: Upload files to S3 using presigned URLs
+        await Promise.all(
+          files.map(async (file, index) => {
+            const presignedUrl = presignedUrls[index];
+            const response = await fetch(presignedUrl.uploadUrl, {
+              method: 'PUT',
+              body: file,
+              headers: {
+                'Content-Type': file.type,
+              },
+            });
+
+            if (!response.ok) {
+              throw new Error(`Failed to upload file: ${file.name}`);
+            }
+
+            uploadedFiles.push({
+              fileName: presignedUrl.fileName,
+              mimeType: presignedUrl.mimeType,
+              fileSize: presignedUrl.fileSize,
+              url: presignedUrl.publicUrl,
+            });
+          })
+        );
       }
 
-      // Use API client with the Supabase token from session
-      // The API saves the message and broadcasts it to other clients
+      // Step 3: Send message with uploaded file metadata
       const api = clientsideApiClient(session.user.sbToken);
-      const enrichedMessage = await api.post(`/protected/chats/${chatId}/messages`, formData) as any;
+      const enrichedMessage = await api.post(`/protected/chats/${chatId}/messages`, {
+        content,
+        files: uploadedFiles,
+      }) as any;
+
       // Since we have self: false, we won't receive our own messages via broadcast
       // So we need to manually add it to the local state
       const mapped: Message = {
@@ -173,13 +206,17 @@ export const useGroupChat = ({
         attachments: enrichedMessage.attachments || [],
         readBy: enrichedMessage.metadata?.readBy || [],
         sender: enrichedMessage.sender,
-        media: enrichedMessage.media,
+        media: enrichedMessage.medias || [],
         created: enrichedMessage.created,
         updated: enrichedMessage.updated,
         reactions: [], // New messages start with no reactions
       };
 
-      setMessages(prev => [...prev, mapped]);
+      // Add duplicate check in case broadcast arrived before API response
+      setMessages(prev => {
+        if (prev.some(m => m.id === mapped.id)) return prev;
+        return [...prev, mapped];
+      });
       
       return enrichedMessage;
     } catch (err) {
@@ -218,6 +255,7 @@ export const useGroupChat = ({
           private: true, // Requires authentication
           broadcast: { 
             ack: false,
+            self: false
           }
         }
       });
