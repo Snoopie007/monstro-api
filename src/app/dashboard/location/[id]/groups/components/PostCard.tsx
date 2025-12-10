@@ -183,7 +183,7 @@ export function PostCard({ post, onOpenDetail, onDelete, canDelete = false }: Po
           onClick={handleCardClick}
         >
           <MessageCircle size={16} />
-          {post.comments ?? 0} comments
+          {post.commentCounts ?? 0} comments
         </Button>
       </CardFooter>
     </Card>

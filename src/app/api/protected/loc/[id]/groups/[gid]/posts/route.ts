@@ -20,7 +20,7 @@ export async function GET(req: Request, props: { params: Promise<{ id: string, g
                 metadata: true,
                 created: true,
                 groupId: true,
-                comments: true,
+                commentCounts: true,
             },
             with: {
                 user: {

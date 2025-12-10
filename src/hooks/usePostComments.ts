@@ -137,7 +137,7 @@ export function usePostComments({ locationId, groupId, postId }: UsePostComments
                 return {
                     ...old,
                     comments: old.comments.map((c: PostComment) =>
-                        c.id === commentId ? { ...c, likes: data.likes } : c
+                        c.id === commentId ? { ...c, likeCounts: data.likeCounts } : c
                     ),
                 };
             });

@@ -83,7 +83,7 @@ export async function DELETE(req: Request, props: RouteParams) {
         }
 
         // Check if user is the post owner
-        const isOwner = post.userId === session.user.id;
+        const isOwner = post.authorId === session.user.id;
 
         // Check if user is a staff member at this location
         // First find the staff record for this user
