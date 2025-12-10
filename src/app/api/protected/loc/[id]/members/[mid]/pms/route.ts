@@ -119,6 +119,7 @@ export async function POST(req: Request, props: Props) {
 					accountType: us_bank_account.account_type,
 					last4: us_bank_account.last4,
 				} : null,
+				memberId: mid,
 			}).onConflictDoNothing({
 				target: [paymentMethods.fingerprint],
 			}).returning();
