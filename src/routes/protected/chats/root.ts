@@ -3,7 +3,7 @@ import { reactionCounts } from '@/db/schemas/chat/reactions';
 import { and, eq, inArray } from 'drizzle-orm';
 import { Elysia } from 'elysia';
 import { chatMembers, chats } from '@/db/schemas/chat/chats';
-import { sendMessageRoute } from './messages';
+import { messageRoute } from './messages';
 import type { Context } from 'elysia';
 import { z } from 'zod';
 
@@ -219,7 +219,7 @@ export const userChats = new Elysia({ prefix: '/chats' })
                 return { error: 'Internal server error' }
             }
         }, ChatProps)
-        app.use(sendMessageRoute);
+        app.use(messageRoute);
         return app;
 
     })

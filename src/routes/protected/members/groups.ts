@@ -1,7 +1,9 @@
 import { db } from "@/db/db";
 import { Elysia } from "elysia";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
+import type { ReactionCounts } from "@/types/reactions";
+import { reactionCounts } from "@/db/schemas/chat/reactions";
 
 const MemberGroupsProps = {
     params: z.object({
@@ -51,13 +53,7 @@ export const memberGroups = new Elysia({ prefix: '/groups' })
                 where: (groups, { eq }) => eq(groups.id, gid),
                 with: {
                     location: true,
-                    posts: {
-                        orderBy: (posts, { desc }) => desc(posts.created),
-                        with: {
-                            medias: true,
-                            user: true,
-                        },
-                    },
+
                     groupMembers: {
                         with: {
                             user: true,
@@ -65,12 +61,54 @@ export const memberGroups = new Elysia({ prefix: '/groups' })
                     },
                 },
             });
-
             if (!group) {
                 return status(404, { error: "Group not found" });
             }
+            const posts = await db.query.groupPosts.findMany({
+                where: (groupPosts, { eq }) => eq(groupPosts.groupId, gid),
+                with: {
+                    medias: true,
+                    author: true,
+                },
+                limit: 50,
+                orderBy: (groupPosts, { desc }) => desc(groupPosts.created),
+            });
 
-            return status(200, group);
+            const postIds = posts.map(p => p.id) || [];
+
+            let reactions: ReactionCounts[] = [];
+
+            if (postIds.length > 0) {
+                reactions = await db.select().from(reactionCounts).where(and(
+                    eq(reactionCounts.ownerType, 'post'),
+                    inArray(reactionCounts.ownerId, postIds)
+                ));
+
+
+
+                // Add reactions to each message
+
+            }
+
+            // Group reactions by message ID
+            const reactionsByPost = reactions.reduce((acc, reaction) => {
+                const postId = reaction.ownerId; // Updated field name
+                if (!postId) return acc;
+                if (!acc[postId]) acc[postId] = [];
+                acc[postId].push(reaction);
+                return acc;
+            }, {} as Record<string, any[]>);
+            const postsWithReactions = posts.map(post => ({
+                ...post,
+                reactions: reactionsByPost[post.id] || []
+            }));
+
+
+
+            return status(200, {
+                ...group,
+                posts: postsWithReactions
+            });
         } catch (error) {
             console.error(error);
             return status(500, { error: "Failed to fetch group" });

@@ -4,6 +4,7 @@ import { locations } from "../locations";
 import { users } from "../users";
 import { media } from "./chats";
 import { comments } from "./comments";
+import { userFeeds } from "./moments";
 
 export const groups = pgTable("groups", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('grp_')`),
@@ -33,13 +34,11 @@ export const groupPosts = pgTable("group_posts", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('pst_')`),
     title: text("title").notNull(),
     groupId: text("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
     comments: integer("comments").notNull().default(0),
-    likes: integer("likes").notNull().default(0),
     pinned: boolean("pinned").notNull().default(false),
     status: text("status", { enum: ["draft", "published", "archived"] }).notNull().default("draft"),
-    content: text("content").notNull(),
-    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
@@ -50,6 +49,7 @@ export const groupsRelations = relations(groups, ({ one, many }) => ({
         fields: [groups.locationId],
         references: [locations.id],
     }),
+    feeds: many(userFeeds),
     groupMembers: many(groupMembers),
     posts: many(groupPosts),
 }));
@@ -70,10 +70,11 @@ export const groupPostsRelations = relations(groupPosts, ({ one, many }) => ({
         fields: [groupPosts.groupId],
         references: [groups.id],
     }),
-    user: one(users, {
-        fields: [groupPosts.userId],
+    author: one(users, {
+        fields: [groupPosts.authorId],
         references: [users.id],
     }),
+    feeds: many(userFeeds),
     comments: many(comments),
     medias: many(media),
 }));

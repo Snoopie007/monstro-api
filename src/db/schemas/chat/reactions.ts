@@ -1,7 +1,7 @@
 // schema/reactions.ts
 import type { ReactionEmoji } from '@/types';
 import { relations, sql } from 'drizzle-orm';
-import { check, index, jsonb, pgTable, pgView, text, timestamp, unique } from 'drizzle-orm/pg-core';
+import { check, index, jsonb, pgTable, pgView, text, timestamp, unique, integer } from 'drizzle-orm/pg-core';
 import { messages } from './chats';
 import { comments } from './comments';
 import { groupPosts } from './groups';
@@ -28,14 +28,14 @@ export const reactions = pgTable('reactions', {
 
 // Views as Drizzle schemas - using existing SQL view definition
 export const reactionCounts = pgView('reaction_counts', {
-	ownerType: text('owner_type'),
-	ownerId: text('owner_id'),
-	display: text('display'),
-	name: text('name'),
-	type: text('type'),
-	count: text('count'),
-	userNames: text('user_names').array(),
-	userIds: text('user_ids').array(),
+	ownerType: text('owner_type').notNull(),
+	ownerId: text('owner_id').notNull(),
+	display: text('display').notNull(),
+	name: text('name').notNull(),
+	type: text('type').notNull(),
+	count: integer('count').notNull(),
+	userNames: text('user_names').array().notNull(),
+	userIds: text('user_ids').array().notNull(),
 }).existing();
 
 export const userReactions = pgView('user_reactions').as((qb) =>

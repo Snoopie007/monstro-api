@@ -5,12 +5,10 @@ import { users } from "../users";
 import { groupPosts, groups } from "./groups";
 
 export const moments = pgTable("moments", {
-    id: text("id").primaryKey().notNull().default(sql`uuid_base62('mem_')`),
-    title: text("title").notNull(),
-    description: text("description"),
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62('')`),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     comments: integer("comments").notNull().default(0),
-    likes: integer("likes").notNull().default(0),
+    likeCounts: integer("like_counts").notNull().default(0),
     tags: text("tags").array().default(sql`'{}'`),
     isPublic: boolean("is_public").notNull().default(true),
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
@@ -50,10 +48,11 @@ export const momentLikes = pgTable("moment_likes", {
 ]);
 
 export const momentsRelations = relations(moments, ({ one, many }) => ({
-    user: one(users, {
+    author: one(users, {
         fields: [moments.userId],
         references: [users.id],
     }),
+    feeds: many(userFeeds),
     comments: many(comments),
     momentLikes: many(momentLikes),
 }));
@@ -67,5 +66,30 @@ export const momentLikesRelations = relations(momentLikes, ({ one }) => ({
     user: one(users, {
         fields: [momentLikes.userId],
         references: [users.id],
+    }),
+}));
+
+export const userFeedsRelations = relations(userFeeds, ({ one, many }) => ({
+    author: one(users, {
+        fields: [userFeeds.authorId],
+        references: [users.id],
+        relationName: 'authorFeeds',
+    }),
+    moment: one(moments, {
+        fields: [userFeeds.momentId],
+        references: [moments.id],
+    }),
+    post: one(groupPosts, {
+        fields: [userFeeds.postId],
+        references: [groupPosts.id],
+    }),
+    group: one(groups, {
+        fields: [userFeeds.groupId],
+        references: [groups.id],
+    }),
+    user: one(users, {
+        fields: [userFeeds.userId],
+        references: [users.id],
+        relationName: 'userFeeds',
     }),
 }));

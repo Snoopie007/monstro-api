@@ -56,7 +56,7 @@ function getFileTypeCategory(mimeType: string): 'image' | 'video' | 'audio' | 'd
 }
 
 
-export function sendMessageRoute(app: Elysia) {
+export function messageRoute(app: Elysia) {
     app.post('/messages', async ({ params, body, status, ...ctx }) => {
         const { userId } = ctx as Context & { userId: string };
 

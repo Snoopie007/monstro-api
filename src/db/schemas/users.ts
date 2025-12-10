@@ -4,6 +4,7 @@ import { relations, sql } from "drizzle-orm";
 import { members } from "./members";
 import { vendors } from "./vendors";
 import { staffs } from "./staffs";
+import { userFeeds } from "./chat/moments";
 
 export const users = pgTable("users", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -29,5 +30,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
     staff: one(staffs, {
         fields: [users.id],
         references: [staffs.userId],
-    })
+    }),
+    feeds: many(userFeeds, { relationName: 'userFeeds' }),
+    authorFeeds: many(userFeeds, { relationName: 'authorFeeds' }),
 }));
