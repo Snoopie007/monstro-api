@@ -47,7 +47,7 @@ export async function POST(
 			phone: vendor.phone!,
 		}, token.id, {
 			vendorId,
-			locations: [lid],
+			locations: lid,
 		});
 
 		const today = new Date();
