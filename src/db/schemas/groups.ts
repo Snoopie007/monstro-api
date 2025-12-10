@@ -31,7 +31,7 @@ export const groupPosts = pgTable("group_posts", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('pst_')`),
     title: text("title").notNull(),
     groupId: text("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     comments: integer("comments").notNull().default(0),
     likes: integer("likes").notNull().default(0),
     pinned: boolean("pinned").notNull().default(false),
@@ -89,7 +89,7 @@ export const groupPostsRelations = relations(groupPosts, ({ one }) => ({
         references: [groups.id],
     }),
     user: one(users, {
-        fields: [groupPosts.userId],
+        fields: [groupPosts.authorId],
         references: [users.id],
     }),
 }));
