@@ -5,15 +5,15 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
 	/* config options here */
 	// output: 'standalone',
-	productionBrowserSourceMaps: false,
+	// productionBrowserSourceMaps: false,
 
 	// Suppress source map warnings in development
-	webpack: (config, { dev }) => {
-		if (dev) {
-			config.devtool = false; // Disable source maps in dev
-		}
-		return config;
-	},
+	// webpack: (config, { dev }) => {
+	// 	if (dev) {
+	// 		config.devtool = false; // Disable source maps in dev
+	// 	}
+	// 	return config;
+	// },
 	// Remove eslint config - it's no longer supported in next.config.ts
 	// If you need to ignore ESLint during builds, use: next build --no-lint
 	// Or configure ESLint in .eslintrc.json
