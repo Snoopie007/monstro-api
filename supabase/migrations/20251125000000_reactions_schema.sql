@@ -6,9 +6,9 @@
 -- REACTIONS TABLE
 -- ========================
 CREATE TABLE IF NOT EXISTS reactions (
-  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(''),
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
-  owner_type text CHECK (owner_type IN ('message', 'post', 'moment', 'comment')) NOT NULL,
+  owner_type text CHECK (owner_type IN ('message', 'post', 'moment')) NOT NULL,
   owner_id text NOT NULL,
   emoji jsonb NOT NULL, -- Store emoji data as JSON: {"type": "unicode", "value": "👍", "name": "thumbs_up"}
   created_at timestamp with time zone NOT NULL DEFAULT now(),
