@@ -1,46 +1,44 @@
 import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+    Input,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/forms';
+import {
     Button,
-    DialogBody,
-    DialogFooter,
-    DialogClose,
-    Popover,
-    PopoverContent,
     Calendar,
-    PopoverTrigger,
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
+    DialogBody,
+    DialogClose,
+    DialogFooter,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
 } from "@/components/ui";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormMessage,
-    FormItem,
-    FormLabel,
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem,
-    Input,
-    FormDescription,
-} from '@/components/forms';
 
-import { useState } from "react";
-import { NewPackageSchema } from "../../../schema";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { format } from "date-fns";
-import { Loader2, CalendarIcon, ChevronRight } from "lucide-react";
-import { cn, tryCatch } from "@/libs/utils";
-import { useMemberStatus } from "../../../providers";
-import { PaymentMethod } from "@/types";
-import React from "react";
-import { MemberPackage, MemberPlan } from "@/types";
-import { toast } from "react-toastify";
 import { useMemberPackages, } from "@/hooks";
+import { cn, tryCatch } from "@/libs/utils";
+import { MemberPackage, MemberPlan, PaymentMethod } from "@/types";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { CalendarIcon, ChevronRight, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "react-toastify";
+import { z } from "zod";
+import { useMemberStatus } from "../../../providers";
+import { NewPackageSchema } from "../../../schema";
 import { PMSelect } from "../../PMSelect";
 
 interface PkgFormProps {
@@ -83,7 +81,7 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
                 body: JSON.stringify({
                     ...v,
                     paymentType,
-                    paymentMethod: paymentMethod
+                    paymentMethod: paymentMethod,
                 })
             })
         )

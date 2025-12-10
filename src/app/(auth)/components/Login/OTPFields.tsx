@@ -1,8 +1,8 @@
 "use client"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/forms'
 import { Button } from '@/components/ui/button'
-import React, { useState } from 'react'
-import { cn } from '@/libs/utils'
+import React from 'react'
+import { formatEmail, formatPhone } from '@/libs/utils'
 import { z } from 'zod'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FormControl, FormField } from '@/components/forms'
@@ -13,6 +13,7 @@ import { signIn } from '@/hooks/useSession'
 import { Loader2 } from 'lucide-react'
 import { OTPRetry } from './OTPRetry'
 import { LoginSchema } from '@/libs/FormSchemas/schemas'
+import { useLogin } from '../../providers'
 
 interface VerifyOTPProps {
     form: UseFormReturn<z.infer<typeof LoginSchema>>;
@@ -21,6 +22,7 @@ interface VerifyOTPProps {
 export function VerifyOTP({ form }: VerifyOTPProps) {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const { user } = useLogin();
     const { type, ...rest } = form.getValues();
 
 
@@ -56,7 +58,10 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
                     Authenticate your identity
                 </div>
                 <p className="text-gray-500">
-                    We've sent you an email to {rest.email}. The code will expire in 30 minutes.
+                    {type === 'sms' 
+                        ? `We've sent a text message to ${formatPhone(user?.phone || '')}` 
+                        : `We've sent an email to ${formatEmail(rest.email)}`
+                    }. The code will expire in 30 minutes.
                 </p>
             </div>
             <div className="flex flex-col gap-2 space-y-1">

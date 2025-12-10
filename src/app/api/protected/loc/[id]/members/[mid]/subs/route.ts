@@ -1,16 +1,17 @@
 import { db } from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
+import { NextRequest, NextResponse } from "next/server";
 import {
-    calculatePeriodEnd, calculateTrialEnd,
+    addUserToGroup,
+    calculatePeriodEnd,
     calculateStripeFeePercentage,
+    calculateTrialEnd,
     scheduleRecurringInvoiceReminders,
 } from "../../utils";
-import { NextRequest, NextResponse } from "next/server";
 
-import { getTaxRateId } from "../../utils";
 import { PaymentType } from "@/types";
-import { triggerSignUp } from "@/libs/TriggerService";
+import { getTaxRateId } from "../../utils";
 
 
 type Props = {
@@ -158,6 +159,11 @@ export async function POST(req: Request, props: Props) {
                 locationId: id
             }
         }).returning()
+
+        // Add user to group if plan has a groupId
+        if (plan.groupId && member.userId) {
+            await addUserToGroup({ groupId: plan.groupId, userId: member.userId });
+        }
 
         const { locationState } = location;
 

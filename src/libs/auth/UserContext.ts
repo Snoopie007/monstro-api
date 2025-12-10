@@ -1,6 +1,7 @@
 // TODO: REFACTOR - Move this to separate user-context.ts file
 
 import { db } from "@/db/db";
+import { signSupabaseJWT } from "@/libs/server/supabase";
 
 // This should NOT be in the auth flow - should be fetched separately
 export async function buildUserPayload(userId: string) {
@@ -138,6 +139,22 @@ export async function buildUserPayload(userId: string) {
     } else {
       throw new Error("User is not associated with a vendor or staff account");
     }
+  
+    // Generate Supabase JWT token for API authentication
+    const sbToken = await signSupabaseJWT(
+      {
+        id: userPayload.id,
+        email: userPayload.email,
+        name: userPayload.name,
+        role: userPayload.role,
+        vendorId: userPayload.vendorId || 0,
+        staffId: userPayload.staffId || 0,
+      },
+      userPayload.id
+    );
+
+    // Add sbToken to the payload
+    userPayload.sbToken = sbToken;
   
     return userPayload;
   }

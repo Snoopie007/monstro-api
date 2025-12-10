@@ -4,18 +4,17 @@ import {
     DialogTitle,
     DialogTrigger,
     Item,
-    ItemMedia,
     ItemContent,
+    ItemMedia,
     ItemTitle
 } from '@/components/ui'
-import { useState } from 'react'
-import React from 'react'
-import { PkgForm } from './PkgForm'
-import { VisuallyHidden } from 'react-aria'
 import { usePackages } from '@/hooks'
-import { useMemberStatus } from '../../../providers'
 import { MemberPackage } from '@/types'
 import { CircleFadingPlusIcon } from 'lucide-react'
+import { useState } from 'react'
+import { VisuallyHidden } from 'react-aria'
+import { useMemberStatus } from '../../../providers'
+import { PkgForm } from './PkgForm'
 
 export function CreatePackage({
     params,

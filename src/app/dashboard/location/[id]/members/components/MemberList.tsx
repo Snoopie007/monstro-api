@@ -1,16 +1,14 @@
 'use client'
 
-import { useMembers } from '@/hooks'
 import {
     ColumnFiltersState,
     getCoreRowModel,
-    getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
 } from '@tanstack/react-table'
-import { useState, useMemo, useEffect } from 'react'
-import { MemberColumns, MemberWithCustomFieldsColumns } from './MemberColumns'
+import { useMemo, useEffect } from 'react'
+import { MemberColumns } from './MemberColumns'
 import { Input } from '@/components/forms'
 import { MemberTable } from './MemberTable'
 import ErrorComponent from '@/components/error'
@@ -19,13 +17,6 @@ import { Member } from '@/types/member'
 
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { Button, ScrollArea, Separator } from '@/components/ui'
-import {
-    TablePage,
-    TablePageContent,
-    TablePageFooter,
-    TablePageHeader,
-    TablePageHeaderSection,
-} from '@/components/ui/TablePage'
 import { ImportMembers } from '.'
 import TagsFilter from './TagsFilter'
 import { FilterPopover, SortPopover } from './FilterAndSort'

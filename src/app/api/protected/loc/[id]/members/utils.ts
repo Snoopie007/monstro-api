@@ -4,6 +4,8 @@ import {
 } from "@/types";
 import { isAfter, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { serversideApiClient } from "@/libs/api/server";
+import { db } from "@/db/db";
+import { groupMembers } from "@/db/schemas";
 
 
 const STRIPE_FEE_PERCENT = 2.9
@@ -254,6 +256,36 @@ async function cancelRecurringClassReminders(params: {
 	}
 }
 
+/**
+ * Add a user to a group if groupId is provided.
+ * Uses onConflictDoNothing to avoid duplicate membership errors.
+ */
+async function addUserToGroup(params: {
+	groupId: string | null | undefined;
+	userId: string;
+}) {
+	const { groupId, userId } = params;
+	
+	if (!groupId) {
+		return { success: true, added: false };
+	}
+
+	try {
+		await db.insert(groupMembers).values({
+			groupId,
+			userId,
+			role: "member",
+		}).onConflictDoNothing();
+
+		console.log(`👥 Added user ${userId} to group ${groupId}`);
+		return { success: true, added: true };
+	} catch (error) {
+		console.error('Failed to add user to group:', error);
+		// Don't throw - group membership failure shouldn't fail the checkout
+		return { success: false, added: false, error };
+	}
+}
+
 export {
 	calculatePeriodEnd,
 	calculateTax,
@@ -269,5 +301,6 @@ export {
 	scheduleRecurringClassReminders,
 	cancelClassReminders,
 	cancelMissedClassReminder,
-	cancelRecurringClassReminders
+	cancelRecurringClassReminders,
+	addUserToGroup,
 };

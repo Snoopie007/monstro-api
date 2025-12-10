@@ -19,4 +19,11 @@ const supabase = createClient(
   }
 );
 
+// Set auth token for realtime - call this when session changes
+export const setRealtimeAuth = (token: string | null) => {
+  if (token) {
+    supabase.realtime.setAuth(token);
+  }
+};
+
 export default supabase;

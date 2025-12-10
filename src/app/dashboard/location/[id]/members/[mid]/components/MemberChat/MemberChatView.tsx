@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { MemberChatInput } from "./MemberChatInput";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useSocialChat } from "@/hooks/useSocialChat";
 import { useSession } from "@/hooks/useSession";
 import { ScrollArea } from "@/components/ui/";
@@ -9,6 +8,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { Member } from "@/types";
+import { formatMessageTimestamp, getDateLabel } from "@/libs/utils";
+import { isSameDay } from "date-fns";
+import ReactMarkdown from "react-markdown";
+import { GroupChatInput } from "../../../../groups/components/GroupChatInput";
+import { ChatReactions, ChatReactionSheet } from "../../../../groups/components/reactions";
 
 interface MemberChatViewProps {
   locationId: string;
@@ -16,15 +20,34 @@ interface MemberChatViewProps {
   currentMember: Member;
 }
 
+interface Message {
+  id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  sender?: { id: string; name: string | null; image: string | null } | null;
+  media?: Array<{
+    id: string;
+    url: string;
+    fileName: string;
+    fileType: string;
+    mimeType?: string | null;
+  }>;
+  reactions?: Array<{
+    display: string;
+    name: string;
+    count: number;
+    userIds: string[];
+    userNames: string[];
+  }>;
+}
+
 export function MemberChatView({ locationId, currentMemberId, currentMember }: MemberChatViewProps) {
   const { data: session } = useSession();
-  
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const fromUserId = session?.user?.id || null;
   const toUserId = currentMember?.userId || null;
-  console.log(currentMember)
-  console.log(toUserId);
 
   // Use the chat hook with user IDs
   const {
@@ -33,7 +56,8 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
     isLoading,
     chatId,
     error,
-    sendMessage
+    sendMessage,
+    toggleReaction
   } = useSocialChat({
     fromUserId,
     toUserId,
@@ -41,47 +65,63 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
     enabled: !!fromUserId && !!toUserId && fromUserId !== toUserId,
   });
 
+  // State for reaction picker
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+  const [selectedMessageForReaction, setSelectedMessageForReaction] = useState<Message | null>(null);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim()) return;
+  const handleSendMessage = async (content: string, files: File[]) => {
+    if (!content.trim() && files.length === 0) return;
     
     try {
-      await sendMessage(content);
+      await sendMessage(content, files);
     } catch (err) {
       console.error('Failed to send message:', err);
     }
   };
 
+  const handleOpenReactionPicker = useCallback((message: Message) => {
+    setSelectedMessageForReaction(message);
+    setReactionPickerOpen(true);
+  }, []);
+
+  const handleToggleReaction = useCallback(async (
+    messageId: string,
+    emoji: { value: string; name: string; type: string }
+  ) => {
+    try {
+      await toggleReaction(messageId, emoji);
+    } catch (err) {
+      console.error('Failed to toggle reaction:', err);
+    }
+  }, [toggleReaction]);
+
+  const handleReactionSelect = useCallback((emoji: { value: string; name: string; type: string }) => {
+    if (selectedMessageForReaction && session?.user?.id) {
+      handleToggleReaction(selectedMessageForReaction.id, emoji);
+    }
+    setReactionPickerOpen(false);
+    setSelectedMessageForReaction(null);
+  }, [selectedMessageForReaction, session?.user?.id, handleToggleReaction]);
+
   const canChat = fromUserId && toUserId && fromUserId !== toUserId;
-
   const currentMemberName = `${currentMember?.firstName ?? ""} ${currentMember?.lastName ?? ""}`.trim() || "Member";
-  const currentMemberInitials = `${currentMember?.firstName?.[0] ?? ""}${currentMember?.lastName?.[0] ?? ""}`.trim() || "?";
   const currentMemberAvatar = currentMember?.avatar || undefined;
-
-  const currentUserName = session?.user?.name || session?.user?.member?.firstName || "You";
-  const currentUserAvatar = session?.user?.image || session?.user?.member?.avatar || undefined;
-  const currentUserInitials = (currentUserName || "?")
-    .split(" ")
-    .map((part: string) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "?";
+  const currentMemberInitials = `${currentMember?.firstName?.[0] ?? ""}${currentMember?.lastName?.[0] ?? ""}`.trim() || "?";
 
   return (
-    <div className="bg-muted/50 rounded-lg flex-1 h-full flex flex-col min-h-0">
+    <div className="bg-muted/50 rounded-lg flex-1 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="flex flex-col gap-2 border-b border-foreground/5 p-4 flex-shrink-0">
         <div className="flex flex-row items-center justify-between">
           <div className="flex flex-row items-center gap-2">
-            <span className="text-sm font-bold">Member Chat</span>
+            <span className="text-sm font-bold">Chat with {currentMemberName}</span>
             {isConnected && (
               <Badge variant="outline" className="text-xs">
                 <span className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></span>
-                {/* TODO: add back in when we have integrated supabase presence */}
-                {/* Connected */}
               </Badge>
             )}
             {error && (
@@ -91,94 +131,196 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
             )}
           </div>
         </div>
-
       </div>
 
-      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-        {!canChat ? (
-          <div className="h-full flex items-center justify-center text-center px-4">
-            <div className="space-y-2">
-              <span className="text-sm text-muted-foreground block">
-                {!fromUserId
-                  ? "You must be logged in to chat"
-                  : !toUserId
-                  ? "This member cannot be reached right now"
-                  : "Cannot chat with yourself"}
-              </span>
-            </div>
-          </div>
-        ) : isLoading ? (
-          <div className="h-full flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <>
-            <ScrollArea className="flex-1 h-full px-4">
-              <div className="space-y-4 py-4">
-                {messages.length === 0 ? (
-                  <div className="text-center text-sm text-muted-foreground py-8">
-                    No messages yet. Start the conversation!
-                  </div>
-                ) : (
-                  messages.map((message) => {
-                    const isFromCurrentUser = message.sender_id === fromUserId;
-                    const displayName = isFromCurrentUser ? currentUserName : currentMemberName;
-                    const avatarSrc = isFromCurrentUser ? currentUserAvatar : currentMemberAvatar;
-                    const fallbackInitials = isFromCurrentUser ? currentUserInitials : currentMemberInitials;
-
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex gap-3 ${
-                          isFromCurrentUser ? 'flex-row-reverse' : 'flex-row'
-                        }`}
-                      >
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={avatarSrc} />
-                          <AvatarFallback className="text-xs">
-                            {fallbackInitials || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div
-                          className={`flex flex-col gap-1 max-w-[70%] ${
-                            isFromCurrentUser ? 'items-end' : 'items-start'
-                          }`}
-                        >
-                          <span className="text-xs text-muted-foreground">
-                            {displayName}
-                          </span>
-                          <div
-                            className={`rounded-lg px-3 py-2 text-sm ${
-                              isFromCurrentUser
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
-                            }`}
-                          >
-                            {message.content}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(message.created_at).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={messagesEndRef} />
+      <div className="flex-1 relative min-h-0">
+        <div className="absolute inset-0 flex flex-col">
+          {!canChat ? (
+            <div className="h-full flex items-center justify-center text-center px-4">
+              <div className="space-y-2">
+                <span className="text-sm text-muted-foreground block">
+                  {!fromUserId
+                    ? "You must be logged in to chat"
+                    : !toUserId
+                    ? "This member cannot be reached right now"
+                    : "Cannot chat with yourself"}
+                </span>
               </div>
-            </ScrollArea>
-            <div className="flex-shrink-0 p-4">
-              <MemberChatInput
-                onSend={handleSendMessage}
-                disabled={!canChat || !isConnected}
-              />
             </div>
-          </>
-        )}
+          ) : isLoading ? (
+            <div className="h-full flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              <ScrollArea className="flex-1 w-full px-4">
+                <div className="space-y-6 py-4">
+                  {messages.length === 0 ? (
+                    <div className="text-center text-sm text-muted-foreground py-8">
+                      Send a message to start the conversation
+                    </div>
+                  ) : (
+                    messages.map((message, index) => {
+                      const isFromCurrentUser = message.sender_id === fromUserId;
+                      const isFromMember = message.sender_id === toUserId;
+                      
+                      // Determine display name and avatar based on sender
+                      let displayName: string;
+                      let avatarSrc: string | undefined;
+                      let fallbackInitials: string;
+                      
+                      if (isFromMember) {
+                        displayName = currentMemberName;
+                        avatarSrc = currentMemberAvatar;
+                        fallbackInitials = currentMemberInitials;
+                      } else {
+                        // Staff member (current user or other staff)
+                        displayName = message.sender?.name || "Staff";
+                        avatarSrc = message.sender?.image || undefined;
+                        fallbackInitials = (message.sender?.name || "S")
+                          .split(" ")
+                          .map((part: string) => part[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase() || "S";
+                      }
+
+                      const prevMessage = messages[index - 1];
+                      const isNewDay = !prevMessage || !isSameDay(new Date(prevMessage.created_at), new Date(message.created_at));
+
+                      return (
+                        <div key={message.id}>
+                          {isNewDay && message.created_at && (
+                            <div className="relative flex items-center justify-center my-6">
+                              <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-muted-foreground/20" />
+                              </div>
+                              <span className="relative bg-muted px-2 text-xs text-muted-foreground rounded-full">
+                                {getDateLabel(new Date(message.created_at))}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex gap-3 flex-row group">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={avatarSrc} />
+                              <AvatarFallback className="text-xs">
+                                {fallbackInitials || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col gap-1 max-w-[70%] items-start">
+                              <div className="flex flex-row items-center gap-2">
+                                <span className="text-xs text-muted-foreground">
+                                  {isFromCurrentUser ? "You" : displayName}
+                                </span>
+                                <span className="text-xs text-muted-foreground/60">
+                                  {message.created_at ? formatMessageTimestamp(message.created_at) : "Unknown time"}
+                                </span>
+                              </div>
+                              <div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
+                                <ReactMarkdown>
+                                  {message.content}
+                                </ReactMarkdown>
+                              </div>
+
+                              {/* Media Display */}
+                              {(() => {
+                                const mediaFiles = message.media || [];
+                                const images = mediaFiles.filter(m => m.fileType === 'image' || m.mimeType?.startsWith('image/'));
+                                const otherFiles = mediaFiles.filter(m => !(m.fileType === 'image' || m.mimeType?.startsWith('image/')));
+
+                                return (
+                                  <>
+                                    {/* Render Non-Image Files List */}
+                                    {otherFiles.length > 0 && (
+                                      <div className="flex flex-wrap gap-2 mt-2">
+                                        {otherFiles.map((file) => (
+                                          <a 
+                                            key={file.id}
+                                            href={file.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center p-3 bg-muted/50 gap-2 min-w-[150px] hover:bg-muted transition-colors rounded-md border border-border/50"
+                                          >
+                                            <span className="text-xs truncate max-w-[120px]">{file.fileName}</span>
+                                          </a>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Render Images Grid */}
+                                    {images.length > 0 && (
+                                      <div className={`grid gap-0.5 mt-2 rounded-xl overflow-hidden border border-border/20 ${
+                                        images.length === 1 ? 'grid-cols-1 max-w-[260px]' : 'grid-cols-2 max-w-[320px]'
+                                      }`}>
+                                        {images.slice(0, 4).map((image, imgIndex) => {
+                                          const isLastSlot = imgIndex === 3;
+                                          const hasMore = images.length > 4;
+                                          const showOverlay = isLastSlot && hasMore;
+                                          const extraCount = images.length - 3;
+                                          const isFirstOfThree = images.length === 3 && imgIndex === 0;
+
+                                          return (
+                                            <div 
+                                              key={image.id} 
+                                              className={`relative bg-muted ${
+                                                images.length === 1 
+                                                  ? 'aspect-auto' 
+                                                  : (isFirstOfThree ? 'row-span-2 h-full' : 'aspect-square')
+                                              }`}
+                                            >
+                                              <img 
+                                                src={image.url} 
+                                                alt={image.fileName || 'Attachment'}
+                                                className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
+                                                onClick={() => window.open(image.url, '_blank')}
+                                              />
+                                              {showOverlay && (
+                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                                                  <span className="text-white font-bold text-lg">+{extraCount}</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+
+                              {/* Reactions */}
+                              <ChatReactions
+                                reactions={message.reactions}
+                                currentUserId={session?.user?.id}
+                                onToggleReaction={(emoji: { value: string; name: string; type: string }) => handleToggleReaction(message.id, emoji)}
+                                onOpenPicker={() => handleOpenReactionPicker(message as Message)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+              <div className="flex-shrink-0 p-4">
+                <GroupChatInput onSend={handleSendMessage} disabled={isLoading || !isConnected} />
+              </div>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Reaction Picker Sheet */}
+      <ChatReactionSheet
+        open={reactionPickerOpen}
+        onOpenChange={(open: boolean) => {
+          setReactionPickerOpen(open);
+          if (!open) setSelectedMessageForReaction(null);
+        }}
+        onSelect={handleReactionSelect}
+      />
     </div>
   );
 }

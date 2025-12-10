@@ -1,39 +1,46 @@
 "use client";
 import {
+	Form,
+	FormControl,
+	FormDescription,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+	Input,
+	Textarea,
+} from "@/components/forms";
+import {
 	Button,
 	Dialog,
 	DialogBody,
+	DialogClose,
 	DialogContent,
 	DialogFooter,
 	DialogTitle,
-	DialogTrigger,
-	DialogClose,
-	Switch,
+	Switch
 } from "@/components/ui";
 import { cn, tryCatch } from "@/libs/utils";
-import { z } from "zod";
-import {
-	Form,
-	FormField,
-	FormLabel,
-	FormMessage,
-	FormItem,
-	FormControl,
-	Input,
-	Textarea,
-	FormDescription,
-} from "@/components/forms";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
-import { toast } from "react-toastify";
-import { Loader2, Pencil } from "lucide-react";
-import AddPrograms from "../AddPrograms";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/forms";
 import { useSubscriptions } from "@/hooks/usePlans";
 import { UpdateSubPlanSchema } from "@/libs/FormSchemas";
 import { MemberPlan } from "@/types";
+import { Loader2 } from "lucide-react";
 import { VisuallyHidden } from "react-aria";
+import { toast } from "react-toastify";
+import { useProducts } from "../../providers";
+import AddPrograms from "../AddPrograms";
 
 interface CreatePlanProps {
 	lid: string;
@@ -44,6 +51,7 @@ interface CreatePlanProps {
 
 export function UpdateSub({ lid, sub, open, setOpen }: CreatePlanProps) {
 	const { mutate: mutateSubs } = useSubscriptions(lid);
+	const { groups } = useProducts();
 
 	const form = useForm<z.infer<typeof UpdateSubPlanSchema>>({
 		resolver: zodResolver(UpdateSubPlanSchema),
@@ -53,9 +61,24 @@ export function UpdateSub({ lid, sub, open, setOpen }: CreatePlanProps) {
 			programs: sub.planPrograms?.map((program) => program.program?.id) || [],
 			allowProration: sub.allowProration,
 			familyMemberLimit: sub.familyMemberLimit || 0,
+			groupId: sub.groupId || undefined,
 		},
 		mode: "onChange",
 	});
+
+	// Reset form values when dialog opens or subscription changes
+	useEffect(() => {
+		if (open) {
+			form.reset({
+				name: sub.name,
+				description: sub.description,
+				programs: sub.planPrograms?.map((program) => program.program?.id) || [],
+				allowProration: sub.allowProration,
+				familyMemberLimit: sub.familyMemberLimit || 0,
+				groupId: sub.groupId || undefined,
+			});
+		}
+	}, [open, sub.id]);
 
 	async function onSubmit(v: z.infer<typeof UpdateSubPlanSchema>) {
 		if (form.formState.isSubmitting) return;
@@ -166,6 +189,41 @@ export function UpdateSub({ lid, sub, open, setOpen }: CreatePlanProps) {
 									)}
 								/>
 							</fieldset>
+							{groups && groups.length > 0 && (
+								<fieldset>
+									<FormField
+										control={form.control}
+										name="groupId"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel size={"tiny"}>Add to Group (Optional)</FormLabel>
+												<Select 
+													onValueChange={(value) => field.onChange(value === "none" ? null : value)} 
+													value={field.value || "none"}
+												>
+													<FormControl>
+														<SelectTrigger>
+															<SelectValue placeholder="Select a group" />
+														</SelectTrigger>
+													</FormControl>
+													<SelectContent>
+														<SelectItem value="none">No group</SelectItem>
+														{groups.map((group) => (
+															<SelectItem key={group.id} value={group.id}>
+																{group.name}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+												<FormDescription className="text-xs">
+													Members will be automatically added to this group when they purchase this plan.
+												</FormDescription>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								</fieldset>
+							)}
 							{sub.family && (
 								<fieldset>
 									<FormField

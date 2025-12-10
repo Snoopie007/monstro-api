@@ -34,11 +34,11 @@ export default async function LocationLayout(props: LocationLayoutProps) {
   }
 
   return (
-    <main className="min-h-screen max-h-screen h-screen  flex flex-col w-full  bg-background"    >
+    <main className="min-h-screen max-h-screen h-screen overflow-hidden flex flex-col w-full  bg-background">
       <AccountStatusProvider locationState={locationState}>
         <TooltipProvider>
           <LocationTopNav lid={params.id} />
-          <div className="relative flex flex-1 flex-row justify-start items-start  w-full">
+          <div className="relative flex flex-1 flex-row justify-start items-start w-full">
             <LocationSideNav lid={params.id} />
             <div className="flex-1 h-full">{children}</div>
           </div>

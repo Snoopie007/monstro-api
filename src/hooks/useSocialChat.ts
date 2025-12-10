@@ -1,7 +1,9 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { clientsideApiClient } from '@/libs/api/client';
 import supabase from '@/libs/client/supabase';
-import { useSession } from './useSession';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSession } from './useSession';
+import type { MessageSender, MessageMedia, MessageReaction, EmojiData, PresignedUploadUrl, FileUploadPayload } from '@/types/chats';
 
 interface Message {
   id: string;
@@ -13,6 +15,9 @@ interface Message {
   metadata?: any;
   created_at: string;
   updated_at?: string;
+  sender?: MessageSender | null;
+  media?: MessageMedia[];
+  reactions?: MessageReaction[];
 }
 
 interface UseSocialChatOptions {
@@ -36,75 +41,26 @@ export const useSocialChat = ({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Function to find or create a chat between two users
-  const findOrCreateChat = useCallback(async () => {
-    if (!fromUserId || !toUserId) {
+  // Function to find an existing location-based group chat for a member
+  // Returns null if no chat exists yet (chat will be created on first message)
+  const findChat = useCallback(async () => {
+    if (!fromUserId || !toUserId || !locationId || !session?.user?.sbToken) {
       return null;
     }
 
     try {
-      // First, check if a chat already exists between these two users
-      const { data: existingChats, error: searchError } = await supabase
-        .from('chat_members')
-        .select('chat_id')
-        .in('user_id', [fromUserId, toUserId]);
-
-      if (searchError) throw searchError;
-
-      // Find a chat where both users are present
-      if (existingChats && existingChats.length > 0) {
-        const chatIds = existingChats.map(c => c.chat_id);
-        const chatCounts = chatIds.reduce((acc, id) => {
-          acc[id] = (acc[id] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        // Find chat with exactly 2 users (both fromUser and toUser)
-        const existingChatId = Object.entries(chatCounts)
-          .find(([_, count]) => count === 2)?.[0];
-
-        if (existingChatId) {
-          // Verify it's a direct chat (only 2 users total)
-          const { count } = await supabase
-            .from('chat_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('chat_id', existingChatId);
-
-          if (count === 2) {
-            return existingChatId;
-          }
-        }
-      }
-
-      // No existing chat found, create a new one
-      const { data: newChat, error: chatError } = await supabase
-        .from('chats')
-        .insert({
-          started_by: fromUserId,
-          name: null, // Direct chats don't need names
-        })
-        .select()
-        .single();
-
-      if (chatError) throw chatError;
-
-      // Add both users to the chat
-      const { error: membersError } = await supabase
-        .from('chat_members')
-        .insert([
-          { chat_id: newChat.id, user_id: fromUserId },
-          { chat_id: newChat.id, user_id: toUserId },
-        ]);
-
-      if (membersError) throw membersError;
-
-      return newChat.id;
+      const api = clientsideApiClient(session.user.sbToken);
+      const result = await api.get<{ chatId: string | null }>(
+        `/x/loc/${locationId}/chat/member`,
+        { memberId: toUserId }
+      );
+      return result.chatId;
     } catch (err) {
-      console.error('Error finding/creating chat:', err);
-      setError('Failed to initialize chat');
+      console.error('Error finding location chat:', err);
+      setError('Failed to load chat');
       return null;
     }
-  }, [fromUserId, toUserId]);
+  }, [fromUserId, toUserId, locationId, session?.user?.sbToken]);
 
   // Load messages for the current chat
   const loadMessages = useCallback(async (currentChatId: string) => {
@@ -112,14 +68,83 @@ export const useSocialChat = ({
       setIsLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
+      const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
-        .select('*')
+        .select('*, sender:users!sender_id(id, name, image)')
         .eq('chat_id', currentChatId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
-      setMessages(data || []);
+      if (messagesError) throw messagesError;
+
+      // Fetch media and reactions for messages
+      const messageIds = messagesData?.map(m => m.id) || [];
+      let mediaMap: Record<string, MessageMedia[]> = {};
+      let reactionsMap: Record<string, MessageReaction[]> = {};
+
+      if (messageIds.length > 0) {
+        // Fetch media
+        const { data: mediaData, error: mediaError } = await supabase
+          .from('media')
+          .select('*')
+          .in('owner_id', messageIds)
+          .eq('owner_type', 'message');
+
+        if (!mediaError && mediaData) {
+          mediaData.forEach(item => {
+            if (!mediaMap[item.owner_id]) {
+              mediaMap[item.owner_id] = [];
+            }
+            mediaMap[item.owner_id].push({
+              id: item.id,
+              url: item.url,
+              thumbnailUrl: item.thumbnail_url,
+              fileName: item.file_name,
+              fileType: item.file_type,
+              mimeType: item.mime_type,
+              altText: item.alt_text
+            });
+          });
+        }
+
+        // Fetch reactions from reaction_counts view
+        const { data: reactionsData, error: reactionsError } = await supabase
+          .from('reaction_counts')
+          .select('*')
+          .eq('owner_type', 'message')
+          .in('owner_id', messageIds);
+
+        if (!reactionsError && reactionsData) {
+          reactionsData.forEach((reaction: any) => {
+            if (!reactionsMap[reaction.owner_id]) {
+              reactionsMap[reaction.owner_id] = [];
+            }
+            reactionsMap[reaction.owner_id].push({
+              display: reaction.display,
+              name: reaction.name,
+              count: reaction.count,
+              userIds: reaction.user_ids || [],
+              userNames: reaction.user_names || []
+            });
+          });
+        }
+      }
+
+      const mapped = messagesData?.map((message) => ({
+        id: message.id,
+        chat_id: message.chat_id,
+        sender_id: message.sender_id,
+        content: message.content,
+        attachments: message.attachments,
+        read_by: message.read_by,
+        metadata: message.metadata,
+        created_at: message.created_at,
+        updated_at: message.updated_at,
+        sender: message.sender,
+        media: mediaMap[message.id] || [],
+        reactions: reactionsMap[message.id] || []
+      })) || [];
+
+      setMessages(mapped);
     } catch (err) {
       console.error('Error loading messages:', err);
       setError('Failed to load messages');
@@ -128,56 +153,117 @@ export const useSocialChat = ({
     }
   }, []);
 
-  // Send a message
+  // Send a message - creates chat on first message if needed
   const sendMessage = useCallback(async (
     content: string, 
-    attachments?: any[]
+    files?: File[]
   ) => {
-    if (!chatId || !fromUserId) {
-      throw new Error('Chat not initialized or sender not set');
+    if (!fromUserId || !toUserId || !locationId) {
+      throw new Error('Missing required user or location info');
     }
 
+    if (!session?.user?.sbToken) {
+      throw new Error('No authentication token available');
+    }
+
+    let currentChatId = chatId;
+
     try {
-      // 1. Store message in database
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          chat_id: chatId,
-          sender_id: fromUserId,
-          content,
-          attachments: attachments || [],
-          read_by: [fromUserId],
-        })
-        .select()
-        .single();
+      // If no chat exists yet, create it via API
+      if (!currentChatId) {
+        const api = clientsideApiClient(session.user.sbToken);
+        const chatResult = await api.post(`/x/loc/${locationId}/chat/member`, {
+          memberId: toUserId,
+        }) as { chatId: string; created?: boolean };
 
-      if (error) throw error;
-
-      // 2. Manually broadcast to all connected clients via the channel
-      if (channelRef.current) {
-        await channelRef.current.send({
-          type: 'broadcast',
-          event: 'new_message',
-          payload: data,
-        });
+        currentChatId = chatResult.chatId;
+        setChatId(currentChatId);
       }
 
-      // Optimistically add to local state
-      setMessages(prev => [...prev, data]);
+      let uploadedFiles: FileUploadPayload[] = [];
+
+      // Step 1: Get presigned URLs if files exist
+      if (files && files.length > 0) {
+        const api = clientsideApiClient(session.user.sbToken);
+        const presignedUrls = await api.post(`/protected/medias/presigned`, {
+          chatId: currentChatId,
+          files: files.map(file => ({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+          })),
+        }) as PresignedUploadUrl[];
+
+        // Step 2: Upload files to S3 using presigned URLs
+        await Promise.all(
+          files.map(async (file, index) => {
+            const presignedUrl = presignedUrls[index];
+            const response = await fetch(presignedUrl.uploadUrl, {
+              method: 'PUT',
+              body: file,
+              headers: {
+                'Content-Type': file.type,
+              },
+            });
+
+            if (!response.ok) {
+              throw new Error(`Failed to upload file: ${file.name}`);
+            }
+
+            uploadedFiles.push({
+              fileName: presignedUrl.fileName,
+              mimeType: presignedUrl.mimeType,
+              fileSize: presignedUrl.fileSize,
+              url: presignedUrl.publicUrl,
+            });
+          })
+        );
+      }
+
+      // Step 3: Send message with uploaded file metadata
+      const api = clientsideApiClient(session.user.sbToken);
+      const enrichedMessage = await api.post(`/protected/chats/${currentChatId}/messages`, {
+        content,
+        files: uploadedFiles,
+      }) as any;
       
-      return data;
+      // Since we have self: false, we won't receive our own messages via broadcast
+      // So we need to manually add it to the local state
+      const message: Message = {
+        id: enrichedMessage.id,
+        chat_id: enrichedMessage.chatId,
+        sender_id: enrichedMessage.senderId,
+        content: enrichedMessage.content,
+        attachments: enrichedMessage.attachments || [],
+        read_by: enrichedMessage.metadata?.read_by || [],
+        metadata: enrichedMessage.metadata,
+        created_at: enrichedMessage.created,
+        updated_at: enrichedMessage.updated,
+        sender: enrichedMessage.sender || null,
+        media: enrichedMessage.medias || [],
+        reactions: [],
+      };
+
+      // Add duplicate check in case broadcast arrived before API response
+      setMessages(prev => {
+        if (prev.some(m => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
+      
+      return enrichedMessage;
     } catch (err) {
       console.error('Error sending message:', err);
       throw err;
     }
-  }, [chatId, fromUserId]);
+  }, [chatId, fromUserId, toUserId, locationId, session?.user?.sbToken]);
 
   // Initialize chat and set up realtime subscription
   useEffect(() => {
-    if (!enabled || !session || !fromUserId || !toUserId) {
+    if (!enabled || !session || !fromUserId || !toUserId || !locationId) {
       setChatId(null);
       setMessages([]);
       setIsConnected(false);
+      setIsLoading(false);
       return;
     }
 
@@ -185,29 +271,35 @@ export const useSocialChat = ({
     let mounted = true;
 
     const initializeChat = async () => {
-      // Find or create the chat
-      const foundChatId = await findOrCreateChat();
-      console.log('foundChatId', foundChatId);
-      if (!mounted || !foundChatId) {
+      setIsLoading(true);
+      
+      // Find existing chat (don't create - that happens on first message)
+      const foundChatId = await findChat();
+      
+      if (!mounted) return;
+      
+      setIsLoading(false);
+      
+      // No chat exists yet - this is fine, user can send first message to create it
+      if (!foundChatId) {
+        setChatId(null);
+        setMessages([]);
+        setIsConnected(true); // Mark as "ready" so input is enabled
         return;
       }
 
+      // Set auth token for private channels
+      if (session?.user?.sbToken) {
+        supabase.realtime.setAuth(session.user.sbToken);
+      } 
       setChatId(foundChatId);
-
-      // Set up realtime channel with Broadcast Replay
-      const replayTimestamp = Date.now() - (10 * 60 * 1000); // Last 10 minutes
 
       channel = supabase.channel(`chat:${foundChatId}`, {
         config: {
           private: true, // Requires authentication
           broadcast: { 
-            self: false, // Don't receive own messages via broadcast
             ack: false,
-            // @ts-expect-error - replay is available in Supabase client 2.74.0+ but not yet in type definitions
-            replay: {
-              since: replayTimestamp,
-              limit: 25 // Get up to 25 recent messages
-            }
+            self: false,
           }
         }
       });
@@ -216,26 +308,28 @@ export const useSocialChat = ({
       channel.on('broadcast', { event: 'new_message' }, (payload) => {
         if (!mounted) return;
 
-        const newMessage = payload.payload as Message;
+        const enrichedMessage = payload.payload?.message || payload.payload;
         
-        // Check if this is a replayed message
-        const isReplayed = payload.meta?.replayed;
-        
-        if (isReplayed) {
-          // Add replayed messages to state, avoiding duplicates
-          setMessages((prev) => {
-            if (prev.some(m => m.id === newMessage.id)) return prev;
-            return [...prev, newMessage].sort(
-              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-            );
-          });
-        } else {
-          // New message (not replayed)
-          setMessages((prev) => {
-            if (prev.some(m => m.id === newMessage.id)) return prev;
-            return [...prev, newMessage];
-          });
-        }
+        // Messages are now enriched by the API with sender and media data
+        const message: Message = {
+          id: enrichedMessage.id,
+          chat_id: enrichedMessage.chatId,
+          sender_id: enrichedMessage.senderId,
+          content: enrichedMessage.content,
+          attachments: enrichedMessage.attachments || [],
+          read_by: enrichedMessage.metadata?.read_by || [],
+          metadata: enrichedMessage.metadata,
+          created_at: enrichedMessage.created,
+          updated_at: enrichedMessage.updated,
+          sender: enrichedMessage.sender || null,
+          media: enrichedMessage.medias || [],
+          reactions: enrichedMessage.reactions || [],
+        };
+        // New message (not replayed)
+        setMessages((prev) => {
+          if (prev.some(m => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
       });
 
       // Subscribe to the channel
@@ -268,7 +362,96 @@ export const useSocialChat = ({
         supabase.removeChannel(channel);
       }
     };
-  }, [enabled, session, fromUserId, toUserId, findOrCreateChat, loadMessages]);
+  }, [enabled, session, fromUserId, toUserId, locationId, findChat, loadMessages]);
+
+  // Toggle reaction on a message (optimistic update)
+  const toggleReaction = useCallback(async (
+    messageId: string,
+    emoji: EmojiData
+  ) => {
+    if (!session?.user?.sbToken || !session?.user?.id) {
+      throw new Error('No authentication token available');
+    }
+
+    const currentUserId = session.user.id;
+
+    // Find the message and check if user already reacted with this emoji
+    const message = messages.find(m => m.id === messageId);
+    const existingReaction = message?.reactions?.find(
+      r => r.display === emoji.value && r.userIds?.includes(currentUserId)
+    );
+
+    // Optimistically update local state
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId) return m;
+      
+      const currentReactions = m.reactions || [];
+      
+      if (existingReaction) {
+        // Remove user's reaction
+        const updatedReactions = currentReactions.map(r => {
+          if (r.display !== emoji.value) return r;
+          return {
+            ...r,
+            count: r.count - 1,
+            userIds: r.userIds.filter(id => id !== currentUserId),
+            userNames: r.userNames.filter((_, idx) => r.userIds[idx] !== currentUserId)
+          };
+        }).filter(r => r.count > 0);
+        
+        return { ...m, reactions: updatedReactions };
+      } else {
+        // Add user's reaction
+        const existingEmojiReaction = currentReactions.find(r => r.display === emoji.value);
+        
+        if (existingEmojiReaction) {
+          return {
+            ...m,
+            reactions: currentReactions.map(r => {
+              if (r.display !== emoji.value) return r;
+              return {
+                ...r,
+                count: r.count + 1,
+                userIds: [...r.userIds, currentUserId],
+                userNames: [...r.userNames, session?.user?.name || 'You']
+              };
+            })
+          };
+        } else {
+          return {
+            ...m,
+            reactions: [...currentReactions, {
+              display: emoji.value,
+              name: emoji.name,
+              count: 1,
+              userIds: [currentUserId],
+              userNames: [session?.user?.name || 'You']
+            }]
+          };
+        }
+      }
+    }));
+
+    // Make API call - server handles toggle logic
+    try {
+      const response = await fetch(`/api/protected/reactions/message/${messageId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emoji })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update reaction');
+      }
+    } catch (err) {
+      console.error('Error toggling reaction:', err);
+      // Revert optimistic update on error by reloading
+      if (chatId) {
+        loadMessages(chatId);
+      }
+      throw err;
+    }
+  }, [messages, session?.user?.sbToken, session?.user?.name, session?.user?.id, chatId, loadMessages]);
 
   return {
     messages,
@@ -277,6 +460,7 @@ export const useSocialChat = ({
     chatId,
     error,
     sendMessage,
+    toggleReaction,
     refresh: () => chatId ? loadMessages(chatId) : Promise.resolve()
   };
 };
