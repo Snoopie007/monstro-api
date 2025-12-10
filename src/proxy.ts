@@ -4,9 +4,8 @@ import { auth } from "./libs/auth/server";
 
 const publicPaths = ["/login", "/join", "/callbacks", "/api/webhooks"];
 
-export const runtime = 'nodejs';
 
-export default async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
 	try {
 		const { pathname } = new URL(req.url);
 

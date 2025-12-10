@@ -38,11 +38,6 @@ import { triggerSignUp } from "@/libs/TriggerService";
  * - Recurring invoices are identified by stripeScheduleId in metadata
  */
 
-export const config = {
-	api: {
-		bodyParser: false, // Required for Stripe webhooks
-	},
-};
 
 const allowedEvents: Stripe.Event.Type[] = [
 	"customer.subscription.updated",

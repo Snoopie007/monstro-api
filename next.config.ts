@@ -6,11 +6,10 @@ const nextConfig: NextConfig = {
 	/* config options here */
 	// output: 'standalone',
 
-	eslint: {
-		// Warning: This allows production builds to successfully complete even if
-		// your project has ESLint errors.
-		ignoreDuringBuilds: true,
-	},
+	// Remove eslint config - it's no longer supported in next.config.ts
+	// If you need to ignore ESLint during builds, use: next build --no-lint
+	// Or configure ESLint in .eslintrc.json
+
 	images: {
 		remotePatterns: [
 			{
@@ -44,9 +43,8 @@ const nextConfig: NextConfig = {
 			},
 		],
 	},
-	serverRuntimeConfig: {
-		maxHeaderSize: 32 * 1024, // 32KB
-	},
+	// Remove serverRuntimeConfig - not a valid Next.js option
+	// If you need server-side config, use environment variables or API routes
 	skipTrailingSlashRedirect: true,
 	transpilePackages: ["next-mdx-remote"],
 	output: "standalone",
