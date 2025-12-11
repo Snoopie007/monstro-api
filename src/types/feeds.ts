@@ -6,8 +6,8 @@ import type { User } from "./user";
 import type { Moment } from "./moments";
 
 export type UserFeed = typeof userFeeds.$inferSelect & {
-    moment?: Moment;
-    post?: GroupPost;
-    author?: User;
-    group?: Group;
+    moment?: Moment | null;
+    post?: GroupPost | null;
+    author?: User | null;
+    group?: Group | null;
 }

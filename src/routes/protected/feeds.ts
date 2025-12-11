@@ -1,6 +1,7 @@
 import { db } from "@/db/db";
 import { Elysia, type Context } from "elysia";
 import { z } from "zod";
+import type { UserFeed } from "@/types/feeds";
 
 const UserFeedsProps = {
     params: z.object({
@@ -19,7 +20,7 @@ export function userFeedsRoutes(app: Elysia) {
 
 
             try {
-                let feeds: any[] = [];
+                let feeds: UserFeed[] = [];
                 if (type === "moments") {
                     feeds = await db.query.userFeeds.findMany({
                         where: (userFeeds, { eq, and, isNull, isNotNull }) => and(
@@ -28,8 +29,11 @@ export function userFeedsRoutes(app: Elysia) {
                             isNotNull(userFeeds.momentId),
                         ),
                         with: {
-                            moment: true,
-                            author: true,
+                            moment: {
+                                with: {
+                                    author: true,
+                                },
+                            },
                         },
                     });
                 }
@@ -41,8 +45,13 @@ export function userFeedsRoutes(app: Elysia) {
                             isNotNull(userFeeds.postId),
                         ),
                         with: {
-                            post: true,
-                            author: true,
+                            post: {
+                                with: {
+                                    group: true,
+                                    author: true,
+                                    medias: true,
+                                },
+                            },
                         },
                     });
                 }

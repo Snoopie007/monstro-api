@@ -22,7 +22,7 @@ export const userFeeds = pgTable("user_feeds", {
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     momentId: text("moment_id").references(() => moments.id, { onDelete: "cascade" }),
     postId: text("post_id").references(() => groupPosts.id, { onDelete: "cascade" }),
-    authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    authorId: text("author_id").references(() => users.id, { onDelete: "cascade" }),
     groupId: text("group_id").references(() => groups.id, { onDelete: "cascade" }),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     viewedAt: timestamp("viewed_at", { withTimezone: true }),

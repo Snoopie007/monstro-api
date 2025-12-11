@@ -3,7 +3,7 @@ import type { User } from "./user";
 import type { Comment } from "./group";
 
 export type Moment = typeof moments.$inferSelect & {
-    user?: User;
+    author?: User;
     comments?: Comment[];
 }
 
