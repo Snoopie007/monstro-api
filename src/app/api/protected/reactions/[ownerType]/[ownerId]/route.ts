@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db/db";
-import { type EmojiData } from "@/db/schemas";
+import { ReactionEmoji } from "@/types";
 import { NextResponse } from "next/server";
 import { auth } from "@/libs/auth/server";
 
@@ -57,7 +57,7 @@ export async function POST(req: Request, props: RouteParams) {
         }
 
         const body = await req.json();
-        const { emoji } = body as { emoji: EmojiData };
+        const { emoji } = body as { emoji: ReactionEmoji };
 
         if (!emoji || !emoji.value || !emoji.name || !emoji.type) {
             return NextResponse.json(

@@ -6,13 +6,13 @@ import {
     jsonb,
     index,
     primaryKey,
-    integer,
 } from "drizzle-orm/pg-core";
 import { members } from "./members";
 import { users } from "./users";
 import { locations } from "./locations";
 import { groupPosts, groups } from "./groups";
 import { reactions } from "./reactions";
+import { media } from "./media";
 
 export const chats = pgTable("chats", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('cht_')`),
@@ -49,21 +49,6 @@ export const messages = pgTable("messages", {
     index("idx_messages_sender_id").on(t.senderId),
 ]);
 
-export const media = pgTable("media", {
-    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
-    ownerId: text("owner_id").notNull(),
-    ownerType: text("owner_type", { enum: ["post", "message", "memory"] }).notNull(),
-    fileName: text("file_name").notNull(),
-    fileType: text("file_type", { enum: ["image", "video", "audio", "document", "other"] }).notNull(),
-    fileSize: integer("file_size"), // Using text instead of bigint for compatibility
-    mimeType: text("mime_type"),
-    url: text("url").notNull(),
-    thumbnailUrl: text("thumbnail_url"),
-    altText: text("alt_text"),
-    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
-    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: true }),
-});
 
 
 
@@ -111,13 +96,3 @@ export const messagesRelations = relations(messages, ({ one, many }) => ({
     reactions: many(reactions, { relationName: 'messageReactions' }),
 }));
 
-export const mediaRelations = relations(media, ({ one }) => ({
-    message: one(messages, {
-        fields: [media.ownerId],
-        references: [messages.id],
-    }),
-    post: one(groupPosts, {
-        fields: [media.ownerId],
-        references: [groupPosts.id],
-    }),
-}));

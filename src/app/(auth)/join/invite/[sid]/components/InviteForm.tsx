@@ -13,7 +13,7 @@ import {
 
 } from "@/components/forms";
 import { useEffect, useState } from "react";
-import { VendorInviteSchema } from "@/libs/FormSchemas/schemas";
+import { VendorInviteSchema } from "@/libs/FormSchemas";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { cn, sleep, tryCatch } from "@/libs/utils";
@@ -23,7 +23,7 @@ import { signIn } from "@/hooks/useSession";
 import { Sale } from "@/types/admin";
 import { TermsAndConditions } from "@/components/terms";
 import { MonstroLegal } from "@/libs/server/MDXParse";
-import PasswordStrength from "@/components/forms/PasswordField";
+import { PasswordField } from "@/components/forms";
 
 interface InviteFormProps {
     sale: Sale;
@@ -126,14 +126,12 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                                         Setup Your Password
                                     </FormLabel>
                                     <FormControl>
-                                        <Input type="password" placeholder="••••••••" className={InputStyle} {...field} />
+                                        <PasswordField value={field.value} onChange={field.onChange} className={InputStyle} placeholder="••••••••" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
-                            {password && (
-                                <PasswordStrength password={password} />
-                            )}
+
                         </fieldset>
                         <TermsAndConditions checked={checked} tos={tos} setChecked={setChecked} className="border-gray-200" />
 
