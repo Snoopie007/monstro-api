@@ -1,7 +1,7 @@
 "use client"
 import { ResetPasswordSchema } from '@/libs/FormSchemas/schemas';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
@@ -11,7 +11,8 @@ import {
     FormItem,
     FormLabel,
     FormMessage,
-    Input
+    Input,
+    PasswordField
 } from "@/components/forms";
 import { cn, tryCatch } from '@/libs/utils';
 import { toast } from 'react-toastify';
@@ -97,7 +98,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
                                     <FormItem>
                                         <FormLabel size="tiny">New Password</FormLabel>
                                         <FormControl>
-                                            <Input {...field} className={InputStyle} type="password" placeholder="••••••••" />
+                                            <PasswordField value={field.value} onChange={field.onChange} className={InputStyle} placeholder="••••••••" />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

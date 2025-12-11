@@ -101,7 +101,6 @@ CREATE TABLE IF NOT EXISTS group_posts (
   group_id text REFERENCES groups (id) ON DELETE CASCADE NOT NULL,
   author_id text NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   pinned boolean NOT NULL DEFAULT false,
-  like_counts integer NOT NULL DEFAULT 0,
   comment_counts integer NOT NULL DEFAULT 0,
   status text CHECK (status IN ('draft', 'published', 'archived')) NOT NULL DEFAULT 'draft',
   content text NOT NULL,

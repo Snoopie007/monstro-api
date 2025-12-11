@@ -5,7 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
     Form, FormControl, FormField, FormItem, FormLabel, FormMessage, Input,
     SelectContent, SelectValue, SelectTrigger, Select, SelectItem,
-    Checkbox
+    Checkbox,
+    PasswordField
 } from "@/components/forms";
 import { useSearchParams } from "next/navigation";
 import { cn, sleep } from "@/libs/utils";
@@ -19,7 +20,6 @@ import PhoneInput from 'react-phone-number-input/input'
 import { CountryCodes } from "@/libs/data";
 import { CountryCode } from "@/types";
 import { useJoin } from "../providers/JoinProvider";
-import PasswordStrength from "./PasswordStrength";
 
 const InputStyle = "bg-white border border-gray-200 text-base ";
 
@@ -239,17 +239,12 @@ export function RegisterForm() {
                                 return (
                                     <FormItem className="space-y-2">
                                         <FormControl>
-                                            <Input
-                                                type="password"
+                                            <PasswordField value={password} onChange={field.onChange}
                                                 className={InputStyle}
-                                                placeholder="Password"
-                                                {...field}
                                             />
                                         </FormControl>
 
-                                        {password && (
-                                            <PasswordStrength password={password} />
-                                        )}
+
                                     </FormItem>
                                 );
                             }}

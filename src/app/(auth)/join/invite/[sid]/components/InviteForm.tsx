@@ -23,7 +23,7 @@ import { signIn } from "@/hooks/useSession";
 import { Sale } from "@/types/admin";
 import { TermsAndConditions } from "@/components/terms";
 import { MonstroLegal } from "@/libs/server/MDXParse";
-import PasswordStrength from "@/app/(auth)/components/PasswordStrength";
+import PasswordStrength from "@/components/forms/PasswordField";
 
 interface InviteFormProps {
     sale: Sale;

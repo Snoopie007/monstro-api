@@ -12,3 +12,4 @@ export * from "./PriceInput";
 export * from "./switch";
 export * from "./slider";
 export * from "./InputGroup";
+export * from "./PasswordField";

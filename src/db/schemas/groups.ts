@@ -4,7 +4,7 @@ import { locations } from "./locations";
 import { users } from "./users";
 
 export const groups = pgTable("groups", {
-    id: text("id").primaryKey().notNull().default(sql`uuid_base62('grp_')`),
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
     name: text("name").notNull(),
     description: text("description"),
     locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
@@ -33,10 +33,9 @@ export const groupPosts = pgTable("group_posts", {
     groupId: text("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
     authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     commentCounts: integer("comment_counts").notNull().default(0),
-    likeCounts: integer("like_counts").notNull().default(0),
     pinned: boolean("pinned").notNull().default(false),
     status: text("status", { enum: ["draft", "published", "archived"] }).notNull().default("draft"),
-    content: text("content").notNull(),
+    content: text("content"),
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
@@ -48,19 +47,19 @@ export const groupPosts = pgTable("group_posts", {
 // Polymorphic comments table - used for posts, memories, etc.
 export const comments = pgTable("comments", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
-    ownerType: text("owner_type").notNull(), // 'post', 'memory', etc.
     ownerId: text("owner_id").notNull(),
+    ownerType: text("owner_type").notNull(),
     parentId: text("parent_id"),
-    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    likeCounts: integer("like_counts").notNull().default(0),
+    pinned: boolean("pinned").notNull().default(false),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     content: text("content").notNull(),
     depth: integer("depth").notNull().default(0),
     replyCounts: integer("reply_counts").notNull().default(0),
-    likeCounts: integer("like_counts").notNull().default(0),
-    pinned: boolean("pinned").notNull().default(false),
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updated: timestamp("updated_at", { withTimezone: true }),
     deletedOn: timestamp("deleted_on", { withTimezone: true }),
+    updated: timestamp("updated_at", { withTimezone: true }),
 });
 
 export const groupsRelations = relations(groups, ({ one, many }) => ({
