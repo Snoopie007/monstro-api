@@ -5,11 +5,11 @@ import { users } from "../users";
 import { groupPosts, groups } from "./groups";
 
 export const moments = pgTable("moments", {
-    id: text("id").primaryKey().notNull().default(sql`uuid_base62('')`),
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-    comments: integer("comments").notNull().default(0),
+    content: text("content"),
+    commentCounts: integer("comment_counts").notNull().default(0),
     likeCounts: integer("like_counts").notNull().default(0),
-    tags: text("tags").array().default(sql`'{}'`),
     isPublic: boolean("is_public").notNull().default(true),
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -18,7 +18,7 @@ export const moments = pgTable("moments", {
 
 
 export const userFeeds = pgTable("user_feeds", {
-    id: text("id").primaryKey().notNull().default(sql`uuid_base62('ufd_')`),
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     momentId: text("moment_id").references(() => moments.id, { onDelete: "cascade" }),
     postId: text("post_id").references(() => groupPosts.id, { onDelete: "cascade" }),
@@ -54,7 +54,7 @@ export const momentsRelations = relations(moments, ({ one, many }) => ({
     }),
     feeds: many(userFeeds),
     comments: many(comments),
-    momentLikes: many(momentLikes),
+    likes: many(momentLikes),
 }));
 
 

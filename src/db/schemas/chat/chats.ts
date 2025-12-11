@@ -51,7 +51,7 @@ export const messages = pgTable("messages", {
 ]);
 
 export const media = pgTable("media", {
-    id: text("id").primaryKey().notNull().default(sql`uuid_base62('med_')`),
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
     ownerId: text("owner_id").notNull(),
     ownerType: text("owner_type", { enum: ["post", "message", "memory"] }).notNull(),
     fileName: text("file_name").notNull(),

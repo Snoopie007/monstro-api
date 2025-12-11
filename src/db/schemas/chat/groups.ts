@@ -7,7 +7,7 @@ import { comments } from "./comments";
 import { userFeeds } from "./moments";
 
 export const groups = pgTable("groups", {
-    id: text("id").primaryKey().notNull().default(sql`uuid_base62('grp_')`),
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
     name: text("name").notNull(),
     description: text("description"),
     locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
@@ -36,7 +36,7 @@ export const groupPosts = pgTable("group_posts", {
     groupId: text("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
     authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     content: text("content").notNull(),
-    comments: integer("comments").notNull().default(0),
+    commentCounts: integer("comment_counts").notNull().default(0),
     pinned: boolean("pinned").notNull().default(false),
     status: text("status", { enum: ["draft", "published", "archived"] }).notNull().default("draft"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
