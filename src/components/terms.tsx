@@ -1,17 +1,20 @@
 
 import { useState } from "react";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui";
-import { Button } from "@/components/ui/button";
+import {
+    Dialog, DialogTrigger, DialogContent,
+    DialogTitle, DialogDescription, DialogFooter, DialogClose,
+    Button,
+} from "@/components/ui";
 import { cn } from "@/libs/utils";
 import { ScrollArea } from "@/components/ui/ScrollArea";
-import { MonstroLegal } from "@/libs/server/MDXParse";
 import { VisuallyHidden } from "@react-aria/visually-hidden";
-
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface TermsAndConditionsProps {
     checked: boolean;
     setChecked: (checked: boolean) => void;
-    tos: MonstroLegal | undefined;
+    tos: string | null;
     className?: string;
 }
 
@@ -56,7 +59,12 @@ export function TermsAndConditions({ checked, setChecked, tos, className }: Term
                     </div>
                     <ScrollArea className="h-[500px] px-4 border-y border-gray-200" onScrollCapture={handleScroll}>
                         <div className='prose py-4   text-black prose-strong:text-black prose-headings:my-4 prose-h2:text-2xl prose-sm max-w-full prose-p:font-roboto prose-p:leading-6'>
-                            {tos?.content}
+
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                            >
+                                {tos}
+                            </ReactMarkdown>
                         </div>
                     </ScrollArea>
 

@@ -30,7 +30,7 @@ export default async function InvitePackagePage(props: InvitePackagePageProps) {
     const { sid } = await props.params;
 
     const sale = await getSale(sid);
-    const tos = await getTOS("term-of-use")
+    const tos = await getTOS()
 
     if (!sale) {
         return <div className="h-screen flex items-center justify-center ">

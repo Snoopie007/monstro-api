@@ -22,19 +22,18 @@ import { useRouter } from "next/navigation";
 import { signIn } from "@/hooks/useSession";
 import { Sale } from "@/types/admin";
 import { TermsAndConditions } from "@/components/terms";
-import { MonstroLegal } from "@/libs/server/MDXParse";
 import { PasswordField } from "@/components/forms";
 
 interface InviteFormProps {
     sale: Sale;
-    tos: MonstroLegal | undefined;
+    tos: string | null;
 }
 
 const InputStyle = "bg-white border border-gray-200 rounded-lg h-12 text-base"
 
 export function InviteForm({ sale, tos }: InviteFormProps) {
     const [errors, setErrors] = useState<FieldErrors<z.infer<typeof VendorInviteSchema>> | null>(null);
-    const [checked, setChecked] = useState<boolean>(true);
+    const [checked, setChecked] = useState<boolean>(false);
     const router = useRouter();
 
 
@@ -47,7 +46,6 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
         mode: "onChange",
     });
 
-    const password = form.watch('password');
 
     useEffect(() => {
         if (form.formState.errors) {

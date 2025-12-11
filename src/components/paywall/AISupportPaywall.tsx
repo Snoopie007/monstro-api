@@ -22,7 +22,7 @@ export function AISupportPaywall() {
 							<Zap className="w-6 h-6 text-amber-600" />
 						</div>
 					</div>
-					<CardTitle className="text-2xl">Upgrade to Premium</CardTitle>
+					<CardTitle className="text-2xl">Upgrade to Basic</CardTitle>
 					<CardDescription>
 						Unlock AI support assistant with our $99/month plan and above
 					</CardDescription>
@@ -30,13 +30,13 @@ export function AISupportPaywall() {
 				<CardContent className="space-y-6">
 					<div className="space-y-3">
 						<p className="text-sm text-center font-semibold text-foreground">
-							With a $99/month plan and above, you not only unlock AI-Support Plans, but also get access to other premium features such as, automated reminders and more.
+							With a $99/month plan and above, you can unlock AI-Support that can help you with your members support management.
 						</p>
 					</div>
 
 					<Button
 						onClick={handleUpgrade}
-                        variant="primary"
+						variant="primary"
 						className="w-full"
 						size="lg"
 					>

@@ -3,12 +3,11 @@
 import { createContext, useReducer, ReactElement, useCallback, useContext, ReactNode } from "react";
 
 import { LocationState } from "@/types/location";
-import { MonstroLegal } from "@/libs/server/MDXParse";
 import { MonstroPlan } from "@/types/admin";
 
 type StateType = {
     locationState: LocationState;
-    tos: MonstroLegal | undefined;
+    tos: string | null;
     plans: MonstroPlan[];
 }
 
@@ -49,7 +48,7 @@ export const NewLocationContext = createContext<UseNewLocationContextType | null
 
 interface NewLocationProviderProps {
     state: LocationState;
-    tos: MonstroLegal | undefined;
+    tos: string | null;
     children: ReactNode;
     plans: MonstroPlan[];
 }
@@ -73,7 +72,7 @@ export const NewLocationProvider = ({ children, state, tos, plans }: NewLocation
 type UseNewLocationHookType = {
     locationState: LocationState;
     updateLocationState: (locationState: LocationState) => void;
-    tos: MonstroLegal | undefined;
+    tos: string | null;
     plans: MonstroPlan[];
 }
 

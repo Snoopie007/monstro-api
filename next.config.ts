@@ -54,7 +54,7 @@ const nextConfig: NextConfig = {
 	// Remove serverRuntimeConfig - not a valid Next.js option
 	// If you need server-side config, use environment variables or API routes
 	skipTrailingSlashRedirect: true,
-	transpilePackages: ["next-mdx-remote"],
+	// transpilePackages: ["gray-matter"],
 	output: "standalone",
 	// webpack: (config) => {
 	//   config.plugins.push(ReactComponentName({}));

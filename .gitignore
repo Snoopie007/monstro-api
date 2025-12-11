@@ -9,6 +9,9 @@
 .pnp.js
 .yarn/install-state.gz
 
+# Other
+/fixtures
+/.archived
 # testing
 /coverage
 

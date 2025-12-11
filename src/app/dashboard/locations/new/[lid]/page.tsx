@@ -48,7 +48,7 @@ export default async function PlanSelectionPage(props: {
 		return redirect("/dashboard/locations/new");
 	}
 
-	const tos = await getTOS("term-of-use");
+	const tos = await getTOS();
 	const plans = await getPlans();
 
 	if (!plans) {

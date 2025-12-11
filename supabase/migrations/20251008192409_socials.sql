@@ -198,7 +198,7 @@ CREATE TABLE user_feeds (
     user_id TEXT NOT NULL,
     moment_id TEXT,
     post_id TEXT,
-    author_id TEXT NOT NULL,
+    author_id TEXT,
     group_id TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     viewed_at TIMESTAMP WITH TIME ZONE
