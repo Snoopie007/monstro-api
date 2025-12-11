@@ -4,9 +4,9 @@ import {
     Dialog, DialogTrigger, DialogContent,
     DialogTitle, DialogDescription, DialogFooter, DialogClose,
     Button,
+    ScrollArea,
 } from "@/components/ui";
 import { cn } from "@/libs/utils";
-import { ScrollArea } from "@/components/ui/ScrollArea";
 import { VisuallyHidden } from "@react-aria/visually-hidden";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
