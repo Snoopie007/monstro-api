@@ -11,7 +11,7 @@ import {
 } from '@/components/ui'
 import { X } from 'lucide-react'
 import { MemberList } from './MemberList'
-import { MembersTabState, useMemberTabData } from './useMemberTabData'
+import { MembersTabState, useUserMembers } from '@/hooks/userMembers'
 
 interface MembersPageProps {
     id: string | null
@@ -21,27 +21,26 @@ interface MembersPageProps {
 export default function MembersPage({ id, stripeKey }: MembersPageProps) {
     const {
         membersTabs,
-        handleNewTab,
         handleRemoveTab,
         handleChangeParam,
         handleFetchForCurrentTab,
-    } = useMemberTabData(id ?? '')
+    } = useUserMembers(id ?? '')
 
     if (!id) {
         return <div>Loading...</div>
     }
 
-    useEffect(() => {
-        // Only fetch on initial mount when we have exactly one tab with no data
-        if (
-            membersTabs.length === 1 &&
-            membersTabs[0].active &&
-            membersTabs[0].state.data.members &&
-            membersTabs[0].state.data.members.length === 0
-        ) {
-            handleFetchForCurrentTab(membersTabs[0].id)
-        }
-    }, []) // Run only once on mount
+    // useEffect(() => {
+    //     // Only fetch on initial mount when we have exactly one tab with no data
+    //     if (
+    //         membersTabs.length === 1 &&
+    //         membersTabs[0].active &&
+    //         membersTabs[0].state.data.members &&
+    //         membersTabs[0].state.data.members.length === 0
+    //     ) {
+    //         mutate()
+    //     }
+    // }, []) // Run only once on mount
 
     const renderTabs = useMemo(() => {
         return membersTabs.map((tab) => (

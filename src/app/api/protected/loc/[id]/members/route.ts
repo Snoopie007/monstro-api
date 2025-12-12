@@ -30,7 +30,7 @@ export async function GET(
     req: Request,
     props: { params: Promise<{ id: string }> }
 ) {
-    console.log('GET Members')
+
     const params = await props.params
     const { searchParams } = new URL(req.url)
 
@@ -67,7 +67,6 @@ export async function GET(
             )
             : undefined
 
-        console.log('searchCondition')
         // Tag filtering condition
         let tagCondition
         if (tagIds.length > 0) {
@@ -96,7 +95,7 @@ export async function GET(
                 )
             }
         }
-        console.log('tagCondition')
+
         // Helper function to normalize enum values
         const normalizeEnumValue = (columnId: string, value: string): string => {
             switch (columnId) {
@@ -129,7 +128,7 @@ export async function GET(
                     return value;
             }
         };
-        console.log('normalizeEnumValue')
+
         let columnFilterConditions: any[] = []
         if (columnFilters.length > 0) {
             for (const filter of columnFilters) {
@@ -175,7 +174,7 @@ export async function GET(
                 }
             }
         }
-        console.log('columnFilterConditions')
+
         // Combine all conditions
         const conditions = [baseCondition]
         if (searchCondition) conditions.push(searchCondition)
@@ -189,7 +188,7 @@ export async function GET(
         const sortColumn =
             sortColumnMap[sortBy as MemberSortableField] || members.created
         const sortDirection = sortOrder === 'asc' ? asc : desc
-        console.log('sortDirection')
+
         // Fetch members with all conditions and their tags
         const membersResult = await db
             .select({
@@ -218,7 +217,6 @@ export async function GET(
             .limit(pageSize)
             .offset((page - 1) * pageSize)
 
-        console.log('membersResult')
         // Get tags for each member
         const memberIds = membersResult.map((m) => m.id)
         let memberTagsMap: Record<string, any[]> = {}
@@ -307,7 +305,7 @@ export async function GET(
             })
             .from(memberFields)
             .where(eq(memberFields.locationId, params.id))
-        console.log('customFields')
+
         // Return the paginated result, total count, and custom fields
         return NextResponse.json(
             {

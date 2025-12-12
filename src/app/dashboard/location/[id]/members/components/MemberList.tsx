@@ -20,7 +20,7 @@ import { Button, ScrollArea, Separator } from '@/components/ui'
 import { ImportMembers } from '.'
 import TagsFilter from './TagsFilter'
 import { FilterPopover, SortPopover } from './FilterAndSort'
-import { MembersTabState } from './useMemberTabData'
+import { MembersTabState } from '../../../../../../hooks/userMembers'
 import { debounce } from '@tiptap-pro/extension-table-of-contents'
 import { usePermission } from '@/hooks/usePermissions'
 
