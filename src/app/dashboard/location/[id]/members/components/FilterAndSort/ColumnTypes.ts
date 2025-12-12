@@ -1,4 +1,4 @@
-import { CustomFieldDefinition } from "@/app/dashboard/location/[id]/members/[mid]/components/CustomFields";
+import { CustomFieldDefinition } from "@/types";
 
 export enum FilterInputType {
   TEXT = 'text',

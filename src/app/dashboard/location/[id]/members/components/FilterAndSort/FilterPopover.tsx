@@ -1,11 +1,11 @@
-import { Popover, PopoverTrigger, PopoverContent, Button, Separator } from "@/components/ui";
+import { Popover, PopoverTrigger, PopoverContent, Button } from "@/components/ui";
 import { ColumnDef } from "@/libs/table-utils";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Input } from "@/components/forms";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
 import { FilterIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MemberWithCustomFieldsColumns } from "../MemberColumns";
 import { FilterInputType, memberColumnMetadata, getCustomFieldConfig } from "./ColumnTypes";
-import { CustomFieldDefinition } from "@/app/dashboard/location/[id]/members/[mid]/components/CustomFields";
+import { CustomFieldDefinition } from "@/types";
 import { FilterInput } from "./FilterInput";
 
 interface FilterPopoverProps {

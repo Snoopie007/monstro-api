@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/libs/utils";
 import { MessageCircle, Pin, Play } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { GroupPost, ReactionCount } from "@/types/groups";
+import { GroupPost } from "@/types";
 import Markdown from "react-markdown";
 import { ReactionBar, QuickReactions } from "./reactions";
 import { useReactions } from "@/hooks/useReactions";
@@ -159,7 +159,7 @@ export function PostCard({ post, onOpenDetail, onDelete, canDelete = false }: Po
         </div>
       </CardContent>
 
-      <CardFooter 
+      <CardFooter
         className="flex flex-wrap items-center justify-start gap-4 pt-4 text-sm text-muted-foreground"
         onClick={(e) => e.stopPropagation()}
       >

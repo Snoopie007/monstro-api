@@ -4,12 +4,12 @@ import { Button } from "@/components/ui";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { POST_REACTIONS, POST_QUICK_REACTIONS, toEmojiData } from "@/constants/emojis";
 import { cn } from "@/libs/utils";
-import { EmojiData } from "@/types/chats";
+import { ReactionEmoji } from "@/types";
 import { SmilePlus } from "lucide-react";
 import { useState } from "react";
 
 type ReactionPickerProps = {
-    onSelect: (emoji: EmojiData) => void;
+    onSelect: (emoji: ReactionEmoji) => void;
     isUpdating?: boolean;
     triggerClassName?: string;
     size?: "sm" | "md";
@@ -46,8 +46,8 @@ export function ReactionPicker({
                     )} />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent 
-                className="w-auto p-1.5 bg-popover/95 backdrop-blur-sm border-border/50" 
+            <PopoverContent
+                className="w-auto p-1.5 bg-popover/95 backdrop-blur-sm border-border/50"
                 align="start"
                 side="top"
                 sideOffset={8}
@@ -76,7 +76,7 @@ export function ReactionPicker({
 // Inline quick reaction bar (for use in post footers, etc.)
 // Shows only thumbs up and fire
 type QuickReactionsProps = {
-    onSelect: (emoji: EmojiData) => void;
+    onSelect: (emoji: ReactionEmoji) => void;
     isUpdating?: boolean;
     showPicker?: boolean;
 };

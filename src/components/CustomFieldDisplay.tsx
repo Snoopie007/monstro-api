@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge } from './ui';
 import { Check, X } from "lucide-react";
 import { format } from "date-fns";
 import type { CustomFieldDefinition } from "@/types";

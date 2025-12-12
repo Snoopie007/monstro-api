@@ -56,9 +56,10 @@ export function EditableMessage({
     };
 
     const handleSave = () => {
-        if (editContent.trim() && editContent.trim() !== message.content) {
+        if (!editContent) return;
+        if (editContent.trim() !== message.content) {
             onSave(editContent.trim());
-        } else if (editContent.trim() === message.content) {
+        } else {
             // No changes, just cancel
             onCancel();
         }
@@ -74,7 +75,7 @@ export function EditableMessage({
             <div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
                 <textarea
                     ref={textareaRef}
-                    value={editContent}
+                    value={editContent || ''}
                     onChange={(e) => setEditContent(e.target.value)}
                     onKeyDown={handleKeyDown}
                     className="w-full min-h-[40px] max-h-[200px] px-3 py-2 text-sm bg-muted/50 border border-foreground/10 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"

@@ -1,14 +1,14 @@
 "use client";
 
 import { Button } from "@/components/ui";
-import { MessageReaction, EmojiData } from "@/types/chats";
+import { ReactionCount, ReactionEmoji } from "@/types";
 import { cn } from "@/libs/utils";
 import { SmilePlus } from "lucide-react";
 
 type ChatReactionsProps = {
-  reactions?: MessageReaction[];
+  reactions?: ReactionCount[];
   currentUserId?: string;
-  onToggleReaction: (emoji: EmojiData) => void;
+  onToggleReaction: (emoji: ReactionEmoji) => void;
   onOpenPicker: () => void;
   isUpdating?: boolean;
 };
@@ -45,7 +45,7 @@ export function ChatReactions({
     <div className="flex items-center gap-1 flex-wrap mt-1">
       {reactions.map((reaction) => {
         const hasReacted = currentUserId && reaction.userIds?.includes(currentUserId);
-        
+
         return (
           <button
             key={reaction.display}
@@ -73,7 +73,7 @@ export function ChatReactions({
           </button>
         );
       })}
-      
+
       {/* Add reaction button */}
       <button
         onClick={(e) => {

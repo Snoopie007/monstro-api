@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import type { CustomFieldDefinition } from "@/app/dashboard/location/[id]/members/[mid]/components/CustomFields";
+import type { CustomFieldDefinition } from "@/types";
 
 interface CustomFieldValue {
   fieldId: string;

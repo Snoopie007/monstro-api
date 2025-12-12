@@ -5,8 +5,8 @@ import { ColumnDef, FilterFn } from "@tanstack/react-table";
 import Link from "next/link";
 import {
 	CustomFieldDisplay,
-	type CustomFieldDefinition,
-} from "@/app/dashboard/location/[id]/members/[mid]/components/CustomFields";
+} from "@/components/CustomFieldDisplay";
+import { CustomFieldDefinition } from "@/types";
 
 export interface MemberWithCustomFieldsColumns extends Member {
 	customFields?: Array<{

@@ -143,8 +143,8 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
 										</div>
 									) : (
 										messages.map((message, index) => {
-											const isFromCurrentUser = message.sender_id === fromUserId;
-											const isFromMember = message.sender_id === toUserId;
+											const isFromCurrentUser = message.senderId === fromUserId;
+											const isFromMember = message.senderId === toUserId;
 
 											// Determine display name and avatar based on sender
 											let displayName: string;
@@ -168,17 +168,17 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
 											}
 
 											const prevMessage = messages[index - 1];
-											const isNewDay = !prevMessage || !isSameDay(new Date(prevMessage.created_at), new Date(message.created_at));
+											const isNewDay = !prevMessage || !isSameDay(new Date(prevMessage.created), new Date(message.created));
 
 											return (
 												<div key={message.id}>
-													{isNewDay && message.created_at && (
+													{isNewDay && message.created && (
 														<div className="relative flex items-center justify-center my-6">
 															<div className="absolute inset-0 flex items-center">
 																<span className="w-full border-t border-muted-foreground/20" />
 															</div>
 															<span className="relative bg-muted px-2 text-xs text-muted-foreground rounded-full">
-																{getDateLabel(new Date(message.created_at))}
+																{getDateLabel(new Date(message.created))}
 															</span>
 														</div>
 													)}
@@ -195,7 +195,7 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
 																	{isFromCurrentUser ? "You" : displayName}
 																</span>
 																<span className="text-xs text-muted-foreground/60">
-																	{message.created_at ? formatMessageTimestamp(message.created_at) : "Unknown time"}
+																	{message.created ? formatMessageTimestamp(message.created) : "Unknown time"}
 																</span>
 															</div>
 															<div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">

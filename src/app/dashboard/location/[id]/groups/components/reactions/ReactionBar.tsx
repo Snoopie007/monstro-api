@@ -1,13 +1,12 @@
 "use client";
 
-import { ReactionCount } from "@/types/groups";
-import { EmojiData } from "@/types/chats";
+import { ReactionCount, ReactionEmoji } from "@/types";
 import { cn } from "@/libs/utils";
 
 type ReactionBarProps = {
     reactions: ReactionCount[];
     currentUserId?: string;
-    onToggleReaction: (emoji: EmojiData) => void;
+    onToggleReaction: (emoji: ReactionEmoji) => void;
     isUpdating?: boolean;
     size?: "sm" | "md";
 };
@@ -25,12 +24,12 @@ export function ReactionBar({
 
     return (
         <div className="flex flex-wrap items-center gap-1">
-            {reactions.map((reaction) => {
+            {reactions.map((reaction, index) => {
                 const hasReacted = currentUserId && reaction.userIds?.includes(currentUserId);
-                
+
                 return (
                     <button
-                        key={`${reaction.display}-${reaction.name}`}
+                        key={`${reaction.display}-${index}`}
                         onClick={() => onToggleReaction({
                             value: reaction.display,
                             name: reaction.name,
@@ -39,8 +38,8 @@ export function ReactionBar({
                         disabled={isUpdating}
                         className={cn(
                             "inline-flex items-center gap-1 rounded-full transition-colors",
-                            hasReacted 
-                                ? "bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30" 
+                            hasReacted
+                                ? "bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30"
                                 : "bg-foreground/5 hover:bg-foreground/10",
                             size === "sm" ? "px-1.5 py-0.5" : "px-2 py-1",
                             isUpdating && "opacity-50 cursor-not-allowed"

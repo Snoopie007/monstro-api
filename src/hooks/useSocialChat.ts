@@ -3,7 +3,7 @@ import supabase from '@/libs/client/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from './useSession';
-import { Message, Media, ReactionCounts, ReactionEmoji } from '@/types';
+import { Message, Media, ReactionCount, ReactionEmoji } from '@/types';
 
 
 
@@ -66,7 +66,7 @@ export const useSocialChat = ({
       // Fetch media and reactions for messages
       const messageIds = messagesData?.map(m => m.id) || [];
       let mediaMap: Record<string, Media[]> = {};
-      let reactionsMap: Record<string, ReactionCounts[]> = {};
+      let reactionsMap: Record<string, ReactionCount[]> = {};
 
       if (messageIds.length > 0) {
         // Fetch media

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ReactionCount } from "@/types/groups";
+import { ReactionCount } from "@/types";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 

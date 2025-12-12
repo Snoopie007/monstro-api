@@ -1,6 +1,6 @@
 import { clientsideApiClient } from '@/libs/api/client';
 import supabase from '@/libs/client/supabase';
-import { EmojiData, Message, MessageReaction, PresignedUploadUrl, FileUploadPayload } from '@/types/chats';
+import { ReactionEmoji, Message, ReactionCount, Media } from '@/types';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from './useSession';
@@ -11,9 +11,9 @@ interface UseGroupChatOptions {
   enabled?: boolean;              // Whether to start the connection
 }
 
-export const useGroupChat = ({ 
-  chatId, 
-  fromUserId, 
+export const useGroupChat = ({
+  chatId,
+  fromUserId,
   enabled = true
 }: UseGroupChatOptions) => {
   const { data: session } = useSession();
@@ -60,55 +60,64 @@ export const useGroupChat = ({
 
       // Fetch media for these messages
       const messageIds = messagesData?.map(m => m.id) || [];
-      let mediaMap: Record<string, any[]> = {};
-      let reactionsMap: Record<string, MessageReaction[]> = {};
-      
+      let mediaMap: Record<string, Media[]> = {};
+      let reactionsMap: Record<string, ReactionCount[]> = {};
+
       // TODO: Move in api route instead -- loadMessages should be an api route
       if (messageIds.length > 0) {
         // Fetch media
         const { data: mediaData, error: mediaError } = await supabase
-            .from('media')
-            .select('*')
-            .in('owner_id', messageIds)
-            .eq('owner_type', 'message');
-            
+          .from('media')
+          .select('*')
+          .in('owner_id', messageIds)
+          .eq('owner_type', 'message');
+
         if (!mediaError && mediaData) {
-            mediaData.forEach(item => {
-                if (!mediaMap[item.owner_id]) {
-                    mediaMap[item.owner_id] = [];
-                }
-                mediaMap[item.owner_id].push({
-                    id: item.id,
-                    url: item.url,
-                    thumbnailUrl: item.thumbnail_url,
-                    fileName: item.file_name,
-                    fileType: item.file_type,
-                    mimeType: item.mime_type,
-                    altText: item.alt_text
-                });
+          mediaData.forEach(item => {
+            if (!mediaMap[item.owner_id]) {
+              mediaMap[item.owner_id] = [];
+            }
+            mediaMap[item.owner_id].push({
+              id: item.id,
+              ownerId: item.owner_id,
+              ownerType: item.owner_type,
+              url: item.url,
+              thumbnailUrl: item.thumbnail_url,
+              fileName: item.file_name,
+              fileType: item.file_type as "image" | "video" | "audio" | "document" | "other",
+              mimeType: item.mime_type,
+              altText: item.alt_text,
+              fileSize: item.file_size,
+              metadata: item.metadata,
+              created: item.created_at,
+              updated: item.updated_at,
             });
+          });
         }
 
         // Batch fetch reactions from reaction_counts view
         const { data: reactionsData, error: reactionsError } = await supabase
-            .from('reaction_counts')
-            .select('*')
-            .eq('owner_type', 'message')
-            .in('owner_id', messageIds);
-        
+          .from('reaction_counts')
+          .select('*')
+          .eq('owner_type', 'message')
+          .in('owner_id', messageIds);
+
         if (!reactionsError && reactionsData) {
-            reactionsData.forEach((reaction: any) => {
-                if (!reactionsMap[reaction.owner_id]) {
-                    reactionsMap[reaction.owner_id] = [];
-                }
-                reactionsMap[reaction.owner_id].push({
-                    display: reaction.display,
-                    name: reaction.name,
-                    count: reaction.count,
-                    userIds: reaction.user_ids || [],
-                    userNames: reaction.user_names || []
-                });
+          reactionsData.forEach((reaction: any) => {
+            if (!reactionsMap[reaction.owner_id]) {
+              reactionsMap[reaction.owner_id] = [];
+            }
+            reactionsMap[reaction.owner_id].push({
+              display: reaction.display,
+              name: reaction.name,
+              count: reaction.count,
+              userIds: reaction.user_ids || [],
+              userNames: reaction.user_names || [],
+              ownerType: reaction.owner_type,
+              ownerId: reaction.owner_id,
+              type: reaction.type,
             });
+          });
         }
       }
 
@@ -136,7 +145,7 @@ export const useGroupChat = ({
 
   // Send a message
   const sendMessage = useCallback(async (
-    content: string, 
+    content: string,
     files?: File[]
   ) => {
     if (!chatId || !fromUserId) {
@@ -148,7 +157,7 @@ export const useGroupChat = ({
     }
 
     try {
-      let uploadedFiles: FileUploadPayload[] = [];
+      let uploadedFiles: Record<string, any>[] = [];
 
       // Step 1: Get presigned URLs if files exist
       if (files && files.length > 0) {
@@ -160,7 +169,7 @@ export const useGroupChat = ({
             type: file.type,
             size: file.size,
           })),
-        }) as PresignedUploadUrl[];
+        }) as Record<string, any>[];
 
         // Step 2: Upload files to S3 using presigned URLs
         await Promise.all(
@@ -203,8 +212,6 @@ export const useGroupChat = ({
         senderId: enrichedMessage.senderId,
         content: enrichedMessage.content,
         metadata: enrichedMessage.metadata,
-        attachments: enrichedMessage.attachments || [],
-        readBy: enrichedMessage.metadata?.readBy || [],
         sender: enrichedMessage.sender,
         media: enrichedMessage.medias || [],
         created: enrichedMessage.created,
@@ -217,7 +224,7 @@ export const useGroupChat = ({
         if (prev.some(m => m.id === mapped.id)) return prev;
         return [...prev, mapped];
       });
-      
+
       return enrichedMessage;
     } catch (err) {
       console.error('Error sending message:', err);
@@ -239,7 +246,7 @@ export const useGroupChat = ({
 
     const initializeChat = async () => {
       if (!mounted || !authenticatedSupabase) return;
-      
+
       if (session?.user?.sbToken) {
         // Set auth token for realtime (like mobile does)
         await authenticatedSupabase.realtime.setAuth(session.user.sbToken);
@@ -247,13 +254,13 @@ export const useGroupChat = ({
         console.error('No sbToken available - cannot authenticate realtime');
         return;
       }
-      
+
       loadMessages(chatId);
       // Use authenticated client for realtime
       channel = authenticatedSupabase.channel(`chat:${chatId}`, {
         config: {
           private: true, // Requires authentication
-          broadcast: { 
+          broadcast: {
             ack: false,
             self: false
           }
@@ -265,13 +272,13 @@ export const useGroupChat = ({
         if (!mounted) return;
         // The message is nested: payload.payload.message
         const enrichedMessage = payload.payload?.message;
-        
+
         // Skip if no valid message
         if (!enrichedMessage?.id) {
           console.warn('Invalid message received:', enrichedMessage);
           return;
         }
-        
+
         // Messages are now enriched by the API with sender and media data
         const mapped: Message = {
           id: enrichedMessage.id,
@@ -279,15 +286,13 @@ export const useGroupChat = ({
           senderId: enrichedMessage.senderId,
           content: enrichedMessage.content,
           metadata: enrichedMessage.metadata,
-          attachments: enrichedMessage.attachments || [],
-          readBy: enrichedMessage.metadata?.readBy || [],
           sender: enrichedMessage.sender,
           media: enrichedMessage.medias || [],
           created: enrichedMessage.created,
           updated: enrichedMessage.updated,
           reactions: enrichedMessage.reactions || [],
         };
-        
+
         // New message (not replayed)
         setMessages((prev) => {
           if (prev.some(m => m.id === mapped.id)) return prev;
@@ -295,31 +300,29 @@ export const useGroupChat = ({
         });
       });
 
-        // Listen for message updates
+      // Listen for message updates
       channel.on('broadcast', { event: 'message_updated' }, (payload) => {
         if (!mounted) return;
         const enrichedMessage = payload.payload?.message;
-        
+
         if (!enrichedMessage?.id) {
           console.warn('Invalid updated message received:', enrichedMessage);
           return;
         }
-        
+
         const mapped: Message = {
           id: enrichedMessage.id,
           chatId: enrichedMessage.chatId,
           senderId: enrichedMessage.senderId,
           content: enrichedMessage.content,
           metadata: enrichedMessage.metadata,
-          attachments: enrichedMessage.attachments || [],
-          readBy: enrichedMessage.metadata?.readBy || [],
           sender: enrichedMessage.sender,
           media: enrichedMessage.medias || [],
           created: enrichedMessage.created,
           updated: enrichedMessage.updated,
           reactions: enrichedMessage.reactions || [],
         };
-        
+
         // Update existing message
         setMessages((prev) => prev.map(m => m.id === mapped.id ? mapped : m));
       });
@@ -328,12 +331,12 @@ export const useGroupChat = ({
       channel.on('broadcast', { event: 'message_deleted' }, (payload) => {
         if (!mounted) return;
         const messageId = payload.payload?.messageId;
-        
+
         if (!messageId) {
           console.warn('Invalid deleted message ID received:', payload.payload);
           return;
         }
-        
+
         // Remove message from local state
         setMessages((prev) => prev.filter(m => m.id !== messageId));
       });
@@ -436,7 +439,7 @@ export const useGroupChat = ({
       console.error('Error deleting message:', err);
       // Revert optimistic update on error
       if (messageToDelete) {
-        setMessages(prev => [...prev, messageToDelete].sort((a, b) => 
+        setMessages(prev => [...prev, messageToDelete].sort((a, b) =>
           new Date(a.created).getTime() - new Date(b.created).getTime()
         ));
       } else if (chatId) {
@@ -449,7 +452,7 @@ export const useGroupChat = ({
   // Toggle reaction on a message (optimistic update)
   const toggleReaction = useCallback(async (
     messageId: string,
-    emoji: EmojiData
+    emoji: ReactionEmoji
   ) => {
     if (!session?.user?.sbToken || !session?.user?.id) {
       throw new Error('No authentication token available');
@@ -464,11 +467,11 @@ export const useGroupChat = ({
     );
 
     // Optimistically update local state
-    setMessages(prev => prev.map(m => {
+    setMessages(prev => prev.map((m: Message): Message => {
       if (m.id !== messageId) return m;
-      
+
       const currentReactions = m.reactions || [];
-      
+
       if (existingReaction) {
         // Remove user's reaction
         const updatedReactions = currentReactions.map(r => {
@@ -480,12 +483,12 @@ export const useGroupChat = ({
             userNames: r.userNames.filter((_, idx) => r.userIds[idx] !== currentUserId)
           };
         }).filter(r => r.count > 0);
-        
+
         return { ...m, reactions: updatedReactions };
       } else {
         // Add user's reaction
         const existingEmojiReaction = currentReactions.find(r => r.display === emoji.value);
-        
+
         if (existingEmojiReaction) {
           return {
             ...m,
@@ -503,6 +506,9 @@ export const useGroupChat = ({
           return {
             ...m,
             reactions: [...currentReactions, {
+              ownerType: 'message',
+              ownerId: messageId,
+              type: 'emoji',
               display: emoji.value,
               name: emoji.name,
               count: 1,

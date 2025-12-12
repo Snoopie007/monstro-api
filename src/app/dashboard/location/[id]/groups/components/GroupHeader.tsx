@@ -5,14 +5,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/libs/utils";
 import { Lock, Share2, Users } from "lucide-react";
 import Image from "next/image";
-import { GroupCommunity } from "@/types/groups";
+import { Group } from "@/types";
 
 type GroupHeaderProps = {
-  group: GroupCommunity;
+  group: Group;
 };
 
 export function GroupHeader({ group }: GroupHeaderProps) {
- 
+
   return (
     <Card className="overflow-hidden border-foreground/10 bg-gradient-to-b from-background/40 to-background">
       <div className="relative h-56 w-full">

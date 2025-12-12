@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { tryCatch } from "@/libs/utils";
-import { ChatMember } from "@/types/chats";
+import { ChatMember } from "@/types";
 import { Loader2, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -40,8 +40,8 @@ type ChatMembersDialogProps = {
     chatMembers?: ChatMember[];
 };
 
-export function ChatMembersDialog({ 
-    open, 
+export function ChatMembersDialog({
+    open,
     onOpenChange,
     lid,
     chatId,
@@ -70,7 +70,7 @@ export function ChatMembersDialog({
             fetch(`/api/protected/loc/${lid}/members?query=${encodeURIComponent(searchQuery)}&size=10`)
         );
         setLoading(false);
-        
+
         if (error || !result || !result.ok) {
             console.error("Search failed", error);
             return;
@@ -102,7 +102,7 @@ export function ChatMembersDialog({
 
     const handleAddMember = async () => {
         if (!selectedMember) return;
-        
+
         setAdding(true);
         try {
             const response = await fetch(`/api/protected/chats/${chatId}/members`, {
@@ -124,17 +124,19 @@ export function ChatMembersDialog({
                 chatId: chatId,
                 userId: selectedMember.userId,
                 joined: new Date(),
-                member: {
+                user: {
                     id: selectedMember.id,
-                    firstName: selectedMember.firstName,
-                    lastName: selectedMember.lastName,
+                    name: `${selectedMember.firstName} ${selectedMember.lastName}`,
                     email: selectedMember.email,
-                    avatar: selectedMember.avatar,
-                    userId: selectedMember.userId,
-                } as any,
+                    image: selectedMember.avatar,
+                    emailVerified: null,
+                    password: null,
+                    created: new Date(),
+                    updated: null,
+                },
             };
             setMembers([...members, newChatMember]);
-            
+
             toast.success(`Added ${selectedMember.firstName} to chat`);
             setShowConfirmDialog(false);
             setSelectedMember(null);
@@ -214,7 +216,7 @@ export function ChatMembersDialog({
                                             ? member.name
                                             : member?.email || "Unknown";
                                         const initials = member?.name?.[0] || member?.email?.[0] || "?";
-                                        
+
                                         return (
                                             <div
                                                 key={`${chatMember.chatId}-${chatMember.userId}`}
