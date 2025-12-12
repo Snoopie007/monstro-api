@@ -4,6 +4,7 @@ import { ReactionEmoji, Message, ReactionCount, Media } from '@/types';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from './useSession';
+import { UploadUrl } from '@/types/other';
 
 interface UseGroupChatOptions {
   chatId: string | null;
@@ -169,7 +170,7 @@ export const useGroupChat = ({
             type: file.type,
             size: file.size,
           })),
-        }) as Record<string, any>[];
+        }) as UploadUrl[];
 
         // Step 2: Upload files to S3 using presigned URLs
         await Promise.all(

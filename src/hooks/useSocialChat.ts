@@ -3,7 +3,7 @@ import supabase from '@/libs/client/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from './useSession';
-import { Message, Media, ReactionCount, ReactionEmoji } from '@/types';
+import { Message, Media, ReactionCount, ReactionEmoji, UploadUrl } from '@/types';
 
 
 
@@ -187,7 +187,7 @@ export const useSocialChat = ({
             type: file.type,
             size: file.size,
           })),
-        }) as Record<string, any>[];
+        }) as UploadUrl[];
 
         // Step 2: Upload files to S3 using presigned URLs
         await Promise.all(
