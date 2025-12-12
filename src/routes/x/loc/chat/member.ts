@@ -5,33 +5,29 @@ import type { Context, Elysia } from "elysia";
 import { z } from "zod";
 
 
-const PostProps = {
+const GetProps = {
     params: z.object({
         lid: z.string(),
     }),
-    body: z.object({
-        memberId: z.string(),
-    }),
     query: z.object({
-        memberId: z.string(),
+        userId: z.string(),
     }),
 };
+
 
 
 
 export function memberChatRoute(app: Elysia) {
     // Find existing location chat for a member (GET - doesn't create)
     app.get('/member', async ({ params, query, status, ...ctx }) => {
-        const { userId, memberId } = ctx as Context & { userId: string, memberId: string };
+
+        const { userId } = ctx as Context & { userId: string };
         const { lid } = params;
 
         if (!userId) {
             return status(401, { error: 'User not authenticated' });
         }
 
-        if (!memberId) {
-            return status(400, { error: 'memberId query param is required' });
-        }
 
         try {
             const existingChats = await db.query.chats.findMany({
@@ -45,30 +41,26 @@ export function memberChatRoute(app: Elysia) {
             });
 
             const existingChat = existingChats.find(chat =>
-                chat.chatMembers.some(cm => cm.userId === memberId)
+                chat.chatMembers.some(cm => cm.userId === userId)
             );
 
             if (existingChat) {
                 return status(200, { chatId: existingChat.id });
             }
-
             // No chat exists yet - return null (not an error)
             return status(200, { chatId: null });
         } catch (error) {
             console.error('Error finding member chat:', error);
             return status(500, { error: 'Internal server error' });
         }
-    }, PostProps).post('/member', async ({ params, body, query, status, ...ctx }) => {
-        const { userId, memberId } = ctx as Context & { userId: string, memberId: string };
+    }, GetProps).post('/member', async ({ params, body, query, status, ...ctx }) => {
+        const { userId } = ctx as Context & { userId: string };
         const { lid } = params;
 
         if (!userId) {
             return status(401, { error: 'User not authenticated' });
         }
 
-        if (!memberId) {
-            return status(400, { error: 'memberId is required' });
-        }
 
         try {
             // Find existing location chat where the member is a participant
@@ -88,7 +80,7 @@ export function memberChatRoute(app: Elysia) {
 
             // Find a chat where the member is a participant
             const existingChat = existingChats.find(chat =>
-                chat.chatMembers.some(cm => cm.userId === memberId)
+                chat.chatMembers.some(cm => cm.userId === userId)
             );
 
             // If chat exists and member is in it, return it
@@ -121,7 +113,7 @@ export function memberChatRoute(app: Elysia) {
             // Add the member to the chat
             await db.insert(chatMembers).values({
                 chatId: newChat.id,
-                userId: memberId,
+                userId: userId,
             });
 
             return status(201, { chatId: newChat.id, created: true });
@@ -129,7 +121,12 @@ export function memberChatRoute(app: Elysia) {
             console.error('Error finding/creating member chat:', error);
             return status(500, { error: 'Internal server error' });
         }
-    }, PostProps);
+    }, {
+        ...GetProps,
+        body: z.object({
+            userId: z.string(),
+        }),
+    });
 
     return app;
 }

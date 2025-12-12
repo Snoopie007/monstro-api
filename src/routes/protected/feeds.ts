@@ -5,7 +5,7 @@ import type { UserFeed } from "@/types/feeds";
 
 const UserFeedsProps = {
     params: z.object({
-        type: z.enum(["moments", "posts", "groups"]),
+        type: z.enum(["moments", "posts", "group"]),
     }),
 };
 
@@ -35,9 +35,10 @@ export function userFeedsRoutes(app: Elysia) {
                                 },
                             },
                         },
+                        orderBy: (userFeeds, { desc }) => desc(userFeeds.created),
                     });
                 }
-                if (type === "posts") {
+                if (type === "group") {
                     feeds = await db.query.userFeeds.findMany({
                         where: (userFeeds, { eq, and, isNull, isNotNull }) => and(
                             eq(userFeeds.userId, userId),
@@ -53,6 +54,7 @@ export function userFeedsRoutes(app: Elysia) {
                                 },
                             },
                         },
+                        orderBy: (userFeeds, { desc }) => desc(userFeeds.created),
                     });
                 }
 
