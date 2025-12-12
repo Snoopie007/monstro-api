@@ -10,6 +10,7 @@ import { Input } from "@/components/forms/input";
 import { usePermission } from "@/hooks/usePermissions";
 import { ProgramItem } from "./components";
 import { ScrollArea } from "@/components/ui/ScrollArea";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Programs(props: { params: Promise<{ id: string }> }) {
 	const params = use(props.params);
@@ -34,34 +35,39 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
 
 	return (
 		<div className="flex flex-col gap-4">
-			<div className="max-w-6xl mx-auto w-full space-y-4">
-				<div className="flex flex-row items-center gap-2 justify-between">
-					<Input
-						placeholder="Find a program..."
-						value={searchQuery}
-						className="h-10 bg-foreground/5 rounded-lg w-[300px]"
-						onChange={(e) => setSearchQuery(e.target.value)}
-						variant="search"
-					/>
-					{canAddProgram && <AddProgram lid={params.id} />}
+			<ScrollArea className="h-[calc(100vh-52px)] w-full ">
 
-				</div>
+				<div className="max-w-6xl mx-auto w-full space-y-4">
+					<div className="flex flex-row items-center gap-2 justify-between">
+						<Input
+							placeholder="Find a program..."
+							value={searchQuery}
+							className="h-10 bg-foreground/5 rounded-lg w-[300px]"
+							onChange={(e) => setSearchQuery(e.target.value)}
+							variant="search"
+						/>
+						{canAddProgram && <AddProgram lid={params.id} />}
 
-				{isLoading && (
-					<div></div>
-				)}
-				<div className="space-y-2">
-					<ScrollArea className="h-[calc(100vh-52px)] w-full ">
+					</div>
+
+					{isLoading && (
+						<div>
+							<Skeleton className="h-10 w-full rounded-lg border border-foreground/5" />
+							<Skeleton className="h-10 w-full rounded-lg border border-foreground/5" />
+						</div>
+					)}
+					<div className="space-y-2">
 
 
 						{filteredPrograms?.map((program) => (
 							<ProgramItem key={program.id} program={program} />
 						))}
-					</ScrollArea>
 
+
+					</div>
 				</div>
-			</div>
-		</div>
+			</ScrollArea>
+		</div >
 	)
 }
 
