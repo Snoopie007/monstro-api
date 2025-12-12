@@ -9,6 +9,7 @@ import Loading from "@/components/loading";
 import { Input } from "@/components/forms/input";
 import { usePermission } from "@/hooks/usePermissions";
 import { ProgramItem } from "./components";
+import { ScrollArea } from "@/components/ui/ScrollArea";
 
 export default function Programs(props: { params: Promise<{ id: string }> }) {
 	const params = use(props.params);
@@ -50,10 +51,13 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
 					<div></div>
 				)}
 				<div className="space-y-2">
+					<ScrollArea className="h-[calc(100vh-52px)] w-full ">
 
-					{filteredPrograms?.map((program) => (
-						<ProgramItem key={program.id} program={program} />
-					))}
+
+						{filteredPrograms?.map((program) => (
+							<ProgramItem key={program.id} program={program} />
+						))}
+					</ScrollArea>
 
 				</div>
 			</div>
