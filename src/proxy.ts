@@ -28,18 +28,16 @@ export default async function proxy(req: NextRequest) {
 			}
 		}
 
-		// Protected API routes
-		if (pathname.startsWith("/api/protected")) {
-			if (!isLoggedIn) {
+
+
+		// Unauthenticated user redirects
+		if (!isLoggedIn) {
+			if (pathname.startsWith("/api/protected")) {
 				return NextResponse.json(
 					{ message: "Unauthorized" },
 					{ status: 401 }
 				);
 			}
-		}
-
-		// Unauthenticated user redirects
-		if (!isLoggedIn) {
 			if (pathname.startsWith("/api/auth") ||
 				publicPaths.some((path) => pathname.startsWith(path))
 			) {
@@ -53,10 +51,9 @@ export default async function proxy(req: NextRequest) {
 
 		// Authenticated user redirects
 		if (isLoggedIn) {
-			if (
-				pathname.startsWith("/api/") ||
-				pathname.startsWith("/callbacks")
-			) {
+
+			if (pathname.startsWith("/api/") || pathname.startsWith("/callbacks")) {
+
 				return NextResponse.next();
 			}
 

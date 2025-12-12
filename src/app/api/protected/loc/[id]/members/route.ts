@@ -24,12 +24,13 @@ import {
 } from '@/db/schemas'
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { MemberSortableField, sortColumnMap } from '@/types/member'
-import { hasPermission, canView } from "@/libs/server/permissions";
+import { hasPermission } from "@/libs/server/permissions";
 
 export async function GET(
     req: Request,
     props: { params: Promise<{ id: string }> }
 ) {
+
     const params = await props.params
     const { searchParams } = new URL(req.url)
 

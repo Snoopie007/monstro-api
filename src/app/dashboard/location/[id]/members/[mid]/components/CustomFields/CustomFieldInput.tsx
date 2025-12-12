@@ -22,15 +22,9 @@ import {
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/libs/utils";
+import { CustomFieldDefinition } from "@/types";
 
-export interface CustomFieldDefinition {
-	id: string;
-	name: string;
-	type: "text" | "number" | "date" | "boolean" | "select" | "multi-select";
-	placeholder?: string;
-	helpText?: string;
-	options?: Array<{ value: string; label: string }>;
-}
+
 
 interface CustomFieldInputProps {
 	field: CustomFieldDefinition;

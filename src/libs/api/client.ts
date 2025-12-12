@@ -11,12 +11,14 @@ export interface ApiClient {
 }
 
 export const clientsideApiClient = (token?: string): ApiClient => {
-    const baseUrl = process.env.NEXT_PUBLIC_MONSTRO_API_URL || 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_MONSTRO_API_URL || 'http://localhost:3000/api'
 
     return {
         get: async (endpoint: string, params?: Record<string, string | number | boolean | string[]>) => {
+            console.log("endpoint", endpoint);
             // For XRoutes, strip /api from baseUrl
             const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
+
             const url = new URL(`${finalBaseUrl}${endpoint}`)
 
             if (params) {
@@ -42,6 +44,7 @@ export const clientsideApiClient = (token?: string): ApiClient => {
             const response = await fetch(url.toString(), {
                 headers,
             })
+
             if (!response.ok) {
                 throw new Error(`API Error: ${response.status}`)
             }
@@ -51,7 +54,7 @@ export const clientsideApiClient = (token?: string): ApiClient => {
             // For XRoutes, strip /api from baseUrl
             const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
             const url = new URL(`${finalBaseUrl}${endpoint}`)
-            
+
             const headers: HeadersInit = {};
 
             // Only set Content-Type if not FormData (FormData sets its own boundary)
@@ -75,7 +78,7 @@ export const clientsideApiClient = (token?: string): ApiClient => {
                 headers,
                 body: data instanceof FormData ? data : JSON.stringify(data)
             })
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('[API Client] Error response:', {
@@ -91,7 +94,7 @@ export const clientsideApiClient = (token?: string): ApiClient => {
             // For XRoutes, strip /api from baseUrl
             const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
             const url = new URL(`${finalBaseUrl}${endpoint}`)
-            
+
             const headers: HeadersInit = {
                 'Content-Type': 'application/json',
             };
@@ -105,7 +108,7 @@ export const clientsideApiClient = (token?: string): ApiClient => {
                 headers,
                 body: JSON.stringify(data)
             })
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('[API Client] PUT Error response:', {
@@ -121,7 +124,7 @@ export const clientsideApiClient = (token?: string): ApiClient => {
             // For XRoutes, strip /api from baseUrl
             const finalBaseUrl = endpoint.startsWith('/x') ? baseUrl.replace(/\/api$/, '') : baseUrl;
             const url = new URL(`${finalBaseUrl}${endpoint}`)
-            
+
             const headers: HeadersInit = {
                 'Content-Type': 'application/json',
             };
@@ -134,7 +137,7 @@ export const clientsideApiClient = (token?: string): ApiClient => {
                 method: 'DELETE',
                 headers,
             })
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('[API Client] DELETE Error response:', {

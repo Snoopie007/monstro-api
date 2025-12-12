@@ -137,6 +137,7 @@ export type CustomFieldDefinition = MemberField & {
     helpText?: string
 }
 
+
 export type MemberSortableField =
     | 'created'
     | 'updated'

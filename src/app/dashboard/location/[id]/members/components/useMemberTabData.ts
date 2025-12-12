@@ -1,4 +1,4 @@
-import { CustomFieldDefinition } from '@/app/dashboard/location/[id]/members/[mid]/components/CustomFields'
+import { CustomFieldDefinition } from '@/types'
 import { ApiClient, clientsideApiClient } from '@/libs/api/client'
 import { ColumnFiltersState } from '@tanstack/react-table'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -85,11 +85,11 @@ export function useMemberTabData(locationId: string, memberId?: string) {
             },
         },
         ])
-
         // Fetch data asynchronously
         try {
             // Fetch all members for this location
-            const response: Record<string, any> | undefined = await apiRef.current?.get(`/protected/loc/${locationId}/members`, {
+            const response: Record<string, any> | undefined = await apiRef.current?.get(
+                `/protected/loc/${locationId}/members`, {
                 size: 25,
                 page: 1,
             })

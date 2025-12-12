@@ -1,10 +1,9 @@
 "use client";
 
-import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Check, X } from "lucide-react";
 import { format } from "date-fns";
-import type { CustomFieldDefinition } from "./CustomFieldInput";
+import type { CustomFieldDefinition } from "@/types";
 
 interface CustomFieldDisplayProps {
   field: CustomFieldDefinition;

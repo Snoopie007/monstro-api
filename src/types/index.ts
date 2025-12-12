@@ -25,3 +25,6 @@ export * from "./user";
 export * from "./vendor";
 export * from "./VendorReferral";
 export * from "./wallet";
+export * from "./chats";
+export * from "./media";
+export * from "./reactions";

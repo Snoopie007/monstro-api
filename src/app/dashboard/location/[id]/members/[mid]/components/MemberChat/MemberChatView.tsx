@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useSocialChat } from "@/hooks/useSocialChat";
 import { useSession } from "@/hooks/useSession";
-import { ScrollArea } from "@/components/ui/";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import {
+	Avatar, AvatarFallback, AvatarImage,
+	ScrollArea,
+	Badge,
+} from "@/components/ui/";
 import { Loader2 } from "lucide-react";
 import { Member } from "@/types";
 import { formatMessageTimestamp, getDateLabel } from "@/libs/utils";
@@ -13,314 +15,292 @@ import { isSameDay } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import { GroupChatInput } from "../../../../groups/components/GroupChatInput";
 import { ChatReactions, ChatReactionSheet } from "../../../../groups/components/reactions";
+import { Message } from "@/types";
 
 interface MemberChatViewProps {
-  locationId: string;
-  currentMemberId: string; // The member page we're viewing
-  currentMember: Member;
+	locationId: string;
+	currentMemberId: string; // The member page we're viewing
+	currentMember: Member;
 }
 
-interface Message {
-  id: string;
-  sender_id: string;
-  content: string;
-  created_at: string;
-  sender?: { id: string; name: string | null; image: string | null } | null;
-  media?: Array<{
-    id: string;
-    url: string;
-    fileName: string;
-    fileType: string;
-    mimeType?: string | null;
-  }>;
-  reactions?: Array<{
-    display: string;
-    name: string;
-    count: number;
-    userIds: string[];
-    userNames: string[];
-  }>;
-}
 
 export function MemberChatView({ locationId, currentMemberId, currentMember }: MemberChatViewProps) {
-  const { data: session } = useSession();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+	const { data: session } = useSession();
+	const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const fromUserId = session?.user?.id || null;
-  const toUserId = currentMember?.userId || null;
+	const fromUserId = session?.user?.id || null;
+	const toUserId = currentMember?.userId || null;
 
-  // Use the chat hook with user IDs
-  const {
-    messages,
-    isConnected,
-    isLoading,
-    chatId,
-    error,
-    sendMessage,
-    toggleReaction
-  } = useSocialChat({
-    fromUserId,
-    toUserId,
-    locationId,
-    enabled: !!fromUserId && !!toUserId && fromUserId !== toUserId,
-  });
+	// Use the chat hook with user IDs
+	const {
+		messages,
+		isConnected,
+		isLoading,
+		chatId,
+		error,
+		sendMessage,
+		toggleReaction
+	} = useSocialChat({
+		fromUserId,
+		toUserId,
+		locationId,
+		enabled: !!fromUserId && !!toUserId && fromUserId !== toUserId,
+	});
 
-  // State for reaction picker
-  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
-  const [selectedMessageForReaction, setSelectedMessageForReaction] = useState<Message | null>(null);
+	// State for reaction picker
+	const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+	const [selectedMessageForReaction, setSelectedMessageForReaction] = useState<Message | null>(null);
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+	// Auto-scroll to bottom when new messages arrive
+	useEffect(() => {
+		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+	}, [messages]);
 
-  const handleSendMessage = async (content: string, files: File[]) => {
-    if (!content.trim() && files.length === 0) return;
-    
-    try {
-      await sendMessage(content, files);
-    } catch (err) {
-      console.error('Failed to send message:', err);
-    }
-  };
+	const handleSendMessage = async (content: string, files: File[]) => {
+		if (!content.trim() && files.length === 0) return;
 
-  const handleOpenReactionPicker = useCallback((message: Message) => {
-    setSelectedMessageForReaction(message);
-    setReactionPickerOpen(true);
-  }, []);
+		try {
+			await sendMessage(content, files);
+		} catch (err) {
+			console.error('Failed to send message:', err);
+		}
+	};
 
-  const handleToggleReaction = useCallback(async (
-    messageId: string,
-    emoji: { value: string; name: string; type: string }
-  ) => {
-    try {
-      await toggleReaction(messageId, emoji);
-    } catch (err) {
-      console.error('Failed to toggle reaction:', err);
-    }
-  }, [toggleReaction]);
+	const handleOpenReactionPicker = useCallback((message: Message) => {
+		setSelectedMessageForReaction(message);
+		setReactionPickerOpen(true);
+	}, []);
 
-  const handleReactionSelect = useCallback((emoji: { value: string; name: string; type: string }) => {
-    if (selectedMessageForReaction && session?.user?.id) {
-      handleToggleReaction(selectedMessageForReaction.id, emoji);
-    }
-    setReactionPickerOpen(false);
-    setSelectedMessageForReaction(null);
-  }, [selectedMessageForReaction, session?.user?.id, handleToggleReaction]);
+	const handleToggleReaction = useCallback(async (
+		messageId: string,
+		emoji: { value: string; name: string; type: string }
+	) => {
+		try {
+			await toggleReaction(messageId, emoji);
+		} catch (err) {
+			console.error('Failed to toggle reaction:', err);
+		}
+	}, [toggleReaction]);
 
-  const canChat = fromUserId && toUserId && fromUserId !== toUserId;
-  const currentMemberName = `${currentMember?.firstName ?? ""} ${currentMember?.lastName ?? ""}`.trim() || "Member";
-  const currentMemberAvatar = currentMember?.avatar || undefined;
-  const currentMemberInitials = `${currentMember?.firstName?.[0] ?? ""}${currentMember?.lastName?.[0] ?? ""}`.trim() || "?";
+	const handleReactionSelect = useCallback((emoji: { value: string; name: string; type: string }) => {
+		if (selectedMessageForReaction && session?.user?.id) {
+			handleToggleReaction(selectedMessageForReaction.id, emoji);
+		}
+		setReactionPickerOpen(false);
+		setSelectedMessageForReaction(null);
+	}, [selectedMessageForReaction, session?.user?.id, handleToggleReaction]);
 
-  return (
-    <div className="bg-muted/50 rounded-lg flex-1 h-full flex flex-col min-h-0 overflow-hidden">
-      <div className="flex flex-col gap-2 border-b border-foreground/5 p-4 flex-shrink-0">
-        <div className="flex flex-row items-center justify-between">
-          <div className="flex flex-row items-center gap-2">
-            <span className="text-sm font-bold">Chat with {currentMemberName}</span>
-            {isConnected && (
-              <Badge variant="outline" className="text-xs">
-                <span className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></span>
-              </Badge>
-            )}
-            {error && (
-              <Badge variant="destructive" className="text-xs">
-                {error}
-              </Badge>
-            )}
-          </div>
-        </div>
-      </div>
+	const canChat = fromUserId && toUserId && fromUserId !== toUserId;
+	const currentMemberName = `${currentMember?.firstName ?? ""} ${currentMember?.lastName ?? ""}`.trim() || "Member";
+	const currentMemberAvatar = currentMember?.avatar || undefined;
+	const currentMemberInitials = `${currentMember?.firstName?.[0] ?? ""}${currentMember?.lastName?.[0] ?? ""}`.trim() || "?";
 
-      <div className="flex-1 relative min-h-0">
-        <div className="absolute inset-0 flex flex-col">
-          {!canChat ? (
-            <div className="h-full flex items-center justify-center text-center px-4">
-              <div className="space-y-2">
-                <span className="text-sm text-muted-foreground block">
-                  {!fromUserId
-                    ? "You must be logged in to chat"
-                    : !toUserId
-                    ? "This member cannot be reached right now"
-                    : "Cannot chat with yourself"}
-                </span>
-              </div>
-            </div>
-          ) : isLoading ? (
-            <div className="h-full flex items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <>
-              <ScrollArea className="flex-1 w-full px-4">
-                <div className="space-y-6 py-4">
-                  {messages.length === 0 ? (
-                    <div className="text-center text-sm text-muted-foreground py-8">
-                      Send a message to start the conversation
-                    </div>
-                  ) : (
-                    messages.map((message, index) => {
-                      const isFromCurrentUser = message.sender_id === fromUserId;
-                      const isFromMember = message.sender_id === toUserId;
-                      
-                      // Determine display name and avatar based on sender
-                      let displayName: string;
-                      let avatarSrc: string | undefined;
-                      let fallbackInitials: string;
-                      
-                      if (isFromMember) {
-                        displayName = currentMemberName;
-                        avatarSrc = currentMemberAvatar;
-                        fallbackInitials = currentMemberInitials;
-                      } else {
-                        // Staff member (current user or other staff)
-                        displayName = message.sender?.name || "Staff";
-                        avatarSrc = message.sender?.image || undefined;
-                        fallbackInitials = (message.sender?.name || "S")
-                          .split(" ")
-                          .map((part: string) => part[0])
-                          .join("")
-                          .slice(0, 2)
-                          .toUpperCase() || "S";
-                      }
+	return (
+		<div className="bg-muted/50 rounded-lg flex-1 h-full flex flex-col min-h-0 overflow-hidden">
+			<div className="flex flex-col gap-2 border-b border-foreground/5 p-4 flex-shrink-0">
+				<div className="flex flex-row items-center justify-between">
+					<div className="flex flex-row items-center gap-2">
+						<span className="text-sm font-bold">Chat with {currentMemberName}</span>
+						{isConnected && (
+							<Badge variant="outline" className="text-xs">
+								<span className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></span>
+							</Badge>
+						)}
+						{error && (
+							<Badge variant="destructive" className="text-xs">
+								{error}
+							</Badge>
+						)}
+					</div>
+				</div>
+			</div>
 
-                      const prevMessage = messages[index - 1];
-                      const isNewDay = !prevMessage || !isSameDay(new Date(prevMessage.created_at), new Date(message.created_at));
+			<div className="flex-1 relative min-h-0">
+				<div className="absolute inset-0 flex flex-col">
+					{!canChat ? (
+						<div className="h-full flex items-center justify-center text-center px-4">
+							<div className="space-y-2">
+								<span className="text-sm text-muted-foreground block">
+									{!fromUserId
+										? "You must be logged in to chat"
+										: !toUserId
+											? "This member cannot be reached right now"
+											: "Cannot chat with yourself"}
+								</span>
+							</div>
+						</div>
+					) : isLoading ? (
+						<div className="h-full flex items-center justify-center">
+							<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+						</div>
+					) : (
+						<>
+							<ScrollArea className="flex-1 w-full px-4">
+								<div className="space-y-6 py-4">
+									{messages.length === 0 ? (
+										<div className="text-center text-sm text-muted-foreground py-8">
+											Send a message to start the conversation
+										</div>
+									) : (
+										messages.map((message, index) => {
+											const isFromCurrentUser = message.sender_id === fromUserId;
+											const isFromMember = message.sender_id === toUserId;
 
-                      return (
-                        <div key={message.id}>
-                          {isNewDay && message.created_at && (
-                            <div className="relative flex items-center justify-center my-6">
-                              <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t border-muted-foreground/20" />
-                              </div>
-                              <span className="relative bg-muted px-2 text-xs text-muted-foreground rounded-full">
-                                {getDateLabel(new Date(message.created_at))}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex gap-3 flex-row group">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={avatarSrc} />
-                              <AvatarFallback className="text-xs">
-                                {fallbackInitials || "?"}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col gap-1 max-w-[70%] items-start">
-                              <div className="flex flex-row items-center gap-2">
-                                <span className="text-xs text-muted-foreground">
-                                  {isFromCurrentUser ? "You" : displayName}
-                                </span>
-                                <span className="text-xs text-muted-foreground/60">
-                                  {message.created_at ? formatMessageTimestamp(message.created_at) : "Unknown time"}
-                                </span>
-                              </div>
-                              <div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
-                                <ReactMarkdown>
-                                  {message.content}
-                                </ReactMarkdown>
-                              </div>
+											// Determine display name and avatar based on sender
+											let displayName: string;
+											let avatarSrc: string | undefined;
+											let fallbackInitials: string;
 
-                              {/* Media Display */}
-                              {(() => {
-                                const mediaFiles = message.media || [];
-                                const images = mediaFiles.filter(m => m.fileType === 'image' || m.mimeType?.startsWith('image/'));
-                                const otherFiles = mediaFiles.filter(m => !(m.fileType === 'image' || m.mimeType?.startsWith('image/')));
+											if (isFromMember) {
+												displayName = currentMemberName;
+												avatarSrc = currentMemberAvatar;
+												fallbackInitials = currentMemberInitials;
+											} else {
+												// Staff member (current user or other staff)
+												displayName = message.sender?.name || "Staff";
+												avatarSrc = message.sender?.image || undefined;
+												fallbackInitials = (message.sender?.name || "S")
+													.split(" ")
+													.map((part: string) => part[0])
+													.join("")
+													.slice(0, 2)
+													.toUpperCase() || "S";
+											}
 
-                                return (
-                                  <>
-                                    {/* Render Non-Image Files List */}
-                                    {otherFiles.length > 0 && (
-                                      <div className="flex flex-wrap gap-2 mt-2">
-                                        {otherFiles.map((file) => (
-                                          <a 
-                                            key={file.id}
-                                            href={file.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center p-3 bg-muted/50 gap-2 min-w-[150px] hover:bg-muted transition-colors rounded-md border border-border/50"
-                                          >
-                                            <span className="text-xs truncate max-w-[120px]">{file.fileName}</span>
-                                          </a>
-                                        ))}
-                                      </div>
-                                    )}
+											const prevMessage = messages[index - 1];
+											const isNewDay = !prevMessage || !isSameDay(new Date(prevMessage.created_at), new Date(message.created_at));
 
-                                    {/* Render Images Grid */}
-                                    {images.length > 0 && (
-                                      <div className={`grid gap-0.5 mt-2 rounded-xl overflow-hidden border border-border/20 ${
-                                        images.length === 1 ? 'grid-cols-1 max-w-[260px]' : 'grid-cols-2 max-w-[320px]'
-                                      }`}>
-                                        {images.slice(0, 4).map((image, imgIndex) => {
-                                          const isLastSlot = imgIndex === 3;
-                                          const hasMore = images.length > 4;
-                                          const showOverlay = isLastSlot && hasMore;
-                                          const extraCount = images.length - 3;
-                                          const isFirstOfThree = images.length === 3 && imgIndex === 0;
+											return (
+												<div key={message.id}>
+													{isNewDay && message.created_at && (
+														<div className="relative flex items-center justify-center my-6">
+															<div className="absolute inset-0 flex items-center">
+																<span className="w-full border-t border-muted-foreground/20" />
+															</div>
+															<span className="relative bg-muted px-2 text-xs text-muted-foreground rounded-full">
+																{getDateLabel(new Date(message.created_at))}
+															</span>
+														</div>
+													)}
+													<div className="flex gap-3 flex-row group">
+														<Avatar className="h-8 w-8">
+															<AvatarImage src={avatarSrc} />
+															<AvatarFallback className="text-xs">
+																{fallbackInitials || "?"}
+															</AvatarFallback>
+														</Avatar>
+														<div className="flex flex-col gap-1 max-w-[70%] items-start">
+															<div className="flex flex-row items-center gap-2">
+																<span className="text-xs text-muted-foreground">
+																	{isFromCurrentUser ? "You" : displayName}
+																</span>
+																<span className="text-xs text-muted-foreground/60">
+																	{message.created_at ? formatMessageTimestamp(message.created_at) : "Unknown time"}
+																</span>
+															</div>
+															<div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
+																<ReactMarkdown>
+																	{message.content}
+																</ReactMarkdown>
+															</div>
 
-                                          return (
-                                            <div 
-                                              key={image.id} 
-                                              className={`relative bg-muted ${
-                                                images.length === 1 
-                                                  ? 'aspect-auto' 
-                                                  : (isFirstOfThree ? 'row-span-2 h-full' : 'aspect-square')
-                                              }`}
-                                            >
-                                              <img 
-                                                src={image.url} 
-                                                alt={image.fileName || 'Attachment'}
-                                                className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
-                                                onClick={() => window.open(image.url, '_blank')}
-                                              />
-                                              {showOverlay && (
-                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
-                                                  <span className="text-white font-bold text-lg">+{extraCount}</span>
-                                                </div>
-                                              )}
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    )}
-                                  </>
-                                );
-                              })()}
+															{/* Media Display */}
+															{(() => {
+																const mediaFiles = message.media || [];
+																const images = mediaFiles.filter(m => m.fileType === 'image' || m.mimeType?.startsWith('image/'));
+																const otherFiles = mediaFiles.filter(m => !(m.fileType === 'image' || m.mimeType?.startsWith('image/')));
 
-                              {/* Reactions */}
-                              <ChatReactions
-                                reactions={message.reactions}
-                                currentUserId={session?.user?.id}
-                                onToggleReaction={(emoji: { value: string; name: string; type: string }) => handleToggleReaction(message.id, emoji)}
-                                onOpenPicker={() => handleOpenReactionPicker(message as Message)}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
-              <div className="flex-shrink-0 p-4">
-                <GroupChatInput onSend={handleSendMessage} disabled={isLoading || !isConnected} />
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+																return (
+																	<>
+																		{/* Render Non-Image Files List */}
+																		{otherFiles.length > 0 && (
+																			<div className="flex flex-wrap gap-2 mt-2">
+																				{otherFiles.map((file) => (
+																					<a
+																						key={file.id}
+																						href={file.url}
+																						target="_blank"
+																						rel="noopener noreferrer"
+																						className="flex items-center p-3 bg-muted/50 gap-2 min-w-[150px] hover:bg-muted transition-colors rounded-md border border-border/50"
+																					>
+																						<span className="text-xs truncate max-w-[120px]">{file.fileName}</span>
+																					</a>
+																				))}
+																			</div>
+																		)}
 
-      {/* Reaction Picker Sheet */}
-      <ChatReactionSheet
-        open={reactionPickerOpen}
-        onOpenChange={(open: boolean) => {
-          setReactionPickerOpen(open);
-          if (!open) setSelectedMessageForReaction(null);
-        }}
-        onSelect={handleReactionSelect}
-      />
-    </div>
-  );
+																		{/* Render Images Grid */}
+																		{images.length > 0 && (
+																			<div className={`grid gap-0.5 mt-2 rounded-xl overflow-hidden border border-border/20 ${images.length === 1 ? 'grid-cols-1 max-w-[260px]' : 'grid-cols-2 max-w-[320px]'
+																				}`}>
+																				{images.slice(0, 4).map((image, imgIndex) => {
+																					const isLastSlot = imgIndex === 3;
+																					const hasMore = images.length > 4;
+																					const showOverlay = isLastSlot && hasMore;
+																					const extraCount = images.length - 3;
+																					const isFirstOfThree = images.length === 3 && imgIndex === 0;
+
+																					return (
+																						<div
+																							key={image.id}
+																							className={`relative bg-muted ${images.length === 1
+																								? 'aspect-auto'
+																								: (isFirstOfThree ? 'row-span-2 h-full' : 'aspect-square')
+																								}`}
+																						>
+																							<img
+																								src={image.url}
+																								alt={image.fileName || 'Attachment'}
+																								className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
+																								onClick={() => window.open(image.url, '_blank')}
+																							/>
+																							{showOverlay && (
+																								<div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+																									<span className="text-white font-bold text-lg">+{extraCount}</span>
+																								</div>
+																							)}
+																						</div>
+																					);
+																				})}
+																			</div>
+																		)}
+																	</>
+																);
+															})()}
+
+															{/* Reactions */}
+															<ChatReactions
+																reactions={message.reactions}
+																currentUserId={session?.user?.id}
+																onToggleReaction={(emoji: { value: string; name: string; type: string }) => handleToggleReaction(message.id, emoji)}
+																onOpenPicker={() => handleOpenReactionPicker(message as Message)}
+															/>
+														</div>
+													</div>
+												</div>
+											);
+										})
+									)}
+									<div ref={messagesEndRef} />
+								</div>
+							</ScrollArea>
+							<div className="flex-shrink-0 p-4">
+								<GroupChatInput onSend={handleSendMessage} disabled={isLoading || !isConnected} />
+							</div>
+						</>
+					)}
+				</div>
+			</div>
+
+			{/* Reaction Picker Sheet */}
+			<ChatReactionSheet
+				open={reactionPickerOpen}
+				onOpenChange={(open: boolean) => {
+					setReactionPickerOpen(open);
+					if (!open) setSelectedMessageForReaction(null);
+				}}
+				onSelect={handleReactionSelect}
+			/>
+		</div>
+	);
 }

@@ -3,22 +3,9 @@ import supabase from '@/libs/client/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from './useSession';
-import type { MessageSender, MessageMedia, MessageReaction, EmojiData, PresignedUploadUrl, FileUploadPayload } from '@/types/chats';
+import { Message, Media, ReactionCounts, ReactionEmoji } from '@/types';
 
-interface Message {
-  id: string;
-  chat_id: string;
-  sender_id: string;
-  content: string;
-  attachments?: any[];
-  read_by?: string[];
-  metadata?: any;
-  created_at: string;
-  updated_at?: string;
-  sender?: MessageSender | null;
-  media?: MessageMedia[];
-  reactions?: MessageReaction[];
-}
+
 
 interface UseSocialChatOptions {
   fromUserId: string | null;        // The user sending (or admin masquerading as)
@@ -27,8 +14,8 @@ interface UseSocialChatOptions {
   enabled?: boolean;                // Whether to start the connection
 }
 
-export const useSocialChat = ({ 
-  fromUserId, 
+export const useSocialChat = ({
+  fromUserId,
   toUserId,
   locationId,
   enabled = true
@@ -52,7 +39,7 @@ export const useSocialChat = ({
       const api = clientsideApiClient(session.user.sbToken);
       const result = await api.get<{ chatId: string | null }>(
         `/x/loc/${locationId}/chat/member`,
-        { memberId: toUserId }
+        { userId: toUserId }
       );
       return result.chatId;
     } catch (err) {
@@ -78,13 +65,12 @@ export const useSocialChat = ({
 
       // Fetch media and reactions for messages
       const messageIds = messagesData?.map(m => m.id) || [];
-      let mediaMap: Record<string, MessageMedia[]> = {};
-      let reactionsMap: Record<string, MessageReaction[]> = {};
+      let mediaMap: Record<string, Media[]> = {};
+      let reactionsMap: Record<string, ReactionCounts[]> = {};
 
       if (messageIds.length > 0) {
         // Fetch media
-        const { data: mediaData, error: mediaError } = await supabase
-          .from('media')
+        const { data: mediaData, error: mediaError } = await supabase.from('media')
           .select('*')
           .in('owner_id', messageIds)
           .eq('owner_type', 'message');
@@ -101,7 +87,13 @@ export const useSocialChat = ({
               fileName: item.file_name,
               fileType: item.file_type,
               mimeType: item.mime_type,
-              altText: item.alt_text
+              altText: item.alt_text,
+              created: item.created_at,
+              updated: item.updated_at,
+              ownerId: item.owner_id,
+              ownerType: item.owner_type,
+              fileSize: item.file_size,
+              metadata: item.metadata
             });
           });
         }
@@ -119,6 +111,9 @@ export const useSocialChat = ({
               reactionsMap[reaction.owner_id] = [];
             }
             reactionsMap[reaction.owner_id].push({
+              ownerType: reaction.owner_type,
+              ownerId: reaction.owner_id,
+              type: reaction.type,
               display: reaction.display,
               name: reaction.name,
               count: reaction.count,
@@ -131,14 +126,14 @@ export const useSocialChat = ({
 
       const mapped = messagesData?.map((message) => ({
         id: message.id,
-        chat_id: message.chat_id,
-        sender_id: message.sender_id,
+        chatId: message.chat_id,
+        senderId: message.sender_id,
         content: message.content,
         attachments: message.attachments,
-        read_by: message.read_by,
+        readBy: message.read_by,
         metadata: message.metadata,
-        created_at: message.created_at,
-        updated_at: message.updated_at,
+        created: message.created_at,
+        updated: message.updated_at,
         sender: message.sender,
         media: mediaMap[message.id] || [],
         reactions: reactionsMap[message.id] || []
@@ -155,7 +150,7 @@ export const useSocialChat = ({
 
   // Send a message - creates chat on first message if needed
   const sendMessage = useCallback(async (
-    content: string, 
+    content: string,
     files?: File[]
   ) => {
     if (!fromUserId || !toUserId || !locationId) {
@@ -180,7 +175,7 @@ export const useSocialChat = ({
         setChatId(currentChatId);
       }
 
-      let uploadedFiles: FileUploadPayload[] = [];
+      let uploadedFiles: Record<string, any>[] = [];
 
       // Step 1: Get presigned URLs if files exist
       if (files && files.length > 0) {
@@ -192,7 +187,7 @@ export const useSocialChat = ({
             type: file.type,
             size: file.size,
           })),
-        }) as PresignedUploadUrl[];
+        }) as Record<string, any>[];
 
         // Step 2: Upload files to S3 using presigned URLs
         await Promise.all(
@@ -226,19 +221,17 @@ export const useSocialChat = ({
         content,
         files: uploadedFiles,
       }) as any;
-      
+
       // Since we have self: false, we won't receive our own messages via broadcast
       // So we need to manually add it to the local state
       const message: Message = {
         id: enrichedMessage.id,
-        chat_id: enrichedMessage.chatId,
-        sender_id: enrichedMessage.senderId,
+        chatId: enrichedMessage.chatId,
+        senderId: enrichedMessage.senderId,
         content: enrichedMessage.content,
-        attachments: enrichedMessage.attachments || [],
-        read_by: enrichedMessage.metadata?.read_by || [],
         metadata: enrichedMessage.metadata,
-        created_at: enrichedMessage.created,
-        updated_at: enrichedMessage.updated,
+        created: enrichedMessage.created,
+        updated: enrichedMessage.updated,
         sender: enrichedMessage.sender || null,
         media: enrichedMessage.medias || [],
         reactions: [],
@@ -249,7 +242,7 @@ export const useSocialChat = ({
         if (prev.some(m => m.id === message.id)) return prev;
         return [...prev, message];
       });
-      
+
       return enrichedMessage;
     } catch (err) {
       console.error('Error sending message:', err);
@@ -272,14 +265,14 @@ export const useSocialChat = ({
 
     const initializeChat = async () => {
       setIsLoading(true);
-      
+
       // Find existing chat (don't create - that happens on first message)
       const foundChatId = await findChat();
-      
+
       if (!mounted) return;
-      
+
       setIsLoading(false);
-      
+
       // No chat exists yet - this is fine, user can send first message to create it
       if (!foundChatId) {
         setChatId(null);
@@ -291,13 +284,13 @@ export const useSocialChat = ({
       // Set auth token for private channels
       if (session?.user?.sbToken) {
         supabase.realtime.setAuth(session.user.sbToken);
-      } 
+      }
       setChatId(foundChatId);
 
       channel = supabase.channel(`chat:${foundChatId}`, {
         config: {
           private: true, // Requires authentication
-          broadcast: { 
+          broadcast: {
             ack: false,
             self: false,
           }
@@ -309,18 +302,16 @@ export const useSocialChat = ({
         if (!mounted) return;
 
         const enrichedMessage = payload.payload?.message || payload.payload;
-        
+
         // Messages are now enriched by the API with sender and media data
         const message: Message = {
           id: enrichedMessage.id,
-          chat_id: enrichedMessage.chatId,
-          sender_id: enrichedMessage.senderId,
+          chatId: enrichedMessage.chatId,
+          senderId: enrichedMessage.senderId,
           content: enrichedMessage.content,
-          attachments: enrichedMessage.attachments || [],
-          read_by: enrichedMessage.metadata?.read_by || [],
           metadata: enrichedMessage.metadata,
-          created_at: enrichedMessage.created,
-          updated_at: enrichedMessage.updated,
+          created: enrichedMessage.created,
+          updated: enrichedMessage.updated,
           sender: enrichedMessage.sender || null,
           media: enrichedMessage.medias || [],
           reactions: enrichedMessage.reactions || [],
@@ -367,7 +358,7 @@ export const useSocialChat = ({
   // Toggle reaction on a message (optimistic update)
   const toggleReaction = useCallback(async (
     messageId: string,
-    emoji: EmojiData
+    emoji: ReactionEmoji
   ) => {
     if (!session?.user?.sbToken || !session?.user?.id) {
       throw new Error('No authentication token available');
@@ -382,11 +373,11 @@ export const useSocialChat = ({
     );
 
     // Optimistically update local state
-    setMessages(prev => prev.map(m => {
+    setMessages(prev => prev.map((m: Message): Message => {
       if (m.id !== messageId) return m;
-      
+
       const currentReactions = m.reactions || [];
-      
+
       if (existingReaction) {
         // Remove user's reaction
         const updatedReactions = currentReactions.map(r => {
@@ -398,12 +389,12 @@ export const useSocialChat = ({
             userNames: r.userNames.filter((_, idx) => r.userIds[idx] !== currentUserId)
           };
         }).filter(r => r.count > 0);
-        
+
         return { ...m, reactions: updatedReactions };
       } else {
         // Add user's reaction
         const existingEmojiReaction = currentReactions.find(r => r.display === emoji.value);
-        
+
         if (existingEmojiReaction) {
           return {
             ...m,
@@ -421,11 +412,14 @@ export const useSocialChat = ({
           return {
             ...m,
             reactions: [...currentReactions, {
+              ownerType: 'message',
+              ownerId: messageId,
+              type: 'emoji',
               display: emoji.value,
               name: emoji.name,
               count: 1,
               userIds: [currentUserId],
-              userNames: [session?.user?.name || 'You']
+              userNames: [session?.user?.name || ''],
             }]
           };
         }
