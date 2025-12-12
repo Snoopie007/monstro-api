@@ -56,7 +56,7 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
 							<Skeleton className="h-10 w-full rounded-lg border border-foreground/5" />
 						</div>
 					)}
-					<div className="space-y-2">
+					<div className="space-y-2 pb-10">
 
 
 						{filteredPrograms?.map((program) => (

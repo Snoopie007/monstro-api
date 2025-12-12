@@ -4,7 +4,7 @@ import { CreatePlan, SubscriptionList, PackageList } from "./components";
 import { db } from "@/db/db";
 import { ProductsProvider } from "./providers";
 import { Group, Program } from "@/types";
-
+import { ScrollArea } from "@/components/ui";
 
 async function getPrograms(lid: string): Promise<Program[]> {
     try {
@@ -43,22 +43,25 @@ export default async function Products(props: { params: Promise<{ id: string, ty
         <ProductsProvider programs={programs} groups={groups}>
 
             <div className="flex flex-col gap-4">
-                <div className="max-w-4xl mx-auto w-full space-y-4">
-                    <div className="flex flex-row items-center gap-2 justify-between">
-                        <div className="text-xl font-bold">
-                            {params.type === "subs" ? "Subscriptions" : "Packages"}
-                        </div>
-                        <CreatePlan lid={params.id} type={params.type} />
-                    </div>
+                <ScrollArea className="h-[calc(100vh-52px)] w-full ">
 
-                    <div className="space-y-2">
-                        {params.type === "subs" ? (
-                            <SubscriptionList lid={params.id} />
-                        ) : (
-                            <PackageList lid={params.id} />
-                        )}
+                    <div className="max-w-4xl mx-auto w-full space-y-4">
+                        <div className="flex flex-row items-center gap-2 justify-between">
+                            <div className="text-xl font-bold">
+                                {params.type === "subs" ? "Subscriptions" : "Packages"}
+                            </div>
+                            <CreatePlan lid={params.id} type={params.type} />
+                        </div>
+
+                        <div className="space-y-2 pb-10">
+                            {params.type === "subs" ? (
+                                <SubscriptionList lid={params.id} />
+                            ) : (
+                                <PackageList lid={params.id} />
+                            )}
+                        </div>
                     </div>
-                </div>
+                </ScrollArea>
 
             </div>
 

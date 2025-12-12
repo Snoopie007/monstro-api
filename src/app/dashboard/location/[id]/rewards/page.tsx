@@ -2,6 +2,7 @@ import ErrorComponent from '@/components/error';
 import { db } from "@/db/db";
 import { RewardList, CreateReward } from "./components";
 import { RewardProvider } from "./providers";
+import { ScrollArea } from "@/components/ui";
 
 async function fetchRewards(lid: string) {
 	try {
@@ -25,13 +26,16 @@ export default async function Rewards(props: { params: Promise<{ id: string }> }
 
 	return (
 		<RewardProvider rewards={rewards}>
-			<div className='max-w-4xl mx-auto py-4 space-y-4'>
+			<ScrollArea className="h-[calc(100vh-52px)] w-full ">
 
-				<CreateReward lid={lid} />
-				<div className='border border-foreground/10 rounded-lg'>
-					<RewardList lid={lid} />
+				<div className='max-w-4xl mx-auto py-4 space-y-4'>
+
+					<CreateReward lid={lid} />
+					<div className='border border-foreground/10 rounded-lg mb-10'>
+						<RewardList lid={lid} />
+					</div>
 				</div>
-			</div>
+			</ScrollArea>
 		</RewardProvider>
 	)
 }
