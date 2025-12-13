@@ -34,6 +34,13 @@ async function chargeWallet(
 async function getPlan(planId: number) {
   const p = await admindb.query.monstroPlans.findFirst({
     where: (plan, { eq }) => eq(plan.id, planId),
+    columns: {
+      benefits: false,
+      created: false,
+      updated: false,
+      description: false,
+
+    },
   });
   if (!p) {
     throw new Error("Plan not found, please contact your sales rep.")

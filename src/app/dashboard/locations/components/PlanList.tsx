@@ -3,9 +3,11 @@ import { cn } from "@/libs/utils";
 import { MonstroPlan } from "@/types/admin";
 import {
     Table, TableHeader, TableBody, TableRow,
-    TableCell, TableHead, TooltipTrigger, Tooltip, TooltipContent
+    TableCell, TableHead, TooltipTrigger, Tooltip, TooltipContent,
+    Badge
 } from "@/components/ui";
 import { InfoIcon } from "./Compare";
+import { useCallback, useMemo } from "react";
 
 
 const FeesData = [
@@ -41,11 +43,18 @@ export function PlanSelector({ onSelect, value, plans, currentPlanId }: PlanSele
         return value === plan.id;
     }
 
+    const isCurrentPlan = useCallback((id: number) => {
+        return currentPlanId === id;
+    }, [currentPlanId]);
 
+    async function handlePlanSelect(id: number) {
 
-    function handlePlanSelect(id: number) {
+        if (currentPlanId === id) return;
         onSelect(id);
-    };
+    }
+
+
+
 
 
     return (
@@ -54,9 +63,26 @@ export function PlanSelector({ onSelect, value, plans, currentPlanId }: PlanSele
                 {plans.map((plan, i) => (
                     <div key={i}
                         onClick={() => handlePlanSelect(plan.id)}
-                        className={cn("space-y-4 border border-foreground/10 p-4 rounded-lg cursor-pointer", { "border-indigo-500 border-2": isSelected(plan) })}>
+                        data-current-plan={isCurrentPlan(plan.id)}
+                        className={cn(
+                            "space-y-4 border border-foreground/10 p-4 rounded-lg cursor-pointer",
+                            "data-[current-plan=true]:opacity-50 data-[current-plan=true]:border-orange-500 ",
+                            "data-[current-plan=true]:border-2 data-[current-plan=true]:bg-orange-500/5",
+
+                            {
+                                "border-indigo-500 border-2 bg-indigo-500/5": isSelected(plan),
+                            }
+                        )}
+                    >
                         <div className="space-y-2">
-                            <div className="  font-semibold">{plan.name}</div>
+                            <div className="  font-semibold flex items-center gap-2">
+                                <span>{plan.name}</span>
+                                {isCurrentPlan(plan.id) && (
+
+                                    <Badge size="tiny" className="bg-orange-500 text-white">Current Plan</Badge>
+                                )}
+
+                            </div>
                             <p className="text-muted-foreground text-sm" dangerouslySetInnerHTML={{ __html: plan.description }} />
                         </div>
                         <div className="flex flex-col">

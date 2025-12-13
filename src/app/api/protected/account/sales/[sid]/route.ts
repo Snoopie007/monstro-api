@@ -62,13 +62,13 @@ export async function POST(req: Request) {
 
         stripe.setCustomer(sale.stripeCustomerId)
 
-
+        let stripeSubscriptionId: string | undefined;
         if ([2, 3].includes(plan.id)) {
-            await Promise.all([
+            const results = await Promise.all([
                 stripe.createSubscription(plan, metadata, 0),
                 stripe.createGHLSubscription(metadata),
             ]);
-
+            stripeSubscriptionId = results[0].id;
             if (sale.upgradeToScale && plan.id === 3) {
                 await stripe.createScaleUpgrade(metadata)
             }
@@ -81,6 +81,7 @@ export async function POST(req: Request) {
                 settings: DEFAULT_LOCATION_SETTINGS,
                 agreeToTerms: sale.agreedToTerms,
                 locationId: location.id,
+                stripeSubscriptionId,
                 status: "active",
                 startDate: today,
                 lastRenewalDate: today,

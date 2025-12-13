@@ -66,9 +66,8 @@ export const locationState = pgTable("location_state", {
     onDelete: "set null",
   }),
   agreeToTerms: boolean("agree_to_terms").notNull().default(false),
-  lastRenewalDate: timestamp("last_renewal_date", {
-    withTimezone: true,
-  }).defaultNow(),
+  lastRenewalDate: timestamp("last_renewal_date", { withTimezone: true, }).defaultNow(),
+  stripeSubscriptionId: text("stripe_subscription_id"),
   startDate: timestamp("start_date", { withTimezone: true }),
   settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),
   usagePercent: integer("usage_percent").notNull().default(0),

@@ -52,16 +52,18 @@ export async function POST(
 
 		const today = new Date();
 
+		let stripeSubscriptionId: string | undefined;
 		if (plan.id === 1) {
 			await stripe.createPaymentIntent(100, token.card.id, {
 				authorizeOnly: true,
 				metadata
 			})
 		} else {
-			await Promise.all([
+			const [sub, _] = await Promise.all([
 				stripe.createSubscription(plan, metadata, 0),
 				stripe.createGHLSubscription(metadata),
 			]);
+			stripeSubscriptionId = sub.id;
 		}
 
 		await db.transaction(async (tx) => {
@@ -73,6 +75,7 @@ export async function POST(
 					status: "active",
 					usagePercent: plan?.usagePercent,
 					startDate: today,
+					stripeSubscriptionId,
 					lastRenewalDate: today,
 					updated: today,
 				})

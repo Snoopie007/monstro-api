@@ -1,4 +1,4 @@
-import { db } from "@/db/db";
+
 import { MemberPlan } from "@/types";
 import { MonstroPlan } from "@/types/admin";
 import { AddressParam } from "@stripe/stripe-js";
@@ -170,8 +170,9 @@ abstract class BaseStripePayments {
 		const list = await this._stripe.subscriptions.list({
 			customer: customerId,
 			limit: limit || 10,
+			status: "active",
 		});
-		return list;
+		return list.data;
 	}
 
 	async getCharges(limit?: number) {
@@ -314,7 +315,7 @@ class VendorStripePayments extends BaseStripePayments {
 	}
 
 	async createSubscription(
-		plan: MonstroPlan,
+		plan: Partial<MonstroPlan>,
 		metadata: Record<string, any>,
 		trial?: number,
 		paymentMethodId?: string | undefined
@@ -377,8 +378,30 @@ class VendorStripePayments extends BaseStripePayments {
 		};
 		return this._stripe.subscriptions.create(options);
 	}
-}
 
+	async upgradeSubscription(subscriptionId: string, previousId: string, plan: Partial<MonstroPlan>) {
+		console.log('subscriptionId', subscriptionId);
+		if (!this._customer) {
+			throw new Error("Customer not set");
+		}
+
+		const planPrice = isProd ? plan.priceId! : plan.testPriceId!;
+		const options: Stripe.SubscriptionUpdateParams = {
+			items: [
+				{ price: planPrice },
+				{ id: previousId, deleted: true },
+			],
+		};
+		console.log('options', options);
+		return await this._stripe.subscriptions.update(subscriptionId, options);
+	}
+
+
+	async cancelSubscription(subscriptionId: string) {
+		return await this._stripe.subscriptions.cancel(subscriptionId);
+	}
+
+}
 class MemberStripePayments extends BaseStripePayments {
 	private _accountId: string | null;
 	constructor(accountId?: string, secretKey?: string) {
