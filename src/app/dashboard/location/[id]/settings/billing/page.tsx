@@ -64,24 +64,26 @@ async function fetchClientStripe(
 		const stripe = new VendorStripePayments();
 		const methods = await stripe.getPaymentMethods(customerId);
 		if (locationState.planId && locationState.planId !== 1) {
-			const res = await stripe.getSubscriptions(customerId);
+			const data = await stripe.getSubscriptions(customerId);
 
-			subscriptions = res.data.filter((sub) => sub.metadata.locationId === locationId).map((sub) => {
-				const item = sub.items.data[0];
+			subscriptions = data
+				.filter((sub: Stripe.Subscription) => sub.metadata.locationId === locationId)
+				.map((sub: Stripe.Subscription) => {
+					const item = sub.items.data[0];
 
-				return {
-					subscriptionId: sub.id,
-					name: item?.plan?.nickname || "N/A",
-					amount: item?.plan?.amount || 0,
-					nextInvoice: format(item.current_period_end * 1000, "MMM d, yyyy"),
-					endDate: sub.cancel_at
-						? format(sub.cancel_at * 1000, "MMM d, yyyy")
-						: "N/A",
-					currency: item?.plan?.currency || "USD",
-					status: sub.status,
-					invoiceId: sub.latest_invoice,
-				};
-			});
+					return {
+						subscriptionId: sub.id,
+						name: item?.plan?.nickname || "N/A",
+						amount: item?.plan?.amount || 0,
+						nextInvoice: format(item.current_period_end * 1000, "MMM d, yyyy"),
+						endDate: sub.cancel_at
+							? format(sub.cancel_at * 1000, "MMM d, yyyy")
+							: "N/A",
+						currency: item?.plan?.currency || "USD",
+						status: sub.status,
+						invoiceId: sub.latest_invoice,
+					};
+				});
 		}
 
 		return { paymentMethods: methods.data, subscriptions };

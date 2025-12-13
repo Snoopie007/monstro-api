@@ -10,10 +10,10 @@ import {
 } from "date-fns";
 import { toast } from "react-toastify";
 
-import { useSessionCalendar } from "./providers/SessionCalendarProvider";
+import { useSessionCalendar } from "./providers";
 import { Calendar } from "@/components/ui/calendar";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
-import { CalendarFilters } from "./components/CalendarFilters";
+import { CalendarFilters } from "./components/";
 import { tryCatch } from "@/libs/utils";
 import { SessionManagementDialog } from "./components/EnhancedEventDialog";
 
@@ -21,8 +21,8 @@ import {
   EventCalendar,
   CalendarDndProvider
 } from "@/components/event-calendar";
-import LoaderOverlay from "@/components/ui/loader-overlay";
 import { CalendarEvent, CalendarView } from "@/types";
+import { Loader2 } from "lucide-react";
 
 interface CalendarPageClientProps {
   params: Promise<{ id: string }>;
@@ -183,20 +183,22 @@ export default function CalendarPageClient({
       <CalendarDndProvider onEventUpdate={handleEventUpdate}>
         <div className="relative flex-1 h-full pr-2 pb-2">
           {/* Loader Overlay on the container */}
-          {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <LoaderOverlay isLoading={isLoading} />
+          {isLoading ? (
+            <div className="h-full w-full flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm text-foreground/80">Loading events...</span>
             </div>
+          ) : (
+            <EventCalendar
+              events={events}
+              currentDate={currentDate}
+              view={view}
+              onDateChange={setCurrentDate}
+              onViewChange={setView}
+              onEventUpdate={handleEventUpdate}
+              onEventClick={handleEventSelect}
+            />
           )}
-          <EventCalendar
-            events={events}
-            currentDate={currentDate}
-            view={view}
-            onDateChange={setCurrentDate}
-            onViewChange={setView}
-            onEventUpdate={handleEventUpdate}
-            onEventClick={handleEventSelect}
-          />
         </div>
       </CalendarDndProvider>
 
