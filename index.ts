@@ -22,6 +22,9 @@ app.use(cors(CORS_CONFIG))
 	.use(RateLimitMiddleware())
 	.onRequest(({ request }) => {
 		// Check if request came through HTTPS proxy
+		if (request.url.includes('/healthcheck')) {
+			return;
+		}
 		console.log(`🔥 ${request.method} ${request.url}`);
 	})
 	// Dedicated health check endpoint
