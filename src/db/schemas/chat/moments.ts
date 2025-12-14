@@ -3,6 +3,7 @@ import { text, timestamp, pgTable, jsonb, boolean, unique, integer, index } from
 import { comments } from "./comments";
 import { users } from "../users";
 import { groupPosts, groups } from "./groups";
+import { media } from "./medias";
 
 export const moments = pgTable("moments", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
@@ -55,6 +56,7 @@ export const momentsRelations = relations(moments, ({ one, many }) => ({
     feeds: many(userFeeds),
     comments: many(comments),
     likes: many(momentLikes),
+    medias: many(media),
 }));
 
 

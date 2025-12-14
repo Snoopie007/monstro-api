@@ -4,7 +4,9 @@ import { z } from "zod";
 import type { UserFeed } from "@/types/feeds";
 
 const UserFeedsProps = {
+
     params: z.object({
+        uid: z.string(),
         type: z.enum(["moments", "posts", "group"]),
     }),
 };
@@ -12,28 +14,25 @@ const UserFeedsProps = {
 export function userFeedsRoutes(app: Elysia) {
     return app.group('/feeds/:type', (app) => {
         app.get("/", async ({ params, status, ...ctx }) => {
-            const { type } = params;
-            const { userId } = ctx as Context & { userId: string };
-            if (!userId) {
-                return status(401, { error: "Unauthorized" });
-            }
-
+            const { type, uid } = params;
 
             try {
                 let feeds: UserFeed[] = [];
                 if (type === "moments") {
                     feeds = await db.query.userFeeds.findMany({
                         where: (userFeeds, { eq, and, isNull, isNotNull }) => and(
-                            eq(userFeeds.userId, userId),
+                            eq(userFeeds.userId, uid),
                             isNull(userFeeds.viewedAt),
                             isNotNull(userFeeds.momentId),
                         ),
                         with: {
+                            author: true,
                             moment: {
                                 with: {
-                                    author: true,
+                                    medias: true,
                                 },
                             },
+
                         },
                         orderBy: (userFeeds, { desc }) => desc(userFeeds.created),
                     });
@@ -41,7 +40,7 @@ export function userFeedsRoutes(app: Elysia) {
                 if (type === "group") {
                     feeds = await db.query.userFeeds.findMany({
                         where: (userFeeds, { eq, and, isNull, isNotNull }) => and(
-                            eq(userFeeds.userId, userId),
+                            eq(userFeeds.userId, uid),
                             isNull(userFeeds.viewedAt),
                             isNotNull(userFeeds.postId),
                         ),
@@ -57,7 +56,6 @@ export function userFeedsRoutes(app: Elysia) {
                         orderBy: (userFeeds, { desc }) => desc(userFeeds.created),
                     });
                 }
-
                 return status(200, feeds);
             } catch (error) {
                 console.error("Error fetching moments feed:", error);

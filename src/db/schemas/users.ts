@@ -1,4 +1,4 @@
-import { text, timestamp, pgTable, uuid } from "drizzle-orm/pg-core";
+import { text, timestamp, pgTable, uuid, check, index, boolean } from "drizzle-orm/pg-core";
 import { accounts } from "./accounts";
 import { relations, sql } from "drizzle-orm";
 import { members } from "./members";
@@ -17,6 +17,30 @@ export const users = pgTable("users", {
     updated: timestamp("updated_at", { withTimezone: true }),
 });
 
+
+export const userNotifications = pgTable("user_notifications", {
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62('not_')`),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    platform: text("platform", { enum: ["ios", "android"] }).notNull(),
+    token: text("token").notNull().unique(),
+    deviceId: text("device_id"),
+    deviceName: text("device_name"),
+    enabled: boolean("enabled").notNull().default(true),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+},
+    (t) => [
+        index("idx_user_notifications_user_id").on(t.userId),
+        index("idx_user_notifications_user_platform").on(t.userId, t.platform),
+        index("idx_user_notifications_enabled").on(t.enabled).where(sql`${t.enabled} = true`),
+        index("idx_user_notifications_token").on(t.token),
+    ]
+);
+
+
+
+
 export const usersRelations = relations(users, ({ many, one }) => ({
     accounts: many(accounts),
     member: one(members, {
@@ -33,4 +57,12 @@ export const usersRelations = relations(users, ({ many, one }) => ({
     }),
     feeds: many(userFeeds, { relationName: 'userFeeds' }),
     authorFeeds: many(userFeeds, { relationName: 'authorFeeds' }),
+    notifications: many(userNotifications),
+}));
+
+export const userNotificationsRelations = relations(userNotifications, ({ one }) => ({
+    user: one(users, {
+        fields: [userNotifications.userId],
+        references: [users.id],
+    }),
 }));

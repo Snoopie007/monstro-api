@@ -2,7 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import { text, timestamp, pgTable, jsonb, boolean, index, primaryKey, integer } from "drizzle-orm/pg-core";
 import { locations } from "../locations";
 import { users } from "../users";
-import { media } from "./chats";
+import { media } from "./medias";
 import { comments } from "./comments";
 import { userFeeds } from "./moments";
 
