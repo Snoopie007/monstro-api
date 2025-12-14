@@ -51,14 +51,14 @@ export async function AuthMiddleware(app: Elysia) {
     return app.resolve(async ({ headers, status }) => {
         // Get token from Authorization header
         const auth = headers['authorization'];
-
+        console.log('AuthMiddleware: Authorization header', auth);
         if (!auth) {
             console.log('AuthMiddleware: No Authorization header');
             return status(401, { error: "Unauthorized - No token provided" });
         }
 
         const token = auth.split(" ")[1];
-
+        console.log('AuthMiddleware: Token', token);
         if (!token) {
             console.log('AuthMiddleware: No token in Authorization header');
             return status(401, { error: "Unauthorized - Invalid token format" });
@@ -68,7 +68,7 @@ export async function AuthMiddleware(app: Elysia) {
 
         if (!result) {
             console.log('AuthMiddleware: Token verification failed');
-            return status(401, { error: "Unauthorized - Invalid token" });
+            return status(401, { error: "Unauthorized." });
         }
 
         return {
@@ -88,7 +88,7 @@ export async function AuthXMiddleware(app: Elysia) {
 
         const token = auth.split(" ")[1];
 
-        if (!token) return status(401, { error: "Unauthorized" })
+        if (!token) return status(401, { error: "Unauthorized." })
 
         const result = await verifyTokenX(token);
 
