@@ -1,11 +1,17 @@
 import { generateMobileToken } from "@/libs/auth";
 import { Elysia } from "elysia";
 import { jwtVerify } from "jose";
+import { z } from "zod";
 
+const MobileRefreshTokenSchema = {
+    body: z.object({
+        token: z.string(),
+    }),
+};
 
 export async function mobileRefreshToken(app: Elysia) {
-    return app.post('/refresh', async ({ body, status }) => {
-        const { token } = body as { token: string };
+    app.post('/refresh', async ({ body, status }) => {
+        const { token } = body;
 
         if (!token) {
             return status(400, { message: "Refresh token is required" });
@@ -27,6 +33,7 @@ export async function mobileRefreshToken(app: Elysia) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             return status(401, { message: errorMessage });
         }
-    });
+    }, MobileRefreshTokenSchema);
+    return app;
 }
 

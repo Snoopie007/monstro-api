@@ -1,5 +1,6 @@
 import type { ProgramSession, RecurringReservation, Reservation } from "@/types";
 import { addDays, isBefore, isSameDay } from "date-fns";
+import { JWT } from "google-auth-library";
 
 
 async function tryCatch<T, E = Error>(
@@ -288,9 +289,26 @@ function getSessionState(session: ProgramSession, mid: string) {
 }
 
 
-
+/**
+ * Get the access token for the FCM client
+ * @param key - The FCM private key file
+ * @returns The access token
+ */
+async function getAccessTokenAsync(
+    key: Record<string, any> // Contents of your FCM private key file
+) {
+    const client = new JWT({
+        clientId: key.client_email,
+        email: key.client_email,
+        key: key.private_key,
+        scopes: ['https://www.googleapis.com/auth/cloud-platform']
+    });
+    const tokens = await client.authorize();
+    return tokens.access_token;
+}
 
 export {
+    getAccessTokenAsync,
     interEmailsAndText,
     generateReferralCode,
     generateVRs,

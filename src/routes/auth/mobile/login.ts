@@ -2,18 +2,20 @@ import { Elysia } from "elysia";
 import { db } from "../../../db/db";
 import bcrypt from "bcryptjs";
 import { generateMobileToken } from "../../../libs/auth";
-
-type MobileLoginBody = {
-    email: string;
-    password: string;
-}
+import { z } from "zod";
+const MobileLoginSchema = {
+    body: z.object({
+        email: z.string(),
+        password: z.string(),
+    }),
+};
 
 
 export async function mobileLogin(app: Elysia) {
 
-    return app.post('/login', async ({ body, status }) => {
+    app.post('/login', async ({ body, status }) => {
 
-        const { email, password } = body as MobileLoginBody;
+        const { email, password } = body;
 
         if (!email || !password) {
             return status(400, { message: "Email and password are required" })
@@ -71,5 +73,6 @@ export async function mobileLogin(app: Elysia) {
             console.error("Error in mobile login:", error);
             return status(500, { message: "Internal server error" });
         }
-    })
+    }, MobileLoginSchema);
+    return app;
 }

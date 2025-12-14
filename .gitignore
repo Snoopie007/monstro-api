@@ -2,6 +2,9 @@
 node_modules
 .cursor
 
+# keys
+_keys
+
 # output
 out
 dist

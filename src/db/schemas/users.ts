@@ -19,11 +19,11 @@ export const users = pgTable("users", {
 
 
 export const userNotifications = pgTable("user_notifications", {
-    id: text("id").primaryKey().notNull().default(sql`uuid_base62('not_')`),
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     platform: text("platform", { enum: ["ios", "android"] }).notNull(),
     token: text("token").notNull().unique(),
-    deviceId: text("device_id"),
+    deviceModelId: text("device_model_id"),
     deviceName: text("device_name"),
     enabled: boolean("enabled").notNull().default(true),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),

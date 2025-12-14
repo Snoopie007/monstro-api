@@ -4,27 +4,32 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
 import { users, members, accounts } from "@/db/schemas";
 import { generateReferralCode } from "@/libs/utils";
-
+import { z } from "zod";
 const GOOGLE_JWKS = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
 
 
-type GoogleLoginBody = {
-    idToken: string;
-}
+const GoogleLoginSchema = {
+    body: z.object({
+        idToken: z.string(),
+    }),
+};
 
-type GoogleNewAccountBody = {
-    token: string;
-    accessToken: string;
-    email: string;
-    name: string;
-    picture: string;
-    phone?: string;
-}
+const GoogleNewAccountSchema = {
+    body: z.object({
+        token: z.string(),
+        accessToken: z.string(),
+        email: z.string(),
+        name: z.string(),
+        picture: z.string(),
+        phone: z.string().optional(),
+    }),
+};
+
 
 export async function mobileGoogleLogin(app: Elysia) {
-    return app.post('/google', async ({ body, status }) => {
+    app.post('/google', async ({ body, status }) => {
 
-        const { idToken } = body as GoogleLoginBody;
+        const { idToken } = body;
 
         if (!idToken) {
             return status(400, { message: "Id token is required" });
@@ -39,7 +44,7 @@ export async function mobileGoogleLogin(app: Elysia) {
             const { payload } = decodedToken;
             const account = await db.query.accounts.findFirst({
                 where: (account, { eq, and }) => and(
-                    eq(account.providerAccountId, `${payload.sub}`),
+                    eq(account.accountId, `${payload.sub}`),
                     eq(account.provider, "google")
                 )
             });
@@ -85,8 +90,10 @@ export async function mobileGoogleLogin(app: Elysia) {
             return status(500, { message: errorMessage });
 
         }
-    }).post('/google/new', async ({ body, status }) => {
-        const { token, accessToken, email, name, picture, phone } = body as GoogleNewAccountBody;
+    }, GoogleLoginSchema)
+
+    app.post('/google/new', async ({ body, status }) => {
+        const { token, accessToken, email, name, picture, phone } = body;
 
         if (!token) {
             return status(400, { message: "Id token is required" });
@@ -158,22 +165,22 @@ export async function mobileGoogleLogin(app: Elysia) {
             // Check if account already exists to avoid duplicate key errors
             const existingAccount = await db.query.accounts.findFirst({
                 where: (account, { eq, and }) => and(
-                    eq(account.providerAccountId, payload.sub as string),
+                    eq(account.accountId, payload.sub as string),
                     eq(account.provider, "google")
                 )
             });
 
             if (!existingAccount) {
                 await db.insert(accounts).values({
+                    userId: user.id,
                     provider: "google",
                     type: "oidc",
-                    providerAccountId: payload.sub as string,
-                    userId: user.id,
-                    access_token: accessToken,
-                    expires_at: payload.exp,
-                    token_type: "bearer",
+                    accountId: payload.sub as string,
+                    accessToken: accessToken,
+                    expiresAt: payload.exp?.toString() || null,
+                    tokenType: "bearer",
                     scope: "openid",
-                    id_token: token
+                    idToken: token
                 });
             }
 
@@ -212,5 +219,6 @@ export async function mobileGoogleLogin(app: Elysia) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             return status(500, { message: errorMessage });
         }
-    });
+    }, GoogleNewAccountSchema);
+    return app;
 }

@@ -47,6 +47,7 @@
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.44.5",
     "elysia": "^1.4.17",
+    "google-auth-library": "^10.5.0",
     "helmet": "^8.1.0",
     "jose": "^6.0.13",
     "libphonenumber-js": "^1.12.14",
