@@ -33,7 +33,11 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function CreateGroupModal() {
+interface CreateGroupModalProps {
+    trigger?: React.ReactNode;
+}
+
+export function CreateGroupModal({ trigger }: CreateGroupModalProps) {
     const [open, setOpen] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -105,9 +109,11 @@ export function CreateGroupModal() {
     return (
         <Dialog open={open} onOpenChange={setOpen} >
             <DialogTrigger asChild>
-                <Button variant="primary" className="rounded-full mt-4">
-                    Create One Now!
-                </Button>
+                {trigger || (
+                    <Button variant="primary" className="rounded-full mt-4">
+                        Create One Now!
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] p-4">
             <DialogTitle className="mb-2">Create Group</DialogTitle>

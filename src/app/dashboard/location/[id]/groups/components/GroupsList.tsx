@@ -5,6 +5,7 @@ import { useState } from "react"
 import { useGroups } from "./GroupsProvider"
 import { Chat } from "@/types/chats"
 import { CreateGroupModal } from "./CreateGroupModal"
+import { Plus } from "lucide-react"
 export function GroupsList({ lid }: { lid: string }) {
     const [search, setSearch] = useState<string>('')
     const { chats } = useGroups();
@@ -13,6 +14,15 @@ export function GroupsList({ lid }: { lid: string }) {
         <div className="flex flex-col bg-muted/50 rounded-lg h-full min-h-0">
             <div className="flex items-center justify-between px-4 py-2">
                 <div className="text-base font-bold">Groups</div>
+                {chats.length > 0 && (
+                    <CreateGroupModal
+                        trigger={
+                            <button className="p-1 rounded-md hover:bg-foreground/10 transition-colors">
+                                <Plus className="size-5 text-muted-foreground hover:text-foreground" />
+                            </button>
+                        }
+                    />
+                )}
             </div>
 
             <div className="flex flex-col flex-1 min-h-0 space-y-2">

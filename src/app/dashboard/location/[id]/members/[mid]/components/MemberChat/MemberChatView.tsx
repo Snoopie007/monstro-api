@@ -15,6 +15,8 @@ import { isSameDay } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import { GroupChatInput } from "../../../../groups/components/GroupChatInput";
 import { ChatReactions, ChatReactionSheet } from "../../../../groups/components/reactions";
+import { UploadingMessage } from "../../../../groups/components/UploadingMessage";
+import { MessageMedia } from "../../../../groups/components/MessageMedia";
 import { Message } from "@/types";
 
 interface MemberChatViewProps {
@@ -198,83 +200,44 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
 																	{message.created ? formatMessageTimestamp(message.created) : "Unknown time"}
 																</span>
 															</div>
-															<div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
-																<ReactMarkdown>
-																	{message.content}
-																</ReactMarkdown>
-															</div>
 
-															{/* Media Display */}
-															{(() => {
-																const mediaFiles = message.media || [];
-																const images = mediaFiles.filter(m => m.fileType === 'image' || m.mimeType?.startsWith('image/'));
-																const otherFiles = mediaFiles.filter(m => !(m.fileType === 'image' || m.mimeType?.startsWith('image/')));
+															{/* Check if this is an optimistic upload in progress */}
+															{message.isOptimistic && message.pendingFiles ? (
+																<>
+																	{/* Show text content if any */}
+																	{message.content && (
+																		<div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
+																			<ReactMarkdown>
+																				{message.content}
+																			</ReactMarkdown>
+																		</div>
+																	)}
+																	{/* Show upload progress */}
+																	<UploadingMessage
+																		progress={message.progress ?? 0}
+																		files={message.pendingFiles}
+																	/>
+																</>
+															) : (
+																<>
+																	<div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
+																		<ReactMarkdown>
+																			{message.content}
+																		</ReactMarkdown>
+																	</div>
 
-																return (
-																	<>
-																		{/* Render Non-Image Files List */}
-																		{otherFiles.length > 0 && (
-																			<div className="flex flex-wrap gap-2 mt-2">
-																				{otherFiles.map((file) => (
-																					<a
-																						key={file.id}
-																						href={file.url}
-																						target="_blank"
-																						rel="noopener noreferrer"
-																						className="flex items-center p-3 bg-muted/50 gap-2 min-w-[150px] hover:bg-muted transition-colors rounded-md border border-border/50"
-																					>
-																						<span className="text-xs truncate max-w-[120px]">{file.fileName}</span>
-																					</a>
-																				))}
-																			</div>
-																		)}
+																	{/* Media attachments */}
+																	<MessageMedia media={message.media || []} />
 
-																		{/* Render Images Grid */}
-																		{images.length > 0 && (
-																			<div className={`grid gap-0.5 mt-2 rounded-xl overflow-hidden border border-border/20 ${images.length === 1 ? 'grid-cols-1 max-w-[260px]' : 'grid-cols-2 max-w-[320px]'
-																				}`}>
-																				{images.slice(0, 4).map((image, imgIndex) => {
-																					const isLastSlot = imgIndex === 3;
-																					const hasMore = images.length > 4;
-																					const showOverlay = isLastSlot && hasMore;
-																					const extraCount = images.length - 3;
-																					const isFirstOfThree = images.length === 3 && imgIndex === 0;
-
-																					return (
-																						<div
-																							key={image.id}
-																							className={`relative bg-muted ${images.length === 1
-																								? 'aspect-auto'
-																								: (isFirstOfThree ? 'row-span-2 h-full' : 'aspect-square')
-																								}`}
-																						>
-																							<img
-																								src={image.url}
-																								alt={image.fileName || 'Attachment'}
-																								className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
-																								onClick={() => window.open(image.url, '_blank')}
-																							/>
-																							{showOverlay && (
-																								<div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
-																									<span className="text-white font-bold text-lg">+{extraCount}</span>
-																								</div>
-																							)}
-																						</div>
-																					);
-																				})}
-																			</div>
-																		)}
-																	</>
-																);
-															})()}
-
-															{/* Reactions */}
-															<ChatReactions
-																reactions={message.reactions}
-																currentUserId={session?.user?.id}
-																onToggleReaction={(emoji: { value: string; name: string; type: string }) => handleToggleReaction(message.id, emoji)}
-																onOpenPicker={() => handleOpenReactionPicker(message as Message)}
-															/>
+																	{/* Reactions */}
+																	<ChatReactions
+																		reactions={message.reactions}
+																		currentUserId={session?.user?.id}
+																		onToggleReaction={(emoji: { value: string; name: string; type: string }) => handleToggleReaction(message.id, emoji)}
+																		onOpenPicker={() => handleOpenReactionPicker(message as Message)}
+																	/>
+																</>
+															)}
 														</div>
 													</div>
 												</div>
