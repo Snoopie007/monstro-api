@@ -1,9 +1,10 @@
 import { clientsideApiClient } from '@/libs/api/client';
 import supabase from '@/libs/client/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from './useSession';
 import { Message, Media, ReactionCount, ReactionEmoji, UploadUrl } from '@/types';
+import { uploadToS3 } from '@/libs/client/s3';
 
 
 
@@ -24,9 +25,14 @@ export const useSocialChat = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<Record<number, number>>({});
+  const [optimisticMessage, setOptimisticMessage] = useState<Message | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper to generate unique temp IDs for optimistic messages
+  const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   // Function to find an existing location-based group chat for a member
   // Returns null if no chat exists yet (chat will be created on first message)
@@ -39,7 +45,7 @@ export const useSocialChat = ({
       const api = clientsideApiClient(session.user.sbToken);
       const result = await api.get<{ chatId: string | null }>(
         `/x/loc/${locationId}/chat/member`,
-        { userId: toUserId }
+        { memberId: toUserId }
       );
       return result.chatId;
     } catch (err) {
@@ -51,102 +57,28 @@ export const useSocialChat = ({
 
   // Load messages for the current chat
   const loadMessages = useCallback(async (currentChatId: string) => {
+    if (!session?.user?.sbToken) {
+      setError('No authentication token');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
-
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('messages')
-        .select('*, sender:users!sender_id(id, name, image)')
-        .eq('chat_id', currentChatId)
-        .order('created_at', { ascending: true });
-
-      if (messagesError) throw messagesError;
-
-      // Fetch media and reactions for messages
-      const messageIds = messagesData?.map(m => m.id) || [];
-      let mediaMap: Record<string, Media[]> = {};
-      let reactionsMap: Record<string, ReactionCount[]> = {};
-
-      if (messageIds.length > 0) {
-        // Fetch media
-        const { data: mediaData, error: mediaError } = await supabase.from('media')
-          .select('*')
-          .in('owner_id', messageIds)
-          .eq('owner_type', 'message');
-
-        if (!mediaError && mediaData) {
-          mediaData.forEach(item => {
-            if (!mediaMap[item.owner_id]) {
-              mediaMap[item.owner_id] = [];
-            }
-            mediaMap[item.owner_id].push({
-              id: item.id,
-              url: item.url,
-              thumbnailUrl: item.thumbnail_url,
-              fileName: item.file_name,
-              fileType: item.file_type,
-              mimeType: item.mime_type,
-              altText: item.alt_text,
-              created: item.created_at,
-              updated: item.updated_at,
-              ownerId: item.owner_id,
-              ownerType: item.owner_type,
-              fileSize: item.file_size,
-              metadata: item.metadata
-            });
-          });
-        }
-
-        // Fetch reactions from reaction_counts view
-        const { data: reactionsData, error: reactionsError } = await supabase
-          .from('reaction_counts')
-          .select('*')
-          .eq('owner_type', 'message')
-          .in('owner_id', messageIds);
-
-        if (!reactionsError && reactionsData) {
-          reactionsData.forEach((reaction: any) => {
-            if (!reactionsMap[reaction.owner_id]) {
-              reactionsMap[reaction.owner_id] = [];
-            }
-            reactionsMap[reaction.owner_id].push({
-              ownerType: reaction.owner_type,
-              ownerId: reaction.owner_id,
-              type: reaction.type,
-              display: reaction.display,
-              name: reaction.name,
-              count: reaction.count,
-              userIds: reaction.user_ids || [],
-              userNames: reaction.user_names || []
-            });
-          });
-        }
-      }
-
-      const mapped = messagesData?.map((message) => ({
-        id: message.id,
-        chatId: message.chat_id,
-        senderId: message.sender_id,
-        content: message.content,
-        attachments: message.attachments,
-        readBy: message.read_by,
-        metadata: message.metadata,
-        created: message.created_at,
-        updated: message.updated_at,
-        sender: message.sender,
-        media: mediaMap[message.id] || [],
-        reactions: reactionsMap[message.id] || []
-      })) || [];
-
-      setMessages(mapped);
+      
+      const api = clientsideApiClient(session.user.sbToken);
+      const messagesData = await api.get<Message[]>(
+        `/protected/chats/${currentChatId}/messages`
+      );
+      
+      setMessages(messagesData);
     } catch (err) {
       console.error('Error loading messages:', err);
       setError('Failed to load messages');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session?.user?.sbToken]);
 
   // Send a message - creates chat on first message if needed
   const sendMessage = useCallback(async (
@@ -162,6 +94,8 @@ export const useSocialChat = ({
     }
 
     let currentChatId = chatId;
+    const tempId = generateTempId();
+    const hasFiles = files && files.length > 0;
 
     try {
       // If no chat exists yet, create it via API
@@ -175,10 +109,40 @@ export const useSocialChat = ({
         setChatId(currentChatId);
       }
 
+      // STEP 1: Create optimistic message immediately if we have files
+      if (hasFiles) {
+        const tempMessage: Message = {
+          id: tempId,
+          chatId: currentChatId,
+          senderId: fromUserId,
+          content,
+          metadata: {},
+          created: new Date(),
+          updated: null,
+          sender: {
+            id: fromUserId,
+            name: session?.user?.name || 'You',
+            image: session?.user?.image || null,
+            email: session?.user?.email || '',
+            emailVerified: null,
+            password: null,
+            created: new Date(),
+            updated: null,
+          } as any,
+          media: [],
+          reactions: [],
+          // Optimistic fields
+          progress: 0,
+          pendingFiles: files,
+          isOptimistic: true,
+        };
+        setOptimisticMessage(tempMessage);
+      }
+
       let uploadedFiles: Record<string, any>[] = [];
 
-      // Step 1: Get presigned URLs if files exist
-      if (files && files.length > 0) {
+      // STEP 2: Get presigned URLs and upload with progress tracking
+      if (hasFiles) {
         const api = clientsideApiClient(session.user.sbToken);
         const presignedUrls = await api.post(`/protected/medias/presigned`, {
           chatId: currentChatId,
@@ -189,21 +153,32 @@ export const useSocialChat = ({
           })),
         }) as UploadUrl[];
 
-        // Step 2: Upload files to S3 using presigned URLs
+        // Track individual file progress for accurate overall calculation
+        const fileProgresses = new Array(files.length).fill(0);
+
+        const calculateOverallProgress = () => {
+          if (files.length === 0) return 0;
+          const total = fileProgresses.reduce((sum, p) => sum + Math.min(100, Math.max(0, p)), 0);
+          return Math.min(100, Math.max(0, Math.round(total / files.length)));
+        };
+
+        // STEP 3: Upload files to S3 with progress tracking
         await Promise.all(
           files.map(async (file, index) => {
             const presignedUrl = presignedUrls[index];
-            const response = await fetch(presignedUrl.uploadUrl, {
-              method: 'PUT',
-              body: file,
-              headers: {
-                'Content-Type': file.type,
-              },
-            });
 
-            if (!response.ok) {
-              throw new Error(`Failed to upload file: ${file.name}`);
-            }
+            await uploadToS3(file, presignedUrl.uploadUrl, (progress) => {
+              fileProgresses[index] = progress;
+              const overallProgress = calculateOverallProgress();
+              
+              // Update optimistic message progress in real-time
+              setOptimisticMessage(prev => 
+                prev ? { ...prev, progress: overallProgress } : null
+              );
+              
+              // Also update the uploadProgress state (for backward compatibility)
+              setUploadProgress(prev => ({ ...prev, [index]: progress }));
+            });
 
             uploadedFiles.push({
               fileName: presignedUrl.fileName,
@@ -213,17 +188,22 @@ export const useSocialChat = ({
             });
           })
         );
+
+        // Clear file progress tracking
+        setUploadProgress({});
       }
 
-      // Step 3: Send message with uploaded file metadata
+      // STEP 4: Send message to API with uploaded file metadata
       const api = clientsideApiClient(session.user.sbToken);
       const enrichedMessage = await api.post(`/protected/chats/${currentChatId}/messages`, {
         content,
         files: uploadedFiles,
       }) as any;
 
-      // Since we have self: false, we won't receive our own messages via broadcast
-      // So we need to manually add it to the local state
+      // STEP 5: Clear optimistic message
+      setOptimisticMessage(null);
+
+      // STEP 6: Add real message to state
       const message: Message = {
         id: enrichedMessage.id,
         chatId: enrichedMessage.chatId,
@@ -237,7 +217,6 @@ export const useSocialChat = ({
         reactions: [],
       };
 
-      // Add duplicate check in case broadcast arrived before API response
       setMessages(prev => {
         if (prev.some(m => m.id === message.id)) return prev;
         return [...prev, message];
@@ -245,10 +224,13 @@ export const useSocialChat = ({
 
       return enrichedMessage;
     } catch (err) {
+      // Clear optimistic message on error
+      setOptimisticMessage(null);
+      setUploadProgress({});
       console.error('Error sending message:', err);
       throw err;
     }
-  }, [chatId, fromUserId, toUserId, locationId, session?.user?.sbToken]);
+  }, [chatId, fromUserId, toUserId, locationId, session?.user?.sbToken, session?.user?.name, session?.user?.image, session?.user?.email]);
 
   // Initialize chat and set up realtime subscription
   useEffect(() => {
@@ -447,12 +429,21 @@ export const useSocialChat = ({
     }
   }, [messages, session?.user?.sbToken, session?.user?.name, session?.user?.id, chatId, loadMessages]);
 
+  // Combine real messages with optimistic message for display
+  const displayMessages = useMemo(() => {
+    if (optimisticMessage) {
+      return [...messages, optimisticMessage];
+    }
+    return messages;
+  }, [messages, optimisticMessage]);
+
   return {
-    messages,
+    messages: displayMessages,
     isConnected,
     isLoading,
     chatId,
     error,
+    uploadProgress,
     sendMessage,
     toggleReaction,
     refresh: () => chatId ? loadMessages(chatId) : Promise.resolve()

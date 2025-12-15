@@ -22,4 +22,7 @@ export type Message = typeof messages.$inferSelect & {
     sender?: User;
     media?: Media[];
     reactions?: ReactionCount[];
+    progress?: number;
+    pendingFiles?: File[];
+    isOptimistic?: boolean;
 }
