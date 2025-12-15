@@ -57,7 +57,95 @@ function getFileTypeCategory(mimeType: string): 'image' | 'video' | 'audio' | 'd
 
 
 export function messageRoute(app: Elysia) {
-    app.post('/messages', async ({ params, body, status, ...ctx }) => {
+    // Get messages for a chat with media and reactions
+    app.get('/messages', async ({ params, status }) => {
+        const { cid } = params;
+
+        try {
+            // Fetch messages with sender and media relations
+            const messagesData = await db.query.messages.findMany({
+                where: (messages, { eq }) => eq(messages.chatId, cid),
+                with: {
+                    sender: {
+                        columns: {
+                            id: true,
+                            name: true,
+                            image: true,
+                        }
+                    },
+                    medias: true,
+                },
+                orderBy: (messages, { asc }) => asc(messages.created),
+            });
+
+            // Get message IDs for reaction lookup
+            const messageIds = messagesData.map(m => m.id);
+
+            // Fetch reactions in bulk
+            let reactionsMap: Record<string, any[]> = {};
+            if (messageIds.length > 0) {
+                const reactions = await db.select()
+                    .from(reactionCounts)
+                    .where(
+                        and(
+                            eq(reactionCounts.ownerType, 'message'),
+                            inArray(reactionCounts.ownerId, messageIds)
+                        )
+                    );
+
+                reactions.forEach(r => {
+                    if (!reactionsMap[r.ownerId]) {
+                        reactionsMap[r.ownerId] = [];
+                    }
+                    reactionsMap[r.ownerId]?.push({
+                        display: r.display,
+                        name: r.name,
+                        count: r.count,
+                        type: r.type,
+                        userIds: r.userIds || [],
+                        userNames: r.userNames || [],
+                        ownerType: r.ownerType,
+                        ownerId: r.ownerId,
+                    });
+                });
+            }
+
+            // Transform to client format
+            const enrichedMessages = messagesData.map(msg => ({
+                id: msg.id,
+                chatId: msg.chatId,
+                senderId: msg.senderId,
+                content: msg.content,
+                metadata: msg.metadata,
+                created: msg.created,
+                updated: msg.updated,
+                sender: msg.sender || null,
+                media: (msg.medias || []).map(m => ({
+                    id: m.id,
+                    ownerId: m.ownerId,
+                    ownerType: m.ownerType,
+                    url: m.url,
+                    thumbnailUrl: m.thumbnailUrl,
+                    fileName: m.fileName,
+                    fileType: m.fileType,
+                    mimeType: m.mimeType,
+                    altText: m.altText,
+                    fileSize: m.fileSize,
+                    metadata: m.metadata,
+                    created: m.created,
+                    updated: m.updated,
+                })),
+                reactions: reactionsMap[msg.id] || [],
+            }));
+
+            return status(200, enrichedMessages);
+        } catch (error) {
+            console.error('Error fetching messages:', error);
+            return status(500, { error: 'Failed to load messages' });
+        }
+    }, GetProps)
+
+    .post('/messages', async ({ params, body, status, ...ctx }) => {
         const { userId } = ctx as Context & { userId: string };
 
         const { cid } = params;
@@ -107,6 +195,11 @@ export function messageRoute(app: Elysia) {
 
             let medias: Media[] = [];
             if (files.length > 0) {
+                console.log('[DEBUG] Inserting media for message:', {
+                    messageId: newMessage.id,
+                    fileCount: files.length,
+                    files: files.map(f => ({ fileName: f.fileName, url: f.url }))
+                });
 
                 medias = await db.insert(media).values(files.map(file => ({
                     ...file,
@@ -114,6 +207,11 @@ export function messageRoute(app: Elysia) {
                     ownerType: 'message' as const,
                     fileType: getFileTypeCategory(file.mimeType),
                 }))).returning();
+
+                console.log('[DEBUG] Inserted media:', {
+                    count: medias.length,
+                    ids: medias.map(m => m.id)
+                });
             }
 
             const enrichedMessage: Message = {

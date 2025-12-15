@@ -10,26 +10,33 @@ const GetProps = {
         lid: z.string(),
     }),
     query: z.object({
-        userId: z.string(),
+        memberId: z.string(),
+    }),
+};
+
+const PostProps = {
+    params: z.object({
+        lid: z.string(),
+    }),
+    body: z.object({
+        memberId: z.string(),
     }),
 };
 
 
-
-
 export function memberChatRoute(app: Elysia) {
-    // Find existing location chat for a member (GET - doesn't create)
+    // Find existing location DM chat between authenticated user and a member (GET - doesn't create)
     app.get('/member', async ({ params, query, status, ...ctx }) => {
-
-        const { userId } = ctx as Context & { userId: string };
+        const { userId: authUserId } = ctx as Context & { userId: string };
         const { lid } = params;
+        const { memberId } = query;
 
-        if (!userId) {
+        if (!authUserId) {
             return status(401, { error: 'User not authenticated' });
         }
 
-
         try {
+            // Find DM chats in this location (no groupId)
             const existingChats = await db.query.chats.findMany({
                 where: and(
                     eq(chats.locationId, lid),
@@ -40,9 +47,11 @@ export function memberChatRoute(app: Elysia) {
                 }
             });
 
-            const existingChat = existingChats.find(chat =>
-                chat.chatMembers.some(cm => cm.userId === userId)
-            );
+            // Find a chat where BOTH authenticated user AND target member are participants
+            const existingChat = existingChats.find(chat => {
+                const memberIds = chat.chatMembers.map(cm => cm.userId);
+                return memberIds.includes(authUserId) && memberIds.includes(memberId);
+            });
 
             if (existingChat) {
                 return status(200, { chatId: existingChat.id });
@@ -53,21 +62,20 @@ export function memberChatRoute(app: Elysia) {
             console.error('Error finding member chat:', error);
             return status(500, { error: 'Internal server error' });
         }
-    }, GetProps).post('/member', async ({ params, body, query, status, ...ctx }) => {
-        const { userId } = ctx as Context & { userId: string };
-        const { lid } = params;
+    }, GetProps)
 
-        if (!userId) {
+    // Find or create a DM chat between authenticated user and a member (POST - creates if needed)
+    .post('/member', async ({ params, body, status, ...ctx }) => {
+        const { userId: authUserId } = ctx as Context & { userId: string };
+        const { lid } = params;
+        const { memberId } = body;
+
+        if (!authUserId) {
             return status(401, { error: 'User not authenticated' });
         }
 
-
         try {
-            // Find existing location chat where the member is a participant
-            // We need to find a chat that:
-            // 1. Has location_id = lid
-            // 2. Has no group_id (not a group chat)
-            // 3. Has the member in chat_members
+            // Find DM chats in this location (no groupId)
             const existingChats = await db.query.chats.findMany({
                 where: and(
                     eq(chats.locationId, lid),
@@ -78,12 +86,13 @@ export function memberChatRoute(app: Elysia) {
                 }
             });
 
-            // Find a chat where the member is a participant
-            const existingChat = existingChats.find(chat =>
-                chat.chatMembers.some(cm => cm.userId === userId)
-            );
+            // Find a chat where BOTH authenticated user AND target member are participants
+            const existingChat = existingChats.find(chat => {
+                const memberIds = chat.chatMembers.map(cm => cm.userId);
+                return memberIds.includes(authUserId) && memberIds.includes(memberId);
+            });
 
-            // If chat exists and member is in it, return it
+            // If chat exists with both users, return it
             if (existingChat) {
                 return status(200, { chatId: existingChat.id });
             }
@@ -100,7 +109,7 @@ export function memberChatRoute(app: Elysia) {
 
             // Create the chat
             const result = await db.insert(chats).values({
-                startedBy: userId,
+                startedBy: authUserId,
                 locationId: lid,
                 name: location.name,
             }).returning();
@@ -110,23 +119,18 @@ export function memberChatRoute(app: Elysia) {
                 return status(500, { error: 'Failed to create chat' });
             }
 
-            // Add the member to the chat
-            await db.insert(chatMembers).values({
-                chatId: newChat.id,
-                userId: userId,
-            });
+            // Add BOTH users to the chat
+            await db.insert(chatMembers).values([
+                { chatId: newChat.id, userId: authUserId },
+                { chatId: newChat.id, userId: memberId },
+            ]);
 
             return status(201, { chatId: newChat.id, created: true });
         } catch (error) {
             console.error('Error finding/creating member chat:', error);
             return status(500, { error: 'Internal server error' });
         }
-    }, {
-        ...GetProps,
-        body: z.object({
-            userId: z.string(),
-        }),
-    });
+    }, PostProps);
 
     return app;
 }
