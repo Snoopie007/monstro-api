@@ -125,7 +125,8 @@ export function mlReservationsRoutes(app: Elysia) {
             const all = [...(r ? [r] : []), ...filteredVrs];
 
             if (all.length === 0) {
-                return status(200, null);
+                console.log("no reservations found");
+                return status(200, JSON.stringify(null));
             }
 
             // Find the closest reservation to current time
@@ -134,7 +135,6 @@ export function mlReservationsRoutes(app: Elysia) {
                 const currentDiff = Math.abs(current.startOn.getTime() - startDate.getTime());
                 return currentDiff < prevDiff ? current : prev;
             });
-
             return status(200, closest);
         } catch (error) {
             console.error(error);
