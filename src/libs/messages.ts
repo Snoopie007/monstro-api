@@ -39,13 +39,10 @@ export async function broadcastMessage(chatId: string, message: Message): Promis
     });
 
     // Broadcast the enriched message
-    await channel.send({
-      type: 'broadcast',
-      event: 'new_message',
-      payload: {
-        message
-      },
-    });
+    await channel.httpSend(
+      'new_message',
+      { message },
+    );
 
     supabase.removeChannel(channel);
 
