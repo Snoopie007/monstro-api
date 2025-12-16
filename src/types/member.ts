@@ -175,7 +175,7 @@ export type LocationMembersQuery = {
   columnFilters: string
 }
 
-export type MemberTag = {
+export type MemberTagRef = {
   id: string
   name: string
 }
@@ -201,7 +201,7 @@ export type MemberListItem = {
   referralCode: string
   stripeCustomerId: string | null
   memberLocation: { status: string }
-  tags: MemberTag[]
+  tags: MemberTagRef[]
   customFields: MemberCustomFieldValue[]
 }
 

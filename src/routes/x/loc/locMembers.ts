@@ -13,7 +13,7 @@ import type {
     LocationMembersQuery,
     MemberCustomFieldValue,
     MemberSortableField,
-    MemberTag,
+    MemberTagRef,
 } from "@/types/member";
 
 const sortColumns = {
@@ -204,7 +204,7 @@ function locMembers(app: Elysia) {
                 .offset((pageNumber - 1) * pageSize);
 
             const memberIds = membersResult.map((m) => m.id);
-            let memberTagsMap: Record<string, MemberTag[]> = {};
+            let memberTagsMap: Record<string, MemberTagRef[]> = {};
 
             if (memberIds.length > 0) {
                 const memberTagsResult = await db
@@ -226,7 +226,7 @@ function locMembers(app: Elysia) {
                         name: row.tagName,
                     });
                     return acc;
-                }, {} as Record<string, MemberTag[]>);
+                }, {} as Record<string, MemberTagRef[]>);
             }
 
             let memberCustomFieldsMap: Record<string, MemberCustomFieldValue[]> = {};
