@@ -38,7 +38,7 @@ export default async function LocationLayout(props: LocationLayoutProps) {
       <AccountStatusProvider locationState={locationState}>
         <TooltipProvider>
           <LocationTopNav lid={params.id} />
-          <div className="relative flex flex-1 flex-row justify-start items-start w-full">
+          <div className="relative flex flex-1 flex-row overflow-hidden justify-start items-start w-full">
             <LocationSideNav lid={params.id} />
             <div className="flex-1 h-full">{children}</div>
           </div>

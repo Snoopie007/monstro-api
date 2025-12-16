@@ -164,3 +164,39 @@ export const sortColumnMap: Record<MemberSortableField, any> = {
     email: members.email,
     dob: members.dob,
 }
+
+export type MemberTag = {
+    id: string
+    name: string
+}
+
+export type MemberCustomFieldValue = {
+    fieldId: string
+    value: string
+}
+
+export type MemberListItem = {
+    id: string
+    userId: string
+    firstName: string
+    lastName: string | null
+    email: string
+    phone: string
+    avatar: string | null
+    created: string
+    updated: string | null
+    dob: string | null
+    gender: string | null
+    firstTime: boolean
+    referralCode: string
+    stripeCustomerId: string | null
+    memberLocation: { status: string }
+    tags: MemberTag[]
+    customFields: MemberCustomFieldValue[]
+}
+
+export type LocationMembersResponse = {
+    count: number
+    members: MemberListItem[]
+    customFields: CustomFieldDefinition[]
+}
