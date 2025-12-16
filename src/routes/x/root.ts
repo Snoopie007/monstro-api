@@ -6,6 +6,7 @@ import { xClass } from './loc/class/root';
 import { xEmail } from './loc/email/root';
 import { xChat } from './loc/chat/root';
 import { xGroups } from './loc/groups/root';
+import { locMembers } from './loc/locMembers';
 
 export const XRoutes = new Elysia()
     .use(AuthXMiddleware)
@@ -16,6 +17,7 @@ export const XRoutes = new Elysia()
         app.use(xClass);
         app.use(xChat);
         app.use(xGroups);
+        app.group('/members', (app) => app.use(locMembers));
         return app;
     })
 
