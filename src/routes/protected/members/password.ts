@@ -35,12 +35,18 @@ export async function resetPassword(app: Elysia) {
             }
 
             if (!user.password) {
-                return status(401, { error: "User has no password" })
+                return status(401, {
+                    message: "User has no password",
+                    code: "NO_PASSWORD"
+                })
             }
 
             const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
             if (!isPasswordValid) {
-                return status(401, { error: "Invalid password" })
+                return status(401, {
+                    message: "Invalid password",
+                    code: "INVALID_PASSWORD"
+                })
             }
 
             const hashedPassword = await bcrypt.hash(newPassword, 10);

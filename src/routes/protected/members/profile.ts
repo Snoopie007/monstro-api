@@ -45,7 +45,8 @@ export function memberProfile(app: Elysia) {
             });
             return status(200, { success: true });
         } catch (error) {
-            return status(401, { error: "Unauthorized" });
+            console.error(error);
+            return status(500, { message: "Internal server error", code: "INTERNAL_SERVER_ERROR" });
         }
     }, MemberProfileProps).patch("/email", async ({ status, body, params }) => {
         const { email } = body;

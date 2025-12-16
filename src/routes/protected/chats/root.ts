@@ -24,7 +24,7 @@ export const userChats = new Elysia({ prefix: '/chats' })
     .get('/', async ({ status, ...ctx }) => {
         const { memberId, userId } = ctx as Context & { memberId: string, userId: string };
         if (!memberId || !userId) {
-            return status(401, { error: 'Unauthorized' });
+            return status(401, { message: "Unauthorized", code: "UNAUTHORIZED" });
         }
         try {
 

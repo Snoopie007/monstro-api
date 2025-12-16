@@ -31,7 +31,7 @@ export async function mobileRefreshToken(app: Elysia) {
         } catch (error) {
             console.error(error);
             const errorMessage = error instanceof Error ? error.message : String(error);
-            return status(401, { message: errorMessage });
+            return status(400, { message: errorMessage });
         }
     }, MobileRefreshTokenSchema);
     return app;

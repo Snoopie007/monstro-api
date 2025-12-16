@@ -65,13 +65,13 @@ export function memberChatRoute(app: Elysia) {
     }, GetProps)
 
     // Find or create a DM chat between authenticated user and a member (POST - creates if needed)
-    .post('/member', async ({ params, body, status, ...ctx }) => {
+    app.post('/member', async ({ params, body, status, ...ctx }) => {
         const { userId: authUserId } = ctx as Context & { userId: string };
         const { lid } = params;
         const { memberId } = body;
 
         if (!authUserId) {
-            return status(401, { error: 'User not authenticated' });
+            return status(401, { message: "Unauthorized", code: "UNAUTHORIZED" });
         }
 
         try {

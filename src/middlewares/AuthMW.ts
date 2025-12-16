@@ -1,11 +1,25 @@
 import type { ExtendedVendorUser } from '@/types/auth';
 import { Elysia } from 'elysia';
-import { jwtVerify } from 'jose';
+import { errors, jwtVerify } from 'jose';
+
+type MobileTokenReturnType = {
+    ok: boolean;
+    data: {
+        mid: string | null;
+        userId: string | null;
+        isServiceRole: boolean;
+    } | null;
+    code: string;
+}
 
 
-async function verifyToken(token: string) {
+async function verifyToken(token: string): Promise<MobileTokenReturnType> {
     if (!process.env.SUPABASE_JWT_SECRET) {
-        return null;
+        return {
+            ok: false,
+            data: null,
+            code: "SUPABASE_JWT_SECRET_NOT_SET",
+        };
     }
 
     try {
@@ -14,23 +28,41 @@ async function verifyToken(token: string) {
         // Check if this is a service role token (used for internal service-to-service calls)
         if (payload.role === 'service_role') {
             // Service role token - valid for internal operations
-            return { mid: 'service', userId: null, isServiceRole: true };
+            return { ok: true, data: { mid: null, userId: null, isServiceRole: true }, code: "SUCCESS" };
         }
 
         // Regular user token
         const { user_metadata } = payload as { user_metadata: { member_id: string } };
         const userId = payload.sub as string; // Extract userId from sub field
-        return { mid: user_metadata.member_id, userId, isServiceRole: false };
+        return { ok: true, data: { mid: user_metadata.member_id, userId, isServiceRole: false }, code: "SUCCESS" };
     } catch (error) {
+
         console.log("Token verification error", error);
-        return null;
+        if (error instanceof errors.JWTExpired) {
+            return { ok: false, data: null, code: "TOKEN_EXPIRED" };
+        }
+        return { ok: false, data: null, code: "TOKEN_VERIFICATION_FAILED" };
     }
 }
 
-async function verifyTokenX(token: string) {
+type VendorTokenReturnType = {
+    ok: boolean;
+    data: {
+        vendorId: string;
+        userId: string;
+    } | null;
+    code: string;
+}
+
+
+async function verifyTokenX(token: string): Promise<VendorTokenReturnType> {
 
     if (!process.env.SUPABASE_JWT_SECRET) {
-        return null;
+        return {
+            ok: false,
+            data: null,
+            code: "SUPABASE_JWT_SECRET_NOT_SET",
+        };
     }
 
     try {
@@ -40,11 +72,31 @@ async function verifyTokenX(token: string) {
         const user = payload as ExtendedVendorUser;
         const userId = payload.sub as string; // Extract userId from sub field
 
-        return { vendorId: user.vendorId, userId };
+        return {
+            ok: true,
+            data: {
+                vendorId: user.vendorId,
+                userId,
+            },
+            code: "SUCCESS",
+        };
     } catch (error) {
+        let data = {
+            ok: false,
+            data: null,
+        }
+        if (error instanceof errors.JWTExpired) {
+            return {
+                ...data,
+                code: "TOKEN_EXPIRED",
+            };
+        }
         console.log("Token verification error", error);
-        return null;
-    }
+        return {
+            ...data,
+            code: "TOKEN_VERIFICATION_FAILED",
+        };
+    };
 }
 
 export async function AuthMiddleware(app: Elysia) {
@@ -54,27 +106,37 @@ export async function AuthMiddleware(app: Elysia) {
 
         if (!auth) {
             console.log('AuthMiddleware: No Authorization header');
-            return status(401, { error: "Unauthorized - No token provided" });
+            return status(401, {
+                message: "No token provided",
+                code: "UNAUTHORIZED"
+            });
         }
 
         const token = auth.split(" ")[1];
 
         if (!token) {
             console.log('AuthMiddleware: No token in Authorization header');
-            return status(401, { error: "Unauthorized - Invalid token format" });
+            return status(401, {
+                message: "Invalid token format",
+                code: "INVALID_TOKEN"
+            });
         }
 
-        const result = await verifyToken(token);
+        const res = await verifyToken(token);
 
-        if (!result) {
+        if (!res.ok || !res.data) {
             console.log('AuthMiddleware: Token verification failed');
-            return status(401, { error: "Unauthorized." });
+            return status(401, {
+                message: "Unauthorized.",
+                code: res.code
+            });
         }
+        const { mid, userId, isServiceRole } = res.data;
 
         return {
-            memberId: result.mid,
-            userId: result.userId,
-            isServiceRole: result.isServiceRole
+            memberId: mid,
+            userId: userId,
+            isServiceRole: isServiceRole
         };
     })
 }
@@ -84,17 +146,28 @@ export async function AuthXMiddleware(app: Elysia) {
 
         const auth = headers['authorization']
 
-        if (!auth) return status(401, { error: "Unauthorized" })
+        const error = {
+            message: "Unauthorized",
+            code: "UNAUTHORIZED"
+        }
+        if (!auth) return status(401, error);
 
         const token = auth.split(" ")[1];
 
-        if (!token) return status(401, { error: "Unauthorized." })
+        if (!token) return status(401, error);
 
-        const result = await verifyTokenX(token);
+        const res = await verifyTokenX(token);
 
-        if (!result) return status(401, { error: "Unauthorized" })
+        if (!res.ok || !res.data) {
+            return status(401, {
+                message: "Unauthorized",
+                code: res.code
+            });
+        };
 
-        return { vendorId: result.vendorId, userId: result.userId };
+        const { vendorId, userId } = res.data;
+
+        return { vendorId: vendorId, userId: userId };
 
     })
 }

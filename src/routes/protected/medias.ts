@@ -44,7 +44,7 @@ export function mediaRoutes(app: Elysia) {
         const { files, chatId } = body;
 
         if (!userId) {
-            return status(401, { error: "Unauthorized" });
+            return status(401, { message: "Unauthorized", code: "UNAUTHORIZED" });
         }
 
         validateFiles(files);
@@ -87,7 +87,10 @@ export function mediaRoutes(app: Elysia) {
         const { files } = body;
 
         if (!userId) {
-            return status(401, { error: "Unauthorized" });
+            return status(401, {
+                message: "Unauthorized",
+                code: "UNAUTHORIZED"
+            });
         }
 
         validateFiles(files);

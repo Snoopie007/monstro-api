@@ -30,7 +30,8 @@ export async function memberAccounts(app: Elysia) {
             return status(200, accounts);
 
         } catch (error) {
-            return status(401, { error: "Unauthorized" });
+            console.error(error);
+            return status(500, { message: "Internal server error", code: "INTERNAL_SERVER_ERROR" });
         }
     }, MemberAccountsProps)
 }

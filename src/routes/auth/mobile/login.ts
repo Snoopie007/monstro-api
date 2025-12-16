@@ -39,7 +39,7 @@ export async function mobileLogin(app: Elysia) {
 
             if (!match) {
                 console.log("Password mismatch");
-                return status(401, { message: "Invalid email or password." })
+                return status(400, { message: "Invalid email or password." })
             }
 
             const member = await db.query.members.findFirst({

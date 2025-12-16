@@ -6,7 +6,7 @@ export const userFriends = new Elysia({ prefix: '/friends' })
     .get('/', async ({ params, body, status, ...ctx }) => {
         const { userId } = ctx as Context & { userId: string };
         if (!userId) {
-            return status(401, { error: "Unauthorized" });
+            return status(401, { message: "Unauthorized", code: "UNAUTHORIZED" });
         }
         try {
             const friends = await db.query.friends.findMany({
