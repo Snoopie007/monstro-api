@@ -145,29 +145,30 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
 										</div>
 									) : (
 										messages.map((message, index) => {
-											const isFromCurrentUser = message.senderId === fromUserId;
-											const isFromMember = message.senderId === toUserId;
+										const isFromCurrentUser = message.senderId === fromUserId;
+										const isFromMember = message.senderId === toUserId;
 
-											// Determine display name and avatar based on sender
-											let displayName: string;
-											let avatarSrc: string | undefined;
-											let fallbackInitials: string;
+										let displayName: string;
+										let avatarSrc: string | undefined;
+										let fallbackInitials: string;
 
-											if (isFromMember) {
-												displayName = currentMemberName;
-												avatarSrc = currentMemberAvatar;
-												fallbackInitials = currentMemberInitials;
-											} else {
-												// Staff member (current user or other staff)
-												displayName = message.sender?.name || "Staff";
-												avatarSrc = message.sender?.image || undefined;
-												fallbackInitials = (message.sender?.name || "S")
-													.split(" ")
-													.map((part: string) => part[0])
-													.join("")
-													.slice(0, 2)
-													.toUpperCase() || "S";
-											}
+										if (message.isOptimistic && message.sender) {
+											displayName = message.sender.name ?? "You";
+											avatarSrc = message.sender.image ?? undefined;
+											fallbackInitials = displayName.charAt(0) ?? "?";
+										} else if (isFromMember) {
+											displayName = currentMemberName;
+											avatarSrc = currentMemberAvatar;
+											fallbackInitials = currentMemberInitials;
+										} else if (isFromCurrentUser) {
+											displayName = session?.user?.name ?? "You";
+											avatarSrc = session?.user?.image ?? undefined;
+											fallbackInitials = displayName.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase() || "?";
+										} else {
+											displayName = "Staff";
+											avatarSrc = undefined;
+											fallbackInitials = "S";
+										}
 
 											const prevMessage = messages[index - 1];
 											const isNewDay = !prevMessage || !isSameDay(new Date(prevMessage.created), new Date(message.created));
@@ -227,7 +228,7 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
 																	</div>
 
 																	{/* Media attachments */}
-																	<MessageMedia media={message.media || []} />
+																	<MessageMedia media={message.medias || []} />
 
 																	{/* Reactions */}
 																	<ChatReactions

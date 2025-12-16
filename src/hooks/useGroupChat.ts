@@ -67,7 +67,10 @@ export const useGroupChat = ({
         `/protected/chats/${currentChatId}/messages`
       );
       
-      setMessages(messagesData);
+      setMessages(messagesData.map(msg => ({
+        ...msg,
+        media: msg.medias || [],
+      })));
     } catch (err) {
       console.error('Error loading messages:', err);
       setError('Failed to load messages');
@@ -108,7 +111,7 @@ export const useGroupChat = ({
             name: session?.user?.name || 'You',
             image: session?.user?.image || null,
           } as any,
-          media: [],
+          medias: [],
           reactions: [],
           // Optimistic fields
           progress: 0,
@@ -118,7 +121,7 @@ export const useGroupChat = ({
         setOptimisticMessage(tempMessage);
       }
 
-      let uploadedFiles: Record<string, any>[] = [];
+      let uploadedFiles: Record<string, any>[] = [];  
 
       // STEP 2: Get presigned URLs and upload with progress tracking
       if (hasFiles) {
@@ -178,15 +181,8 @@ export const useGroupChat = ({
 
       // STEP 6: Add real message to state
       const mapped: Message = {
-        id: enrichedMessage.id,
-        chatId: enrichedMessage.chatId,
-        senderId: enrichedMessage.senderId,
-        content: enrichedMessage.content,
-        metadata: enrichedMessage.metadata,
-        sender: enrichedMessage.sender,
+        ...enrichedMessage,
         media: enrichedMessage.medias || [],
-        created: enrichedMessage.created,
-        updated: enrichedMessage.updated,
         reactions: [],
       };
 
@@ -253,15 +249,8 @@ export const useGroupChat = ({
 
         // Messages are now enriched by the API with sender and media data
         const mapped: Message = {
-          id: enrichedMessage.id,
-          chatId: enrichedMessage.chatId,
-          senderId: enrichedMessage.senderId,
-          content: enrichedMessage.content,
-          metadata: enrichedMessage.metadata,
-          sender: enrichedMessage.sender,
+          ...enrichedMessage,
           media: enrichedMessage.medias || [],
-          created: enrichedMessage.created,
-          updated: enrichedMessage.updated,
           reactions: enrichedMessage.reactions || [],
         };
 
@@ -283,15 +272,8 @@ export const useGroupChat = ({
         }
 
         const mapped: Message = {
-          id: enrichedMessage.id,
-          chatId: enrichedMessage.chatId,
-          senderId: enrichedMessage.senderId,
-          content: enrichedMessage.content,
-          metadata: enrichedMessage.metadata,
-          sender: enrichedMessage.sender,
-          media: enrichedMessage.medias || [],
-          created: enrichedMessage.created,
-          updated: enrichedMessage.updated,
+          ...enrichedMessage,
+          medias: enrichedMessage.medias || [],
           reactions: enrichedMessage.reactions || [],
         };
 

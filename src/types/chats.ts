@@ -20,7 +20,7 @@ export type ChatMember = typeof chatMembers.$inferSelect & {
 
 export type Message = typeof messages.$inferSelect & {
     sender?: User;
-    media?: Media[];
+    medias?: Media[];
     reactions?: ReactionCount[];
     progress?: number;
     pendingFiles?: File[];

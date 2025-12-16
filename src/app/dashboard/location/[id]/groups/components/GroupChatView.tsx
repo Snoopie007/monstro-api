@@ -4,9 +4,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useGroupChat } from "@/hooks/useGroupChat";
 import { useSession } from "@/hooks/useSession";
 import { formatMessageTimestamp, getDateLabel } from "@/libs/utils";
-import { Message } from "@/types/chats";
+import { Message, User } from "@/types";
 import { isSameDay } from "date-fns";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { ChatActions } from "./ChatActions";
 import { EditableMessage } from "./EditableMessage";
@@ -25,6 +25,14 @@ export function GroupChatView({ lid }: { lid: string }) {
         chatId: currentChat?.id ?? null,
         fromUserId: session?.user?.id ?? null,
     });
+    
+    const senderLookup = useMemo(() => {
+        if (!currentChat?.chatMembers) return {};
+        return currentChat.chatMembers.reduce<Record<string, User | undefined>>((acc, member) => {
+            if (member.userId) acc[member.userId] = member.user;
+            return acc;
+        }, {});
+    }, [currentChat?.chatMembers]);
     
     // State for reaction picker
     const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
@@ -150,8 +158,9 @@ export function GroupChatView({ lid }: { lid: string }) {
                         ) : (
                             messages.map((message, index) => {
                                 const isFromCurrentUser = message.senderId === session?.user?.id;
-                                const displayName = message.sender?.name ?? "Unknown";
-                                const avatarSrc = message.sender?.image ?? undefined;
+                                const sender = message.isOptimistic ? message.sender : senderLookup[message.senderId ?? ''];
+                                const displayName = sender?.name ?? "Unknown";
+                                const avatarSrc = sender?.image ?? undefined;
                                 const fallbackInitials = displayName.charAt(0) ?? "?";
                                 
                                 const prevMessage = messages[index - 1];
@@ -220,7 +229,7 @@ export function GroupChatView({ lid }: { lid: string }) {
                                                         />
                                                         
                                                         {/* Media attachments */}
-                                                        <MessageMedia media={message.media || []} />
+                                                        <MessageMedia media={message.medias || []} />
                                                         
                                                         {/* Reactions */}
                                                         <ChatReactions

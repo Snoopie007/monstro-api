@@ -71,7 +71,10 @@ export const useSocialChat = ({
         `/protected/chats/${currentChatId}/messages`
       );
       
-      setMessages(messagesData);
+      setMessages(messagesData.map(msg => ({
+        ...msg,
+        media: msg.medias || [],
+      })));
     } catch (err) {
       console.error('Error loading messages:', err);
       setError('Failed to load messages');
@@ -129,7 +132,7 @@ export const useSocialChat = ({
             created: new Date(),
             updated: null,
           } as any,
-          media: [],
+          medias: [],
           reactions: [],
           // Optimistic fields
           progress: 0,
@@ -205,14 +208,7 @@ export const useSocialChat = ({
 
       // STEP 6: Add real message to state
       const message: Message = {
-        id: enrichedMessage.id,
-        chatId: enrichedMessage.chatId,
-        senderId: enrichedMessage.senderId,
-        content: enrichedMessage.content,
-        metadata: enrichedMessage.metadata,
-        created: enrichedMessage.created,
-        updated: enrichedMessage.updated,
-        sender: enrichedMessage.sender || null,
+        ...enrichedMessage,
         media: enrichedMessage.medias || [],
         reactions: [],
       };
@@ -285,16 +281,8 @@ export const useSocialChat = ({
 
         const enrichedMessage = payload.payload?.message || payload.payload;
 
-        // Messages are now enriched by the API with sender and media data
         const message: Message = {
-          id: enrichedMessage.id,
-          chatId: enrichedMessage.chatId,
-          senderId: enrichedMessage.senderId,
-          content: enrichedMessage.content,
-          metadata: enrichedMessage.metadata,
-          created: enrichedMessage.created,
-          updated: enrichedMessage.updated,
-          sender: enrichedMessage.sender || null,
+          ...enrichedMessage,
           media: enrichedMessage.medias || [],
           reactions: enrichedMessage.reactions || [],
         };
