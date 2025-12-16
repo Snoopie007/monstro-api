@@ -13,7 +13,7 @@ const CommentPostsProps = {
         depth: z.number(),
         type: z.string(),
         userId: z.string(),
-        parentId: z.string(),
+        parentId: z.string().optional(),
     }),
 };
 
@@ -94,6 +94,7 @@ export function commentPosts(app: Elysia) {
                 depth: parentId ? (depth || 0) + 1 : 0,
                 ownerType: type,
                 userId: owner.userId,
+                parentId: parentId || null,
             }).returning();
 
             if (parentId) {
@@ -107,17 +108,23 @@ export function commentPosts(app: Elysia) {
             }
 
             await db.update(groupPosts).set({
-                comments: sql`comments + 1`
+                commentCounts: sql`comment_counts + 1`
             }).where(eq(groupPosts.id, pid));
 
             const { user } = owner;
 
 
-            return status(200, { ...newComment, user });
+            // Ensure dates are serialized as ISO strings
+            return status(200, {
+                ...newComment,
+                created: newComment.created?.toISOString() ?? new Date().toISOString(),
+                updated: newComment.updated?.toISOString() ?? null,
+                deletedOn: newComment.deletedOn?.toISOString() ?? null,
+                user,
+            });
         } catch (error) {
             console.error(error);
-            status(500, { error: 'Internal server error' });
-            return { error: 'Internal server error' }
+            return status(500, { error: 'Internal server error' });
         }
     }, CommentPostsProps)
     return app;
