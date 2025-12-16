@@ -11,7 +11,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui";
-import { Member } from "@/types";
+import { MemberListItem } from "@/types";
 import { Skeleton } from "@/components/ui";
 
 export function MemberTable<TData, TValue>({
@@ -20,7 +20,7 @@ export function MemberTable<TData, TValue>({
 	isLoading,
 }: {
 	columns: number;
-	table: TansackTable<Member>;
+	table: TansackTable<MemberListItem>;
 	isLoading: boolean;
 }) {
 	return (

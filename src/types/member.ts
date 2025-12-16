@@ -165,7 +165,7 @@ export const sortColumnMap: Record<MemberSortableField, any> = {
     dob: members.dob,
 }
 
-export type MemberTag = {
+export type MemberTagRef = {
     id: string
     name: string
 }
@@ -191,7 +191,7 @@ export type MemberListItem = {
     referralCode: string
     stripeCustomerId: string | null
     memberLocation: { status: string }
-    tags: MemberTag[]
+    tags: MemberTagRef[]
     customFields: MemberCustomFieldValue[]
 }
 
