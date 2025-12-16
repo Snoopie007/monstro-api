@@ -1,6 +1,6 @@
 import { Checkbox } from "@/components/forms/checkbox";
 import { Badge } from "@/components/ui";
-import { Member } from "@/types";
+import { MemberListItem } from "@/types";
 import { ColumnDef, FilterFn } from "@tanstack/react-table";
 import Link from "next/link";
 import {
@@ -8,14 +8,7 @@ import {
 } from "@/components/CustomFieldDisplay";
 import { CustomFieldDefinition } from "@/types";
 
-export interface MemberWithCustomFieldsColumns extends Member {
-	customFields?: Array<{
-		fieldId: string;
-		value: string;
-	}>;
-}
-
-const customFieldFilter: FilterFn<MemberWithCustomFieldsColumns> = (row, columnId, filterValue) => {
+const customFieldFilter: FilterFn<MemberListItem> = (row, columnId, filterValue) => {
 	if (columnId.startsWith('custom-field-')) {
 		const fieldId = columnId.replace('custom-field-', '');
 		const member = row.original;
@@ -34,8 +27,8 @@ const customFieldFilter: FilterFn<MemberWithCustomFieldsColumns> = (row, columnI
 export const MemberColumns = (
 	locationId: string,
 	customFields?: CustomFieldDefinition[]
-): ColumnDef<MemberWithCustomFieldsColumns, any>[] => {
-	const baseColumns: ColumnDef<MemberWithCustomFieldsColumns, any>[] = [
+): ColumnDef<MemberListItem, any>[] => {
+	const baseColumns: ColumnDef<MemberListItem, any>[] = [
 		{
 			id: "select",
 			header: ({ table }) => (
@@ -92,7 +85,7 @@ export const MemberColumns = (
 				const member = row.original;
 
 				return (
-					<Badge member={member.memberLocation?.status} >
+					<Badge member={member.memberLocation?.status as any} >
 						{member.memberLocation?.status}
 					</Badge>
 				);
@@ -129,7 +122,7 @@ export const MemberColumns = (
 	];
 
 	// Generate custom field columns
-	const customFieldColumns: ColumnDef<MemberWithCustomFieldsColumns, any>[] =
+	const customFieldColumns: ColumnDef<MemberListItem, any>[] =
 		customFields?.map((field) => ({
 			accessorKey: `custom-field-${field.id}`,
 			id: `custom-field-${field.id}`,

@@ -13,7 +13,7 @@ import { Input } from '@/components/forms'
 import { MemberTable } from './MemberTable'
 import ErrorComponent from '@/components/error'
 import { AddMember } from './CreateMember'
-import { Member } from '@/types/member'
+import { MemberListItem } from '@/types/member'
 
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { Button, ScrollArea, Separator } from '@/components/ui'
@@ -95,7 +95,7 @@ export function MemberList({
         })
     }
 
-    const table = useReactTable<Member>({
+    const table = useReactTable<MemberListItem>({
         data: data.members || [], // Only use data when it's available
         columns,
         pageCount: totalPages, // Set total pages from the API

@@ -124,7 +124,7 @@ export function SupportList({ lid }: { lid: string }) {
                 </div>
             </div>
 
-            <div className="flex-col flex-1 space-y-2 ">
+            <div className="flex flex-col flex-1 space-y-2 overflow-hidden">
                 <div className="space-y-4 px-2">
                     <Input
                         placeholder="Search"
@@ -177,7 +177,7 @@ export function SupportList({ lid }: { lid: string }) {
                 )}
 
                 {!isLoading && (
-                    <ScrollArea className="px-2">
+                    <ScrollArea className="flex-1 px-2">
                         {filteredConversations.length === 0 ? (
                             <div className="text-center pt-8 text-muted-foreground">
                                 <p>No conversations yet</p>

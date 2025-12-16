@@ -3,13 +3,12 @@ import { ColumnDef } from "@/libs/table-utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
 import { FilterIcon, XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { MemberWithCustomFieldsColumns } from "../MemberColumns";
 import { FilterInputType, memberColumnMetadata, getCustomFieldConfig } from "./ColumnTypes";
-import { CustomFieldDefinition } from "@/types";
+import { CustomFieldDefinition, MemberListItem } from "@/types";
 import { FilterInput } from "./FilterInput";
 
 interface FilterPopoverProps {
-    columns: ColumnDef<MemberWithCustomFieldsColumns, any>[];
+    columns: ColumnDef<MemberListItem, any>[];
     filters: { id: string, value: unknown }[];
     onFiltersChange: (filters: { id: string, value: unknown }[]) => void;
     customFields?: CustomFieldDefinition[];
@@ -19,9 +18,9 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
 
     // Generate column options with metadata
     const columnOptions = columns
-        .filter((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) =>
+        .filter((column: ColumnDef<MemberListItem, any> & { accessorKey?: string }) =>
             column.id !== 'select' && column.accessorKey !== 'tags')
-        .map((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => {
+        .map((column: ColumnDef<MemberListItem, any> & { accessorKey?: string }) => {
             const { accessorKey, id, header } = column;
             const columnId = accessorKey ?? id ?? 'name';
 

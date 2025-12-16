@@ -2,12 +2,12 @@ import { Popover, PopoverTrigger, Button, PopoverContent, Separator } from "@/co
 import { ListOrderedIcon, TextAlignJustify, XIcon } from "lucide-react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@/components/forms";
-import { useEffect, useState } from "react";
-import { MemberWithCustomFieldsColumns } from "../MemberColumns";
+import { useState } from "react";
 import { ColumnDef } from "@/libs/table-utils";
+import { MemberListItem } from "@/types";
 
 interface SortPopoverProps {
-    columns: ColumnDef<MemberWithCustomFieldsColumns, any>[];
+    columns: ColumnDef<MemberListItem, any>[];
     onSortChange: (sort: { id: string, direction: 'asc' | 'desc' }[]) => void;
 }
 
@@ -15,8 +15,8 @@ export function SortPopover({ columns, onSortChange }: SortPopoverProps) {
     const [sort, setSort] = useState<{ id: string, direction: 'asc' | 'desc' }[]>([]);
 
     const columnOptions = columns
-        .filter((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => column.id !== 'select' && column.accessorKey !== 'tags')
-        .map((column: ColumnDef<MemberWithCustomFieldsColumns, any> & { accessorKey?: string }) => {
+        .filter((column: ColumnDef<MemberListItem, any> & { accessorKey?: string }) => column.id !== 'select' && column.accessorKey !== 'tags')
+        .map((column: ColumnDef<MemberListItem, any> & { accessorKey?: string }) => {
             const { accessorKey, id, header } = column;
             return {
                 id: accessorKey ?? id ?? 'name',

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui'
 import { X } from 'lucide-react'
 import { MemberList } from './MemberList'
-import { MembersTabState, useUserMembers } from '@/hooks/userMembers'
+import { MembersTabState, useUserTabState } from '@/hooks/userMembers'
 
 interface MembersPageProps {
     id: string | null
@@ -24,7 +24,7 @@ export default function MembersPage({ id, stripeKey }: MembersPageProps) {
         handleRemoveTab,
         handleChangeParam,
         handleFetchForCurrentTab,
-    } = useUserMembers(id ?? '')
+    } = useUserTabState(id ?? '')
 
     if (!id) {
         return <div>Loading...</div>
