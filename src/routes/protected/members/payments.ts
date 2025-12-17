@@ -44,7 +44,6 @@ export function memberPayments(app: Elysia) {
                 }
             })
 
-            console.log(methods)
             return status(200, methods)
         } catch (err) {
             console.log(err)

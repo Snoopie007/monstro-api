@@ -70,13 +70,10 @@ export async function broadcastMessage(chatId: string, message: Message): Promis
             }
           }
         });
-        await userChannel.send({
-          type: 'broadcast',
-          event: 'chat_updated',
-          payload: {
-            message: message,
-          },
-        });
+        await userChannel.httpSend(
+          'chat_updated',
+          { message },
+        );
         supabase.removeChannel(userChannel);
       } catch (err) {
         console.error(`Failed to broadcast to user ${member.user.id}:`, err);

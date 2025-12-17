@@ -1,7 +1,6 @@
 import { db } from "@/db/db";
 import { chatMembers, chats, media, messages, reactionCounts } from "@/db/schemas";
 import { broadcastMessage, broadcastMessageUpdate, broadcastMessageDelete } from "@/libs/messages";
-import S3Bucket from "@/libs/s3";
 import type { Media, Message } from "@/types";
 import { and, eq, inArray } from "drizzle-orm";
 import { Elysia, type Context } from "elysia";
@@ -68,7 +67,7 @@ export function messageRoute(app: Elysia) {
                 with: {
                     medias: true,
                 },
-                limit: 80,
+                limit: 20,
                 orderBy: (messages, { asc }) => asc(messages.created),
             });
 
