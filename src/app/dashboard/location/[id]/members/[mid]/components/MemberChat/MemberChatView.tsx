@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useSocialChat } from "@/hooks/useSocialChat";
+import { useChat } from "@/hooks/useChat";
 import { useSession } from "@/hooks/useSession";
 import {
 	Avatar, AvatarFallback, AvatarImage,
@@ -42,10 +42,10 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
 		error,
 		sendMessage,
 		toggleReaction
-	} = useSocialChat({
-		fromUserId,
-		toUserId,
-		locationId,
+	} = useChat({
+		mode: fromUserId && toUserId && locationId 
+			? { type: 'social', fromUserId, toUserId, locationId } 
+			: null,
 		enabled: !!fromUserId && !!toUserId && fromUserId !== toUserId,
 	});
 
