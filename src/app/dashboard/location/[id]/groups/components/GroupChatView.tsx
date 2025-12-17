@@ -1,7 +1,7 @@
 'use client'
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Avatar, AvatarFallback, AvatarImage, ScrollArea } from "@/components/ui";
-import { useGroupChat } from "@/hooks/useGroupChat";
+import { useChat } from "@/hooks/useChat";
 import { useSession } from "@/hooks/useSession";
 import { formatMessageTimestamp, getDateLabel } from "@/libs/utils";
 import { Message, User } from "@/types";
@@ -21,9 +21,9 @@ export function GroupChatView({ lid }: { lid: string }) {
     const {currentChat} = useGroups()
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { data: session } = useSession();
-    const { messages, sendMessage, editMessage, deleteMessage, toggleReaction, isLoading } = useGroupChat({
-        chatId: currentChat?.id ?? null,
-        fromUserId: session?.user?.id ?? null,
+    const { messages, sendMessage, editMessage, deleteMessage, toggleReaction, isLoading } = useChat({
+        mode: currentChat?.id ? { type: 'direct', chatId: currentChat.id } : null,
+        enabled: !!currentChat?.id,
     });
     
     const senderLookup = useMemo(() => {
