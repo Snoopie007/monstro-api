@@ -8,9 +8,10 @@ import ReactMarkdown from 'react-markdown';
 interface ChatMessageProps {
     message: SupportMessage;
     member: Member | undefined;
+    isGrouped?: boolean;
 }
 
-export function ChatMessage({ message, member }: ChatMessageProps) {
+export function ChatMessage({ message, member, isGrouped = false }: ChatMessageProps) {
     const { assistant } = useSupport()
 
     const { isMember, isStaff, isAI, isSystem } = useMemo(() => ({
@@ -33,25 +34,29 @@ export function ChatMessage({ message, member }: ChatMessageProps) {
     }, [message]);
 
     return (
-        <div key={message.id} className="flex gap-3">
-            <div className="flex-shrink-0">
-                <div className='size-10 rounded-full bg-foreground/10 border-foreground/10'>
-
+        <div key={message.id} className={`flex gap-3 ${isGrouped ? '' : 'py-1'}`}>
+            {!isGrouped ? (
+                <div className="flex-shrink-0">
+                    <div className='size-8 rounded-full bg-foreground/10 border-foreground/10' />
                 </div>
-            </div>
-            <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm  text-indigo-500 font-bold">
-                        {userName}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                        {format(message.created || new Date(), "HH:mm a")}
-                    </span>
-                </div>
-                <div className="leading-relaxed">
-                <ReactMarkdown>
-                    {message.content}
-                </ReactMarkdown>
+            ) : (
+                <div className="w-8 flex-shrink-0" />
+            )}
+            <div className="flex-1 flex flex-col gap-0.5 min-w-0">
+                {!isGrouped && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-indigo-500 font-bold">
+                            {userName}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                            {format(message.created || new Date(), "HH:mm a")}
+                        </span>
+                    </div>
+                )}
+                <div className="leading-relaxed text-sm">
+                    <ReactMarkdown>
+                        {message.content}
+                    </ReactMarkdown>
                 </div>
             </div>
         </div>

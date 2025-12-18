@@ -1,7 +1,7 @@
 import { ExtendedAttendance, Member } from "@/types";
 import { Time } from '@internationalized/date';
 import { type ClassValue, clsx } from "clsx";
-import { addDays, format, isToday, isYesterday, subDays } from "date-fns";
+import { addDays, format, isToday, isYesterday, subDays, isSameDay } from "date-fns";
 import { decodeJwt } from "jose";
 import { NextRequest } from "next/server";
 import { twMerge } from "tailwind-merge";
@@ -315,9 +315,72 @@ function getDateLabel(date: Date): string {
     }
 }
 
+/**
+ * Determines if a message should be visually grouped with the previous message.
+ * Messages are grouped when:
+ * 1. Same sender (senderId matches)
+ * 2. Same day (no date separator between them)
+ * 3. Within time threshold (default 2 minutes)
+ * 
+ * @param current - Current message being rendered
+ * @param previous - Previous message in the list (or null if first)
+ * @param options - Optional configuration
+ * @returns true if message should be rendered compactly (no avatar/name)
+ */
+function isGroupedMessage(
+    current: { senderId?: string | null; created: Date | string } | null | undefined,
+    previous: { senderId?: string | null; created: Date | string } | null | undefined,
+    options?: { thresholdMs?: number }
+): boolean {
+    if (!previous || !current) return false;
+    
+    const { thresholdMs = 120000 } = options ?? {}; // 2 minutes default
+    
+    // Must be same sender
+    if (previous.senderId !== current.senderId) return false;
+    
+    const prevDate = new Date(previous.created);
+    const currDate = new Date(current.created);
+    
+    // Must be same day (don't group across date separators)
+    if (!isSameDay(prevDate, currDate)) return false;
+    
+    // Must be within time threshold
+    const timeDiff = currDate.getTime() - prevDate.getTime();
+    return timeDiff < thresholdMs && timeDiff >= 0;
+}
+
+/**
+ * Role-based grouping for support chat messages.
+ * Groups by message role (ai, human, staff) + agentId for staff messages.
+ */
+function isGroupedSupportMessage(
+    current: { role: string; agentId?: string | null; created: Date | string } | null | undefined,
+    previous: { role: string; agentId?: string | null; created: Date | string } | null | undefined,
+    options?: { thresholdMs?: number }
+): boolean {
+    if (!previous || !current) return false;
+    
+    const { thresholdMs = 120000 } = options ?? {};
+    
+    // Must be same role
+    if (previous.role !== current.role) return false;
+    
+    // For staff messages, must be same agent
+    if (current.role === 'staff' && previous.agentId !== current.agentId) return false;
+    
+    const prevDate = new Date(previous.created);
+    const currDate = new Date(current.created);
+    
+    if (!isSameDay(prevDate, currDate)) return false;
+    
+    const timeDiff = currDate.getTime() - prevDate.getTime();
+    return timeDiff < thresholdMs && timeDiff >= 0;
+}
+
 export {
     authenticateMember, cn, formatAmountForDisplay, formatEmail, formatMessageTimestamp, formatPhone, formatTime, generateTestAttendanceData, getDateLabel, getTimezoneOffset, interEmailsAndText, interpolate, sleep,
-    tryCatch
+    tryCatch, isGroupedMessage, isGroupedSupportMessage
 };
 
 

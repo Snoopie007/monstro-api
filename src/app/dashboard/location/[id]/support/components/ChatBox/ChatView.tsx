@@ -3,7 +3,7 @@
 import { ScrollArea } from '@/components/ui'
 import { useEffect, useRef, useState } from 'react'
 
-import { tryCatch } from '@/libs/utils'
+import { tryCatch, isGroupedSupportMessage } from '@/libs/utils'
 import { SupportMessage } from '@/types'
 import { format } from 'date-fns'
 import { toast } from 'react-toastify'
@@ -130,7 +130,7 @@ export function ChatView({ lid }: { lid: string }) {
             <div className="flex flex-col h-full flex-1  overflow-hidden">
                 <div className="relative h-full flex flex-col">
                     <ScrollArea className="h-full px-4">
-                        <div className="space-y-8 py-4">
+                        <div className="space-y-1 py-4">
                             {messages
                                 .sort(
                                     (a, b) =>
@@ -138,13 +138,22 @@ export function ChatView({ lid }: { lid: string }) {
                                         new Date(b.created).getTime()
                                 )
                                 .filter((message) => ["ai", "human", "system", "staff"].includes(message.role))
-                                .map((message, index) => (
-                                    <ChatMessage
-                                        key={index}
-                                        message={message}
-                                        member={current.member}
-                                    />
-                                ))}
+                                .map((message, index, arr) => {
+                                    const prevMessage = index > 0 ? arr[index - 1] : null;
+                                    const nextMessage = index < arr.length - 1 ? arr[index + 1] : null;
+                                    const isGrouped = isGroupedSupportMessage(message, prevMessage);
+                                    const isGroupedWithNext = isGroupedSupportMessage(nextMessage, message);
+                                    return (
+                                        <div className={!isGroupedWithNext ? 'mb-4' : ''}>
+                                            <ChatMessage
+                                                key={index}
+                                                message={message}
+                                                member={current.member}
+                                                isGrouped={isGrouped}
+                                            />
+                                        </div>
+                                    );
+                                })}
                             <div ref={messagesEndRef} />
                         </div>
                     </ScrollArea>
