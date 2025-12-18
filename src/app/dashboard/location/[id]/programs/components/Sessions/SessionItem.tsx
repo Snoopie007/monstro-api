@@ -16,10 +16,11 @@ interface SessionItemProps {
     session: ProgramSession
     lid: string
     availableStaff: Staff[]
+    onRefetch?: () => void
 }
 const ItemBtnStyle = "cursor-pointer font-medium text-xs flex flex-row items-center justify-between gap-2 ";
 
-export default function SessionItem({ session, lid }: SessionItemProps) {
+export default function SessionItem({ session, lid, onRefetch }: SessionItemProps) {
     const [openCancel, setOpenCancel] = useState(false)
 
     const calculateTime = useCallback((time: string, duration: number) => {
@@ -36,7 +37,7 @@ export default function SessionItem({ session, lid }: SessionItemProps) {
 
     return (
         <div className="flex text-xs flex-row gap-4 bg-foreground/5 p-2 rounded-lg items-center justify-between min-w-40">
-            <CancelSession session={session} lid={lid} open={openCancel} onOpenChange={setOpenCancel} />
+            <CancelSession session={session} lid={lid} open={openCancel} onOpenChange={setOpenCancel} onRefetch={onRefetch} />
             <span>{calculateTime(session.time, session.duration!)}</span>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -62,8 +63,9 @@ interface CancelSessionProps {
     lid: string
     open: boolean
     onOpenChange: (open: boolean) => void
+    onRefetch?: () => void
 }
-function CancelSession({ session, lid, open, onOpenChange }: CancelSessionProps) {
+function CancelSession({ session, lid, open, onOpenChange, onRefetch }: CancelSessionProps) {
     const [loading, setLoading] = useState(false)
     const PATH = `/api/protected/loc/${lid}/programs/${session.programId}/sessions/${session.id}`
     async function handleCancel() {
@@ -78,6 +80,8 @@ function CancelSession({ session, lid, open, onOpenChange }: CancelSessionProps)
             toast.error(error?.message || 'Failed to delete session')
         } else {
             toast.success('Session deleted successfully')
+            onOpenChange(false)
+            onRefetch?.()
         }
     }
 

@@ -26,6 +26,7 @@ export async function GET(req: NextRequest, props: props) {
 				day: true,
 				duration: true,
 				time: true,
+				programId: true,
 			}
 		});
 
