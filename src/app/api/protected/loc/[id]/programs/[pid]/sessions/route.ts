@@ -30,23 +30,24 @@ export async function GET(req: NextRequest, props: props) {
 			}
 		});
 
-		//Session counts
-		// const sessionIds = sessions.map(session => session.id);
-		// const [reservationsCount, recurringReservationsCount] = await Promise.all([
-		// 	db.select({ count: count(), sessionId: reservations.sessionId })
-		// 		.from(reservations)
-		// 		.where(inArray(reservations.sessionId, sessionIds))
-		// 		.groupBy(reservations.sessionId),
-		// 	db.select({ count: count(), sessionId: recurringReservations.sessionId })
-		// 		.from(recurringReservations)
-		// 		.where(and(inArray(recurringReservations.sessionId, sessionIds), isNull(recurringReservations.canceledOn)))
-		// ]);
-		// const sessionsWithCounts = sessions.map(session => {
-		// 	const rc = reservationsCount.find(r => r.sessionId === session.id)?.count ?? 0;
-		// 	const rrc = recurringReservationsCount.find(r => r.sessionId === session.id)?.count ?? 0;
-		// 	return { ...session, reservationsCount: rc + rrc }
-		// });
-		return NextResponse.json(sessions, { status: 200 });
+		// Session counts
+		const sessionIds = sessions.map(session => session.id);
+		const [reservationsCount, recurringReservationsCount] = await Promise.all([
+			db.select({ count: count(), sessionId: reservations.sessionId })
+				.from(reservations)
+				.where(inArray(reservations.sessionId, sessionIds))
+				.groupBy(reservations.sessionId),
+			db.select({ count: count(), sessionId: recurringReservations.sessionId })
+				.from(recurringReservations)
+				.where(and(inArray(recurringReservations.sessionId, sessionIds), isNull(recurringReservations.canceledOn)))
+				.groupBy(recurringReservations.sessionId),
+		]);
+		const sessionsWithCounts = sessions.map(session => {
+			const rc = reservationsCount.find(r => r.sessionId === session.id)?.count ?? 0;
+			const rrc = recurringReservationsCount.find(r => r.sessionId === session.id)?.count ?? 0;
+			return { ...session, reservationsCount: rc + rrc }
+		});
+		return NextResponse.json(sessionsWithCounts, { status: 200 });
 	} catch (err) {
 		console.log(err);
 		return NextResponse.json({ error: err }, { status: 500 });
