@@ -29,9 +29,8 @@ export function ChatReactions({
         }}
         disabled={isUpdating}
         className={cn(
-          "opacity-0 group-hover:opacity-100 transition-opacity",
           "p-1.5 rounded-lg bg-foreground/5 hover:bg-foreground/10",
-          "flex items-center gap-1",
+          "flex items-center gap-1 transition-colors",
           isUpdating && "opacity-50 cursor-not-allowed"
         )}
         title="Add reaction"
@@ -42,7 +41,7 @@ export function ChatReactions({
   }
 
   return (
-    <div className="flex items-center gap-1 flex-wrap mt-1">
+    <div className="flex items-center gap-1 flex-wrap">
       {reactions.map((reaction) => {
         const hasReacted = currentUserId && reaction.userIds?.includes(currentUserId);
 

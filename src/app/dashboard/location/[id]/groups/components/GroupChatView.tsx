@@ -3,7 +3,7 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Avatar, AvatarFallback, AvatarImage, ScrollArea } from "@/components/ui";
 import { useChat } from "@/hooks/useChat";
 import { useSession } from "@/hooks/useSession";
-import { formatMessageTimestamp, getDateLabel } from "@/libs/utils";
+import { formatMessageTimestamp, getDateLabel, isGroupedMessage } from "@/libs/utils";
 import { Message, User } from "@/types";
 import { isSameDay } from "date-fns";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -150,7 +150,7 @@ export function GroupChatView({ lid }: { lid: string }) {
                 ) : (
                 <>
                     <ScrollArea className="flex-1 w-full px-4">
-                        <div className="space-y-6 py-4">
+                        <div className="space-y-1 py-4">
                         {messages?.length === 0 ? (
                             <div className="text-center text-sm text-muted-foreground py-8">
                             No messages yet. Start the conversation!
@@ -164,9 +164,12 @@ export function GroupChatView({ lid }: { lid: string }) {
                                 const fallbackInitials = displayName.charAt(0) ?? "?";
                                 
                                 const prevMessage = messages[index - 1];
+                                const nextMessage = messages[index + 1];
                                 const isNewDay = !prevMessage || !isSameDay(new Date(prevMessage.created), new Date(message.created));
+                                const isGrouped = isGroupedMessage(message, prevMessage);
+                                const isGroupedWithNext = isGroupedMessage(nextMessage, message);
                                 return (
-                                    <div key={message.id}>
+                                    <div key={message.id} className={!isGroupedWithNext ? 'mb-4' : ''}>
                                         {isNewDay && message.created && (
                                             <div className="relative flex items-center justify-center my-6">
                                                 <div className="absolute inset-0 flex items-center">
@@ -178,40 +181,43 @@ export function GroupChatView({ lid }: { lid: string }) {
                                             </div>
                                         )}
                                         <div
-                                            className={`flex gap-3 flex-row group hover:bg-muted/30 rounded-lg px-4 py-2 -mx-2 transition-colors`}
+                                            className={`flex gap-3 flex-row group hover:bg-muted/30 rounded-lg px-4 ${
+                                                isGrouped ? 'py-0.5' : 'py-2'
+                                            } -mx-2 transition-colors`}
                                         >
-                                            <Avatar className="h-8 w-8 flex-shrink-0">
-                                                <AvatarImage src={avatarSrc} />
-                                                <AvatarFallback className="text-xs">
-                                                {fallbackInitials || "?"}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div
-                                                className={`flex flex-col gap-1 max-w-[70%] items-start`}
-                                            >
-                                                <div className="flex flex-row items-center gap-2">
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {isFromCurrentUser ? "You" : displayName}
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground/60">
-                                                        {message.created ? formatMessageTimestamp(message.created) : "Unknown time"}
-                                                    </span>
-                                                    {message.updated && (
-                                                        <span className="text-xs text-muted-foreground/40 italic">
-                                                            (edited)
+                                            {!isGrouped ? (
+                                                <Avatar className="h-8 w-8 flex-shrink-0">
+                                                    <AvatarImage src={avatarSrc} />
+                                                    <AvatarFallback className="text-xs">
+                                                    {fallbackInitials || "?"}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                            ) : (
+                                                <div className="w-8 flex-shrink-0" />
+                                            )}
+                                            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                                                {!isGrouped && (
+                                                    <div className="flex flex-row items-center gap-2">
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {isFromCurrentUser ? "You" : displayName}
                                                         </span>
-                                                    )}
-                                                </div>
-                                                {/* Message content - check if optimistic upload in progress */}
+                                                        <span className="text-xs text-muted-foreground/60">
+                                                            {message.created ? formatMessageTimestamp(message.created) : "Unknown time"}
+                                                        </span>
+                                                        {message.updated && (
+                                                            <span className="text-xs text-muted-foreground/40 italic">
+                                                                (edited)
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
                                                 {message.isOptimistic && message.pendingFiles ? (
                                                     <>
-                                                        {/* Show text content if any */}
                                                         {message.content && (
                                                             <div className="text-sm whitespace-pre-wrap break-words">
                                                                 {message.content}
                                                             </div>
                                                         )}
-                                                        {/* Show upload progress */}
                                                         <UploadingMessage 
                                                             progress={message.progress ?? 0} 
                                                             files={message.pendingFiles} 
@@ -219,7 +225,6 @@ export function GroupChatView({ lid }: { lid: string }) {
                                                     </>
                                                 ) : (
                                                     <>
-                                                        {/* Normal message rendering */}
                                                         <EditableMessage
                                                             message={message}
                                                             isEditing={editingMessageId === message.id}
@@ -227,28 +232,38 @@ export function GroupChatView({ lid }: { lid: string }) {
                                                             onSave={(content) => handleSaveEdit(message.id, content)}
                                                             onCancel={handleCancelEdit}
                                                         />
-                                                        
-                                                        {/* Media attachments */}
                                                         <MessageMedia media={message.medias || []} />
-                                                        
-                                                        {/* Reactions */}
+                                                        {/* Show existing reactions below message */}
+                                                        {message.reactions && message.reactions.length > 0 && (
+                                                            <ChatReactions
+                                                                reactions={message.reactions}
+                                                                currentUserId={session?.user?.id}
+                                                                onToggleReaction={(emoji) => handleToggleReaction(message.id, emoji)}
+                                                                onOpenPicker={() => handleOpenReactionPicker(message)}
+                                                            />
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                            {/* Actions toolbar - right side, shows on hover */}
+                                            {!message.isOptimistic && (
+                                                <div className="flex items-center gap-1 ml-auto flex-shrink-0 self-start opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {/* Add reaction button (when no reactions yet) */}
+                                                    {(!message.reactions || message.reactions.length === 0) && (
                                                         <ChatReactions
-                                                            reactions={message.reactions}
+                                                            reactions={[]}
                                                             currentUserId={session?.user?.id}
                                                             onToggleReaction={(emoji) => handleToggleReaction(message.id, emoji)}
                                                             onOpenPicker={() => handleOpenReactionPicker(message)}
                                                         />
-                                                    </>
-                                                )}
-                                            </div>
-                                            {/* Actions dropdown - far right */}
-                                            {isFromCurrentUser && !message.isOptimistic && (
-                                                <div className="ml-auto flex-shrink-0 self-start pt-0.5">
-                                                    <MessageActionsDropdown
-                                                        message={message}
-                                                        onEdit={() => handleStartEdit(message.id)}
-                                                        onDelete={() => handleRequestDelete(message)}
-                                                    />
+                                                    )}
+                                                    {isFromCurrentUser && (
+                                                        <MessageActionsDropdown
+                                                            message={message}
+                                                            onEdit={() => handleStartEdit(message.id)}
+                                                            onDelete={() => handleRequestDelete(message)}
+                                                        />
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

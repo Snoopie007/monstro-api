@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/";
 import { Loader2 } from "lucide-react";
 import { Member } from "@/types";
-import { formatMessageTimestamp, getDateLabel } from "@/libs/utils";
+import { formatMessageTimestamp, getDateLabel, isGroupedMessage } from "@/libs/utils";
 import { isSameDay } from "date-fns";
 import ReactMarkdown from "react-markdown";
 import { GroupChatInput } from "../../../../groups/components/GroupChatInput";
@@ -137,8 +137,8 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
 						</div>
 					) : (
 						<>
-							<ScrollArea className="flex-1 w-full px-4">
-								<div className="space-y-6 py-4">
+						<ScrollArea className="flex-1 w-full px-4">
+							<div className="space-y-1 py-4">
 									{messages.length === 0 ? (
 										<div className="text-center text-sm text-muted-foreground py-8">
 											Send a message to start the conversation
@@ -170,77 +170,94 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
 											fallbackInitials = "S";
 										}
 
-											const prevMessage = messages[index - 1];
-											const isNewDay = !prevMessage || !isSameDay(new Date(prevMessage.created), new Date(message.created));
+										const prevMessage = messages[index - 1];
+										const nextMessage = messages[index + 1];
+										const isNewDay = !prevMessage || !isSameDay(new Date(prevMessage.created), new Date(message.created));
+										const isGrouped = isGroupedMessage(message, prevMessage);
+										const isGroupedWithNext = isGroupedMessage(nextMessage, message);
 
-											return (
-												<div key={message.id}>
-													{isNewDay && message.created && (
-														<div className="relative flex items-center justify-center my-6">
-															<div className="absolute inset-0 flex items-center">
-																<span className="w-full border-t border-muted-foreground/20" />
-															</div>
-															<span className="relative bg-muted px-2 text-xs text-muted-foreground rounded-full">
-																{getDateLabel(new Date(message.created))}
-															</span>
+										return (
+											<div key={message.id} className={!isGroupedWithNext ? 'mb-4' : ''}>
+												{isNewDay && message.created && (
+													<div className="relative flex items-center justify-center my-6">
+														<div className="absolute inset-0 flex items-center">
+															<span className="w-full border-t border-muted-foreground/20" />
 														</div>
-													)}
-													<div className="flex gap-3 flex-row group">
-														<Avatar className="h-8 w-8">
-															<AvatarImage src={avatarSrc} />
-															<AvatarFallback className="text-xs">
-																{fallbackInitials || "?"}
-															</AvatarFallback>
-														</Avatar>
-														<div className="flex flex-col gap-1 max-w-[70%] items-start">
-															<div className="flex flex-row items-center gap-2">
-																<span className="text-xs text-muted-foreground">
-																	{isFromCurrentUser ? "You" : displayName}
-																</span>
-																<span className="text-xs text-muted-foreground/60">
-																	{message.created ? formatMessageTimestamp(message.created) : "Unknown time"}
-																</span>
-															</div>
-
-															{/* Check if this is an optimistic upload in progress */}
-															{message.isOptimistic && message.pendingFiles ? (
-																<>
-																	{/* Show text content if any */}
-																	{message.content && (
-																		<div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
-																			<ReactMarkdown>
-																				{message.content}
-																			</ReactMarkdown>
-																		</div>
-																	)}
-																	{/* Show upload progress */}
-																	<UploadingMessage
-																		progress={message.progress ?? 0}
-																		files={message.pendingFiles}
-																	/>
-																</>
-															) : (
-																<>
-																	<div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
-																		<ReactMarkdown>
-																			{message.content}
-																		</ReactMarkdown>
-																	</div>
-
-																	{/* Media attachments */}
-																	<MessageMedia media={message.medias || []} />
-
-																	{/* Reactions */}
-																	<ChatReactions
-																		reactions={message.reactions}
-																		currentUserId={session?.user?.id}
-																		onToggleReaction={(emoji: { value: string; name: string; type: string }) => handleToggleReaction(message.id, emoji)}
-																		onOpenPicker={() => handleOpenReactionPicker(message as Message)}
-																	/>
-																</>
-															)}
-														</div>
+														<span className="relative bg-muted px-2 text-xs text-muted-foreground rounded-full">
+															{getDateLabel(new Date(message.created))}
+														</span>
 													</div>
+												)}
+										<div className={`flex gap-3 flex-row group ${
+											isGrouped ? 'py-0.5' : 'py-2'
+										}`}>
+											{!isGrouped ? (
+												<Avatar className="h-8 w-8 flex-shrink-0">
+													<AvatarImage src={avatarSrc} />
+													<AvatarFallback className="text-xs">
+														{fallbackInitials || "?"}
+													</AvatarFallback>
+												</Avatar>
+											) : (
+												<div className="w-8 flex-shrink-0" />
+											)}
+											<div className="flex flex-col gap-0.5 flex-1 min-w-0">
+												{!isGrouped && (
+													<div className="flex flex-row items-center gap-2">
+														<span className="text-xs text-muted-foreground">
+															{isFromCurrentUser ? "You" : displayName}
+														</span>
+														<span className="text-xs text-muted-foreground/60">
+															{message.created ? formatMessageTimestamp(message.created) : "Unknown time"}
+														</span>
+													</div>
+												)}
+												{message.isOptimistic && message.pendingFiles ? (
+													<>
+														{message.content && (
+															<div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
+																<ReactMarkdown>
+																	{message.content}
+																</ReactMarkdown>
+															</div>
+														)}
+														<UploadingMessage
+															progress={message.progress ?? 0}
+															files={message.pendingFiles}
+														/>
+													</>
+												) : (
+													<>
+														<div className="text-sm prose prose-sm prose-invert max-w-none leading-relaxed">
+															<ReactMarkdown>
+																{message.content}
+															</ReactMarkdown>
+														</div>
+														<MessageMedia media={message.medias || []} />
+														{/* Show existing reactions below message */}
+														{message.reactions && message.reactions.length > 0 && (
+															<ChatReactions
+																reactions={message.reactions}
+																currentUserId={session?.user?.id}
+																onToggleReaction={(emoji: { value: string; name: string; type: string }) => handleToggleReaction(message.id, emoji)}
+																onOpenPicker={() => handleOpenReactionPicker(message as Message)}
+															/>
+														)}
+													</>
+												)}
+											</div>
+											{/* Actions toolbar - right side, shows on hover */}
+											{!message.isOptimistic && (!message.reactions || message.reactions.length === 0) && (
+												<div className="flex items-center gap-1 ml-auto flex-shrink-0 self-start opacity-0 group-hover:opacity-100 transition-opacity">
+													<ChatReactions
+														reactions={[]}
+														currentUserId={session?.user?.id}
+														onToggleReaction={(emoji: { value: string; name: string; type: string }) => handleToggleReaction(message.id, emoji)}
+														onOpenPicker={() => handleOpenReactionPicker(message as Message)}
+													/>
+												</div>
+											)}
+										</div>
 												</div>
 											);
 										})

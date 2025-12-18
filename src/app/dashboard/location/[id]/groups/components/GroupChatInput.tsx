@@ -57,11 +57,17 @@ export function GroupChatInput({ onSend, disabled = false }: GroupChatInputProps
 	const handleSend = async () => {
 		if ((!message.trim() && files.length === 0) || sending || disabled) return;
 
+		// Capture values before clearing
+		const messageToSend = message;
+		const filesToSend = files;
+
+		// Clear input immediately for optimistic UI
+		setMessage("");
+		setFiles([]);
+
 		setSending(true);
 		try {
-			await onSend(message, files);
-			setMessage("");
-			setFiles([]);
+			await onSend(messageToSend, filesToSend);
 		} catch (err) {
 			console.error('Failed to send message:', err);
 		} finally {
