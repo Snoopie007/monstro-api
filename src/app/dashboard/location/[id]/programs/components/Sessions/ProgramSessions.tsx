@@ -94,7 +94,7 @@ export function ProgramSessions({ program }: { program: Program }) {
                                     </div>
                                     <div className="flex flex-row gap-2">
                                         {daySessions.map((session: ProgramSession, i: number) => (
-                                            <SessionItem key={i} session={session} lid={lid} availableStaff={[]} />
+                                            <SessionItem key={i} session={session} lid={lid} availableStaff={[]} onRefetch={getSessions} />
                                         ))}
                                     </div>
                                 </div>
