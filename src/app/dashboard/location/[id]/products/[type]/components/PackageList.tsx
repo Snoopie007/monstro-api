@@ -58,7 +58,7 @@ export function PackageItem({ pkg }: { pkg: MemberPlan }) {
             {pkg.name}
           </InfoField>
           <InfoField label="Price" className="col-span-1">
-            {formatAmountForDisplay(pkg.price, pkg.currency)}
+            {formatAmountForDisplay(pkg.price / 100, pkg.currency)}
           </InfoField>
           <InfoField label="Family Plan" className="col-span-1 gap-0.5">
             <div className="flex flex-row items-center gap-2">
