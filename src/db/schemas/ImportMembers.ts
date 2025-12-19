@@ -37,3 +37,4 @@ export const importedMembersRelations = relations(importMembers, ({ one }) => ({
         references: [memberPlans.id],
     })
 }));
+

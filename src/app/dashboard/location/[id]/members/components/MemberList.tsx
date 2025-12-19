@@ -17,7 +17,6 @@ import { MemberListItem } from '@/types/member'
 
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { Button, ScrollArea, Separator } from '@/components/ui'
-import { ImportMembers } from '.'
 import TagsFilter from './TagsFilter'
 import { FilterPopover, SortPopover } from './FilterAndSort'
 import { MembersTabState } from '../../../../../../hooks/userMembers'
@@ -183,13 +182,6 @@ export function MemberList({
         return null
     }, [canAddMember])
 
-    const renderImportMembers = useMemo(() => {
-        if (canAddMember) {
-            return <ImportMembers lid={params.id} />
-        }
-        return null
-    }, [canAddMember])
-
     useEffect(() => {
         if (!isLoading && data.members && data.members.length === 0) {
             handleFetchForCurrentTab(tabId)
@@ -240,7 +232,6 @@ export function MemberList({
                     canCreateTags={true}
                 />
                 {renderAddMember}
-                {renderImportMembers}
             </div>
             <div>
                 <ScrollArea className="h-[calc(100vh-210px)] overflow-hidden">
