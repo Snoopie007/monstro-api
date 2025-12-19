@@ -95,7 +95,9 @@ export type FamilyPlan = {
     packageId?: number
 }
 
-export type ImportMember = typeof importMembers.$inferSelect & {}
+export type ImportMember = typeof importMembers.$inferSelect & {
+    plan?: MemberPlan
+}
 
 export type MemberReferral = typeof memberReferrals.$inferSelect & {
     member?: Member

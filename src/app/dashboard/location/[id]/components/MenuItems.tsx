@@ -31,8 +31,17 @@ export const SidebarMenuItems: SidebarMenuItem[] = [
 },
 {
     name: "Members",
-    path: "members",
     icon: <Users size={16} />,
+    subMenu: [
+        {
+            name: 'All Members',
+            path: 'members',
+        },
+        {
+            name: 'Migrations',
+            path: 'migration',
+        },
+    ],
 },
 {
     name: 'Programs & Plans',
