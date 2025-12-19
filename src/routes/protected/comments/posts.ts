@@ -4,10 +4,15 @@ import type { Elysia } from "elysia";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-const CommentPostsProps = {
+
+const GetCommentProps = {
     params: z.object({
         pid: z.string(),
     }),
+};
+
+const CommentPostsProps = {
+    ...GetCommentProps,
     body: z.object({
         content: z.string(),
         depth: z.number(),
@@ -43,7 +48,7 @@ export function commentPosts(app: Elysia) {
             console.error(error);
             return status(500, { error: "Failed to fetch post comments" });
         }
-    }, CommentPostsProps).post('/', async ({ params, body, status }) => {
+    }, GetCommentProps).post('/', async ({ params, body, status }) => {
         const { pid } = params;
 
         const { content, depth, type, userId, parentId } = body;
@@ -51,40 +56,18 @@ export function commentPosts(app: Elysia) {
             return status(400, { error: "Invalid request" });
         }
 
-        const userType = userId.startsWith("mbr_") ? "member" : "vendor";
+
         try {
 
-            let owner;
-            if (userType === "member") {
-                owner = await db.query.members.findFirst({
-                    where: (members, { eq }) => eq(members.id, userId),
-                    with: {
-                        user: {
-                            columns: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                image: true,
-                            }
-                        }
-                    }
-                });
-            } else {
-                owner = await db.query.vendors.findFirst({
-                    where: (vendors, { eq }) => eq(vendors.id, userId),
-                    with: {
-                        user: {
-                            columns: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                image: true,
-                            }
-                        }
-                    }
-                });
-            }
-            if (!owner) {
+            const user = await db.query.users.findFirst({
+                where: (users, { eq }) => eq(users.id, userId),
+                columns: {
+                    id: true,
+                    name: true,
+                    image: true,
+                }
+            });
+            if (!user) {
                 return status(404, { error: "User not found" });
             }
 
@@ -93,7 +76,7 @@ export function commentPosts(app: Elysia) {
                 content,
                 depth: parentId ? (depth || 0) + 1 : 0,
                 ownerType: type,
-                userId: owner.userId,
+                userId: userId,
                 parentId: parentId || null,
             }).returning();
 
@@ -110,8 +93,6 @@ export function commentPosts(app: Elysia) {
             await db.update(groupPosts).set({
                 commentCounts: sql`comment_counts + 1`
             }).where(eq(groupPosts.id, pid));
-
-            const { user } = owner;
 
 
             // Ensure dates are serialized as ISO strings
