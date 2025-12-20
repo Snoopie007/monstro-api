@@ -23,7 +23,7 @@ const CommentPostsProps = {
 };
 
 export function commentPosts(app: Elysia) {
-    app.get('/', async ({ params, status }) => {
+    app.get('/', async ({ params, status, query }) => {
         const { pid } = params;
 
         try {

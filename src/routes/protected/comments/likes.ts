@@ -8,17 +8,31 @@ const CommentLikesProps = {
     params: z.object({
         cid: z.string(),
     }),
+    body: z.object({
+        userId: z.string(),
+        remove: z.boolean()
+    }),
 };
 
 export function commentLikes(app: Elysia) {
     return app.post('/likes', async ({ params, body, status, ...ctx }) => {
-
+        const { userId, remove } = body;
         const { cid } = params;
         try {
 
-            await db.update(comments).set({
-                likes: sql`likes + 1`,
-            }).where(eq(comments.id, cid));
+            if (remove) {
+                await db.update(comments).set({
+                    likes: sql`array_remove(likes, ${userId})`,
+                }).where(eq(comments.id, cid));
+
+            } else {
+                await db.update(comments).set({
+                    likes: sql`array_append(likes, ${userId})`,
+                }).where(eq(comments.id, cid));
+
+            }
+
+
             return status(200, { success: true });
         } catch (error) {
             console.error(error);

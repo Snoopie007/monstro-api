@@ -9,7 +9,7 @@ export const comments = pgTable("comments", {
     ownerId: text("owner_id").notNull(),
     ownerType: text("owner_type").notNull(),
     parentId: text("parent_id"),
-    likeCounts: integer("like_counts").notNull().default(0),
+    likes: text("likes").array().notNull().default(sql`'{}'::text[]`),
     pinned: boolean("pinned").notNull().default(false),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     content: text("content").notNull(),

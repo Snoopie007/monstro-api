@@ -28,7 +28,13 @@ declare global {
 if (!Bun.env.DATABASE_URL) {
     throw new Error('DATABASE_URL environment variable is required');
 }
-const client = postgres(Bun.env.DATABASE_URL, { prepare: false, max: 2 });
+const client = postgres(Bun.env.DATABASE_URL, {
+    prepare: false,
+    max: 2,
+    connect_timeout: 10,
+    idle_timeout: 30,
+    max_lifetime: 60 * 30, // 30 minutes
+});
 const db = drizzle(client, { schema: schema });
 
 
@@ -39,7 +45,12 @@ if (!Bun.env.DATABASE_ADMIN_URL) {
 
 const adminConnectionString = Bun.env.DATABASE_ADMIN_URL;
 
-const adminClient = postgres(adminConnectionString, { max: 1 });
+const adminClient = postgres(adminConnectionString, {
+    max: 1,
+    connect_timeout: 10,
+    idle_timeout: 30,
+    max_lifetime: 60 * 30, // 30 minutes
+});
 const admindb = drizzle(adminClient, { schema: adminSchema, logger: false });
 
 
