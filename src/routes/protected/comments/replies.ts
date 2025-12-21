@@ -1,6 +1,5 @@
 import { db } from "@/db/db";
 import { comments, groupPosts } from "@/db/schemas";
-import type { Comment } from "@/types/group";
 import { eq, sql } from "drizzle-orm";
 import type { Elysia } from "elysia";
 import { z } from "zod";
@@ -35,12 +34,23 @@ export function commentReplies(app: Elysia) {
                         isNull(comments.deletedOn)
                     ),
                 orderBy: (comments, { desc }) => desc(comments.created),
-                with: {
-                    user: true,
-                },
+
             });
 
-            return status(200, replies);
+            const userIds = replies.map(r => r.userId);
+            const users = await db.query.users.findMany({
+                where: (users, { inArray }) => inArray(users.id, userIds),
+                columns: {
+                    id: true,
+                    name: true,
+                    image: true,
+                },
+            });
+            const repliesWithUsers = replies.map(r => ({
+                ...r,
+                user: users.find(u => u.id === r.userId),
+            }));
+            return status(200, repliesWithUsers);
         } catch (error) {
             console.error(error);
             return status(500, { error: 'Internal server error' }); // fixz: ensure consistent return with status
@@ -50,16 +60,32 @@ export function commentReplies(app: Elysia) {
     app.post('/replies', async ({ params, body, status }) => {
         const { cid } = params;
         const { content, userId } = body;
+
         try {
+
+            const user = await db.query.users.findFirst({
+                where: (users, { eq }) => eq(users.id, userId),
+                columns: {
+                    id: true,
+                    name: true,
+                    image: true,
+                },
+            });
+            if (!user) {
+                return status(404, { error: 'User not found' });
+            }
+
             const parentComment = await db.query.comments.findFirst({
                 where: (comments, { eq }) => eq(comments.id, cid),
             });
+
+
             if (!parentComment) {
                 return status(404, { error: 'Parent comment not found' });
             }
 
-            let newReply: Comment | null = null;
-            await db.transaction(async (tx) => {
+
+            const newReply = await db.transaction(async (tx) => {
                 const [nr] = await tx.insert(comments).values({
                     parentId: cid,
                     ownerId: parentComment.ownerId,
@@ -79,16 +105,19 @@ export function commentReplies(app: Elysia) {
                     commentCounts: sql`comment_counts + 1`
                 }).where(eq(groupPosts.id, parentComment.ownerId));
 
-                newReply = nr;
+                return nr;
             });
-            if (!newReply) {
+            if (newReply === null) {
                 throw new Error('Failed to create reply');
             }
-            console.log(newReply);
-            return status(201, newReply);
+            return status(200, {
+                ...newReply,
+                user: user,
+            });
         } catch (error) {
             console.error(error);
             return status(500, { error: (error as Error).message || 'Internal server error' });
         }
     }, ReplyPostProps);
+    return app;
 }

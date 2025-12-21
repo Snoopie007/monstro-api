@@ -18,6 +18,7 @@ export function commentLikes(app: Elysia) {
     return app.post('/likes', async ({ params, body, status, ...ctx }) => {
         const { userId, remove } = body;
         const { cid } = params;
+        console.log(cid)
         try {
 
             if (remove) {

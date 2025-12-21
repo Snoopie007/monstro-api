@@ -173,7 +173,6 @@ export const userChats = new Elysia({ prefix: '/chats' })
                                     columns: {
                                         id: true,
                                         name: true,
-                                        email: true,
                                         image: true,
                                     },
                                 },
