@@ -87,7 +87,7 @@ export async function POST(
 			}).where(eq(vendors.id, vendorId));
 		});
 		try {
-			await fetch('https://api.mymonstroapp.com/api/public/signup', {
+			await fetch(`${process.env.NEXT_PUBLIC_MONSTRO_API_URL}/api/public/signup`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
