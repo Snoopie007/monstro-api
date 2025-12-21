@@ -133,6 +133,8 @@ export const userChats = new Elysia({ prefix: '/chats' })
                     chatId: chat.id,
                     userId: addresseeId,
                 }]);
+
+
                 return {
                     ...chat,
                     chatMembers: [
@@ -147,9 +149,10 @@ export const userChats = new Elysia({ prefix: '/chats' })
                             user: addressee,
                         },
                     ],
-                    messages: [],
                 };
             });
+
+            console.log(chat);
 
             return status(200, chat);
         } catch (error) {
