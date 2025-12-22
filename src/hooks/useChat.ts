@@ -175,6 +175,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
             progress: 0,
             pendingFiles: files,
             isOptimistic: true,
+            replyId: null,
           };
           setOptimisticMessage(tempMessage);
         }
