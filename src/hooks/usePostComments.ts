@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { PostComment } from "@/types/groups";
-import { useState, useMemo } from "react";
 import { clientsideApiClient } from "@/libs/api/client";
+import { PostComment } from "@/types/groups";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { useSession } from "./useSession";
 
 type UsePostCommentsParams = {
@@ -68,7 +68,7 @@ export function usePostComments({ locationId, groupId, postId }: UsePostComments
             
             // Get the userId to pass to monstro-api (vendorId for vendors)
             // monstro-api expects memberId or vendorId, then resolves to user.id
-            const userId = session.user.vendorId || session.user.staffId;
+            const userId = session.user.id;
             if (!userId) {
                 throw new Error("No vendorId or staffId available");
             }
@@ -127,18 +127,34 @@ export function usePostComments({ locationId, groupId, postId }: UsePostComments
     // Like comment mutation - calls monstro-api
     const likeCommentMutation = useMutation({
         mutationFn: async (commentId: string) => {
-            if (!api) throw new Error("No API client available");
-            return api.post(`/protected/comments/${commentId}/likes`);
+            if (!api || !session?.user?.id) throw new Error("No API client available");
+            return api.post(`/protected/comments/${commentId}/likes`, {
+                userId: session.user.id,
+            });
         },
         onSuccess: (data: any, commentId) => {
-            // Update the likes count in the cache
             queryClient.setQueryData(queryKey, (old: any) => {
                 if (!old?.comments) return old;
+                
+                const updateComment = (comments: PostComment[]): PostComment[] => {
+                    return comments.map((c) => {
+                        if (c.id === commentId) {
+                            const updatedLikes = data.likes ?? c.likes ?? [];
+                            return { 
+                                ...c, 
+                                likes: updatedLikes,
+                            };
+                        }
+                        if (c.replies?.length) {
+                            return { ...c, replies: updateComment(c.replies) };
+                        }
+                        return c;
+                    });
+                };
+                
                 return {
                     ...old,
-                    comments: old.comments.map((c: PostComment) =>
-                        c.id === commentId ? { ...c, likeCounts: data.likeCounts } : c
-                    ),
+                    comments: updateComment(old.comments),
                 };
             });
         },
@@ -148,7 +164,7 @@ export function usePostComments({ locationId, groupId, postId }: UsePostComments
     const deleteCommentMutation = useMutation({
         mutationFn: async (commentId: string) => {
             const response = await fetch(
-                `/protected/loc/${locationId}/groups/${groupId}/posts/${postId}/comments/${commentId}`,
+                `/api/protected/loc/${locationId}/groups/${groupId}/posts/${postId}/comments/${commentId}`,
                 { method: "DELETE" }
             );
             if (!response.ok) throw new Error("Failed to delete comment");

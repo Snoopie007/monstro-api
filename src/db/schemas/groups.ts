@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { text, timestamp, pgTable, jsonb, boolean, index, primaryKey, integer } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { users } from "./users";
 
@@ -50,9 +50,9 @@ export const comments = pgTable("comments", {
     ownerId: text("owner_id").notNull(),
     ownerType: text("owner_type").notNull(),
     parentId: text("parent_id"),
-    likeCounts: integer("like_counts").notNull().default(0),
+    likes: text("likes").array().default(sql`'{}'::text[]`),
     pinned: boolean("pinned").notNull().default(false),
-    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
     content: text("content").notNull(),
     depth: integer("depth").notNull().default(0),
     replyCounts: integer("reply_counts").notNull().default(0),

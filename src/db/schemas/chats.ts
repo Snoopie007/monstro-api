@@ -1,18 +1,18 @@
 import { relations, sql } from "drizzle-orm";
 import {
+    index,
+    jsonb,
+    pgTable,
+    primaryKey,
     text,
     timestamp,
-    pgTable,
-    jsonb,
-    index,
-    primaryKey,
 } from "drizzle-orm/pg-core";
-import { members } from "./members";
-import { users } from "./users";
+import { groups } from "./groups";
 import { locations } from "./locations";
-import { groupPosts, groups } from "./groups";
-import { reactions } from "./reactions";
 import { media } from "./media";
+import { members } from "./members";
+import { reactions } from "./reactions";
+import { users } from "./users";
 
 export const chats = pgTable("chats", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('cht_')`),
@@ -40,6 +40,7 @@ export const messages = pgTable("messages", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62('msg_')`),
     chatId: text("chat_id").notNull().references(() => chats.id, { onDelete: "cascade" }),
     senderId: text("sender_id").references(() => users.id, { onDelete: "set null" }),
+    replyId: text("reply_id").references((): any => messages.id, { onDelete: "set null" }),
     content: text("content"),
     metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -91,6 +92,10 @@ export const messagesRelations = relations(messages, ({ one, many }) => ({
     sender: one(users, {
         fields: [messages.senderId],
         references: [users.id],
+    }),
+    replyTo: one(messages, {
+        fields: [messages.replyId],
+        references: [messages.id],
     }),
     medias: many(media),
     reactions: many(reactions, { relationName: 'messageReactions' }),

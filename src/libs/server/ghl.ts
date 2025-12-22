@@ -1,319 +1,107 @@
 import { db } from "@/db/db";
-import QueryString from "qs";
 import { eq } from "drizzle-orm";
-import { addDays } from "date-fns";
-import { Integration } from "@/types";
+import { HighLevel } from '@gohighlevel/api-client';
 import { integrations } from "@/db/schemas";
+import { Integration } from "@/types";
 
-const DefaultHeaders = {
-  Version: "2021-07-28",
-  "Content-Type": "application/json",
-};
 
-const OAuthConfig = {
-  method: "POST",
-  maxBodyLength: Infinity,
-  headers: {
-    Version: "2021-07-28",
-    Accept: "application/json",
-    "Content-Type": "application/x-www-form-urlencoded",
-  },
-};
+const IS_PROD = process.env.NODE_ENV === "production";
 
-class BaseGHL {
-  readonly API: string;
-  readonly CLIENT_ID: string;
-  readonly CLIENT_SECRET: string;
-  ACCESS_TOKEN: string | undefined;
-  constructor() {
-    this.API = process.env.NEXT_PUBLIC_GHL_API || "";
-    this.CLIENT_ID = process.env.NEXT_PUBLIC_GHL_CLIENT_ID || "";
-    this.CLIENT_SECRET = process.env.GHL_CLIENT_SECRET || "";
-  }
 
-  setAccessToken(accessToken: string) {
-    this.ACCESS_TOKEN = accessToken;
-  }
-
-  /* With Code */
-  async getToken(code: string, type: string, callback = "/callback") {
-    const data = QueryString.stringify({
-      client_id: this.CLIENT_ID,
-      client_secret: this.CLIENT_SECRET,
-      grant_type: "authorization_code",
-      user_type: type,
-      redirect_uri: `${
-        process.env.NODE_ENV === "development"
-          ? "http://localhost:3000"
-          : "https://admin.mymonstro.com"
-      }${callback}`,
-      code,
-    });
-
-    const config = {
-      ...OAuthConfig,
-      body: data,
-    };
-
-    const res = await fetch(`${this.API}oauth/token`, config);
-
-    if (!res.ok) {
-      const error = await res.json();
-      return null;
-    }
-
-    return await res.json();
-  }
-
-  /* With Refresh Token */
-  async getTokenWithRefreshToken(refreshToken: string, type: string) {
-    const options = {
-      client_id: this.CLIENT_ID,
-      client_secret: this.CLIENT_SECRET,
-      grant_type: "refresh_token",
-      user_type: type,
-      refresh_token: refreshToken,
-    };
-
-    const data = QueryString.stringify(options);
-    const config = {
-      ...OAuthConfig,
-      body: data,
-    };
-
-    const res = await fetch(`${this.API}/oauth/token`, config);
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error("Error Getting Refresh Token.");
-    }
-
-    return await res.json();
-  }
+type GetAccessTokenParams = {
+	code?: string;
+	type: 'Company' | 'Location';
+	callback?: string;
+	refreshToken?: string;
 }
 
-class AgencyGHL extends BaseGHL {
-  constructor() {
-    super();
-  }
-  async getLocationTokenFromAgency(data: {
-    companyId: string;
-    locationId: string;
-  }) {
-    if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
-    const qs = QueryString.stringify(data);
-    const res = await fetch(`${this.API}/oauth/locationToken`, {
-      method: "POST",
-      headers: {
-        Version: "2021-07-28",
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Bearer ${this.ACCESS_TOKEN}`,
-      },
-      body: qs,
-    });
-    if (!res.ok) {
-      const error = await res.json();
-    }
 
-    const { companyId, traceId, userId, ...responseData } = await res.json();
-    return responseData;
-  }
+class HighLevelClient {
+	readonly agencyClient: HighLevel;
+	LOCATION_ACCESS_TOKEN: string | undefined;
+	readonly CLIENT_ID: string;
+	readonly CLIENT_SECRET: string;
+	constructor(accessToken?: string) {
+		if (!process.env.NEXT_PUBLIC_GHL_CLIENT_ID || !process.env.GHL_CLIENT_SECRET) {
+			throw new Error("GHL_CLIENT_ID and GHL_CLIENT_SECRET are required");
+		}
+		this.agencyClient = new HighLevel({
+			apiVersion: '2021-07-28',
+			clientId: process.env.NEXT_PUBLIC_GHL_CLIENT_ID,
+			clientSecret: process.env.GHL_CLIENT_SECRET,
+			...(accessToken && { locationAccessToken: accessToken }),
+		});
+		this.CLIENT_ID = process.env.NEXT_PUBLIC_GHL_CLIENT_ID || '';
+		this.CLIENT_SECRET = process.env.GHL_CLIENT_SECRET || '';
+	}
 
-  async getCompanyToken(code: string, callback = "/callback") {
-    const res = await this.getToken(code, "Company", callback);
-    return res;
-  }
+
+	setLocationAccessToken(accessToken: string) {
+		this.LOCATION_ACCESS_TOKEN = accessToken;
+	}
+
+
+
+
+	async getLocationAccessToken(integration: Integration): Promise<string> {
+		const currentTime = new Date().getTime();
+		const isExpired = integration.expires ? currentTime > integration.expires : true;
+
+		if (!integration.refreshToken) throw new Error("No Refresh Token.");
+
+		if (!isExpired && integration.accessToken) {
+			this.LOCATION_ACCESS_TOKEN = integration.accessToken;
+			return integration.accessToken;
+		}
+
+		const res = await this.getAccessToken({ refreshToken: integration.refreshToken, type: 'Location' });
+		const { access_token, refresh_token, expires_in, scope } = res;
+
+		await db.update(integrations).set({
+			accessToken: access_token,
+			refreshToken: refresh_token,
+			expires: expires_in ? new Date().getTime() + (expires_in * 1000) : undefined,
+			metadata: {
+				scope,
+			},
+		}).where(eq(integrations.service, "ghl"));
+
+		this.LOCATION_ACCESS_TOKEN = access_token;
+
+		return access_token!;
+	}
+
+
+
+	/* With Code */
+	async getAccessToken({ code, type, callback, refreshToken }: GetAccessTokenParams) {
+		try {
+			const redirectUri = `${IS_PROD ? "https://app.monstro-x.com" : "http://localhost:3000"}/${callback}`;
+
+			const res = await this.agencyClient.oauth.getAccessToken({
+				client_id: this.CLIENT_ID,
+				client_secret: this.CLIENT_SECRET,
+				grant_type: refreshToken ? 'refresh_token' : 'authorization_code',
+				user_type: type,
+				redirect_uri: redirectUri,
+				...(code && { code }),
+				...(refreshToken && { refresh_token: refreshToken })
+			});
+			return res;
+		} catch (error) {
+			console.log(error);
+			throw new Error("Error Getting Token.");
+		}
+	}
+
+
+
 }
 
-class VendorGHL extends BaseGHL {
-  constructor() {
-    super();
-  }
 
-  async getLocationToken(code: string, callback = "/callback") {
-    const res = await this.getToken(code, "Location", callback);
-    return res;
-  }
 
-  async getAccessToken(integration: Integration) {
-    const currentTime = new Date().getTime();
-    const isExpired = integration.expires
-      ? currentTime > integration.expires
-      : true;
 
-    if (integration.accessToken && !isExpired) {
-      this.ACCESS_TOKEN = integration.accessToken;
-      return integration.accessToken;
-    }
 
-    if (!integration.refreshToken) {
-      throw new Error("Access token error.");
-    }
-
-    const res = await this.getTokenWithRefreshToken(
-      integration.refreshToken,
-      "Location"
-    );
-    const { access_token, refresh_token, expires_in } = res;
-    await db
-      .update(integrations)
-      .set({
-        accessToken: access_token,
-        refreshToken: refresh_token,
-        expires: new Date().getTime() + expires_in * 1000,
-      })
-      .where(eq(integrations.id, integration.id!));
-
-    this.ACCESS_TOKEN = access_token;
-
-    return access_token;
-  }
-
-  async getCalendars(id: string) {
-    if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
-    const res = await fetch(`${this.API}/calendars/?locationId=${id}`, {
-      method: "GET",
-      headers: {
-        ...DefaultHeaders,
-        Authorization: `Bearer ${this.ACCESS_TOKEN}`,
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error("Error Fetching Calendars.");
-    }
-
-    const data = await res.json();
-    return data.calendars;
-  }
-
-  async getWorkflows(id: string) {
-    if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
-    const res = await fetch(`${this.API}/workflows/?locationId=${id}`, {
-      method: "GET",
-      headers: {
-        ...DefaultHeaders,
-        Authorization: `Bearer ${this.ACCESS_TOKEN}`,
-      },
-    });
-
-    if (!res.ok) {
-      throw new Error("Error Fetching Workflows.");
-    }
-    const data = await res.json();
-
-    return data.workflows;
-  }
-  async sendMessage(message: {
-    message: string;
-    contactId: string;
-    type: string;
-  }) {
-    if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
-    const res = await fetch(`${this.API}/conversations/messages`, {
-      method: "POST",
-      headers: {
-        ...DefaultHeaders,
-        Authorization: `Bearer ${this.ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify(message),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error("Error Sending Message.");
-    }
-
-    return data;
-  }
-
-  async addToWorkflow(workflowId: string, contactId: string) {
-    if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
-    const res = await fetch(
-      `${this.API}/contacts/${contactId}/workflow/${workflowId}`,
-      {
-        method: "POST",
-        headers: {
-          ...DefaultHeaders,
-          Authorization: `Bearer ${this.ACCESS_TOKEN}`,
-        },
-      }
-    );
-
-    if (!res.ok) {
-      throw new Error("Error Adding Contact to Workflow.");
-    }
-
-    return true;
-  }
-
-  async getFreeSlots(id: string, day = 7, limit = 14) {
-    if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
-    const startDate = new Date();
-    const endDate = addDays(startDate, day);
-    const qs = QueryString.stringify({
-      startDate: startDate.getTime(),
-      endDate: endDate.getTime(),
-    });
-    const res = await fetch(`${this.API}/calendars/${id}/free-slots?${qs}`, {
-      method: "GET",
-      headers: {
-        ...DefaultHeaders,
-        Authorization: `Bearer ${this.ACCESS_TOKEN}`,
-      },
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error("Error Fetching Free Slots.");
-    }
-
-    let data = await res.json();
-
-    if (Object.keys(data).length > 0) {
-      data = Object.values<{ slots: string[] }>(data)
-        .filter((day) => day.slots)
-        .flatMap((day) => day.slots)
-        .slice(0, limit);
-    }
-
-    return data;
-  }
-
-  async upsertContact(contact: Record<string, any>): Promise<void> {
-    if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
-    const res = await fetch(`${this.API}/contacts/upsert`, {
-      method: "POST",
-      headers: {
-        ...DefaultHeaders,
-        Authorization: `Bearer ${this.ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify(contact),
-    });
-    if (!res.ok) {
-      const error = await res.json();
-    }
-  }
-
-  async bookAppointment(appointment: Record<string, any>) {
-    if (!this.ACCESS_TOKEN) throw new Error("No Access Token.");
-    const res = await fetch(`${this.API}/calendars/events/appointments`, {
-      method: "POST",
-      headers: {
-        ...DefaultHeaders,
-        Authorization: `Bearer ${this.ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify(appointment),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error("Error Booking Appointment.");
-    }
-
-    return true;
-  }
+export {
+	HighLevelClient,
 }
-
-export { AgencyGHL, VendorGHL };
