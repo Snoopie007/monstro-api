@@ -1,9 +1,9 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui";
-import { PostComment } from "@/types/groups";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/libs/utils";
+import { PostComment } from "@/types/groups";
 import { formatDistanceToNow } from "date-fns";
 import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
@@ -115,8 +115,8 @@ export function CommentItem({
                             onClick={handleLike}
                             disabled={isLiking}
                         >
-                            <Heart className={cn("h-3.5 w-3.5 mr-1", comment.likeCounts > 0 && "fill-red-500 text-red-500")} />
-                            {comment.likeCounts > 0 && <span className="text-xs">{comment.likeCounts}</span>}
+                            <Heart className={cn("h-3.5 w-3.5 mr-1", (comment.likes?.length ?? 0) > 0 && "fill-red-500 text-red-500")} />
+                            {(comment.likes?.length ?? 0) > 0 && <span className="text-xs">{comment.likes?.length}</span>}
                         </Button>
                         <Button
                             variant="ghost"
