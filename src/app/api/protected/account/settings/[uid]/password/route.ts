@@ -1,8 +1,8 @@
 import { auth } from "@/libs/auth/server";
 import { NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { eq } from "drizzle-orm";
-import { users } from "@/db/schemas";
+import { eq, and } from "drizzle-orm";
+import { users, accounts } from "@/db/schemas";
 import bcrypt from "bcryptjs";
 
 export async function PATCH(req: Request, props: { params: Promise<{ uid: string }> }) {
@@ -53,8 +53,21 @@ export async function PATCH(req: Request, props: { params: Promise<{ uid: string
 
     const newHashedPassword: string = await bcrypt.hash(password, 10)
 
+    // Update users table
     await db.update(users).set({ password: newHashedPassword }).where(eq(users.id, uid))
 
+    // Update accounts table for Better Auth
+    await db
+      .update(accounts)
+      .set({
+        password: newHashedPassword,
+      })
+      .where(
+        and(
+          eq(accounts.userId, uid),
+          eq(accounts.provider, "credential")
+        )
+      );
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {

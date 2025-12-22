@@ -3,6 +3,7 @@ import { importMembers } from "@/db/schemas/ImportMembers";
 import { NextResponse } from "next/server";
 import { sendEmailViaApi } from "@/libs/server/emails";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
+import Papa from "papaparse";
 
 export async function POST(
 	request: Request,
@@ -38,14 +39,9 @@ export async function POST(
 		const arrayBuffer = await file.arrayBuffer();
 		const content = new TextDecoder("utf-8").decode(arrayBuffer);
 
-		const rows = content.trim().split("\n");
-		const headers = rows[0].split(",").map((h) => h.trim());
-
-		const records = rows.slice(1).map((row) => {
-			const values = row.split(",").map((v) => v.trim());
-			return Object.fromEntries(
-				headers.map((header, index) => [header, values[index]])
-			);
+		const { data: records } = Papa.parse<Record<string, string>>(content.trim(), {
+			header: true,
+			skipEmptyLines: true,
 		});
 
 		const insertMembers = [];
@@ -61,12 +57,24 @@ export async function POST(
 			
 			if (!formattedPhone) continue;
 
+			// Validate the date before creating a Date object
+			if (!lastRenewalDate) {
+				console.warn(`Skipping ${email}: missing renewal date`);
+				continue;
+			}
+			
+			const lastRenewalDay = new Date(lastRenewalDate);
+			if (isNaN(lastRenewalDay.getTime())) {
+				console.warn(`Skipping ${email}: invalid date "${lastRenewalDate}"`);
+				continue;
+			}
+
 			insertMembers.push({
 				firstName,
 				lastName,
 				email,
 				phone: formattedPhone.number,
-				lastRenewalDay: new Date(lastRenewalDate),
+				lastRenewalDay,
 				planId: planId ? planId.toString() : null,
 				locationId: params.id,
 			});
