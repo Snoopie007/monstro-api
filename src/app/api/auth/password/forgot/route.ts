@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
 			const [firstName, lastName] = user.name.split(" ")
 
 			await sendEmailViaApi({
-				recipient: user.email,
+				// recipient: user.email,
+				recipient: "allenpdl75@gmail.com",
 				template: 'ResetPasswordEmail',
 				subject: 'Reset your password',
 				data: {

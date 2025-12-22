@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
-import { users } from "@/db/schemas";
+import { users, accounts } from "@/db/schemas";
 import { sendEmailViaApi } from "@/libs/server/emails";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getRedisClient } from "@/libs/server/redis";
@@ -48,12 +48,27 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Update users table
     await db
       .update(users)
       .set({
         password: hashedPassword,
       })
       .where(eq(users.id, user.id));
+
+    // Update accounts table for Better Auth
+    await db
+      .update(accounts)
+      .set({
+        password: hashedPassword,
+      })
+      .where(
+        and(
+          eq(accounts.userId, user.id),
+          eq(accounts.provider, "credential")
+        )
+      );
 
     const [firstName, lastName] = user.name.split(" ");
     await sendEmailViaApi({
