@@ -55,7 +55,6 @@ export async function mobileLogin(app: Elysia) {
             const data = {
                 ...rest,
                 phone: member.phone,
-                image: member?.avatar,
                 stripeCustomerId: member?.stripeCustomerId,
                 memberId: member?.id,
                 role: "member",

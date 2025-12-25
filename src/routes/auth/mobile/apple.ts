@@ -126,7 +126,6 @@ export async function mobileAppleLogin(app: Elysia) {
                         lastName: name.split(" ")[1] || "",
                         email: email,
                         phone: phone || "",
-                        avatar: null,
                         referralCode: generateReferralCode(),
                     }).returning();
 

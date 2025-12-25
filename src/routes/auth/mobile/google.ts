@@ -20,7 +20,7 @@ const GoogleNewAccountSchema = {
         accessToken: z.string(),
         email: z.string(),
         name: z.string(),
-        picture: z.string(),
+        image: z.string().optional(),
         phone: z.string().optional(),
     }),
 };
@@ -93,7 +93,7 @@ export async function mobileGoogleLogin(app: Elysia) {
     }, GoogleLoginSchema)
 
     app.post('/google/new', async ({ body, status }) => {
-        const { token, accessToken, email, name, picture, phone } = body;
+        const { token, accessToken, email, name, image, phone } = body;
 
         if (!token) {
             return status(400, { message: "Id token is required" });
@@ -120,7 +120,7 @@ export async function mobileGoogleLogin(app: Elysia) {
                     const [newUser] = await tx.insert(users).values({
                         email,
                         name,
-                        image: picture,
+                        image: image || null,
                     }).returning();
 
                     if (!newUser) {
@@ -133,7 +133,6 @@ export async function mobileGoogleLogin(app: Elysia) {
                         lastName: name.split(" ")[1] || "",
                         email: email,
                         phone: phone || "",
-                        avatar: picture || null,
                         referralCode: generateReferralCode(),
                     }).returning();
 
