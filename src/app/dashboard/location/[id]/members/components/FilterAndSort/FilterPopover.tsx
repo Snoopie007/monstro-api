@@ -2,7 +2,7 @@ import { Popover, PopoverTrigger, PopoverContent, Button } from "@/components/ui
 import { ColumnDef } from "@/libs/table-utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/forms";
 import { FilterIcon, XIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { FilterInputType, memberColumnMetadata, getCustomFieldConfig } from "./ColumnTypes";
 import { CustomFieldDefinition, MemberListItem } from "@/types";
 import { FilterInput } from "./FilterInput";
@@ -16,44 +16,46 @@ interface FilterPopoverProps {
 
 export function FilterPopover({ columns, filters, onFiltersChange, customFields }: FilterPopoverProps) {
 
-    // Generate column options with metadata
-    const columnOptions = columns
-        .filter((column: ColumnDef<MemberListItem, any> & { accessorKey?: string }) =>
-            column.id !== 'select' && column.accessorKey !== 'tags')
-        .map((column: ColumnDef<MemberListItem, any> & { accessorKey?: string }) => {
-            const { accessorKey, id, header } = column;
-            const columnId = accessorKey ?? id ?? 'name';
+    // Generate column options with metadata - memoized to prevent recalculation
+    const columnOptions = useMemo(() => {
+        return columns
+            .filter((column: ColumnDef<MemberListItem, any> & { accessorKey?: string }) =>
+                column.id !== 'select' && column.accessorKey !== 'tags')
+            .map((column: ColumnDef<MemberListItem, any> & { accessorKey?: string }) => {
+                const { accessorKey, id, header } = column;
+                const columnId = accessorKey ?? id ?? 'name';
 
-            // Check if this is a custom field column
-            if (columnId.startsWith('custom-field-')) {
-                const fieldId = columnId.replace('custom-field-', '');
-                const customFieldConfig = getCustomFieldConfig(fieldId, customFields);
+                // Check if this is a custom field column
+                if (columnId.startsWith('custom-field-')) {
+                    const fieldId = columnId.replace('custom-field-', '');
+                    const customFieldConfig = getCustomFieldConfig(fieldId, customFields);
 
-                if (customFieldConfig) {
-                    return {
-                        id: columnId,
-                        label: header,
-                        inputType: customFieldConfig.inputType,
-                        options: customFieldConfig.options,
-                        placeholder: customFieldConfig.placeholder
-                    };
+                    if (customFieldConfig) {
+                        return {
+                            id: columnId,
+                            label: header,
+                            inputType: customFieldConfig.inputType,
+                            options: customFieldConfig.options,
+                            placeholder: customFieldConfig.placeholder
+                        };
+                    }
                 }
-            }
 
-            // Handle regular columns
-            const metadata = memberColumnMetadata[columnId];
-            return {
-                id: columnId,
-                label: header,
-                inputType: metadata?.inputType || FilterInputType.TEXT,
-                options: metadata?.options,
-                placeholder: metadata?.placeholder || `Enter ${header?.toString().toLowerCase()}`
-            };
-        });
+                // Handle regular columns
+                const metadata = memberColumnMetadata[columnId];
+                return {
+                    id: columnId,
+                    label: header,
+                    inputType: metadata?.inputType || FilterInputType.TEXT,
+                    options: metadata?.options,
+                    placeholder: metadata?.placeholder || `Enter ${header?.toString().toLowerCase()}`
+                };
+            });
+    }, [columns, customFields]);
 
     const allColumnOptions = columnOptions;
 
-    const [filterKv, setFilterKv] = useState<{ id: string, value: unknown }[]>([{ id: allColumnOptions[0]?.id || '', value: "" }]);
+    const [filterKv, setFilterKv] = useState<{ id: string, value: unknown }[]>([]);
 
     const handleColumnChange = (currentId: string, newColumnId: string) => {
         setFilterKv(filterKv.map(filter => filter.id === currentId ? { ...filter, id: newColumnId } : filter))
@@ -73,10 +75,23 @@ export function FilterPopover({ columns, filters, onFiltersChange, customFields 
     }
 
     useEffect(() => {
-        if (filters.length > 0) {
-            setFilterKv(filters)
-        }
+        setFilterKv(filters)
     }, [filters])
+
+    // Guard against empty columns - prevent errors when page is loading
+    if (columnOptions.length === 0) {
+        return (
+            <Button variant="ghost" className="hover:bg-foreground/10" disabled>
+                <FilterIcon size={14} className="mr-2" />
+                Filter
+                {filterKv.length > 0 &&
+                    <span className="text-xs text-foreground/80 ml-2 size-5 flex items-center justify-center bg-foreground/10 rounded-full">
+                        {filterKv.length}
+                    </span>
+                }
+            </Button>
+        );
+    }
 
     return (
         <Popover>

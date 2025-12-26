@@ -16,6 +16,7 @@ import {
 } from '@/db/schemas'
 import { PaymentType } from './DatabaseEnums'
 import { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
+import { ColumnFiltersState } from '@tanstack/react-table'
 
 
 export type Member = typeof members.$inferSelect & {
@@ -201,4 +202,56 @@ export type LocationMembersResponse = {
     count: number
     members: MemberListItem[]
     customFields: CustomFieldDefinition[]
+}
+
+export type MemberStatus = 
+    | 'active' | 'incomplete' | 'past_due' | 'canceled' 
+    | 'paused' | 'trialing' | 'unpaid' | 'incomplete_expired' | 'archived'
+
+export interface TableState {
+    page: number
+    pageSize: number
+    columnFilters: ColumnFiltersState
+    searchQuery: string
+    selectedTags: string[]
+    tagOperator: 'AND' | 'OR'
+    sorting: { id: string; direction: 'asc' | 'desc' }[]
+}
+
+export interface TabConfig {
+    id: string
+    name: string
+    statusFilter: MemberStatus[]
+    removable: boolean
+    state: TableState
+}
+
+export interface SavedTabConfig {
+    id: string
+    name: string
+    statusFilter: MemberStatus[]
+    columnFilters: ColumnFiltersState
+    searchQuery: string
+    selectedTags: string[]
+    tagOperator: 'AND' | 'OR'
+    sorting: { id: string; direction: 'asc' | 'desc' }[]
+}
+
+export interface MembersTabState extends TabConfig {
+    filteredData: {
+        members: MemberListItem[]
+        count: number
+        customFields: CustomFieldDefinition[]
+    }
+}
+
+export interface TabParams {
+    id: string
+    page: number
+    pageSize: number
+    searchQuery: string
+    selectedTags: string[]
+    columnFilters: ColumnFiltersState
+    tagOperator: 'AND' | 'OR'
+    sorting: { id: string; direction: 'asc' | 'desc' }[]
 }

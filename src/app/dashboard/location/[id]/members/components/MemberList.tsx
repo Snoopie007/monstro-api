@@ -1,5 +1,7 @@
 'use client'
 
+import { Input } from '@/components/forms'
+import { MemberListItem } from '@/types/member'
 import {
     ColumnFiltersState,
     getCoreRowModel,
@@ -7,21 +9,18 @@ import {
     getSortedRowModel,
     useReactTable,
 } from '@tanstack/react-table'
-import { useMemo, useEffect } from 'react'
-import { MemberColumns } from './MemberColumns'
-import { Input } from '@/components/forms'
-import { MemberTable } from './MemberTable'
-import ErrorComponent from '@/components/error'
+import { useMemo } from 'react'
 import { AddMember } from './CreateMember'
-import { MemberListItem } from '@/types/member'
+import { MemberColumns } from './MemberColumns'
+import { MemberTable } from './MemberTable'
 
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { Button, ScrollArea, Separator } from '@/components/ui'
-import TagsFilter from './TagsFilter'
-import { FilterPopover, SortPopover } from './FilterAndSort'
-import { MembersTabState } from '../../../../../../hooks/userMembers'
-import { debounce } from '@tiptap-pro/extension-table-of-contents'
 import { usePermission } from '@/hooks/usePermissions'
+import { debounce } from '@tiptap-pro/extension-table-of-contents'
+import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
+import { MembersTabState } from '../../../../../../hooks/userMembers'
+import { FilterPopover, SortPopover } from './FilterAndSort'
+import TagsFilter from './TagsFilter'
 
 export function MemberList({
     params,
@@ -30,15 +29,14 @@ export function MemberList({
     memberTab,
     isLoading,
     handleChangeParam,
-    handleFetchForCurrentTab,
 }: {
     params: { id: string }
-    tabId: number
+    tabId: string
     stripeKey: string | null
     memberTab: MembersTabState
     isLoading: boolean
     handleChangeParam: (params: {
-        id: number
+        id: string
         page: number
         pageSize: number
         searchQuery: string
@@ -47,7 +45,6 @@ export function MemberList({
         tagOperator: 'AND' | 'OR'
         sorting: { id: string; direction: 'asc' | 'desc' }[]
     }) => void
-    handleFetchForCurrentTab: (id: number) => void
 }) {
     const canAddMember = usePermission("add member", params.id)
     const {
@@ -58,20 +55,21 @@ export function MemberList({
         selectedTags,
         tagOperator,
         sorting,
-        data,
     } = memberTab.state
 
+    const { filteredData } = memberTab
+
     const columns = useMemo(
-        () => MemberColumns(params.id, data.customFields),
-        [params.id, data.customFields]
+        () => MemberColumns(params.id, filteredData.customFields),
+        [params.id, filteredData.customFields]
     )
 
     const totalPages = useMemo(() => {
-        if (data.count && pageSize > 0) {
-            return Math.ceil(data.count / pageSize) // size: total items, pageSize: items per page
+        if (filteredData.count && pageSize > 0) {
+            return Math.ceil(filteredData.count / pageSize) // size: total items, pageSize: items per page
         }
         return 1 // Default to 1 page if data is unavailable
-    }, [data.count, pageSize])
+    }, [filteredData.count, pageSize])
 
     const handleFiltersChange = (
         updaterOrValue:
@@ -95,13 +93,14 @@ export function MemberList({
     }
 
     const table = useReactTable<MemberListItem>({
-        data: data.members || [], // Only use data when it's available
+        data: filteredData.members || [], // Client-side filtered data
         columns,
-        pageCount: totalPages, // Set total pages from the API
+        pageCount: totalPages,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         onColumnFiltersChange: handleFiltersChange,
         getSortedRowModel: getSortedRowModel(),
+        manualPagination: true, // CRITICAL: Prevents infinite loop - we handle pagination in useMemberTabs hook
         state: {
             pagination: {
                 pageIndex: page,
@@ -126,8 +125,7 @@ export function MemberList({
                 sorting,
             })
         },
-        manualPagination: true, // Enable manual pagination
-        manualFiltering: true, // Enable manual filtering
+        // Note: manualPagination and manualFiltering removed - filtering now happens client-side in the hook
     })
 
     const handleSearch = useMemo(
@@ -144,7 +142,7 @@ export function MemberList({
                     sorting,
                 })
             }, 300), // Wait 300ms after typing stops
-        []
+        [tabId, pageSize, selectedTags, columnFilters, tagOperator, sorting, handleChangeParam]
     )
 
     const handleSortChange = (
@@ -182,27 +180,6 @@ export function MemberList({
         return null
     }, [canAddMember])
 
-    useEffect(() => {
-        if (!isLoading && data.members && data.members.length === 0) {
-            handleFetchForCurrentTab(tabId)
-        }
-    }, [
-        tabId,
-        pageSize,
-        searchQuery,
-        selectedTags,
-        columnFilters,
-        tagOperator,
-        sorting,
-    ])
-
-    if (data.error) {
-        return (
-            <ErrorComponent
-                error={{ name: 'Member List Error', message: data.error }}
-            />
-        )
-    }
 
     return (
         <div className='space-y-2 bg-muted/50  rounded-lg '>
@@ -211,7 +188,7 @@ export function MemberList({
                     columns={columns}
                     filters={columnFilters}
                     onFiltersChange={handleFiltersChange}
-                    customFields={data.customFields}
+                    customFields={filteredData.customFields}
                 />
                 <SortPopover
                     columns={columns}
@@ -286,7 +263,7 @@ export function MemberList({
                     orientation="vertical"
                     className="bg-foreground/10"
                 />
-                Total members: {data?.count}
+                Total members: {filteredData?.count}
             </div>
         </div>
     )
