@@ -15,7 +15,6 @@ export function userFeedsRoutes(app: Elysia) {
     return app.group('/feeds/:type', (app) => {
         app.get("/", async ({ params, status, ...ctx }) => {
             const { type, uid } = params;
-
             try {
                 let feeds: UserFeed[] = [];
                 if (type === "moments") {

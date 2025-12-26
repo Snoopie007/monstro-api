@@ -14,8 +14,7 @@ const CommentPostsProps = {
     ...GetCommentProps,
     body: z.object({
         content: z.string(),
-        depth: z.number(),
-        type: z.string(),
+        depth: z.number().optional(),
         userId: z.string(),
         parentId: z.string().optional(),
     }),
@@ -62,9 +61,9 @@ export function commentPosts(app: Elysia) {
 
     app.post("/", async ({ params, body, status }) => {
         const { pid } = params;
-        const { content, depth, type, userId, parentId } = body;
+        const { content, depth = 0, userId, parentId } = body;
 
-        if (!userId || !content || !type) {
+        if (!userId || !content) {
             return status(400, { error: "Invalid request" });
         }
 
@@ -86,7 +85,7 @@ export function commentPosts(app: Elysia) {
                     ownerId: pid,
                     content,
                     depth: parentId ? (depth || 0) + 1 : 0,
-                    ownerType: type,
+                    ownerType: "post",
                     userId: userId,
                     parentId: parentId || null,
                 })
