@@ -1,10 +1,10 @@
 import { clientsideApiClient } from '@/libs/api/client';
+import { uploadToS3 } from '@/libs/client/s3';
+import { Message, ReactionEmoji } from '@/types';
+import { UploadUrl } from '@/types/other';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from './useSession';
-import { ReactionEmoji, Message } from '@/types';
-import { UploadUrl } from '@/types/other';
-import { uploadToS3 } from '@/libs/client/s3';
 
 // ============== Types ==============
 
@@ -175,7 +175,7 @@ export const useChat = ({ mode, enabled = true }: UseChatOptions): UseChatReturn
             progress: 0,
             pendingFiles: files,
             isOptimistic: true,
-            replyId: null,
+            replyId: null
           };
           setOptimisticMessage(tempMessage);
         }
