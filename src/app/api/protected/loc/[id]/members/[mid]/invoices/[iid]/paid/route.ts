@@ -97,19 +97,20 @@ export async function POST(
 
 			// If invoice is linked to a subscription, mark subscription as active AND move billing period forward
 			if (invoice.memberSubscriptionId) {
-				// Fetch the subscription to get plan details
+				// Fetch the subscription to get plan and pricing details
 				const subscription = await tx.query.memberSubscriptions.findFirst({
 					where: eq(memberSubscriptions.id, invoice.memberSubscriptionId),
-					with: { plan: true },
+					with: { plan: true, pricing: true },
 				});
 
-				if (subscription && subscription.plan) {
-					// Calculate next billing period based on plan interval
+				if (subscription && (subscription.pricing || subscription.plan)) {
+					// Calculate next billing period based on pricing interval (fallback to defaults)
 					const currentPeriodEnd = new Date(subscription.currentPeriodEnd);
 					let nextPeriodEnd: Date;
 
-					const interval = subscription.plan.interval || 'month';
-					const intervalThreshold = subscription.plan.intervalThreshold || 1;
+					// Use pricing.interval if available, otherwise default to month
+					const interval = subscription.pricing?.interval || 'month';
+					const intervalThreshold = subscription.pricing?.intervalThreshold || 1;
 
 					switch (interval) {
 						case 'day':

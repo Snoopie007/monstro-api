@@ -1,9 +1,19 @@
 
-import { MemberPlan } from "@/types";
+import { MemberPlan, MemberPlanPricing } from "@/types";
 import { MonstroPlan } from "@/types/admin";
 import { AddressParam } from "@stripe/stripe-js";
 import { isSameDay, addMonths, isAfter } from "date-fns";
 import Stripe from "stripe";
+
+// Type for creating Stripe products/prices
+type StripePricingData = {
+	name: string;
+	description?: string;
+	price: number;
+	currency?: string;
+	interval?: "day" | "week" | "month" | "year" | null;
+	intervalThreshold?: number | null;
+};
 
 type Customer = {
 	firstName: string;
@@ -465,7 +475,11 @@ class MemberStripePayments extends BaseStripePayments {
 	}
 
 
-	async createSubscription(plan: MemberPlan, settings: MemberSubscriptionSettings) {
+	async createSubscription(
+		plan: MemberPlan, 
+		pricing: MemberPlanPricing, 
+		settings: MemberSubscriptionSettings
+	) {
 		if (!this._customer) {
 			throw new Error("Customer not set");
 		}
@@ -475,11 +489,11 @@ class MemberStripePayments extends BaseStripePayments {
 		const { startDate, trialEnd, paymentMethod, feePercent, allowProration, cancelAt,
 			taxRateId, ...rest } = settings;
 
-		if (!plan.stripePriceId) {
+		if (!pricing.stripePriceId) {
 			throw new Error("Price not found");
 		}
 
-		const isAllowProration = plan.interval === "month" || plan.interval === "year"
+		const isAllowProration = pricing.interval === "month" || pricing.interval === "year"
 
 
 		const accountDestination = {
@@ -496,8 +510,8 @@ class MemberStripePayments extends BaseStripePayments {
 			},
 			automatic_tax: { enabled: false },
 			invoice_settings: { issuer: accountDestination },
-			description: `Subscription to ${plan.name}`,
-			items: [{ price: plan.stripePriceId as string }],
+			description: `Subscription to ${plan.name} - ${pricing.name}`,
+			items: [{ price: pricing.stripePriceId as string }],
 			collection_method: "charge_automatically",
 			default_payment_method: paymentMethod || undefined,
 			application_fee_percent: feePercent || 0,
@@ -521,20 +535,20 @@ class MemberStripePayments extends BaseStripePayments {
 
 
 	async createStripeProduct(
-		data: MemberPlan,
+		data: StripePricingData,
 		metadata: Record<string, any>
 	): Promise<Stripe.Price> {
 		const { interval, price, intervalThreshold } = data;
 		const product = await this._stripe.products.create({
 			name: data.name,
-			description: data.description,
+			description: data.description || "",
 			active: true,
 			default_price_data: {
 				currency: data.currency || "usd",
-				recurring: {
+				recurring: interval ? {
 					interval: interval as Stripe.PriceCreateParams.Recurring.Interval,
 					interval_count: intervalThreshold || 1,
-				},
+				} : undefined,
 				unit_amount: price,
 				metadata,
 			},

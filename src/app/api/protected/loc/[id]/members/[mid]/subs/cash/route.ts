@@ -1,11 +1,13 @@
 import { db } from "@/db/db";
-import { memberSubscriptions } from "@/db/schemas";
+import { memberSubscriptions, memberPlanPricing } from "@/db/schemas";
 import { NextResponse } from "next/server";
 import {
     addUserToGroup,
     calculatePeriodEnd,
+    calculateExpiresAt,
     scheduleRecurringInvoiceReminders,
 } from "../../../utils";
+import { eq } from "drizzle-orm";
 
 
 type Props = {
@@ -17,14 +19,33 @@ type Props = {
 
 export async function POST(req: Request, props: Props) {
     const { id, mid } = await props.params;
-    const { paymentMethod, paymentType, trialDays, ...data } = await req.json();
+    const { paymentMethod, paymentType, trialDays, pricingId, ...data } = await req.json();
     try {
+        // Validate pricingId is provided
+        if (!pricingId) {
+            return NextResponse.json({ error: "Pricing selection is required" }, { status: 400 });
+        }
+
+        // Fetch the pricing option
+        const pricing = await db.query.memberPlanPricing.findFirst({
+            where: eq(memberPlanPricing.id, pricingId)
+        });
+
+        if (!pricing) {
+            return NextResponse.json({ error: "Pricing option not found" }, { status: 404 });
+        }
+
         const plan = await db.query.memberPlans.findFirst({
             where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
         })
 
         if (!plan) {
             throw new Error("Plan not found")
+        }
+
+        // Validate pricing belongs to the plan
+        if (pricing.memberPlanId !== plan.id) {
+            return NextResponse.json({ error: "Pricing does not belong to this plan" }, { status: 400 });
         }
 
 
@@ -57,19 +78,26 @@ export async function POST(req: Request, props: Props) {
 
         const today = new Date()
         const startDate = data.startDate ? new Date(data.startDate) : today;
+        
+        // Use pricing for period calculation
         const endDate = calculatePeriodEnd(
             startDate,
-            plan.interval!,
-            plan.intervalThreshold!
+            pricing.interval!,
+            pricing.intervalThreshold!
         );
+
+        // Calculate expires_at from pricing term if set
+        const expiresAt = calculateExpiresAt(startDate, pricing.expireInterval, pricing.expireThreshold);
 
         const [sub] = await db.insert(memberSubscriptions).values({
             startDate: startDate,
             currentPeriodStart: startDate,
             currentPeriodEnd: endDate,
+            expiresAt: expiresAt,
             locationId: id,
             memberId: mid,
             memberPlanId: plan.id,
+            memberPlanPricingId: pricing.id,
             paymentType,
             status: "active",
             metadata: {
@@ -83,49 +111,16 @@ export async function POST(req: Request, props: Props) {
             await addUserToGroup({ groupId: plan.groupId, userId: member.userId });
         }
 
-        // const tx = await db.transaction(async (tx) => {
-        // TODO: uncomment and refine when invoices are being done
-        // // Invoice starts as DRAFT
-        // const [{ invoiceId }] = await tx.insert(memberInvoices).values({
-        //     locationId: id,
-        //     memberId: mid,
-        //     description: `Recurring Invoice for ${plan.name}`,
-        //     status: "paid",
-        //     paymentType: "cash",
-        //     invoiceType: "recurring",
-        //     memberSubscriptionId: sub.id
-        // }).returning({ invoiceId: memberInvoices.id });
-
-        // // Transaction created as incomplete
-        // await tx.insert(transactions).values({
-        //     locationId: id,
-        //     memberId: mid,
-        //     type: "inbound",
-        //     invoiceId,
-        //     status: "paid",
-        //     paymentType: "cash",
-        // });
-        // })
-
-
         const { locationState } = location;
 
         if (locationState?.planId && locationState.planId >= 2) {
-            if (member && location && plan.interval && plan.intervalThreshold) {
+            if (member && location && pricing.interval && pricing.intervalThreshold) {
                 await scheduleRecurringInvoiceReminders({ subscriptionId: sub.id, memberId: mid, locationId: id });
                 console.log(`📧 Scheduled recurring invoice emails for subscription ${sub.id}`);
             }
         }
 
-        // await triggerSignUp({
-        //     mid: mid,
-        //     lid: id,
-        //     pid: plan.id,
-        // });
-
-
-
-        return NextResponse.json({ ...sub, plan: plan, }, { status: 200 })
+        return NextResponse.json({ ...sub, plan: plan, pricing: pricing }, { status: 200 })
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })

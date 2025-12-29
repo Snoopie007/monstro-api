@@ -8,7 +8,6 @@ import {
 	FormLabel,
 	FormMessage,
 	Input,
-	PriceInput,
 	Textarea,
 } from "@/components/forms";
 import {
@@ -43,6 +42,7 @@ import { toast } from "react-toastify";
 import { useProducts } from "../../providers";
 import AddPrograms from "../AddPrograms";
 import { PlanPkgFields } from "./PkgFields";
+import { PricingOptions } from "./PricingOptions";
 import { PlanSubFields } from "./SubFields";
 
 interface CreatePlanProps {
@@ -64,18 +64,21 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 			type: type === "subs" ? "recurring" : "one-time",
 			family: false,
 			familyMemberLimit: 0,
-			amount: 0,
+			pricingOptions: [{
+				name: "Standard",
+				price: 0,
+				interval: type === "subs" ? "month" : undefined,
+				intervalThreshold: 1,
+				expireInterval: null,
+				expireThreshold: null,
+			}],
 			programs: [],
 			intervalClassLimit: undefined,
 			sub: {
-				interval: "month",
-				intervalThreshold: 1,
 				allowProration: false,
 				billingAnchor: undefined,
 			},
 			pkg: {
-				expireInterval: undefined,
-				expireThreshold: undefined,
 				totalClassLimit: type === "pkgs" ? 1 : 0,
 			},
 			contractId: undefined,
@@ -88,12 +91,13 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 		if (form.formState.isSubmitting) return;
 
 		try {
-			const { pkg, sub, ...rest } = v;
+			const { pkg, sub, pricingOptions, ...rest } = v;
 			const { result, error } = await tryCatch(
 				fetch(`/api/protected/loc/${lid}/plans/${type}`, {
 					method: "POST",
 					body: JSON.stringify({
 						...rest,
+						pricingOptions,
 						...(type === "subs" ? { ...sub } : { ...pkg }),
 					}),
 				})
@@ -132,15 +136,15 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 					<Plus className="size-3.5 text-white" />
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="max-w-lg border-foreground/10">
+			<DialogContent className="max-w-lg border-foreground/10 max-h-[90vh] flex flex-col">
 				<VisuallyHidden className="space-y-0">
 					<DialogTitle>
 					</DialogTitle>
 				</VisuallyHidden>
-				<DialogBody>
+				<DialogBody className="overflow-y-auto flex-1">
 					<Form {...form}>
 						<form className="space-y-2">
-							<fieldset className="grid grid-cols-2 gap-2">
+							<fieldset>
 								<FormField
 									control={form.control}
 									name="name"
@@ -153,22 +157,6 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 													className={cn("")}
 													placeholder="Name"
 													{...field}
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="amount"
-									render={({ field }) => (
-										<FormItem className="flex-1">
-											<FormLabel size={"tiny"}>Price</FormLabel>
-											<FormControl>
-												<PriceInput
-													value={field.value}
-													onChange={field.onChange}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -195,6 +183,10 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 									)}
 								/>
 							</fieldset>
+							<PricingOptions 
+								form={form} 
+								planType={type === "subs" ? "recurring" : "one-time"} 
+							/>
 							<fieldset>
 								<FormField
 									control={form.control}

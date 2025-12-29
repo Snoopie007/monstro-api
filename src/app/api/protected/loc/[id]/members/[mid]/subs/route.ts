@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberSubscriptions } from "@/db/schemas";
+import { memberSubscriptions, memberPlanPricing } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -8,7 +8,9 @@ import {
     calculateStripeFeePercentage,
     calculateTrialEnd,
     scheduleRecurringInvoiceReminders,
+    calculateExpiresAt,
 } from "../../utils";
+import { eq } from "drizzle-orm";
 
 import { PaymentType } from "@/types";
 import { getTaxRateId } from "../../utils";
@@ -42,7 +44,8 @@ export async function GET(req: NextRequest, props: Props) {
                             }
                         }
                     }
-                }
+                },
+                pricing: true
             }
         })
 
@@ -56,15 +59,34 @@ export async function GET(req: NextRequest, props: Props) {
 export async function POST(req: Request, props: Props) {
     const { id, mid } = await props.params;
     const body = await req.json();
-    const { paymentMethod, paymentType, trialDays, ...data } = body;
+    const { paymentMethod, paymentType, trialDays, pricingId, ...data } = body;
 
     try {
+        // Validate pricingId is provided
+        if (!pricingId) {
+            return NextResponse.json({ error: "Pricing selection is required" }, { status: 400 });
+        }
+
+        // Fetch the pricing option
+        const pricing = await db.query.memberPlanPricing.findFirst({
+            where: eq(memberPlanPricing.id, pricingId)
+        });
+
+        if (!pricing) {
+            return NextResponse.json({ error: "Pricing option not found" }, { status: 404 });
+        }
+
         const plan = await db.query.memberPlans.findFirst({
             where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
         })
 
         if (!plan) {
             throw new Error("Plan not found")
+        }
+
+        // Validate pricing belongs to the plan
+        if (pricing.memberPlanId !== plan.id) {
+            return NextResponse.json({ error: "Pricing does not belong to this plan" }, { status: 400 });
         }
 
 
@@ -115,22 +137,27 @@ export async function POST(req: Request, props: Props) {
 
         const today = new Date()
         const startDate = data.startDate ? new Date(data.startDate) : today;
+        
+        // Use pricing for period calculation
         const endDate = calculatePeriodEnd(
             startDate,
-            plan.interval!,
-            plan.intervalThreshold!
+            pricing.interval!,
+            pricing.intervalThreshold!
         );
 
+        // Calculate expires_at from pricing term if set
+        const expiresAt = calculateExpiresAt(startDate, pricing.expireInterval, pricing.expireThreshold);
 
         const taxRateId = getTaxRateId(location.taxRates);
 
 
-        const stripeFeePercentage = calculateStripeFeePercentage(plan.price, paymentMethod.type as PaymentType);
+        const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentMethod.type as PaymentType);
         const feePercent = location.locationState?.usagePercent + stripeFeePercentage;
 
-        const stripeSubscription = await stripe.createSubscription(plan, {
+        // Pass both plan and pricing to createSubscription
+        const stripeSubscription = await stripe.createSubscription(plan, pricing, {
             startDate,
-            cancelAt: data.cancelAt ? new Date(data.cancelAt) : undefined,
+            cancelAt: expiresAt || (data.cancelAt ? new Date(data.cancelAt) : undefined),
             trialEnd: trialDays ? calculateTrialEnd(startDate, trialDays) : undefined,
             paymentMethod: paymentMethod.stripeId,
             allowProration: plan.allowProration,
@@ -138,7 +165,8 @@ export async function POST(req: Request, props: Props) {
             taxRateId,
             metadata: {
                 memberId: mid,
-                locationId: id
+                locationId: id,
+                pricingId: pricing.id
             },
         })
 
@@ -148,9 +176,11 @@ export async function POST(req: Request, props: Props) {
             startDate: startDate,
             currentPeriodStart: startDate,
             currentPeriodEnd: endDate,
+            expiresAt: expiresAt,
             locationId: id,
             memberId: mid,
             memberPlanId: plan.id,
+            memberPlanPricingId: pricing.id,
             paymentType,
             status: "incomplete",
             metadata: {
@@ -168,7 +198,7 @@ export async function POST(req: Request, props: Props) {
         const { locationState } = location;
 
         if (locationState?.planId && locationState.planId >= 2) {
-            if (member && location && plan.interval && plan.intervalThreshold) {
+            if (member && location && pricing.interval && pricing.intervalThreshold) {
                 await scheduleRecurringInvoiceReminders({ 
                     subscriptionId: sub.id, 
                     memberId: mid, 
@@ -178,28 +208,7 @@ export async function POST(req: Request, props: Props) {
             }
         }
 
-
-
-        // if (data.paymentType === "cash") {
-        //     // Invoice starts as DRAFT
-        //     const [{ invoiceId }] = await tx.insert(memberInvoices).values({
-
-        //         status: "paid",
-        //         paymentType: "cash",
-        //         invoiceType: "recurring",
-        //         memberSubscriptionId: sub.id
-        //     }).returning({ invoiceId: memberInvoices.id });
-
-        //     // Transaction created as incomplete
-        //     await tx.insert(transactions).values({
-
-        //         invoiceId,
-        //         status: "paid",
-        //         paymentType: "cash",
-        //     });
-        // }
-
-        return NextResponse.json({ ...sub, plan: plan, }, { status: 200 })
+        return NextResponse.json({ ...sub, plan: plan, pricing: pricing }, { status: 200 })
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })

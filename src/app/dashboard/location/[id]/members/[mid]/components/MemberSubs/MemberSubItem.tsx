@@ -134,7 +134,13 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                         {`${format(sub.startDate, 'MMM d, yyyy')} - ${sub.endedAt ? format(sub.endedAt, 'MMM d, yyyy') : 'n/a'}`}
                     </InfoField>
                     <InfoField label="Price">
-                        {`${formatAmountForDisplay(sub.plan?.price! / 100, 'usd', true)} / ${sub.plan?.interval}`}
+                        {sub.pricing 
+                            ? `${formatAmountForDisplay(sub.pricing.price / 100, sub.pricing.currency || 'usd', true)} / ${sub.pricing.interval || 'one-time'}`
+                            : 'N/A'
+                        }
+                        {sub.pricing?.name && sub.pricing.name !== 'Standard' && (
+                            <span className="text-xs text-muted-foreground ml-1">({sub.pricing.name})</span>
+                        )}
                     </InfoField>
                     <InfoField label="Payment Type">
                         {getPaymentType(sub.paymentType)}
@@ -154,13 +160,22 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                     </InfoField>
                 </div>
 
-                {sub.cancelAt && sub.cancelAtPeriodEnd && (
+                {(sub.cancelAt || sub.expiresAt) && (
                     <div className="grid grid-cols-3 items-center">
-                        <InfoField label="Cancels at">
-                            <span className="flex items-center gap-1">
-                                <Clock4Icon size={14} /> {format(sub.cancelAt, "MMM d, yyyy")}
-                            </span>
-                        </InfoField>
+                        {sub.cancelAt && sub.cancelAtPeriodEnd && (
+                            <InfoField label="Cancels at">
+                                <span className="flex items-center gap-1">
+                                    <Clock4Icon size={14} /> {format(sub.cancelAt, "MMM d, yyyy")}
+                                </span>
+                            </InfoField>
+                        )}
+                        {sub.expiresAt && (
+                            <InfoField label="Expires at">
+                                <span className="flex items-center gap-1">
+                                    <Clock4Icon size={14} /> {format(sub.expiresAt, "MMM d, yyyy")}
+                                </span>
+                            </InfoField>
+                        )}
                     </div>
                 )}
 

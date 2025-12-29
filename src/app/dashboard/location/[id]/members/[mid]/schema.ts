@@ -19,6 +19,7 @@ export const ChargeItemSchema = z.object({
 // Common fields shared between subscription and package schemas
 const CommonFields = z.object({
     memberPlanId: z.string().min(1, "required"),
+    pricingId: z.string().min(1, "Pricing option is required"),
     startDate: z.date().min(new Date(), "Activation date must be in the future"),
 })
 

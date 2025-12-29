@@ -33,10 +33,10 @@ export async function POST(
 
 
 
-		// Get subscription with plan
+		// Get subscription with plan and pricing
 		const subscription = await db.query.memberSubscriptions.findFirst({
 			where: eq(memberSubscriptions.id, params.sid),
-			with: { plan: true },
+			with: { plan: true, pricing: true },
 		});
 
 		if (!subscription) {
@@ -58,12 +58,16 @@ export async function POST(
 			);
 		}
 
+		// Use pricing for interval calculation
+		const interval = subscription.pricing?.interval || "month";
+		const intervalThreshold = subscription.pricing?.intervalThreshold || 1;
+
 		// Calculate next billing period
 		const nextPeriodStart = subscription.currentPeriodEnd;
 		const nextPeriodEnd = calculatePeriodEnd(
 			nextPeriodStart,
-			subscription.plan.interval!,
-			subscription.plan.intervalThreshold!
+			interval,
+			intervalThreshold
 		);
 
 		// Check if invoice already exists for next period
@@ -81,8 +85,9 @@ export async function POST(
 			);
 		}
 
-
-		const tax = calculateTax(subscription.plan.price, location.taxRates);
+		// Use pricing.price for tax calculation
+		const price = subscription.pricing?.price || 0;
+		const tax = calculateTax(price, location.taxRates);
 
 		// // Use same utility functions as subscription creation
 		// const newTransaction = createTransaction(

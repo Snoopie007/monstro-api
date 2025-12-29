@@ -47,7 +47,7 @@ export async function POST(
     if (type === "from-subscription" && selectedSubscriptionId) {
       const subscription = await db.query.memberSubscriptions.findFirst({
         where: eq(memberSubscriptions.id, selectedSubscriptionId),
-        with: { plan: true },
+        with: { plan: true, pricing: true },
       });
 
       if (!subscription) {
@@ -64,23 +64,27 @@ export async function POST(
         );
       }
 
+      // Use pricing for price if available, fallback to 0 if no pricing
+      const price = subscription.pricing?.price || 0;
+      const pricingName = subscription.pricing?.name ? ` - ${subscription.pricing.name}` : "";
+
       // Create invoice with subscription details
       const subscriptionInvoiceData = {
         memberId: params.mid,
         locationId: params.id,
         memberSubscriptionId: subscription.id,
-        description: `${subscription.plan.name} - Billing Period`,
+        description: `${subscription.plan.name}${pricingName} - Billing Period`,
         items: [{
-          name: subscription.plan.name,
+          name: subscription.plan.name + pricingName,
           description: subscription.plan.description || "",
           quantity: 1,
-          price: subscription.plan.price, // Already in cents
+          price: price, // Already in cents
         }],
-        total: subscription.plan.price,
-        subtotal: subscription.plan.price,
+        total: price,
+        subtotal: price,
         tax: 0, // TODO: Implement add tax
         discount: 0,
-        currency: subscription.plan.currency || "usd",
+        currency: subscription.pricing?.currency || subscription.plan.currency || "usd",
         status: "draft" as const,
         dueDate: new Date(subscription.currentPeriodEnd),
         paymentType: subscription.paymentType,
@@ -90,6 +94,7 @@ export async function POST(
         metadata: {
           type: "from-subscription",
           subscriptionId: subscription.id,
+          pricingId: subscription.pricing?.id,
         },
       };
 
@@ -105,19 +110,19 @@ export async function POST(
           memberId: params.mid,
           locationId: params.id,
           invoiceId: newInvoice.id,
-          description: `${subscription.plan.name} - Recurring Payment`,
+          description: `${subscription.plan.name}${pricingName} - Recurring Payment`,
           type: "inbound",
           status: "incomplete",
           paymentType: subscription.paymentType,
-          total: subscription.plan.price,
-          currency: subscription.plan.currency || "usd",
+          total: price,
+          currency: subscription.pricing?.currency || subscription.plan.currency || "usd",
           created: new Date(),
-          subTotal: subscription.plan.price,
+          subTotal: price,
           // TODO: implement tax
           // tax: 
           items: [{
             productId: subscription.plan.id,
-            amount: subscription.plan.price,
+            amount: price,
             tax: 0,
             quantity: 1,
         }],

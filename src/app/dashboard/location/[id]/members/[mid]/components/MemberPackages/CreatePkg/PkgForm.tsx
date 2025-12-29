@@ -28,12 +28,12 @@ import {
 } from "@/components/ui";
 
 import { useMemberPackages, } from "@/hooks";
-import { cn, tryCatch } from "@/libs/utils";
-import { MemberPackage, MemberPlan, PaymentMethod } from "@/types";
+import { cn, formatAmountForDisplay, tryCatch } from "@/libs/utils";
+import { MemberPackage, MemberPlan, MemberPlanPricing, PaymentMethod } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { CalendarIcon, ChevronRight, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { z } from "zod";
@@ -61,11 +61,20 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
             startDate: new Date(),
             expireDate: undefined,
             memberPlanId: undefined,
+            pricingId: undefined,
             totalClassLimit: undefined,
 
         },
         mode: "onSubmit",
     })
+
+    // Get pricing options for the selected plan
+    const selectedPlanId = form.watch("memberPlanId");
+    const selectedPlan = useMemo(() => {
+        return pkgs.find(p => p.id === selectedPlanId);
+    }, [pkgs, selectedPlanId]);
+
+    const pricingOptions = selectedPlan?.pricingOptions || [];
 
 
 
@@ -108,7 +117,11 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Select a Plan</FormLabel>
-                                        <Select onValueChange={field.onChange} >
+                                        <Select onValueChange={(value) => {
+                                            field.onChange(value);
+                                            // Reset pricing when plan changes
+                                            form.setValue("pricingId", "");
+                                        }} >
                                             <FormControl>
                                                 <SelectTrigger >
                                                     <SelectValue placeholder="Select a plan" />
@@ -128,6 +141,38 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
                             />
 
                         </fieldset>
+
+                        {selectedPlanId && pricingOptions.length > 0 && (
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="pricingId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size="tiny">Select pricing option</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select pricing" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {pricingOptions.map((pricing: MemberPlanPricing) => (
+                                                        <SelectItem key={pricing.id} value={pricing.id}>
+                                                            {pricing.name} - {formatAmountForDisplay(pricing.price / 100, pricing.currency || 'usd')}
+                                                            {pricing.expireInterval && pricing.expireThreshold && 
+                                                                ` (expires in ${pricing.expireThreshold} ${pricing.expireInterval}s)`
+                                                            }
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
+                        )}
 
                         <fieldset className="grid grid-cols-7 gap-2">
                             <div className="col-span-3">
