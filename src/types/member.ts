@@ -8,6 +8,7 @@ import {
   memberLocations,
   memberPackages,
   memberPlans,
+  memberPlanPricing,
   memberReferrals,
   members,
   memberSubscriptions,
@@ -29,10 +30,15 @@ export type Member = typeof members.$inferSelect & {
   referredBy?: MemberReferral
 }
 
+export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
+  plan?: MemberPlan
+}
+
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
   child?: MemberSubscription | null
   invoices?: MemberInvoice[]
   plan?: MemberPlan
+  pricing?: MemberPlanPricing | null
   contract?: MemberContract | null
   member?: Member
   paymentType: PaymentType
@@ -40,6 +46,7 @@ export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
 
 export type MemberPackage = typeof memberPackages.$inferSelect & {
   plan?: MemberPlan
+  pricing?: MemberPlanPricing | null
   contract?: MemberContract | null
   member?: Member
   parent?: MemberPackage | null
@@ -58,6 +65,7 @@ export type MemberPlan = typeof memberPlans.$inferSelect & {
   contract?: Contract | undefined
   billingAnchorConfig: BillingCycleAnchorConfig | null
   planPrograms?: PlanProgram[]
+  pricingOptions?: MemberPlanPricing[]
   member?: Member
 }
 
