@@ -3,7 +3,6 @@ import {
     text,
     timestamp,
     pgTable,
-    jsonb,
     index,
 
     primaryKey,
@@ -44,7 +43,6 @@ export const messages = pgTable("messages", {
     senderId: text("sender_id").notNull().references(() => users.id, { onDelete: "set null" }),
     replyId: text("reply_id"),
     content: text("content"),
-    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [

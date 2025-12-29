@@ -26,17 +26,15 @@ export const userNotifications = pgTable("user_notifications", {
     deviceModelId: text("device_model_id"),
     deviceName: text("device_name"),
     enabled: boolean("enabled").notNull().default(true),
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }),
-},
-    (t) => [
-        index("idx_user_notifications_user_id").on(t.userId),
-        index("idx_user_notifications_user_platform").on(t.userId, t.platform),
-        index("idx_user_notifications_enabled").on(t.enabled).where(sql`${t.enabled} = true`),
-        index("idx_user_notifications_token").on(t.token),
-    ]
-);
+    lastSeen: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+    created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
+}, (t) => [
+    index("idx_user_notifications_user_id").on(t.userId),
+    index("idx_user_notifications_user_platform").on(t.userId, t.platform),
+    index("idx_user_notifications_enabled").on(t.enabled).where(sql`${t.enabled} = true`),
+    index("idx_user_notifications_token").on(t.token),
+]);
 
 
 

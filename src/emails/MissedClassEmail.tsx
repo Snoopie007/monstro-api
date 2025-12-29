@@ -71,7 +71,7 @@ export default function MissedClassEmail({
 
             <Section style={buttonContainerStyle}>
               <Button
-                href={`https://app.mymonstro.com/schedule`}
+                href={`https://app.monstro-x.com/schedule`}
                 style={buttonStyle}
               >
                 Book Your Next Class
@@ -226,8 +226,8 @@ MissedClassEmail.PreviewProps = {
   },
   monstro: {
     fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',
-    privacyUrl: 'https://mymonstro.com/privacy',
-    unsubscribeUrl: 'https://mymonstro.com/unsubscribe',
+    privacyUrl: 'https://monstro-x.com/privacy',
+    unsubscribeUrl: 'https://monstro-x.com/unsubscribe',
   },
 } as MissedClassEmailProps;
 

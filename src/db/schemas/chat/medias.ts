@@ -16,7 +16,6 @@ export const media = pgTable("media", {
     url: text("url").notNull(),
     thumbnailUrl: text("thumbnail_url"),
     altText: text("alt_text"),
-    metadata: jsonb("metadata").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });

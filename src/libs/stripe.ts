@@ -47,7 +47,7 @@ abstract class BaseStripePayments {
             apiVersion: "2025-10-29.clover",
             appInfo: {
                 name: "My Monstro",
-                url: "https://mymonstro.com",
+                url: "https://monstro-x.com",
             },
         });
     }

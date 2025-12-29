@@ -72,21 +72,21 @@ export default function InvoiceReminderEmail({
 
             <Section style={invoiceBoxStyle}>
               <Text style={invoiceHeaderStyle}>Invoice Details</Text>
-              
+
               <Text style={invoiceDetailStyle}>
                 <strong>Invoice ID:</strong> {invoice.id}
               </Text>
-              
+
               <Text style={invoiceDetailStyle}>
                 <strong>Description:</strong> {invoice.description}
               </Text>
-              
+
               <Text style={invoiceDetailStyle}>
                 <strong>Due Date:</strong> {formatDate(invoice.dueDate)}
               </Text>
-              
+
               <Hr style={dividerStyle} />
-              
+
               <Section style={itemsSection}>
                 <Text style={itemsHeaderStyle}>Items:</Text>
                 {invoice.items.map((item, index) => (
@@ -100,9 +100,9 @@ export default function InvoiceReminderEmail({
                   </Section>
                 ))}
               </Section>
-              
+
               <Hr style={dividerStyle} />
-              
+
               <Text style={totalStyle}>
                 <strong>Amount Due:</strong> {formatCurrency(invoice.total)}
               </Text>
@@ -117,13 +117,13 @@ export default function InvoiceReminderEmail({
                 <strong>Phone:</strong> {location.phone}
               </Text>
             )}
-            
+
             {location.email && (
               <Text style={contactStyle}>
                 <strong>Email:</strong> {location.email}
               </Text>
             )}
-            
+
             {location.address && (
               <Text style={contactStyle}>
                 <strong>Address:</strong> {location.address}
@@ -314,8 +314,8 @@ InvoiceReminderEmail.PreviewProps = {
   },
   monstro: {
     fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',
-    privacyUrl: 'https://mymonstro.com/privacy',
-    unsubscribeUrl: 'https://mymonstro.com/unsubscribe',
+    privacyUrl: 'https://monstro-x.com/privacy',
+    unsubscribeUrl: 'https://monstro-x.com/unsubscribe',
   },
 } as InvoiceReminderEmailProps;
 

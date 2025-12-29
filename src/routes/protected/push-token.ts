@@ -6,7 +6,7 @@ import { userNotifications } from "@/db/schemas";
 const MobilePushTokenSchema = {
     body: z.object({
         token: z.string(),
-        deviceModelId: z.string(),
+        deviceModelId: z.string().nullish(),
         deviceName: z.string(),
         platform: z.enum(["ios", "android"]),
     }),
@@ -24,6 +24,7 @@ export async function userPushTokenRoutes(app: Elysia) {
             await db.insert(userNotifications).values({
                 userId,
                 ...data,
+                created: today,
             });
             return status(200, { success: true });
         } catch (error) {
