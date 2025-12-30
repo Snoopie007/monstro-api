@@ -1,6 +1,7 @@
 import { db, admindb } from "@/db/db";
 import { wallets } from "@/db/schemas/locations";
 import { VendorStripePayments } from "@/libs/server/stripe";
+import { Sale } from "@/types/admin";
 
 async function chargeWallet(
   stripe: VendorStripePayments,
@@ -48,4 +49,38 @@ async function getPlan(planId: number) {
   return p;
 }
 
-export { chargeWallet, getPlan };
+
+type NotifyData = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
+// Helper function for external API call
+async function notifyAdminAPI(user: NotifyData, locationId: string) {
+
+  try {
+    const response = await fetch('https://api.mymonstroapp.com/api/public/signup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer 4087c1d6-5bb9-47a5-8598-c2a0868c6a78`
+      },
+      body: JSON.stringify({
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        lid: locationId,
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`External API returned ${response.status}`);
+    }
+  } catch (error) {
+    // Re-throw to be caught by caller
+    throw error;
+  }
+}
+export { chargeWallet, getPlan, notifyAdminAPI };

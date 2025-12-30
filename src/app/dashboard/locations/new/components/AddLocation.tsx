@@ -141,9 +141,9 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
 
         if (!result || error || !result.ok) {
             setLoading(false);
-            const error = await result?.json();
-            console.log(error)
-            return toast.error(error?.error || "Failed to add location, please try again.");
+            const err = await result?.json();
+            console.log(err)
+            return toast.error(err.error || "Failed to add location, please try again.");
         }
         const data = await result.json();
 

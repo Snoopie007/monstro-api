@@ -1,14 +1,14 @@
 CREATE TABLE IF NOT EXISTS user_notifications (
-  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('not_'),
-  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
+  user_id text NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   platform text NOT NULL CHECK (platform IN ('ios', 'android')),
   token text NOT NULL UNIQUE,
-  device_id text, -- Optional: to track multiple devices per user/platform
-  device_name text, -- Optional: user-friendly device name
+  device_model_id text,
+  device_name text,
   enabled boolean NOT NULL DEFAULT true,
   last_seen_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz -- Consistent with other tables in your codebase
+  updated_at timestamptz
 );
 
 -- Indexes for common query patterns
