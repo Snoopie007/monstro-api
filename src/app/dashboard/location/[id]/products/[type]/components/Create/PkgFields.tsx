@@ -109,48 +109,6 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
           </span>
         </CollapsibleTrigger>
         <CollapsibleContent className="bg-background rounded-sm p-4 space-y-2">
-          <fieldset className="flex flex-col gap-1 items-baseline">
-            <FormLabel size={"tiny"}>Expires In (From Signup Date)</FormLabel>
-            <div className="grid grid-cols-3 gap-3 items-baseline">
-              <FormField
-                control={form.control}
-                name="pkg.expireThreshold"
-                render={({ field }) => (
-                  <FormItem className="col-span-1">
-                    <FormControl>
-                      <Input type="number" placeholder="1" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="pkg.expireInterval"
-                render={({ field }) => (
-                  <FormItem className="col-span-2">
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || ""}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select interval..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {["day", "week", "month", "year"].map(
-                          (preset, index) => (
-                            <SelectItem key={index} value={preset}>
-                              {preset}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-            </div>
-          </fieldset>
-
           <fieldset>
             <FormField
               control={form.control}

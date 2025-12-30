@@ -154,7 +154,7 @@ export function CancelSub({ sub, open, onOpenChange }: CancelSubProps) {
 									refundAmount: value,
 								}));
 							}}
-							amount={sub.plan?.price || 0}
+							amount={sub.pricing?.price || 0}
 						/>
 					)}
 

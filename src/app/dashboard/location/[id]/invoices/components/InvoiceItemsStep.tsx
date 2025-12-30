@@ -115,12 +115,12 @@ export function InvoiceItemsStep({
             <div className="flex justify-between items-center pt-3 border-t">
               <span className="text-sm font-medium">Price:</span>
               <span className="text-lg font-semibold">
-                {formatAmountForDisplay((selectedSubscription.plan?.price ?? 0) / 100, 'usd', true)}
+                {formatAmountForDisplay((selectedSubscription.pricing?.price ?? 0) / 100, 'usd', true)}
               </span>
             </div>
             <div className="flex justify-between items-center text-sm text-muted-foreground">
               <span>Billing Interval:</span>
-              <span>{selectedSubscription.plan?.interval}</span>
+              <span>{selectedSubscription.pricing?.interval}</span>
             </div>
           </CardContent>
         </Card>
