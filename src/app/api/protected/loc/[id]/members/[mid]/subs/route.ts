@@ -139,14 +139,21 @@ export async function POST(req: Request, props: Props) {
         const startDate = data.startDate ? new Date(data.startDate) : today;
         
         // Use pricing for period calculation
-        const endDate = calculatePeriodEnd(
+        const periodEnd = calculatePeriodEnd(
             startDate,
             pricing.interval!,
             pricing.intervalThreshold!
         );
 
-        // Calculate expires_at from pricing term if set
-        const expiresAt = calculateExpiresAt(startDate, pricing.expireInterval, pricing.expireThreshold);
+        // Calculate expires_at: use manually selected endDate first, then pricing term, then null (ongoing)
+        let expiresAt: Date | null = null;
+        if (data.endDate) {
+            // User manually selected an end date from Duration picker
+            expiresAt = new Date(data.endDate);
+        } else if (pricing.expireInterval && pricing.expireThreshold) {
+            // Use pricing term settings
+            expiresAt = calculateExpiresAt(startDate, pricing.expireInterval, pricing.expireThreshold);
+        }
 
         const taxRateId = getTaxRateId(location.taxRates);
 
@@ -175,7 +182,7 @@ export async function POST(req: Request, props: Props) {
             stripeSubscriptionId: stripeSubscription.id,
             startDate: startDate,
             currentPeriodStart: startDate,
-            currentPeriodEnd: endDate,
+            currentPeriodEnd: periodEnd,
             expiresAt: expiresAt,
             locationId: id,
             memberId: mid,

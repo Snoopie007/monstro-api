@@ -54,10 +54,14 @@ export function UpdateSub({ sub, open, onOpenChange }: UpdateSubProps) {
 	const paymentMethods = ml.memberPaymentMethods;
 	const params = useParams();
 
+	// Use expiresAt (term-based) or cancelAt (manual cancellation) for the end date
+	const rawEndDate = sub.expiresAt || sub.cancelAt;
+	const effectiveEndDate = rawEndDate ? new Date(rawEndDate) : null;
+
 	const form = useForm<z.infer<typeof UpdateSubSchema>>({
 		resolver: zodResolver(UpdateSubSchema),
 		defaultValues: {
-			endAt: sub.cancelAt || undefined,
+			endAt: effectiveEndDate || undefined,
 			trialDays: 0,
 			allowProration: sub.plan?.allowProration,
 			reset: false,
@@ -121,22 +125,22 @@ export function UpdateSub({ sub, open, onOpenChange }: UpdateSubProps) {
 										{format(new Date(sub.currentPeriodStart), "MMM d, yyyy")}
 									</span>
 									<ArrowRight className="size-3.5 " />
-									<FormField
-										control={form.control}
-										name="endAt"
-										render={({ field }) => (
-											<FormItem>
-												<FormControl>
-													<EndDayPicker
-														onChange={field.onChange}
-														startDate={sub.currentPeriodStart}
-														endDate={field.value || sub.cancelAt}
-													/>
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
+								<FormField
+									control={form.control}
+									name="endAt"
+									render={({ field }) => (
+										<FormItem>
+											<FormControl>
+												<EndDayPicker
+													onChange={field.onChange}
+													startDate={sub.currentPeriodStart}
+													endDate={field.value || effectiveEndDate}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
 								</div>
 							</fieldset>
 

@@ -515,17 +515,23 @@ class MemberStripePayments extends BaseStripePayments {
 			collection_method: "charge_automatically",
 			default_payment_method: paymentMethod || undefined,
 			application_fee_percent: feePercent || 0,
-			cancel_at: cancelAt ? cancelAt.getTime() / 1000 : undefined,
-			trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
+			cancel_at: cancelAt ? Math.floor(cancelAt.getTime() / 1000) : undefined,
+			trial_end: trialEnd ? Math.floor(trialEnd.getTime() / 1000) : undefined,
 		};
 
 		if (isAllowProration) {
-			if (plan.billingAnchorConfig) {
-				options.billing_cycle_anchor_config = plan.billingAnchorConfig;
+			// Only use billing_cycle_anchor_config when there's no cancel_at
+			// Stripe doesn't allow arbitrary cancel_at timestamps with billing_cycle_anchor_config
+			const hasBillingAnchor = plan.billingAnchorConfig && Object.keys(plan.billingAnchorConfig).length > 0;
+			const hasTermEndDate = cancelAt || options.cancel_at;
+			if (hasBillingAnchor && !hasTermEndDate) {
+				options.billing_cycle_anchor_config = plan.billingAnchorConfig!;
 			}
-			if (startDate && isAfter(startDate, new Date())) {
+			// Only set billing_cycle_anchor for future start dates without cancel_at
+			// to avoid conflicts with term-based subscriptions
+			if (startDate && isAfter(startDate, new Date()) && !hasTermEndDate) {
 				options.proration_behavior = (allowProration || plan.allowProration) ? "create_prorations" : "none";
-				options.billing_cycle_anchor = startDate.getTime() / 1000;
+				options.billing_cycle_anchor = Math.floor(startDate.getTime() / 1000);
 			}
 		}
 
@@ -611,7 +617,7 @@ class MemberStripePayments extends BaseStripePayments {
 			return this._stripe.subscriptions.update(subscriptionId, {
 				cancel_at_period_end: endOfPeriod,
 				...(!endOfPeriod && {
-					cancel_at: cancelDate ? cancelDate.getTime() / 1000 : undefined,
+					cancel_at: cancelDate ? Math.floor(cancelDate.getTime() / 1000) : undefined,
 				}),
 			});
 		}
@@ -797,7 +803,7 @@ class MemberStripePayments extends BaseStripePayments {
 		const options: Stripe.SubscriptionScheduleCreateParams = {
 			customer: customerId,
 			start_date: Math.floor(startDate.getTime() / 1000),
-			end_behavior: "cancel",
+			end_behavior: endDate ? "cancel" : "release",
 			phases: [
 				{
 					items: scheduleItems,
