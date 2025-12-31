@@ -33,8 +33,8 @@ export function StaffEmail({ staff, lid }: StaffEmailProps) {
         toast.success("Email updated successfully");
     }
     return (
-        <div className="bg-foreground/5 rounded-lg">
-            <div className="p-6 space-y-4">
+        <div className="bg-foreground/5 rounded-lg p-6 space-y-4">
+            <div className=" space-y-4">
                 <div className="space-y-1">
                     <div className="text-lg font-bold">Email</div>
                     <p className="text-sm text-muted-foreground">
@@ -43,7 +43,7 @@ export function StaffEmail({ staff, lid }: StaffEmailProps) {
                 </div>
                 <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
             </div>
-            <div className="flex justify-end px-6 py-3 bg-foreground/5">
+            <div className="flex justify-end">
                 <Button type="submit"
                     variant="foreground"
                     disabled={loading || newEmail === staff.email}

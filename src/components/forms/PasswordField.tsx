@@ -34,7 +34,6 @@ export function PasswordField({ value, onChange, className, placeholder }: Passw
 
         let level: PasswordStrengthLevel;
 
-
         if (score <= 2) {
             level = "weak";
         } else if (score <= 4) {
@@ -47,9 +46,6 @@ export function PasswordField({ value, onChange, className, placeholder }: Passw
 
         return { level, score };
     }, [value]);
-
-
-
 
     const strengthColors = {
         weak: "bg-red-500",
@@ -67,7 +63,6 @@ export function PasswordField({ value, onChange, className, placeholder }: Passw
 
     return (
         <div className="space-y-1">
-
             <div className={cn(" overflow-hidden border border-foreground/5 rounded-lg", className)}>
                 <Input
                     type="password"
@@ -77,8 +72,6 @@ export function PasswordField({ value, onChange, className, placeholder }: Passw
                     onChange={(e) => onChange(e.target.value)}
                 />
                 {value && (
-
-
                     <div className="w-full bg-gray-200 h-1">
                         <div
                             className={cn(
@@ -88,21 +81,22 @@ export function PasswordField({ value, onChange, className, placeholder }: Passw
                             )}
                         />
                     </div>
-
                 )}
             </div>
-            <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Password strength:</span>
-                <span className={cn(
-                    "font-medium ",
-                    level === "weak" && "text-red-600",
-                    level === "fair" && "text-orange-600",
-                    level === "good" && "text-yellow-600",
-                    level === "strong" && "text-green-600"
-                )}>
-                    {level}
-                </span>
-            </div>
+            {value && (
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Password strength:</span>
+                    <span className={cn(
+                        "font-medium ",
+                        level === "weak" && "text-red-600",
+                        level === "fair" && "text-orange-600",
+                        level === "good" && "text-yellow-600",
+                        level === "strong" && "text-green-600"
+                    )}>
+                        {level}
+                    </span>
+                </div>
+            )}
         </div>
     );
 }

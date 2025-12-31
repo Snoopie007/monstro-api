@@ -45,10 +45,10 @@ export function StaffProfile({ staff, lid }: StaffProfileProps) {
     }
 
     return (
-        <div className="bg-foreground/5 rounded-lg">
+        <div className="bg-foreground/5 rounded-lg p-6 space-y-4">
 
             <Form {...form}>
-                <form className="space-y-4 p-6">
+                <form className="space-y-4 ">
 
                     <fieldset className="space-y-4">
                         <div className="space-y-1">
@@ -90,7 +90,7 @@ export function StaffProfile({ staff, lid }: StaffProfileProps) {
 
                 </form>
             </Form>
-            <div className="bg-foreground/5 py-3 px-6 flex justify-end">
+            <div className="flex justify-end">
                 <Button
                     type="submit"
 

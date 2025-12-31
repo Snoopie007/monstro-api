@@ -1,17 +1,33 @@
 import { NextResponse } from 'next/server';
-import { staffs } from '@/db/schemas';
+import { staffs, staffsLocationRoles, staffLocations } from '@/db/schemas';
 import { db } from '@/db/db';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+
+
 type StaffProps = {
-  sid: string
-  id: string
+  sid: string;
+  id: string;
+  lid: string;
 }
 
 export async function DELETE(req: Request, props: { params: Promise<StaffProps> }) {
-  const params = await props.params;
+  const { lid, sid } = await props.params;
 
   try {
-    await db.delete(staffs).where(eq(staffs.id, params.sid))
+    await db.transaction(async (tx) => {
+      await tx.delete(staffLocations).where(
+        and(
+          eq(staffLocations.staffId, sid),
+          eq(staffLocations.locationId, lid)
+        )
+      )
+
+      await tx.delete(staffsLocationRoles).where(
+        eq(staffsLocationRoles.staffLocationId, sid)
+      )
+
+      await tx.delete(staffs).where(eq(staffs.id, sid))
+    })
     return NextResponse.json({ success: true }, { status: 200 })
 
   } catch (err) {

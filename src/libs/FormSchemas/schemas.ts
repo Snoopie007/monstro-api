@@ -66,6 +66,18 @@ export const ResetPasswordSchema = z.object({
     }
 );
 
+export const UpdatePasswordSchema = z.object({
+    confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters long."),
+    password: z.string().min(8, "Password must be at least 8 characters long."),
+    currentPassword: z.string().min(8, "Current password must be at least 8 characters long."),
+}).refine(
+    (data) => data.password === data.confirmPassword,
+    {
+        message: "Passwords do not match.",
+        path: ["confirmPassword"]
+    }
+);
+
 
 export const LocationSetupSchema = z.object({
     name: z.string({ message: "Business name is required." }).min(1),

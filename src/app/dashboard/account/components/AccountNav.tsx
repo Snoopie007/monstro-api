@@ -19,7 +19,7 @@ const AccountNavItems = [
 ]
 
 const NavStyle = ' block   text-sm p-3 hover:bg-accent rounded-md';
-export function AccountNav({ uid }: { uid: string }) {
+export function AccountNav() {
     const pathname = usePathname();
 
     function isActive(path: string) {
@@ -37,7 +37,7 @@ export function AccountNav({ uid }: { uid: string }) {
                 </li>
                 {AccountNavItems.map((item, i) => (
                     <li key={i} className={cn("font-semibold rounded-md", isActive(item.path) && 'bg-accent')}>
-                        <Link href={`/dashboard/account/${uid}/${item.path}`}
+                        <Link href={`/dashboard/account/${item.path}`}
                             className={NavStyle}>
                             {item.name}
                         </Link>

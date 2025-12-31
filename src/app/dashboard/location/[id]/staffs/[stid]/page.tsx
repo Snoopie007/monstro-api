@@ -1,7 +1,9 @@
 
 import { db } from "@/db/db";
 import { notFound } from "next/navigation";
-import { StaffProfile, StaffEmail } from "./components";
+import { StaffProfile, StaffEmail, StaffPassword, StaffAvatar, DangerZone } from "./components";
+import { ScrollArea } from "@/components/ui";
+
 
 async function getStaffLocation(stid: string, lid: string) {
     try {
@@ -49,10 +51,15 @@ export default async function StaffPage({ params }: StaffPageProps) {
 
     return (
         <div>
-            <div className="max-w-3xl mx-auto w-full space-y-4">
-                <StaffProfile staff={staff} lid={id} />
-                <StaffEmail staff={staff} lid={id} />
-            </div>
+            <ScrollArea className="h-[calc(100vh-50px)]">
+                <div className="max-w-3xl mx-auto w-full  pb-20 space-y-4">
+                    <StaffAvatar avatar={staff.avatar} staffId={staff.id} locationId={id} />
+                    <StaffProfile staff={staff} lid={id} />
+                    <StaffEmail staff={staff} lid={id} />
+                    <StaffPassword staff={staff} lid={id} />
+                    <DangerZone staff={staff} lid={id} />
+                </div>
+            </ScrollArea>
         </div>
     );
 }

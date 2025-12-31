@@ -1,9 +1,14 @@
 
+import { redirect } from "next/navigation";
 import { ResetPassword } from "./components";
+import { auth } from "@/libs/auth/server";
 
 
-export default async function ResetPasswordPage({ params }: { params: Promise<{ uid: string }> }) {
-    const { uid } = await params;
+export default async function ResetPasswordPage() {
+    const session = await auth();
+    if (!session) {
+        return redirect("/login");
+    }
     return (
         <div className="space-y-4">
             <div className="space-y-1">
@@ -13,7 +18,7 @@ export default async function ResetPasswordPage({ params }: { params: Promise<{ 
                 </p>
 
             </div>
-            <ResetPassword userId={uid} />
+            <ResetPassword userId={session.user.id} />
         </div>
     )
 }
