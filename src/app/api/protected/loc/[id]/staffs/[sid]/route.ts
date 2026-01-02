@@ -7,7 +7,6 @@ import { eq, and } from 'drizzle-orm';
 type StaffProps = {
   sid: string;
   id: string;
-  lid: string;
 }
 
 export async function DELETE(req: Request, props: { params: Promise<StaffProps> }) {
