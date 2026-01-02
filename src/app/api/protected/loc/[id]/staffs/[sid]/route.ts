@@ -7,32 +7,41 @@ import { eq, and } from 'drizzle-orm';
 type StaffProps = {
   sid: string;
   id: string;
-  lid: string;
 }
 
 export async function DELETE(req: Request, props: { params: Promise<StaffProps> }) {
-  const { lid, sid } = await props.params;
+  const { id, sid } = await props.params;
 
   try {
     await db.transaction(async (tx) => {
-      await tx.delete(staffLocations).where(
-        and(
+      // First, get the staff location record to get its ID
+      const staffLocation = await tx.query.staffLocations.findFirst({
+        where: and(
           eq(staffLocations.staffId, sid),
-          eq(staffLocations.locationId, lid)
+          eq(staffLocations.locationId, id)
         )
-      )
+      });
 
-      await tx.delete(staffsLocationRoles).where(
-        eq(staffsLocationRoles.staffLocationId, sid)
-      )
+      if (staffLocation) {
+        // Delete roles using the correct staffLocation.id
+        await tx.delete(staffsLocationRoles).where(
+          eq(staffsLocationRoles.staffLocationId, staffLocation.id)
+        );
+        
+        // Delete staff location
+        await tx.delete(staffLocations).where(
+          eq(staffLocations.id, staffLocation.id)
+        );
+      }
 
-      await tx.delete(staffs).where(eq(staffs.id, sid))
-    })
-    return NextResponse.json({ success: true }, { status: 200 })
-
+      // Delete the staff record
+      await tx.delete(staffs).where(eq(staffs.id, sid));
+    });
+    
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
-    console.log(err)
-    return NextResponse.json({ error: err }, { status: 500 })
+    console.log(err);
+    return NextResponse.json({ error: err }, { status: 500 });
   }
 }
 
