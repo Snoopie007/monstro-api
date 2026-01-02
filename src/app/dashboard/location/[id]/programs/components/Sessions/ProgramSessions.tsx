@@ -10,7 +10,12 @@ import { ChevronRight, Loader2, Timer } from "lucide-react";
 import { DaysOfWeek } from "../../schemas";
 import SessionItem from "./SessionItem";
 
-export function ProgramSessions({ program }: { program: Program }) {
+interface ProgramSessionsProps {
+    program: Program;
+    version?: number;
+}
+
+export function ProgramSessions({ program, version = 0 }: ProgramSessionsProps) {
     const [loading, setLoading] = useState(false);
     const lid = program.locationId;
     const [open, setOpen] = useState(false);
@@ -22,6 +27,13 @@ export function ProgramSessions({ program }: { program: Program }) {
             getSessions();
         }
     }, [open, hasFetched]);
+
+    // Refetch sessions when version changes (triggered by parent after session creation)
+    useEffect(() => {
+        if (open && version > 0) {
+            getSessions();
+        }
+    }, [version]);
 
     async function getSessions() {
         setLoading(true);

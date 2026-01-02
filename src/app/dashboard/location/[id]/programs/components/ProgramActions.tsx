@@ -18,6 +18,7 @@ import { CreateSession } from "./Sessions/CreateSession";
 interface ProgramActionsProps {
     program: Program;
     lid: string;
+    onSessionCreated?: () => void;
 }
 
 const ItemBtnStyle = "cursor-pointer font-medium text-xs flex flex-row items-center justify-between gap-2 ";
@@ -25,6 +26,7 @@ const ItemBtnStyle = "cursor-pointer font-medium text-xs flex flex-row items-cen
 export default function ProgramActions({
     program,
     lid,
+    onSessionCreated,
 }: ProgramActionsProps) {
     const [openUpdate, setOpenUpdate] = useState(false);
     const [openSession, setOpenSession] = useState(false);
@@ -50,7 +52,7 @@ export default function ProgramActions({
 
     return (
         <>
-            <CreateSession program={program} availableStaff={[]} staffId={'staff_id'} open={openSession} onOpenChange={setOpenSession} />
+            <CreateSession program={program} availableStaff={[]} staffId={program.instructorId ?? ''} open={openSession} onOpenChange={setOpenSession} onSuccess={onSessionCreated} />
             <UpdateProgram program={program} open={openUpdate} setOpen={setOpenUpdate} />
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
