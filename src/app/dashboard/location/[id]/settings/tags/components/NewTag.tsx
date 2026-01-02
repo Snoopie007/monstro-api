@@ -7,14 +7,14 @@ import {
     Dialog,
     DialogClose,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
-import { VisuallyHidden } from "react-aria";
+import { Plus, Loader2 } from "lucide-react";
+import { useTags } from "@/hooks/useTags";
+import { toast } from "react-toastify";
 
 interface NewTagProps {
     lid: string;
@@ -23,15 +23,31 @@ interface NewTagProps {
 export default function NewTag({ lid }: NewTagProps) {
     const [tagName, setTagName] = useState("");
     const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const { createTag } = useTags(lid);
 
     const handleCreate = async () => {
-        if (!tagName.trim()) return;
+        if (!tagName.trim() || loading) return;
 
+        setLoading(true);
         try {
-
+            await createTag({ name: tagName.trim() });
+            toast.success(`Tag "${tagName.trim()}" created successfully`);
             setTagName("");
+            setOpen(false);
         } catch (error) {
+            if (error instanceof Error) {
+                if (error.message.includes("already exists")) {
+                    toast.error("A tag with this name already exists");
+                } else {
+                    toast.error("Failed to create tag. Please try again.");
+                }
+            } else {
+                toast.error("Failed to create tag. Please try again.");
+            }
             console.error("Failed to create tag:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -48,7 +64,6 @@ export default function NewTag({ lid }: NewTagProps) {
                 <Button variant="primary" className="flex flex-row items-center gap-2">
                     <span>Create Tag</span>
                     <Plus className="size-4" />
-
                 </Button>
             </DialogTrigger>
             <DialogContent>
@@ -62,21 +77,21 @@ export default function NewTag({ lid }: NewTagProps) {
                             value={tagName}
                             onChange={(e) => setTagName(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                            disabled={loading}
                         />
                     </div>
                 </div>
                 <DialogFooter className="flex sm:justify-between">
                     <DialogClose asChild>
-                        <Button variant="outline" className="border-foreground/10">
+                        <Button variant="outline" className="border-foreground/10" disabled={loading}>
                             Cancel
                         </Button>
                     </DialogClose>
-                    <Button variant="primary" onClick={handleCreate} disabled={!tagName.trim()}>
-                        Create Tag
+                    <Button variant="primary" onClick={handleCreate} disabled={!tagName.trim() || loading}>
+                        {loading ? <Loader2 className="size-4 animate-spin" /> : "Create Tag"}
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );
 }
-
