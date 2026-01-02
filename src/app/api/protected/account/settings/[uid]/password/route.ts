@@ -54,7 +54,7 @@ export async function PATCH(req: Request, props: { params: Promise<{ uid: string
     const newHashedPassword: string = await bcrypt.hash(password, 10)
 
     // Update users table
-    await db.update(users).set({ password: newHashedPassword }).where(eq(users.id, uid))
+    await db.update(users).set({ password: newHashedPassword }).where(eq(users.id, user.id))
 
     // Update accounts table for Better Auth
     await db
@@ -64,7 +64,7 @@ export async function PATCH(req: Request, props: { params: Promise<{ uid: string
       })
       .where(
         and(
-          eq(accounts.userId, uid),
+          eq(accounts.userId, user.id),
           eq(accounts.provider, "credential")
         )
       );
