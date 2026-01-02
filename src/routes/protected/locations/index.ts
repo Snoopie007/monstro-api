@@ -7,3 +7,4 @@ export * from './checkin';
 export * from './support';
 export * from './leaderboard';
 export * from './email';
+export * from './plans';

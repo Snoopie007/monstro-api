@@ -4,6 +4,8 @@ import { addDays, addMinutes } from "date-fns";
 import Elysia from "elysia";
 import { generateVRs } from "@/libs/utils";
 import { z } from "zod";
+
+
 const LocationSessionsProps = {
     query: z.object({
         planId: z.string(),
