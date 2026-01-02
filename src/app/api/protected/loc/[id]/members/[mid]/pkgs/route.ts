@@ -1,10 +1,11 @@
 import { db } from "@/db/db";
-import { memberPackages, transactions } from "@/db/schemas";
+import { memberPackages, memberPlanPricing, transactions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
+import { eq } from "drizzle-orm";
 
 import { PaymentType } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
-import { addUserToGroup, calculatePeriodEnd, calculateStripeFeeAmount, calculateTax } from "../../utils";
+import { addUserToGroup, calculateExpiresAt, calculateStripeFeeAmount, calculateTax } from "../../utils";
 
 type Props = {
 	params: Promise<{
@@ -25,6 +26,7 @@ export async function GET(req: NextRequest, props: Props) {
 				),
 			with: {
 				plan: true,
+				pricing: true,
 			},
 		});
 
@@ -40,14 +42,33 @@ export async function POST(req: NextRequest, props: Props) {
 	const { id, mid } = await props.params;
 	const body = await req.json();
 
-	const { paymentMethod, paymentType, trialDays, ...data } = body;
+	const { paymentMethod, paymentType, trialDays, pricingId, ...data } = body;
 	try {
+		// Validate pricingId is provided
+		if (!pricingId) {
+			return NextResponse.json({ error: "Pricing selection is required" }, { status: 400 });
+		}
+
+		// Fetch the pricing option
+		const pricing = await db.query.memberPlanPricing.findFirst({
+			where: eq(memberPlanPricing.id, pricingId)
+		});
+
+		if (!pricing) {
+			return NextResponse.json({ error: "Pricing option not found" }, { status: 404 });
+		}
+
 		const plan = await db.query.memberPlans.findFirst({
 			where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
 		})
 
 		if (!plan) {
 			throw new Error("Plan not found")
+		}
+
+		// Validate pricing belongs to the plan
+		if (pricing.memberPlanId !== plan.id) {
+			return NextResponse.json({ error: "Pricing does not belong to this plan" }, { status: 400 });
 		}
 
 		const ml = await db.query.memberLocations.findFirst({
@@ -96,21 +117,17 @@ export async function POST(req: NextRequest, props: Props) {
 		const today = new Date();
 		const startDate = data.startDate ? new Date(data.startDate) : today;
 
-		const { expireInterval, expireThreshold } = plan;
-
+		// Calculate expire date from pricing term if set
 		let expireDate: Date | null = null;
 		if (data.expireDate) {
 			expireDate = new Date(data.expireDate);
-		} else if (expireInterval && expireThreshold) {
-			expireDate = calculatePeriodEnd(
-				startDate,
-				expireInterval,
-				expireThreshold
-			);
+		} else {
+			expireDate = calculateExpiresAt(startDate, pricing.expireInterval, pricing.expireThreshold);
 		}
 
-		const tax = calculateTax(plan.price, taxRates);
-		let subTotal = plan.price;
+		// Use pricing.price instead of plan.price
+		const tax = calculateTax(pricing.price, taxRates);
+		let subTotal = pricing.price;
 		let total = subTotal + tax;
 		const monstroFee = Math.floor(subTotal * (locationState.usagePercent / 100));
 		const stripeFee = calculateStripeFeeAmount((
@@ -129,12 +146,13 @@ export async function POST(req: NextRequest, props: Props) {
 		const { clientSecret } = await stripe.createPaymentIntent(total, applicationFeeAmount, {
 			paymentMethod: paymentMethod.id,
 			currency: plan.currency,
-			description: `Payment for ${plan.name}`,
+			description: `Payment for ${plan.name} - ${pricing.name}`,
 			productName: plan.name,
 			unitCost: subTotal,
 			tax: tax,
 			metadata: {
 				planId: plan.id,
+				pricingId: pricing.id,
 				startDate: today,
 				locationId: id,
 				memberId: mid,
@@ -155,6 +173,7 @@ export async function POST(req: NextRequest, props: Props) {
 				...CommonData,
 				stripePaymentId: clientSecret.split("_secret_")[0] || null,
 				memberPlanId: plan.id,
+				memberPlanPricingId: pricing.id,
 				...data,
 				status: "active",
 				startDate,
@@ -163,22 +182,23 @@ export async function POST(req: NextRequest, props: Props) {
 
 			/** Create Transaction */
 			await tx.insert(transactions).values({
-				description: `One time payment for ${plan.name}`,
+				description: `One time payment for ${plan.name} - ${pricing.name}`,
 				...CommonData,
 				totalTax: tax,
 				type: "inbound",
 				items: [{
 					productId: plan.id,
-					amount: plan.price,
+					amount: pricing.price,
 					tax: tax,
 					quantity: 1,
 				}],
 				status: "paid",
-				subTotal: plan.price,
+				subTotal: pricing.price,
 				total,
 				currency: plan.currency,
 				metadata: {
 					packageId: pkg.id,
+					pricingId: pricing.id,
 				},
 			});
 			return pkg;
@@ -189,7 +209,7 @@ export async function POST(req: NextRequest, props: Props) {
 			await addUserToGroup({ groupId: plan.groupId, userId: member.userId });
 		}
 
-		return NextResponse.json({ ...pkg, plan }, { status: 200 });
+		return NextResponse.json({ ...pkg, plan, pricing }, { status: 200 });
 	} catch (err) {
 		console.log(err);
 		return NextResponse.json({ error: err }, { status: 500 });

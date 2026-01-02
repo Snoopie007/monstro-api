@@ -148,7 +148,7 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId
                                         <SelectContent>
                                             {pastDueSubscriptions.map((sub) => (
                                                 <SelectItem key={sub.id} value={sub.id}>
-                                                    {sub.plan?.name} - {formatAmountForDisplay((sub.plan?.price ?? 0) / 100, 'usd', true)}
+                                                    {sub.plan?.name} - {formatAmountForDisplay((sub.pricing?.price ?? 0) / 100, 'usd', true)}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

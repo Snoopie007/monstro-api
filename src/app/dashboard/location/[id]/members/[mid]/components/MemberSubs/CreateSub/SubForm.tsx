@@ -20,11 +20,11 @@ import {
     Switch,
 } from "@/components/ui";
 
-import { sleep, tryCatch } from "@/libs/utils";
-import { MemberPlan, MemberSubscription, PaymentMethod } from "@/types";
+import { formatAmountForDisplay, sleep, tryCatch } from "@/libs/utils";
+import { MemberPlan, MemberPlanPricing, MemberSubscription, PaymentMethod } from "@/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { z } from "zod";
@@ -53,10 +53,19 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
             endDate: undefined,
             trailDays: undefined,
             memberPlanId: undefined,
+            pricingId: undefined,
             allowProration: false,
         },
         mode: "onSubmit",
     })
+
+    // Get pricing options for the selected plan
+    const selectedPlanId = form.watch("memberPlanId");
+    const selectedPlan = useMemo(() => {
+        return subs.find(s => s.id === selectedPlanId);
+    }, [subs, selectedPlanId]);
+
+    const pricingOptions = selectedPlan?.pricingOptions || [];
 
     async function onSubmit(v: z.infer<typeof NewSubscriptionSchema>) {
         if (paymentType === "card" && !paymentMethod) {
@@ -100,7 +109,11 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Select a plan</FormLabel>
-                                        <Select onValueChange={field.onChange}>
+                                        <Select onValueChange={(value) => {
+                                            field.onChange(value);
+                                            // Reset pricing when plan changes
+                                            form.setValue("pricingId", "");
+                                        }}>
                                             <FormControl>
                                                 <SelectTrigger >
                                                     <SelectValue placeholder="Select a plan" />
@@ -119,6 +132,38 @@ export function SubForm({ lid, subs, mid, onFinish }: SubFormProps) {
                             />
 
                         </fieldset>
+
+                        {selectedPlanId && pricingOptions.length > 0 && (
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="pricingId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size="tiny">Select pricing option</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select pricing" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {pricingOptions.map((pricing: MemberPlanPricing) => (
+                                                        <SelectItem key={pricing.id} value={pricing.id}>
+                                                            {pricing.name} - {formatAmountForDisplay(pricing.price / 100, pricing.currency || 'usd')}/{pricing.interval || "one-time"}
+                                                            {pricing.expireInterval && pricing.expireThreshold && 
+                                                                ` (${pricing.expireThreshold} ${pricing.expireInterval} term)`
+                                                            }
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
+                        )}
 
                         <fieldset className="grid grid-cols-8 gap-2">
                             <div className="col-span-3">

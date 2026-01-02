@@ -49,6 +49,24 @@ export function PackageList({ lid }: { lid: string }) {
 export function PackageItem({ pkg }: { pkg: MemberPlan }) {
   const [open, setOpen] = useState(false);
   const lid = pkg.locationId;
+
+  // Get pricing display from pricingOptions
+  const pricingOptions = pkg.pricingOptions || [];
+  const getPriceDisplay = () => {
+    if (pricingOptions.length === 0) return 'N/A';
+    if (pricingOptions.length === 1) {
+      return formatAmountForDisplay(pricingOptions[0].price / 100, pricingOptions[0].currency || 'usd');
+    }
+    // Show range for multiple pricing
+    const prices = pricingOptions.map(p => p.price);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    if (min === max) {
+      return formatAmountForDisplay(min / 100, pricingOptions[0].currency || 'usd');
+    }
+    return `${formatAmountForDisplay(min / 100, pricingOptions[0].currency || 'usd')} - ${formatAmountForDisplay(max / 100, pricingOptions[0].currency || 'usd')}`;
+  };
+
   return (
     <div className="flex flex-col gap-2 bg-muted/50 border rounded-lg border-foreground/5 last:border-b-0">
       <div className="flex flex-row gap-4 items-center justify-between p-4">
@@ -58,7 +76,10 @@ export function PackageItem({ pkg }: { pkg: MemberPlan }) {
             {pkg.name}
           </InfoField>
           <InfoField label="Price" className="col-span-1">
-            {formatAmountForDisplay(pkg.price / 100, pkg.currency)}
+            {getPriceDisplay()}
+            {pricingOptions.length > 1 && (
+              <span className="text-xs text-muted-foreground ml-1">({pricingOptions.length} options)</span>
+            )}
           </InfoField>
           <InfoField label="Family Plan" className="col-span-1 gap-0.5">
             <div className="flex flex-row items-center gap-2">
@@ -82,7 +103,25 @@ export function PackageItem({ pkg }: { pkg: MemberPlan }) {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="py-4">
-
+          {pricingOptions.length > 0 && (
+            <div className="space-y-2">
+              <InfoField label="Pricing Options">
+                <div className="space-y-1">
+                  {pricingOptions.map((pricing) => (
+                    <div key={pricing.id} className="text-sm">
+                      <span className="font-medium">{pricing.name}</span>
+                      <span className="text-muted-foreground ml-2">
+                        {formatAmountForDisplay(pricing.price / 100, pricing.currency || 'usd')}
+                        {pricing.expireInterval && pricing.expireThreshold && (
+                          <span className="ml-1">(expires in {pricing.expireThreshold} {pricing.expireInterval}s)</span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </InfoField>
+            </div>
+          )}
         </CollapsibleContent>
       </Collapsible>
     </div >

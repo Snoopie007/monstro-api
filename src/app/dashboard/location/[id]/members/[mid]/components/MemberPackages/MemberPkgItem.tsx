@@ -96,9 +96,12 @@ export function MemberPackageItem({ pkg }: MemberPackageItemProps) {
                 </div>
                 <div className="grid grid-cols-3 items-center">
                     <InfoField label="Price">
-                        {formatAmountForDisplay(
-                            (pkg.plan?.price || 0) / 100,
-                            pkg.plan?.currency || 'usd'
+                        {pkg.pricing
+                            ? formatAmountForDisplay(pkg.pricing.price / 100, pkg.pricing.currency || 'usd')
+                            : 'N/A'
+                        }
+                        {pkg.pricing?.name && pkg.pricing.name !== 'Standard' && (
+                            <span className="text-xs text-muted-foreground ml-1">({pkg.pricing.name})</span>
                         )}
                     </InfoField>
                     <InfoField label="Payment Type">

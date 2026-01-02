@@ -43,10 +43,10 @@ export async function POST(
 		if (body.type === 'from-subscription') {
 			const { selectedSubscriptionId } = FromSubscriptionPreviewSchema.parse(body);
 
-			// Fetch subscription with plan details
+			// Fetch subscription with plan and pricing details
 			const subscription = await db.query.memberSubscriptions.findFirst({
 				where: eq(memberSubscriptions.id, selectedSubscriptionId),
-				with: { plan: true },
+				with: { plan: true, pricing: true },
 			});
 
 			if (!subscription) {
@@ -56,22 +56,29 @@ export async function POST(
 				);
 			}
 
+			if (!subscription.pricing) {
+				return NextResponse.json(
+					{ error: "Subscription pricing not found" },
+					{ status: 404 }
+				);
+			}
+
 			// Get member
 			const member = await db.query.members.findFirst({
 				where: eq(members.id, params.mid),
 			});
 
-			// Build preview from subscription plan
-			const subtotal = subscription.plan.price; // Already in cents
+			// Build preview from subscription pricing
+			const subtotal = subscription.pricing.price; // Already in cents
 			const tax = 0; // Can be calculated if needed
 			const discount = 0;
 			const amountDue = subtotal + tax - discount;
 
 			const formatted_lines = [{
 				description: `${subscription.plan.name}${subscription.plan.description ? ` - ${subscription.plan.description}` : ''}`,
-				amount: subscription.plan.price,
+				amount: subscription.pricing.price,
 				quantity: 1,
-				currency: subscription.plan.currency || "usd"
+				currency: subscription.pricing.currency || "usd"
 			}];
 
 			return NextResponse.json({
@@ -80,7 +87,7 @@ export async function POST(
 					subtotal,
 					tax_total: tax,
 					amount_due: amountDue,
-					currency: subscription.plan.currency || "usd",
+					currency: subscription.pricing.currency || "usd",
 					formatted_lines,
 					customer_info: {
 						name: `${member?.firstName} ${member?.lastName}`,

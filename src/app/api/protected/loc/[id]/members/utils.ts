@@ -90,6 +90,33 @@ function calculateTrialEnd(startDate: Date, trialDays: number): Date {
 	}
 }
 
+/**
+ * Calculate the expiration date based on term settings.
+ * Returns null if no expiration is set (ongoing subscription/package).
+ */
+function calculateExpiresAt(
+	startDate: Date,
+	expireInterval: string | null | undefined,
+	expireThreshold: number | null | undefined
+): Date | null {
+	if (!expireInterval || !expireThreshold) {
+		return null; // Ongoing, no expiration
+	}
+
+	switch (expireInterval) {
+		case "day":
+			return addDays(startDate, expireThreshold);
+		case "week":
+			return addWeeks(startDate, expireThreshold);
+		case "month":
+			return addMonths(startDate, expireThreshold);
+		case "year":
+			return addYears(startDate, expireThreshold);
+		default:
+			return null;
+	}
+}
+
 
 async function scheduleRecurringInvoiceReminders(params: {
 	subscriptionId: string;
@@ -293,6 +320,7 @@ export {
 	calculateStripeFeePercentage,
 	getTaxRateId,
 	calculateTrialEnd,
+	calculateExpiresAt,
 	scheduleRecurringInvoiceReminders,
 	scheduleOneOffInvoiceReminders,
 	cancelRecurringInvoiceReminders,

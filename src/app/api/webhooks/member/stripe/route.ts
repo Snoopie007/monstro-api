@@ -193,6 +193,7 @@ async function handleSubscriptionInvoicePayment(
 			where: eq(memberSubscriptions.stripeSubscriptionId, subscriptionId),
 			with: {
 				plan: true,
+				pricing: true,
 				member: true,
 			},
 		});
@@ -205,6 +206,10 @@ async function handleSubscriptionInvoicePayment(
 		}
 
 		const tax = calculateTaxFromInvoice(invoice);
+		
+		// Use pricing name if available
+		const pricingName = subscription.pricing?.name ? ` - ${subscription.pricing.name}` : "";
+		const itemName = subscription.plan?.name + pricingName;
 
 		await db.transaction(async (tx) => {
 			const CommonFields = {
@@ -227,7 +232,7 @@ async function handleSubscriptionInvoicePayment(
 					discount: 0,
 					items: [
 						{
-							name: subscription.plan?.name,
+							name: itemName,
 							quantity: 1,
 							price: invoice.amount_paid,
 						},
@@ -241,6 +246,7 @@ async function handleSubscriptionInvoicePayment(
 						invoiceUrl: invoice.hosted_invoice_url,
 						issuer: (invoice as any).issuer,
 						type: "subscription",
+						pricingId: subscription.pricing?.id,
 					},
 				})
 				.returning({ invoiceId: memberInvoices.id });
@@ -252,7 +258,7 @@ async function handleSubscriptionInvoicePayment(
 					subscriptionId: subscription.id,
 					invoiceId,
 					amount: invoice.amount_paid,
-					description: subscription.plan?.name,
+					description: itemName,
 				},
 				invoice
 			);

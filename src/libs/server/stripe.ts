@@ -1,9 +1,19 @@
 
-import { MemberPlan } from "@/types";
+import { MemberPlan, MemberPlanPricing } from "@/types";
 import { MonstroPlan } from "@/types/admin";
 import { AddressParam } from "@stripe/stripe-js";
 import { isSameDay, addMonths, isAfter } from "date-fns";
 import Stripe from "stripe";
+
+// Type for creating Stripe products/prices
+type StripePricingData = {
+	name: string;
+	description?: string;
+	price: number;
+	currency?: string;
+	interval?: "day" | "week" | "month" | "year" | null;
+	intervalThreshold?: number | null;
+};
 
 type Customer = {
 	firstName: string;
@@ -465,7 +475,11 @@ class MemberStripePayments extends BaseStripePayments {
 	}
 
 
-	async createSubscription(plan: MemberPlan, settings: MemberSubscriptionSettings) {
+	async createSubscription(
+		plan: MemberPlan, 
+		pricing: MemberPlanPricing, 
+		settings: MemberSubscriptionSettings
+	) {
 		if (!this._customer) {
 			throw new Error("Customer not set");
 		}
@@ -475,11 +489,11 @@ class MemberStripePayments extends BaseStripePayments {
 		const { startDate, trialEnd, paymentMethod, feePercent, allowProration, cancelAt,
 			taxRateId, ...rest } = settings;
 
-		if (!plan.stripePriceId) {
+		if (!pricing.stripePriceId) {
 			throw new Error("Price not found");
 		}
 
-		const isAllowProration = plan.interval === "month" || plan.interval === "year"
+		const isAllowProration = pricing.interval === "month" || pricing.interval === "year"
 
 
 		const accountDestination = {
@@ -496,22 +510,28 @@ class MemberStripePayments extends BaseStripePayments {
 			},
 			automatic_tax: { enabled: false },
 			invoice_settings: { issuer: accountDestination },
-			description: `Subscription to ${plan.name}`,
-			items: [{ price: plan.stripePriceId as string }],
+			description: `Subscription to ${plan.name} - ${pricing.name}`,
+			items: [{ price: pricing.stripePriceId as string }],
 			collection_method: "charge_automatically",
 			default_payment_method: paymentMethod || undefined,
 			application_fee_percent: feePercent || 0,
-			cancel_at: cancelAt ? cancelAt.getTime() / 1000 : undefined,
-			trial_end: trialEnd ? trialEnd.getTime() / 1000 : undefined,
+			cancel_at: cancelAt ? Math.floor(cancelAt.getTime() / 1000) : undefined,
+			trial_end: trialEnd ? Math.floor(trialEnd.getTime() / 1000) : undefined,
 		};
 
 		if (isAllowProration) {
-			if (plan.billingAnchorConfig) {
-				options.billing_cycle_anchor_config = plan.billingAnchorConfig;
+			// Only use billing_cycle_anchor_config when there's no cancel_at
+			// Stripe doesn't allow arbitrary cancel_at timestamps with billing_cycle_anchor_config
+			const hasBillingAnchor = plan.billingAnchorConfig && Object.keys(plan.billingAnchorConfig).length > 0;
+			const hasTermEndDate = cancelAt || options.cancel_at;
+			if (hasBillingAnchor && !hasTermEndDate) {
+				options.billing_cycle_anchor_config = plan.billingAnchorConfig!;
 			}
-			if (startDate && isAfter(startDate, new Date())) {
+			// Only set billing_cycle_anchor for future start dates without cancel_at
+			// to avoid conflicts with term-based subscriptions
+			if (startDate && isAfter(startDate, new Date()) && !hasTermEndDate) {
 				options.proration_behavior = (allowProration || plan.allowProration) ? "create_prorations" : "none";
-				options.billing_cycle_anchor = startDate.getTime() / 1000;
+				options.billing_cycle_anchor = Math.floor(startDate.getTime() / 1000);
 			}
 		}
 
@@ -521,20 +541,20 @@ class MemberStripePayments extends BaseStripePayments {
 
 
 	async createStripeProduct(
-		data: MemberPlan,
+		data: StripePricingData,
 		metadata: Record<string, any>
 	): Promise<Stripe.Price> {
 		const { interval, price, intervalThreshold } = data;
 		const product = await this._stripe.products.create({
 			name: data.name,
-			description: data.description,
+			description: data.description || "",
 			active: true,
 			default_price_data: {
 				currency: data.currency || "usd",
-				recurring: {
+				recurring: interval ? {
 					interval: interval as Stripe.PriceCreateParams.Recurring.Interval,
 					interval_count: intervalThreshold || 1,
-				},
+				} : undefined,
 				unit_amount: price,
 				metadata,
 			},
@@ -597,7 +617,7 @@ class MemberStripePayments extends BaseStripePayments {
 			return this._stripe.subscriptions.update(subscriptionId, {
 				cancel_at_period_end: endOfPeriod,
 				...(!endOfPeriod && {
-					cancel_at: cancelDate ? cancelDate.getTime() / 1000 : undefined,
+					cancel_at: cancelDate ? Math.floor(cancelDate.getTime() / 1000) : undefined,
 				}),
 			});
 		}
@@ -783,7 +803,7 @@ class MemberStripePayments extends BaseStripePayments {
 		const options: Stripe.SubscriptionScheduleCreateParams = {
 			customer: customerId,
 			start_date: Math.floor(startDate.getTime() / 1000),
-			end_behavior: "cancel",
+			end_behavior: endDate ? "cancel" : "release",
 			phases: [
 				{
 					items: scheduleItems,

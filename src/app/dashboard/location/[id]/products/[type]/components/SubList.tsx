@@ -50,10 +50,35 @@ export function SubscriptionItem({ sub }: { sub: MemberPlan }) {
 	const [open, setOpen] = useState(false);
 	const lid = sub.locationId;
 
-	function getInterval(interval: string | null) {
+	function getInterval(interval: string | null | undefined) {
 		if (!interval) return 'N/A';
 		return interval === 'month' ? 'monthly' : interval === 'year' ? 'annual' : interval === 'week' ? 'weekly' : 'daily';
 	}
+
+	// Get pricing display
+	const pricingOptions = sub.pricingOptions || [];
+	const getPriceDisplay = () => {
+		if (pricingOptions.length === 0) return 'N/A';
+		if (pricingOptions.length === 1) {
+			return formatAmountForDisplay(pricingOptions[0].price / 100, pricingOptions[0].currency || 'usd');
+		}
+		// Show range for multiple pricing
+		const prices = pricingOptions.map(p => p.price);
+		const min = Math.min(...prices);
+		const max = Math.max(...prices);
+		const currency = pricingOptions[0].currency || 'usd';
+		if (min === max) {
+			return formatAmountForDisplay(min / 100, currency);
+		}
+		return `${formatAmountForDisplay(min / 100, currency)} - ${formatAmountForDisplay(max / 100, currency)}`;
+	};
+
+	const getCycleDisplay = () => {
+		if (pricingOptions.length === 0) return 'N/A';
+		// Show first pricing's interval
+		return getInterval(pricingOptions[0]?.interval);
+	};
+
 	return (
 		<div className="flex flex-col gap-2 bg-muted/50 border rounded-lg border-foreground/5 last:border-b-0">
 			<div className="flex flex-row gap-4 items-center justify-between p-4">
@@ -62,10 +87,13 @@ export function SubscriptionItem({ sub }: { sub: MemberPlan }) {
 						{sub.name}
 					</InfoField>
 					<InfoField label="Price" className="col-span-1">
-						{formatAmountForDisplay(sub.price / 100, sub.currency)}
+						{getPriceDisplay()}
+						{pricingOptions.length > 1 && (
+							<span className="text-xs text-muted-foreground ml-1">({pricingOptions.length} options)</span>
+						)}
 					</InfoField>
 					<InfoField label="Cycle" className="col-span-1">
-						{getInterval(sub.interval)}
+						{getCycleDisplay()}
 					</InfoField>
 					<InfoField label="Family Plan" className="col-span-1 gap-0.5">
 						<div className="flex flex-row items-center gap-2">
