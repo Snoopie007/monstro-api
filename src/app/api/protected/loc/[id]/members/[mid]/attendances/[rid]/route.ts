@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { attendances } from '@/db/schemas';
+import { attendances, reservations } from '@/db/schemas';
 import { triggerIncrement } from "@/libs/TriggerService";
 import { serviceApiClient } from "@/libs/api/server";
+import { eq } from 'drizzle-orm';
 
 export async function POST(req: NextRequest, props: { params: Promise<{ mid: string, id: string, rid: string }> }) {
 	const params = await props.params;
@@ -16,6 +17,22 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: str
 			return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
 		}
 
+		// Look up program info from reservation chain
+		const reservation = await db.query.reservations.findFirst({
+			where: eq(reservations.id, params.rid),
+			with: {
+				session: {
+					with: {
+						program: {
+							columns: { id: true, name: true }
+						}
+					}
+				}
+			}
+		});
+
+		const programId = reservation?.session?.program?.id ?? null;
+		const programName = reservation?.session?.program?.name ?? null;
 
 		const parsedStartTime = new Date(startTime);
 		const parsedEndTime = new Date(endTime);
@@ -27,6 +44,8 @@ export async function POST(req: NextRequest, props: { params: Promise<{ mid: str
 			reservationId: params.rid,
 			memberId: params.mid,
 			locationId: params.id,
+			programId,
+			programName,
 			startTime: parsedStartTime,
 			endTime: parsedEndTime,
 			checkInTime: parsedCheckInTime,

@@ -14,7 +14,7 @@ import {
     Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
     Input, Form,
 } from "@/components/forms";
-import { cn, sleep, tryCatch } from "@/libs/utils";
+import { cn, tryCatch } from "@/libs/utils";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -33,10 +33,11 @@ interface CreateSessionProps {
     staffId: string
     open: boolean
     onOpenChange: (open: boolean) => void
+    onSuccess?: () => void
 }
 
 
-export function CreateSession({ program, availableStaff, staffId, open, onOpenChange }: CreateSessionProps) {
+export function CreateSession({ program, availableStaff, staffId, open, onOpenChange, onSuccess }: CreateSessionProps) {
 
     const { id: pid, locationId: lid } = program;
 
@@ -70,10 +71,11 @@ export function CreateSession({ program, availableStaff, staffId, open, onOpenCh
             toast.error(error?.message || "Something went wrong, please try again later")
             return
         }
-        await sleep(2000)
+        
         toast.success("Session Created Successfully")
-
-
+        form.reset()
+        onOpenChange(false)
+        onSuccess?.()
     };
 
     return (

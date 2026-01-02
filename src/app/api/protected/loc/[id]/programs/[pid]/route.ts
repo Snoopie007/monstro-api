@@ -79,3 +79,21 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ id: str
 		return NextResponse.json({ error: err }, { status: 500 })
 	}
 }
+
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string, pid: string }> }) {
+	const params = await props.params;
+
+	try {
+		const canDeleteProgram = await hasPermission("delete program", params.id);
+		if (!canDeleteProgram) {
+			return NextResponse.json({ error: "Access denied" }, { status: 403 });
+		}
+
+		// Soft delete: set status to 'archived' instead of hard delete
+		await db.update(programs).set({ status: 'archived' }).where(eq(programs.id, params.pid));
+		return NextResponse.json({ success: true }, { status: 200 });
+	} catch (err) {
+		console.error(err);
+		return NextResponse.json({ error: "Failed to archive program" }, { status: 500 });
+	}
+}

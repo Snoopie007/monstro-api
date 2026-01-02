@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { eq } from 'drizzle-orm';
+import { eq, and, ne } from 'drizzle-orm';
 import { programSessions, programs as program, programs } from '@/db/schemas';
 import { ProgramSession } from '@/types';
 import { format, addMinutes, setHours, setMinutes, setSeconds, startOfDay } from 'date-fns';
@@ -20,7 +20,10 @@ export async function GET(req: Request, props: { params: Promise<{ id: string }>
 		const programs = await db.query.programs.findMany({
 			limit: pageSize,
 			offset: (page - 1) * pageSize,
-			where: (program, { eq }) => eq(program.locationId, params.id),
+			where: (program, { eq, and, ne }) => and(
+				eq(program.locationId, params.id),
+				ne(program.status, 'archived')
+			),
 			with: {
 				planPrograms: {
 					with: {
