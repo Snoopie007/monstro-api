@@ -3,13 +3,16 @@ import { timestamp, pgTable, text, integer, uuid } from 'drizzle-orm/pg-core'
 import { recurringReservations, reservations } from './reservations'
 import { locations, memberLocations } from './locations'
 import { members } from './members'
+import { programs } from './programs'
 
 export const attendances = pgTable('check_ins', {
     id: uuid('id').primaryKey().notNull().default(sql`uuid_base62("chk_")`),
     reservationId: text('reservation_id').references(() => reservations.id, {
-        onDelete: 'cascade',
+        onDelete: 'set null',
     }),
-    recurringId: text('recurring_id').references(() => recurringReservations.id, { onDelete: 'cascade' }),
+    recurringId: text('recurring_id').references(() => recurringReservations.id, { onDelete: 'set null' }),
+    programId: text('program_id').references(() => programs.id, { onDelete: 'set null' }),
+    programName: text('program_name'),
     startTime: timestamp('start_time', { withTimezone: true }).notNull(),
     endTime: timestamp('end_time', { withTimezone: true }).notNull(),
     checkInTime: timestamp('check_in_time', { withTimezone: true })
@@ -36,6 +39,10 @@ export const attendancesRelations = relations(attendances, ({ one }) => ({
     recurring: one(recurringReservations, {
         fields: [attendances.recurringId],
         references: [recurringReservations.id],
+    }),
+    program: one(programs, {
+        fields: [attendances.programId],
+        references: [programs.id],
     }),
     location: one(locations, {
         fields: [attendances.locationId],

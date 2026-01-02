@@ -14,6 +14,7 @@ export type Attendance = typeof attendances.$inferSelect & {
 };
 
 export type ExtendedAttendance = Attendance & {
+  programId: string | null;
   programName: string;
 };
 

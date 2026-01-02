@@ -14,8 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Programs(props: { params: Promise<{ id: string }> }) {
 	const params = use(props.params);
-	const { programs, isLoading, error } = usePrograms(params.id);
+	const { programs, isLoading, error, mutate } = usePrograms(params.id);
 	const canAddProgram = usePermission("add program", params.id);
+	const refetchPrograms = () => mutate();
 
 	const [searchQuery, setSearchQuery] = useState<string>("");
 	const filteredPrograms = useMemo(() => {
@@ -60,7 +61,7 @@ export default function Programs(props: { params: Promise<{ id: string }> }) {
 
 
 						{filteredPrograms?.map((program) => (
-							<ProgramItem key={program.id} program={program} />
+							<ProgramItem key={program.id} program={program} onDeleted={refetchPrograms} />
 						))}
 
 

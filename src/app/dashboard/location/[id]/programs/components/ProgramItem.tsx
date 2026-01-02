@@ -6,7 +6,12 @@ import { useState } from "react";
 import { Avatar, AvatarImage, InfoField } from "@/components/ui";
 import { ProgramSessions } from "./Sessions";
 
-export function ProgramItem({ program }: { program: Program }) {
+interface ProgramItemProps {
+    program: Program;
+    onDeleted?: () => void;
+}
+
+export function ProgramItem({ program, onDeleted }: ProgramItemProps) {
     const lid = program.locationId;
     const [sessionsVersion, setSessionsVersion] = useState(0);
     const refetchSessions = () => setSessionsVersion(v => v + 1);
@@ -41,7 +46,7 @@ export function ProgramItem({ program }: { program: Program }) {
                     </InfoField>
                 </div>
                 <div className="flex-shrink-0">
-                    <ProgramActions program={program} lid={lid} onSessionCreated={refetchSessions} />
+                    <ProgramActions program={program} lid={lid} onSessionCreated={refetchSessions} onDeleted={onDeleted} />
                 </div>
             </div>
             <ProgramSessions program={program} version={sessionsVersion} />
