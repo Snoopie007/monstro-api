@@ -3,16 +3,21 @@ import { serial, timestamp, pgTable, text, integer } from "drizzle-orm/pg-core";
 import { recurringReservations, reservations } from "./reservations";
 import { locations, memberLocations } from "./locations";
 import { members } from "./members";
+import { programs } from "./programs";
 
 export const attendances = pgTable("check_ins", {
   id: serial("id").primaryKey(),
   reservationId: text("reservation_id").references(() => reservations.id, {
-    onDelete: "cascade",
+    onDelete: "set null",
   }),
   recurringId: text("recurring_id").references(
     () => recurringReservations.id,
-    { onDelete: "cascade" }
+    { onDelete: "set null" }
   ),
+  programId: text("program_id").references(() => programs.id, {
+    onDelete: "set null",
+  }),
+  programName: text("program_name"),
   locationId: text("location_id").notNull().references(() => locations.id, {
     onDelete: "cascade",
   }),
@@ -43,6 +48,10 @@ export const attendancesRelations = relations(attendances, ({ one }) => ({
   recurring: one(recurringReservations, {
     fields: [attendances.recurringId],
     references: [recurringReservations.id],
+  }),
+  program: one(programs, {
+    fields: [attendances.programId],
+    references: [programs.id],
   }),
   location: one(locations, {
     fields: [attendances.locationId],
