@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { attendances, memberPackages, reservations, recurringReservations } from "@/db/schemas";
+import { attendances, memberPackages, reservations, recurringReservations, programSessions } from "@/db/schemas";
 import type { Reservation } from "@/types/attendance";
 import { isSameHour } from "date-fns";
 import Elysia from "elysia";
@@ -86,9 +86,28 @@ export async function locationCheckin(app: Elysia) {
                 return status(400, { error: "Already checked in for this session" });
             }
 
+            // Look up program info from the session
+            let programId: string | null = null;
+            let programName: string | null = null;
+
+            if (reservation.sessionId) {
+                const sessionWithProgram = await db.query.programSessions.findFirst({
+                    where: eq(programSessions.id, reservation.sessionId),
+                    with: {
+                        program: {
+                            columns: { id: true, name: true }
+                        }
+                    }
+                });
+                programId = sessionWithProgram?.program?.id ?? null;
+                programName = sessionWithProgram?.program?.name ?? null;
+            }
+
             const checkin = await db.insert(attendances).values({
                 reservationId: !reservation.isRecurring ? reservation.id : null,
                 recurringId: reservation.isRecurring ? reservation.recurringId : null,
+                programId,
+                programName,
                 locationId: reservation.locationId,
                 memberId: reservation.memberId,
                 checkInTime: new Date(),
