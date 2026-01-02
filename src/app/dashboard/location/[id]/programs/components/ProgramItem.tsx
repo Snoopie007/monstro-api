@@ -6,8 +6,15 @@ import { useState } from "react";
 import { Avatar, AvatarImage, InfoField } from "@/components/ui";
 import { ProgramSessions } from "./Sessions";
 
-export function ProgramItem({ program }: { program: Program }) {
+interface ProgramItemProps {
+    program: Program;
+    onDeleted?: () => void;
+}
+
+export function ProgramItem({ program, onDeleted }: ProgramItemProps) {
     const lid = program.locationId;
+    const [sessionsVersion, setSessionsVersion] = useState(0);
+    const refetchSessions = () => setSessionsVersion(v => v + 1);
 
     return (
         <div className="flex flex-col gap-2 bg-muted/50 border rounded-lg border-foreground/5 last:border-b-0">
@@ -39,10 +46,10 @@ export function ProgramItem({ program }: { program: Program }) {
                     </InfoField>
                 </div>
                 <div className="flex-shrink-0">
-                    <ProgramActions program={program} lid={lid} />
+                    <ProgramActions program={program} lid={lid} onSessionCreated={refetchSessions} onDeleted={onDeleted} />
                 </div>
             </div>
-            <ProgramSessions program={program} />
+            <ProgramSessions program={program} version={sessionsVersion} />
             {/* <Collapsible open={open} onOpenChange={setOpen} className="border-t border-foreground/5 group px-4 pt-3 pb-2">
                 <CollapsibleTrigger onClick={() => setOpen(!open)}>
                     <div className="flex flex-row items-center gap-1">

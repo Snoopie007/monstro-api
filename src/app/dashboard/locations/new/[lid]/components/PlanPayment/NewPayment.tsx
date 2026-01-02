@@ -74,9 +74,12 @@ export function NewPlanPayment({ lid }: { lid: string }) {
 				});
 				setLoading(false);
 				if (!res.ok) {
+					const err = await res.json();
+					console.log(err);
+
 					return handlePaymentError(
 						toastRef,
-						"An error occurred while processing your payment."
+						err.error || "An error occurred while processing your payment."
 					);
 				}
 

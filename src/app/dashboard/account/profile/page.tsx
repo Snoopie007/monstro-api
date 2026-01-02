@@ -1,7 +1,7 @@
 import { Staff, Vendor } from "@/types";
 import { UserEmail, UserProfile } from "./components";
 import { db } from "@/db/db";
-import { auth } from "@/libs/auth/server";
+import { authWithContext } from "@/libs/auth/server";
 import { notFound, redirect } from "next/navigation";
 import UserPhone from "./components/UserPhone";
 
@@ -37,20 +37,19 @@ async function getStaff(id: string): Promise<Staff | undefined> {
     }
 }
 
-export default async function ProfilePage({ params }: { params: Promise<{ uid: string }> }) {
-    const session = await auth();
-    const { uid } = await params;
+export default async function ProfilePage() {
+    const session = await authWithContext();
     if (!session) {
         return redirect('/login');
     }
 
 
-    const isVendor = uid.startsWith('vdr');
+    const isVendor = session.user.vendorId ? true : false;
     let user = null;
     if (isVendor) {
-        user = await getVendor(uid);
+        user = await getVendor(session.user.vendorId as string);
     } else {
-        user = await getStaff(uid);
+        user = await getStaff(session.user.staffId as string);
     }
 
     if (!user) {

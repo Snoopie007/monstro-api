@@ -53,8 +53,11 @@ export function ExistingPlanPayment({ lid }: { lid: string }) {
 		setLoading(false);
 
 		if (error || !result?.ok) {
+			const err = await result?.json();
+			console.log(err);
+
 			toast.update(toastRef, {
-				render: "An error occurred while processing your payment.",
+				render: err.error || "An error occurred while processing your payment.",
 				type: "error",
 				isLoading: false,
 				autoClose: 100,

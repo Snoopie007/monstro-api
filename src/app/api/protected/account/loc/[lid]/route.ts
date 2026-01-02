@@ -3,8 +3,9 @@ import { db } from "@/db/db";
 import { locationState, vendors } from "@/db/schemas";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { eq } from "drizzle-orm";
-import { getPlan } from "../../utils";
+import { getPlan, notifyAdminAPI } from "../../utils";
 import { authWithContext } from '@/libs/auth/server';
+import Stripe from "stripe";
 
 const stripe = new VendorStripePayments();
 
@@ -52,7 +53,7 @@ export async function POST(
 
 		const today = new Date();
 
-		let stripeSubscriptionId: string | undefined;
+		let stripeSubscription: Stripe.Subscription | undefined;
 		if (plan.id === 1) {
 			await stripe.createPaymentIntent(100, token.card.id, {
 				authorizeOnly: true,
@@ -63,7 +64,7 @@ export async function POST(
 				stripe.createSubscription(plan, metadata, 0),
 				stripe.createGHLSubscription(metadata),
 			]);
-			stripeSubscriptionId = sub.id;
+			stripeSubscription = sub;
 		}
 
 		await db.transaction(async (tx) => {
@@ -72,10 +73,10 @@ export async function POST(
 				.update(locationState)
 				.set({
 					...rest,
-					status: "active",
+					status: stripeSubscription?.status || 'incomplete',
 					usagePercent: plan?.usagePercent,
 					startDate: today,
-					stripeSubscriptionId,
+					stripeSubscriptionId: stripeSubscription?.id,
 					lastRenewalDate: today,
 					updated: today,
 				})
@@ -86,24 +87,17 @@ export async function POST(
 				updated: today,
 			}).where(eq(vendors.id, vendorId));
 		});
-		try {
-			await fetch(`${process.env.NEXT_PUBLIC_MONSTRO_API_URL}/api/public/signup`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer 4087c1d6-5bb9-47a5-8598-c2a0868c6a78`
-				},
-				body: JSON.stringify({
-					email: vendor.email!,
-					firstName: vendor.firstName,
-					lastName: vendor.lastName!,
-					phone: vendor.phone!,
-					lid: lid,
-				})
-			})
-		} catch (error) {
-			console.log(error);
-		}
+
+
+		notifyAdminAPI({
+			email: vendor.email!,
+			firstName: vendor.firstName,
+			lastName: vendor.lastName!,
+			phone: vendor.phone!,
+		}, lid).catch(error => {
+			console.error('Failed to notify external API:', error);
+			// Could also send to error tracking service (Sentry, etc.)
+		});
 		return NextResponse.json({ success: true }, { status: 200 });
 	} catch (err) {
 		console.log(err);
