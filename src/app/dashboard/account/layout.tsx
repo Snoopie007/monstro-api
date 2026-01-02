@@ -1,7 +1,6 @@
 import { ScrollArea } from "@/components/ui";
 import { AccountNav } from "./components";
-export default async function AccountLayout({ params, children }: { params: Promise<{ uid: string }>, children: React.ReactNode }) {
-    const { uid } = await params;
+export default async function AccountLayout({ children }: { children: React.ReactNode }) {
     return (
         <ScrollArea className='h-[calc(100vh-50px)] '>
             <div className="max-w-5xl m-auto  pb-20">
