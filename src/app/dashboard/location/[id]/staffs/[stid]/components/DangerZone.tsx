@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { Staff } from "@/types";
 import { toast } from "react-toastify";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/forms";
 
 interface DangerZoneProps {
@@ -20,13 +21,13 @@ interface DangerZoneProps {
 export function DangerZone({ staff, lid }: DangerZoneProps) {
     const [loading, setLoading] = useState(false);
     const [confirm, setConfirm] = useState("");
+    const router = useRouter();
 
     async function handleDelete() {
         if (confirm.trim().toLowerCase() !== `${staff.firstName} ${staff.lastName}`.trim().toLowerCase()) {
-            toast.error("Please enter the correct full name and email address.");
+            toast.error("Please enter the correct full name.");
             return;
         }
-
 
         setLoading(true);
         const { result, error } = await tryCatch(
@@ -36,10 +37,14 @@ export function DangerZone({ staff, lid }: DangerZoneProps) {
         );
 
         if (error || !result || !result.ok) {
+            setLoading(false);
             toast.error("Something went wrong.");
             return;
         }
-        toast.success("Profile updated successfully!");
+
+        setLoading(false);
+        toast.success("Staff deleted successfully!");
+        router.push(`/dashboard/location/${lid}/staffs`);
     }
 
     return (
@@ -55,8 +60,8 @@ export function DangerZone({ staff, lid }: DangerZoneProps) {
                     </p>
                 </div>
                 <Input type="text"
-                    className="bg-white border border-foreground/10 rounded-lg"
-                    placeholder="Enter email address to confirm"
+                    className="bg-white text-black border border-foreground/10 rounded-lg placeholder:text-gray-500"
+                    placeholder="Enter full name to confirm"
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
                 />
