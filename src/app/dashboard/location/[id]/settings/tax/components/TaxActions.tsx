@@ -7,9 +7,8 @@ import {
     DropdownMenuTrigger,
 
 } from "@/components/ui";
-import { Pencil, MoreHorizontal, Pause, Play, Star, Link } from "lucide-react";
+import { Pencil, MoreHorizontal, Pause, Play, Star, Link, Trash } from "lucide-react";
 import { useState, useMemo } from "react";
-import { cn, sleep } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { tryCatch } from "@/libs/utils";
 import { useTaxRates } from "../provider";
@@ -23,10 +22,14 @@ export default function TaxActions({ taxRate }: { taxRate: TaxRate }) {
     const lid = taxRate.locationId
     const [open, setOpen] = useState(false);
 
+    const isLastTaxRate = useMemo(() => {
+        return taxRates.length === 1;
+    }, [taxRates]);
 
     const { isActive, isDefault, isStripeConnected } = useMemo(() => {
 
         return {
+
             isActive: taxRate.status === "active",
             isDefault: taxRate.isDefault,
             isStripeConnected: taxRate.stripeRateId ? true : false,
@@ -83,6 +86,27 @@ export default function TaxActions({ taxRate }: { taxRate: TaxRate }) {
         }));
     }
 
+    async function deleteTaxRate() {
+        if (isLastTaxRate) {
+            toast.error("You cannot delete the last tax rate");
+            return;
+        }
+        if (taxRate.isDefault) {
+            toast.error("You cannot delete the default tax rate");
+            return;
+        }
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/loc/${lid}/config/tax/${taxRate.id}`, {
+                method: "DELETE",
+            })
+        );
+        if (error || !result || !result.ok) {
+            toast.error(error?.message ?? "Failed to delete tax rate");
+            return;
+        }
+        setTaxRates((prev) => prev.filter((t) => t.id !== taxRate.id));
+        toast.success("Tax rate deleted successfully");
+    }
 
     async function connectToStripe() {
         const { result, error } = await tryCatch(
@@ -105,6 +129,7 @@ export default function TaxActions({ taxRate }: { taxRate: TaxRate }) {
     }
     return (
         <>
+
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button
@@ -163,7 +188,16 @@ export default function TaxActions({ taxRate }: { taxRate: TaxRate }) {
                             <Star className="size-3" />
                         </DropdownMenuItem>
                     )}
-
+                    {!isLastTaxRate && !isDefault && (
+                        <DropdownMenuItem
+                            className={MenuItemStyle}
+                            onClick={deleteTaxRate}
+                            disabled={!taxRate}
+                        >
+                            <span > Delete</span>
+                            <Trash className="size-3" />
+                        </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
             <UpdateTaxRate lid={lid} taxRate={taxRate} open={open} setOpen={setOpen} />

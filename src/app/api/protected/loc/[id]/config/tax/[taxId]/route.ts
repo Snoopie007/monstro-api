@@ -37,3 +37,16 @@ export async function PATCH(req: NextRequest, props: Props) {
         return NextResponse.json({ error: "Failed to update tax rate" }, { status: 500 });
     }
 }
+
+
+export async function DELETE(req: NextRequest, props: Props) {
+    const params = await props.params;
+    const { taxId } = params;
+    try {
+        await db.delete(taxRates).where(eq(taxRates.id, taxId));
+        return NextResponse.json({ success: true }, { status: 200 });
+    } catch (error) {
+        console.log(error);
+        return NextResponse.json({ error: "Failed to delete tax rate" }, { status: 500 });
+    }
+}
