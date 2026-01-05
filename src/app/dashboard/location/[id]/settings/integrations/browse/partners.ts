@@ -7,7 +7,7 @@ export const IntergrationPartners = [
         tags: ["Marketing"],
         options: {
             response_type: "code",
-            redirect_uri: "http//localhost:3000/callbacks/integrations/gl",
+            redirect_uri: "/callbacks/integrations/gl",
             client_id: process.env.NEXT_PUBLIC_GHL_CLIENT_ID!,
             scope: ["oauth.write", "oauth.readonly"],
             state: "test123",
@@ -37,7 +37,7 @@ export const IntergrationPartners = [
             client_id: process.env.NEXT_PUBLIC_QUICKBOOKS_CLIENT_ID,
             response_type: 'code',
             scope: 'com.intuit.quickbooks.accounting',
-            redirect_uri: 'http://localhost:3000/callbacks/integrations/quickbooks',
+            redirect_uri: '/callbacks/integrations/quickbooks',
             state: 'test123',
         }
     }
