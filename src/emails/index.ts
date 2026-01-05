@@ -1,5 +1,6 @@
 import ClassReminderEmail from "./ClassReminderEmail";
 import InvoiceReminderEmail from "./InvoiceReminderEmail";
+import LoginTokenEmail from "./LoginTokenEmail";
 import MemberInviteEmail from "./MemberInviteEmail";
 import MissedClassEmail from "./MissedClassEmail";
 import OTPEmailTemplate from "./OTPEmailTemplate";
@@ -15,6 +16,7 @@ import UpdateEmailOTP from "./UpdateEmailOTP";
 export const EmailTemplates = {
     ClassReminderEmail,
     InvoiceReminderEmail,
+    LoginTokenEmail,
     MemberInviteEmail,
     MissedClassEmail,
     OTPEmailTemplate,
