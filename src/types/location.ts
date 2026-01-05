@@ -28,8 +28,32 @@ export type LocationState = typeof locationState.$inferSelect & {
 }
 
 
+export type HolidayType = 
+  | 'new_years'
+  | 'mlk_day'
+  | 'presidents_day'
+  | 'memorial_day'
+  | 'independence_day'
+  | 'labor_day'
+  | 'columbus_day'
+  | 'veterans_day'
+  | 'thanksgiving'
+  | 'christmas_eve'
+  | 'christmas'
+  | 'new_years_eve';
+
+export type HolidayBehavior = 'block_all' | 'block_new_only' | 'notify_only';
+
+export type HolidaySettings = {
+  blockedHolidays: HolidayType[];
+  defaultBehavior: HolidayBehavior;
+  advanceBlockDays: number;
+  autoNotifyMembers: boolean;
+};
+
 export type LocationSettings = {
   theme: 'default';
   passOnFees: boolean;
   processingMethods: PaymentType[];
+  holidays?: HolidaySettings;
 }

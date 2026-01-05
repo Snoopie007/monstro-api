@@ -51,42 +51,53 @@ export async function GET(
       },
     });
 
-    // Get standard reservations
+    // Get standard reservations - now uses denormalized data to reduce joins
+    // Only fetch confirmed reservations (exclude cancelled ones)
     const reservations = await db.query.reservations.findMany({
       where: (r, { between, and, eq }) =>
         and(
           between(r.startOn, startDate, endDate),
-          eq(r.locationId, params.id)
+          eq(r.locationId, params.id),
+          eq(r.status, 'confirmed')
         ),
       with: {
         member: true,
+        // Still include session for backward compatibility during migration
+        // but we'll prefer denormalized data when available
         session: {
           with: {
             program: true,
           },
         },
         memberPackage: true,
+        staff: true, // Now available directly from reservation
       },
     });
 
-    // Get recurring reservations
+    // Get recurring reservations - uses denormalized data
+    // Only fetch confirmed recurring reservations
     const recurrings = await db.query.recurringReservations.findMany({
       where: (r, { and, eq, gte, or, isNull, lte }) =>
         and(
           lte(r.startDate, startDate),
           eq(r.locationId, params.id),
-          or(isNull(r.canceledOn), gte(r.canceledOn, startDate.toISOString()))
+          or(isNull(r.canceledOn), gte(r.canceledOn, startDate.toISOString())),
+          eq(r.status, 'confirmed')
         ),
       with: {
         member: true,
         memberPackage: true,
+        // Still include session for backward compatibility
         session: {
           with: {
             program: true,
             staff: true,
           },
         },
+        staff: true, // Now available directly from recurring reservation
+        // Use new unified exceptions table
         exceptions: true,
+        legacyExceptions: true, // Keep for backward compatibility during migration
       },
     }) as RecurringReservation[];
 
@@ -221,17 +232,23 @@ function addEventToCalendar(
   reservation: Reservation,
   recurringId?: string
 ) {
-  if (
-    !reservation.session ||
-    !reservation.member ||
-    !reservation.session.program
-  )
+  // Use denormalized data when available, fall back to session data for backward compatibility
+  const programName = reservation.programName || reservation.session?.program?.name;
+  const programId = reservation.programId || reservation.session?.programId;
+  const sessionId = reservation.sessionId || reservation.session?.id;
+  const duration = reservation.sessionDuration || reservation.session?.duration || 0;
+  const staffId = reservation.staffId || reservation.session?.staffId;
+  const staff = reservation.staff || reservation.session?.staff;
+
+  // Skip if we don't have required data
+  if (!reservation.member || (!programName && !reservation.session?.program)) {
     return;
+  }
 
   const start = new Date(reservation.startOn);
   const end = new Date(reservation.endOn);
 
-  const id = `${start.toISOString()}-${reservation.session.id}`;
+  const id = sessionId ? `${start.toISOString()}-${sessionId}` : `${start.toISOString()}-${reservation.id}`;
   const member = {
     memberId: reservation.member.id,
     name: `${reservation.member.firstName} ${reservation.member.lastName}`,
@@ -241,7 +258,7 @@ function addEventToCalendar(
   const existingIndex = events.findIndex(
     (e) =>
       e.id === id ||
-      (e.data?.sessionId === reservation.session?.id &&
+      (e.data?.sessionId === sessionId &&
         e.start.toISOString() === start.toISOString())
   );
 
@@ -260,31 +277,32 @@ function addEventToCalendar(
       ];
     }
   } else {
-    // Create new event
+    // Create new event using denormalized data when available
     events.push({
       id,
-      title: reservation.session.program.name,
+      title: programName || 'Unknown Program',
       start,
       end,
-      duration: reservation.session.duration,
+      duration,
       data: {
-        sessionId: reservation.session.id,
+        sessionId: sessionId || '',
         memberPlanId: [
           reservation.memberPackage?.memberPlanId ||
             reservation.memberPackageId ||
             "",
         ],
-        programId: reservation.session.program.id,
+        programId: programId || '',
         reservationId: reservation.id || undefined,
         recurringId,
         members: [member],
         isRecurring: !!recurringId,
+        isMakeUpClass: reservation.isMakeUpClass || false,
       },
-      staff: {
-        id: reservation.session.staffId || "",
-        name: reservation.session.staff?.firstName + " " + reservation.session.staff?.lastName,
-        avatar: reservation.session.staff?.avatar,
-      },
+      staff: staff ? {
+        id: staffId || "",
+        name: (staff.firstName || '') + " " + (staff.lastName || ''),
+        avatar: staff.avatar,
+      } : undefined,
     });
   }
 }

@@ -46,9 +46,12 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
   }
 
   try {
-    // First, fetch the session to get the duration for calculating endOn
+    // First, fetch the session with program info to get all denormalized data
     const session = await db.query.programSessions.findFirst({
       where: (s, { eq }) => eq(s.id, sessionId),
+      with: {
+        program: true,
+      },
     });
 
     if (!session) {
@@ -122,6 +125,14 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
         sessionId,
         locationId: id,
         memberId,
+        // Denormalized session/program fields
+        programId: session.programId,
+        programName: session.program?.name,
+        sessionTime: session.time,
+        sessionDuration: session.duration,
+        sessionDay: session.day,
+        staffId: session.staffId,
+        status: 'confirmed' as const,
       });
     }
 
