@@ -48,6 +48,10 @@ export type CalendarEventData = {
   members: CalendarEventMember[];
   isRecurring: boolean;
   memberPlanId?: string[] | null;
+  // Status tracking for attendance
+  isMakeUpClass?: boolean;
+  status?: 'confirmed' | 'cancelled_by_member' | 'cancelled_by_vendor' | 'cancelled_by_holiday' | 'completed' | 'no_show';
+  hasCheckIn?: boolean; // Whether members checked in
 };
 
 export type CalendarEventMember = {
