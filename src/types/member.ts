@@ -35,22 +35,24 @@ export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
 }
 
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
-  child?: MemberSubscription | null
+  child?: MemberSubscription
   invoices?: MemberInvoice[]
   plan?: MemberPlan
-  pricing?: MemberPlanPricing | null
-  contract?: MemberContract | null
+  pricing?: MemberPlanPricing
+  contract?: MemberContract
   member?: Member
   paymentType: PaymentType
+  location?: Location
 }
 
 export type MemberPackage = typeof memberPackages.$inferSelect & {
   plan?: MemberPlan
-  pricing?: MemberPlanPricing | null
-  contract?: MemberContract | null
+  pricing?: MemberPlanPricing
+  contract?: MemberContract
   member?: Member
-  parent?: MemberPackage | null
-  paymentType: PaymentType
+  parent?: MemberPackage
+  paymentType: PaymentType,
+  location?: Location
 }
 
 export type BillingCycleAnchorConfig = {
@@ -62,7 +64,7 @@ export type BillingCycleAnchorConfig = {
 }
 
 export type MemberPlan = typeof memberPlans.$inferSelect & {
-  contract?: Contract | undefined
+  contract: Contract | null
   billingAnchorConfig: BillingCycleAnchorConfig | null
   planPrograms?: PlanProgram[]
   pricingOptions?: MemberPlanPricing[]

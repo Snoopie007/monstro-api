@@ -32,7 +32,7 @@ export const memberPlans = pgTable("member_plans", {
 	family: boolean("family").notNull().default(false),
 	familyMemberLimit: integer("family_member_limit").notNull().default(0),
 	archived: boolean("archived").notNull().default(false),
-	contractId: integer("contract_id").references(() => contractTemplates.id),
+	contractId: text("contract_id").references(() => contractTemplates.id),
 	type: PlanType("type").notNull().default("recurring"),
 	currency: text("currency").notNull().default("USD"),
 	totalClassLimit: integer("total_class_limit"),
@@ -130,6 +130,10 @@ export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
 		fields: [memberPlans.groupId],
 		references: [groups.id],
 	}),
+	contract: one(contractTemplates, {
+		fields: [memberPlans.contractId],
+		references: [contractTemplates.id],
+	}),
 	planPrograms: many(planPrograms),
 	packages: many(memberPackages),
 	subscriptions: many(memberSubscriptions),
@@ -180,37 +184,35 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
 	recurrings: many(recurringReservations),
 }));
 
-export const memberPackagesRelations = relations(
-	memberPackages,
-	({ one, many }) => ({
-		plan: one(memberPlans, {
-			fields: [memberPackages.memberPlanId],
-			references: [memberPlans.id],
-		}),
-		pricing: one(memberPlanPricing, {
-			fields: [memberPackages.memberPlanPricingId],
-			references: [memberPlanPricing.id],
-		}),
-		location: one(locations, {
-			fields: [memberPackages.locationId],
-			references: [locations.id],
-		}),
-		member: one(members, {
-			fields: [memberPackages.memberId],
-			references: [members.id],
-		}),
-		parent: one(memberPackages, {
-			fields: [memberPackages.parentId],
-			references: [memberPackages.id],
-		}),
-		contract: one(memberContracts, {
-			fields: [memberPackages.memberContractId],
-			references: [memberContracts.id],
-		}),
-		reservations: many(reservations),
-		recurrings: many(recurringReservations),
-		childs: many(memberPackages, {
-			relationName: "children",
-		}),
-	})
+export const memberPackagesRelations = relations(memberPackages, ({ one, many }) => ({
+	plan: one(memberPlans, {
+		fields: [memberPackages.memberPlanId],
+		references: [memberPlans.id],
+	}),
+	pricing: one(memberPlanPricing, {
+		fields: [memberPackages.memberPlanPricingId],
+		references: [memberPlanPricing.id],
+	}),
+	location: one(locations, {
+		fields: [memberPackages.locationId],
+		references: [locations.id],
+	}),
+	member: one(members, {
+		fields: [memberPackages.memberId],
+		references: [members.id],
+	}),
+	parent: one(memberPackages, {
+		fields: [memberPackages.parentId],
+		references: [memberPackages.id],
+	}),
+	contract: one(memberContracts, {
+		fields: [memberPackages.memberContractId],
+		references: [memberContracts.id],
+	}),
+	reservations: many(reservations),
+	recurrings: many(recurringReservations),
+	childs: many(memberPackages, {
+		relationName: "children",
+	}),
+})
 );

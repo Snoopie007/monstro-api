@@ -33,39 +33,53 @@ export function mlDocsRoutes(app: Elysia) {
 	return app.get("/docs", async ({ params, status }) => {
 		const { mid, lid } = params;
 		try {
-			const member = await db.query.members.findFirst({
-				where: (m, { eq }) => eq(m.id, mid),
+
+			const memberContracts = await db.query.memberContracts.findMany({
+				where: (c, { eq, and }) => and(eq(c.memberId, mid), eq(c.locationId, lid)),
+			});
+
+			const pkgs = await db.query.memberPackages.findMany({
+				where: (pkg, { eq, and }) => and(eq(pkg.memberId, mid), eq(pkg.locationId, lid)),
 				with: {
-					subscriptions: {
-						with: {
-							plan: true,
+
+					plan: {
+						columns: {
+							contractId: true,
 						},
 					},
-					packages: {
-						with: {
-							plan: true,
+				},
+				columns: {
+					id: true,
+				},
+			});
+			const subs = await db.query.memberSubscriptions.findMany({
+				where: (sub, { eq, and }) => and(eq(sub.memberId, mid), eq(sub.locationId, lid)),
+				with: {
+					plan: {
+						columns: {
+							contractId: true,
 						},
 					},
-					contracts: true,
+				},
+				columns: {
+					id: true,
 				},
 			});
 
-			if (!member) {
-				return status(404, { error: "Member not found" });
-			}
 
 			const docIds: string[] = [];
-			member.subscriptions.forEach((sub) => {
+			subs.forEach((sub) => {
 				if (sub.plan.contractId) {
 					docIds.push(sub.plan.contractId.toString());
 				}
 			});
 
-			member.packages.forEach((pkg) => {
+			pkgs.forEach((pkg) => {
 				if (pkg.plan.contractId) {
 					docIds.push(pkg.plan.contractId.toString());
 				}
 			});
+
 
 			const documents = await db.query.contractTemplates.findMany({
 				where: (ct, { inArray, or, eq }) =>
@@ -73,10 +87,10 @@ export function mlDocsRoutes(app: Elysia) {
 			});
 
 			const extendedDocuments = documents.map((doc) => {
-				const signedDoc = member.contracts.find((c) => c.templateId === doc.id);
+				const signedDoc = memberContracts.find((c) => c.templateId === doc.id);
 				const memberPlan =
-					member.subscriptions.find((s) => s.plan.contractId?.toString() === doc.id) ||
-					member.packages.find((p) => p.plan.contractId?.toString() === doc.id);
+					subs.find((s) => s.plan.contractId?.toString() === doc.id) ||
+					pkgs.find((p) => p.plan.contractId?.toString() === doc.id);
 				return {
 					...doc,
 					memberContract: signedDoc,

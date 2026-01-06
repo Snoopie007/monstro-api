@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { interpolate } from "@/libs/utils";
-import { errorPageTemplate, waiverPageTemplate } from "@/libs/html";
+import { NotFoundPageTemplate, DocumentPageTemplate } from "@/libs/html";
 
 async function fetchWaiver(did: string) {
   if (!did) return undefined;
@@ -40,13 +40,14 @@ async function fetchMember(mid: string) {
 
 export const memberRoutes = new Elysia({ prefix: "/member" }).group("/:mid", (app) =>
   app.group("/waiver", (waiverApp) =>
-    waiverApp.get("/:did", async ({ params: { mid, did }, set }) => {
+    waiverApp.get("/:did", async ({ params: { mid, did }, set, query }) => {
       const waiver = await fetchWaiver(did);
       const member = await fetchMember(mid);
+      const { theme } = query;
 
       if (!waiver || !member) {
         set.status = 404;
-        return errorPageTemplate("Waiver Not Found", "Waiver not found");
+        return NotFoundPageTemplate();
       }
 
       const { location, ...waiverContract } = waiver;
@@ -62,9 +63,10 @@ export const memberRoutes = new Elysia({ prefix: "/member" }).group("/:mid", (ap
       );
 
       // Return HTML similar to the original Next.js page
-      const html = waiverPageTemplate(
+      const html = DocumentPageTemplate(
         waiverContract.title || "Waiver",
-        interpolatedContent
+        interpolatedContent,
+        theme
       );
 
       set.headers = {

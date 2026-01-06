@@ -10,9 +10,8 @@ export type Contract = typeof contractTemplates.$inferSelect & {
 
 export type MemberContract = typeof memberContracts.$inferSelect & {
     member?: Member;
-    contract?: Contract;
-    subscription?: MemberSubscription | null;
-    package?: MemberPackage | null;
+    subscription?: MemberSubscription;
+    package?: MemberPackage;
     contractTemplate?: Contract;
     location?: Location;
 }
