@@ -10,14 +10,17 @@ export const paymentMethods = pgTable('payment_methods', {
     id: text('id').primaryKey().notNull().default(sql`uuid_base62()`),
     type: text('type').$type<PaymentType>().notNull(),
     stripeId: text('stripe_id').notNull().unique(),
-    fingerprint: text('fingerprint').notNull().unique(),
+    fingerprint: text('fingerprint').notNull(), // Remove .unique()
     card: jsonb('card').$type<CardPaymentMethod>(),
     usBankAccount: jsonb('us_bank_account').$type<UsBankAccountPaymentMethod>(),
     memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
     metadata: jsonb('metadata').$type<Record<string, any>>().default(sql`'{}'::jsonb`),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
-}, t => [unique('stripe_id_unique').on(t.stripeId), unique('fingerprint_unique').on(t.fingerprint)])
+}, t => [
+    unique('stripe_id_unique').on(t.stripeId),
+    unique('fingerprint_member_unique').on(t.fingerprint, t.memberId) // Composite unique constraint
+])
 
 export const memberPaymentMethods = pgTable('member_payment_methods', {
 

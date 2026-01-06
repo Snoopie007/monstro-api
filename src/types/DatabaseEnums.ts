@@ -1,4 +1,4 @@
-export type LocationStatus = 'incomplete' | 'active' | 'past_due' | 'canceled' | 'paused' | 'trialing' | 'unpaid' | 'incomplete_expired';
+export type LocationStatus = 'incomplete' | 'active' | 'past_due' | 'canceled' | 'paused' | 'trialing' | 'unpaid' | 'incomplete_expired' | "archived";
 export type PlanType = 'recurring' | 'one-time';
 export type Interval = 'day' | 'week' | 'month' | 'year';
 export type PackageStatus = 'active' | 'incomplete' | 'expired' | 'completed';
@@ -9,7 +9,7 @@ export type ContractType = 'contract' | 'waiver';
 export type RoleColor = "red" | "green" | "blue" | "pink" | "cyan" | "lime" | "orange" | "fuchsia" | "sky" | "lemon" | "purple" | "yellow";
 export type TransactionStatus = 'paid' | 'failed' | 'incomplete';
 export type StaffStatus = 'active' | 'inactive';
-export type ProgramStatus = 'active' | 'inactive' | 'archived';
+export type ProgramStatus = 'active' | 'inactive';
 export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type TransactionType = 'inbound' | 'outbound';
 export type ASsistantStatus = "draft" | "active" | "paused";

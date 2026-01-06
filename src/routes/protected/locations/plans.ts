@@ -2,9 +2,6 @@
 import type { Elysia } from "elysia";
 import { z } from "zod";
 import { db } from "@/db/db";
-import { memberPlans, planPrograms, programs } from "@/db/schemas";
-import { eq, getTableColumns } from "drizzle-orm";
-
 const LocationPlansProps = {
     params: z.object({
         lid: z.string(),
@@ -25,30 +22,32 @@ export async function locationPlans(app: Elysia) {
                             program: true,
                         },
                     },
+                    pricingOptions: true,
                 },
             });
             const mappedPlans = plans.map(plan => {
-                const programs = plan.planPrograms.map(pp => pp.program);
+                const { planPrograms, pricingOptions, ...rest } = plan
+                const programs = planPrograms.map(pp => pp.program);
 
                 // Get all numeric minAge and maxAge values from programs
-                const minAges = programs
-                    .map(p => typeof p.minAge === 'number' ? p.minAge : null)
-                    .filter((a): a is number => a !== null);
-                const maxAges = programs
-                    .map(p => typeof p.maxAge === 'number' ? p.maxAge : null)
-                    .filter((a): a is number => a !== null);
+                const minAges = programs.map(p => p.minAge)
+                const maxAges = programs.map(p => p.maxAge)
 
-                const minAge = minAges.length ? Math.min(...minAges) : null;
-                const maxAge = maxAges.length ? Math.max(...maxAges) : null;
+                const minAge = minAges.length ? Math.min(...minAges) : 0;
+                const maxAge = maxAges.length ? Math.max(...maxAges) : 0;
+
+                const prices = pricingOptions.map(p => p.price);
+                const minPrice = prices.length ? Math.min(...prices) : 0;
 
                 return {
-                    ...plan,
+                    ...rest,
                     programs,
-                    ageRange: (minAge !== null && maxAge !== null) ? { min: minAge, max: maxAge } : null,
+                    startingPrice: minPrice,
+                    prices: pricingOptions,
+                    ageRange: { min: minAge, max: maxAge },
                 };
             });
-
-            return status(200, plans);
+            return status(200, mappedPlans);
         } catch (err) {
             console.error("Error getting plans:", err);
             return status(500, { error: "Failed to get plans" });

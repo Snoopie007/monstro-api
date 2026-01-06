@@ -50,10 +50,8 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                     where: (l, { eq, and }) => and(eq(l.locationId, lid), eq(l.memberId, mid)),
                     with: {
                         pointsHistory: true,
-                        location: true,
                         member: {
                             with: {
-                                user: true,
                                 packages: {
                                     with: {
                                         plan: true,

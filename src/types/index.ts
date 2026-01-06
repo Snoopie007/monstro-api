@@ -20,3 +20,5 @@ export * from "./PaymentMethods";
 export * from "./reactions";
 export * from "./medias";
 export * from "./chat";
+export * from "./tax";
+export * from "./achievement";

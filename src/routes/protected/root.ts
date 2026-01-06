@@ -12,18 +12,7 @@ import { mediaRoutes } from './medias';
 import { stripeRoutes } from './stripe';
 import { userPushTokenRoutes } from './push-token';
 import { groupRoutes } from './groups';
-import {
-    locationAchievements,
-    locationCheckin,
-    locationDocs,
-    locationEmail,
-    locationPlans,
-    locationLeaderboard,
-    locationReservations,
-    locationRewards,
-    locationSessions,
-    locationSupport
-} from './locations';
+import { locationsRoutes } from './locations';
 import {
     memberAccounts,
     memberAvatar,
@@ -66,20 +55,5 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         })
         return app;
     })
-    .group('/locations', (app) => {
-        app.use(locationEmail);
-        return app;
-    })
-    .group('/locations/:lid', (app) => {
-        app.use(locationAchievements);
-        app.use(locationCheckin);
-        app.use(locationDocs);
-        app.use(locationReservations);
-        app.use(locationRewards);
-        app.use(locationSessions);
-        app.use(locationSupport);
-        app.use(locationLeaderboard);
-        app.use(locationPlans);
-        return app;
-    })
+    .use(locationsRoutes)
     .use(commentRoutes)

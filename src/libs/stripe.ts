@@ -1,5 +1,5 @@
 
-import type { MemberPlan } from "@/types";
+import type { BillingCycleAnchorConfig, MemberPlanPricing, PaymentMethod, PaymentType } from "@/types";
 import type { MonstroPlan } from "@/types/admin";
 import type { AddressParam } from "@stripe/stripe-js";
 import { isSameDay, addMonths, isAfter } from "date-fns";
@@ -35,8 +35,11 @@ type MemberSubscriptionSettings = BaseSettings & {
     taxRateId?: string;
     startDate?: Date,
     allowProration?: boolean
+    billingAnchorConfig?: BillingCycleAnchorConfig
 }
 const isProd = process.env.NODE_ENV === "production";
+const STRIPE_API_VERSION = "2025-12-15.clover";
+
 
 abstract class BaseStripePayments {
     protected _stripe: Stripe;
@@ -44,7 +47,7 @@ abstract class BaseStripePayments {
 
     constructor(key: string) {
         this._stripe = new Stripe(key, {
-            apiVersion: "2025-10-29.clover",
+            apiVersion: STRIPE_API_VERSION,
             appInfo: {
                 name: "My Monstro",
                 url: "https://monstro-x.com",
@@ -56,6 +59,9 @@ abstract class BaseStripePayments {
         this._customer = customer;
         return this;
     }
+
+
+
     async connectOAuth(code: string, scope?: string) {
         return await this._stripe.oauth.token({
             grant_type: "authorization_code",
@@ -98,12 +104,26 @@ abstract class BaseStripePayments {
         return await this._stripe.paymentMethods.update(id, update);
     }
 
-    async createSetupIntent(customerId: string, cardId: string) {
+    async createEphemeralKey(accountId?: string) {
+        if (!this._customer) {
+            throw new Error("Customer not set");
+        }
+        return await this._stripe.ephemeralKeys.create(
+            { customer: this._customer },
+            {
+                apiVersion: STRIPE_API_VERSION,
+                ...(accountId && { account: accountId }),
+            }
+        );
+    }
+
+    async setupIntentWithToken(customerId: string, token: string) {
         const option: Stripe.SetupIntentCreateParams = {
             automatic_payment_methods: { enabled: true },
             customer: customerId,
             usage: "off_session",
-            payment_method: cardId,
+            payment_method: token,
+            expand: ["payment_method"]
         };
         return await this._stripe.setupIntents.create(option);
     }
@@ -128,13 +148,17 @@ abstract class BaseStripePayments {
         });
     }
 
-    async createBankSetupIntent() {
+    async createSetupIntent(paymentMethodTypes?: PaymentType[]) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
+
+        const types = paymentMethodTypes || ["card", "us_bank_account"];
+
+
         const option: Stripe.SetupIntentCreateParams = {
             customer: this._customer,
-            payment_method_types: ["us_bank_account"],
+            payment_method_types: types,
             payment_method_options: {
                 us_bank_account: {
                     financial_connections: {
@@ -146,7 +170,14 @@ abstract class BaseStripePayments {
         return await this._stripe.setupIntents.create(option);
     }
 
+    async getSetupIntent(setupIntentId: string) {
+        return await this._stripe.setupIntents.retrieve(setupIntentId, {
+            expand: ["payment_method"],
+        });
+    }
+
     async getCustomer(customerId: string): Promise<Stripe.Customer | undefined> {
+
         const customer = await this._stripe.customers.retrieve(customerId);
 
         if (customer.deleted) {
@@ -196,7 +227,7 @@ abstract class BaseStripePayments {
             customer: this._customer,
             confirm: true,
             payment_method_data: {
-                type: "card",
+                type: type || "card",
                 card: {
                     token: source,
                 },
@@ -360,28 +391,6 @@ class VendorStripePayments extends BaseStripePayments {
         };
     }
 
-    async createSubscription(
-        plan: MonstroPlan,
-        metadata: Record<string, any>,
-        trial?: number,
-        paymentMethodId?: string | undefined
-    ) {
-        if (!this._customer) {
-            throw new Error("Customer not set");
-        }
-
-        const options: Stripe.SubscriptionCreateParams = {
-            customer: this._customer,
-            description: `Monstro ${plan.name} Subscription`,
-            ...(paymentMethodId && { default_payment_method: paymentMethodId }),
-            items: [{ price: isProd ? plan.priceId! : plan.testPriceId! }],
-            metadata,
-        };
-        if (trial) {
-            options.trial_period_days = trial;
-        }
-        return this._stripe.subscriptions.create(options);
-    }
 
     async createScaleUpgrade(
         metadata: Record<string, any>,
@@ -425,6 +434,8 @@ class VendorStripePayments extends BaseStripePayments {
         return this._stripe.subscriptions.create(options);
     }
 }
+
+
 
 class MemberStripePayments extends BaseStripePayments {
     private _accountId: string | null;
@@ -489,21 +500,31 @@ class MemberStripePayments extends BaseStripePayments {
     }
 
 
-    async createSubscription(plan: MemberPlan, settings: MemberSubscriptionSettings) {
+    async createSubscription(pricing: MemberPlanPricing, settings: MemberSubscriptionSettings) {
         if (!this._customer) {
             throw new Error("Customer not set");
         }
         if (!this._accountId) {
             throw new Error("Account ID not set");
         }
-        const { startDate, trialEnd, paymentMethod, feePercent, allowProration, cancelAt,
-            taxRateId, ...rest } = settings;
+        const {
+            startDate,
+            trialEnd,
+            paymentMethod,
+            feePercent,
+            allowProration,
+            cancelAt,
+            taxRateId,
+            billingAnchorConfig,
+            ...rest
+        } = settings;
 
-        if (!plan.stripePriceId) {
+        if (!pricing.stripePriceId) {
             throw new Error("Price not found");
         }
 
-        const isAllowProration = plan.interval === "month" || plan.interval === "year"
+        const planName = pricing.plan?.name || "";
+        const isAllowProration = pricing.interval === "month" || pricing.interval === "year"
 
 
         const accountDestination = {
@@ -520,8 +541,8 @@ class MemberStripePayments extends BaseStripePayments {
             },
             automatic_tax: { enabled: false },
             invoice_settings: { issuer: accountDestination },
-            description: `Subscription to ${plan.name}`,
-            items: [{ price: plan.stripePriceId as string }],
+            description: `Subscription to ${planName}`,
+            items: [{ price: pricing.stripePriceId }],
             collection_method: "charge_automatically",
             default_payment_method: paymentMethod || undefined,
             application_fee_percent: feePercent || 0,
@@ -530,11 +551,11 @@ class MemberStripePayments extends BaseStripePayments {
         };
 
         if (isAllowProration) {
-            if (plan.billingAnchorConfig) {
-                options.billing_cycle_anchor_config = plan.billingAnchorConfig;
+            if (billingAnchorConfig) {
+                options.billing_cycle_anchor_config = billingAnchorConfig;
             }
             if (startDate && isAfter(startDate, new Date())) {
-                options.proration_behavior = (allowProration || plan.allowProration) ? "create_prorations" : "none";
+                options.proration_behavior = (allowProration || allowProration) ? "create_prorations" : "none";
                 options.billing_cycle_anchor = startDate.getTime() / 1000;
             }
         }
@@ -545,16 +566,16 @@ class MemberStripePayments extends BaseStripePayments {
 
 
     async createStripeProduct(
-        data: MemberPlan,
+        data: MemberPlanPricing,
         metadata: Record<string, any>
     ): Promise<Stripe.Price> {
         const { interval, price, intervalThreshold } = data;
         const product = await this._stripe.products.create({
             name: data.name,
-            description: data.description,
+            description: metadata.description,
             active: true,
             default_price_data: {
-                currency: data.currency || "usd",
+                currency: "usd",
                 recurring: {
                     interval: interval as Stripe.PriceCreateParams.Recurring.Interval,
                     interval_count: intervalThreshold || 1,
@@ -568,19 +589,6 @@ class MemberStripePayments extends BaseStripePayments {
 
         return product.default_price as Stripe.Price;
     }
-
-    // async retrieveTaxSettings() {
-    // 	return await this._stripe.tax.settings.retrieve();
-
-    // }
-
-    // async updateTaxSettings(settings: Stripe.Tax.SettingsUpdateParams) {
-    // 	return await this._stripe.tax.settings.update(settings);
-    // }
-
-    // async getTaxRegistrations() {
-    // 	return await this._stripe.tax.registrations.list();
-    // }
 
 
     async createTaxRate(data: Stripe.TaxRateCreateParams) {

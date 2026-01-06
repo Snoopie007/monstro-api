@@ -2,7 +2,7 @@ import { VendorStripePayments } from "@/libs/stripe";
 import Elysia from "elysia";
 import { db } from "@/db/db";
 import { z } from "zod";
-import { paymentMethods } from "@/db/schemas";
+import { members, paymentMethods } from "@/db/schemas";
 import type { PaymentType } from "@/types/DatabaseEnums";
 import type Stripe from "stripe";
 import { eq } from "drizzle-orm";
@@ -15,19 +15,6 @@ const GetMPProps = {
 };
 
 
-const NewCardProps = {
-    ...GetMPProps,
-    body: z.object({
-        token: z.string(),
-        nameOnCard: z.string().optional(),
-        address: z.object({
-            line1: z.string(),
-            city: z.string(),
-            state: z.string(),
-            postalCode: z.string(),
-        }),
-    }),
-};
 
 
 const liveStripe = new VendorStripePayments();
@@ -43,6 +30,8 @@ export function memberPayments(app: Elysia) {
                     fingerprint: false,
                 }
             })
+
+
 
             return status(200, methods)
         } catch (err) {
@@ -71,12 +60,115 @@ export function memberPayments(app: Elysia) {
     })
 
 
-    app.group("/payments/card", (app) => {
+    app.group("/payments/checkout", (app) => {
+        app.get("/", async ({ status, params }) => {
+            const { mid } = params;
+            try {
+                const member = await db.query.members.findFirst({
+                    where: (member, { eq }) => eq(member.id, mid)
+                })
+                if (!member) {
+                    return status(404, { error: "Member not found" })
+                }
+                const stripe = new VendorStripePayments();
+
+                let stripeCustomerId = member.stripeCustomerId;
+                if (!stripeCustomerId) {
+                    const newCustomer = await stripe.createCustomer({
+                        email: member.email,
+                        phone: member.phone,
+                        firstName: member.firstName,
+                        lastName: member.lastName,
+                    }, undefined, {
+                        memberId: mid,
+                    });
+                    await db.update(members).set({
+                        stripeCustomerId: newCustomer.id,
+                    }).where(eq(members.id, mid));
+                    stripeCustomerId = newCustomer.id;
+                }
+
+                stripe.setCustomer(stripeCustomerId);
+                const setupIntent = await stripe.createSetupIntent();
+                const ephemeralKey = await stripe.createEphemeralKey();
+
+
+
+                return status(200, { customer: stripeCustomerId, ephemeralKey: ephemeralKey.secret })
+            } catch (err) {
+                console.log(err)
+                return status(500, { error: err })
+            }
+        }, GetMPProps)
         app.post("/", async ({ status, body, params }) => {
             const { mid } = params;
+            const { token, lid, secret } = body;
+            if (!secret) {
+                return status(400, { error: "Secret is required" })
+            }
+            // Extract SetupIntent ID from client secret
+            const setupIntentId = secret.split('_secret_')[0];
+            if (!setupIntentId) {
+                return status(400, { error: "Setup intent ID is required" })
+            }
+            console.log(setupIntentId)
+            try {
 
-            const { token, nameOnCard } = body;
+                // const member = await db.query.members.findFirst({
+                //     where: (member, { eq }) => eq(member.id, mid)
+                // })
+                // if (!member) {
+                //     return status(404, { error: "Member not found" })
+                // }
+                const stripe = new VendorStripePayments();
 
+                // let stripeCustomerId = member.stripeCustomerId;
+                // if (!stripeCustomerId) {
+                //     const newCustomer = await stripe.createCustomer({
+                //         email: member.email,
+                //         phone: member.phone,
+                //         firstName: member.firstName,
+                //         lastName: member.lastName,
+                //     }, undefined, {
+                //         memberId: mid,
+                //     });
+                //     await db.update(members).set({
+                //         stripeCustomerId: newCustomer.id,
+                //     }).where(eq(members.id, mid));
+                //     stripeCustomerId = newCustomer.id;
+                // }
+                // stripe.setCustomer(stripeCustomerId);
+                // const setupIntent = await stripe.createSetupIntent(stripeCustomerId, token);
+                // const paymentMethod = setupIntent.payment_method as Stripe.PaymentMethod;
+                // console.log(paymentMethod)
+                // await attachPaymentMethod(paymentMethod, mid, `${member.firstName} ${member.lastName}`);
+
+                return status(200, { success: true })
+            } catch (err) {
+                console.log(err)
+                return status(500, { error: err })
+            }
+        }, {
+            ...GetMPProps,
+            body: z.object({
+                token: z.string().optional(),
+                lid: z.string().optional(),
+                secret: z.string().optional(),
+            }),
+        })
+        return app;
+    })
+
+
+    app.group("/payments/new", (app) => {
+        app.post("/", async ({ status, body, params }) => {
+            const { mid } = params;
+            const { userAgent, secret } = body;
+            // const ip = headers['x-forwarded-for'] || headers['cf-connecting-ip'] || '127.0.0.1';
+            const setupIntentId = secret.split('_secret_')[0];
+            if (!setupIntentId) {
+                return status(400, { error: "Setup intent ID is required" })
+            }
             try {
                 const member = await db.query.members.findFirst({
                     where: (member, { eq }) => eq(member.id, mid)
@@ -89,31 +181,8 @@ export function memberPayments(app: Elysia) {
                 const isTestMember = member.email === 'mtest@yahoo.com';
                 const stripe = new VendorStripePayments(isTestMember ? process.env.STRIPE_TEST_SECRET_KEY : undefined);
                 stripe.setCustomer(member.stripeCustomerId);
+                const setupIntent = await stripe.getSetupIntent(setupIntentId);
 
-                const { paymentMethod } = await stripe.setupIntent(token);
-                const pm = await attachPaymentMethod(paymentMethod, mid, nameOnCard);
-
-                return status(200, pm)
-
-            } catch (err) {
-                console.log(err)
-                return status(500, { error: err })
-            }
-        }, NewCardProps)
-        return app;
-    })
-    app.group("/payments/bank", (app) => {
-        app.post("/", async ({ status, params, body, headers }) => {
-            const { mid } = params;
-            const { setupIntentId, userAgent } = body;
-            const ip = headers['x-forwarded-for'] || headers['cf-connecting-ip'] || '127.0.0.1';
-            try {
-                const stripe = await getStripeCustomer(mid);
-                const setupIntent = await stripe.confirmSetupIntent(setupIntentId, {
-                    ip,
-                    userAgent: userAgent,
-                    acceptedAt: new Date().getTime(),
-                });
 
                 if (setupIntent.status === 'succeeded') {
                     // Save the payment method to your database
@@ -125,6 +194,7 @@ export function memberPayments(app: Elysia) {
                 } else {
                     return status(400, { error: 'Setup intent not succeeded' });
                 }
+
             } catch (err) {
                 console.log(err)
                 return status(500, { error: err })
@@ -132,18 +202,18 @@ export function memberPayments(app: Elysia) {
         }, {
             ...GetMPProps,
             body: z.object({
-                userAgent: z.string(),
-                setupIntentId: z.string(),
+                userAgent: z.string().optional(),
+                secret: z.string(),
             }),
         })
-        app.post("/intent", async ({ status, params }) => {
+        app.get("/intent", async ({ status, params }) => {
             const { mid } = params;
             try {
                 const stripe = await getStripeCustomer(mid);
-                const setupIntent = await stripe.createBankSetupIntent();
-
+                const setupIntent = await stripe.createSetupIntent();
 
                 return status(200, {
+                    customer: setupIntent.customer,
                     clientSecret: setupIntent.client_secret,
                 })
             } catch (err) {
@@ -151,7 +221,6 @@ export function memberPayments(app: Elysia) {
                 return status(500, { error: err })
             }
         }, GetMPProps)
-
         return app;
     })
 
@@ -188,38 +257,28 @@ async function attachPaymentMethod(paymentMethod: Stripe.PaymentMethod, mid: str
         console.error("Fingerprint is required");
         return;
     }
-    // Check if the payment method already exists
-    let pm = await db.query.paymentMethods.findFirst({
-        where: (paymentMethod, { eq }) => eq(paymentMethod.fingerprint, fingerprint),
-    });
-
-    if (!pm) {
-
-        const [newPaymentMethod] = await db.insert(paymentMethods).values({
-            fingerprint: fingerprint,
-            stripeId: paymentMethod.id,
-            type: paymentMethod.type as PaymentType,
-            card: card ? {
-                brand: card.brand,
-                last4: card.last4,
-                expMonth: card.exp_month,
-                expYear: card.exp_year,
-            } : null,
-            usBankAccount: us_bank_account ? {
-                bankName: us_bank_account.bank_name,
-                accountType: us_bank_account.account_type,
-                last4: us_bank_account.last4,
-            } : null,
-            memberId: mid,
-            metadata: {
-                nameOnCard: name || undefined,
-            },
-        }).onConflictDoNothing({
-            target: [paymentMethods.fingerprint],
-        }).returning();
-
-        pm = newPaymentMethod;
-    }
-
-    return pm;
+    const [newPaymentMethod] = await db.insert(paymentMethods).values({
+        fingerprint: fingerprint,
+        stripeId: paymentMethod.id,
+        type: paymentMethod.type as PaymentType,
+        card: card ? {
+            brand: card.brand,
+            last4: card.last4,
+            expMonth: card.exp_month,
+            expYear: card.exp_year,
+        } : null,
+        usBankAccount: us_bank_account ? {
+            bankName: us_bank_account.bank_name,
+            accountType: us_bank_account.account_type,
+            last4: us_bank_account.last4,
+        } : null,
+        memberId: mid,
+        metadata: {
+            nameOnCard: name || undefined,
+        },
+    }).onConflictDoNothing({
+        target: [paymentMethods.fingerprint, paymentMethods.memberId],
+    }).returning();
+    console.log('newPaymentMethod', newPaymentMethod)
+    return newPaymentMethod;
 }

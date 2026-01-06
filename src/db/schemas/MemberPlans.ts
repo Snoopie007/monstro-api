@@ -52,11 +52,8 @@ export const memberPlanPricing = pgTable("member_plan_pricing", {
 	memberPlanId: text("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
 	name: text("name").notNull(),
 	price: integer("price").notNull().default(0),
-	currency: text("currency").notNull().default("USD"),
-	// Billing Cycle: how often they're charged (for recurring plans)
 	interval: IntervalType("interval").default("month"),
 	intervalThreshold: integer("interval_threshold").default(1),
-	// Term/Expiration: how long until auto-cancel (null = ongoing/never expires)
 	expireInterval: IntervalType("expire_interval"),
 	expireThreshold: integer("expire_threshold"),
 	stripePriceId: text("stripe_price_id"),

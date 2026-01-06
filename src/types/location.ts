@@ -4,6 +4,8 @@ import type {
   MemberInvoice,
   MemberSubscription,
   Transaction,
+  PaymentType,
+  TaxRate,
 } from ".";
 import { locations, locationState } from "@/db/schemas/locations";
 import type { MemberPlan } from "./member";
@@ -16,10 +18,16 @@ export type Location = typeof locations.$inferSelect & {
   transactions?: Transaction[];
   wallet?: Wallet;
   memberPlans?: MemberPlan[];
+  taxRates?: TaxRate[];
 };
 
-export type LocationState = typeof locationState.$inferSelect;
+export type LocationState = typeof locationState.$inferSelect & {
+  settings: LocationSettings;
+}
+
 
 export type LocationSettings = {
-  aibotsCount: number;
-};
+  theme: 'default';
+  passOnFees: boolean;
+  processingMethods: PaymentType[];
+}
