@@ -121,6 +121,8 @@ export const auth = betterAuth({
       "https://monstro-x.com",
       "https://www.monstro-x.com",
       "https://app.monstro-x.com",
+      "https://checkin.monstro-x.com",
+      "https://c.monstro-x.com",
       isPreview && "https://monstrox.vercel.app",
     ].filter(Boolean) as string[],
   
