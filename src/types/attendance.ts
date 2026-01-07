@@ -1,6 +1,6 @@
 import {
   recurringReservations,
-  recurringReservationsExceptions,
+  reservationExceptions,
   reservations,
 } from "@/db/schemas/reservations";
 import type { ProgramSession } from "@/types/program";
@@ -22,7 +22,7 @@ export type Reservation = typeof reservations.$inferSelect & {
   recurringId?: string;
   session?: ProgramSession;
   member?: Member;
-  exceptions?: RecurringReservationException[];
+  exceptions?: ReservationException[];
   memberSubscription?: MemberSubscription | null;
   memberPackage?: MemberPackage | null;
   attendance?: Attendance;
@@ -33,11 +33,15 @@ export type RecurringReservation = typeof recurringReservations.$inferSelect & {
   location?: Location;
   attendances?: Attendance[];
   member?: Member;
-  exceptions?: RecurringReservationException[];
+  exceptions?: ReservationException[];
 };
 
-export type RecurringReservationException =
-  typeof recurringReservationsExceptions.$inferSelect & {
+// Unified exception type - supports both recurring and single reservations
+export type ReservationException =
+  typeof reservationExceptions.$inferSelect & {
     recurring?: RecurringReservation;
     reservation?: Reservation;
   };
+
+// Backward compatible alias
+export type RecurringReservationException = ReservationException;

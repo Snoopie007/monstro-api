@@ -15,3 +15,20 @@ export const StaffStatusEnum = pgEnum("staff_status", ["active", "inactive"]);
 export const ProgramStatusEnum = pgEnum("program_status", ["active", "inactive", "archived"]);
 export const ImportedMemberStatusEnum = pgEnum("imported_member_status", ["pending", "processing", "completed", "failed"]);
 export const CustomFieldTypeEnum = pgEnum("custom_field_type", ["text", "number", "date", "boolean", "select", "multi-select"]);
+
+// Reservation and Exception Enums
+export const ReservationStatusEnum = pgEnum("reservation_status", [
+  "confirmed",
+  "cancelled_by_member",
+  "cancelled_by_vendor",
+  "cancelled_by_holiday",
+  "completed",
+  "no_show"
+]);
+
+export const ExceptionInitiatorEnum = pgEnum("exception_initiator", [
+  "member",
+  "vendor",
+  "holiday",
+  "maintenance"
+]);

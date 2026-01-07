@@ -12,7 +12,6 @@ export * from "./DatabaseEnums";
 export * from "./staffs";
 export * from "./transactions";
 export * from "./attendances";
-export * from "./reservations";
 export * from "./ImportedMember";
 export * from "./rewards";
 export * from "./achievements";

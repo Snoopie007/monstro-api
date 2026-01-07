@@ -2,7 +2,7 @@
 import type { Elysia } from "elysia";
 import { db } from "@/db/db";
 import type { RecurringReservation, Reservation, MemberPackage, MemberSubscription } from "@/types";
-import { recurringReservations, recurringReservationsExceptions, reservations } from "@/db/schemas";
+import { recurringReservations, reservationExceptions, reservations } from "@/db/schemas";
 import { isSessionPasted, getSessionState } from "@/libs/utils";
 import { eq } from "drizzle-orm";
 import { emailQueue, classQueue } from "@/libs/queues";
@@ -118,6 +118,13 @@ export async function locationReservations(app: Elysia) {
                     sessionId: sessionId,
                     startOn: startOn,
                     endOn: endOn,
+                    // Denormalized fields
+                    programId: session.programId,
+                    programName: session.program?.name,
+                    sessionTime: session.time,
+                    sessionDuration: session.duration,
+                    sessionDay: session.day,
+                    staffId: session.staffId,
                     ...(type === "pkg") ? {
                         memberPackageId: memberPlan.id,
                     } : {
@@ -131,6 +138,13 @@ export async function locationReservations(app: Elysia) {
                     locationId: lid,
                     sessionId: sessionId,
                     startDate: new Date(),
+                    // Denormalized fields
+                    programId: session.programId,
+                    programName: session.program?.name,
+                    sessionTime: session.time,
+                    sessionDuration: session.duration,
+                    sessionDay: session.day,
+                    staffId: session.staffId,
                     ...(type === "pkg") ? {
                         memberPackageId: memberPlan.id,
                     } : {
@@ -150,8 +164,16 @@ export async function locationReservations(app: Elysia) {
                     ...rrRest,
                     id,
                     sessionId: sessionId,
+                    locationId: lid,
                     startOn: startOn,
                     endOn: endOn,
+                    status: 'confirmed',
+                    isMakeUpClass: false,
+                    created: new Date(),
+                    updated: null,
+                    cancelledAt: null,
+                    cancelledReason: null,
+                    originalReservationId: null,
                     isRecurring: true,
                     recurringId: id,
                 } as Reservation;
@@ -258,9 +280,12 @@ export async function locationReservations(app: Elysia) {
                 }
 
 
-                await db.insert(recurringReservationsExceptions).values({
+                await db.insert(reservationExceptions).values({
                     recurringReservationId: rr.id,
-                    occurrenceDate: new Date(date!)
+                    locationId: rr.locationId,
+                    sessionId: rr.sessionId,
+                    occurrenceDate: new Date(date!),
+                    initiator: 'member', // Member-initiated cancellation
                 })
                 sid = rr.sessionId;
 
