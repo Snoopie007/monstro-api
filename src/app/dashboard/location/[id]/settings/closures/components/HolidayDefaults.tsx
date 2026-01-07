@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { Loader2 } from "lucide-react";
 
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Separator } from "@/components/ui";
-import { Checkbox, Form, FormField, FormItem, FormControl, FormLabel, FormDescription, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Input } from "@/components/forms";
+import { Checkbox, Form, FormField, FormItem, FormLabel, FormDescription, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Input, FormControl } from "@/components/forms";
 import { tryCatch } from "@/libs/utils";
 import { COMMON_HOLIDAYS, HolidayDefaultsSchema, type HolidayDefaultsFormData } from "../schemas";
 import type { HolidaySettings } from "@/types/location";
@@ -55,14 +55,13 @@ export function HolidayDefaults({ locationId, initialSettings, onUpdate }: Holid
 
   const blockedHolidays = form.watch('blockedHolidays');
 
-  function toggleHoliday(holidayId: string) {
+  const toggleHoliday = useCallback((holidayId: string) => {
     const current = form.getValues('blockedHolidays');
-    if (current.includes(holidayId)) {
-      form.setValue('blockedHolidays', current.filter(id => id !== holidayId));
-    } else {
-      form.setValue('blockedHolidays', [...current, holidayId]);
-    }
-  }
+    const newValue = current.includes(holidayId)
+      ? current.filter(id => id !== holidayId)
+      : [...current, holidayId];
+    form.setValue('blockedHolidays', newValue, { shouldDirty: true });
+  }, [form]);
 
   return (
     <Card className="border-foreground/10">
@@ -77,19 +76,21 @@ export function HolidayDefaults({ locationId, initialSettings, onUpdate }: Holid
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Holiday checkboxes grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {COMMON_HOLIDAYS.map((holiday) => (
-                <div
-                  key={holiday.id}
-                  className="flex items-center gap-2 p-2 rounded-lg bg-foreground/5 hover:bg-foreground/10 transition-colors cursor-pointer"
-                  onClick={() => toggleHoliday(holiday.id)}
-                >
-                  <Checkbox
-                    checked={blockedHolidays.includes(holiday.id)}
-                    onCheckedChange={() => toggleHoliday(holiday.id)}
-                  />
-                  <span className="text-sm font-medium">{holiday.name}</span>
-                </div>
-              ))}
+              {COMMON_HOLIDAYS.map((holiday) => {
+                const isChecked = blockedHolidays.includes(holiday.id);
+                return (
+                  <label
+                    key={holiday.id}
+                    className="flex items-center gap-2 p-2 rounded-lg bg-foreground/5 hover:bg-foreground/10 transition-colors cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={() => toggleHoliday(holiday.id)}
+                    />
+                    <span className="text-sm font-medium">{holiday.name}</span>
+                  </label>
+                );
+              })}
             </div>
 
             <Separator className="bg-foreground/10" />
@@ -102,12 +103,14 @@ export function HolidayDefaults({ locationId, initialSettings, onUpdate }: Holid
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel size="tiny">Holiday Behavior</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select behavior" />
-                        </SelectTrigger>
-                      </FormControl>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      value={field.value}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select behavior" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="block_all">Block all reservations</SelectItem>
                         <SelectItem value="block_new_only">Block new reservations only</SelectItem>

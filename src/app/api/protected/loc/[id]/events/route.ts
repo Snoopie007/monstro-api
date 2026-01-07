@@ -51,14 +51,15 @@ export async function GET(
       },
     });
 
-    // Get standard reservations - now uses denormalized data to reduce joins
-    // Only fetch confirmed reservations (exclude cancelled ones)
+    // Get standard reservations - uses denormalized data to reduce joins when available
+    // Filter by status if the column exists (post-migration), otherwise fetch all
     const reservations = await db.query.reservations.findMany({
-      where: (r, { between, and, eq }) =>
+      where: (r, { between, and, eq, or, isNull }) =>
         and(
           between(r.startOn, startDate, endDate),
           eq(r.locationId, params.id),
-          eq(r.status, 'confirmed')
+          // Only include confirmed reservations (or null status for pre-migration data)
+          or(eq(r.status, 'confirmed'), isNull(r.status))
         ),
       with: {
         member: true,
@@ -67,22 +68,24 @@ export async function GET(
         session: {
           with: {
             program: true,
+            staff: true,
           },
         },
         memberPackage: true,
-        staff: true, // Now available directly from reservation
+        program: true,
+        staff: true,
       },
     });
 
-    // Get recurring reservations - uses denormalized data
-    // Only fetch confirmed recurring reservations
+    // Get recurring reservations - uses denormalized data when available
     const recurrings = await db.query.recurringReservations.findMany({
       where: (r, { and, eq, gte, or, isNull, lte }) =>
         and(
           lte(r.startDate, startDate),
           eq(r.locationId, params.id),
           or(isNull(r.canceledOn), gte(r.canceledOn, startDate.toISOString())),
-          eq(r.status, 'confirmed')
+          // Only include confirmed reservations (or null status for pre-migration data)
+          or(eq(r.status, 'confirmed'), isNull(r.status))
         ),
       with: {
         member: true,
@@ -94,10 +97,10 @@ export async function GET(
             staff: true,
           },
         },
-        staff: true, // Now available directly from recurring reservation
-        // Use new unified exceptions table
+        program: true,
+        staff: true,
+        // Use unified exceptions table
         exceptions: true,
-        legacyExceptions: true, // Keep for backward compatibility during migration
       },
     }) as RecurringReservation[];
 

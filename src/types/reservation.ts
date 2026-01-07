@@ -2,7 +2,6 @@ import {
   reservations, 
   recurringReservations, 
   reservationExceptions,
-  recurringReservationsExceptions 
 } from '@/db/schemas/reservations';
 import { Member } from './member';
 import { Program } from './program';
@@ -54,14 +53,10 @@ export type RecurringReservationWithRelations = RecurringReservation & {
     programId: string;
   };
   exceptions?: ReservationException[];
-  legacyExceptions?: LegacyRecurringException[];
 };
 
-// New unified exception type
+// Unified exception type (repurposed from recurring_reservations_exceptions)
 export type ReservationException = typeof reservationExceptions.$inferSelect;
-
-// Legacy exception type (for backward compatibility)
-export type LegacyRecurringException = typeof recurringReservationsExceptions.$inferSelect;
 
 // Input types for creating reservations
 export type CreateReservationInput = {

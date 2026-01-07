@@ -29,11 +29,10 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  RadioGroup,
-  RadioBox,
 } from "@/components/forms";
 import { cn, tryCatch } from "@/libs/utils";
 import { ClosureSchema, type ClosureFormData } from "../schemas";
+import { RadioBox } from "@/components/forms/radio-box";
 
 interface NewClosureDialogProps {
   locationId: string;
@@ -116,18 +115,24 @@ export function NewClosureDialog({
                   <FormItem>
                     <FormLabel size="tiny">Closure Type</FormLabel>
                     <FormControl>
-                      <RadioGroup
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        className="flex gap-4"
-                      >
-                        <RadioBox value="holiday" className="flex-1">
+                      <div className="flex gap-4">
+                        <RadioBox
+                          value="holiday"
+                          selected={field.value === 'holiday'}
+                          onSelectChange={field.onChange}
+                          className="flex-1"
+                        >
                           Holiday
                         </RadioBox>
-                        <RadioBox value="maintenance" className="flex-1">
+                        <RadioBox
+                          value="maintenance"
+                          selected={field.value === 'maintenance'}
+                          onSelectChange={field.onChange}
+                          className="flex-1"
+                        >
                           Maintenance
                         </RadioBox>
-                      </RadioGroup>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

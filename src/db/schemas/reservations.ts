@@ -112,48 +112,31 @@ export const recurringReservations = pgTable('recurring_reservations', {
     updated: timestamp('updated_at', { withTimezone: true }),
 })
 
-// Legacy table - kept for backward compatibility during migration
-export const recurringReservationsExceptions = pgTable(
-    'recurring_reservations_exceptions',
+// Unified reservation exceptions table - supports both recurring and single reservations
+// Also supports location-wide blocks (holidays, maintenance)
+export const reservationExceptions = pgTable(
+    'reservation_exceptions',
     {
-        recurringReservationId: text('recurring_reservation_id')
+        id: uuid('id')
+            .primaryKey()
             .notNull()
-            .references(() => recurringReservations.id, {
-                onDelete: 'cascade',
-            }),
-        occurrenceDate: timestamp('occurrence_date', {
-            withTimezone: true,
-        }).notNull(),
-    },
-    (t) => [
-        unique('unique_exception_recurring').on(
-            t.recurringReservationId,
-            t.occurrenceDate
-        ),
-    ]
+            .default(sql`uuid_base62()`),
+        // Can apply to specific reservations - nullable for flexibility
+        reservationId: text('reservation_id').references(() => reservations.id, { onDelete: 'cascade' }),
+        recurringReservationId: text('recurring_reservation_id').references(() => recurringReservations.id, { onDelete: 'cascade' }),
+        // For location-wide blocking (holidays, maintenance)
+        locationId: text('location_id').references(() => locations.id, { onDelete: 'cascade' }),
+        sessionId: text('session_id').references(() => programSessions.id, { onDelete: 'cascade' }),
+        // Exception details
+        occurrenceDate: timestamp('occurrence_date', { withTimezone: true }).notNull(),
+        endDate: timestamp('end_date', { withTimezone: true }), // For multi-day blocks
+        initiator: ExceptionInitiatorEnum('initiator').notNull().default('member'),
+        reason: text('reason'),
+        // Track who created it
+        createdBy: text('created_by').references(() => staffs.id, { onDelete: 'set null' }),
+        created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    }
 )
-
-// New unified exception table for all exception types
-export const reservationExceptions = pgTable('reservation_exceptions', {
-    id: uuid('id')
-        .primaryKey()
-        .notNull()
-        .default(sql`uuid_base62()`),
-    // Can apply to specific reservations or be location-wide
-    reservationId: text('reservation_id').references(() => reservations.id, { onDelete: 'cascade' }),
-    recurringReservationId: text('recurring_reservation_id').references(() => recurringReservations.id, { onDelete: 'cascade' }),
-    // For location-wide blocking (holidays, maintenance)
-    locationId: text('location_id').references(() => locations.id, { onDelete: 'cascade' }),
-    sessionId: text('session_id').references(() => programSessions.id, { onDelete: 'cascade' }),
-    // Exception details
-    occurrenceDate: timestamp('occurrence_date', { withTimezone: true }).notNull(),
-    endDate: timestamp('end_date', { withTimezone: true }), // For multi-day blocks
-    initiator: ExceptionInitiatorEnum('initiator').notNull(),
-    reason: text('reason'),
-    // Track who created it
-    createdBy: text('created_by').references(() => staffs.id, { onDelete: 'set null' }),
-    created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-})
 
 export const reservationsRelations = relations(
     reservations,
@@ -231,23 +214,10 @@ export const recurringReservationsRelations = relations(
             fields: [recurringReservations.staffId],
             references: [staffs.id],
         }),
-        // Legacy exceptions - kept for backward compatibility
-        legacyExceptions: many(recurringReservationsExceptions),
-        // New unified exceptions
         exceptions: many(reservationExceptions, {
             relationName: 'recurringReservationExceptions',
         }),
         attendances: many(attendances),
-    })
-)
-
-export const recurringReservationsExceptionsRelations = relations(
-    recurringReservationsExceptions,
-    ({ one }) => ({
-        recurring: one(recurringReservations, {
-            fields: [recurringReservationsExceptions.recurringReservationId],
-            references: [recurringReservations.id],
-        }),
     })
 )
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { isNull } from 'drizzle-orm';
-import { recurringReservationsExceptions } from '@/db/schemas';
+import { reservationExceptions } from '@/db/schemas';
 
 export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string, rid: string, mid: string }> }) {
 
@@ -21,20 +21,19 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
     }
 
     try {
-        // console.log(authMember.member.id)
         const exceptionDate = new Date(date);
         if (isNaN(exceptionDate.getTime())) {
             return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
         }
 
-        const reservationException = await db.query.recurringReservationsExceptions.findFirst({
+        const existingException = await db.query.reservationExceptions.findFirst({
             where: (e, { eq, and }) => and(
                 eq(e.recurringReservationId, params.rid),
                 eq(e.occurrenceDate, exceptionDate)
             )
         });
 
-        if (reservationException) {
+        if (existingException) {
             return NextResponse.json({ error: "This reservation exception already exists" }, { status: 400 });
         }
 
@@ -73,12 +72,14 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
         if (recurringreservation.session?.program?.allowWaitlist) {
             console.log(`Waitlist notification needed for session ${recurringreservation.sessionId}`);
         }
-        await db.insert(recurringReservationsExceptions).values({
+        
+        // Insert exception with initiator tracking
+        await db.insert(reservationExceptions).values({
             recurringReservationId: params.rid,
+            locationId: params.id,
             occurrenceDate: exceptionDate,
+            initiator: 'member', // Member-initiated cancellation
         });
-
-        // await db.delete(reservations).where(eq(reservations.id, params.rid));
 
         return NextResponse.json({
             message: `Reservation for ${exceptionDate.toISOString()} deleted successfully`,

@@ -25,7 +25,8 @@ export async function GET(req: NextRequest, props: Props) {
   
   const startDate = searchParams.get('startDate');
   const endDate = searchParams.get('endDate');
-  const initiator = searchParams.get('initiator') as ExceptionInitiator | null;
+  // Support multiple initiators (e.g., ?initiator=holiday&initiator=maintenance)
+  const initiators = searchParams.getAll('initiator') as ExceptionInitiator[];
   const sessionId = searchParams.get('sessionId');
 
   try {
@@ -44,8 +45,13 @@ export async function GET(req: NextRequest, props: Props) {
       );
     }
 
-    if (initiator) {
-      conditions.push(eq(reservationExceptions.initiator, initiator));
+    // Handle single or multiple initiators
+    if (initiators.length === 1) {
+      conditions.push(eq(reservationExceptions.initiator, initiators[0]));
+    } else if (initiators.length > 1) {
+      conditions.push(
+        or(...initiators.map(i => eq(reservationExceptions.initiator, i)))!
+      );
     }
 
     if (sessionId) {

@@ -146,19 +146,19 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
                                 <FormField control={form.control} name="inclusive" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size='tiny'>Inclusive</FormLabel>
-                                        <FormControl>
-                                            <Select onValueChange={(value) => field.onChange(value === "true")} value={field.value.toString()}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select inclusive" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="true">Yes</SelectItem>
-                                                    <SelectItem value="false">No</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </FormControl>
+                                        <Select 
+                                            onValueChange={(value) => field.onChange(value === "true")} 
+                                            defaultValue={field.value.toString()}
+                                            value={field.value.toString()}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select inclusive" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="true">Yes</SelectItem>
+                                                <SelectItem value="false">No</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </FormItem>
                                 )} />
                                 <FormField
@@ -181,12 +181,14 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormLabel size='tiny'>Country</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select country" />
-                                                    </SelectTrigger>
-                                                </FormControl>
+                                            <Select 
+                                                onValueChange={field.onChange} 
+                                                defaultValue={field.value}
+                                                value={field.value}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select country" />
+                                                </SelectTrigger>
                                                 <SelectContent>
                                                     {CountryCodes.map((country) => (
                                                         <SelectItem key={country.code} value={country.code}>

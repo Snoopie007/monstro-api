@@ -31,12 +31,11 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  RadioGroup,
-  RadioBox,
 } from "@/components/forms";
 import { cn, tryCatch } from "@/libs/utils";
 import { MakeupClassSchema, type MakeupClassFormData } from "./schemas";
 import type { Reservation } from "@/types/reservation";
+import { RadioBox } from "@/components/forms/radio-box";
 
 interface AvailableSlot {
   sessionId: string;
@@ -267,18 +266,16 @@ export function ScheduleMakeupDialog({
                   <div className="space-y-2">
                     {/* Available slots */}
                     {availableSlots.length > 0 && (
-                      <RadioGroup
-                        value={sessionId || ''}
-                        onValueChange={(value) => {
-                          form.setValue('sessionId', value);
-                          form.setValue('useCustomTime', false);
-                        }}
-                        className="space-y-2"
-                      >
+                      <div className="space-y-2">
                         {availableSlots.map((slot) => (
                           <RadioBox
                             key={slot.sessionId}
                             value={slot.sessionId}
+                            selected={sessionId === slot.sessionId}
+                            onSelectChange={(value) => {
+                              form.setValue('sessionId', value);
+                              form.setValue('useCustomTime', false);
+                            }}
                             className="flex items-center justify-between p-3"
                           >
                             <div className="flex items-center gap-2">
@@ -292,7 +289,7 @@ export function ScheduleMakeupDialog({
                             </Badge>
                           </RadioBox>
                         ))}
-                      </RadioGroup>
+                      </div>
                     )}
 
                     {availableSlots.length === 0 && !useCustomTime && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useState, useCallback } from "react";
 import { Separator } from "@/components/ui";
 import { HolidayDefaults, CustomClosures } from "./components";
 import type { ReservationException } from "@/types/reservation";
@@ -16,18 +16,20 @@ export default function ClosuresPage({ params }: ClosuresPageProps) {
   const [holidaySettings, setHolidaySettings] = useState<HolidaySettings | undefined>();
   const [loading, setLoading] = useState(true);
 
-  async function fetchData() {
-    setLoading(true);
+  const fetchData = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
-      // Fetch closures (exceptions)
-      const closuresRes = await fetch(`/api/protected/loc/${locationId}/exceptions?initiator=holiday&initiator=maintenance`);
+      // Fetch closures (exceptions) and settings in parallel
+      const [closuresRes, settingsRes] = await Promise.all([
+        fetch(`/api/protected/loc/${locationId}/exceptions?initiator=holiday&initiator=maintenance`),
+        fetch(`/api/protected/loc/${locationId}/settings`)
+      ]);
+
       if (closuresRes.ok) {
         const data = await closuresRes.json();
         setClosures(data);
       }
 
-      // Fetch location settings for holiday defaults
-      const settingsRes = await fetch(`/api/protected/loc/${locationId}/settings`);
       if (settingsRes.ok) {
         const settings = await settingsRes.json();
         setHolidaySettings(settings?.holidays);
@@ -35,12 +37,12 @@ export default function ClosuresPage({ params }: ClosuresPageProps) {
     } catch (error) {
       console.error('Failed to fetch closures data:', error);
     }
-    setLoading(false);
-  }
+    if (showLoading) setLoading(false);
+  }, [locationId]);
 
   useEffect(() => {
     fetchData();
-  }, [locationId]);
+  }, [fetchData]);
 
   return (
     <div className="space-y-6">
@@ -63,13 +65,13 @@ export default function ClosuresPage({ params }: ClosuresPageProps) {
           <HolidayDefaults
             locationId={locationId}
             initialSettings={holidaySettings}
-            onUpdate={fetchData}
+            onUpdate={() => fetchData(false)}
           />
 
           <CustomClosures
             locationId={locationId}
             closures={closures}
-            onRefetch={fetchData}
+            onRefetch={() => fetchData(false)}
           />
         </div>
       )}
