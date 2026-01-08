@@ -1,5 +1,5 @@
+export function NotFoundPageTemplate(theme: string = "light") {
 
-export function NotFoundPageTemplate() {
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -7,33 +7,43 @@ export function NotFoundPageTemplate() {
     <title>404 Not Found</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
+    [data-theme="light"] {
+    --headline-color: #000000;
+      --content-color: #4b5563;
+    }
+    [data-theme="dark"] {
+      --headline-color: #FFFFFF;
+      --content-color: #cbd5e1;
+    }
       body {
-        min-height: 100vh;
         margin: 0;
+        padding: 0 20px;
         display: flex;
         align-items: center;
+        min-height: 100vh;
         justify-content: center;
         font-family: 'Segoe UI', Arial, sans-serif;
-        background: #fff;
-        color: #222;
+        background: transparent;
+        color: var(--content-color);
       }
       .error-simple {
         text-align: center;
       }
       .error-simple h1 {
-        font-size: 2rem;
+        font-size: 26px;
         margin-bottom: 0.5em;
+        color: var(--headline-color);
       }
       .error-simple p {
         font-size: 1.1rem;
-        color: #666;
+        color: var(--content-color);
       }
     </style>
   </head>
-  <body>
+  <body data-theme="${theme}">
     <div class="error-simple">
-      <h1>404 Not Found</h1>
-      <p>The page you are looking for does not exist.</p>
+      <h1>Uh oh! We couldn't find this document.</h1>
+      <p>The document you are looking for does not exist.</p>
     </div>
   </body>
 </html>`;

@@ -19,6 +19,25 @@ const app = new Elysia({
 });
 
 app.use(cors(CORS_CONFIG))
+	.onError(({ code, error, set }) => {
+		console.log(`❌ Error ${code}:`);
+
+		if (code === "VALIDATION") {
+			set.status = 400;
+			error.all.forEach((err: Record<string, any>) => {
+				console.log(`Validation ${err.summary} on ${err.path}`);
+			});
+			return { error: "Validation failed", details: error.message };
+		}
+
+		if (code === "NOT_FOUND") {
+			set.status = 404;
+			return { error: "Route not found" };
+		}
+
+		set.status = 500;
+		return { error: "Internal server error" };
+	})
 	.use(RateLimitMiddleware())
 	.onRequest(({ request }) => {
 		// Check if request came through HTTPS proxy
@@ -52,22 +71,7 @@ app.use(cors(CORS_CONFIG))
 		app.use(realtimeRoutes).use(realtimeHealthRoutes)
 	)
 	.use(PublicRoutes)
-	.onError(({ code, error, set }) => {
-		console.error(`❌ Error ${code}:`, error);
 
-		if (code === "VALIDATION") {
-			set.status = 400;
-			return { error: "Validation failed", details: error.message };
-		}
-
-		if (code === "NOT_FOUND") {
-			set.status = 404;
-			return { error: "Route not found" };
-		}
-
-		set.status = 500;
-		return { error: "Internal server error" };
-	})
 	.listen({
 		hostname: "0.0.0.0",
 		port: serverConfig.port

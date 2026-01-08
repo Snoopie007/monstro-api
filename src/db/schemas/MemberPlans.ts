@@ -65,8 +65,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
 	parentId: text("parent_id"),
-	memberPlanId: text("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
-	memberPlanPricingId: text("member_plan_pricing_id").references(() => memberPlanPricing.id, { onDelete: "set null" }),
+	memberPlanPricingId: text("member_plan_pricing_id").notNull().references(() => memberPlanPricing.id, { onDelete: "set null" }),
 	memberContractId: text("member_contract_id").references(() => memberContracts.id, { onDelete: "set null" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	stripeSubscriptionId: text("stripe_subscription_id"),
@@ -95,8 +94,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 
 export const memberPackages = pgTable("member_packages", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
-	memberPlanId: text("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
-	memberPlanPricingId: text("member_plan_pricing_id").references(() => memberPlanPricing.id, { onDelete: "set null" }),
+	memberPlanPricingId: text("member_plan_pricing_id").notNull().references(() => memberPlanPricing.id, { onDelete: "set null" }),
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
 	memberContractId: text("member_contract_id").references(() => memberContracts.id, { onDelete: "set null" }),
@@ -137,7 +135,7 @@ export const memberPlansRelations = relations(memberPlans, ({ one, many }) => ({
 	planPrograms: many(planPrograms),
 	packages: many(memberPackages),
 	subscriptions: many(memberSubscriptions),
-	pricingOptions: many(memberPlanPricing),
+	pricings: many(memberPlanPricing),
 }));
 
 export const memberPlanPricingRelations = relations(memberPlanPricing, ({ one, many }) => ({
@@ -160,10 +158,7 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
 		references: [memberSubscriptions.id],
 		relationName: "childs",
 	}),
-	plan: one(memberPlans, {
-		fields: [memberSubscriptions.memberPlanId],
-		references: [memberPlans.id],
-	}),
+
 	pricing: one(memberPlanPricing, {
 		fields: [memberSubscriptions.memberPlanPricingId],
 		references: [memberPlanPricing.id],
@@ -185,10 +180,7 @@ export const memberSubscriptionRelations = relations(memberSubscriptions, ({ one
 }));
 
 export const memberPackagesRelations = relations(memberPackages, ({ one, many }) => ({
-	plan: one(memberPlans, {
-		fields: [memberPackages.memberPlanId],
-		references: [memberPlans.id],
-	}),
+
 	pricing: one(memberPlanPricing, {
 		fields: [memberPackages.memberPlanPricingId],
 		references: [memberPlanPricing.id],
@@ -214,5 +206,4 @@ export const memberPackagesRelations = relations(memberPackages, ({ one, many })
 	childs: many(memberPackages, {
 		relationName: "children",
 	}),
-})
-);
+}));

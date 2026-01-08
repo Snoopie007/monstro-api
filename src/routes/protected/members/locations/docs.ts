@@ -5,32 +5,28 @@ import {
 	memberPackages,
 	memberSubscriptions,
 } from "@/db/schemas";
+import type { Contract } from "@/types";
 import S3Bucket from "@/libs/s3";
 import { and, eq } from "drizzle-orm";
 import { Elysia } from "elysia";
 import { generatePDFBuffer } from "@/libs/PDFGenerator";
 import { z } from "zod";
+import type { MemberPackage, MemberSubscription } from "@/types";
 
 const s3 = new S3Bucket();
-const MemberLocationDocsProps = {
+const MLDocsProps = {
 	params: z.object({
 		mid: z.string(),
 		lid: z.string(),
 	}),
-	body: z.object({
-		plan: z.object({
-			id: z.string(),
-		}),
-		signature: z.string(),
-		templateId: z.string(),
-	}),
+
 };
 
 
 
 
 export function mlDocsRoutes(app: Elysia) {
-	return app.get("/docs", async ({ params, status }) => {
+	app.get("/docs", async ({ params, status }) => {
 		const { mid, lid } = params;
 		try {
 
@@ -41,42 +37,53 @@ export function mlDocsRoutes(app: Elysia) {
 			const pkgs = await db.query.memberPackages.findMany({
 				where: (pkg, { eq, and }) => and(eq(pkg.memberId, mid), eq(pkg.locationId, lid)),
 				with: {
-
-					plan: {
-						columns: {
-							contractId: true,
+					pricing: {
+						with: {
+							plan: {
+								columns: {
+									name: true,
+									contractId: true,
+								},
+							},
 						},
 					},
 				},
 				columns: {
 					id: true,
+					memberContractId: true,
 				},
 			});
 			const subs = await db.query.memberSubscriptions.findMany({
 				where: (sub, { eq, and }) => and(eq(sub.memberId, mid), eq(sub.locationId, lid)),
 				with: {
-					plan: {
-						columns: {
-							contractId: true,
+					pricing: {
+						with: {
+							plan: {
+								columns: {
+									name: true,
+									contractId: true,
+								},
+							},
 						},
 					},
 				},
 				columns: {
 					id: true,
+					memberContractId: true,
 				},
 			});
 
 
 			const docIds: string[] = [];
 			subs.forEach((sub) => {
-				if (sub.plan.contractId) {
-					docIds.push(sub.plan.contractId.toString());
+				if (sub.pricing.plan.contractId) {
+					docIds.push(sub.pricing.plan.contractId.toString());
 				}
 			});
 
 			pkgs.forEach((pkg) => {
-				if (pkg.plan.contractId) {
-					docIds.push(pkg.plan.contractId.toString());
+				if (pkg.pricing.plan.contractId) {
+					docIds.push(pkg.pricing.plan.contractId.toString());
 				}
 			});
 
@@ -86,28 +93,92 @@ export function mlDocsRoutes(app: Elysia) {
 					or(inArray(ct.id, docIds), eq(ct.type, "waiver")),
 			});
 
-			const extendedDocuments = documents.map((doc) => {
-				const signedDoc = memberContracts.find((c) => c.templateId === doc.id);
-				const memberPlan =
-					subs.find((s) => s.plan.contractId?.toString() === doc.id) ||
-					pkgs.find((p) => p.plan.contractId?.toString() === doc.id);
-				return {
-					...doc,
-					memberContract: signedDoc,
-					memberPlan,
-				};
+			const extendedDocuments: Contract[] = [];
+
+			// Ensure type correctness: only spread contract if found and all required fields are present
+			subs.forEach((sub) => {
+				const contractId = sub.pricing.plan.contractId;
+				if (!contractId) return;
+				const contract = documents.find((d) => d.id === contractId);
+				if (!contract) return;
+
+				const signedContract = sub.memberContractId
+					? memberContracts.find((c) => c.id === sub.memberContractId)
+					: undefined;
+				extendedDocuments.push({
+					...contract,
+					...(signedContract && { signedContract }),
+					pricingId: sub.pricing.id,
+					planName: sub.pricing.plan.name,
+					memberPlanId: sub.id,
+				});
 			});
+
+			pkgs.forEach((pkg) => {
+				const contractId = pkg.pricing.plan.contractId;
+				if (!contractId) return;
+				const contract = documents.find((d) => d.id === contractId);
+				if (!contract) return;
+				const signedContract = pkg.memberContractId
+					? memberContracts.find((c) => c.id === pkg.memberContractId)
+					: undefined;
+				extendedDocuments.push({
+					...contract,
+					...(signedContract && { signedContract }),
+					pricingId: pkg.pricing?.id,
+					planName: pkg.pricing.plan.name,
+					memberPlanId: pkg.id,
+				});
+			});
+
+
+
+
 
 			return status(200, extendedDocuments);
 		} catch (err) {
 			console.log(err);
 			return status(500, { error: err });
 		}
-	}, MemberLocationDocsProps).post("/docs", async ({ params, status, body }) => {
+	}, MLDocsProps)
+	app.post("/docs", async ({ params, status, body }) => {
 		const { lid, mid } = params;
-		const { plan, signature, templateId } = body;
+		const { memberPlanId, signature, templateId } = body;
 
 		try {
+			let mp: MemberPackage | MemberSubscription | undefined;
+
+			if (memberPlanId.startsWith("pkg")) {
+				mp = await db.query.memberPackages.findFirst({
+					where: (pkg, { eq }) => eq(pkg.id, memberPlanId),
+					with: {
+						pricing: {
+							with: {
+								plan: true,
+							},
+						},
+					},
+				});
+			} else {
+				mp = await db.query.memberSubscriptions.findFirst({
+					where: (sub, { eq }) => eq(sub.id, memberPlanId),
+					with: {
+						pricing: {
+							with: {
+								plan: true,
+							},
+						},
+					},
+				});
+			}
+
+			if (!mp) {
+				return status(404, { error: "Member plan not found" });
+			}
+
+			const { plan } = mp;
+
+
 			const member = await db.query.members.findFirst({
 				where: (m, { eq }) => eq(m.id, mid),
 			});
@@ -130,7 +201,7 @@ export function mlDocsRoutes(app: Elysia) {
 			const variables = {
 				location: template.location,
 				member,
-				...(plan ? { plan } : {}),
+				plan: plan,
 			};
 
 			const pdfBuffer = await generatePDFBuffer(template, variables);
@@ -159,34 +230,41 @@ export function mlDocsRoutes(app: Elysia) {
 				return status(500, { error: "Failed to create contract" });
 			}
 
-			if (!plan) {
+			// if (!plan) {
+			// await db.update(memberLocations)
+			// 	.set({ waiverId: c.id })
+			// 	.where(
+			// 		and(
+			// 			eq(memberLocations.locationId, lid),
+			// 			eq(memberLocations.memberId, mid)
+			// 		)
+			// 	);
+			// } else {
+			if (memberPlanId.startsWith("pkg")) {
 				await db
-					.update(memberLocations)
-					.set({ waiverId: c.id })
-					.where(
-						and(
-							eq(memberLocations.locationId, lid),
-							eq(memberLocations.memberId, mid)
-						)
-					);
+					.update(memberPackages)
+					.set({ memberContractId: c.id })
+					.where(eq(memberPackages.id, memberPlanId));
 			} else {
-				if (plan.id.startsWith("pkg")) {
-					await db
-						.update(memberPackages)
-						.set({ memberContractId: c.id })
-						.where(eq(memberPackages.id, plan.id));
-				} else {
-					await db
-						.update(memberSubscriptions)
-						.set({ memberContractId: c.id })
-						.where(eq(memberSubscriptions.id, plan.id));
-				}
+				await db
+					.update(memberSubscriptions)
+					.set({ memberContractId: c.id })
+					.where(eq(memberSubscriptions.id, memberPlanId));
 			}
+			// }
 
 			return status(200, c);
 		} catch (err) {
 			console.error("Subscription contract processing error:", err);
 			return status(500, { error: err });
 		}
-	}, MemberLocationDocsProps)
+	}, {
+		...MLDocsProps,
+		body: z.object({
+			memberPlanId: z.string(),
+			signature: z.string(),
+			templateId: z.string(),
+		}),
+	})
+	return app;
 }

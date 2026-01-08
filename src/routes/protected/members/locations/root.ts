@@ -8,15 +8,16 @@ import { mlReferralsRoutes } from './referrals';
 import { mlRewardsRoutes } from './rewards';
 import { mlSupportRoutes } from './support';
 import { z } from "zod";
+import { memberLocations } from '@/db/schemas/locations';
 
 
-const MemberLocationsRootProps = {
+const GetMemberLocationsProps = {
     params: z.object({
         mid: z.string(),
     }),
 };
 
-const MemberLocationRootProps = {
+const GetMemberLocationProps = {
     params: z.object({
         mid: z.string(),
         lid: z.string(),
@@ -40,7 +41,29 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }
-    }, MemberLocationsRootProps)
+    }, GetMemberLocationsProps)
+    .post('/', async ({ params, status, body }) => {
+        const { mid } = params;
+        const { lid } = body;
+        try {
+            const ml = await db.insert(memberLocations).values({
+                memberId: mid,
+                locationId: lid,
+                status: "incomplete",
+            }).onConflictDoNothing().returning();
+            return status(200, ml);
+        } catch (error) {
+            console.error(error);
+            status(500, { error: 'Internal server error' });
+            return { error: 'Internal server error' }
+        }
+    }, {
+        ...GetMemberLocationsProps,
+        body: z.object({
+
+            lid: z.string(),
+        }),
+    })
     .group('/:lid', (app) => {
         app.get('/', async ({ params, status }) => {
             const { lid, mid } = params;
@@ -50,29 +73,20 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                     where: (l, { eq, and }) => and(eq(l.locationId, lid), eq(l.memberId, mid)),
                     with: {
                         pointsHistory: true,
-                        member: {
-                            with: {
-                                packages: {
-                                    with: {
-                                        plan: true,
-                                    }
-                                },
-                                subscriptions: {
-                                    with: {
-                                        plan: true,
-                                    }
-                                }
-                            }
-                        }
+                        member: true,
                     }
                 });
-                return status(200, ml);
+
+                return status(200, {
+                    ...ml,
+                });
             } catch (error) {
                 console.error(error);
                 status(500, { error: 'Internal server error' });
                 return { error: 'Internal server error' }
             }
-        }, MemberLocationRootProps)
+        }, GetMemberLocationProps)
+
         app.use(mlReservationsRoutes)
         app.use(mlPlansRoutes)
         app.use(mlAchievementsRoutes)

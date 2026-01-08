@@ -64,7 +64,7 @@ export type BillingCycleAnchorConfig = {
 }
 
 export type MemberPlan = typeof memberPlans.$inferSelect & {
-  contract: Contract | null
+  contract?: Contract | null
   billingAnchorConfig: BillingCycleAnchorConfig | null
   planPrograms?: PlanProgram[]
   pricingOptions?: MemberPlanPricing[]

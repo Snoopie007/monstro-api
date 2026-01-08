@@ -89,6 +89,10 @@ function generateVRs({ reservations, rrs, startDate, endDate }: GenerateVRsParam
                 attendance,
                 recurringId: id,
                 isRecurring: true,
+                cancelledAt: null,
+                cancelledReason: null,
+                isMakeUpClass: false,
+                originalReservationId: null,
             } as Reservation);
             currentDate = addDays(currentDate, (rr.intervalThreshold || 1) * 7);
         }

@@ -46,7 +46,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.44.5",
-    "elysia": "^1.4.17",
+    "elysia": "^1.4.21",
     "google-auth-library": "^10.5.0",
     "helmet": "^8.1.0",
     "jose": "^6.0.13",

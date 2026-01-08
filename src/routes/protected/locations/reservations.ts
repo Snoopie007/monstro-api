@@ -34,7 +34,11 @@ export async function locationReservations(app: Elysia) {
                         eq(memberPackages.status, "active")
                     ),
                     with: {
-                        plan: true,
+                        pricing: {
+                            with: {
+                                plan: true,
+                            },
+                        },
                     },
                 });
             } else {
@@ -45,7 +49,11 @@ export async function locationReservations(app: Elysia) {
                         eq(memberSubscriptions.status, "active")
                     ),
                     with: {
-                        plan: true,
+                        pricing: {
+                            with: {
+                                plan: true,
+                            },
+                        },
                     },
                 });
             }

@@ -1,7 +1,7 @@
 import { db } from "@/db/db";
 import { memberLocations, memberSubscriptions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -14,23 +14,52 @@ import {
 
 import type { PaymentType } from "@/types/DatabaseEnums";
 
-const CheckoutSubProps = {
+const PurchaseSubProps = {
     params: z.object({
         lid: z.string(),
     }),
 };
 
-export function checkoutSubRoutes(app: Elysia) {
+export function purchaseSubRoutes(app: Elysia) {
 
     app.group('/sub', (app) => {
-        app.post('/payment', async ({ params, status, body }) => {
+        app.post('/', async ({ params, status, body }) => {
             const { lid } = params;
-            const { paymentMethodId, pricingId, mid, stripeCustomerId, ...data } = body;
+            const { paymentMethodId, priceId, mid, memberContractId, paymentType } = body;
+            ;
             try {
 
+                const member = await db.query.members.findFirst({
+                    where: (member, { eq }) => eq(member.id, mid),
+                });
+
+
+                if (!member || !member.stripeCustomerId) {
+                    return status(404, { error: "Member or Stripe customer not found" });
+                }
+
+                const location = await db.query.locations.findFirst({
+                    where: (location, { eq }) => eq(location.id, lid),
+                    with: {
+                        taxRates: true,
+                        locationState: true,
+                        integrations: {
+                            where: (integration, { eq }) => eq(integration.service, "stripe"),
+                            columns: {
+                                accountId: true,
+                                service: true,
+                            },
+                        },
+                    },
+                });
+
+
+                if (!location) {
+                    return status(404, { error: "Location not found" });
+                }
 
                 const pricing = await db.query.memberPlanPricing.findFirst({
-                    where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, pricingId),
+                    where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
                     with: {
                         plan: true,
                     },
@@ -40,36 +69,16 @@ export function checkoutSubRoutes(app: Elysia) {
                 if (!pricing) {
                     return status(404, { error: "Pricing not found" });
                 }
-                const location = await db.query.locations.findFirst({
-                    where: (location, { eq }) => eq(location.id, lid),
-                    with: {
-                        taxRates: true,
-                        locationState: true,
-
-                    },
-                });
 
 
-                if (!location) {
-                    return status(404, { error: "Location not found" });
-                }
-                const { taxRates, locationState } = location;
-                const integrations = await db.query.integrations.findFirst({
-                    where: (integration, { eq, and }) =>
-                        and(
-                            eq(integration.locationId, lid),
-                            eq(integration.service, "stripe")
-                        ),
-                    columns: {
-                        accountId: true,
-                    },
-                });
+                const { taxRates, locationState, integrations } = location;
 
-                if (!integrations?.accountId) {
+                const integration = integrations?.find((i) => i.service === "stripe");
+                if (!integration) {
                     throw new Error("Stripe integration not found");
                 }
 
-                const stripe = new MemberStripePayments(integrations.accountId);
+                const stripe = new MemberStripePayments(integration.accountId);
 
                 const metadata = {
                     locationId: lid,
@@ -86,9 +95,9 @@ export function checkoutSubRoutes(app: Elysia) {
                     pricing.intervalThreshold!
                 );
 
-                stripe.setCustomer(stripeCustomerId as string);
+                stripe.setCustomer(member.stripeCustomerId);
 
-                const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, data.paymentType as PaymentType);
+                const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentType as PaymentType);
                 const feePercent = locationState?.usagePercent + stripeFeePercentage;
 
                 const sub = await stripe.createSubscription(pricing, {
@@ -107,14 +116,13 @@ export function checkoutSubRoutes(app: Elysia) {
                     currentPeriodEnd: endDate,
                     locationId: lid,
                     memberId: mid,
-                    memberPlanId: pricing.memberPlanId,
                     memberPlanPricingId: pricing.id,
-                    paymentType: data.paymentType,
+                    paymentType: paymentType,
                     metadata: {
                         stripePaymentMethodId: paymentMethodId,
                     },
                     status: sub.status,
-                    memberContractId: data.memberContractId,
+                    memberContractId: memberContractId,
                 }).returning({ id: memberSubscriptions.id });
 
 
@@ -129,36 +137,16 @@ export function checkoutSubRoutes(app: Elysia) {
                 return status(500, { error: "Failed to checkout" });
             }
         }, {
-            ...CheckoutSubProps,
-            body: z.object({
-                paymentMethodId: z.string(),
-                pricingId: z.string(),
-                mid: z.string(),
-                stripeCustomerId: z.string(),
-                memberContractId: z.string(),
-                paymentType: z.enum(["cash", "card", "us_bank_account", "paypal", "apple_pay", "google_pay"]),
+            ...PurchaseSubProps,
+            body: t.Object({
+                paymentMethodId: t.String(),
+                priceId: t.String(),
+                mid: t.String(),
+                memberContractId: t.String(),
+                paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
             }),
         });
 
-        app.post('/new-member', async ({ params, status, body }) => {
-            const { lid } = params;
-            const { subscriptionStatus, mid } = body;
-
-
-
-            try {
-
-            } catch (error) {
-                console.error(error);
-                return status(500, { error: "Failed to create subscription" });
-            }
-        }, {
-            ...CheckoutSubProps,
-            body: z.object({
-                subscriptionStatus: z.enum(["active", "inactive", "pending", "canceled", "expired"]),
-                mid: z.string(),
-            }),
-        });
         return app;
     });
 

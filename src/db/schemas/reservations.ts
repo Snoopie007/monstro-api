@@ -1,10 +1,10 @@
 import { relations, sql } from "drizzle-orm";
-import { 
-	integer, 
-	timestamp, 
-	pgTable, 
-	date, 
-	uuid, 
+import {
+	integer,
+	timestamp,
+	pgTable,
+	date,
+	uuid,
 	text,
 	time,
 	smallint,
@@ -21,7 +21,6 @@ import { IntervalType, ReservationStatusEnum, ExceptionInitiatorEnum } from "./D
 
 export const reservations = pgTable("reservations", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
-	// Session reference - nullable to support make-up classes
 	sessionId: text("session_id").references(() => programSessions.id, { onDelete: "set null" }),
 	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
 	memberSubscriptionId: text("member_subscription_id").references(() => memberSubscriptions.id, { onDelete: "cascade" }),
@@ -29,24 +28,19 @@ export const reservations = pgTable("reservations", {
 	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
 	startOn: timestamp("start_on", { withTimezone: true }).notNull(),
 	endOn: timestamp("end_on", { withTimezone: true }).notNull(),
-	
-	// Denormalized session/program fields
 	programId: text("program_id").references(() => programs.id, { onDelete: "set null" }),
 	programName: text("program_name"),
 	sessionTime: time("session_time"),
 	sessionDuration: smallint("session_duration"),
 	sessionDay: smallint("session_day"),
 	staffId: text("staff_id").references(() => staffs.id, { onDelete: "set null" }),
-	
-	// Status tracking
 	status: ReservationStatusEnum("status").notNull().default("confirmed"),
 	cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
 	cancelledReason: text("cancelled_reason"),
-	
-	// Make-up class support
+
 	isMakeUpClass: boolean("is_make_up_class").notNull().default(false),
 	originalReservationId: text("original_reservation_id"),
-	
+
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
@@ -63,7 +57,7 @@ export const recurringReservations = pgTable("recurring_reservations", {
 	memberPackageId: text("member_package_id").references(() => memberPackages.id, { onDelete: "cascade" }),
 	interval: IntervalType("interval").notNull().default("week"),
 	intervalThreshold: integer("interval_threshold").notNull().default(1),
-	
+
 	// Denormalized session/program fields
 	programId: text("program_id").references(() => programs.id, { onDelete: "set null" }),
 	programName: text("program_name"),
@@ -71,10 +65,10 @@ export const recurringReservations = pgTable("recurring_reservations", {
 	sessionDuration: smallint("session_duration"),
 	sessionDay: smallint("session_day"),
 	staffId: text("staff_id").references(() => staffs.id, { onDelete: "set null" }),
-	
+
 	// Status tracking
 	status: ReservationStatusEnum("status").notNull().default("confirmed"),
-	
+
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
@@ -100,8 +94,9 @@ export const reservationExceptions = pgTable("reservation_exceptions", {
 });
 
 export const reservationsRelations = relations(reservations, ({ one, many }) => ({
-	attendances: many(attendances, {
-		relationName: "attendances",
+	attendance: one(attendances, {
+		fields: [reservations.id],
+		references: [attendances.reservationId],
 	}),
 	session: one(programSessions, {
 		fields: [reservations.sessionId],
@@ -141,42 +136,40 @@ export const reservationsRelations = relations(reservations, ({ one, many }) => 
 	}),
 }));
 
-export const recurringReservationsRelations = relations(
-	recurringReservations,
-	({ one, many }) => ({
-		session: one(programSessions, {
-			fields: [recurringReservations.sessionId],
-			references: [programSessions.id],
-		}),
-		location: one(locations, {
-			fields: [recurringReservations.locationId],
-			references: [locations.id],
-		}),
-		member: one(members, {
-			fields: [recurringReservations.memberId],
-			references: [members.id],
-		}),
-		memberSubscription: one(memberSubscriptions, {
-			fields: [recurringReservations.memberSubscriptionId],
-			references: [memberSubscriptions.id],
-		}),
-		memberPackage: one(memberPackages, {
-			fields: [recurringReservations.memberPackageId],
-			references: [memberPackages.id],
-		}),
-		program: one(programs, {
-			fields: [recurringReservations.programId],
-			references: [programs.id],
-		}),
-		staff: one(staffs, {
-			fields: [recurringReservations.staffId],
-			references: [staffs.id],
-		}),
-		exceptions: many(reservationExceptions, {
-			relationName: "recurringReservationExceptions",
-		}),
-		attendances: many(attendances),
-	})
+export const recurringReservationsRelations = relations(recurringReservations, ({ one, many }) => ({
+	session: one(programSessions, {
+		fields: [recurringReservations.sessionId],
+		references: [programSessions.id],
+	}),
+	location: one(locations, {
+		fields: [recurringReservations.locationId],
+		references: [locations.id],
+	}),
+	member: one(members, {
+		fields: [recurringReservations.memberId],
+		references: [members.id],
+	}),
+	memberSubscription: one(memberSubscriptions, {
+		fields: [recurringReservations.memberSubscriptionId],
+		references: [memberSubscriptions.id],
+	}),
+	memberPackage: one(memberPackages, {
+		fields: [recurringReservations.memberPackageId],
+		references: [memberPackages.id],
+	}),
+	program: one(programs, {
+		fields: [recurringReservations.programId],
+		references: [programs.id],
+	}),
+	staff: one(staffs, {
+		fields: [recurringReservations.staffId],
+		references: [staffs.id],
+	}),
+	exceptions: many(reservationExceptions, {
+		relationName: "recurringReservationExceptions",
+	}),
+	attendances: many(attendances),
+})
 );
 
 export const reservationExceptionsRelations = relations(

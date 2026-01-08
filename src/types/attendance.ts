@@ -20,7 +20,7 @@ export type ExtendedAttendance = Attendance & {
 export type Reservation = typeof reservations.$inferSelect & {
   isRecurring?: boolean;
   recurringId?: string;
-  session?: ProgramSession;
+  session?: ProgramSession | null;
   member?: Member;
   exceptions?: ReservationException[];
   memberSubscription?: MemberSubscription | null;
@@ -29,7 +29,7 @@ export type Reservation = typeof reservations.$inferSelect & {
 };
 
 export type RecurringReservation = typeof recurringReservations.$inferSelect & {
-  session?: ProgramSession;
+  session?: ProgramSession | null;
   location?: Location;
   attendances?: Attendance[];
   member?: Member;

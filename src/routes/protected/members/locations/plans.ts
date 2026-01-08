@@ -1,9 +1,11 @@
 import { db } from "@/db/db"
 import { getTableColumns } from "drizzle-orm"
 import { Elysia } from "elysia"
-import { memberPackages, memberPlans, memberSubscriptions, reservations } from "@/db/schemas"
+import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions, reservations } from "@/db/schemas"
 import { and, eq, sql } from "drizzle-orm"
 import { z } from "zod";
+
+
 const MemberLocationPlansProps = {
     params: z.object({
         mid: z.string(),
@@ -24,13 +26,15 @@ export function mlPlansRoutes(app: Elysia) {
             })
                 .from(memberPackages)
                 .where(and(eq(memberPackages.memberId, mid), eq(memberPackages.locationId, lid)))
-                .leftJoin(memberPlans, eq(memberPackages.memberPlanId, memberPlans.id))
+                .innerJoin(memberPlanPricing, eq(memberPackages.memberPlanPricingId, memberPlanPricing.id))
+                .innerJoin(memberPlans, eq(memberPlanPricing.memberPlanId, memberPlans.id))
                 .leftJoin(reservations, eq(reservations.memberPackageId, memberPackages.id))
                 .groupBy(memberPackages.id, memberPlans.id)
                 .execute();
 
             const subs = await db.select({
                 ...getTableColumns(memberSubscriptions),
+
                 plan: {
                     ...getTableColumns(memberPlans),
                 },
@@ -38,7 +42,8 @@ export function mlPlansRoutes(app: Elysia) {
             })
                 .from(memberSubscriptions)
                 .where(and(eq(memberSubscriptions.memberId, mid), eq(memberSubscriptions.locationId, lid)))
-                .leftJoin(memberPlans, eq(memberSubscriptions.memberPlanId, memberPlans.id))
+                .innerJoin(memberPlanPricing, eq(memberSubscriptions.memberPlanPricingId, memberPlanPricing.id))
+                .innerJoin(memberPlans, eq(memberPlanPricing.memberPlanId, memberPlans.id))
                 .leftJoin(reservations, eq(reservations.memberSubscriptionId, memberSubscriptions.id))
                 .groupBy(memberSubscriptions.id, memberPlans.id)
                 .execute();

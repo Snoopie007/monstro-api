@@ -17,16 +17,23 @@ export async function locationPlans(app: Elysia) {
             const plans = await db.query.memberPlans.findMany({
                 where: (plans, { eq }) => eq(plans.locationId, lid),
                 with: {
+                    contract: {
+                        columns: {
+                            id: true,
+                            title: true,
+                            requireSignature: true,
+                        },
+                    },
                     planPrograms: {
                         with: {
                             program: true,
                         },
                     },
-                    pricingOptions: true,
+                    pricings: true,
                 },
             });
             const mappedPlans = plans.map(plan => {
-                const { planPrograms, pricingOptions, ...rest } = plan
+                const { planPrograms, pricings, ...rest } = plan
                 const programs = planPrograms.map(pp => pp.program);
 
                 // Get all numeric minAge and maxAge values from programs
@@ -36,14 +43,14 @@ export async function locationPlans(app: Elysia) {
                 const minAge = minAges.length ? Math.min(...minAges) : 0;
                 const maxAge = maxAges.length ? Math.max(...maxAges) : 0;
 
-                const prices = pricingOptions.map(p => p.price);
+                const prices = pricings.map(p => p.price);
                 const minPrice = prices.length ? Math.min(...prices) : 0;
 
                 return {
                     ...rest,
                     programs,
                     startingPrice: minPrice,
-                    prices: pricingOptions,
+                    prices: pricings,
                     ageRange: { min: minAge, max: maxAge },
                 };
             });
