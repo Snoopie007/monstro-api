@@ -13,10 +13,9 @@ interface RadioBoxProps<T> extends React.HTMLAttributes<HTMLDivElement> {
 const RadioBox = <T,>({ children, value, selected, onSelectChange, className, hasRadio = true, ...props }: RadioBoxProps<T>) => {
     return (
         <div
-            className={cn("border-2 cursor-pointer group flex hover:border-indigo-600 flex-row  shadow-unique border-black rounded-sm text-black bg-white p-4 gap-2",
+            className={cn("border-2 cursor-pointer group flex hover:border-indigo-600 flex-row shadow-unique border-transparent rounded-sm text-foreground bg-background p-4 gap-2",
                 {
-                    "border-indigo-600 ": selected,
-
+                    "border-indigo-600": selected,
                 }
                 , className)}
             data-selected={selected}
@@ -24,19 +23,19 @@ const RadioBox = <T,>({ children, value, selected, onSelectChange, className, ha
             {...props}
         >
             {hasRadio && <span className='
-                flex-initial border-2 h-4 w-4 group cursor-pointer shrink-0 box-border border-black rounded-full relative
+                flex-initial border-2 h-4 w-4 group cursor-pointer shrink-0 box-border border-foreground/40 rounded-full relative
                 group-data-[selected=true]:border-indigo-600
                 group-hover:border-indigo-600
                 ' aria-hidden="true">
                 <span className={cn(
                     `absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
-                    h-2 w-2 rounded-full bg-black opacity-0 transition-opacity duration-200
+                    h-2 w-2 rounded-full bg-foreground opacity-0 transition-opacity duration-200
                     group-data-[selected=true]:opacity-100 group-data-[selected=true]:bg-indigo-600
-                    group-hover:opacity-100  group-hover:bg-indigo-600 
+                    group-hover:opacity-100 group-hover:bg-indigo-600 
                     `,
                 )}></span>
             </span>}
-            <div className="space-y-2  flex-1  ">
+            <div className="space-y-2 flex-1">
                 {children}
             </div>
 

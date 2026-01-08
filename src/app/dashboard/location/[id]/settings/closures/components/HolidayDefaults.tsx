@@ -21,10 +21,21 @@ interface HolidayDefaultsProps {
 export function HolidayDefaults({ locationId, initialSettings, onUpdate }: HolidayDefaultsProps) {
   const [saving, setSaving] = useState(false);
 
+  // Map legacy string IDs to new integer IDs
+  const LEGACY_ID_MAP: Record<string, number> = {
+    new_years: 1, mlk_day: 2, presidents_day: 3, memorial_day: 4,
+    independence_day: 5, labor_day: 6, columbus_day: 7, veterans_day: 8,
+    thanksgiving: 9, christmas_eve: 10, christmas: 11, new_years_eve: 12,
+  };
+
+  const normalizedBlockedHolidays = (initialSettings?.blockedHolidays || [])
+    .map(id => typeof id === 'string' ? LEGACY_ID_MAP[id] : id)
+    .filter((id): id is number => typeof id === 'number');
+
   const form = useForm<HolidayDefaultsFormData>({
     resolver: zodResolver(HolidayDefaultsSchema),
     defaultValues: {
-      blockedHolidays: initialSettings?.blockedHolidays || [],
+      blockedHolidays: normalizedBlockedHolidays,
       defaultBehavior: initialSettings?.defaultBehavior || 'block_all',
       advanceBlockDays: initialSettings?.advanceBlockDays || 7,
       autoNotifyMembers: initialSettings?.autoNotifyMembers ?? true,
@@ -55,7 +66,7 @@ export function HolidayDefaults({ locationId, initialSettings, onUpdate }: Holid
 
   const blockedHolidays = form.watch('blockedHolidays');
 
-  const toggleHoliday = useCallback((holidayId: string) => {
+  const toggleHoliday = useCallback((holidayId: number) => {
     const current = form.getValues('blockedHolidays');
     const newValue = current.includes(holidayId)
       ? current.filter(id => id !== holidayId)
@@ -73,7 +84,10 @@ export function HolidayDefaults({ locationId, initialSettings, onUpdate }: Holid
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.error('Form validation errors:', errors);
+            toast.error('Please fix form errors');
+          })} className="space-y-6">
             {/* Holiday checkboxes grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {COMMON_HOLIDAYS.map((holiday) => {

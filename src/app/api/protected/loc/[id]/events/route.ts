@@ -28,17 +28,60 @@ export async function GET(
   try {
     const events: CalendarEvent[] = [];
 
-    // First, get all programs for this location
-    const locationPrograms = await db.query.programs.findMany({
-      where: (p, { eq }) => eq(p.locationId, params.id),
-      columns: {
-        id: true,
-      },
-    });
+    // Parallelize independent queries for better performance
+    const [locationPrograms, reservations, recurrings] = await Promise.all([
+      // Get all programs for this location
+      db.query.programs.findMany({
+        where: (p, { eq }) => eq(p.locationId, params.id),
+        columns: {
+          id: true,
+        },
+      }),
+      // Get standard reservations - uses denormalized data to reduce joins
+      db.query.reservations.findMany({
+        where: (r, { between, and, eq, or, isNull }) =>
+          and(
+            between(r.startOn, startDate, endDate),
+            eq(r.locationId, params.id),
+            // Only include confirmed reservations (or null status for pre-migration data)
+            or(eq(r.status, 'confirmed'), isNull(r.status))
+          ),
+        with: {
+          member: true,
+          memberPackage: true,
+          program: true,
+          staff: true,
+        },
+      }),
+      // Get recurring reservations - uses denormalized data when available
+      db.query.recurringReservations.findMany({
+        where: (r, { and, eq, gte, or, isNull, lte }) =>
+          and(
+            lte(r.startDate, startDate),
+            eq(r.locationId, params.id),
+            or(isNull(r.canceledOn), gte(r.canceledOn, startDate.toISOString())),
+            // Only include confirmed reservations (or null status for pre-migration data)
+            or(eq(r.status, 'confirmed'), isNull(r.status))
+          ),
+        with: {
+          member: true,
+          memberPackage: true,
+          session: {
+            with: {
+              program: true,
+              staff: true,
+            },
+          },
+          program: true,
+          staff: true,
+          exceptions: true,
+        },
+      }) as Promise<RecurringReservation[]>,
+    ]);
 
     const programIds = locationPrograms.map((p) => p.id);
 
-    // Then get all sessions for these programs
+    // Fetch sessions after we have programIds (depends on previous query)
     const locationSessions = await db.query.programSessions.findMany({
       where: (s, { inArray }) => inArray(s.programId, programIds),
       with: {
@@ -51,58 +94,23 @@ export async function GET(
       },
     });
 
-    // Get standard reservations - uses denormalized data to reduce joins when available
-    // Filter by status if the column exists (post-migration), otherwise fetch all
-    const reservations = await db.query.reservations.findMany({
-      where: (r, { between, and, eq, or, isNull }) =>
-        and(
-          between(r.startOn, startDate, endDate),
-          eq(r.locationId, params.id),
-          // Only include confirmed reservations (or null status for pre-migration data)
-          or(eq(r.status, 'confirmed'), isNull(r.status))
-        ),
-      with: {
-        member: true,
-        // Still include session for backward compatibility during migration
-        // but we'll prefer denormalized data when available
-        session: {
-          with: {
-            program: true,
-            staff: true,
-          },
-        },
-        memberPackage: true,
-        program: true,
-        staff: true,
-      },
+    // Build lookup maps for O(1) reservation checks instead of O(n²) .some() calls
+    const reservationsBySessionAndDate = new Map<string, boolean>();
+    reservations.forEach(r => {
+      if (r.sessionId) {
+        const key = `${r.sessionId}-${new Date(r.startOn).toDateString()}`;
+        reservationsBySessionAndDate.set(key, true);
+      }
     });
 
-    // Get recurring reservations - uses denormalized data when available
-    const recurrings = await db.query.recurringReservations.findMany({
-      where: (r, { and, eq, gte, or, isNull, lte }) =>
-        and(
-          lte(r.startDate, startDate),
-          eq(r.locationId, params.id),
-          or(isNull(r.canceledOn), gte(r.canceledOn, startDate.toISOString())),
-          // Only include confirmed reservations (or null status for pre-migration data)
-          or(eq(r.status, 'confirmed'), isNull(r.status))
-        ),
-      with: {
-        member: true,
-        memberPackage: true,
-        // Still include session for backward compatibility
-        session: {
-          with: {
-            program: true,
-            staff: true,
-          },
-        },
-        program: true,
-        staff: true,
-        // Use unified exceptions table
-        exceptions: true,
-      },
-    }) as RecurringReservation[];
+    const recurringsBySessionDay = new Map<string, number[]>();
+    recurrings.forEach(r => {
+      if (r.sessionId && r.session?.day !== undefined) {
+        const existing = recurringsBySessionDay.get(r.sessionId) || [];
+        existing.push(r.session.day);
+        recurringsBySessionDay.set(r.sessionId, existing);
+      }
+    });
 
     // Generate available session slots
     locationSessions.forEach((session) => {
@@ -125,16 +133,11 @@ export async function GET(
         const end = toDate(parsedSessionEndDate, { timeZone: timezone });
         const id = `${start.toISOString()}-${session.id}`;
       
-        // Check if this session already has a reservation
+        // O(1) lookup using pre-built Maps instead of O(n) .some() calls
+        const reservationKey = `${session.id}-${currentDate.toDateString()}`;
         const hasReservation =
-          reservations.some(
-            (r) =>
-              r.sessionId === session.id &&
-              new Date(r.startOn).toDateString() === currentDate.toDateString()
-          ) ||
-          recurrings.some(
-            (r) => r.sessionId === session.id && r.session?.day === session.day
-          );
+          reservationsBySessionAndDate.has(reservationKey) ||
+          recurringsBySessionDay.get(session.id)?.includes(session.day) === true;
 
         if (!hasReservation) {
           events.push({

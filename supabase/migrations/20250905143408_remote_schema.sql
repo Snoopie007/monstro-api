@@ -114,7 +114,7 @@ drop table "public"."tickets";
 
 alter table "public"."account" enable row level security;
 
-alter table "public"."achievement_triggers" enable row level security;
+-- alter table "public"."achievement_triggers" enable row level security;
 
 alter table "public"."achievements" enable row level security;
 
@@ -225,7 +225,7 @@ alter table "public"."support_plans" enable row level security;
 
 alter table "public"."transactions" enable row level security;
 
-alter table "public"."triggered_achievements" enable row level security;
+-- alter table "public"."triggered_achievements" enable row level security;
 
 alter table "public"."user_roles" enable row level security;
 

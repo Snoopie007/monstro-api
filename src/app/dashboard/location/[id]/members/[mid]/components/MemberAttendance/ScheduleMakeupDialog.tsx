@@ -45,6 +45,12 @@ interface AvailableSlot {
   duration: number;
 }
 
+interface MakeUpCreditsInfo {
+  used: number;
+  limit: number;
+  remaining: number;
+}
+
 interface ScheduleMakeupDialogProps {
   locationId: string;
   memberId: string;
@@ -53,6 +59,8 @@ interface ScheduleMakeupDialogProps {
     programName?: string;
     startOn: Date | string;
     programId?: string;
+    memberSubscriptionId?: string | null;
+    memberPackageId?: string | null;
   };
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -70,6 +78,8 @@ export function ScheduleMakeupDialog({
   const [saving, setSaving] = useState(false);
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [creditsInfo, setCreditsInfo] = useState<MakeUpCreditsInfo | null>(null);
+  const [loadingCredits, setLoadingCredits] = useState(false);
 
   const form = useForm<MakeupClassFormData>({
     resolver: zodResolver(MakeupClassSchema),
@@ -86,6 +96,38 @@ export function ScheduleMakeupDialog({
   const selectedDate = form.watch('startOn');
   const useCustomTime = form.watch('useCustomTime');
   const sessionId = form.watch('sessionId');
+
+  // Fetch make-up credits info when dialog opens
+  useEffect(() => {
+    if (!open) return;
+
+    async function fetchCreditsInfo() {
+      setLoadingCredits(true);
+      try {
+        const subId = originalReservation.memberSubscriptionId;
+        const pkgId = originalReservation.memberPackageId;
+        
+        if (subId) {
+          const res = await fetch(`/api/protected/loc/${locationId}/members/${memberId}/subs/${subId}/credits`);
+          if (res.ok) {
+            const data = await res.json();
+            setCreditsInfo(data);
+          }
+        } else if (pkgId) {
+          const res = await fetch(`/api/protected/loc/${locationId}/members/${memberId}/pkgs/${pkgId}/credits`);
+          if (res.ok) {
+            const data = await res.json();
+            setCreditsInfo(data);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch credits info:', error);
+      }
+      setLoadingCredits(false);
+    }
+
+    fetchCreditsInfo();
+  }, [open, locationId, memberId, originalReservation.memberSubscriptionId, originalReservation.memberPackageId]);
 
   // Fetch available slots when date changes
   useEffect(() => {
@@ -203,6 +245,31 @@ export function ScheduleMakeupDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogBody className="space-y-4">
+              {/* Make-up credits info */}
+              {loadingCredits ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Loading credits...
+                </div>
+              ) : creditsInfo && creditsInfo.limit > 0 ? (
+                <div className={cn(
+                  "rounded-lg p-3 border",
+                  creditsInfo.remaining > 0 
+                    ? "bg-green-500/10 border-green-500/20" 
+                    : "bg-red-500/10 border-red-500/20"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Make-up Credits</span>
+                    <Badge variant={creditsInfo.remaining > 0 ? "secondary" : "destructive"}>
+                      {creditsInfo.remaining} remaining
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {creditsInfo.used} of {creditsInfo.limit} credits used
+                  </p>
+                </div>
+              ) : null}
+
               {/* Original class info */}
               <div className="bg-foreground/5 rounded-lg p-3">
                 <p className="text-xs text-muted-foreground mb-1">Original Class</p>
@@ -354,11 +421,17 @@ export function ScheduleMakeupDialog({
               </Button>
               <Button 
                 type="submit" 
-                disabled={saving || (!sessionId && !useCustomTime)} 
+                disabled={
+                  saving || 
+                  (!sessionId && !useCustomTime) || 
+                  (creditsInfo !== null && creditsInfo.limit > 0 && creditsInfo.remaining <= 0)
+                } 
                 variant="foreground"
               >
                 {saving ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
-                Schedule Make-up
+                {creditsInfo !== null && creditsInfo.limit > 0 && creditsInfo.remaining <= 0 
+                  ? "No Credits Remaining" 
+                  : "Schedule Make-up"}
               </Button>
             </DialogFooter>
           </form>

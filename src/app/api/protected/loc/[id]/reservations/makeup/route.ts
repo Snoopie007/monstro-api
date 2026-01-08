@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
-import { eq } from "drizzle-orm";
-import { reservations, programSessions, programs } from "@/db/schemas";
+import { eq, sql } from "drizzle-orm";
+import { reservations, programSessions, memberSubscriptions, memberPackages } from "@/db/schemas";
 import { NextRequest, NextResponse } from "next/server";
 import type { CreateMakeUpClassInput } from "@/types/reservation";
 
@@ -92,6 +92,59 @@ export async function POST(req: NextRequest, props: Props) {
       );
     }
 
+    // Check make-up credits limit based on subscription or package
+    const subId = memberSubscriptionId || originalReservation.memberSubscriptionId;
+    const pkgId = memberPackageId || originalReservation.memberPackageId;
+    
+    let planMakeUpCredits = 0;
+    let usedMakeUpCredits = 0;
+    
+    if (subId) {
+      const subscription = await db.query.memberSubscriptions.findFirst({
+        where: eq(memberSubscriptions.id, subId),
+        with: {
+          pricing: {
+            with: {
+              plan: true,
+            },
+          },
+        },
+      });
+      
+      if (subscription) {
+        usedMakeUpCredits = subscription.makeUpCredits;
+        planMakeUpCredits = subscription.pricing?.plan?.makeUpCredits ?? 0;
+      }
+    } else if (pkgId) {
+      const pkg = await db.query.memberPackages.findFirst({
+        where: eq(memberPackages.id, pkgId),
+        with: {
+          pricing: {
+            with: {
+              plan: true,
+            },
+          },
+        },
+      });
+      
+      if (pkg) {
+        usedMakeUpCredits = pkg.makeUpCredits;
+        planMakeUpCredits = pkg.pricing?.plan?.makeUpCredits ?? 0;
+      }
+    }
+    
+    // Check if member has available make-up credits
+    if (planMakeUpCredits > 0 && usedMakeUpCredits >= planMakeUpCredits) {
+      return NextResponse.json(
+        { 
+          error: "No make-up credits remaining",
+          used: usedMakeUpCredits,
+          limit: planMakeUpCredits,
+        },
+        { status: 400 }
+      );
+    }
+
     // Determine program info - from sessionId, provided values, or original reservation
     let resolvedProgramId = programId;
     let resolvedProgramName = programName;
@@ -148,7 +201,10 @@ export async function POST(req: NextRequest, props: Props) {
       );
     }
 
-    // Create the make-up class reservation
+    // Create the make-up class reservation and increment used credits
+    const effectiveSubId = memberSubscriptionId || originalReservation.memberSubscriptionId;
+    const effectivePkgId = memberPackageId || originalReservation.memberPackageId;
+    
     const [makeUpReservation] = await db
       .insert(reservations)
       .values({
@@ -157,8 +213,8 @@ export async function POST(req: NextRequest, props: Props) {
         locationId: params.id,
         startOn: startDateTime,
         endOn: endDateTime,
-        memberSubscriptionId: memberSubscriptionId || originalReservation.memberSubscriptionId,
-        memberPackageId: memberPackageId || originalReservation.memberPackageId,
+        memberSubscriptionId: effectiveSubId,
+        memberPackageId: effectivePkgId,
         programId: resolvedProgramId,
         programName: resolvedProgramName,
         sessionTime: resolvedSessionTime,
@@ -170,6 +226,25 @@ export async function POST(req: NextRequest, props: Props) {
         status: 'confirmed',
       })
       .returning();
+
+    // Increment make-up credits used on the subscription or package
+    if (effectiveSubId) {
+      await db
+        .update(memberSubscriptions)
+        .set({
+          makeUpCredits: sql`${memberSubscriptions.makeUpCredits} + 1`,
+          updated: new Date(),
+        })
+        .where(eq(memberSubscriptions.id, effectiveSubId));
+    } else if (effectivePkgId) {
+      await db
+        .update(memberPackages)
+        .set({
+          makeUpCredits: sql`${memberPackages.makeUpCredits} + 1`,
+          updated: new Date(),
+        })
+        .where(eq(memberPackages.id, effectivePkgId));
+    }
 
     return NextResponse.json(makeUpReservation, { status: 201 });
   } catch (err) {

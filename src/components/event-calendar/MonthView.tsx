@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	addDays,
 	eachDayOfInterval,
@@ -36,6 +36,13 @@ interface MonthViewProps {
 	onEventCreate: (startTime: Date) => void;
 }
 
+// Pre-computed event data for a single day
+interface DayEventData {
+	dayEvents: CalendarEvent[];
+	spanningEvents: CalendarEvent[];
+	allDayEvents: CalendarEvent[];
+	allEvents: CalendarEvent[];
+}
 
 const DayCellStyle = cn(
 	"group border-foreground/5 data-outside-cell:bg-muted/50",
@@ -79,12 +86,34 @@ export function MonthView({
 		return result;
 	}, [days]);
 
-	function handleEventClick(event: CalendarEvent, e: React.MouseEvent) {
+	// Memoize events by day - compute all event data once instead of per-cell
+	const eventsByDay = useMemo(() => {
+		const map = new Map<string, DayEventData>();
+
+		days.forEach(day => {
+			const key = format(day, 'yyyy-MM-dd');
+			const dayEvents = getEventsForDay(events, day);
+			const spanningEvents = getSpanningEventsForDay(events, day);
+			const allDayEvents = [...spanningEvents, ...dayEvents];
+			const allEvents = getAllEventsForDay(events, day);
+
+			map.set(key, {
+				dayEvents,
+				spanningEvents,
+				allDayEvents,
+				allEvents,
+			});
+		});
+
+		return map;
+	}, [events, days]);
+
+	const handleEventClick = useCallback((event: CalendarEvent, e: React.MouseEvent) => {
 		e.stopPropagation();
 		e.preventDefault();
 
 		onEventSelect(event);
-	}
+	}, [onEventSelect]);
 
 	const [isMounted, setIsMounted] = useState(false);
 	const { contentRef, getVisibleEventCount } = useEventVisibility({
@@ -117,119 +146,29 @@ export function MonthView({
 						{week.map((day, dayIndex) => {
 							if (!day) return null; // Skip if day is undefined
 
-							const dayEvents = getEventsForDay(events, day);
-							const spanningEvents = getSpanningEventsForDay(events, day);
-							const isCurrentMonth = isSameMonth(day, currentDate);
-							const cellId = `month-cell-${day.toISOString()}`;
-							const allDayEvents = [...spanningEvents, ...dayEvents];
-							const allEvents = getAllEventsForDay(events, day);
+							// O(1) lookup from pre-computed map instead of 4 filter operations
+							const dayKey = format(day, 'yyyy-MM-dd');
+							const eventData = eventsByDay.get(dayKey);
+							const allDayEvents = eventData?.allDayEvents || [];
+							const allEvents = eventData?.allEvents || [];
 
 							const isReferenceCell = weekIndex === 0 && dayIndex === 0;
-							const visibleCount = isMounted
-								? getVisibleEventCount(allDayEvents.length)
-								: undefined;
-							const hasMore =
-								visibleCount !== undefined &&
-								allDayEvents.length > visibleCount;
-							const remainingCount = hasMore
-								? allDayEvents.length - visibleCount
-								: 0;
 
 							return (
-								<div key={day.toString()}
-									className={DayCellStyle}
-									data-today={isToday(day) || undefined}
-									data-outside-cell={!isCurrentMonth || undefined}
-								>
-									<DroppableCell
-										id={cellId}
-										date={day}
-										onClick={() => {
-											const startTime = new Date(day);
-											startTime.setHours(DefaultStartHour, 0, 0);
-											onEventCreate(startTime);
-										}}
-										className="flex flex-col h-full"
-									>
-										<div className={cn(
-											"group-data-today:text-indigo-500 group-data-today:font-medium",
-											"inline-flex w-6  h-auto items-center justify-center rounded-lg text-sm"
-										)}>
-											{format(day, "d")}
-										</div>
-										<div
-											ref={isReferenceCell ? contentRef : null}
-											className={cn(
-												"flex-1 flex flex-col min-h-[calc((var(--event-height)+var(--event-gap))*2)]",
-												"sm:min-h-[calc((var(--event-height)+var(--event-gap))*3)] lg:min-h-[calc((var(--event-height)+var(--event-gap))*4)]"
-											)}
-										>
-											{sortEvents(allDayEvents).map(
-												(event: CalendarEvent, index: number) => {
-													const eventStart = new Date(event.start);
-													const eventEnd = new Date(event.end);
-													const isFirstDay = isSameDay(day, eventStart);
-													const isLastDay = isSameDay(day, eventEnd);
-
-													const isHidden = isMounted && visibleCount && index >= visibleCount;
-
-													if (!visibleCount) return null;
-
-													if (!isFirstDay) {
-														return (
-															<div key={`spanning-${event.id}-${day.toISOString().slice(0, 10)}`}
-																className="aria-hidden:hidden"
-																aria-hidden={isHidden ? "true" : undefined}
-															>
-																<EventItem onClick={(e: React.MouseEvent) => {
-																	handleEventClick(event, e);
-																}}
-																	event={event}
-																	view="month"
-																	isFirstDay={isFirstDay}
-																	isLastDay={isLastDay}
-																>
-																	<div className="invisible" aria-hidden={true}>
-																		{!event.allDay && (
-																			<span>
-																				{format(new Date(event.start), "h:mm")}{" "}
-																			</span>
-																		)}
-																		{event.title}
-																	</div>
-																</EventItem>
-															</div>
-														);
-													}
-
-													return (
-														<div key={event.id} className="aria-hidden:hidden"
-															aria-hidden={isHidden ? "true" : undefined}
-														>
-															<DraggableEvent
-																event={event}
-																view="month"
-																onClick={(e: React.MouseEvent) => {
-																	handleEventClick(event, e);
-																}}
-																isFirstDay={isFirstDay}
-																isLastDay={isLastDay}
-															/>
-														</div>
-													);
-												}
-											)}
-
-											{hasMore && (
-												<HasMoreEvents
-													remainingCount={remainingCount}
-													day={day} allEvents={allEvents}
-													onEventClick={onEventSelect}
-												/>
-											)}
-										</div>
-									</DroppableCell>
-								</div>
+								<DayCell
+									key={day.toString()}
+									day={day}
+									allDayEvents={allDayEvents}
+									allEvents={allEvents}
+									isCurrentMonth={isSameMonth(day, currentDate)}
+									isReferenceCell={isReferenceCell}
+									isMounted={isMounted}
+									getVisibleEventCount={getVisibleEventCount}
+									contentRef={contentRef}
+									onEventClick={handleEventClick}
+									onEventCreate={onEventCreate}
+									onEventSelect={onEventSelect}
+								/>
 							);
 						})}
 					</div>
@@ -239,6 +178,145 @@ export function MonthView({
 		</div >
 	);
 }
+
+// Memoized day cell component to prevent unnecessary re-renders
+interface DayCellProps {
+	day: Date;
+	allDayEvents: CalendarEvent[];
+	allEvents: CalendarEvent[];
+	isCurrentMonth: boolean;
+	isReferenceCell: boolean;
+	isMounted: boolean;
+	getVisibleEventCount: (totalEvents: number) => number;
+	contentRef: React.RefObject<HTMLDivElement>;
+	onEventClick: (event: CalendarEvent, e: React.MouseEvent) => void;
+	onEventCreate: (startTime: Date) => void;
+	onEventSelect: (event: CalendarEvent) => void;
+}
+
+const DayCell = React.memo(function DayCell({
+	day,
+	allDayEvents,
+	allEvents,
+	isCurrentMonth,
+	isReferenceCell,
+	isMounted,
+	getVisibleEventCount,
+	contentRef,
+	onEventClick,
+	onEventCreate,
+	onEventSelect,
+}: DayCellProps) {
+	const cellId = `month-cell-${day.toISOString()}`;
+
+	const visibleCount = isMounted
+		? getVisibleEventCount(allDayEvents.length)
+		: undefined;
+	const hasMore =
+		visibleCount !== undefined &&
+		allDayEvents.length > visibleCount;
+	const remainingCount = hasMore
+		? allDayEvents.length - visibleCount
+		: 0;
+
+	return (
+		<div
+			className={DayCellStyle}
+			data-today={isToday(day) || undefined}
+			data-outside-cell={!isCurrentMonth || undefined}
+		>
+			<DroppableCell
+				id={cellId}
+				date={day}
+				onClick={() => {
+					const startTime = new Date(day);
+					startTime.setHours(DefaultStartHour, 0, 0);
+					onEventCreate(startTime);
+				}}
+				className="flex flex-col h-full"
+			>
+				<div className={cn(
+					"group-data-today:text-indigo-500 group-data-today:font-medium",
+					"inline-flex w-6 h-auto items-center justify-center rounded-lg text-sm"
+				)}>
+					{format(day, "d")}
+				</div>
+				<div
+					ref={isReferenceCell ? contentRef : null}
+					className={cn(
+						"flex-1 flex flex-col min-h-[calc((var(--event-height)+var(--event-gap))*2)]",
+						"sm:min-h-[calc((var(--event-height)+var(--event-gap))*3)] lg:min-h-[calc((var(--event-height)+var(--event-gap))*4)]"
+					)}
+				>
+					{sortEvents(allDayEvents).map(
+						(event: CalendarEvent, index: number) => {
+							const eventStart = new Date(event.start);
+							const eventEnd = new Date(event.end);
+							const isFirstDay = isSameDay(day, eventStart);
+							const isLastDay = isSameDay(day, eventEnd);
+
+							const isHidden = isMounted && visibleCount && index >= visibleCount;
+
+							if (!visibleCount) return null;
+
+							if (!isFirstDay) {
+								return (
+									<div key={`spanning-${event.id}-${day.toISOString().slice(0, 10)}`}
+										className="aria-hidden:hidden"
+										aria-hidden={isHidden ? "true" : undefined}
+									>
+										<EventItem onClick={(e: React.MouseEvent) => {
+											onEventClick(event, e);
+										}}
+											event={event}
+											view="month"
+											isFirstDay={isFirstDay}
+											isLastDay={isLastDay}
+										>
+											<div className="invisible" aria-hidden={true}>
+												{!event.allDay && (
+													<span>
+														{format(new Date(event.start), "h:mm")}{" "}
+													</span>
+												)}
+												{event.title}
+											</div>
+										</EventItem>
+									</div>
+								);
+							}
+
+							return (
+								<div key={event.id} className="aria-hidden:hidden"
+									aria-hidden={isHidden ? "true" : undefined}
+								>
+									<DraggableEvent
+										event={event}
+										view="month"
+										onClick={(e: React.MouseEvent) => {
+											onEventClick(event, e);
+										}}
+										isFirstDay={isFirstDay}
+										isLastDay={isLastDay}
+									/>
+								</div>
+							);
+						}
+					)}
+
+					{hasMore && (
+						<HasMoreEvents
+							remainingCount={remainingCount}
+							day={day}
+							allEvents={allEvents}
+							onEventClick={onEventSelect}
+						/>
+					)}
+				</div>
+			</DroppableCell>
+		</div>
+	);
+})
 
 interface HasMoreEventsProps {
 	remainingCount: number;

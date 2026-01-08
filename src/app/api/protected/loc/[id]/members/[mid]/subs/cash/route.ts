@@ -107,6 +107,8 @@ export async function POST(req: Request, props: Props) {
             memberPlanPricingId: pricing.id,
             paymentType,
             status: "active",
+            makeUpCredits: 0,
+            allowMakeUpCarryOver: false,
             metadata: {
                 memberId: mid,
                 locationId: id

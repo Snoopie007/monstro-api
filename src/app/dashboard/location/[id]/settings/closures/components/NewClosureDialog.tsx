@@ -115,12 +115,11 @@ export function NewClosureDialog({
                   <FormItem>
                     <FormLabel size="tiny">Closure Type</FormLabel>
                     <FormControl>
-                      <div className="flex gap-4">
+                      <div className="flex flex-col gap-2">
                         <RadioBox
                           value="holiday"
                           selected={field.value === 'holiday'}
                           onSelectChange={field.onChange}
-                          className="flex-1"
                         >
                           Holiday
                         </RadioBox>
@@ -128,7 +127,6 @@ export function NewClosureDialog({
                           value="maintenance"
                           selected={field.value === 'maintenance'}
                           onSelectChange={field.onChange}
-                          className="flex-1"
                         >
                           Maintenance
                         </RadioBox>
