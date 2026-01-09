@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS tax_rates (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   name text NOT NULL,
-  percentage integer NOT NULL default 0,
+  percentage real NOT NULL default 0.00,
   is_default boolean NOT NULL DEFAULT false,
   description text,
   country text NOT NULL,

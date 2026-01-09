@@ -5,6 +5,7 @@ import {
     pgTable,
     boolean,
     uuid,
+    real,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
@@ -12,7 +13,7 @@ import { relations, sql } from "drizzle-orm";
 export const taxRates = pgTable("tax_rates", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
     name: text("name").notNull(),
-    percentage: integer("percentage").notNull().default(0),
+    percentage: real("percentage").notNull().default(0.00),
     description: text("description"),
     isDefault: boolean("is_default").notNull().default(false),
     country: text("country").notNull(),
@@ -24,6 +25,7 @@ export const taxRates = pgTable("tax_rates", {
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
 });
+
 
 export const taxRatesRelations = relations(taxRates, ({ one }) => ({
     location: one(locations, {

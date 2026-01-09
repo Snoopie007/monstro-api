@@ -1,6 +1,6 @@
 'use client'
-import React, { useState } from 'react'
-
+import { useState } from 'react'
+import { NumericFormat } from 'react-number-format';
 
 import {
     Form, FormControl, FormField, FormMessage, FormItem, FormLabel,
@@ -28,7 +28,6 @@ import { tryCatch } from '@/libs/utils';
 import { toast } from 'react-toastify';
 import { Loader2, PlusIcon } from 'lucide-react';
 import { useTaxRates } from '../provider';
-
 interface NewTaxRateProps {
     lid: string;
 }
@@ -53,11 +52,15 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
     async function onSubmit(v: z.infer<typeof taxRateSchema>) {
         if (form.formState.isSubmitting) return;
 
+        console.log(v);
         const isDefault = taxRates.length === 0;
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/config/tax`, {
                 method: "POST",
-                body: JSON.stringify({ ...v, isDefault })
+                body: JSON.stringify({
+                    ...v,
+                    isDefault
+                })
             })
         );
 
@@ -116,25 +119,23 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
                                         <FormItem className='col-span-2'>
                                             <FormLabel size='tiny'>Percentage</FormLabel>
                                             <FormControl>
-                                                <Input
-                                                    type="number"
-                                                    min={0}
-                                                    max={100}
-                                                    step="1"
-                                                    placeholder="0"
-                                                    value={field.value === 0 ? '' : field.value}
-                                                    onChange={(e) => {
-                                                        const value = e.target.value;
-                                                        if (value === '') {
-                                                            field.onChange(0);
+                                                <NumericFormat
+                                                    customInput={Input}
+                                                    value={field.value}
+
+                                                    decimalScale={2}
+                                                    fixedDecimalScale={true}
+
+                                                    allowNegative={false}
+
+                                                    onValueChange={(values) => {
+                                                        if (values.floatValue) {
+                                                            console.log(values.floatValue);
+                                                            field.onChange(values.floatValue);
                                                         } else {
-                                                            const numValue = parseInt(value);
-                                                            if (!isNaN(numValue)) {
-                                                                field.onChange(Math.min(100, Math.max(0, Math.round(numValue))));
-                                                            }
+                                                            field.onChange(0);
                                                         }
-                                                    }}
-                                                />
+                                                    }} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -230,7 +231,7 @@ export function NewTaxRate({ lid }: NewTaxRateProps) {
 
                         variant={'foreground'}
                         onClick={form.handleSubmit(onSubmit)}
-                        disabled={form.formState.isSubmitting || !form.formState.isValid}
+                    // disabled={form.formState.isSubmitting || !form.formState.isValid}
                     >
                         {form.formState.isSubmitting ? <Loader2 className='size-4 animate-spin ' /> : "Add Tax Rate"}
                     </Button>

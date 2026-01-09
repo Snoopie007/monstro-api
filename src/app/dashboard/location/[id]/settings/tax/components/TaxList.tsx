@@ -27,7 +27,7 @@ export function TaxList() {
                         </TableCell>
                         <TableCell>{taxRate.country}</TableCell>
                         <TableCell>{taxRate.state}</TableCell>
-                        <TableCell>{taxRate.percentage}%</TableCell>
+                        <TableCell>{taxRate.percentage.toFixed(2)}%</TableCell>
 
                         <TableCell>
                             <Badge variant={taxRate.status === "active" ? "success" : "error"} >{taxRate.status}</Badge>
