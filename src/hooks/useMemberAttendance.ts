@@ -52,7 +52,7 @@ export const useMemberAttendance = (id: string, mid: string) => {
         const startingDayOfWeek = firstDayOfMonth.getDay()
         const lastDayOfMonth = new Date(year, month + 1, 0).getDate()
         const allDates: Array<{
-            date: string | null
+            date: Date
             count: number
             isCurrentMonth: boolean
             isEmpty: boolean
@@ -64,10 +64,10 @@ export const useMemberAttendance = (id: string, mid: string) => {
                 checkOutTime: Date | null
             }>
         }> = []
-        // Add empty placeholders for days before month starts
         for (let i = 0; i < startingDayOfWeek; i++) {
+            const emptyDayDate = new Date(year, month, 1 - (startingDayOfWeek - i))
             allDates.push({
-                date: null,
+                date: emptyDayDate,
                 count: 0,
                 isCurrentMonth: false,
                 isEmpty: true,
@@ -96,7 +96,7 @@ export const useMemberAttendance = (id: string, mid: string) => {
                 }))
 
             allDates.push({
-                date: dateStr,
+                date: date,
                 count: formattedAttendancesDays[dateStr],
                 isCurrentMonth: true,
                 isEmpty: false,
@@ -108,10 +108,10 @@ export const useMemberAttendance = (id: string, mid: string) => {
         const weeks = []
         for (let i = 0; i < allDates.length; i += 7) {
             const week = allDates.slice(i, i + 7)
-            // Pad the last week with empty days to reach 7 items
             while (week.length < 7) {
+                const paddingDate = new Date(year, month + 1, week.length - 6 + lastDayOfMonth)
                 week.push({
-                    date: null,
+                    date: paddingDate,
                     count: 0,
                     isCurrentMonth: false,
                     isEmpty: true,

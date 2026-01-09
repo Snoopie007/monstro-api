@@ -75,7 +75,7 @@ export async function POST(
 			const amountDue = subtotal + tax - discount;
 
 			const formatted_lines = [{
-				description: `${subscription.plan.name}${subscription.plan.description ? ` - ${subscription.plan.description}` : ''}`,
+				description: `${subscription.pricing?.plan?.name ?? 'Unknown Plan'}${subscription.pricing?.plan?.description ? ` - ${subscription.pricing.plan.description}` : ''}`,
 				amount: subscription.pricing.price,
 				quantity: 1,
 				currency: subscription.pricing.currency || "usd"
@@ -107,7 +107,7 @@ export async function POST(
 					tax_cents: tax,
 					discount_cents: discount,
 					total_cents: amountDue,
-					currency: subscription.plan.currency || "usd"
+					currency: subscription.pricing?.plan?.currency || "usd"
 				}
 			});
 		}

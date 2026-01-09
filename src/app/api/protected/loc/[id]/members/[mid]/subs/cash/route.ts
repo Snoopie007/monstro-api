@@ -103,7 +103,6 @@ export async function POST(req: Request, props: Props) {
             expiresAt: expiresAt,
             locationId: id,
             memberId: mid,
-            memberPlanId: plan.id,
             memberPlanPricingId: pricing.id,
             paymentType,
             status: "active",

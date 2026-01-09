@@ -1,6 +1,6 @@
 import { db } from "@/db/db";
 import { CalendarEvent } from "@/types/calendar";
-import { RecurringReservation, Reservation } from "@/types";
+import { RecurringReservation } from "@/types";
 import { endOfMonth, startOfMonth, addDays, addMinutes } from "date-fns";
 import { toDate,  } from 'date-fns-tz'
 import { NextResponse, NextRequest } from "next/server";
@@ -190,13 +190,17 @@ export async function GET(
         if (!exception) {
           const { id, intervalThreshold, interval, exceptions, ...rest } =
             recurring;
-          const vr: Reservation = {
+          const vr = {
             ...rest,
             startOn: currentDate,
             id: recurring.id,
             endOn: new Date(
               currentDate.getTime() + (recurring.session?.duration || 0) * 60000
             ),
+            cancelledAt: null,
+            cancelledReason: null,
+            isMakeUpClass: false,
+            originalReservationId: null,
           };
           addEventToCalendar(events, vr, recurring.id);
         }
@@ -234,9 +238,10 @@ export async function GET(
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function addEventToCalendar(
   events: CalendarEvent[],
-  reservation: Reservation,
+  reservation: any,
   recurringId?: string
 ) {
   const programName = reservation.programName || reservation.session?.program?.name;
@@ -247,7 +252,6 @@ function addEventToCalendar(
   const staff = reservation.staff || reservation.session?.staff;
   const programColor = reservation.program?.color || reservation.session?.program?.color;
 
-  // Skip if we don't have required data
   if (!reservation.member || (!programName && !reservation.session?.program)) {
     return;
   }
@@ -270,7 +274,6 @@ function addEventToCalendar(
   );
 
   if (existingIndex >= 0) {
-    // Merge with existing event
     const event = events[existingIndex];
     if (event.data) {
       event.data.members = [...(event.data.members || []), member];
@@ -278,8 +281,8 @@ function addEventToCalendar(
       event.data.recurringId = recurringId;
       event.data.isRecurring = !!recurringId;
       event.data.memberPlanId = [
-        reservation.memberPackage?.memberPlanId ||
-          reservation.memberPackage?.id ||
+        reservation.memberPackageId ||
+          reservation.memberSubscriptionId ||
           "",
       ];
     }
@@ -294,8 +297,8 @@ function addEventToCalendar(
       data: {
         sessionId: sessionId || '',
         memberPlanId: [
-          reservation.memberPackage?.memberPlanId ||
-            reservation.memberPackageId ||
+          reservation.memberPackageId ||
+            reservation.memberSubscriptionId ||
             "",
         ],
         programId: programId || '',
@@ -309,7 +312,11 @@ function addEventToCalendar(
         id: staffId || "",
         name: (staff.firstName || '') + " " + (staff.lastName || ''),
         avatar: staff.avatar,
-      } : undefined,
+      } : {
+        id: "",
+        name: "Unassigned",
+        avatar: null,
+      },
     });
   }
 }

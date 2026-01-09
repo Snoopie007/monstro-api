@@ -27,11 +27,19 @@ interface Closure {
     reason: string;
 }
 
+interface SimplifiedAttendance {
+    programName: string;
+    startTime: Date;
+    endTime: Date;
+    checkInTime: Date;
+    checkOutTime: Date | null;
+}
+
 interface DayData {
     isEmpty: boolean;
     date: Date;
     count: number;
-    attendances: Attendance[];
+    attendances?: SimplifiedAttendance[] | Attendance[];
     missedReservations?: MissedReservation[];
     closure?: Closure;
 }
@@ -147,10 +155,10 @@ export const MonthView = ({ weeks, month, locationId, memberId, onMakeupSchedule
                                                     </>
                                                 )}
                                                 
-                                                {!isClosure && day.attendances.length > 0 && (
+                                                {!isClosure && day.attendances && day.attendances.length > 0 && (
                                                     <>
                                                         <Separator className="mt-1 mb-2 bg-foreground/10" />
-                                                        {day.attendances.map((attendance: Attendance, index: number) => (
+                                                        {day.attendances.map((attendance, index: number) => (
                                                             <div key={index} className="flex flex-col gap-1 text-xs mb-2">
                                                                 <div className="flex flex-row gap-1 items-center justify-between">
                                                                     <span className="text-muted-foreground">program:</span>

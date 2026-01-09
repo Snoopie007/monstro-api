@@ -210,9 +210,8 @@ async function handleSubscriptionInvoicePayment(
 
 		const tax = calculateTaxFromInvoice(invoice);
 		
-		// Use pricing name if available
-		const pricingName = subscription.pricing?.name ? ` - ${subscription.pricing.name}` : "";
-		const itemName = subscription.plan?.name + pricingName;
+	const pricingName = subscription.pricing?.name ? ` - ${subscription.pricing.name}` : "";
+	const itemName = (subscription.pricing?.plan?.name ?? 'Unknown Plan') + pricingName;
 
 		await db.transaction(async (tx) => {
 			const CommonFields = {
@@ -279,11 +278,13 @@ async function handleSubscriptionInvoicePayment(
 			}
 		});
 
-		await triggerSignUp({
-			mid: subscription.memberId,
-			lid: subscription.locationId,
-			pid: subscription.memberPlanId,
-		});
+		if (subscription.pricing?.plan?.id) {
+			await triggerSignUp({
+				mid: subscription.memberId,
+				lid: subscription.locationId,
+				pid: subscription.pricing.plan.id,
+			});
+		}
 
 
 	} catch (error) {

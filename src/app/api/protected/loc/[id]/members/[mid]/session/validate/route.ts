@@ -47,55 +47,69 @@ export async function GET(
       });
     }
 
-    // Check member's active subscriptions
     const activeSubscriptions = await db.query.memberSubscriptions.findMany({
-      where: (s, { eq, and, inArray }) =>
+      where: (s, { eq, and }) =>
         and(
           eq(s.memberId, params.mid),
           eq(s.locationId, params.id),
-          eq(s.status, "active"),
-          inArray(s.memberPlanId, planIds)
+          eq(s.status, "active")
         ),
       with: {
-        plan: {
-          columns: {
-            name: true,
+        pricing: {
+          with: {
+            plan: {
+              columns: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
     });
 
-    if (activeSubscriptions.length > 0) {
+    const matchingSubscription = activeSubscriptions.find(
+      (sub) => sub.pricing?.plan?.id && planIds.includes(sub.pricing.plan.id)
+    );
+
+    if (matchingSubscription) {
       return NextResponse.json({
         hasAccess: true,
         accessType: "subscription",
-        details: `Active subscription: ${activeSubscriptions[0].plan.name}`,
+        details: `Active subscription: ${matchingSubscription.pricing?.plan?.name ?? 'Unknown'}`,
       });
     }
 
-    // Check member's active packages
     const activePackages = await db.query.memberPackages.findMany({
-      where: (p, { eq, and, inArray }) =>
+      where: (p, { eq, and }) =>
         and(
           eq(p.memberId, params.mid),
           eq(p.locationId, params.id),
-          eq(p.status, "active"),
-          inArray(p.memberPlanId, planIds)
+          eq(p.status, "active")
         ),
       with: {
-        plan: {
-          columns: {
-            name: true,
+        pricing: {
+          with: {
+            plan: {
+              columns: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
     });
 
-    if (activePackages.length > 0) {
+    const matchingPackage = activePackages.find(
+      (pkg) => pkg.pricing?.plan?.id && planIds.includes(pkg.pricing.plan.id)
+    );
+
+    if (matchingPackage) {
       return NextResponse.json({
         hasAccess: true,
         accessType: "package",
-        details: `Active package: ${activePackages[0].plan.name}`,
+        details: `Active package: ${matchingPackage.pricing?.plan?.name ?? 'Unknown'}`,
       });
     }
 
