@@ -4,6 +4,7 @@ import { RecurringReservation, Reservation } from "@/types";
 import { endOfMonth, startOfMonth, addDays, addMinutes } from "date-fns";
 import { toDate,  } from 'date-fns-tz'
 import { NextResponse, NextRequest } from "next/server";
+import { getEventColorFromId } from "@/libs/program-colors";
 
 export async function GET(
   req: NextRequest,
@@ -143,6 +144,7 @@ export async function GET(
           events.push({
             id,
             title: session.program.name,
+            color: getEventColorFromId(session.program.color),
             start,
             end,
             duration: session.duration,
@@ -211,15 +213,14 @@ export async function GET(
     });
     // Merge duplicates and filter by date range
     let finalEvents = mergeAndFilterEvents(events, startDate, endDate);
-    // Apply plan filtering if planIds are provided
     if (planIds && planIds.length > 0) {
       finalEvents = finalEvents.filter((event) => {
-        // If the event has a memberPlanId, check if it's in the filter
         if (event.data?.memberPlanId) {
           return event.data.memberPlanId.some((planId) =>
             planIds.includes(planId)
           );
         }
+        return false;
       });
     }
 
@@ -238,13 +239,13 @@ function addEventToCalendar(
   reservation: Reservation,
   recurringId?: string
 ) {
-  // Use denormalized data when available, fall back to session data for backward compatibility
   const programName = reservation.programName || reservation.session?.program?.name;
   const programId = reservation.programId || reservation.session?.programId;
   const sessionId = reservation.sessionId || reservation.session?.id;
   const duration = reservation.sessionDuration || reservation.session?.duration || 0;
   const staffId = reservation.staffId || reservation.session?.staffId;
   const staff = reservation.staff || reservation.session?.staff;
+  const programColor = reservation.program?.color || reservation.session?.program?.color;
 
   // Skip if we don't have required data
   if (!reservation.member || (!programName && !reservation.session?.program)) {
@@ -283,10 +284,10 @@ function addEventToCalendar(
       ];
     }
   } else {
-    // Create new event using denormalized data when available
     events.push({
       id,
       title: programName || 'Unknown Program',
+      color: getEventColorFromId(programColor),
       start,
       end,
       duration,

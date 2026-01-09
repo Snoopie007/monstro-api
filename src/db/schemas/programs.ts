@@ -28,6 +28,7 @@ export const programs = pgTable("programs", {
   interval: IntervalType("interval").notNull().default("week"),
   intervalThreshold: smallint("interval_threshold").notNull().default(1),
   icon: text("icon"),
+  color: smallint("color").notNull().default(1),
   allowWaitlist: boolean("allow_waitlist").notNull().default(false),
   waitlistCapacity: smallint("waitlist_capacity").notNull().default(0),
   allowMakeUpClass: boolean("allow_make_up_class").notNull().default(false),

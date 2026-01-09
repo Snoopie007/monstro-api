@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
-import { format, addMinutes } from "date-fns";
+import { format, addMinutes, addDays, isSameDay } from "date-fns";
 import { CalendarIcon, Clock, Loader2 } from "lucide-react";
 
 import {
@@ -51,6 +51,11 @@ interface MakeUpCreditsInfo {
   remaining: number;
 }
 
+interface BlockedDate {
+  date: string;
+  reason: string;
+}
+
 interface ScheduleMakeupDialogProps {
   locationId: string;
   memberId: string;
@@ -80,6 +85,8 @@ export function ScheduleMakeupDialog({
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [creditsInfo, setCreditsInfo] = useState<MakeUpCreditsInfo | null>(null);
   const [loadingCredits, setLoadingCredits] = useState(false);
+  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
+  const [loadingBlockedDates, setLoadingBlockedDates] = useState(false);
 
   const form = useForm<MakeupClassFormData>({
     resolver: zodResolver(MakeupClassSchema),
@@ -97,7 +104,25 @@ export function ScheduleMakeupDialog({
   const useCustomTime = form.watch('useCustomTime');
   const sessionId = form.watch('sessionId');
 
-  // Fetch make-up credits info when dialog opens
+  const blockedDateSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const b of blockedDates) {
+      set.add(b.date.slice(0, 10));
+    }
+    return set;
+  }, [blockedDates]);
+
+  const isDateBlocked = (date: Date): boolean => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return blockedDateSet.has(dateStr);
+  };
+
+  const getBlockedReason = (date: Date): string | null => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const blocked = blockedDates.find(b => b.date.slice(0, 10) === dateStr);
+    return blocked?.reason || null;
+  };
+
   useEffect(() => {
     if (!open) return;
 
@@ -128,6 +153,31 @@ export function ScheduleMakeupDialog({
 
     fetchCreditsInfo();
   }, [open, locationId, memberId, originalReservation.memberSubscriptionId, originalReservation.memberPackageId]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    async function fetchBlockedDates() {
+      setLoadingBlockedDates(true);
+      try {
+        const startDate = new Date();
+        const endDate = addDays(new Date(), 90);
+        
+        const res = await fetch(
+          `/api/protected/loc/${locationId}/closures/calendar?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setBlockedDates(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch blocked dates:', error);
+      }
+      setLoadingBlockedDates(false);
+    }
+
+    fetchBlockedDates();
+  }, [open, locationId]);
 
   // Fetch available slots when date changes
   useEffect(() => {
@@ -310,9 +360,20 @@ export function ScheduleMakeupDialog({
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={(date) => date && field.onChange(date)}
+                          onSelect={(date) => date && !isDateBlocked(date) && field.onChange(date)}
                           initialFocus
-                          disabled={(date) => date < new Date()}
+                          disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            if (date < today) return true;
+                            return isDateBlocked(date);
+                          }}
+                          modifiers={{
+                            blocked: (date) => isDateBlocked(date),
+                          }}
+                          modifiersClassNames={{
+                            blocked: 'bg-red-100 dark:bg-red-900/20 text-red-400 line-through',
+                          }}
                         />
                       </PopoverContent>
                     </Popover>

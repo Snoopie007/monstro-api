@@ -38,7 +38,13 @@ export type EventColor =
   | "violet"
   | "rose"
   | "emerald"
-  | "orange";
+  | "orange"
+  | "cyan"
+  | "pink"
+  | "indigo"
+  | "teal"
+  | "lime"
+  | "red";
 
 export type CalendarEventData = {
   reservationId?: string;

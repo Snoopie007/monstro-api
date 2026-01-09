@@ -14,6 +14,7 @@ import {
 	startOfMonth,
 	startOfWeek,
 } from "date-fns";
+import { CalendarX, Wrench } from "lucide-react";
 
 import {
 	DraggableEvent,
@@ -26,12 +27,20 @@ import type { CalendarEvent } from "@/types";
 import { DefaultStartHour } from "@/components/event-calendar/constants";
 import { getAllEventsForDay, getEventsForDay, getSpanningEventsForDay, sortEvents } from "@/libs/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/ToolTip";
 import { useEventVisibility } from "@/hooks";
 import { cn } from "@/libs/utils";
+
+interface ClosedDate {
+	date: string;
+	reason: string;
+	type: 'holiday' | 'maintenance';
+}
 
 interface MonthViewProps {
 	currentDate: Date;
 	events: CalendarEvent[];
+	closedDates?: ClosedDate[];
 	onEventSelect: (event: CalendarEvent) => void;
 	onEventCreate: (startTime: Date) => void;
 }
@@ -52,6 +61,7 @@ const DayCellStyle = cn(
 export function MonthView({
 	currentDate,
 	events,
+	closedDates = [],
 	onEventSelect,
 	onEventCreate,
 }: MonthViewProps) {
@@ -86,7 +96,6 @@ export function MonthView({
 		return result;
 	}, [days]);
 
-	// Memoize events by day - compute all event data once instead of per-cell
 	const eventsByDay = useMemo(() => {
 		const map = new Map<string, DayEventData>();
 
@@ -107,6 +116,15 @@ export function MonthView({
 
 		return map;
 	}, [events, days]);
+
+	const closedDatesByDay = useMemo(() => {
+		const map = new Map<string, ClosedDate>();
+		closedDates.forEach(closure => {
+			const dateKey = closure.date.slice(0, 10);
+			map.set(dateKey, closure);
+		});
+		return map;
+	}, [closedDates]);
 
 	const handleEventClick = useCallback((event: CalendarEvent, e: React.MouseEvent) => {
 		e.stopPropagation();
@@ -144,13 +162,13 @@ export function MonthView({
 						className="grid grid-cols-7 [&:last-child>*]:border-b-0"
 					>
 						{week.map((day, dayIndex) => {
-							if (!day) return null; // Skip if day is undefined
+							if (!day) return null;
 
-							// O(1) lookup from pre-computed map instead of 4 filter operations
 							const dayKey = format(day, 'yyyy-MM-dd');
 							const eventData = eventsByDay.get(dayKey);
 							const allDayEvents = eventData?.allDayEvents || [];
 							const allEvents = eventData?.allEvents || [];
+							const closedDate = closedDatesByDay.get(dayKey);
 
 							const isReferenceCell = weekIndex === 0 && dayIndex === 0;
 
@@ -160,6 +178,7 @@ export function MonthView({
 									day={day}
 									allDayEvents={allDayEvents}
 									allEvents={allEvents}
+									closedDate={closedDate}
 									isCurrentMonth={isSameMonth(day, currentDate)}
 									isReferenceCell={isReferenceCell}
 									isMounted={isMounted}
@@ -179,11 +198,11 @@ export function MonthView({
 	);
 }
 
-// Memoized day cell component to prevent unnecessary re-renders
 interface DayCellProps {
 	day: Date;
 	allDayEvents: CalendarEvent[];
 	allEvents: CalendarEvent[];
+	closedDate?: ClosedDate;
 	isCurrentMonth: boolean;
 	isReferenceCell: boolean;
 	isMounted: boolean;
@@ -194,10 +213,19 @@ interface DayCellProps {
 	onEventSelect: (event: CalendarEvent) => void;
 }
 
+const ClosedDayCellStyle = cn(
+	"group border-foreground/5 data-outside-cell:bg-muted/50",
+	"data-outside-cell:text-muted/50 border-r border-b last:border-r-0 flex flex-col h-full",
+	"bg-gray-100 dark:bg-gray-800/50 relative",
+	"bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(0,0,0,0.03)_4px,rgba(0,0,0,0.03)_8px)]",
+	"dark:bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(255,255,255,0.02)_4px,rgba(255,255,255,0.02)_8px)]"
+);
+
 const DayCell = React.memo(function DayCell({
 	day,
 	allDayEvents,
 	allEvents,
+	closedDate,
 	isCurrentMonth,
 	isReferenceCell,
 	isMounted,
@@ -208,6 +236,7 @@ const DayCell = React.memo(function DayCell({
 	onEventSelect,
 }: DayCellProps) {
 	const cellId = `month-cell-${day.toISOString()}`;
+	const isClosed = !!closedDate;
 
 	const visibleCount = isMounted
 		? getVisibleEventCount(allDayEvents.length)
@@ -218,6 +247,39 @@ const DayCell = React.memo(function DayCell({
 	const remainingCount = hasMore
 		? allDayEvents.length - visibleCount
 		: 0;
+
+	if (isClosed) {
+		return (
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<div
+						className={ClosedDayCellStyle}
+						data-today={isToday(day) || undefined}
+						data-outside-cell={!isCurrentMonth || undefined}
+					>
+						<div className="flex flex-col h-full p-1 cursor-not-allowed">
+							<div className={cn(
+								"group-data-today:text-indigo-500 group-data-today:font-medium",
+								"inline-flex w-6 h-auto items-center justify-center rounded-lg text-sm text-muted-foreground"
+							)}>
+								{format(day, "d")}
+							</div>
+							<div className="flex-1 flex items-center justify-center">
+								{closedDate.type === 'holiday' ? (
+									<CalendarX className="size-4 text-gray-400 dark:text-gray-500" />
+								) : (
+									<Wrench className="size-4 text-gray-400 dark:text-gray-500" />
+								)}
+							</div>
+						</div>
+					</div>
+				</TooltipTrigger>
+				<TooltipContent>
+					<span className="font-medium">Closed:</span> {closedDate.reason}
+				</TooltipContent>
+			</Tooltip>
+		);
+	}
 
 	return (
 		<div

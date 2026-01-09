@@ -37,7 +37,6 @@ export const memberPlans = pgTable("member_plans", {
   currency: text("currency").notNull().default("USD"),
   totalClassLimit: integer("total_class_limit"),
   classLimitInterval: IntervalType("class_limit_interval"),
-  classLimitThreshold: integer("class_limit_threshold"),
   billingAnchorConfig: jsonb("billing_anchor_config").$type<BillingCycleAnchorConfig>().default(sql`'{}'::jsonb`),
   allowProration: boolean("allow_proration").notNull().default(false),
   makeUpCredits: integer("make_up_credits").notNull().default(0),
