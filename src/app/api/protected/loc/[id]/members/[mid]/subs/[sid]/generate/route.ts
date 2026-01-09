@@ -36,7 +36,7 @@ export async function POST(
 		// Get subscription with plan and pricing
 		const subscription = await db.query.memberSubscriptions.findFirst({
 			where: eq(memberSubscriptions.id, params.sid),
-			with: { plan: true, pricing: true },
+			with: { pricing: { with: { plan: true } } },
 		});
 
 		if (!subscription) {

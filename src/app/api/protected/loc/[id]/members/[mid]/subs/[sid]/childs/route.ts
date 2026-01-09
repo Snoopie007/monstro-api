@@ -43,7 +43,11 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
                     eq(memberSubscriptions.status, "active")
                 ),
             with: {
-                plan: true,
+                pricing: {
+                    with: {
+                        plan: true,
+                    }
+                },
                 location: true,
             },
         });
@@ -51,7 +55,8 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
         if (!sub) {
             throw new Error("Plan not found");
         }
-        if (!sub.plan.family) {
+        const plan = sub.pricing?.plan;
+        if (!plan?.family) {
             throw new Error("This is not a family plan");
         }
 
@@ -64,7 +69,7 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
                 eq(memberSubscriptions.status, "active")
             ));
 
-        if (result.count >= sub.plan.familyMemberLimit) {
+        if (result.count >= (plan.familyMemberLimit || 0)) {
             throw new Error("Family member limit reached");
         }
 
@@ -160,7 +165,11 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
             where: (memberSubscriptions, { eq }) => eq(memberSubscriptions.id, params.sid),
             with: {
                 member: true,
-                plan: true,
+                pricing: {
+                    with: {
+                        plan: true,
+                    }
+                },
             },
         });
 

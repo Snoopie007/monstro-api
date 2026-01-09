@@ -109,6 +109,8 @@ export async function POST(req: NextRequest, props: Props) {
                 status: "active",
                 startDate,
                 expireDate,
+                makeUpCredits: 0,
+                allowMakeUpCarryOver: false,
             }).returning();
 
             /** Create Transaction */

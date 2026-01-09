@@ -47,7 +47,7 @@ export async function POST(
     if (type === "from-subscription" && selectedSubscriptionId) {
       const subscription = await db.query.memberSubscriptions.findFirst({
         where: eq(memberSubscriptions.id, selectedSubscriptionId),
-        with: { plan: true, pricing: true },
+        with: { pricing: { with: { plan: true } } },
       });
 
       if (!subscription) {
