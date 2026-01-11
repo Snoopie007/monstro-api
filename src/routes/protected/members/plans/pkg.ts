@@ -20,14 +20,20 @@ export function memberPlansPkgRoutes(app: Elysia) {
                         eq(memberPackages.status, "active")
                     ),
                 with: {
-                    plan: true,
+                    pricing: {
+                        with: {
+                            plan: true,
+                        },
+                    },
                     location: true,
                 },
             });
             if (!pkg) {
                 return status(404, { error: "Plan not found" });
             }
-            if (!pkg.plan.family) {
+
+            const { plan } = pkg.pricing;
+            if (!plan.family) {
                 return status(400, { error: "This is not a family plan" });
 
             }
@@ -46,7 +52,7 @@ export function memberPlansPkgRoutes(app: Elysia) {
                     eq(memberPackages.status, "active")
                 ));
 
-            if (pkg.plan?.familyMemberLimit && result && result.count >= pkg.plan.familyMemberLimit) {
+            if (plan?.familyMemberLimit && result && result.count >= plan.familyMemberLimit) {
                 return status(400, { error: "Family member limit reached" });
             }
 
@@ -88,7 +94,7 @@ export function memberPlansPkgRoutes(app: Elysia) {
             }
 
             const sharedData = {
-                memberPlanId: pkg.memberPlanId,
+                memberPlanPricingId: pkg.pricing.id,
                 locationId: locationId,
                 memberId: familyMemberId,
                 parentId: pid,
@@ -136,7 +142,11 @@ export function memberPlansPkgRoutes(app: Elysia) {
                 where: (mp, { eq }) => eq(mp.id, pid),
                 with: {
                     childs: true,
-                    plan: true,
+                    pricing: {
+                        with: {
+                            plan: true,
+                        },
+                    },
                 },
             });
 
@@ -144,7 +154,8 @@ export function memberPlansPkgRoutes(app: Elysia) {
                 return status(404, { error: "Package not found" });
             }
 
-            if (pkg.plan.familyMemberLimit && pkg.childs.length >= pkg.plan.familyMemberLimit) {
+            const { plan } = pkg.pricing;
+            if (plan?.familyMemberLimit && pkg.childs.length >= plan.familyMemberLimit) {
                 return status(400, { error: "Family member limit reached." });
             }
         }

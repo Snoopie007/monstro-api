@@ -1,54 +1,25 @@
 import { db } from "@/db/db";
-import type { MemberPackage, MemberSubscription } from "@/types/member";
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { memberPlansPkgRoutes } from "./pkg";
 import { memberPlansSubRoutes } from "./sub";
-import { z } from "zod";
+
 const MemberPlansRootProps = {
-    params: z.object({
-        pid: z.string(),
+    params: t.Object({
+        pid: t.String(),
+        mid: t.String(),
     }),
 };
 export const memberPlans = new Elysia({ prefix: '/plans/:pid' })
-    .get('/', async ({ status, params }) => {
+    .get('/invoices', async ({ status, params }) => {
         const { pid } = params;
-
         try {
-            let plans: MemberSubscription | MemberPackage | undefined;
-
-            if (pid.startsWith("sub")) {
-                plans = await db.query.memberSubscriptions.findFirst({
-                    where: (subscriptions, { eq }) => eq(subscriptions.id, pid),
-                    with: {
-                        plan: {
-                            with: {
-                                planPrograms: {
-                                    with: {
-                                        program: true,
-                                    },
-                                },
-                            },
-                        },
-                        invoices: true,
-                    },
-                });
-            } else {
-                plans = await db.query.memberPackages.findFirst({
-                    where: (packages, { eq }) => eq(packages.id, pid),
-                    with: {
-                        plan: {
-                            with: {
-                                planPrograms: {
-                                    with: {
-                                        program: true,
-                                    },
-                                },
-                            },
-                        },
-                    },
-                });
-            }
-            return status(200, plans || []);
+            const invoices = await db.query.memberInvoices.findMany({
+                where: (mi, { eq }) => eq(mi.memberSubscriptionId, pid),
+                with: {
+                    member: true,
+                },
+            });
+            return status(200, invoices);
         } catch (error) {
             console.error(error);
             return status(500, { error: "Internal Server Error" });

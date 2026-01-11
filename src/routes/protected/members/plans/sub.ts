@@ -32,7 +32,11 @@ export function memberPlansSubRoutes(app: Elysia) {
                         eq(memberSubscriptions.status, "active")
                     ),
                 with: {
-                    plan: true,
+                    pricing: {
+                        with: {
+                            plan: true,
+                        },
+                    },
                     location: true,
                 },
             });
@@ -40,7 +44,9 @@ export function memberPlansSubRoutes(app: Elysia) {
             if (!sub) {
                 return status(404, { error: "Plan not found" });
             }
-            if (!sub.plan.family) {
+
+            const { plan } = sub.pricing;
+            if (!plan.family) {
                 return status(400, { error: "This is not a family plan" });
             }
 
@@ -58,8 +64,8 @@ export function memberPlansSubRoutes(app: Elysia) {
                 ));
 
             if (
-                sub.plan?.familyMemberLimit &&
-                result && result.count >= sub.plan.familyMemberLimit
+                plan?.familyMemberLimit &&
+                result && result.count >= plan.familyMemberLimit
             ) {
                 return status(400, { error: "Family member limit reached" });
             }
@@ -102,7 +108,7 @@ export function memberPlansSubRoutes(app: Elysia) {
             }
 
             const sharedData = {
-                memberPlanId: sub?.memberPlanId,
+                memberPlanPricingId: sub?.pricing.id,
                 locationId: locationId,
                 memberId: memberLocation.memberId,
                 parentId: pid,
@@ -153,7 +159,11 @@ export function memberPlansSubRoutes(app: Elysia) {
                 where: (ms, { eq }) => eq(ms.id, pid),
                 with: {
                     childs: true,
-                    plan: true,
+                    pricing: {
+                        with: {
+                            plan: true,
+                        },
+                    },
                 },
             });
 
@@ -161,7 +171,9 @@ export function memberPlansSubRoutes(app: Elysia) {
                 return status(404, { error: "Subscription not found" });
             }
 
-            if (sub.plan.familyMemberLimit && sub.childs.length >= sub.plan.familyMemberLimit) {
+            const { plan } = sub.pricing;
+
+            if (plan?.familyMemberLimit && sub.childs.length >= plan.familyMemberLimit) {
                 return status(400, { error: "Family member limit reached." });
             }
         }

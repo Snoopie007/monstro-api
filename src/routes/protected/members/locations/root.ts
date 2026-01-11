@@ -1,4 +1,4 @@
-import { Elysia } from 'elysia';
+import { Elysia, t } from 'elysia';
 import { db } from '@/db/db';
 import { mlReservationsRoutes } from './reservations';
 import { mlPlansRoutes } from './plans';
@@ -7,22 +7,17 @@ import { mlDocsRoutes } from './docs';
 import { mlReferralsRoutes } from './referrals';
 import { mlRewardsRoutes } from './rewards';
 import { mlSupportRoutes } from './support';
-import { z } from "zod";
-import { memberLocations } from '@/db/schemas/locations';
+import { mlPointsRoutes } from './points';
+import { memberLocations } from '@/db/schemas';
 
 
-const GetMemberLocationsProps = {
-    params: z.object({
-        mid: z.string(),
+const GeMLProps = {
+    params: t.Object({
+        mid: t.String(),
     }),
 };
 
-const GetMemberLocationProps = {
-    params: z.object({
-        mid: z.string(),
-        lid: z.string(),
-    })
-};
+
 
 export const membersLocations = new Elysia({ prefix: '/locations' })
     .get('/', async ({ params, status }) => {
@@ -33,7 +28,12 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             const mls = await db.query.memberLocations.findMany({
                 where: (memberLocations, { eq }) => eq(memberLocations.memberId, mid),
                 with: {
-                    location: true
+                    location: {
+                        with: {
+                            locationState: true,
+                        },
+                    },
+                    member: true
                 }
             })
             return status(200, mls);
@@ -41,7 +41,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }
         }
-    }, GetMemberLocationsProps)
+    }, GeMLProps)
     .post('/', async ({ params, status, body }) => {
         const { mid } = params;
         const { lid } = body;
@@ -58,35 +58,12 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             return { error: 'Internal server error' }
         }
     }, {
-        ...GetMemberLocationsProps,
-        body: z.object({
-
-            lid: z.string(),
+        ...GeMLProps,
+        body: t.Object({
+            lid: t.String(),
         }),
     })
     .group('/:lid', (app) => {
-        app.get('/', async ({ params, status }) => {
-            const { lid, mid } = params;
-
-            try {
-                const ml = await db.query.memberLocations.findFirst({
-                    where: (l, { eq, and }) => and(eq(l.locationId, lid), eq(l.memberId, mid)),
-                    with: {
-                        pointsHistory: true,
-                        member: true,
-                    }
-                });
-
-                return status(200, {
-                    ...ml,
-                });
-            } catch (error) {
-                console.error(error);
-                status(500, { error: 'Internal server error' });
-                return { error: 'Internal server error' }
-            }
-        }, GetMemberLocationProps)
-
         app.use(mlReservationsRoutes)
         app.use(mlPlansRoutes)
         app.use(mlAchievementsRoutes)
@@ -94,6 +71,7 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
         app.use(mlRewardsRoutes)
         app.use(mlReferralsRoutes)
         app.use(mlSupportRoutes)
+        app.use(mlPointsRoutes)
         return app;
 
     })

@@ -43,7 +43,7 @@ export const locations = pgTable("locations", {
 	website: text("website"),
 	country: text("country"),
 	phone: text("phone"),
-	timezone: text("timezone"),
+	timezone: text("timezone").notNull().default("America/New_York"),
 	logoUrl: text("logo_url"),
 	slug: text("slug").unique().notNull(),
 	metadata: jsonb("metadata"),

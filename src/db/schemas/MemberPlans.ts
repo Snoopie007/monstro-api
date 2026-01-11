@@ -36,8 +36,7 @@ export const memberPlans = pgTable("member_plans", {
 	type: PlanType("type").notNull().default("recurring"),
 	currency: text("currency").notNull().default("USD"),
 	totalClassLimit: integer("total_class_limit"),
-	classLimitInterval: IntervalType("class_limit_interval"),
-	classLimitThreshold: integer("class_limit_threshold"),
+	classLimitInterval: text("class_limit_interval", { enum: ["week", "month", "term"] }),
 	billingAnchorConfig: jsonb("billing_anchor_config").$type<BillingCycleAnchorConfig>().default(sql`'{}'::jsonb`),
 	allowProration: boolean("allow_proration").notNull().default(false),
 	groupId: text("group_id").references(() => groups.id, { onDelete: "set null" }),
@@ -78,19 +77,18 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 	cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
 	trialEnd: timestamp("trial_end", { withTimezone: true }),
 	endedAt: timestamp("ended_at", { withTimezone: true }),
+	classCredits: integer("class_credits").default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull().default("cash"),
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
-},
-	(table) => [
-		foreignKey({
-			columns: [table.parentId],
-			foreignColumns: [table.id],
-			name: "parent_child_fk",
-		}),
-	]
-);
+}, (table) => [
+	foreignKey({
+		columns: [table.parentId],
+		foreignColumns: [table.id],
+		name: "parent_child_fk",
+	}),
+]);
 
 export const memberPackages = pgTable("member_packages", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),

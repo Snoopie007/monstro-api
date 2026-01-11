@@ -1,20 +1,24 @@
 import { db } from "@/db/db";
 import type { ExtendedProgramSession } from "@/types/program";
 import { addDays, addMinutes } from "date-fns";
-import Elysia from "elysia";
+import { Elysia, t } from "elysia";
 import { generateVRs } from "@/libs/utils";
-import { z } from "zod";
 
 
-const LocationSessionsProps = {
-    query: z.object({
-        planId: z.string(),
-        date: z.string(),
+const SessionsProps = {
+    params: t.Object({
+        lid: t.String(),
+    }),
+    query: t.Object({
+        programIds: t.String(),
+        date: t.String(),
     }),
 };
 export async function locationSessions(app: Elysia) {
     return app.get('/sessions', async ({ params, status, query }) => {
-        const { planId, date } = query;
+        const { lid } = params;
+        const { programIds, date } = query;
+        const programIdsArray = programIds.split(",");
 
         if (!date) {
             return status(400, { error: "Invalid request" });
@@ -25,18 +29,21 @@ export async function locationSessions(app: Elysia) {
 
         try {
 
-            const planPrograms = await db.query.planPrograms.findMany({
-                where: (planPrograms, { eq }) => eq(planPrograms.planId, planId!),
-                with: {
-                    program: {
-                        with: {
-                            sessions: true,
-                        },
-                    },
+            const location = await db.query.locations.findFirst({
+                where: (locations, { eq }) => eq(locations.id, lid),
+                columns: {
+                    timezone: true,
                 },
             });
 
-            const sessionIds = planPrograms.flatMap((pp) => pp.program.sessions.map((s) => s.id));
+            const programs = await db.query.programs.findMany({
+                where: (programs, { inArray }) => inArray(programs.id, programIdsArray),
+                with: {
+                    sessions: true,
+                },
+            });
+
+            const sessionIds = programs.flatMap((program) => program.sessions.map((session) => session.id));
 
             const reservations = await db.query.reservations.findMany({
                 where: (reservations, { and, between, inArray }) => and(
@@ -65,18 +72,19 @@ export async function locationSessions(app: Elysia) {
 
             const sessions: ExtendedProgramSession[] = [];
 
-            planPrograms.forEach((pp) => {
-                pp.program.sessions.forEach((session) => {
-                    const sessionTime = new Date();
-                    const [hours, minutes] = session.time.split(":").map(Number);
-                    sessionTime.setHours(hours!, minutes!, 0, 0);
+            programs.forEach((program) => {
+                program.sessions.forEach((session) => {
+                    const startTime = new Date();
+                    const [hours, minutes, seconds] = session.time.split(":").map(Number);
+                    startTime.setHours(hours!, minutes!, seconds!, 0);
+                    const endTime = addMinutes(startTime, session.duration);
 
                     sessions.push({
                         ...session,
                         reservations: all.filter((r) => r.sessionId === session.id),
-                        program: pp.program,
-                        startTime: sessionTime,
-                        endTime: addMinutes(sessionTime, session.duration),
+                        program: program,
+                        startTime,
+                        endTime,
                     } as ExtendedProgramSession);
                 });
             });
@@ -87,5 +95,5 @@ export async function locationSessions(app: Elysia) {
             console.error(error);
             return status(500, { error: "Internal server error" });
         }
-    }, LocationSessionsProps)
+    }, SessionsProps)
 }

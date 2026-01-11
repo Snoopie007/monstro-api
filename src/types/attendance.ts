@@ -17,6 +17,8 @@ export type ExtendedAttendance = Attendance & {
   programName: string;
 };
 
+export type InsertReservation = typeof reservations.$inferInsert;
+
 export type Reservation = typeof reservations.$inferSelect & {
   isRecurring?: boolean;
   recurringId?: string;
