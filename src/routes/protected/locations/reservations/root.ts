@@ -50,6 +50,9 @@ export async function locationReservations(app: Elysia) {
                 const memberId = memberPlan.memberId;
                 const now = toZonedTime(new Date(), location!.timezone);
 
+                if (!location) {
+                    throw new Error("Location not found");
+                }
 
                 const reachedClassLimit = await checkClassLimit({ isPackage, memberPlan, now });
                 if (reachedClassLimit) {
@@ -83,97 +86,73 @@ export async function locationReservations(app: Elysia) {
                 }
 
 
-                let reservation: Reservation | null = null;
 
-                await db.transaction(async (tx) => {
-                    const [res] = await tx.insert(reservations).values({
+                const reservation = await db.transaction(async (tx) => {
+                    // Explicitly cast to Reservation[] (or whatever Drizzle returns)
+                    const inserted = await tx.insert(reservations).values({
                         memberId,
                         locationId: lid,
                         sessionId: session.id,
                         startOn: startTime,
                         endOn: endTime,
                         ...session,
-                        ...(isPackage) ? {
+                        ...(isPackage ? {
                             memberPackageId: memberPlan.id,
                         } : {
                             memberSubscriptionId: memberPlan.id,
-                        }
+                        })
                     }).returning();
-                    if (isPackage) {
 
+                    // Cast result to Reservation so reservation.id exists
+                    const res = inserted[0] as Reservation | undefined;
+                    if (!res) {
+                        await tx.rollback();
+                        throw new Error("Failed to create reservation");
+                    }
+                    if (isPackage) {
                         const pkg = memberPlan as MemberPackage;
                         await tx.update(memberPackages).set({
-                            totalClassAttended: (pkg.totalClassAttended || 0) + 1
+                            totalClassAttended: Math.max((pkg.totalClassAttended || 0) + 1, 0)
                         }).where(eq(memberPackages.id, memberPlan.id));
                     } else {
                         const sub = memberPlan as MemberSubscription;
                         if (sub.plan?.classLimitInterval === 'term') {
-                            // Avoid going below 0
-                            const credits = sub.classCredits || 0;
                             await tx.update(memberSubscriptions).set({
-                                classCredits: credits > 0 ? credits - 1 : 0
+                                classCredits: Math.max((sub.classCredits || 0) - 1, 0)
                             }).where(eq(memberSubscriptions.id, memberPlan.id));
                         }
                     }
-                    if (!res) {
-                        await tx.rollback();
-                        reservation = null;
-                    } else {
-                        reservation = res;
-                    }
+                    return res;
                 });
 
-                console.log('reservation', reservation);
-                if (!reservation) {
-                    return status(500, { error: "Failed to create reservation" });
-                }
+
                 // Schedule class reminder jobs using new queue-based system
-                // try {
-                //     const locationState = await db.query.locationState.findFirst({
-                //         where: (ls, { eq }) => eq(ls.locationId, lid)
-                //     });
+                try {
+                    const locationState = location.locationState;
+                    const ids = {
+                        reservationId: reservation.id,
+                        locationId: lid,
+                    }
+                    if (locationState?.planId && locationState.planId >= 2) {
+                        // Single reservation - schedule class reminder and missed check
+                        await classQueue.add('send-class-reminder', ids, {
+                            jobId: `class-reminder-${reservation.id}`,
+                            attempts: 3,
+                            backoff: { type: 'exponential', delay: 5000 }
+                        });
 
-                //     if (locationState?.planId && locationState.planId >= 2) {
-                //         if (!recurring) {
-                //             // Single reservation - schedule class reminder and missed check
-                //             await classQueue.add('send-class-reminder', {
-                //                 reservationId: reservation.id,
-                //                 locationId: lid,
-                //             }, {
-                //                 jobId: `class-reminder-${reservation.id}`,
-                //                 attempts: 3,
-                //                 backoff: { type: 'exponential', delay: 5000 }
-                //             });
+                        await classQueue.add('check-missed-class', ids, {
+                            jobId: `missed-class-${reservation.id}`,
+                            attempts: 3,
+                            backoff: { type: 'exponential', delay: 5000 }
+                        });
 
-                //             await classQueue.add('check-missed-class', {
-                //                 reservationId: reservation.id,
-                //                 locationId: lid,
-                //             }, {
-                //                 jobId: `missed-class-${reservation.id}`,
-                //                 attempts: 3,
-                //                 backoff: { type: 'exponential', delay: 5000 }
-                //             });
-
-                //             console.log(`📧 Scheduled class reminders for reservation ${reservation.id}`);
-                //         } else {
-                //             // Recurring reservation - schedule recurring reminder job
-                //             await classQueue.add('process-recurring-class-reminder', {
-                //                 recurringReservationId: reservation.recurringId,
-                //                 locationId: lid,
-                //                 reminderCount: 0,
-                //             }, {
-                //                 jobId: `recurring-class-reminder-${reservation.recurringId}`,
-                //                 attempts: 3,
-                //                 backoff: { type: 'exponential', delay: 5000 }
-                //             });
-
-                //             console.log(`📧 Scheduled recurring class reminders for recurring reservation ${reservation.recurringId}`);
-                //         }
-                //     }
-                // } catch (error) {
-                //     console.error('Error scheduling class reminder jobs:', error);
-                //     // Don't fail the reservation if job scheduling fails
-                // }
+                        console.log(`📧 Scheduled class reminders for reservation ${reservation.id}`);
+                    }
+                } catch (error) {
+                    console.error('Error scheduling class reminder jobs:', error);
+                    // Don't fail the reservation if job scheduling fails
+                }
 
                 const perfEnd = performance.now();
                 console.log(`⏱️  [PERF] POST /reservations - Success: ${(perfEnd - perfStart).toFixed(2)}ms`);

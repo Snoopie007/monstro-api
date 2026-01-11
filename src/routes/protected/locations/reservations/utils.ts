@@ -15,7 +15,11 @@ export async function getMemberPlan(memberPlanId: string): Promise<MemberPackage
                 eq(memberPackages.status, "active")
             ),
             with: {
-                location: true,
+                location: {
+                    with: {
+                        locationState: true,
+                    },
+                },
                 pricing: {
                     with: {
                         plan: true,
@@ -30,7 +34,11 @@ export async function getMemberPlan(memberPlanId: string): Promise<MemberPackage
                 eq(memberSubscriptions.status, "active")
             ),
             with: {
-                location: true,
+                location: {
+                    with: {
+                        locationState: true,
+                    },
+                },
                 pricing: {
                     with: {
                         plan: true,

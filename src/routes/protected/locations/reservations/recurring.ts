@@ -48,7 +48,9 @@ export async function recurringReservationRoutes(app: Elysia) {
             const memberId = memberPlan.memberId;
             const now = toZonedTime(new Date(), location!.timezone);
 
-
+            if (!location) {
+                throw new Error("Location not found");
+            }
             // location time
             const locationTime = formatInTimeZone(`${date}T${session.time}`, location!.timezone, 'yyyy-MM-dd HH:mm:ss');
             const startTime = new Date(locationTime);
@@ -107,52 +109,26 @@ export async function recurringReservationRoutes(app: Elysia) {
             };
 
             // Schedule class reminder jobs using new queue-based system
-            // try {
-            //     const locationState = await db.query.locationState.findFirst({
-            //         where: (ls, { eq }) => eq(ls.locationId, lid)
-            //     });
+            try {
+                const locationState = location.locationState;
 
-            //     if (locationState?.planId && locationState.planId >= 2) {
-            //         if (!recurring) {
-            //             // Single reservation - schedule class reminder and missed check
-            //             await classQueue.add('send-class-reminder', {
-            //                 reservationId: reservation.id,
-            //                 locationId: lid,
-            //             }, {
-            //                 jobId: `class-reminder-${reservation.id}`,
-            //                 attempts: 3,
-            //                 backoff: { type: 'exponential', delay: 5000 }
-            //             });
+                if (locationState?.planId && locationState.planId >= 2) {
+                    await classQueue.add('process-recurring-class-reminder', {
+                        recurringReservationId: recurringReservation.id,
+                        locationId: lid,
+                        reminderCount: 0,
+                    }, {
+                        jobId: `recurring-class-reminder-${recurringReservation.id}`,
+                        attempts: 3,
+                        backoff: { type: 'exponential', delay: 5000 }
+                    });
 
-            //             await classQueue.add('check-missed-class', {
-            //                 reservationId: reservation.id,
-            //                 locationId: lid,
-            //             }, {
-            //                 jobId: `missed-class-${reservation.id}`,
-            //                 attempts: 3,
-            //                 backoff: { type: 'exponential', delay: 5000 }
-            //             });
-
-            //             console.log(`📧 Scheduled class reminders for reservation ${reservation.id}`);
-            //         } else {
-            //             // Recurring reservation - schedule recurring reminder job
-            //             await classQueue.add('process-recurring-class-reminder', {
-            //                 recurringReservationId: reservation.recurringId,
-            //                 locationId: lid,
-            //                 reminderCount: 0,
-            //             }, {
-            //                 jobId: `recurring-class-reminder-${reservation.recurringId}`,
-            //                 attempts: 3,
-            //                 backoff: { type: 'exponential', delay: 5000 }
-            //             });
-
-            //             console.log(`📧 Scheduled recurring class reminders for recurring reservation ${reservation.recurringId}`);
-            //         }
-            //     }
-            // } catch (error) {
-            //     console.error('Error scheduling class reminder jobs:', error);
-            //     // Don't fail the reservation if job scheduling fails
-            // }
+                    console.log(`📧 Scheduled recurring class reminders for recurring reservation ${recurringReservation.id}`);
+                }
+            } catch (error) {
+                console.error('Error scheduling class reminder jobs:', error);
+                // Don't fail the reservation if job scheduling fails
+            }
 
             const perfEnd = performance.now();
             console.log(`⏱️  [PERF] POST /reservations - Success: ${(perfEnd - perfStart).toFixed(2)}ms`);
