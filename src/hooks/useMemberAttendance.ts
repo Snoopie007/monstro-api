@@ -1,10 +1,11 @@
 'use client'
-import { useMemo, useState } from 'react'
+import { generateTestAttendanceData } from '@/libs/utils'
+import type { AttendanceResponse, ExtendedAttendance, MissedReservation } from '@/types/attendance'
 import { useQuery } from '@tanstack/react-query'
 import { formatDate, subDays } from 'date-fns'
 import { format } from 'date-fns-tz'
+import { useMemo, useState } from 'react'
 import type { DateRange } from 'react-day-picker'
-import type { ExtendedAttendance, MissedReservation, AttendanceResponse } from '@/types/attendance'
 
 async function fetchAttendanceData(
     locationId: string,
@@ -29,16 +30,19 @@ export const useMemberAttendance = (id: string, mid: string) => {
         to: now,
     })
 
+    const isTestMember = mid === 'mbr_E9kMCO1HQQm4J3G7TFj0Zw'
+    const testAttendances = isTestMember ? generateTestAttendanceData() : undefined
+
     const { data, isLoading, error } = useQuery({
         queryKey: ['member-attendance', id, mid],
         queryFn: () => fetchAttendanceData(id, mid),
-        enabled: !!id && !!mid,
+        enabled: !!id && !!mid && !isTestMember,
         staleTime: 60 * 1000,
         refetchOnWindowFocus: false,
     })
 
-    const attendances = data?.attendances ?? []
-    const missedReservations = data?.missedReservations ?? []
+    const attendances = isTestMember ? testAttendances : data?.attendances ?? []
+    const missedReservations = isTestMember ? [] : data?.missedReservations ?? []
 
     const formattedAttendancesDays = useMemo(() => {
         if (!attendances || attendances.length === 0) {
@@ -85,7 +89,7 @@ export const useMemberAttendance = (id: string, mid: string) => {
                 id: string
                 programName: string
                 startOn: Date | string
-                programId?: string
+                programId: string | null
             }>
         }> = []
 
@@ -127,7 +131,7 @@ export const useMemberAttendance = (id: string, mid: string) => {
                     id: res.id,
                     programName: res.programName,
                     startOn: res.startOn,
-                    programId: res.programId ?? undefined,
+                    programId: res.programId,
                 }))
 
             allDates.push({
