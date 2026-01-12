@@ -1,6 +1,7 @@
 import { locationAchievements } from "./achievements";
 import { locationCheckin } from "./checkin";
 import { locationDocs } from "./docs";
+import { locationNotifications } from "./notifications";
 import { locationReservations } from "./reservations";
 import { locationRewards } from "./rewards";
 import { locationSessions } from "./sessions";
@@ -58,6 +59,7 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
         app.use(locationAchievements);
         app.use(locationCheckin);
         app.use(locationDocs);
+        app.use(locationNotifications);
         app.use(locationReservations);
         app.use(locationRewards);
         app.use(locationSessions);
