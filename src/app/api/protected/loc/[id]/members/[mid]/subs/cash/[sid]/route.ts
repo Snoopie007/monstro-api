@@ -27,7 +27,11 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
         const subscription = await db.query.memberSubscriptions.findFirst({
             where: (ms, { eq }) => eq(ms.id, sid),
             with: {
-                plan: true,
+                pricing: {
+                    with: {
+                        plan: true,
+                    }
+                },
                 member: true
             }
         });

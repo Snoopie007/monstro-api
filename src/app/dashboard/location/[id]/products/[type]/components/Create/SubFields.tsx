@@ -80,6 +80,33 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
 					)}
 				/>
 			</fieldset>
+			<fieldset>
+				<FormField
+					control={form.control}
+					name="makeUpCredits"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel size={"tiny"}>Make-up Credits</FormLabel>
+							<FormControl>
+								<Input
+									type="number"
+									placeholder="0"
+									min={0}
+									onChange={(e) => {
+										const value = e.target.value;
+										field.onChange(value ? parseInt(value) : undefined);
+									}}
+									value={field.value || ""}
+								/>
+							</FormControl>
+							<FormDescription className="text-xs">
+								Number of make-up classes included per billing period. Leave blank or 0 for none.
+							</FormDescription>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+			</fieldset>
 
 			<Collapsible>
 				<CollapsibleTrigger className="flex group flex-row items-center gap-1 ">

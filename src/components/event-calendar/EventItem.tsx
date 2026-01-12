@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { DraggableAttributes } from "@dnd-kit/core";
 import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
 import { differenceInMinutes, format, getMinutes, isPast } from "date-fns";
+import { AlertTriangle, CalendarCheck } from "lucide-react";
 
 import {
 	getBorderRadiusClasses,
@@ -151,7 +152,13 @@ export function EventItem({
 		)} - ${formatTimeWithOptionalMinutes(displayEnd)}`;
 	};
 
+	// Check if event is in the past
+	const isEventInPast = isPast(displayEnd);
+
 	if (view === "month") {
+		const isMakeUp = event.data?.isMakeUpClass;
+		const isMissed = isEventInPast && event.data?.hasCheckIn === false && event.data?.members?.length > 0;
+		
 		return (
 			<EventWrapper
 				event={event}
@@ -161,6 +168,8 @@ export function EventItem({
 				onClick={onClick}
 				className={cn(
 					"mt-[var(--event-gap)] h-[var(--event-height)] items-center text-[10px] sm:text-xs cursor-pointer",
+					isMissed && "border-l-2 border-l-amber-500",
+					isMakeUp && "border-l-2 border-l-emerald-500",
 					className
 				)}
 				currentTime={currentTime}
@@ -170,7 +179,13 @@ export function EventItem({
 				onTouchStart={onTouchStart}
 			>
 				{children || (
-					<span className="truncate">
+					<span className="truncate flex items-center gap-1">
+						{isMissed && (
+							<AlertTriangle className="size-3 text-amber-500 flex-shrink-0" />
+						)}
+						{isMakeUp && (
+							<CalendarCheck className="size-3 text-emerald-500 flex-shrink-0" />
+						)}
 						{!event.allDay && (
 							<span className="truncate font-normal opacity-70 sm:text-[11px]">
 								{formatTimeWithOptionalMinutes(displayStart)}{" "}
@@ -227,8 +242,6 @@ export function EventItem({
 	}
 
 	// Agenda view - kept separate since it's significantly different
-	const isEventInPast = isPast(new Date(event.end));
-	
 	return (
 		<button
 			className={cn(

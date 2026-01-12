@@ -28,8 +28,18 @@ export type LocationState = typeof locationState.$inferSelect & {
 }
 
 
+export type HolidayBehavior = 'block_all' | 'block_new_only' | 'notify_only';
+
+export type HolidaySettings = {
+  blockedHolidays: number[];
+  defaultBehavior: HolidayBehavior;
+  advanceBlockDays: number;
+  autoNotifyMembers: boolean;
+};
+
 export type LocationSettings = {
   theme: 'default';
   passOnFees: boolean;
   processingMethods: PaymentType[];
+  holidays?: HolidaySettings;
 }

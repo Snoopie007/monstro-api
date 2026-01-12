@@ -11,7 +11,8 @@ import {
 } from "@/components/ui";
 import {
     Form, FormField, FormLabel, FormMessage, FormItem, FormControl,
-    Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, FormDescription
+    Input, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, FormDescription,
+    ProgramColorPicker
 } from "@/components/forms";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,7 +46,8 @@ export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
             capacity: program?.capacity || 0,
             minAge: program?.minAge || 0,
             maxAge: program?.maxAge || 0,
-            instructorId: program?.instructorId || undefined
+            instructorId: program?.instructorId || undefined,
+            color: program?.color ?? 1
         },
         mode: "onChange",
     });
@@ -59,9 +61,11 @@ export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
                 capacity: program.capacity || 0,
                 minAge: program.minAge || 0,
                 maxAge: program.maxAge || 0,
-                instructorId: program.instructorId || undefined
+                instructorId: program.instructorId || undefined,
+                color: program.color ?? 1
             });
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [program, open]);
 
     async function submitForm(v: z.infer<typeof UpdateProgramSchema>) {
@@ -86,8 +90,7 @@ export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
                 return;
             }
 
-            const data = await result.json();
-            mutate({ ...program, ...data });
+            await mutate();
             toast.success("Program updated successfully");
             setOpen(false);
         } catch (error) {
@@ -172,6 +175,23 @@ export function UpdateProgram({ open, setOpen, program }: UpdateProgramProps) {
                                 </FormItem>
                             )} />
                         )}
+                        <FormField
+                            control={form.control}
+                            name="color"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel size={"tiny"}>Calendar Color</FormLabel>
+                                    <FormDescription>Select a color for this program on the calendar.</FormDescription>
+                                    <FormControl>
+                                        <ProgramColorPicker
+                                            value={field.value}
+                                            onChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <div className='flex flex-row items-center gap-2 w-full'>
                             <FormField
                                 control={form.control}

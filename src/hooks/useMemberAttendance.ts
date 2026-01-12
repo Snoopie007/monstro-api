@@ -1,11 +1,26 @@
 'use client'
-import { useMemo, useState } from 'react'
-import { useAttedance } from './hooks'
-import { formatDate, subDays } from 'date-fns'
-import type { DateRange } from 'react-day-picker'
-import type { ExtendedAttendance } from '@/types/attendance'
 import { generateTestAttendanceData } from '@/libs/utils'
+import type { AttendanceResponse, ExtendedAttendance, MissedReservation } from '@/types/attendance'
+import { useQuery } from '@tanstack/react-query'
+import { formatDate, subDays } from 'date-fns'
 import { format } from 'date-fns-tz'
+import { useMemo, useState } from 'react'
+import type { DateRange } from 'react-day-picker'
+
+async function fetchAttendanceData(
+    locationId: string,
+    memberId: string
+): Promise<AttendanceResponse> {
+    const res = await fetch(
+        `/api/protected/loc/${locationId}/members/${memberId}/attendances`
+    )
+
+    if (!res.ok) {
+        throw new Error('Failed to fetch attendance data')
+    }
+
+    return res.json()
+}
 
 export const useMemberAttendance = (id: string, mid: string) => {
     const now = new Date()
@@ -15,11 +30,19 @@ export const useMemberAttendance = (id: string, mid: string) => {
         to: now,
     })
 
-    // Use hard-coded data for test member, otherwise fetch real data
     const isTestMember = mid === 'mbr_E9kMCO1HQQm4J3G7TFj0Zw'
     const testAttendances = isTestMember ? generateTestAttendanceData() : undefined
-    const { attendances: fetchedAttendances, isLoading, error } = useAttedance(id, mid)
-    const attendances = isTestMember ? testAttendances : fetchedAttendances
+
+    const { data, isLoading, error } = useQuery({
+        queryKey: ['member-attendance', id, mid],
+        queryFn: () => fetchAttendanceData(id, mid),
+        enabled: !!id && !!mid && !isTestMember,
+        staleTime: 60 * 1000,
+        refetchOnWindowFocus: false,
+    })
+
+    const attendances = isTestMember ? testAttendances : data?.attendances ?? []
+    const missedReservations = isTestMember ? [] : data?.missedReservations ?? []
 
     const formattedAttendancesDays = useMemo(() => {
         if (!attendances || attendances.length === 0) {
@@ -46,13 +69,12 @@ export const useMemberAttendance = (id: string, mid: string) => {
         return Object.values(formattedAttendancesDays).reduce((acc, curr) => acc + curr, 0)
     }, [formattedAttendancesDays])
 
-    // Helper function to generate weeks for a specific month
     const generateWeeksForMonth = (year: number, month: number) => {
         const firstDayOfMonth = new Date(year, month, 1)
         const startingDayOfWeek = firstDayOfMonth.getDay()
         const lastDayOfMonth = new Date(year, month + 1, 0).getDate()
         const allDates: Array<{
-            date: string | null
+            date: Date
             count: number
             isCurrentMonth: boolean
             isEmpty: boolean
@@ -63,23 +85,28 @@ export const useMemberAttendance = (id: string, mid: string) => {
                 checkInTime: Date
                 checkOutTime: Date | null
             }>
+            missedReservations?: Array<{
+                id: string
+                programName: string
+                startOn: Date | string
+                programId: string | null
+            }>
         }> = []
-        // Add empty placeholders for days before month starts
+
         for (let i = 0; i < startingDayOfWeek; i++) {
+            const emptyDayDate = new Date(year, month, 1 - (startingDayOfWeek - i))
             allDates.push({
-                date: null,
+                date: emptyDayDate,
                 count: 0,
                 isCurrentMonth: false,
                 isEmpty: true,
             })
         }
 
-        // Add all current month dates
         for (let day = 1; day <= lastDayOfMonth; day++) {
             const date = new Date(year, month, day)
             const dateStr = date.toISOString().split('T')[0]
 
-            // Get all attendances for this specific date
             const dayAttendances = (attendances || [])
                 .filter((att: ExtendedAttendance) => {
                     const attDate = new Date(att.checkInTime)
@@ -95,23 +122,35 @@ export const useMemberAttendance = (id: string, mid: string) => {
                     checkOutTime: att.checkOutTime,
                 }))
 
+            const dayMissedReservations = (missedReservations || [])
+                .filter((res: MissedReservation) => {
+                    const resDate = new Date(res.startOn).toISOString().split('T')[0]
+                    return resDate === dateStr
+                })
+                .map((res: MissedReservation) => ({
+                    id: res.id,
+                    programName: res.programName,
+                    startOn: res.startOn,
+                    programId: res.programId,
+                }))
+
             allDates.push({
-                date: dateStr,
+                date: date,
                 count: formattedAttendancesDays[dateStr],
                 isCurrentMonth: true,
                 isEmpty: false,
                 attendances: dayAttendances,
+                missedReservations: dayMissedReservations,
             })
         }
 
-        // Group into weeks (always 7 per week, fill with empty divs)
         const weeks = []
         for (let i = 0; i < allDates.length; i += 7) {
             const week = allDates.slice(i, i + 7)
-            // Pad the last week with empty days to reach 7 items
             while (week.length < 7) {
+                const paddingDate = new Date(year, month + 1, week.length - 6 + lastDayOfMonth)
                 week.push({
-                    date: null,
+                    date: paddingDate,
                     count: 0,
                     isCurrentMonth: false,
                     isEmpty: true,
@@ -123,7 +162,6 @@ export const useMemberAttendance = (id: string, mid: string) => {
         return weeks
     }
 
-    // Get months to display (current month and previous month)
     const currentMonth = range.to?.getMonth() || now.getMonth()
     const currentYear = range.to?.getFullYear() || now.getFullYear()
     const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1

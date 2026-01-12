@@ -46,9 +46,12 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
   }
 
   try {
-    // First, fetch the session to get the duration for calculating endOn
+    // First, fetch the session with program info to get all denormalized data
     const session = await db.query.programSessions.findFirst({
       where: (s, { eq }) => eq(s.id, sessionId),
+      with: {
+        program: true,
+      },
     });
 
     if (!session) {
@@ -81,34 +84,52 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
         if (programWithPlans) {
           const planIds = programWithPlans.planPrograms.map((pp) => pp.planId);
 
-          // Try to find an active subscription first
-          const activeSubscription =
-            await db.query.memberSubscriptions.findFirst({
-              where: (s, { eq, and, inArray }) =>
+          const activeSubscriptions =
+            await db.query.memberSubscriptions.findMany({
+              where: (s, { eq, and }) =>
                 and(
                   eq(s.memberId, memberId),
                   eq(s.locationId, id),
-                  eq(s.status, "active"),
-                  inArray(s.memberPlanId, planIds)
+                  eq(s.status, "active")
                 ),
+              with: {
+                pricing: {
+                  with: {
+                    plan: { columns: { id: true } },
+                  },
+                },
+              },
             });
 
-          if (activeSubscription) {
-            memberSubscriptionId = activeSubscription.id;
+          const matchingSubscription = activeSubscriptions.find(
+            (sub) => sub.pricing?.plan?.id && planIds.includes(sub.pricing.plan.id)
+          );
+
+          if (matchingSubscription) {
+            memberSubscriptionId = matchingSubscription.id;
           } else {
-            // Try to find an active package
-            const activePackage = await db.query.memberPackages.findFirst({
-              where: (p, { eq, and, inArray }) =>
+            const activePackages = await db.query.memberPackages.findMany({
+              where: (p, { eq, and }) =>
                 and(
                   eq(p.memberId, memberId),
                   eq(p.locationId, id),
-                  eq(p.status, "active"),
-                  inArray(p.memberPlanId, planIds)
+                  eq(p.status, "active")
                 ),
+              with: {
+                pricing: {
+                  with: {
+                    plan: { columns: { id: true } },
+                  },
+                },
+              },
             });
 
-            if (activePackage) {
-              memberPackageId = activePackage.id;
+            const matchingPackage = activePackages.find(
+              (pkg) => pkg.pricing?.plan?.id && planIds.includes(pkg.pricing.plan.id)
+            );
+
+            if (matchingPackage) {
+              memberPackageId = matchingPackage.id;
             }
           }
         }
@@ -122,6 +143,14 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
         sessionId,
         locationId: id,
         memberId,
+        // Denormalized session/program fields
+        programId: session.programId,
+        programName: session.program?.name,
+        sessionTime: session.time,
+        sessionDuration: session.duration,
+        sessionDay: session.day,
+        staffId: session.staffId,
+        status: 'confirmed' as const,
       });
     }
 

@@ -107,7 +107,12 @@ export function MemberPackageItem({ pkg }: MemberPackageItemProps) {
                     <InfoField label="Payment Type">
                         {pkg.paymentType || 'cash'}
                     </InfoField>
-
+                    {/* Make-up Credits */}
+                    {pkg.pricing?.plan?.makeUpCredits !== undefined && pkg.pricing.plan.makeUpCredits > 0 && (
+                        <InfoField label="Make-up Credits">
+                            {pkg.makeUpCredits} / {pkg.pricing.plan.makeUpCredits} used
+                        </InfoField>
+                    )}
                 </div>
                 {isFamilyPlan && isPayer && (
                     <div className={`space-y-1  col-span-1 `}>

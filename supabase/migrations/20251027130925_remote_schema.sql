@@ -40,47 +40,47 @@ revoke truncate on table "public"."account" from "service_role";
 
 revoke update on table "public"."account" from "service_role";
 
-revoke delete on table "public"."achievement_triggers" from "anon";
+-- revoke delete on table "public"."achievement_triggers" from "anon";
 
-revoke insert on table "public"."achievement_triggers" from "anon";
+-- revoke insert on table "public"."achievement_triggers" from "anon";
 
-revoke references on table "public"."achievement_triggers" from "anon";
+-- revoke references on table "public"."achievement_triggers" from "anon";
 
-revoke select on table "public"."achievement_triggers" from "anon";
+-- revoke select on table "public"."achievement_triggers" from "anon";
 
-revoke trigger on table "public"."achievement_triggers" from "anon";
+-- revoke trigger on table "public"."achievement_triggers" from "anon";
 
-revoke truncate on table "public"."achievement_triggers" from "anon";
+-- revoke truncate on table "public"."achievement_triggers" from "anon";
 
-revoke update on table "public"."achievement_triggers" from "anon";
+-- revoke update on table "public"."achievement_triggers" from "anon";
 
-revoke delete on table "public"."achievement_triggers" from "authenticated";
+-- revoke delete on table "public"."achievement_triggers" from "authenticated";
 
-revoke insert on table "public"."achievement_triggers" from "authenticated";
+-- revoke insert on table "public"."achievement_triggers" from "authenticated";
 
-revoke references on table "public"."achievement_triggers" from "authenticated";
+-- revoke references on table "public"."achievement_triggers" from "authenticated";
 
-revoke select on table "public"."achievement_triggers" from "authenticated";
+-- revoke select on table "public"."achievement_triggers" from "authenticated";
 
-revoke trigger on table "public"."achievement_triggers" from "authenticated";
+-- revoke trigger on table "public"."achievement_triggers" from "authenticated";
 
-revoke truncate on table "public"."achievement_triggers" from "authenticated";
+-- revoke truncate on table "public"."achievement_triggers" from "authenticated";
 
-revoke update on table "public"."achievement_triggers" from "authenticated";
+-- revoke update on table "public"."achievement_triggers" from "authenticated";
 
-revoke delete on table "public"."achievement_triggers" from "service_role";
+-- revoke delete on table "public"."achievement_triggers" from "service_role";
 
-revoke insert on table "public"."achievement_triggers" from "service_role";
+-- revoke insert on table "public"."achievement_triggers" from "service_role";
 
-revoke references on table "public"."achievement_triggers" from "service_role";
+-- revoke references on table "public"."achievement_triggers" from "service_role";
 
-revoke select on table "public"."achievement_triggers" from "service_role";
+-- revoke select on table "public"."achievement_triggers" from "service_role";
 
-revoke trigger on table "public"."achievement_triggers" from "service_role";
+-- revoke trigger on table "public"."achievement_triggers" from "service_role";
 
-revoke truncate on table "public"."achievement_triggers" from "service_role";
+-- revoke truncate on table "public"."achievement_triggers" from "service_role";
 
-revoke update on table "public"."achievement_triggers" from "service_role";
+-- revoke update on table "public"."achievement_triggers" from "service_role";
 
 revoke delete on table "public"."achievements" from "anon";
 
@@ -1258,131 +1258,131 @@ revoke truncate on table "public"."members" from "service_role";
 
 revoke update on table "public"."members" from "service_role";
 
-revoke delete on table "public"."memories" from "anon";
+-- revoke delete on table "public"."memories" from "anon";
 
-revoke insert on table "public"."memories" from "anon";
+-- revoke insert on table "public"."memories" from "anon";
 
-revoke references on table "public"."memories" from "anon";
+-- revoke references on table "public"."memories" from "anon";
 
-revoke select on table "public"."memories" from "anon";
+-- revoke select on table "public"."memories" from "anon";
 
-revoke trigger on table "public"."memories" from "anon";
+-- revoke trigger on table "public"."memories" from "anon";
 
-revoke truncate on table "public"."memories" from "anon";
+-- revoke truncate on table "public"."memories" from "anon";
 
-revoke update on table "public"."memories" from "anon";
+-- revoke update on table "public"."memories" from "anon";
 
-revoke delete on table "public"."memories" from "authenticated";
+-- revoke delete on table "public"."memories" from "authenticated";
 
-revoke insert on table "public"."memories" from "authenticated";
+-- revoke insert on table "public"."memories" from "authenticated";
 
-revoke references on table "public"."memories" from "authenticated";
+-- revoke references on table "public"."memories" from "authenticated";
 
-revoke select on table "public"."memories" from "authenticated";
+-- revoke select on table "public"."memories" from "authenticated";
 
-revoke trigger on table "public"."memories" from "authenticated";
+-- revoke trigger on table "public"."memories" from "authenticated";
 
-revoke truncate on table "public"."memories" from "authenticated";
+-- revoke truncate on table "public"."memories" from "authenticated";
 
-revoke update on table "public"."memories" from "authenticated";
+-- revoke update on table "public"."memories" from "authenticated";
 
-revoke delete on table "public"."memories" from "service_role";
+-- revoke delete on table "public"."memories" from "service_role";
 
-revoke insert on table "public"."memories" from "service_role";
+-- revoke insert on table "public"."memories" from "service_role";
 
-revoke references on table "public"."memories" from "service_role";
+-- revoke references on table "public"."memories" from "service_role";
 
-revoke select on table "public"."memories" from "service_role";
+-- revoke select on table "public"."memories" from "service_role";
 
-revoke trigger on table "public"."memories" from "service_role";
+-- revoke trigger on table "public"."memories" from "service_role";
 
-revoke truncate on table "public"."memories" from "service_role";
+-- revoke truncate on table "public"."memories" from "service_role";
 
-revoke update on table "public"."memories" from "service_role";
+-- revoke update on table "public"."memories" from "service_role";
 
-revoke delete on table "public"."memory_comments" from "anon";
+-- revoke delete on table "public"."memory_comments" from "anon";
 
-revoke insert on table "public"."memory_comments" from "anon";
+-- revoke insert on table "public"."memory_comments" from "anon";
 
-revoke references on table "public"."memory_comments" from "anon";
+-- revoke references on table "public"."memory_comments" from "anon";
 
-revoke select on table "public"."memory_comments" from "anon";
+-- revoke select on table "public"."memory_comments" from "anon";
 
-revoke trigger on table "public"."memory_comments" from "anon";
+-- revoke trigger on table "public"."memory_comments" from "anon";
 
-revoke truncate on table "public"."memory_comments" from "anon";
+-- revoke truncate on table "public"."memory_comments" from "anon";
 
-revoke update on table "public"."memory_comments" from "anon";
+-- revoke update on table "public"."memory_comments" from "anon";
 
-revoke delete on table "public"."memory_comments" from "authenticated";
+-- revoke delete on table "public"."memory_comments" from "authenticated";
 
-revoke insert on table "public"."memory_comments" from "authenticated";
+-- revoke insert on table "public"."memory_comments" from "authenticated";
 
-revoke references on table "public"."memory_comments" from "authenticated";
+-- revoke references on table "public"."memory_comments" from "authenticated";
 
-revoke select on table "public"."memory_comments" from "authenticated";
+-- revoke select on table "public"."memory_comments" from "authenticated";
 
-revoke trigger on table "public"."memory_comments" from "authenticated";
+-- revoke trigger on table "public"."memory_comments" from "authenticated";
 
-revoke truncate on table "public"."memory_comments" from "authenticated";
+-- revoke truncate on table "public"."memory_comments" from "authenticated";
 
-revoke update on table "public"."memory_comments" from "authenticated";
+-- revoke update on table "public"."memory_comments" from "authenticated";
 
-revoke delete on table "public"."memory_comments" from "service_role";
+-- revoke delete on table "public"."memory_comments" from "service_role";
 
-revoke insert on table "public"."memory_comments" from "service_role";
+-- revoke insert on table "public"."memory_comments" from "service_role";
 
-revoke references on table "public"."memory_comments" from "service_role";
+-- revoke references on table "public"."memory_comments" from "service_role";
 
-revoke select on table "public"."memory_comments" from "service_role";
+-- revoke select on table "public"."memory_comments" from "service_role";
 
-revoke trigger on table "public"."memory_comments" from "service_role";
+-- revoke trigger on table "public"."memory_comments" from "service_role";
 
-revoke truncate on table "public"."memory_comments" from "service_role";
+-- revoke truncate on table "public"."memory_comments" from "service_role";
 
-revoke update on table "public"."memory_comments" from "service_role";
+-- revoke update on table "public"."memory_comments" from "service_role";
 
-revoke delete on table "public"."memory_likes" from "anon";
+-- revoke delete on table "public"."memory_likes" from "anon";
 
-revoke insert on table "public"."memory_likes" from "anon";
+-- revoke insert on table "public"."memory_likes" from "anon";
 
-revoke references on table "public"."memory_likes" from "anon";
+-- revoke references on table "public"."memory_likes" from "anon";
 
-revoke select on table "public"."memory_likes" from "anon";
+-- revoke select on table "public"."memory_likes" from "anon";
 
-revoke trigger on table "public"."memory_likes" from "anon";
+-- revoke trigger on table "public"."memory_likes" from "anon";
 
-revoke truncate on table "public"."memory_likes" from "anon";
+-- revoke truncate on table "public"."memory_likes" from "anon";
 
-revoke update on table "public"."memory_likes" from "anon";
+-- revoke update on table "public"."memory_likes" from "anon";
 
-revoke delete on table "public"."memory_likes" from "authenticated";
+-- revoke delete on table "public"."memory_likes" from "authenticated";
 
-revoke insert on table "public"."memory_likes" from "authenticated";
+-- revoke insert on table "public"."memory_likes" from "authenticated";
 
-revoke references on table "public"."memory_likes" from "authenticated";
+-- revoke references on table "public"."memory_likes" from "authenticated";
 
-revoke select on table "public"."memory_likes" from "authenticated";
+-- revoke select on table "public"."memory_likes" from "authenticated";
 
-revoke trigger on table "public"."memory_likes" from "authenticated";
+-- revoke trigger on table "public"."memory_likes" from "authenticated";
 
-revoke truncate on table "public"."memory_likes" from "authenticated";
+-- revoke truncate on table "public"."memory_likes" from "authenticated";
 
-revoke update on table "public"."memory_likes" from "authenticated";
+-- revoke update on table "public"."memory_likes" from "authenticated";
 
-revoke delete on table "public"."memory_likes" from "service_role";
+-- revoke delete on table "public"."memory_likes" from "service_role";
 
-revoke insert on table "public"."memory_likes" from "service_role";
+-- revoke insert on table "public"."memory_likes" from "service_role";
 
-revoke references on table "public"."memory_likes" from "service_role";
+-- revoke references on table "public"."memory_likes" from "service_role";
 
-revoke select on table "public"."memory_likes" from "service_role";
+-- revoke select on table "public"."memory_likes" from "service_role";
 
-revoke trigger on table "public"."memory_likes" from "service_role";
+-- revoke trigger on table "public"."memory_likes" from "service_role";
 
-revoke truncate on table "public"."memory_likes" from "service_role";
+-- revoke truncate on table "public"."memory_likes" from "service_role";
 
-revoke update on table "public"."memory_likes" from "service_role";
+-- revoke update on table "public"."memory_likes" from "service_role";
 
 revoke delete on table "public"."messages" from "anon";
 
@@ -1510,47 +1510,47 @@ revoke truncate on table "public"."plan_programs" from "service_role";
 
 revoke update on table "public"."plan_programs" from "service_role";
 
-revoke delete on table "public"."post_comments" from "anon";
+-- revoke delete on table "public"."post_comments" from "anon";
 
-revoke insert on table "public"."post_comments" from "anon";
+-- revoke insert on table "public"."post_comments" from "anon";
 
-revoke references on table "public"."post_comments" from "anon";
+-- revoke references on table "public"."post_comments" from "anon";
 
-revoke select on table "public"."post_comments" from "anon";
+-- revoke select on table "public"."post_comments" from "anon";
 
-revoke trigger on table "public"."post_comments" from "anon";
+-- revoke trigger on table "public"."post_comments" from "anon";
 
-revoke truncate on table "public"."post_comments" from "anon";
+-- revoke truncate on table "public"."post_comments" from "anon";
 
-revoke update on table "public"."post_comments" from "anon";
+-- revoke update on table "public"."post_comments" from "anon";
 
-revoke delete on table "public"."post_comments" from "authenticated";
+-- revoke delete on table "public"."post_comments" from "authenticated";
 
-revoke insert on table "public"."post_comments" from "authenticated";
+-- revoke insert on table "public"."post_comments" from "authenticated";
 
-revoke references on table "public"."post_comments" from "authenticated";
+-- revoke references on table "public"."post_comments" from "authenticated";
 
-revoke select on table "public"."post_comments" from "authenticated";
+-- revoke select on table "public"."post_comments" from "authenticated";
 
-revoke trigger on table "public"."post_comments" from "authenticated";
+-- revoke trigger on table "public"."post_comments" from "authenticated";
 
-revoke truncate on table "public"."post_comments" from "authenticated";
+-- revoke truncate on table "public"."post_comments" from "authenticated";
 
-revoke update on table "public"."post_comments" from "authenticated";
+-- revoke update on table "public"."post_comments" from "authenticated";
 
-revoke delete on table "public"."post_comments" from "service_role";
+-- revoke delete on table "public"."post_comments" from "service_role";
 
-revoke insert on table "public"."post_comments" from "service_role";
+-- revoke insert on table "public"."post_comments" from "service_role";
 
-revoke references on table "public"."post_comments" from "service_role";
+-- revoke references on table "public"."post_comments" from "service_role";
 
-revoke select on table "public"."post_comments" from "service_role";
+-- revoke select on table "public"."post_comments" from "service_role";
 
-revoke trigger on table "public"."post_comments" from "service_role";
+-- revoke trigger on table "public"."post_comments" from "service_role";
 
-revoke truncate on table "public"."post_comments" from "service_role";
+-- revoke truncate on table "public"."post_comments" from "service_role";
 
-revoke update on table "public"."post_comments" from "service_role";
+-- revoke update on table "public"."post_comments" from "service_role";
 
 revoke delete on table "public"."program_has_tags" from "anon";
 
@@ -2602,47 +2602,47 @@ revoke truncate on table "public"."transactions" from "service_role";
 
 revoke update on table "public"."transactions" from "service_role";
 
-revoke delete on table "public"."triggered_achievements" from "anon";
+-- revoke delete on table "public"."triggered_achievements" from "anon";
 
-revoke insert on table "public"."triggered_achievements" from "anon";
+-- revoke insert on table "public"."triggered_achievements" from "anon";
 
-revoke references on table "public"."triggered_achievements" from "anon";
+-- revoke references on table "public"."triggered_achievements" from "anon";
 
-revoke select on table "public"."triggered_achievements" from "anon";
+-- revoke select on table "public"."triggered_achievements" from "anon";
 
-revoke trigger on table "public"."triggered_achievements" from "anon";
+-- revoke trigger on table "public"."triggered_achievements" from "anon";
 
-revoke truncate on table "public"."triggered_achievements" from "anon";
+-- revoke truncate on table "public"."triggered_achievements" from "anon";
 
-revoke update on table "public"."triggered_achievements" from "anon";
+-- revoke update on table "public"."triggered_achievements" from "anon";
 
-revoke delete on table "public"."triggered_achievements" from "authenticated";
+-- revoke delete on table "public"."triggered_achievements" from "authenticated";
 
-revoke insert on table "public"."triggered_achievements" from "authenticated";
+-- revoke insert on table "public"."triggered_achievements" from "authenticated";
 
-revoke references on table "public"."triggered_achievements" from "authenticated";
+-- revoke references on table "public"."triggered_achievements" from "authenticated";
 
-revoke select on table "public"."triggered_achievements" from "authenticated";
+-- revoke select on table "public"."triggered_achievements" from "authenticated";
 
-revoke trigger on table "public"."triggered_achievements" from "authenticated";
+-- revoke trigger on table "public"."triggered_achievements" from "authenticated";
 
-revoke truncate on table "public"."triggered_achievements" from "authenticated";
+-- revoke truncate on table "public"."triggered_achievements" from "authenticated";
 
-revoke update on table "public"."triggered_achievements" from "authenticated";
+-- revoke update on table "public"."triggered_achievements" from "authenticated";
 
-revoke delete on table "public"."triggered_achievements" from "service_role";
+-- revoke delete on table "public"."triggered_achievements" from "service_role";
 
-revoke insert on table "public"."triggered_achievements" from "service_role";
+-- revoke insert on table "public"."triggered_achievements" from "service_role";
 
-revoke references on table "public"."triggered_achievements" from "service_role";
+-- revoke references on table "public"."triggered_achievements" from "service_role";
 
-revoke select on table "public"."triggered_achievements" from "service_role";
+-- revoke select on table "public"."triggered_achievements" from "service_role";
 
-revoke trigger on table "public"."triggered_achievements" from "service_role";
+-- revoke trigger on table "public"."triggered_achievements" from "service_role";
 
-revoke truncate on table "public"."triggered_achievements" from "service_role";
+-- revoke truncate on table "public"."triggered_achievements" from "service_role";
 
-revoke update on table "public"."triggered_achievements" from "service_role";
+-- revoke update on table "public"."triggered_achievements" from "service_role";
 
 revoke delete on table "public"."user_roles" from "anon";
 
@@ -3064,9 +3064,9 @@ revoke truncate on table "public"."wallets" from "service_role";
 
 revoke update on table "public"."wallets" from "service_role";
 
-alter table "public"."check_ins" add column "location_id" text not null;
+-- alter table "public"."check_ins" add column "location_id" text not null;
 
-alter table "public"."check_ins" add column "member_id" text not null;
+-- alter table "public"."check_ins" add column "member_id" text not null;
 
 alter table "public"."group_posts" add column "title" text not null default 'Default Title'::text;
 
@@ -3090,13 +3090,13 @@ CREATE UNIQUE INDEX member_achievements_pkey ON public.member_achievements USING
 
 alter table "public"."member_achievements" add constraint "member_achievements_pkey" PRIMARY KEY using index "member_achievements_pkey";
 
-alter table "public"."check_ins" add constraint "check_ins_location_id_fkey" FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE not valid;
+-- alter table "public"."check_ins" add constraint "check_ins_location_id_fkey" FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE CASCADE not valid;
 
-alter table "public"."check_ins" validate constraint "check_ins_location_id_fkey";
+-- alter table "public"."check_ins" validate constraint "check_ins_location_id_fkey";
 
-alter table "public"."check_ins" add constraint "check_ins_member_id_fkey" FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE not valid;
+-- alter table "public"."check_ins" add constraint "check_ins_member_id_fkey" FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE not valid;
 
-alter table "public"."check_ins" validate constraint "check_ins_member_id_fkey";
+-- alter table "public"."check_ins" validate constraint "check_ins_member_id_fkey";
 
 alter table "public"."member_achievements" add constraint "member_achievements_member_achievement_id_key" UNIQUE using index "member_achievements_member_achievement_id_key";
 

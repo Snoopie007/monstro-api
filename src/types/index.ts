@@ -28,3 +28,14 @@ export * from "./wallet";
 export * from "./chats";
 export * from "./media";
 export * from "./reactions";
+export type { 
+  ReservationWithRelations, 
+  RecurringReservationWithRelations,
+  CreateReservationInput,
+  CreateRecurringReservationInput,
+  CreateExceptionInput,
+  CreateMakeUpClassInput,
+  CancellationResult,
+  ReservationStatus,
+  ExceptionInitiator
+} from "./reservation";

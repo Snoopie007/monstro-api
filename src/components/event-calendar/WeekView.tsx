@@ -25,14 +25,17 @@ import {
   WeekCellsHeight,
 } from "../event-calendar";
 import { useCurrentTimeIndicator } from "@/hooks";
-import type { CalendarEvent } from "@/types";
+import type { CalendarEvent, ClosedDate } from "@/types";
 import { EndHour, StartHour } from "./constants";
 import { cn } from "@/libs/utils";
 import { isMultiDayEvent } from "@/libs/calendar";
+import { CalendarX, Wrench } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/ToolTip";
 
 interface WeekViewProps {
   currentDate: Date;
   events: CalendarEvent[];
+  closedDates?: ClosedDate[];
   onEventSelect: (event: CalendarEvent) => void;
   onEventCreate: (startTime: Date) => void;
 }
@@ -46,9 +49,16 @@ interface PositionedEvent {
   zIndex: number;
 }
 
+const closedColumnStyle = cn(
+  "bg-gray-100 dark:bg-gray-800/50",
+  "bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(0,0,0,0.03)_4px,rgba(0,0,0,0.03)_8px)]",
+  "dark:bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(255,255,255,0.02)_4px,rgba(255,255,255,0.02)_8px)]"
+);
+
 export function WeekView({
   currentDate,
   events,
+  closedDates = [],
   onEventSelect,
   onEventCreate,
 }: WeekViewProps) {
@@ -89,6 +99,15 @@ export function WeekView({
         );
       });
   }, [events, days]);
+
+  const closedDatesByDay = useMemo(() => {
+    const map = new Map<string, ClosedDate>();
+    closedDates.forEach(closure => {
+      const dateKey = closure.date.slice(0, 10);
+      map.set(dateKey, closure);
+    });
+    return map;
+  }, [closedDates]);
 
   // Process events for each day to calculate positions
   const processedDayEvents = useMemo(() => {
@@ -223,18 +242,46 @@ export function WeekView({
         <div className="text-muted-foreground/70 py-2 text-center text-sm">
           <span className="max-[479px]:sr-only">{format(new Date(), "O")}</span>
         </div>
-        {days.map((day) => (
-          <div
-            key={day.toString()}
-            className="data-today:text-foreground text-muted-foreground/70 py-2 text-center text-sm data-today:font-medium"
-            data-today={isToday(day) || undefined}
-          >
-            <span className="sm:hidden" aria-hidden="true">
-              {format(day, "E")[0]} {format(day, "d")}
-            </span>
-            <span className="max-sm:hidden">{format(day, "EEE dd")}</span>
-          </div>
-        ))}
+        {days.map((day) => {
+          const dayKey = format(day, 'yyyy-MM-dd');
+          const closedDate = closedDatesByDay.get(dayKey);
+          const isClosed = !!closedDate;
+
+          return (
+            <div
+              key={day.toString()}
+              className={cn(
+                "data-today:text-foreground text-muted-foreground/70 py-2 text-center text-sm data-today:font-medium",
+                isClosed && "bg-gray-100 dark:bg-gray-800/50"
+              )}
+              data-today={isToday(day) || undefined}
+            >
+              <span className="sm:hidden" aria-hidden="true">
+                {format(day, "E")[0]} {format(day, "d")}
+              </span>
+              <span className="max-sm:hidden">{format(day, "EEE dd")}</span>
+              {isClosed && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center justify-center gap-1 mt-0.5">
+                      {closedDate.type === 'holiday' ? (
+                        <CalendarX className="size-3 text-amber-600 dark:text-amber-400" />
+                      ) : (
+                        <Wrench className="size-3 text-blue-600 dark:text-blue-400" />
+                      )}
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[60px]">
+                        Closed
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <span className="font-medium">{closedDate.reason}</span>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {showAllDaySection && (
@@ -320,92 +367,113 @@ export function WeekView({
           ))}
         </div>
 
-        {days.map((day, dayIndex) => (
-          <div
-            key={day.toString()}
-            className="border-foreground/10 dark:border-border/10 bg-muted/50 relative grid auto-cols-fr border-r last:border-r-0"
-            data-today={isToday(day) || undefined}
-          >
-            {/* Positioned events */}
-            {(processedDayEvents[dayIndex] ?? []).map((positionedEvent) => (
-              <div
-                key={positionedEvent.event.id}
-                className="absolute z-10 px-0.5"
-                style={{
-                  top: `${positionedEvent.top}px`,
-                  height: `${positionedEvent.height}px`,
-                  left: `${positionedEvent.left * 100}%`,
-                  width: `${positionedEvent.width * 100}%`,
-                  zIndex: positionedEvent.zIndex,
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="size-full">
-                  <DraggableEvent
-                    event={positionedEvent.event}
-                    view="week"
-                    onClick={(e: React.MouseEvent) =>
-                      handleEventClick(positionedEvent.event, e)
-                    }
-                    showTime
-                    height={positionedEvent.height}
-                  />
-                </div>
-              </div>
-            ))}
+        {days.map((day, dayIndex) => {
+          const dayKey = format(day, 'yyyy-MM-dd');
+          const closedDate = closedDatesByDay.get(dayKey);
+          const isClosed = !!closedDate;
 
-            {/* Current time indicator - only show for today's column */}
-            {currentTimeVisible && isToday(day) && (
-              <div
-                className="pointer-events-none absolute right-0 left-0 z-20"
-                style={{ top: `${currentTimePosition}%` }}
-              >
-                <div className="relative flex items-center">
-                  <div className="bg-primary dark:bg-border absolute -left-1 h-2 w-2 rounded-full"></div>
-                  <div className="bg-primary dark:bg-border h-[2px] w-full"></div>
-                </div>
-              </div>
-            )}
-            {hours.map((hour) => {
-              const hourValue = getHours(hour);
-              return (
+          return (
+            <div
+              key={day.toString()}
+              className={cn(
+                "border-foreground/10 dark:border-border/10 bg-muted/50 relative grid auto-cols-fr border-r last:border-r-0",
+                isClosed && closedColumnStyle
+              )}
+              data-today={isToday(day) || undefined}
+            >
+              {/* Positioned events */}
+              {(processedDayEvents[dayIndex] ?? []).map((positionedEvent) => (
                 <div
-                  key={hour.toString()}
-                  className="border-foreground/10 dark:border-border/10 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
+                  key={positionedEvent.event.id}
+                  className={cn(
+                    "absolute z-10 px-0.5",
+                    isClosed && "opacity-40 pointer-events-none"
+                  )}
+                  style={{
+                    top: `${positionedEvent.top}px`,
+                    height: `${positionedEvent.height}px`,
+                    left: `${positionedEvent.left * 100}%`,
+                    width: `${positionedEvent.width * 100}%`,
+                    zIndex: positionedEvent.zIndex,
+                  }}
                 >
-                  {/* Quarter-hour intervals */}
-                  {[0, 1, 2, 3].map((quarter) => {
-                    const quarterHourTime = hourValue + quarter * 0.25;
-                    return (
-                      <DroppableCell
-                        key={`${hour.toString()}-${quarter}`}
-                        id={`week-cell-${day.toISOString()}-${quarterHourTime}`}
-                        date={day}
-                        time={quarterHourTime}
-                        className={cn(
-                          "absolute h-[calc(var(--week-cells-height)/4)] w-full",
-                          quarter === 0 && "top-0",
-                          quarter === 1 &&
-                            "top-[calc(var(--week-cells-height)/4)]",
-                          quarter === 2 &&
-                            "top-[calc(var(--week-cells-height)/4*2)]",
-                          quarter === 3 &&
-                            "top-[calc(var(--week-cells-height)/4*3)]"
-                        )}
-                        onClick={() => {
-                          const startTime = new Date(day);
-                          startTime.setHours(hourValue);
-                          startTime.setMinutes(quarter * 15);
-                          onEventCreate(startTime);
-                        }}
+                  <div className="size-full" style={{ height: positionedEvent.height || "auto" }}>
+                    {isClosed ? (
+                      <EventItem
+                        event={positionedEvent.event}
+                        view="week"
+                        showTime
+                        className="line-through cursor-not-allowed h-full"
                       />
-                    );
-                  })}
+                    ) : (
+                      <DraggableEvent
+                        event={positionedEvent.event}
+                        view="week"
+                        onClick={(e: React.MouseEvent) =>
+                          handleEventClick(positionedEvent.event, e)
+                        }
+                        showTime
+                        height={positionedEvent.height}
+                      />
+                    )}
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        ))}
+              ))}
+
+              {/* Current time indicator - only show for today's column */}
+              {currentTimeVisible && isToday(day) && (
+                <div
+                  className="pointer-events-none absolute right-0 left-0 z-20"
+                  style={{ top: `${currentTimePosition}%` }}
+                >
+                  <div className="relative flex items-center">
+                    <div className="bg-primary dark:bg-border absolute -left-1 h-2 w-2 rounded-full"></div>
+                    <div className="bg-primary dark:bg-border h-[2px] w-full"></div>
+                  </div>
+                </div>
+              )}
+              {hours.map((hour) => {
+                const hourValue = getHours(hour);
+                return (
+                  <div
+                    key={hour.toString()}
+                    className="border-foreground/10 dark:border-border/10 relative min-h-[var(--week-cells-height)] border-b last:border-b-0"
+                  >
+                    {/* Quarter-hour intervals */}
+                    {[0, 1, 2, 3].map((quarter) => {
+                      const quarterHourTime = hourValue + quarter * 0.25;
+                      return (
+                        <DroppableCell
+                          key={`${hour.toString()}-${quarter}`}
+                          id={`week-cell-${day.toISOString()}-${quarterHourTime}`}
+                          date={day}
+                          time={quarterHourTime}
+                          className={cn(
+                            "absolute h-[calc(var(--week-cells-height)/4)] w-full",
+                            quarter === 0 && "top-0",
+                            quarter === 1 &&
+                              "top-[calc(var(--week-cells-height)/4)]",
+                            quarter === 2 &&
+                              "top-[calc(var(--week-cells-height)/4*2)]",
+                            quarter === 3 &&
+                              "top-[calc(var(--week-cells-height)/4*3)]",
+                            isClosed && "cursor-not-allowed"
+                          )}
+                          onClick={isClosed ? undefined : () => {
+                            const startTime = new Date(day);
+                            startTime.setHours(hourValue);
+                            startTime.setMinutes(quarter * 15);
+                            onEventCreate(startTime);
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

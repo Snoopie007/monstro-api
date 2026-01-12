@@ -1,9 +1,10 @@
 import { db } from "@/db/db";
 import { CalendarEvent } from "@/types/calendar";
-import { RecurringReservation, Reservation } from "@/types";
+import { RecurringReservation } from "@/types";
 import { endOfMonth, startOfMonth, addDays, addMinutes } from "date-fns";
 import { toDate,  } from 'date-fns-tz'
 import { NextResponse, NextRequest } from "next/server";
+import { getEventColorFromId } from "@/libs/program-colors";
 
 export async function GET(
   req: NextRequest,
@@ -28,17 +29,60 @@ export async function GET(
   try {
     const events: CalendarEvent[] = [];
 
-    // First, get all programs for this location
-    const locationPrograms = await db.query.programs.findMany({
-      where: (p, { eq }) => eq(p.locationId, params.id),
-      columns: {
-        id: true,
-      },
-    });
+    // Parallelize independent queries for better performance
+    const [locationPrograms, reservations, recurrings] = await Promise.all([
+      // Get all programs for this location
+      db.query.programs.findMany({
+        where: (p, { eq }) => eq(p.locationId, params.id),
+        columns: {
+          id: true,
+        },
+      }),
+      // Get standard reservations - uses denormalized data to reduce joins
+      db.query.reservations.findMany({
+        where: (r, { between, and, eq, or, isNull }) =>
+          and(
+            between(r.startOn, startDate, endDate),
+            eq(r.locationId, params.id),
+            // Only include confirmed reservations (or null status for pre-migration data)
+            or(eq(r.status, 'confirmed'), isNull(r.status))
+          ),
+        with: {
+          member: true,
+          memberPackage: true,
+          program: true,
+          staff: true,
+        },
+      }),
+      // Get recurring reservations - uses denormalized data when available
+      db.query.recurringReservations.findMany({
+        where: (r, { and, eq, gte, or, isNull, lte }) =>
+          and(
+            lte(r.startDate, startDate),
+            eq(r.locationId, params.id),
+            or(isNull(r.canceledOn), gte(r.canceledOn, startDate.toISOString())),
+            // Only include confirmed reservations (or null status for pre-migration data)
+            or(eq(r.status, 'confirmed'), isNull(r.status))
+          ),
+        with: {
+          member: true,
+          memberPackage: true,
+          session: {
+            with: {
+              program: true,
+              staff: true,
+            },
+          },
+          program: true,
+          staff: true,
+          exceptions: true,
+        },
+      }) as Promise<RecurringReservation[]>,
+    ]);
 
     const programIds = locationPrograms.map((p) => p.id);
 
-    // Then get all sessions for these programs
+    // Fetch sessions after we have programIds (depends on previous query)
     const locationSessions = await db.query.programSessions.findMany({
       where: (s, { inArray }) => inArray(s.programId, programIds),
       with: {
@@ -51,44 +95,23 @@ export async function GET(
       },
     });
 
-    // Get standard reservations
-    const reservations = await db.query.reservations.findMany({
-      where: (r, { between, and, eq }) =>
-        and(
-          between(r.startOn, startDate, endDate),
-          eq(r.locationId, params.id)
-        ),
-      with: {
-        member: true,
-        session: {
-          with: {
-            program: true,
-          },
-        },
-        memberPackage: true,
-      },
+    // Build lookup maps for O(1) reservation checks instead of O(n²) .some() calls
+    const reservationsBySessionAndDate = new Map<string, boolean>();
+    reservations.forEach(r => {
+      if (r.sessionId) {
+        const key = `${r.sessionId}-${new Date(r.startOn).toDateString()}`;
+        reservationsBySessionAndDate.set(key, true);
+      }
     });
 
-    // Get recurring reservations
-    const recurrings = await db.query.recurringReservations.findMany({
-      where: (r, { and, eq, gte, or, isNull, lte }) =>
-        and(
-          lte(r.startDate, startDate),
-          eq(r.locationId, params.id),
-          or(isNull(r.canceledOn), gte(r.canceledOn, startDate.toISOString()))
-        ),
-      with: {
-        member: true,
-        memberPackage: true,
-        session: {
-          with: {
-            program: true,
-            staff: true,
-          },
-        },
-        exceptions: true,
-      },
-    }) as RecurringReservation[];
+    const recurringsBySessionDay = new Map<string, number[]>();
+    recurrings.forEach(r => {
+      if (r.sessionId && r.session?.day !== undefined) {
+        const existing = recurringsBySessionDay.get(r.sessionId) || [];
+        existing.push(r.session.day);
+        recurringsBySessionDay.set(r.sessionId, existing);
+      }
+    });
 
     // Generate available session slots
     locationSessions.forEach((session) => {
@@ -111,21 +134,17 @@ export async function GET(
         const end = toDate(parsedSessionEndDate, { timeZone: timezone });
         const id = `${start.toISOString()}-${session.id}`;
       
-        // Check if this session already has a reservation
+        // O(1) lookup using pre-built Maps instead of O(n) .some() calls
+        const reservationKey = `${session.id}-${currentDate.toDateString()}`;
         const hasReservation =
-          reservations.some(
-            (r) =>
-              r.sessionId === session.id &&
-              new Date(r.startOn).toDateString() === currentDate.toDateString()
-          ) ||
-          recurrings.some(
-            (r) => r.sessionId === session.id && r.session?.day === session.day
-          );
+          reservationsBySessionAndDate.has(reservationKey) ||
+          recurringsBySessionDay.get(session.id)?.includes(session.day) === true;
 
         if (!hasReservation) {
           events.push({
             id,
             title: session.program.name,
+            color: getEventColorFromId(session.program.color),
             start,
             end,
             duration: session.duration,
@@ -171,13 +190,17 @@ export async function GET(
         if (!exception) {
           const { id, intervalThreshold, interval, exceptions, ...rest } =
             recurring;
-          const vr: Reservation = {
+          const vr = {
             ...rest,
             startOn: currentDate,
             id: recurring.id,
             endOn: new Date(
               currentDate.getTime() + (recurring.session?.duration || 0) * 60000
             ),
+            cancelledAt: null,
+            cancelledReason: null,
+            isMakeUpClass: false,
+            originalReservationId: null,
           };
           addEventToCalendar(events, vr, recurring.id);
         }
@@ -194,15 +217,14 @@ export async function GET(
     });
     // Merge duplicates and filter by date range
     let finalEvents = mergeAndFilterEvents(events, startDate, endDate);
-    // Apply plan filtering if planIds are provided
     if (planIds && planIds.length > 0) {
       finalEvents = finalEvents.filter((event) => {
-        // If the event has a memberPlanId, check if it's in the filter
         if (event.data?.memberPlanId) {
           return event.data.memberPlanId.some((planId) =>
             planIds.includes(planId)
           );
         }
+        return false;
       });
     }
 
@@ -216,22 +238,28 @@ export async function GET(
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function addEventToCalendar(
   events: CalendarEvent[],
-  reservation: Reservation,
+  reservation: any,
   recurringId?: string
 ) {
-  if (
-    !reservation.session ||
-    !reservation.member ||
-    !reservation.session.program
-  )
+  const programName = reservation.programName || reservation.session?.program?.name;
+  const programId = reservation.programId || reservation.session?.programId;
+  const sessionId = reservation.sessionId || reservation.session?.id;
+  const duration = reservation.sessionDuration || reservation.session?.duration || 0;
+  const staffId = reservation.staffId || reservation.session?.staffId;
+  const staff = reservation.staff || reservation.session?.staff;
+  const programColor = reservation.program?.color || reservation.session?.program?.color;
+
+  if (!reservation.member || (!programName && !reservation.session?.program)) {
     return;
+  }
 
   const start = new Date(reservation.startOn);
   const end = new Date(reservation.endOn);
 
-  const id = `${start.toISOString()}-${reservation.session.id}`;
+  const id = sessionId ? `${start.toISOString()}-${sessionId}` : `${start.toISOString()}-${reservation.id}`;
   const member = {
     memberId: reservation.member.id,
     name: `${reservation.member.firstName} ${reservation.member.lastName}`,
@@ -241,12 +269,11 @@ function addEventToCalendar(
   const existingIndex = events.findIndex(
     (e) =>
       e.id === id ||
-      (e.data?.sessionId === reservation.session?.id &&
+      (e.data?.sessionId === sessionId &&
         e.start.toISOString() === start.toISOString())
   );
 
   if (existingIndex >= 0) {
-    // Merge with existing event
     const event = events[existingIndex];
     if (event.data) {
       event.data.members = [...(event.data.members || []), member];
@@ -254,36 +281,41 @@ function addEventToCalendar(
       event.data.recurringId = recurringId;
       event.data.isRecurring = !!recurringId;
       event.data.memberPlanId = [
-        reservation.memberPackage?.memberPlanId ||
-          reservation.memberPackage?.id ||
+        reservation.memberPackageId ||
+          reservation.memberSubscriptionId ||
           "",
       ];
     }
   } else {
-    // Create new event
     events.push({
       id,
-      title: reservation.session.program.name,
+      title: programName || 'Unknown Program',
+      color: getEventColorFromId(programColor),
       start,
       end,
-      duration: reservation.session.duration,
+      duration,
       data: {
-        sessionId: reservation.session.id,
+        sessionId: sessionId || '',
         memberPlanId: [
-          reservation.memberPackage?.memberPlanId ||
-            reservation.memberPackageId ||
+          reservation.memberPackageId ||
+            reservation.memberSubscriptionId ||
             "",
         ],
-        programId: reservation.session.program.id,
+        programId: programId || '',
         reservationId: reservation.id || undefined,
         recurringId,
         members: [member],
         isRecurring: !!recurringId,
+        isMakeUpClass: reservation.isMakeUpClass || false,
       },
-      staff: {
-        id: reservation.session.staffId || "",
-        name: reservation.session.staff?.firstName + " " + reservation.session.staff?.lastName,
-        avatar: reservation.session.staff?.avatar,
+      staff: staff ? {
+        id: staffId || "",
+        name: (staff.firstName || '') + " " + (staff.lastName || ''),
+        avatar: staff.avatar,
+      } : {
+        id: "",
+        name: "Unassigned",
+        avatar: null,
       },
     });
   }

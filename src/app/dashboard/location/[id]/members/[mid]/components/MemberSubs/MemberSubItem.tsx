@@ -160,6 +160,17 @@ export function MemberSubItem({ sub }: { sub: MemberSubscription }) {
                     </InfoField>
                 </div>
 
+                {/* Make-up Credits */}
+                {sub.pricing?.plan?.makeUpCredits !== undefined && sub.pricing.plan.makeUpCredits > 0 && (
+                    <div className="grid grid-cols-3 items-center">
+                        <InfoField label="Make-up Credits">
+                            <span className="flex items-center gap-1">
+                                {sub.makeUpCredits} / {sub.pricing.plan.makeUpCredits} used
+                            </span>
+                        </InfoField>
+                    </div>
+                )}
+
                 {(sub.cancelAt || sub.expiresAt) && (
                     <div className="grid grid-cols-3 items-center">
                         {sub.cancelAt && sub.cancelAtPeriodEnd && (

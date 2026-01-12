@@ -16,6 +16,7 @@ const SettingMenuItems: SettingMenuItem[] = [
     { path: "billing", name: "Billing", roles: ["vendor"] },
     { path: "invoices", name: "Invoices", roles: ["vendor"] },
     { path: "tags", name: "Tags", roles: ["vendor", "admin"] },
+    { path: "closures", name: "Holidays & Closures", roles: ["vendor", "admin"] },
     // { path: "benefits", name: "Benefits", roles: ["vendor"] },
     { path: "integrations", name: "Integrations", roles: ["vendor", "admin"] },
     { path: "processing", name: "Payment Processing", roles: ["vendor", "admin"] },

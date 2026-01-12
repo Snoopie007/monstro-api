@@ -7,6 +7,17 @@ import { Member } from "./member";
 export type CalendarView = "month" | "week" | "day" | "agenda";
 
 // ============================================================================
+// Calendar Closure Types
+// ============================================================================
+
+export interface ClosedDate {
+  date: string;
+  reason: string;
+  type: 'holiday' | 'maintenance';
+  allDay?: boolean;
+}
+
+// ============================================================================
 // Calendar Event Types
 // ============================================================================
 
@@ -38,7 +49,13 @@ export type EventColor =
   | "violet"
   | "rose"
   | "emerald"
-  | "orange";
+  | "orange"
+  | "cyan"
+  | "pink"
+  | "indigo"
+  | "teal"
+  | "lime"
+  | "red";
 
 export type CalendarEventData = {
   reservationId?: string;
@@ -48,6 +65,10 @@ export type CalendarEventData = {
   members: CalendarEventMember[];
   isRecurring: boolean;
   memberPlanId?: string[] | null;
+  // Status tracking for attendance
+  isMakeUpClass?: boolean;
+  status?: 'confirmed' | 'cancelled_by_member' | 'cancelled_by_vendor' | 'cancelled_by_holiday' | 'completed' | 'no_show';
+  hasCheckIn?: boolean; // Whether members checked in
 };
 
 export type CalendarEventMember = {

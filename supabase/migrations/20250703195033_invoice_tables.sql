@@ -52,5 +52,5 @@ CREATE TABLE IF NOT EXISTS transactions (
   metadata jsonb NOT NULL DEFAULT '{}',
   refunded boolean NOT NULL DEFAULT false,
   refunded_amount integer NOT NULL DEFAULT 0,
-  invoice_id text REFERENCES member_invoices (id) ON DELETE CASCADE,
+  invoice_id text REFERENCES member_invoices (id) ON DELETE CASCADE
 );
