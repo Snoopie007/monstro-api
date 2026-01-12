@@ -41,9 +41,11 @@ export async function recurringReservationRoutes(app: Elysia) {
         const { memberPlanId, date, session } = body;
         const isPackage = memberPlanId.startsWith("pkg_");
         try {
+
+            const memberPlan = await getMemberPlan(memberPlanId);
             const perfMemberPlan = performance.now();
             console.log(`⏱️  [PERF] Member plan query: ${(perfMemberPlan - perfStart).toFixed(2)}ms`);
-            const memberPlan = await getMemberPlan(memberPlanId);
+
             const location = memberPlan.location;
             const memberId = memberPlan.memberId;
             const now = toZonedTime(new Date(), location!.timezone);

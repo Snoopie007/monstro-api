@@ -1,0 +1,155 @@
+import { db } from "@/db/db";
+import { memberLocations, memberSubscriptions } from "@/db/schemas";
+import { MemberStripePayments } from "@/libs/stripe";
+import { Elysia, t } from "elysia";
+import { eq, and } from "drizzle-orm";
+import { z } from "zod";
+import {
+    calculatePeriodEnd,
+    calculateStripeFeePercentage,
+    calculateCancelAt
+} from "./utils";
+
+
+
+import type { PaymentType } from "@/types/DatabaseEnums";
+
+const PurchaseSubProps = {
+    params: z.object({
+        lid: z.string(),
+    }),
+};
+
+export function purchaseSubRoutes(app: Elysia) {
+
+    app.group('/pkg', (app) => {
+        app.post('/', async ({ params, status, body }) => {
+            const { lid } = params;
+            const { paymentMethodId, priceId, mid, memberContractId, paymentType } = body;
+            ;
+            try {
+
+                const member = await db.query.members.findFirst({
+                    where: (member, { eq }) => eq(member.id, mid),
+                });
+
+
+                if (!member || !member.stripeCustomerId) {
+                    return status(404, { error: "Member or Stripe customer not found" });
+                }
+
+                const location = await db.query.locations.findFirst({
+                    where: (location, { eq }) => eq(location.id, lid),
+                    with: {
+                        taxRates: true,
+                        locationState: true,
+                        integrations: {
+                            where: (integration, { eq }) => eq(integration.service, "stripe"),
+                            columns: {
+                                accountId: true,
+                                service: true,
+                            },
+                        },
+                    },
+                });
+
+
+                if (!location) {
+                    return status(404, { error: "Location not found" });
+                }
+
+                const pricing = await db.query.memberPlanPricing.findFirst({
+                    where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
+                    with: {
+                        plan: true,
+                    },
+                });
+
+
+                if (!pricing) {
+                    return status(404, { error: "Pricing not found" });
+                }
+
+
+                const { taxRates, locationState, integrations } = location;
+
+                const integration = integrations?.find((i) => i.service === "stripe");
+                if (!integration) {
+                    throw new Error("Stripe integration not found");
+                }
+
+                const stripe = new MemberStripePayments(integration.accountId);
+
+                const metadata = {
+                    locationId: lid,
+                    memberId: mid,
+                };
+
+                const taxRate = taxRates?.find((t) => t.isDefault) || taxRates[0];
+
+
+                const startDate = new Date();
+                const endDate = calculatePeriodEnd(
+                    startDate,
+                    pricing.interval!,
+                    pricing.intervalThreshold!
+                );
+
+                stripe.setCustomer(member.stripeCustomerId);
+
+                const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentType as PaymentType);
+                const feePercent = locationState?.usagePercent + stripeFeePercentage;
+
+                const sub = await stripe.createSubscription(pricing, {
+                    startDate,
+                    taxRateId: taxRate?.stripeRateId || undefined,
+                    cancelAt: calculateCancelAt(startDate, pricing),
+                    feePercent,
+                    paymentMethod: paymentMethodId || undefined,
+                    metadata,
+                });
+
+                const [subscription] = await db.insert(memberSubscriptions).values({
+                    startDate: startDate,
+                    stripeSubscriptionId: sub.id,
+                    currentPeriodStart: startDate,
+                    currentPeriodEnd: endDate,
+                    locationId: lid,
+                    memberId: mid,
+                    memberPlanPricingId: pricing.id,
+                    paymentType: paymentType,
+                    metadata: {
+                        stripePaymentMethodId: paymentMethodId,
+                    },
+                    status: sub.status,
+                    memberContractId: memberContractId,
+                }).returning({ id: memberSubscriptions.id });
+
+
+                if (!subscription) {
+                    return status(500, { error: "Failed to create subscription" });
+                }
+
+
+                return status(200, { id: subscription.id, status: sub.status });
+            } catch (error) {
+                console.error(error);
+                return status(500, { error: "Failed to checkout" });
+            }
+        }, {
+            ...PurchaseSubProps,
+            body: t.Object({
+                paymentMethodId: t.String(),
+                priceId: t.String(),
+                mid: t.String(),
+                memberContractId: t.String(),
+                paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
+            }),
+        });
+
+        return app;
+    });
+
+    return app
+
+}
