@@ -8,18 +8,11 @@ import {
     Separator
 } from '@/components/ui';
 import { cn } from '@/libs/utils';
-import { Attendance } from '@/types';
+import { Attendance, MissedReservation } from '@/types';
 import { format, formatDate, isPast } from 'date-fns';
 import { AlertTriangle, CalendarPlus, CalendarX, Wrench } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { ScheduleMakeupDialog } from './ScheduleMakeupDialog';
-
-interface MissedReservation {
-    id: string;
-    programName?: string;
-    startOn: Date | string;
-    programId?: string;
-}
 
 interface Closure {
     type: 'holiday' | 'maintenance';
