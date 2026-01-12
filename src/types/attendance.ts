@@ -43,3 +43,15 @@ export type ReservationException =
 
 // Backward compatible alias
 export type RecurringReservationException = ReservationException;
+
+export interface MissedReservation {
+  id: string;
+  startOn: Date | string;
+  programId: string | null;
+  programName: string;
+}
+
+export interface AttendanceResponse {
+  attendances: ExtendedAttendance[];
+  missedReservations: MissedReservation[];
+}

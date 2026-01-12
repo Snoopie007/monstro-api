@@ -1,8 +1,9 @@
 import { db } from "@/db/db";
 import { eq, sql } from "drizzle-orm";
-import { reservations, programSessions, memberSubscriptions, memberPackages } from "@/db/schemas";
+import { reservations, programSessions, memberSubscriptions, memberPackages, members, locations } from "@/db/schemas";
 import { NextRequest, NextResponse } from "next/server";
 import type { CreateMakeUpClassInput } from "@/types/reservation";
+import { sendMakeupConfirmationNotification } from "@/libs/notifications/MakeupConfirmation";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -244,6 +245,45 @@ export async function POST(req: NextRequest, props: Props) {
           updated: new Date(),
         })
         .where(eq(memberPackages.id, effectivePkgId));
+    }
+
+    // Send confirmation notification
+    const [member, location] = await Promise.all([
+      db.query.members.findFirst({ where: eq(members.id, memberId) }),
+      db.query.locations.findFirst({ where: eq(locations.id, params.id) }),
+    ]);
+
+    if (member?.email) {
+      const creditsRemaining = planMakeUpCredits > 0 
+        ? planMakeUpCredits - (usedMakeUpCredits + 1) 
+        : undefined;
+
+      sendMakeupConfirmationNotification(params.id, {
+        memberId: member.id,
+        memberEmail: member.email,
+        memberFirstName: member.firstName,
+        originalClass: {
+          name: originalReservation.programName || originalReservation.session?.program?.name || 'Class',
+          date: originalReservation.startOn.toISOString().split('T')[0],
+          time: originalReservation.startOn.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit' 
+          }),
+        },
+        makeupClass: {
+          name: resolvedProgramName || 'Make-up Class',
+          date: startDateTime.toISOString().split('T')[0],
+          time: startDateTime.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit' 
+          }),
+        },
+        creditsRemaining,
+        locationName: location?.name || 'Your Studio',
+        locationAddress: location?.address ?? undefined,
+      }).catch(err => {
+        console.error('Failed to send makeup confirmation notification:', err);
+      });
     }
 
     return NextResponse.json(makeUpReservation, { status: 201 });

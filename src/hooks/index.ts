@@ -1,4 +1,5 @@
 export * from "./hooks";
+export * from './useCalendarClosures';
 export * from './useCalendarKeyboardShortcuts';
 export * from './useCurrentTimeIndicator';
 export * from "./useCustomFields";

@@ -29,6 +29,7 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  Checkbox,
 } from "@/components/forms";
 import { cn, tryCatch } from "@/libs/utils";
 import { ClosureSchema, type ClosureFormData } from "../schemas";
@@ -57,14 +58,16 @@ export function NewClosureDialog({
       endDate: undefined,
       sessionId: undefined,
       reason: '',
+      notifyMembers: true,
     },
   });
 
   async function onSubmit(data: ClosureFormData) {
     setSaving(true);
 
+    const notifyParam = data.notifyMembers ? '?notify=true' : '';
     const { result, error } = await tryCatch(
-      fetch(`/api/protected/loc/${locationId}/exceptions`, {
+      fetch(`/api/protected/loc/${locationId}/exceptions${notifyParam}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -232,6 +235,25 @@ export function NewClosureDialog({
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Notify Members */}
+              <FormField
+                control={form.control}
+                name="notifyMembers"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel size="tiny" className="font-normal cursor-pointer">
+                      Notify affected members via email
+                    </FormLabel>
                   </FormItem>
                 )}
               />

@@ -7,6 +7,17 @@ import { Member } from "./member";
 export type CalendarView = "month" | "week" | "day" | "agenda";
 
 // ============================================================================
+// Calendar Closure Types
+// ============================================================================
+
+export interface ClosedDate {
+  date: string;
+  reason: string;
+  type: 'holiday' | 'maintenance';
+  allDay?: boolean;
+}
+
+// ============================================================================
 // Calendar Event Types
 // ============================================================================
 

@@ -14,7 +14,7 @@ import {
 	startOfMonth,
 	startOfWeek,
 } from "date-fns";
-import { CalendarX, Wrench } from "lucide-react";
+
 
 import {
 	DraggableEvent,
@@ -23,19 +23,14 @@ import {
 	EventHeight,
 	EventItem,
 } from "../event-calendar";
-import type { CalendarEvent } from "@/types";
+import type { CalendarEvent, ClosedDate } from "@/types";
 import { DefaultStartHour } from "@/components/event-calendar/constants";
 import { getAllEventsForDay, getEventsForDay, getSpanningEventsForDay, sortEvents } from "@/libs/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/ToolTip";
 import { useEventVisibility } from "@/hooks";
 import { cn } from "@/libs/utils";
-
-interface ClosedDate {
-	date: string;
-	reason: string;
-	type: 'holiday' | 'maintenance';
-}
+import { CalendarX, Wrench } from "lucide-react";
 
 interface MonthViewProps {
 	currentDate: Date;
@@ -264,18 +259,82 @@ const DayCell = React.memo(function DayCell({
 							)}>
 								{format(day, "d")}
 							</div>
-							<div className="flex-1 flex items-center justify-center">
-								{closedDate.type === 'holiday' ? (
-									<CalendarX className="size-4 text-gray-400 dark:text-gray-500" />
-								) : (
-									<Wrench className="size-4 text-gray-400 dark:text-gray-500" />
+							<div
+								ref={isReferenceCell ? contentRef : null}
+								className={cn(
+									"flex-1 flex flex-col min-h-[calc((var(--event-height)+var(--event-gap))*2)]",
+									"sm:min-h-[calc((var(--event-height)+var(--event-gap))*3)] lg:min-h-[calc((var(--event-height)+var(--event-gap))*4)]",
+									"opacity-40 pointer-events-none"
+								)}
+							>
+								{sortEvents(allDayEvents).map(
+									(event: CalendarEvent, index: number) => {
+										const eventStart = new Date(event.start);
+										const eventEnd = new Date(event.end);
+										const isFirstDay = isSameDay(day, eventStart);
+										const isLastDay = isSameDay(day, eventEnd);
+
+										const isHidden = isMounted && visibleCount && index >= visibleCount;
+
+										if (!visibleCount) return null;
+
+										return (
+											<div key={`closed-${event.id}-${day.toISOString().slice(0, 10)}`}
+												className="aria-hidden:hidden"
+												aria-hidden={isHidden ? "true" : undefined}
+											>
+												<EventItem
+													event={event}
+													view="month"
+													isFirstDay={isFirstDay}
+													isLastDay={isLastDay}
+													className="line-through"
+												>
+													{isFirstDay && (
+														<div className="truncate">
+															{!event.allDay && (
+																<span>
+																	{format(new Date(event.start), "h:mm")}{" "}
+																</span>
+															)}
+															{event.title}
+														</div>
+													)}
+													{!isFirstDay && (
+														<div className="invisible" aria-hidden={true}>
+															{event.title}
+														</div>
+													)}
+												</EventItem>
+											</div>
+										);
+									}
+								)}
+								{hasMore && (
+									<div className="text-muted-foreground text-xs pt-1.5">
+										+ {remainingCount} cancelled
+									</div>
 								)}
 							</div>
 						</div>
 					</div>
 				</TooltipTrigger>
 				<TooltipContent>
-					<span className="font-medium">Closed:</span> {closedDate.reason}
+					<div className="space-y-1">
+						<div className="font-medium flex items-center gap-1.5">
+							{closedDate.type === 'holiday' ? (
+								<CalendarX className="size-3" />
+							) : (
+								<Wrench className="size-3" />
+							)}
+							Closed: {closedDate.reason}
+						</div>
+						{allEvents.length > 0 && (
+							<div className="text-xs opacity-80">
+								{allEvents.length} session{allEvents.length > 1 ? 's' : ''} cancelled
+							</div>
+						)}
+					</div>
 				</TooltipContent>
 			</Tooltip>
 		);

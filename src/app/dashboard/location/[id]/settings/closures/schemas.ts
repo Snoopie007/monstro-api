@@ -6,6 +6,7 @@ export const ClosureSchema = z.object({
   endDate: z.date().optional(),
   sessionId: z.string().optional(),
   reason: z.string().optional(),
+  notifyMembers: z.boolean().optional(),
 });
 
 export type ClosureFormData = z.infer<typeof ClosureSchema>;

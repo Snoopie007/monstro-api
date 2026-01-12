@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { format, addMinutes, addDays, isSameDay } from "date-fns";
-import { CalendarIcon, Clock, Loader2 } from "lucide-react";
+import { CalendarIcon, CalendarX, Clock, Loader2 } from "lucide-react";
 
 import {
   Button,
@@ -87,6 +87,13 @@ export function ScheduleMakeupDialog({
   const [loadingCredits, setLoadingCredits] = useState(false);
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [loadingBlockedDates, setLoadingBlockedDates] = useState(false);
+  const [customTime, setCustomTime] = useState("12:00");
+  const [customDuration, setCustomDuration] = useState(30);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
 
   const form = useForm<MakeupClassFormData>({
     resolver: zodResolver(MakeupClassSchema),
@@ -100,7 +107,6 @@ export function ScheduleMakeupDialog({
     },
   });
 
-  const selectedDate = form.watch('startOn');
   const useCustomTime = form.watch('useCustomTime');
   const sessionId = form.watch('sessionId');
 
@@ -122,6 +128,9 @@ export function ScheduleMakeupDialog({
     const blocked = blockedDates.find(b => b.date.slice(0, 10) === dateStr);
     return blocked?.reason || null;
   };
+
+  const selectedDateBlocked = selectedCalendarDate ? isDateBlocked(selectedCalendarDate) : false;
+  const selectedDateBlockedReason = selectedCalendarDate ? getBlockedReason(selectedCalendarDate) : null;
 
   useEffect(() => {
     if (!open) return;
@@ -179,14 +188,14 @@ export function ScheduleMakeupDialog({
     fetchBlockedDates();
   }, [open, locationId]);
 
-  // Fetch available slots when date changes
+  // Fetch available slots when calendar date changes
   useEffect(() => {
-    if (!selectedDate || !open) return;
+    if (!selectedCalendarDate || !open) return;
 
     async function fetchSlots() {
       setLoadingSlots(true);
       try {
-        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        const dateStr = format(selectedCalendarDate, 'yyyy-MM-dd');
         const res = await fetch(
           `/api/protected/loc/${locationId}/sessions/available?date=${dateStr}&programId=${originalReservation.programId || ''}`
         );
@@ -201,23 +210,7 @@ export function ScheduleMakeupDialog({
     }
 
     fetchSlots();
-  }, [selectedDate, locationId, originalReservation.programId, open]);
-
-  // Update end time when session is selected
-  useEffect(() => {
-    if (sessionId && !useCustomTime) {
-      const slot = availableSlots.find(s => s.sessionId === sessionId);
-      if (slot) {
-        const [hours, minutes] = slot.time.split(':').map(Number);
-        const startDate = new Date(selectedDate);
-        startDate.setHours(hours, minutes, 0, 0);
-        const endDate = addMinutes(startDate, slot.duration);
-        
-        form.setValue('startOn', startDate);
-        form.setValue('endOn', endDate);
-      }
-    }
-  }, [sessionId, useCustomTime, availableSlots, selectedDate]);
+  }, [selectedCalendarDate, locationId, originalReservation.programId, open]);
 
   async function onSubmit(data: MakeupClassFormData) {
     setSaving(true);
@@ -251,6 +244,11 @@ export function ScheduleMakeupDialog({
 
   function handleClose() {
     form.reset();
+    setSelectedCalendarDate(() => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return today;
+    });
     onOpenChange(false);
   }
 
@@ -258,25 +256,25 @@ export function ScheduleMakeupDialog({
     form.setValue('useCustomTime', useCustom);
     if (useCustom) {
       form.setValue('sessionId', undefined);
-      // Set default custom time
-      const startDate = new Date(selectedDate);
-      startDate.setHours(12, 0, 0, 0);
-      const duration = form.getValues('customDuration');
+      const startDate = new Date(selectedCalendarDate);
+      const [hours, minutes] = customTime.split(':').map(Number);
+      startDate.setHours(hours, minutes, 0, 0);
       form.setValue('startOn', startDate);
-      form.setValue('endOn', addMinutes(startDate, duration));
+      form.setValue('endOn', addMinutes(startDate, customDuration));
     }
   }
 
   function handleCustomTimeChange(timeString: string) {
+    setCustomTime(timeString);
     const [hours, minutes] = timeString.split(':').map(Number);
-    const startDate = new Date(selectedDate);
+    const startDate = new Date(selectedCalendarDate);
     startDate.setHours(hours, minutes, 0, 0);
-    const duration = form.getValues('customDuration');
     form.setValue('startOn', startDate);
-    form.setValue('endOn', addMinutes(startDate, duration));
+    form.setValue('endOn', addMinutes(startDate, customDuration));
   }
 
   function handleDurationChange(duration: number) {
+    setCustomDuration(duration);
     form.setValue('customDuration', duration);
     const startOn = form.getValues('startOn');
     form.setValue('endOn', addMinutes(startOn, duration));
@@ -360,7 +358,23 @@ export function ScheduleMakeupDialog({
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={(date) => date && !isDateBlocked(date) && field.onChange(date)}
+                          onSelect={(date) => {
+                            if (!date || isDateBlocked(date)) return;
+                            
+                            // Only update if date (day) actually changed
+                            if (!isSameDay(date, selectedCalendarDate)) {
+                              const normalizedDate = new Date(date);
+                              normalizedDate.setHours(0, 0, 0, 0);
+                              setSelectedCalendarDate(normalizedDate);
+                              
+                              // Reset selections when date changes
+                              form.setValue('sessionId', undefined);
+                              form.setValue('useCustomTime', false);
+                            }
+                            
+                            // Always update the form field for display
+                            field.onChange(date);
+                          }}
                           initialFocus
                           disabled={(date) => {
                             const today = new Date();
@@ -386,37 +400,63 @@ export function ScheduleMakeupDialog({
               <div className="space-y-3">
                 <FormLabel size="tiny">Time Slot</FormLabel>
                 
-                {loadingSlots ? (
+                {selectedDateBlocked ? (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                      <CalendarX className="size-4" />
+                      <span className="text-sm font-medium">Location Closed</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {selectedDateBlockedReason || 'This date is unavailable for scheduling.'}
+                    </p>
+                  </div>
+                ) : loadingSlots ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 className="size-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {/* Available slots */}
                     {availableSlots.length > 0 && (
                       <div className="space-y-2">
-                        {availableSlots.map((slot) => (
-                          <RadioBox
-                            key={slot.sessionId}
-                            value={slot.sessionId}
-                            selected={sessionId === slot.sessionId}
-                            onSelectChange={(value) => {
-                              form.setValue('sessionId', value);
-                              form.setValue('useCustomTime', false);
-                            }}
-                            className="flex items-center justify-between p-3"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Clock className="size-4 text-muted-foreground" />
-                              <span>{slot.time}</span>
-                              <span className="text-muted-foreground">-</span>
-                              <span className="text-muted-foreground">{slot.programName}</span>
-                            </div>
-                            <Badge variant="secondary" className="text-xs">
-                              {slot.availableSpots} spots
-                            </Badge>
-                          </RadioBox>
-                        ))}
+                        {availableSlots.map((slot) => {
+                          const [hours, minutes] = slot.time.split(':').map(Number);
+                          const period = hours >= 12 ? 'PM' : 'AM';
+                          const displayHours = hours % 12 || 12;
+                          const formattedTime = `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+                          
+                          return (
+                            <RadioBox
+                              key={slot.sessionId}
+                              value={slot.sessionId}
+                              selected={sessionId === slot.sessionId}
+                              onSelectChange={(value) => {
+                                form.setValue('sessionId', value);
+                                form.setValue('useCustomTime', false);
+                                
+                                // Set time directly here instead of via effect
+                                const selectedSlot = availableSlots.find(s => s.sessionId === value);
+                                if (selectedSlot) {
+                                  const [hours, minutes] = selectedSlot.time.split(':').map(Number);
+                                  const startDate = new Date(selectedCalendarDate);
+                                  startDate.setHours(hours, minutes, 0, 0);
+                                  form.setValue('startOn', startDate);
+                                  form.setValue('endOn', addMinutes(startDate, selectedSlot.duration));
+                                }
+                              }}
+                              className="flex items-center justify-between p-3"
+                            >
+                              <div className="flex items-center gap-2 min-w-0 whitespace-nowrap overflow-hidden">
+                                <Clock className="size-4 text-muted-foreground shrink-0" />
+                                <span className="shrink-0">{formattedTime}</span>
+                                <span className="text-muted-foreground shrink-0">-</span>
+                                <span className="text-muted-foreground truncate">{slot.programName}</span>
+                              </div>
+                              <Badge variant="secondary" className="text-xs shrink-0 ml-2">
+                                {slot.availableSpots} spots
+                              </Badge>
+                            </RadioBox>
+                          );
+                        })}
                       </div>
                     )}
 
@@ -452,7 +492,7 @@ export function ScheduleMakeupDialog({
                             <label className="text-xs text-muted-foreground mb-1 block">Time</label>
                             <Input
                               type="time"
-                              defaultValue="12:00"
+                              value={customTime}
                               onChange={(e) => handleCustomTimeChange(e.target.value)}
                               className="text-sm"
                             />
@@ -463,7 +503,7 @@ export function ScheduleMakeupDialog({
                               type="number"
                               min={15}
                               max={240}
-                              defaultValue={30}
+                              value={customDuration}
                               onChange={(e) => handleDurationChange(parseInt(e.target.value) || 30)}
                               className="text-sm"
                             />
@@ -484,6 +524,7 @@ export function ScheduleMakeupDialog({
                 type="submit" 
                 disabled={
                   saving || 
+                  selectedDateBlocked ||
                   (!sessionId && !useCustomTime) || 
                   (creditsInfo !== null && creditsInfo.limit > 0 && creditsInfo.remaining <= 0)
                 } 

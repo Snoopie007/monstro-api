@@ -1,19 +1,18 @@
 "use client";
 
-import { useState, useMemo } from 'react'
 import {
+    Button,
     HoverCard,
     HoverCardContent,
     HoverCardTrigger,
-    Separator,
-    Button,
-    Badge,
-} from '@/components/ui'
-import { cn } from '@/libs/utils'
-import { formatDate, isPast, format } from 'date-fns'
-import { Attendance } from '@/types'
-import { AlertTriangle, CalendarPlus, CalendarX, Wrench } from 'lucide-react'
-import { ScheduleMakeupDialog } from './ScheduleMakeupDialog'
+    Separator
+} from '@/components/ui';
+import { cn } from '@/libs/utils';
+import { Attendance } from '@/types';
+import { format, formatDate, isPast } from 'date-fns';
+import { AlertTriangle, CalendarPlus, CalendarX, Wrench } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ScheduleMakeupDialog } from './ScheduleMakeupDialog';
 
 interface MissedReservation {
     id: string;
@@ -37,6 +36,7 @@ interface SimplifiedAttendance {
 
 interface DayData {
     isEmpty: boolean;
+    isCurrentMonth?: boolean;
     date: Date;
     count: number;
     attendances?: SimplifiedAttendance[] | Attendance[];
@@ -111,12 +111,12 @@ export const MonthView = ({ weeks, month, locationId, memberId, onMakeupSchedule
                                                         'transition-colors duration-200 border border-gray-200',
                                                         'hover:border-gray-400 relative',
                                                         isClosure && 'bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-700',
-                                                        !isClosure && day.count === 0 && !hasMissedClasses &&
+                                                        !isClosure && !day.count && !hasMissedClasses &&
                                                         'dark:bg-[#0f172a] bg-[#ebedf0]',
                                                         !isClosure && day.count > 0 &&
                                                         'bg-indigo-700 dark:bg-indigo-500',
-                                                        !isClosure && hasMissedClasses && day.count === 0 &&
-                                                        'bg-amber-500/30 dark:bg-amber-500/20 border-amber-500/50'
+                                                        !isClosure && hasMissedClasses && !day.count &&
+                                                        'bg-amber-500 dark:bg-amber-600 border-amber-600'
                                                     )}
                                                 >
                                                     {isClosure && (
@@ -127,9 +127,6 @@ export const MonthView = ({ weeks, month, locationId, memberId, onMakeupSchedule
                                                                 <Wrench className="size-2.5 text-gray-500 dark:text-gray-400" />
                                                             )}
                                                         </div>
-                                                    )}
-                                                    {!isClosure && hasMissedClasses && (
-                                                        <div className="absolute -top-1 -right-1 size-2 bg-amber-500 rounded-full" />
                                                     )}
                                                 </div>
                                             </HoverCardTrigger>

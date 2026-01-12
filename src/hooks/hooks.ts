@@ -71,18 +71,6 @@ function useMemberAchievements(id: string, mid: string) {
 	};
 }
 
-function useAttedance(id: string, mid: string) {
-	const { data, error, isLoading } = useSWR(
-		{ url: `members/${mid}/attendances`, id: id },
-		fetcher
-	);
-	return {
-		attendances: data,
-		error,
-		isLoading,
-	};
-}
-
 function useMemberPrograms(id: string, mid: string) {
 	const { data, error, isLoading } = useSWR(
 		{ url: `members/${mid}/programs`, id: id },
@@ -190,6 +178,6 @@ function useMemberInvoices(id: string, mid: string) {
 
 export {
 	fetcher, useAchievement,
-	useAchievements, useAttedance, useIntegrations, useMemberAchievements, useMemberInvoices, useMemberPackages, useMemberPrograms, useMembers, useMemberSubscriptions, useMemberTransactions, useWallet
+	useAchievements, useIntegrations, useMemberAchievements, useMemberInvoices, useMemberPackages, useMemberPrograms, useMembers, useMemberSubscriptions, useMemberTransactions, useWallet
 };
 

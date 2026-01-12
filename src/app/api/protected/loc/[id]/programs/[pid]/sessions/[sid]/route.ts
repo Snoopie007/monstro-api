@@ -1,8 +1,9 @@
 import { db } from "@/db/db";
-import { and, eq, count, gte, isNull } from "drizzle-orm";
-import { programSessions, reservations, recurringReservations, reservationExceptions } from "@/db/schemas";
+import { and, eq, gte, isNull } from "drizzle-orm";
+import { programSessions, reservations, recurringReservations, reservationExceptions, locations } from "@/db/schemas";
 import { NextRequest, NextResponse } from "next/server";
 import type { CancellationResult } from "@/types/reservation";
+import { sendSessionCancellationNotifications } from "@/libs/notifications/SessionCancellation";
 
 type props = {
   params: Promise<{ pid: string; sid: string; id: string }>;
@@ -36,14 +37,19 @@ export async function DELETE(req: NextRequest, props: props) {
 
   try {
     const result = await db.transaction(async (tx) => {
-      // 1. Find the session
+      // 1. Find the session with program and staff info
       const session = await tx.query.programSessions.findFirst({
         where: and(
           eq(programSessions.id, params.sid),
           eq(programSessions.programId, params.pid)
         ),
         with: {
-          program: true,
+          program: {
+            with: {
+              instructor: true,
+            },
+          },
+          staff: true,
         },
       });
 
@@ -170,10 +176,51 @@ export async function DELETE(req: NextRequest, props: props) {
           ...activeRecurring.map(r => r.member),
         ].filter(Boolean);
 
-        // TODO: Implement notification sending
-        // This could queue notifications via your existing notification system
-        // For now, we just track the count
-        cancellationResult.notificationsSent = allAffectedMembers.length;
+        const uniqueMembers = [...new Map(
+          allAffectedMembers.map(m => [m.id, m])
+        ).values()];
+
+        if (uniqueMembers.length > 0) {
+          const location = await tx.query.locations.findFirst({
+            where: eq(locations.id, params.id),
+          });
+
+          const instructor = session.staff || session.program.instructor;
+
+          const sessionTime = new Date(`1970-01-01T${session.time}`).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+          });
+
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const sessionDate = dayNames[session.day] || 'Scheduled day';
+
+          sendSessionCancellationNotifications(params.id, {
+            sessionName: session.program.name,
+            sessionDate,
+            sessionTime,
+            instructorFirstName: instructor?.firstName,
+            instructorLastName: instructor?.lastName,
+            reason,
+            affectedMembers: uniqueMembers.map(m => ({
+              memberId: m.id,
+              email: m.email,
+              firstName: m.firstName,
+              lastName: m.lastName ?? undefined,
+            })),
+            locationName: location?.name || 'Your Studio',
+            locationAddress: location?.address ?? undefined,
+            locationEmail: location?.email ?? undefined,
+            locationPhone: location?.phone ?? undefined,
+            makeupBaseUrl: process.env.NEXT_PUBLIC_APP_URL 
+              ? `${process.env.NEXT_PUBLIC_APP_URL}/member/makeup`
+              : undefined,
+          }).catch(err => {
+            console.error('Failed to send session cancellation notifications:', err);
+          });
+
+          cancellationResult.notificationsSent = uniqueMembers.length;
+        }
       }
 
       return cancellationResult;

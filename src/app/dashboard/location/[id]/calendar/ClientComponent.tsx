@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useMemo, useEffect, useRef } from "react";
+import { use, useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   startOfMonth,
   endOfMonth,
@@ -13,6 +13,7 @@ import { toast } from "react-toastify";
 import { useSessionCalendar } from "./providers";
 import { Calendar } from "@/components/ui/calendar";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
+import { useCalendarClosures, type ClosedDate } from "@/hooks";
 import { CalendarFilters } from "./components/";
 import { tryCatch } from "@/libs/utils";
 import { SessionManagementDialog } from "./components/EnhancedEventDialog";
@@ -102,6 +103,16 @@ export default function CalendarPageClient({
     planIds: selectedPlanIds.length > 0 ? selectedPlanIds : undefined,
   });
 
+  // Fetch closures for the calendar
+  const { closures } = useCalendarClosures({
+    locationId: id,
+    startDate: format(startDate, "yyyy-MM-dd"),
+    endDate: format(endDate, "yyyy-MM-dd"),
+  });
+
+  // Memoize closedDates to prevent unnecessary re-renders
+  const closedDates = useMemo<ClosedDate[]>(() => closures, [closures]);
+
   // Handle calendar date selection - navigates to day view of selected date
   const handleDateSelect = (date: Date) => {
     setCurrentDate(date);
@@ -187,6 +198,7 @@ export default function CalendarPageClient({
           ) : (
             <EventCalendar
               events={events}
+              closedDates={closedDates}
               currentDate={currentDate}
               view={view}
               onDateChange={setCurrentDate}
