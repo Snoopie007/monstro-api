@@ -141,7 +141,7 @@ export async function POST(
 		try {
 			await sendEmailViaApi({
 				recipient: existingUser.email,
-				template: "MemberInvite",
+				template: "MemberInviteEmail",
 				subject: "Welcome to Monstro",
 				data: {
 					ui: { button: "Join the team." },
