@@ -27,7 +27,7 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ id: str
         const { member, location } = ml
         await sendEmailViaApi({
             recipient: member.email,
-            template: 'MemberInvite',
+            template: 'MemberInviteEmail',
             subject: `Welcome to ${location.name}`,
             data: {
                 ui: {

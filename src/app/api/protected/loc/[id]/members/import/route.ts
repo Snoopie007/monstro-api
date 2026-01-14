@@ -94,7 +94,7 @@ export async function POST(
 				const subject = `You've been invited to join ${location.name} on Monstro`;
 				return sendEmailViaApi({
 					recipient: m.email,
-					template: "MemberInvite",
+					template: "MemberInviteEmail",
 					subject,
 					data: {
 						location: {
