@@ -18,8 +18,14 @@ import { flexRender, getCoreRowModel, useReactTable } from '@/libs/table-utils'
 import { useMigrations } from '../../../../../../hooks/useMigrations'
 import { DownloadCloud } from 'lucide-react'
 import { useMemo, useState, useEffect } from 'react'
+import { Pagination,
+    PaginationContent,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious } from '@/components/ui/pagination'
 
-export function MigrationList({ lid }: { lid: string }) {
+export function MigrationList({ lid, onRefetchReady }: { lid: string; onRefetchReady?: (refetch: () => void) => void }) {
     const [page, setPage] = useState(0)
     const [pageSize] = useState(15)
 
@@ -56,9 +62,13 @@ export function MigrationList({ lid }: { lid: string }) {
         refetch()
     }, [page, pageSize, refetch])
 
+    useEffect(() => {
+        onRefetchReady?.(refetch)
+    }, [refetch, onRefetchReady])
+
     return (
-        <div>
-            {migrations.length > 0 ? (
+        <div className="space-y-2">
+            <div className="border border-foreground/10 rounded-lg overflow-hidden">
                 <Table>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -79,30 +89,78 @@ export function MigrationList({ lid }: { lid: string }) {
                         ))}
                     </TableHeader>
                     <TableBody>
-                        {table.getRowModel().rows.map((row) => (
-                            <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
-                                {row.getVisibleCells().map((cell) => (
-                                    <TableCell key={cell.id}>
-                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                    </TableCell>
-                                ))}
+                        {migrations.length > 0 ? (
+                            table.getRowModel().rows.map((row) => (
+                                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                                    {row.getVisibleCells().map((cell) => (
+                                        <TableCell key={cell.id}>
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={columns.length} className="h-24 text-center">
+                                    <Empty variant="border">
+                                        <EmptyHeader>
+                                            <EmptyMedia variant="icon">
+                                                <DownloadCloud className="size-5" />
+                                            </EmptyMedia>
+                                            <EmptyTitle>No migrations found</EmptyTitle>
+                                            <EmptyDescription>
+                                                Start by importing members to see them here
+                                            </EmptyDescription>
+                                        </EmptyHeader>
+                                    </Empty>
+                                </TableCell>
                             </TableRow>
-                        ))}
+                        )}
                     </TableBody>
                 </Table>
-            ) : (
-                <Empty variant="border">
-                    <EmptyHeader>
-                        <EmptyMedia variant="icon">
-                            <DownloadCloud className="size-5" />
-                        </EmptyMedia>
-                        <EmptyTitle>No migrations found</EmptyTitle>
-                        <EmptyDescription>
-                            Start by importing members to see them here
-                        </EmptyDescription>
-                    </EmptyHeader>
-                </Empty>
-            )}
+            </div>
+
+
+            <div className="flex flex-row items-center justify-between px-4 py-2 text-sm">
+                <div className="text-muted-foreground">
+                    Total migrations: <span className="font-medium text-foreground">{count}</span>
+                </div>
+                
+                {totalPages > 1 && (
+                    <Pagination className="mx-0 w-auto">
+                        <PaginationContent>
+                            <PaginationItem>
+                                <PaginationPrevious
+                                    onClick={() => setPage(page - 1)}
+                                    className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                />
+                            </PaginationItem>
+                            
+                            {Array.from({ length: totalPages }, (_, i) => {
+                                const pageNum = i + 1
+                                return (
+                                    <PaginationItem key={pageNum}>
+                                        <PaginationLink
+                                            onClick={() => setPage(i)}
+                                            isActive={page === i}
+                                            className="cursor-pointer"
+                                        >
+                                            {pageNum}
+                                        </PaginationLink>
+                                    </PaginationItem>
+                                )
+                            })}
+                            
+                            <PaginationItem>
+                                <PaginationNext
+                                    onClick={() => setPage(page + 1)}
+                                    className={page >= totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                />
+                            </PaginationItem>
+                        </PaginationContent>
+                    </Pagination>
+                )}
+            </div>
         </div>
     )
 }
