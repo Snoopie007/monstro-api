@@ -20,6 +20,7 @@ const NewPlanSchema = z
     familyMemberLimit: z.number().optional(),
     contractId: z.string().optional(),
     intervalClassLimit: z.number().optional(),
+    makeUpCredits: z.number().min(0).optional(),
     groupId: z.string().optional(),
     programs: z
       .array(z.string())

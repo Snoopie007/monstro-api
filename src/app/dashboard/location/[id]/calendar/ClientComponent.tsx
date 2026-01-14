@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useMemo } from "react";
+import { use, useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   startOfMonth,
   endOfMonth,
@@ -13,6 +13,7 @@ import { toast } from "react-toastify";
 import { useSessionCalendar } from "./providers";
 import { Calendar } from "@/components/ui/calendar";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
+import { useCalendarClosures, type ClosedDate } from "@/hooks";
 import { CalendarFilters } from "./components/";
 import { tryCatch } from "@/libs/utils";
 import { SessionManagementDialog } from "./components/EnhancedEventDialog";
@@ -48,27 +49,29 @@ export default function CalendarPageClient({
     endDate: endOfMonth(addMonths(currentDate, 5)),
   }));
 
-  // Track plan filter changes to reset cache
-  const [lastPlanFilterHash, setLastPlanFilterHash] = useState(() =>
-    JSON.stringify(selectedPlanIds)
-  );
+  // Use ref to track plan filter changes without causing re-renders
+  const lastPlanFilterHashRef = useRef(JSON.stringify(selectedPlanIds));
 
-  // Smart caching: only update date range when currentDate goes outside cached range or filters change
+  // Pure computation in useMemo - no state updates here
   const { startDate, endDate } = useMemo(() => {
+    return cachedDateRange;
+  }, [cachedDateRange]);
+
+  // Handle cache invalidation in useEffect (proper place for side effects)
+  useEffect(() => {
+    const currentPlanFilterHash = JSON.stringify(selectedPlanIds);
     const currentMonth = startOfMonth(currentDate);
     const cachedStart = cachedDateRange.startDate;
     const cachedEnd = cachedDateRange.endDate;
-    const currentPlanFilterHash = JSON.stringify(selectedPlanIds);
 
-    // Check if plan filters changed
-    if (currentPlanFilterHash !== lastPlanFilterHash) {
-      setLastPlanFilterHash(currentPlanFilterHash);
-      const newRange = {
+    // Check if plan filters changed - reset cache completely
+    if (currentPlanFilterHash !== lastPlanFilterHashRef.current) {
+      lastPlanFilterHashRef.current = currentPlanFilterHash;
+      setCachedDateRange({
         startDate: startOfMonth(subMonths(currentDate, 3)),
         endDate: endOfMonth(addMonths(currentDate, 5)),
-      };
-      setCachedDateRange(newRange);
-      return newRange;
+      });
+      return;
     }
 
     // Check if current date is outside the cached range
@@ -77,22 +80,16 @@ export default function CalendarPageClient({
 
     if (isBeforeCachedRange || isAfterCachedRange) {
       // Expand cache in the direction of navigation
-      const newRange = {
+      setCachedDateRange({
         startDate: isBeforeCachedRange
           ? startOfMonth(subMonths(currentDate, 6)) // Expand backward
           : cachedStart,
         endDate: isAfterCachedRange
           ? endOfMonth(addMonths(currentDate, 6)) // Expand forward
           : cachedEnd,
-      };
-
-      setCachedDateRange(newRange);
-      return newRange;
+      });
     }
-
-    // Current date is within cached range, no API call needed
-    return cachedDateRange;
-  }, [currentDate, cachedDateRange, selectedPlanIds, lastPlanFilterHash]);
+  }, [currentDate, selectedPlanIds, cachedDateRange]);
 
   // Use the existing hook to fetch events
   const {
@@ -105,6 +102,16 @@ export default function CalendarPageClient({
     endDate: format(endDate, "yyyy-MM-dd"),
     planIds: selectedPlanIds.length > 0 ? selectedPlanIds : undefined,
   });
+
+  // Fetch closures for the calendar
+  const { closures } = useCalendarClosures({
+    locationId: id,
+    startDate: format(startDate, "yyyy-MM-dd"),
+    endDate: format(endDate, "yyyy-MM-dd"),
+  });
+
+  // Memoize closedDates to prevent unnecessary re-renders
+  const closedDates = useMemo<ClosedDate[]>(() => closures, [closures]);
 
   // Handle calendar date selection - navigates to day view of selected date
   const handleDateSelect = (date: Date) => {
@@ -191,6 +198,7 @@ export default function CalendarPageClient({
           ) : (
             <EventCalendar
               events={events}
+              closedDates={closedDates}
               currentDate={currentDate}
               view={view}
               onDateChange={setCurrentDate}

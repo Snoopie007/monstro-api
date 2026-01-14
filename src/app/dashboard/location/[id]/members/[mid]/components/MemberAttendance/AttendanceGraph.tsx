@@ -80,9 +80,9 @@ export const MemberAttendanceGraph = ({
             </div>
             <div className='space-y-6 '>
                 <div className="flex flex-row gap-3 w-full">
-                    <MonthView weeks={secondPreviousMonthWeeks} month={secondPreviousMonthName} />
-                    <MonthView weeks={previousMonthWeeks} month={previousMonthName} />
-                    <MonthView weeks={currentMonthWeeks} month={currentMonthName} />
+                    <MonthView weeks={secondPreviousMonthWeeks} month={secondPreviousMonthName} locationId={params.id} memberId={params.mid} />
+                    <MonthView weeks={previousMonthWeeks} month={previousMonthName} locationId={params.id} memberId={params.mid} />
+                    <MonthView weeks={currentMonthWeeks} month={currentMonthName} locationId={params.id} memberId={params.mid} />
                 </div>
                 <p className='text-xs font-medium'>
                     <span >Total Attendance {totalAttendances}</span>

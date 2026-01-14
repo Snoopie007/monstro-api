@@ -98,7 +98,11 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
         const sub = await db.query.memberSubscriptions.findFirst({
             where: (sub, { eq }) => eq(sub.id, params.sid),
             with: {
-                plan: true,
+                pricing: {
+                    with: {
+                        plan: true,
+                    }
+                },
                 member: true
             }
         });
@@ -190,7 +194,11 @@ export async function DELETE(req: Request, props: { params: Promise<Params> }) {
         const subscription = await db.query.memberSubscriptions.findFirst({
             where: (ms, { eq }) => eq(ms.id, sid),
             with: {
-                plan: true,
+                pricing: {
+                    with: {
+                        plan: true,
+                    }
+                },
                 member: true,
                 invoices: {
                     where: (mi, { eq }) => eq(mi.status, "paid"),

@@ -27,21 +27,25 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_session_token ON sessions (session_token);
 
-CREATE TABLE IF NOT EXISTS account (
-  user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
-  type text,
+CREATE TABLE public.account (
+  user_id text NOT NULL,
+  type text NULL,
   provider text NOT NULL,
   provider_account_id text NOT NULL,
-  refresh_token text,
-  access_token text,
-  expires_at bigint,
-  token_type text,
-  scope text,
-  id_token text,
-  session_state text,
-  CONSTRAINT account_pkey PRIMARY KEY (provider, provider_account_id)
+  refresh_token text NULL,
+  access_token text NULL,
+  expires_at bigint NULL,
+  token_type text NULL,
+  scope text NULL,
+  id_token text NULL,
+  session_state text NULL,
+  password text NULL,
+  CONSTRAINT account_pkey PRIMARY KEY (provider, provider_account_id),
+  CONSTRAINT account_user_id_fkey FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
+-- Create index for faster user lookups
+CREATE INDEX IF NOT EXISTS idx_account_user_id ON public.account(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 -- Tables with dependencies on users
 CREATE TABLE IF NOT EXISTS vendors (

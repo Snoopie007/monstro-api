@@ -192,8 +192,11 @@ async function handleSubscriptionInvoicePayment(
 		const subscription = await db.query.memberSubscriptions.findFirst({
 			where: eq(memberSubscriptions.stripeSubscriptionId, subscriptionId),
 			with: {
-				plan: true,
-				pricing: true,
+				pricing: {
+					with: {
+						plan: true,
+					}
+				},
 				member: true,
 			},
 		});
@@ -207,9 +210,8 @@ async function handleSubscriptionInvoicePayment(
 
 		const tax = calculateTaxFromInvoice(invoice);
 		
-		// Use pricing name if available
-		const pricingName = subscription.pricing?.name ? ` - ${subscription.pricing.name}` : "";
-		const itemName = subscription.plan?.name + pricingName;
+	const pricingName = subscription.pricing?.name ? ` - ${subscription.pricing.name}` : "";
+	const itemName = (subscription.pricing?.plan?.name ?? 'Unknown Plan') + pricingName;
 
 		await db.transaction(async (tx) => {
 			const CommonFields = {
@@ -262,13 +264,27 @@ async function handleSubscriptionInvoicePayment(
 				},
 				invoice
 			);
+			
+			// Handle make-up credits carry-over on billing period renewal
+			// Reset credits if carry-over is not allowed
+			if (!subscription.allowMakeUpCarryOver) {
+				await tx
+					.update(memberSubscriptions)
+					.set({
+						makeUpCredits: 0,
+						updated: new Date(),
+					})
+					.where(eq(memberSubscriptions.id, subscription.id));
+			}
 		});
 
-		await triggerSignUp({
-			mid: subscription.memberId,
-			lid: subscription.locationId,
-			pid: subscription.memberPlanId,
-		});
+		if (subscription.pricing?.plan?.id) {
+			await triggerSignUp({
+				mid: subscription.memberId,
+				lid: subscription.locationId,
+				pid: subscription.pricing.plan.id,
+			});
+		}
 
 
 	} catch (error) {

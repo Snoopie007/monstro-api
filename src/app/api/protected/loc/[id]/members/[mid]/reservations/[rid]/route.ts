@@ -5,7 +5,7 @@ import { authenticateMember } from "@/libs/utils";
 import {
 	reservations,
 	recurringReservations,
-	recurringReservationsExceptions,
+	reservationExceptions,
 } from "@/db/schemas";
 import { cancelClassReminders } from "../../../utils";
 

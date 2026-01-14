@@ -17,7 +17,7 @@ import {
 	EventHeight,
 	WeekCellsHeight,
 } from "./";
-import type { CalendarEvent, CalendarView } from "@/types";
+import type { CalendarEvent, CalendarView, ClosedDate } from "@/types";
 import { cn } from "@/libs/utils";
 import { CalendarToolbar } from "./CalendarToolbar";
 import { CalendarViewRenderer } from "./CalendarViewRenderer";
@@ -27,6 +27,7 @@ import {
 
 export interface EventCalendarProps {
 	events?: CalendarEvent[];
+	closedDates?: ClosedDate[];
 	onEventUpdate?: (event: CalendarEvent) => void;
 	onEventClick?: (event: CalendarEvent) => void;
 	className?: string;
@@ -41,6 +42,7 @@ export interface EventCalendarProps {
 
 export function EventCalendar({
 	events = [],
+	closedDates = [],
 	onEventUpdate,
 	onEventClick,
 	className,
@@ -252,6 +254,7 @@ export function EventCalendar({
 					view={view}
 					currentDate={currentDate}
 					events={events}
+					closedDates={closedDates}
 					onEventSelect={handleEventSelect}
 					onEventCreate={handleEventCreate}
 				/>

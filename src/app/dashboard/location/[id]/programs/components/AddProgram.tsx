@@ -17,7 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
     Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem,
     FormLabel, Select, SelectTrigger, SelectValue, SelectContent,
-    SelectItem, FormDescription
+    SelectItem, FormDescription, ProgramColorPicker
 } from '@/components/forms';
 import { cn, getTimezoneOffset, sleep, tryCatch } from "@/libs/utils";
 
@@ -54,6 +54,7 @@ export function AddProgram({ lid }: { lid: string }) {
                 }
             ],
             instructorId: undefined,
+            color: 1,
             allowWaitlist: false,
             waitlistCapacity: 0,
             allowMakeUpClass: false,
@@ -186,6 +187,25 @@ export function AddProgram({ lid }: { lid: string }) {
                                                         <SelectItem value={"null"} key={"none"}>None</SelectItem>
                                                     </SelectContent>
                                                 </Select>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="color"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size={"tiny"}>Calendar Color</FormLabel>
+                                            <FormDescription>Select a color for this program on the calendar.</FormDescription>
+                                            <FormControl>
+                                                <ProgramColorPicker
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

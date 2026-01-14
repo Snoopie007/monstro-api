@@ -14,14 +14,21 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
                 ),
             with: {
                 member: true,
-                plan: true,
+                pricing: {
+                    with: {
+                        plan: true,
+                    }
+                },
             },
         });
 
+        // Transform to include plan at top level for backwards compatibility
+        const transformedSubs = subs.map(sub => ({
+            ...sub,
+            plan: sub.pricing?.plan
+        }));
 
-
-
-        return NextResponse.json(subs, { status: 200 });
+        return NextResponse.json(transformedSubs, { status: 200 });
     } catch (err) {
         console.error("Error fetching reports:", err);
         return NextResponse.json(

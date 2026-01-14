@@ -100,10 +100,10 @@ export async function POST(
 				// Fetch the subscription to get plan and pricing details
 				const subscription = await tx.query.memberSubscriptions.findFirst({
 					where: eq(memberSubscriptions.id, invoice.memberSubscriptionId),
-					with: { plan: true, pricing: true },
+					with: { pricing: { with: { plan: true } } },
 				});
 
-				if (subscription && (subscription.pricing || subscription.plan)) {
+				if (subscription && subscription.pricing) {
 					// Calculate next billing period based on pricing interval (fallback to defaults)
 					const currentPeriodEnd = new Date(subscription.currentPeriodEnd);
 					let nextPeriodEnd: Date;
@@ -130,12 +130,18 @@ export async function POST(
 					}
 
 					// Update subscription: set to active AND move billing period forward
+					// Handle make-up credits carry-over (reset if not allowed)
+					const makeUpCreditsValue = subscription.allowMakeUpCarryOver 
+						? subscription.makeUpCredits // Keep current credits
+						: 0; // Reset to 0
+					
 					await tx
 						.update(memberSubscriptions)
 						.set({
 							status: "active",
 							currentPeriodStart: currentPeriodEnd, // Next period starts where current ended
 							currentPeriodEnd: nextPeriodEnd, // Move to next billing date
+							makeUpCredits: makeUpCreditsValue,
 							updated: new Date(),
 						})
 						.where(eq(memberSubscriptions.id, invoice.memberSubscriptionId));

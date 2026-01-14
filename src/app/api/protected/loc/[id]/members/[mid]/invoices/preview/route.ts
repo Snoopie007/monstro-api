@@ -46,7 +46,7 @@ export async function POST(
 			// Fetch subscription with plan and pricing details
 			const subscription = await db.query.memberSubscriptions.findFirst({
 				where: eq(memberSubscriptions.id, selectedSubscriptionId),
-				with: { plan: true, pricing: true },
+				with: { pricing: { with: { plan: true } } },
 			});
 
 			if (!subscription) {
@@ -75,7 +75,7 @@ export async function POST(
 			const amountDue = subtotal + tax - discount;
 
 			const formatted_lines = [{
-				description: `${subscription.plan.name}${subscription.plan.description ? ` - ${subscription.plan.description}` : ''}`,
+				description: `${subscription.pricing?.plan?.name ?? 'Unknown Plan'}${subscription.pricing?.plan?.description ? ` - ${subscription.pricing.plan.description}` : ''}`,
 				amount: subscription.pricing.price,
 				quantity: 1,
 				currency: subscription.pricing.currency || "usd"
@@ -107,7 +107,7 @@ export async function POST(
 					tax_cents: tax,
 					discount_cents: discount,
 					total_cents: amountDue,
-					currency: subscription.plan.currency || "usd"
+					currency: subscription.pricing?.plan?.currency || "usd"
 				}
 			});
 		}

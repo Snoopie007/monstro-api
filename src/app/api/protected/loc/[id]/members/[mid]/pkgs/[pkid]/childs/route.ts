@@ -41,7 +41,11 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
                     eq(mpkgs.status, "active")
                 ),
             with: {
-                plan: true,
+                pricing: {
+                    with: {
+                        plan: true,
+                    }
+                },
                 location: true,
             },
         });
@@ -49,7 +53,8 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
         if (!pkg) {
             throw new Error("Plan not found");
         }
-        if (!pkg.plan.family) {
+        const plan = pkg.pricing?.plan;
+        if (!plan?.family) {
             throw new Error("This is not a family plan");
         }
 
@@ -62,7 +67,7 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
                 eq(memberPackages.status, "active")
             ));
 
-        if (result.count >= pkg.plan.familyMemberLimit) {
+        if (result.count >= (plan?.familyMemberLimit || 0)) {
             throw new Error("Family member limit reached");
         }
 

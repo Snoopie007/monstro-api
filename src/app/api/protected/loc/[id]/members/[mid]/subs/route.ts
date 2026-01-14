@@ -36,22 +36,32 @@ export async function GET(req: NextRequest, props: Props) {
                 eq(memberSubscriptions.locationId, id)
             ),
             with: {
-                plan: {
+                pricing: {
                     with: {
-                        planPrograms: {
+                        plan: {
                             with: {
-                                program: true
+                                planPrograms: {
+                                    with: {
+                                        program: true
+                                    }
+                                }
                             }
                         }
                     }
-                },
-                pricing: true
+                }
             }
         })
 
-        return NextResponse.json(subscriptions, { status: 200 })
+        // Transform to include plan at top level for backwards compatibility
+        const transformedSubs = subscriptions.map(sub => ({
+            ...sub,
+            plan: sub.pricing?.plan
+        }))
+
+        return NextResponse.json(transformedSubs, { status: 200 })
     } catch (err) {
-        return NextResponse.json({ error: err }, { status: 500 })
+        console.error("Error fetching subscriptions:", err)
+        return NextResponse.json({ error: String(err) }, { status: 500 })
     }
 }
 
@@ -186,10 +196,11 @@ export async function POST(req: Request, props: Props) {
             expiresAt: expiresAt,
             locationId: id,
             memberId: mid,
-            memberPlanId: plan.id,
             memberPlanPricingId: pricing.id,
             paymentType,
             status: "incomplete",
+            makeUpCredits: 0,
+            allowMakeUpCarryOver: false,
             metadata: {
                 paymentMethodId: paymentMethod.id,
                 memberId: mid,

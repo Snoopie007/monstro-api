@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import type { CalendarEvent, CalendarView } from "@/types";
+import type { CalendarEvent, CalendarView, ClosedDate } from "@/types";
 import { AgendaView, DayView, MonthView, WeekView } from "./";
 import { cn } from "@/libs/utils";
 
@@ -10,6 +10,7 @@ interface CalendarViewRendererProps {
 	view: CalendarView;
 	currentDate: Date;
 	events: CalendarEvent[];
+	closedDates?: ClosedDate[];
 	onEventSelect: (event: CalendarEvent) => void;
 	onEventCreate: (startTime: Date) => void;
 }
@@ -18,6 +19,7 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
 	view,
 	currentDate,
 	events,
+	closedDates = [],
 	onEventSelect,
 	onEventCreate,
 }: CalendarViewRendererProps) {
@@ -32,33 +34,37 @@ export const CalendarViewRenderer = React.memo(function CalendarViewRenderer({
 				<MonthView
 					currentDate={currentDate}
 					events={events}
+					closedDates={closedDates}
 					onEventSelect={onEventSelect}
 					onEventCreate={onEventCreate}
 				/>
 			)}
-			{view === "week" && (
-				<WeekView
-					currentDate={currentDate}
-					events={events}
-					onEventSelect={onEventSelect}
-					onEventCreate={onEventCreate}
-				/>
-			)}
-			{view === "day" && (
-				<DayView
-					currentDate={currentDate}
-					events={events}
-					onEventSelect={onEventSelect}
-					onEventCreate={onEventCreate}
-				/>
-			)}
-			{view === "agenda" && (
-				<AgendaView
-					currentDate={currentDate}
-					events={events}
-					onEventSelect={onEventSelect}
-				/>
-			)}
+		{view === "week" && (
+			<WeekView
+				currentDate={currentDate}
+				events={events}
+				closedDates={closedDates}
+				onEventSelect={onEventSelect}
+				onEventCreate={onEventCreate}
+			/>
+		)}
+		{view === "day" && (
+			<DayView
+				currentDate={currentDate}
+				events={events}
+				closedDates={closedDates}
+				onEventSelect={onEventSelect}
+				onEventCreate={onEventCreate}
+			/>
+		)}
+		{view === "agenda" && (
+			<AgendaView
+				currentDate={currentDate}
+				events={events}
+				closedDates={closedDates}
+				onEventSelect={onEventSelect}
+			/>
+		)}
 		</div>
 	);
 });

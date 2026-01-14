@@ -25,12 +25,21 @@ export async function GET(req: NextRequest, props: Props) {
 					eq(memberPackage.locationId, id)
 				),
 			with: {
-				plan: true,
-				pricing: true,
+				pricing: {
+					with: {
+						plan: true,
+					}
+				},
 			},
 		});
 
-		return NextResponse.json(packages, { status: 200 });
+		// Transform to include plan at top level for backwards compatibility
+		const transformedPackages = packages.map(pkg => ({
+			...pkg,
+			plan: pkg.pricing?.plan
+		}))
+
+		return NextResponse.json(transformedPackages, { status: 200 });
 	} catch (err) {
 		console.log(err);
 		return NextResponse.json({ error: err }, { status: 500 });
@@ -178,6 +187,8 @@ export async function POST(req: NextRequest, props: Props) {
 				status: "active",
 				startDate,
 				expireDate,
+				makeUpCredits: 0,
+				allowMakeUpCarryOver: false,
 			}).returning();
 
 			/** Create Transaction */
