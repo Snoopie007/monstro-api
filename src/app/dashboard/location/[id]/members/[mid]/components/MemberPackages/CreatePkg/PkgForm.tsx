@@ -1,46 +1,45 @@
 import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+    Input,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/forms';
+import {
     Button,
-    DialogBody,
-    DialogFooter,
-    DialogClose,
-    Popover,
-    PopoverContent,
     Calendar,
-    PopoverTrigger,
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
+    DialogBody,
+    DialogClose,
+    DialogFooter,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
 } from "@/components/ui";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormMessage,
-    FormItem,
-    FormLabel,
-    Select,
-    SelectTrigger,
-    SelectValue,
-    SelectContent,
-    SelectItem,
-    Input,
-    FormDescription,
-} from '@/components/forms';
 
-import { useState } from "react";
-import { NewPackageSchema } from "../../../schema";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { format } from "date-fns";
-import { Loader2, CalendarIcon, ChevronRight } from "lucide-react";
-import { cn, tryCatch } from "@/libs/utils";
-import { useMemberPaymentMethods, useMemberStatus } from "../../../providers";
-import React from "react";
-import { MemberPackage, MemberPlan } from "@/types";
-import { Stripe } from "stripe";
-import { toast } from "react-toastify";
 import { useMemberPackages, } from "@/hooks";
+import { cn, formatAmountForDisplay, tryCatch } from "@/libs/utils";
+import { MemberPackage, MemberPlan, MemberPlanPricing, PaymentMethod } from "@/types";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { CalendarIcon, ChevronRight, Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "react-toastify";
+import { z } from "zod";
+import { useMemberStatus } from "../../../providers";
+import { NewPackageSchema } from "../../../schema";
+import { PMSelect } from "../../PMSelect";
 
 interface PkgFormProps {
     lid: string
@@ -50,45 +49,52 @@ interface PkgFormProps {
 }
 
 export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
-
+    const [paymentType, setPaymentType] = useState<"card" | "cash">("cash");
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
     const { mutate } = useMemberPackages(lid, mid)
-    const { ml } = useMemberStatus()
-    const [loading, setLoading] = useState(false);
-    const { paymentMethods } = useMemberPaymentMethods()
-    const [stripePaymentMethod, setStripePaymentMethod] = useState<Stripe.PaymentMethod | null>(null);
+    const { paymentMethods } = useMemberStatus()
+
 
     const form = useForm<z.infer<typeof NewPackageSchema>>({
         resolver: zodResolver(NewPackageSchema),
         defaultValues: {
             startDate: new Date(),
             expireDate: undefined,
-            paymentMethod: undefined,
             memberPlanId: undefined,
+            pricingId: undefined,
             totalClassLimit: undefined,
-            other: {
-                cardId: undefined,
-            }
+
         },
         mode: "onSubmit",
     })
 
+    // Get pricing options for the selected plan
+    const selectedPlanId = form.watch("memberPlanId");
+    const selectedPlan = useMemo(() => {
+        return pkgs.find(p => p.id === selectedPlanId);
+    }, [pkgs, selectedPlanId]);
+
+    const pricingOptions = selectedPlan?.pricingOptions || [];
 
 
-    const paymentType = form.watch("paymentMethod")
 
     async function onSubmit(v: z.infer<typeof NewPackageSchema>) {
-        setLoading(true)
+        if (paymentType === "card" && !paymentMethod) {
+            toast.error("Please select a payment method")
+            return
+        }
+        const path = paymentType === "card" ? "pkgs" : "pkgs/cash"
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${lid}/members/${mid}/pkgs`, {
+            fetch(`/api/protected/loc/${lid}/members/${mid}/${path}`, {
                 method: "POST",
                 body: JSON.stringify({
                     ...v,
-                    stripePaymentMethod: stripePaymentMethod,
-                    hasIncompletePlan: ml.status === "incomplete"
+                    paymentType,
+                    paymentMethod: paymentMethod,
                 })
             })
         )
-        setLoading(false)
+
         if (error || !result?.ok) return;
 
         form.reset()
@@ -97,8 +103,6 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
         toast.success("Package created successfully")
         onFinish(data)
     }
-
-
 
     return (
         <>
@@ -113,7 +117,11 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel size="tiny">Select a Plan</FormLabel>
-                                        <Select onValueChange={field.onChange} >
+                                        <Select onValueChange={(value) => {
+                                            field.onChange(value);
+                                            // Reset pricing when plan changes
+                                            form.setValue("pricingId", "");
+                                        }} >
                                             <FormControl>
                                                 <SelectTrigger >
                                                     <SelectValue placeholder="Select a plan" />
@@ -134,29 +142,51 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
 
                         </fieldset>
 
-                        <fieldset className="grid grid-cols-6 gap-2 ">
-                            <FormField
-                                control={form.control}
-                                name="paymentMethod"
-                                render={({ field }) => (
-                                    <FormItem className="col-span-2 ">
-                                        <FormLabel size="tiny">Payment Method</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!form.getValues("memberPlanId")} >
-                                            <SelectTrigger className="rounded-sm capitalize text-left align-start" >
-                                                <SelectValue placeholder="Select a payment method" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {['card', "cash"].map((method) => (
-                                                    <SelectItem key={method} value={method.toLowerCase()} className="capitalize">
-                                                        {method}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                        {selectedPlanId && pricingOptions.length > 0 && (
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="pricingId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size="tiny">Select pricing option</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select pricing" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {pricingOptions.map((pricing: MemberPlanPricing) => (
+                                                        <SelectItem key={pricing.id} value={pricing.id}>
+                                                            {pricing.name} - {formatAmountForDisplay(pricing.price / 100, pricing.currency || 'usd')}
+                                                            {pricing.expireInterval && pricing.expireThreshold && 
+                                                                ` (expires in ${pricing.expireThreshold} ${pricing.expireInterval}s)`
+                                                            }
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
+                        )}
+
+                        <fieldset className="grid grid-cols-7 gap-2">
+                            <div className="col-span-3">
+                                <FormLabel size="tiny">Payment Type</FormLabel>
+                                <Select onValueChange={(value) => setPaymentType(value as "card" | "cash")}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a payment type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="card">Credit/Debit</SelectItem>
+                                        <SelectItem value="cash">Cash</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             <FormField
                                 control={form.control}
                                 name="expireDate"
@@ -170,96 +200,69 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
                             />
 
                         </fieldset>
-                        {paymentType === "card" && (
-                            <fieldset >
-                                <FormField
-                                    control={form.control}
-                                    name="other.cardId"
-                                    render={({ field }) => (
-                                        <FormItem >
-                                            <FormLabel size="tiny">Select a Card</FormLabel>
-                                            <Select onValueChange={(value) => {
-                                                field.onChange(value)
-
-                                                setStripePaymentMethod(paymentMethods.find((method) => method.id === value) || null)
-                                            }} defaultValue={field.value} >
-                                                <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select a payment method" />
-
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {paymentMethods.map((method, index) => (
-                                                        <React.Fragment key={index}>
-                                                            {method.card ? (
-                                                                <SelectItem value={method.id} className="w-full">
-                                                                    <div className="flex flex-row items-center justify-between gap-4">
-                                                                        <div className="flex flex-row items-center gap-2">
-                                                                            <img src={`/images/cards/${method.card.brand}.svg`} alt={method.card.brand} className="h-7 w-7" />
-
-                                                                            <span className="text-sm capitalize">{method.card.brand} •••• {method.card.last4}</span>
-                                                                        </div>
-                                                                        <span className="text-sm">{method.card.exp_month} / {method.card.exp_year}</span>
-                                                                    </div>
-                                                                </SelectItem>
-                                                            ) : null}
-                                                        </React.Fragment>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                            </fieldset>
-                        )}
-                        <Collapsible  >
-                            <CollapsibleTrigger disabled={!form.getValues("memberPlanId")}
-                                className="disabled:opacity-50 flex group flex-row items-center gap-1  text-sm text-indigo-500">
-                                <ChevronRight size={16} className="group-data-[state=open]:rotate-90" />
-                                <span className="font-medium">Overwrite</span>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="p-4 bg-foreground/5 rounded-sm  space-y-2">
-
-                                <fieldset >
-
-                                    <FormField
-                                        control={form.control}
-                                        name="totalClassLimit"
-                                        render={({ field }) => (
-                                            <FormItem >
-                                                <FormLabel size="tiny">Total Class Limit</FormLabel>
-
-                                                <FormControl>
-                                                    <Input type="number" max={100} placeholder="Total Class Limit" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                                <FormDescription className="text-xs">You may overwrite the total class limit for this package.</FormDescription>
-                                            </FormItem >
-                                        )}
-                                    />
-
-                                </fieldset>
+                        {paymentType === 'card' && (
+                            <>
                                 <fieldset>
-                                    <FormField
-                                        control={form.control}
-                                        name="startDate"
-                                        render={({ field }) => (
-                                            <FormItem className="col-span-1">
-                                                <FormLabel size="tiny">Start Date</FormLabel>
-                                                <DatePicker value={field.value} onChange={field.onChange} />
-                                                <FormMessage />
-                                                <FormDescription className="text-xs">
-                                                    The start date is set to today's date by default.
-                                                </FormDescription>
-                                            </FormItem>
-                                        )}
+
+                                    <FormLabel size="tiny">Payment Method</FormLabel>
+                                    <PMSelect paymentMethods={paymentMethods || []}
+                                        onChange={(paymentMethod) => {
+                                            setPaymentMethod(paymentMethod)
+                                        }} value={paymentMethod?.stripeId || undefined}
+                                        disabled={!form.getValues("memberPlanId")}
                                     />
+
                                 </fieldset>
-                            </CollapsibleContent>
-                        </Collapsible>
+
+                                <Collapsible  >
+                                    <CollapsibleTrigger disabled={!paymentMethod}
+                                        className="disabled:opacity-50 flex group flex-row items-center gap-1  text-sm text-indigo-500">
+                                        <ChevronRight size={16} className="group-data-[state=open]:rotate-90" />
+                                        <span className="font-medium">Overwrite</span>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent className="p-2 bg-foreground/5 rounded-lg  space-y-2">
+
+                                        <fieldset >
+
+                                            <FormField
+                                                control={form.control}
+                                                name="totalClassLimit"
+                                                render={({ field }) => (
+                                                    <FormItem >
+                                                        <FormLabel size="tiny">Total Class Limit</FormLabel>
+
+                                                        <FormControl>
+                                                            <Input type="number" max={100} placeholder="Total Class Limit" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                        <FormDescription className="text-xs">You may overwrite the total class limit for this package.</FormDescription>
+                                                    </FormItem >
+                                                )}
+                                            />
+
+                                        </fieldset>
+                                        <fieldset>
+                                            <FormField
+                                                control={form.control}
+                                                name="startDate"
+                                                render={({ field }) => (
+                                                    <FormItem className="col-span-1">
+                                                        <FormLabel size="tiny">Start Date</FormLabel>
+                                                        <DatePicker value={field.value} onChange={field.onChange} />
+                                                        <FormMessage />
+                                                        <FormDescription className="text-xs">
+                                                            The start date is set to today's date by default.
+                                                        </FormDescription>
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </fieldset>
+                                    </CollapsibleContent>
+                                </Collapsible>
+                            </>
+                        )}
+
+
 
                     </form>
                 </Form>
@@ -269,15 +272,14 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
                     <Button type="button" variant="outline" size={"sm"}>Cancel</Button>
                 </DialogClose>
                 <Button
-                    className={cn("children:hidden", loading && "children:block")}
+
                     variant={"foreground"}
                     size={"sm"}
                     type="submit"
-                    disabled={loading || !form.formState.isValid}
+                    disabled={!form.formState.isValid || form.formState.isSubmitting}
                     onClick={form.handleSubmit(onSubmit)}
                 >
-                    <Loader2 className="mr-2 h-4 w-4  animate-spin" />
-                    Continue
+                    {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : "Register"}
                 </Button>
             </DialogFooter>
 
@@ -288,24 +290,27 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
 
 
 function DatePicker({ value, onChange }: { value: Date | undefined, onChange: (date: Date) => void }) {
-    const [open, setOpen] = useState(false)
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover>
             <PopoverTrigger asChild>
                 <Button variant="outline"
-                    className={cn("w-full pl-3 text-left font-normal bg-background border-foreground/10 rounded-sm", !value && "text-muted-foreground")}>
+
+                    className={cn(
+                        "w-full pl-3  h-12 text-left font-normal bg-background border-foreground/10 rounded-lg",
+                        !value && "text-muted-foreground"
+                    )}>
                     {value ? format(value, "PPP") : "Pick a date"}
-                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    <CalendarIcon className="ml-auto size-4 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 border-foreground/10 overflow-hidden" align="start">
                 <Calendar
                     mode="single"
+                    captionLayout="dropdown-months"
                     disabled={(d) => d < new Date()}
                     selected={value}
                     onSelect={(d) => {
                         onChange(d || new Date())
-                        setOpen(false)
                     }}
 
                 />

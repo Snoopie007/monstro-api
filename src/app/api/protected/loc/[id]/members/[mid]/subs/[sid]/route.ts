@@ -1,10 +1,11 @@
 import { db } from "@/db/db";
 import { memberSubscriptions } from "@/db/schemas";
-import { getStripeCustomer } from "@/libs/server/stripe";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { addDays, addMonths } from "date-fns";
+import { MemberStripePayments } from "@/libs/server/stripe";
+import { cancelRecurringInvoiceReminders } from "../../../utils";
 
 type Params = {
     id: string;
@@ -19,6 +20,9 @@ export async function PUT(req: Request, props: { params: Promise<Params> }) {
     try {
         const sub = await db.query.memberSubscriptions.findFirst({
             where: (sub, { eq }) => eq(sub.id, params.sid),
+            with: {
+                member: true
+            }
         });
 
         if (!sub) {
@@ -28,9 +32,29 @@ export async function PUT(req: Request, props: { params: Promise<Params> }) {
         if (sub.status === "canceled") {
             throw new Error("Subscription is canceled")
         }
+        const member = sub.member;
 
-        const stripe = await getStripeCustomer(params);
+        if (!member.stripeCustomerId) {
+            throw new Error("Member does not have a Stripe customer ID")
+        }
 
+        const integration = await db.query.integrations.findFirst({
+            where: (integration, { eq, and }) => and(
+                eq(integration.locationId, params.id),
+                eq(integration.service, "stripe")
+            ),
+        });
+
+        if (!integration) {
+            throw new Error("Integration not found")
+        }
+
+        if (!integration.accountId) {
+            throw new Error("Integration account ID not found")
+        }
+
+        const stripe = new MemberStripePayments(integration.accountId);
+        stripe.setCustomer(member.stripeCustomerId);
         if (pause) {
 
             await stripe.updateSubscription(sub.stripeSubscriptionId!, {
@@ -67,19 +91,24 @@ export async function PUT(req: Request, props: { params: Promise<Params> }) {
 
 export async function PATCH(req: Request, props: { params: Promise<Params> }) {
     const params = await props.params;
-    const updates = await req.json();
+    const { endAt, trialDays, allowProration, reset, paymentMethodId } = await req.json();
 
     try {
 
-        const current = await db.query.memberSubscriptions.findFirst({
+        const sub = await db.query.memberSubscriptions.findFirst({
             where: (sub, { eq }) => eq(sub.id, params.sid),
             with: {
-                plan: true
+                pricing: {
+                    with: {
+                        plan: true,
+                    }
+                },
+                member: true
             }
         });
 
 
-        if (!current) {
+        if (!sub) {
             throw new Error("No active subscription found")
         }
 
@@ -91,17 +120,35 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
             throw new Error("No valid location found")
         }
 
-        const endDate = updates.endAt ? new Date(updates.endAt) : undefined
-        const trialEnd = updates.trialDays ? addDays(current.currentPeriodStart, updates.trialDays) : undefined
-        const stripe = await getStripeCustomer(params);
+        const member = sub.member;
+        if (!member.stripeCustomerId) {
+            throw new Error("Member does not have a Stripe customer ID")
+        }
 
-        if (updates.paymentMethod === "card") {
+        const integration = await db.query.integrations.findFirst({
+            where: (integration, { eq, and }) => and(
+                eq(integration.locationId, params.id),
+                eq(integration.service, "stripe")
+            ),
+        });
+        if (!integration || !integration.accountId) {
+            throw new Error("Integration not found")
+        }
 
-            await stripe.updateSubscription(current.stripeSubscriptionId!, {
-                billing_cycle_anchor: updates.reset ? 'now' : 'unchanged',
-                default_payment_method: updates.paymentMethodId,
+        const stripe = new MemberStripePayments(integration.accountId);
+        stripe.setCustomer(member.stripeCustomerId);
+
+        const endDate = endAt ? new Date(endAt) : undefined
+        const trialEnd = trialDays ? addDays(sub.currentPeriodStart, trialDays) : undefined
+
+
+        if (sub.stripeSubscriptionId) {
+
+            await stripe.updateSubscription(sub.stripeSubscriptionId, {
+                billing_cycle_anchor: reset ? 'now' : 'unchanged',
+                default_payment_method: paymentMethodId,
                 ...(endDate && { cancel_at: Math.floor(endDate.getTime() / 1000) }),
-                proration_behavior: updates.allowProration ? "create_prorations" : "none",
+                proration_behavior: allowProration ? "create_prorations" : "none",
                 ...(trialEnd && { trial_end: Math.floor(trialEnd.getTime() / 1000) }),
             });
         }
@@ -109,15 +156,15 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
 
         const today = Date.now()
         await db.update(memberSubscriptions).set({
-            ...(updates.reset && {
+            ...(reset && {
                 currentPeriodStart: today,
                 currentPeriodEnd: addMonths(today, 1),
             }),
             cancelAt: endDate,
             endedAt: endDate,
             trialEnd: trialEnd,
-            paymentMethod: updates.paymentMethod,
-        }).where(eq(memberSubscriptions.id, current.id));
+            paymentMethod: paymentMethodId,
+        }).where(eq(memberSubscriptions.id, sub.id));
 
 
 
@@ -147,7 +194,12 @@ export async function DELETE(req: Request, props: { params: Promise<Params> }) {
         const subscription = await db.query.memberSubscriptions.findFirst({
             where: (ms, { eq }) => eq(ms.id, sid),
             with: {
-                plan: true,
+                pricing: {
+                    with: {
+                        plan: true,
+                    }
+                },
+                member: true,
                 invoices: {
                     where: (mi, { eq }) => eq(mi.status, "paid"),
                     orderBy: (invoices, { desc }) => [desc(invoices.created)],
@@ -164,8 +216,22 @@ export async function DELETE(req: Request, props: { params: Promise<Params> }) {
             throw new Error("Already canceled");
         }
 
+        const member = subscription.member;
+        if (!member.stripeCustomerId) {
+            throw new Error("Member does not have a Stripe customer ID")
+        }
         // Initialize Stripe
-        const stripe = await getStripeCustomer({ id, mid: subscription.memberId });
+        const integration = await db.query.integrations.findFirst({
+            where: (integration, { eq, and }) => and(
+                eq(integration.locationId, id),
+                eq(integration.service, "stripe")
+            ),
+        });
+        if (!integration || !integration.accountId) {
+            throw new Error("Integration not found")
+        }
+        const stripe = new MemberStripePayments(integration.accountId);
+        stripe.setCustomer(member.stripeCustomerId);
 
 
         const cancelDate = cancelOption === 'end' ? subscription.currentPeriodEnd : customDate ? new Date(customDate) : new Date();
@@ -211,7 +277,7 @@ export async function DELETE(req: Request, props: { params: Promise<Params> }) {
                     updated: new Date()
                 })
                 .where(eq(memberSubscriptions.id, sid)).returning();
-
+            await cancelRecurringInvoiceReminders({ subscriptionId: sid, locationId: id });
             return NextResponse.json({ success: true }, { status: 200 });
         }
 

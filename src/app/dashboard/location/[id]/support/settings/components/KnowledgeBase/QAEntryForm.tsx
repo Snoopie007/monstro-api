@@ -12,8 +12,8 @@ import {
     DialogTitle,
     DialogDescription,
     DialogFooter,
-    Input,
 } from '@/components/ui'
+import {Input} from "@/components/forms";
 import { FormControl, FormItem, FormField } from '@/components/forms'
 import { VisuallyHidden } from 'react-aria'
 import { KnowledgeBaseSchema } from '@/libs/FormSchemas/'

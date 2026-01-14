@@ -5,11 +5,14 @@ import { Hand, Loader2, Send, Bot } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { toast } from 'react-toastify'
 import { Textarea } from '@/components/forms'
+import { useAccountStatus } from '../../../providers'
 
 export function ChatInput({ lid }: { lid: string }) {
     const { current, updateConversation } = useSupport()
     const [loading, setLoading] = useState(false)
     const [isTakingOver, setIsTakingOver] = useState(false)
+    const { locationState } = useAccountStatus()
+    const isFreePlan = locationState?.planId === 1;
     const [message, setMessage] = useState('')
 
     async function handleSendMessage() {
@@ -20,6 +23,7 @@ export function ChatInput({ lid }: { lid: string }) {
         }
 
         const messageContent = message.trim()
+        console.log('📤 Sending message:', { conversationId: current.id, content: messageContent })
         setMessage('')
         setLoading(true)
 
@@ -39,8 +43,9 @@ export function ChatInput({ lid }: { lid: string }) {
             )
 
             const data = await response.json()
+            console.log('✅ Message sent successfully:', { messageId: data.id, status: response.status })
         } catch (error) {
-            console.error('Failed to send message:', error)
+            console.error('❌ Failed to send message:', error)
             // Re-add the message to input on error
             setMessage(messageContent)
         } finally {
@@ -149,7 +154,7 @@ export function ChatInput({ lid }: { lid: string }) {
                         onChange={(e) => setMessage(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Your message... (Ctrl+Enter to send)"
-                        disabled={loading}
+                        disabled={loading || (isFreePlan && !current?.isVendorActive)}
                         className="border-none resize-none p-4 focus-visible:ring-0 focus-visible:outline-hidden"
                         style={{ minHeight: '80px', maxHeight: '250px' }}
                     />
@@ -162,7 +167,7 @@ export function ChatInput({ lid }: { lid: string }) {
                             <Sparkles size={14} className="text-muted-foreground" />
                             AI Suggest
                         </Button> */}
-                        {current?.isVendorActive && (
+                        {current?.isVendorActive && !isFreePlan && (
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -209,7 +214,7 @@ export function ChatInput({ lid }: { lid: string }) {
                                 )}
                             </Button>
                         )}
-                        {!current?.isVendorActive && (
+                        {!current?.isVendorActive && !isFreePlan && (
                             <Button
                                 onClick={handleTakeOverConversation}
                                 variant="foreground"

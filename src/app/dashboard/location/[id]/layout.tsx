@@ -16,6 +16,7 @@ async function getLocationState(lid: string) {
     const locationState = await db.query.locationState.findFirst({
       where: (locationState, { eq }) => eq(locationState.locationId, lid),
     });
+
     return locationState;
   } catch (error) {
     console.error(error);
@@ -29,21 +30,17 @@ export default async function LocationLayout(props: LocationLayoutProps) {
   const locationState = await getLocationState(params.id);
 
   if (!locationState) {
-    redirect("/dashboard/locations");
+    return redirect("/dashboard/locations");
   }
 
   return (
-    <main
-      className={cn(
-        "min-h-screen max-h-screen h-screen  flex flex-col w-full  bg-background"
-      )}
-    >
+    <main className="min-h-screen max-h-screen h-screen overflow-hidden flex flex-col w-full  bg-background">
       <AccountStatusProvider locationState={locationState}>
         <TooltipProvider>
           <LocationTopNav lid={params.id} />
-          <div className="relative flex flex-1 flex-row justify-start items-start  w-full">
+          <div className="relative flex flex-1 flex-row overflow-hidden justify-start items-start w-full">
             <LocationSideNav lid={params.id} />
-            <div className="flex-1 h-[calc(100vh-44px)]">{children}</div>
+            <div className="flex-1 h-full">{children}</div>
           </div>
         </TooltipProvider>
       </AccountStatusProvider>

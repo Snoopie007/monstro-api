@@ -11,6 +11,12 @@ interface PlanCheckboxProps {
 
 
 export function PlanCheckbox({ plan, isSelected, onToggle }: PlanCheckboxProps) {
+    // Get the first pricing option for display
+    const pricing = plan.pricingOptions?.[0];
+    const price = pricing?.price ?? 0;
+    const interval = pricing?.interval;
+    const intervalThreshold = pricing?.intervalThreshold;
+
     return (
         <div key={plan.id} className="flex items-start space-x-2">
             <div className="flex items-center justify-center mt-0.5">
@@ -33,17 +39,17 @@ export function PlanCheckbox({ plan, isSelected, onToggle }: PlanCheckboxProps) 
                         <span className="capitalize">{plan.type}</span>
                         <span>•</span>
                         <span>
-                            ${(plan.price / 100).toFixed(2)}
-                            {plan.type === "recurring" && (
+                            ${(price / 100).toFixed(2)}
+                            {plan.type === "recurring" && interval && (
                                 <>
                                     /
-                                    {plan.intervalThreshold && plan.intervalThreshold > 1
-                                        ? `${plan.intervalThreshold} `
+                                    {intervalThreshold && intervalThreshold > 1
+                                        ? `${intervalThreshold} `
                                         : ""}
-                                    {plan.interval}
-                                    {plan.intervalThreshold &&
-                                        plan.intervalThreshold > 1 &&
-                                        plan.interval !== "day"
+                                    {interval}
+                                    {intervalThreshold &&
+                                        intervalThreshold > 1 &&
+                                        interval !== "day"
                                         ? "s"
                                         : ""}
                                 </>

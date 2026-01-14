@@ -1,38 +1,26 @@
 'use client'
 
-import { useMembers } from '@/hooks'
+import { Input } from '@/components/forms'
+import { MemberListItem } from '@/types/member'
 import {
     ColumnFiltersState,
     getCoreRowModel,
-    getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
 } from '@tanstack/react-table'
-import { useState, useMemo, useEffect } from 'react'
-import { MemberColumns, MemberWithCustomFieldsColumns } from './MemberColumns'
-import { Input } from '@/components/forms'
-import { MemberTable } from './MemberTable'
-import ErrorComponent from '@/components/error'
+import { useMemo } from 'react'
 import { AddMember } from './CreateMember'
-import { Member } from '@/types/member'
+import { MemberColumns } from './MemberColumns'
+import { MemberTable } from './MemberTable'
 
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
-import { Separator } from '@/components/ui'
-import {
-    TablePage,
-    TablePageContent,
-    TablePageFooter,
-    TablePageHeader,
-    TablePageHeaderSection,
-} from '@/components/ui/TablePage'
-import { ImportMembers } from '.'
-import TagsFilter from './TagsFilter'
-import { FilterPopover, SortPopover } from './FilterAndSort'
-import { MembersTabState } from './useMemberTabData'
-import { debounce } from '@tiptap-pro/extension-table-of-contents'
-import { hasPermission } from '@/libs/server/permissions'
+import { Button, ScrollArea, Separator } from '@/components/ui'
 import { usePermission } from '@/hooks/usePermissions'
+import { debounce } from '@tiptap-pro/extension-table-of-contents'
+import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
+import { MembersTabState } from '../../../../../../hooks/userMembers'
+import { FilterPopover, SortPopover } from './FilterAndSort'
+import TagsFilter from './TagsFilter'
 
 export function MemberList({
     params,
@@ -41,15 +29,14 @@ export function MemberList({
     memberTab,
     isLoading,
     handleChangeParam,
-    handleFetchForCurrentTab,
 }: {
     params: { id: string }
-    tabId: number
+    tabId: string
     stripeKey: string | null
     memberTab: MembersTabState
     isLoading: boolean
     handleChangeParam: (params: {
-        id: number
+        id: string
         page: number
         pageSize: number
         searchQuery: string
@@ -58,7 +45,6 @@ export function MemberList({
         tagOperator: 'AND' | 'OR'
         sorting: { id: string; direction: 'asc' | 'desc' }[]
     }) => void
-    handleFetchForCurrentTab: (id: number) => void
 }) {
     const canAddMember = usePermission("add member", params.id)
     const {
@@ -69,37 +55,21 @@ export function MemberList({
         selectedTags,
         tagOperator,
         sorting,
-        data,
     } = memberTab.state
 
+    const { filteredData } = memberTab
+
     const columns = useMemo(
-        () => MemberColumns(params.id, data.customFields),
-        [params.id, data.customFields]
+        () => MemberColumns(params.id, filteredData.customFields),
+        [params.id, filteredData.customFields]
     )
 
     const totalPages = useMemo(() => {
-        if (data.count && pageSize > 0) {
-            return Math.ceil(data.count / pageSize) // size: total items, pageSize: items per page
+        if (filteredData.count && pageSize > 0) {
+            return Math.ceil(filteredData.count / pageSize) // size: total items, pageSize: items per page
         }
         return 1 // Default to 1 page if data is unavailable
-    }, [data.count, pageSize])
-
-    const handleSearch = useMemo(
-        () =>
-            debounce((value: string) => {
-                handleChangeParam({
-                    id: tabId,
-                    page: 0,
-                    pageSize,
-                    searchQuery: value,
-                    selectedTags,
-                    columnFilters,
-                    tagOperator,
-                    sorting,
-                })
-            }, 300), // Wait 300ms after typing stops
-        []
-    )
+    }, [filteredData.count, pageSize])
 
     const handleFiltersChange = (
         updaterOrValue:
@@ -121,6 +91,59 @@ export function MemberList({
             sorting,
         })
     }
+
+    const table = useReactTable<MemberListItem>({
+        data: filteredData.members || [], // Client-side filtered data
+        columns,
+        pageCount: totalPages,
+        getCoreRowModel: getCoreRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        onColumnFiltersChange: handleFiltersChange,
+        getSortedRowModel: getSortedRowModel(),
+        manualPagination: true, // CRITICAL: Prevents infinite loop - we handle pagination in useMemberTabs hook
+        state: {
+            pagination: {
+                pageIndex: page,
+                pageSize,
+            },
+            columnFilters,
+        },
+        onPaginationChange: (updater) => {
+            const newState =
+                typeof updater === 'function'
+                    ? updater({ pageIndex: page, pageSize })
+                    : updater
+
+            handleChangeParam({
+                id: tabId,
+                page: newState.pageIndex,
+                pageSize: newState.pageSize,
+                searchQuery,
+                selectedTags,
+                columnFilters,
+                tagOperator,
+                sorting,
+            })
+        },
+        // Note: manualPagination and manualFiltering removed - filtering now happens client-side in the hook
+    })
+
+    const handleSearch = useMemo(
+        () =>
+            debounce((value: string) => {
+                handleChangeParam({
+                    id: tabId,
+                    page: 0,
+                    pageSize,
+                    searchQuery: value,
+                    selectedTags,
+                    columnFilters,
+                    tagOperator,
+                    sorting,
+                })
+            }, 300), // Wait 300ms after typing stops
+        [tabId, pageSize, selectedTags, columnFilters, tagOperator, sorting, handleChangeParam]
+    )
 
     const handleSortChange = (
         sort: { id: string; direction: 'asc' | 'desc' }[]
@@ -150,66 +173,6 @@ export function MemberList({
         })
     }
 
-    const table = useReactTable<Member>({
-        data: data.members || [], // Only use data when it's available
-        columns,
-        pageCount: totalPages, // Set total pages from the API
-        getCoreRowModel: getCoreRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        onColumnFiltersChange: handleFiltersChange,
-        getSortedRowModel: getSortedRowModel(),
-        state: {
-            pagination: {
-                pageIndex: page,
-                pageSize,
-            },
-            columnFilters,
-        },
-        onPaginationChange: (updater) => {
-            const newState =
-                typeof updater === 'function'
-                    ? updater({ pageIndex: page, pageSize })
-                    : updater
-
-            handleChangeParam({
-                id: tabId,
-                page: newState.pageIndex,
-                pageSize: newState.pageSize,
-                searchQuery,
-                selectedTags,
-                columnFilters,
-                tagOperator,
-                sorting,
-            })
-        },
-        manualPagination: true, // Enable manual pagination
-        manualFiltering: true, // Enable manual filtering
-    })
-
-    useEffect(() => {
-        if (!isLoading && data.members && data.members.length === 0) {
-            handleFetchForCurrentTab(tabId)
-        }
-    }, [
-        tabId,
-        pageSize,
-        searchQuery,
-        selectedTags,
-        columnFilters,
-        tagOperator,
-        sorting,
-    ])
-
-    if (data.error) {
-        return (
-            <ErrorComponent
-                error={{ name: 'Member List Error', message: data.error }}
-            />
-        )
-    }
-
-    
-
     const renderAddMember = useMemo(() => {
         if (canAddMember) {
             return <AddMember lid={params.id} stripeKey={stripeKey} />
@@ -217,98 +180,91 @@ export function MemberList({
         return null
     }, [canAddMember])
 
-    const renderImportMembers = useMemo(() => {
-        if (canAddMember) {
-            return <ImportMembers lid={params.id} />
-        }
-        return null
-    }, [canAddMember])
 
     return (
-        <TablePage>
-            <TablePageHeader>
-                <TablePageHeaderSection>
-                    <div className="flex flex-row items-center gap-2">
-                        <FilterPopover
-                            columns={columns}
-                            filters={columnFilters}
-                            onFiltersChange={handleFiltersChange}
-                            customFields={data.customFields}
-                        />
-                        <SortPopover
-                            columns={columns}
-                            onSortChange={handleSortChange}
-                        />
-
-                        <Input
-                            placeholder="Find a member..."
-                            onChange={(event) => {
-                                handleSearch(event.target.value)
-                            }}
-                            variant="search"
-                        />
-                        <TagsFilter
-                            locationId={params.id}
-                            selectedTags={selectedTags}
-                            onTagsChange={handleTagsChange}
-                            canCreateTags={true}
-                        />
-                        {renderAddMember}
-                        {renderImportMembers}
-                    </div>
-                </TablePageHeaderSection>
-            </TablePageHeader>
-            <TablePageContent>
-                <MemberTable
-                    table={table}
-                    isLoading={isLoading}
-                    columns={columns.length}
+        <div className='space-y-2 bg-muted/50  rounded-lg '>
+            <div className="flex flex-row items-center gap-2 px-2 pt-2">
+                <FilterPopover
+                    columns={columns}
+                    filters={columnFilters}
+                    onFiltersChange={handleFiltersChange}
+                    customFields={filteredData.customFields}
                 />
-            </TablePageContent>
-            <TablePageFooter>
-                <div className="flex gap-2 items-center p-2">
-                    <button
-                        className="text-foreground/50 border-foreground/50 p-1 border rounded-xs hover:text-indigo-600 hover:border-indigo-600 cursor-pointer"
+                <SortPopover
+                    columns={columns}
+                    onSortChange={handleSortChange}
+                />
+
+                <Input placeholder="Find a member..."
+                    onChange={(event) => {
+                        handleSearch(event.target.value)
+                    }}
+                    className='h-9'
+                    variant="search"
+                />
+                <TagsFilter
+                    locationId={params.id}
+                    selectedTags={selectedTags}
+                    onTagsChange={handleTagsChange}
+                    canCreateTags={true}
+                />
+                {renderAddMember}
+            </div>
+            <div>
+                <ScrollArea className="h-[calc(100vh-210px)] overflow-hidden">
+                    <MemberTable
+                        table={table}
+                        isLoading={isLoading}
+                        columns={columns.length}
+                    />
+                </ScrollArea>
+            </div>
+            <div className=' flex flex-row items-center px-4 py-2 gap-2 text-sm'>
+                <div className="flex gap-2 items-center ">
+                    <Button
+                        variant="ghost"
+                        className='size-8 bg-background'
+                        size="icon"
                         onClick={() => table.previousPage()}
                         disabled={!table.getCanPreviousPage()}
                     >
                         <ChevronLeftIcon size={14} />
-                    </button>
+                    </Button>
                     <span>Page</span>
-                    <span>
-                        <input
-                            type="number"
-                            value={page + 1}
-                            onChange={(e) =>
-                                handleChangeParam({
-                                    id: tabId,
-                                    page: Number(e.target.value) - 1,
-                                    pageSize,
-                                    searchQuery,
-                                    selectedTags,
-                                    columnFilters,
-                                    tagOperator,
-                                    sorting,
-                                })
-                            }
-                            className="w-10 py-0.5 text-center border border-foreground/50 text-xs rounded-xs"
-                        />
-                    </span>
+                    <Input
+                        type="number"
+                        value={page + 1}
+                        onChange={(e) =>
+                            handleChangeParam({
+                                id: tabId,
+                                page: Number(e.target.value) - 1,
+                                pageSize,
+                                searchQuery,
+                                selectedTags,
+                                columnFilters,
+                                tagOperator,
+                                sorting,
+                            })
+                        }
+                        className="w-18 h-9"
+                    />
                     <span>of {totalPages}</span>
-                    <button
-                        className="text-foreground/50 border-foreground/50 p-1 border rounded-xs hover:text-indigo-600 hover:border-indigo-600 cursor-pointer"
+                    <Button
+                        variant="ghost"
+                        className='size-8 bg-background'
+                        size="icon"
                         onClick={() => table.nextPage()}
                         disabled={!table.getCanNextPage()}
                     >
                         <ChevronRightIcon size={14} />
-                    </button>
+                    </Button>
                 </div>
                 <Separator
                     orientation="vertical"
                     className="bg-foreground/10"
                 />
-                <div className=" px-2">Total members: {data?.count}</div>
-            </TablePageFooter>
-        </TablePage>
+                Total members: {filteredData?.count}
+            </div>
+        </div>
     )
 }

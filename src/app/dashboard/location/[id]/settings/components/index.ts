@@ -1,2 +1,3 @@
-export * from './SettingMenuItems'
+
 export * from './SettingMenu'
+export * from './SettingsSwitch'

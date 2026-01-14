@@ -1,20 +1,13 @@
 
-import {
-    TablePage,
-    TablePageHeader,
-    TablePageHeaderSection
 
-} from "@/components/ui";
 import { CreatePlan, SubscriptionList, PackageList } from "./components";
 import { db } from "@/db/db";
 import { ProductsProvider } from "./providers";
-import { Program } from "@/types";
-
+import { Group, Program } from "@/types";
+import { ScrollArea } from "@/components/ui";
 
 async function getPrograms(lid: string): Promise<Program[]> {
-
     try {
-
         const programs = await db.query.programs.findMany({
             where: (program, { eq }) => eq(program.locationId, lid)
         })
@@ -25,30 +18,53 @@ async function getPrograms(lid: string): Promise<Program[]> {
     }
 }
 
+async function getGroups(lid: string): Promise<Group[]> {
+    try {
+        const groups = await db.query.groups.findMany({
+            where: (group, { eq }) => eq(group.locationId, lid)
+        })
+        return groups;
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+}
+
 
 export default async function Products(props: { params: Promise<{ id: string, type: 'subs' | 'pkgs' }> }) {
 
     const params = await props.params;
-    const programs = await getPrograms(params.id);
+    const [programs, groups] = await Promise.all([
+        getPrograms(params.id),
+        getGroups(params.id)
+    ]);
 
     return (
-        <ProductsProvider programs={programs}>
+        <ProductsProvider programs={programs} groups={groups}>
 
-            <TablePage>
-                <TablePageHeader>
+            <div className="flex flex-col gap-4">
+                <ScrollArea className="h-[calc(100vh-52px)] w-full ">
 
-                    <TablePageHeaderSection>
-                        <div className="flex flex-row items-center gap-2">
-
+                    <div className="max-w-4xl mx-auto w-full space-y-4">
+                        <div className="flex flex-row items-center gap-2 justify-between">
+                            <div className="text-xl font-bold">
+                                {params.type === "subs" ? "Subscriptions" : "Packages"}
+                            </div>
                             <CreatePlan lid={params.id} type={params.type} />
-
                         </div>
-                    </TablePageHeaderSection>
-                </TablePageHeader>
 
-                {params.type === "subs" ? <SubscriptionList lid={params.id} /> : <PackageList lid={params.id} />}
-            </TablePage>
-        </ProductsProvider>
+                        <div className="space-y-2 pb-10">
+                            {params.type === "subs" ? (
+                                <SubscriptionList lid={params.id} />
+                            ) : (
+                                <PackageList lid={params.id} />
+                            )}
+                        </div>
+                    </div>
+                </ScrollArea>
 
-    );
+            </div>
+
+        </ProductsProvider >
+    )
 }

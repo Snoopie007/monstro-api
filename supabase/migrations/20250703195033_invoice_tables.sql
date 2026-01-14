@@ -24,7 +24,6 @@ CREATE TABLE IF NOT EXISTS member_invoices (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   member_subscription_id text REFERENCES member_subscriptions (id) ON DELETE CASCADE,
-  member_package_id text REFERENCES member_packages (id) ON DELETE CASCADE,
   for_period_start timestamp with time zone,
   for_period_end timestamp with time zone
 );
@@ -38,20 +37,20 @@ CREATE TABLE IF NOT EXISTS transactions (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('txn_'),
   description text,
   type transaction_type NOT NULL,
-  amount integer NOT NULL,
-  tax_amount integer NOT NULL DEFAULT 0,
+  total integer NOT NULL,
+  sub_total integer NOT NULL,
+  total_tax integer NOT NULL DEFAULT 0,
   status transaction_status NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   location_id text REFERENCES locations (id) ON DELETE CASCADE NOT NULL,
   member_id text REFERENCES members (id) ON DELETE CASCADE,
-  payment_method payment_method NOT NULL,
+  payment_type text NOT NULL,
   items jsonb[] DEFAULT '{}'::jsonb[],
   charge_date timestamp with time zone DEFAULT now(),
   currency text NOT NULL DEFAULT 'USD',
   metadata jsonb NOT NULL DEFAULT '{}',
   refunded boolean NOT NULL DEFAULT false,
-  invoice_id text REFERENCES member_invoices (id) ON DELETE CASCADE,
-  subscription_id text REFERENCES member_subscriptions (id) ON DELETE CASCADE,
-  package_id text REFERENCES member_packages (id) ON DELETE CASCADE
+  refunded_amount integer NOT NULL DEFAULT 0,
+  invoice_id text REFERENCES member_invoices (id) ON DELETE CASCADE
 );

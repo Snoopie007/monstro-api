@@ -38,13 +38,7 @@ const DummyData = [
     { month: 'December', amount: 650 },
 ]
 
-export function CustomerLTVChart({
-    transactions,
-    lid,
-}: {
-    transactions: Transaction[]
-    lid?: string
-}) {
+export function CustomerLTVChart({ transactions, lid }: { transactions: Transaction[], lid?: string }) {
     const [loading, setLoading] = useState(true)
     const data = useMemo<Data[]>(() => {
         if (lid === 'acc_BpT7jEb3Q16nOPL3vo7qlw') {
@@ -67,7 +61,7 @@ export function CustomerLTVChart({
                 const memberMap = memberMonthlyTotals.get(tx.memberId)!
                 const month = MONTHS[new Date(tx.created).getMonth()]
                 const currentAmount = memberMap.get(month) || 0
-                memberMap.set(month, currentAmount + tx.amount / 100)
+                memberMap.set(month, currentAmount + tx.total / 100)
             })
 
             // Calculate median LTV for each month

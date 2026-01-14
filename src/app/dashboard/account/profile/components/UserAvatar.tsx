@@ -1,0 +1,84 @@
+'use client'
+import { CameraIcon, Trash2Icon, UploadCloudIcon } from "lucide-react";
+import React, { useRef } from 'react'
+import Image from "next/image";
+import { cn, tryCatch } from "@/libs/utils";
+
+interface UserAvatarProps {
+    currentAvatar: string | null;
+    onChange: (url: string) => void;
+    isVendor: boolean
+}
+
+export function UserAvatar({ currentAvatar, onChange, isVendor }: UserAvatarProps) {
+    const fileRef = useRef<HTMLInputElement | null>(null)
+
+    async function uploadLogo() {
+        const file = fileRef.current?.files?.[0]
+        if (!file) return;
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("fileDirectory", 'user-avatar');
+        const { result, error } = await tryCatch(
+            fetch(`/api/protected/account/profile/upload`, {
+                method: "POST",
+                body: formData
+            })
+        )
+        if (error || !result) throw error;
+        const data = await result.json();
+        onChange(data.url);
+    }
+
+    async function removeLogo() {
+
+    }
+
+    return (
+        <div className="border-b pb-4 mb-4">
+
+            <input type='file' ref={fileRef} onInput={uploadLogo} className='hidden' />
+            {currentAvatar ? (
+
+                <div className='avatar group shrink relative items-end flex'>
+                    <Image src={currentAvatar ? currentAvatar : ''}
+                        width={100}
+                        height={100}
+                        className="aspect-square"
+                        priority={true}
+                        alt='member avatar' />
+                    <div className="flex">
+                        <div onClick={() => { fileRef.current?.click() }} className='cursor-pointer'>
+                            <UploadCloudIcon size={16} className='mr-2 ' />
+                        </div>
+                        <div onClick={removeLogo} className='cursor-pointer'>
+                            <Trash2Icon size={16} className='mr-2' />
+                        </div>
+                    </div>
+
+                </div>
+
+
+            ) : (
+                <div className="flex flex-row gap-6 items-center">
+                    <div className={cn('flex-1  border h-[80px] border-dashed rounded-lg cursor-pointer',
+                        ' flex flex-row items-center justify-center border-foreground/10'
+                    )}
+                        onClick={() => { fileRef.current?.click() }}>
+                        <span className="text-muted-foreground">
+                            <CameraIcon size={24} className='inline-block stroke-accent' />
+                        </span>
+                    </div>
+                    <div className="flex-1">
+                        <b className="font-semibold text-base">
+                            Upload Profile Picture
+                        </b>
+                        <p className="text-sm mt-1 leading-5 text-muted-foreground">
+                            The proposed size is 350px * 180px. No bigger than 2.5 MB. Only PNG, JPG, JPEG are allowed.
+                        </p>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}

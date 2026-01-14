@@ -17,17 +17,19 @@ import {
   DraggableEvent,
   DroppableCell,
   EventItem,
-  isMultiDayEvent,
-  useCurrentTimeIndicator,
   WeekCellsHeight,
-} from "@/components/event-calendar";
-import type { CalendarEvent } from "@/components/event-calendar/types";
-import { EndHour, StartHour } from "@/components/event-calendar/constants";
-import { cn } from "@/components/event-calendar/utils";
+} from "../event-calendar";
+import type { CalendarEvent, ClosedDate } from "@/types";
+import { EndHour, StartHour } from "./constants";
+import { cn } from "@/libs/utils";
+import { useCurrentTimeIndicator } from "@/hooks";
+import { isMultiDayEvent } from "@/libs/calendar";
+import { CalendarX, Wrench } from "lucide-react";
 
 interface DayViewProps {
   currentDate: Date;
   events: CalendarEvent[];
+  closedDates?: ClosedDate[];
   onEventSelect: (event: CalendarEvent) => void;
   onEventCreate: (startTime: Date) => void;
 }
@@ -41,9 +43,16 @@ interface PositionedEvent {
   zIndex: number;
 }
 
+const closedOverlayStyle = cn(
+  "bg-gray-100 dark:bg-gray-800/50",
+  "bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(0,0,0,0.03)_4px,rgba(0,0,0,0.03)_8px)]",
+  "dark:bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,rgba(255,255,255,0.02)_4px,rgba(255,255,255,0.02)_8px)]"
+);
+
 export function DayView({
   currentDate,
   events,
+  closedDates = [],
   onEventSelect,
   onEventCreate,
 }: DayViewProps) {
@@ -188,8 +197,41 @@ export function DayView({
     "day"
   );
 
+  const closedDate = closedDates.find(
+    c => c.date.slice(0, 10) === format(currentDate, 'yyyy-MM-dd')
+  );
+  const isClosed = !!closedDate;
+
   return (
     <div data-slot="day-view" className="contents">
+      {isClosed && (
+        <div className={cn(
+          "px-4 py-3 border-b flex items-center gap-3",
+          closedDate.type === 'holiday' 
+            ? "bg-amber-500/10 border-amber-500/30" 
+            : "bg-blue-500/10 border-blue-500/30"
+        )}>
+          {closedDate.type === 'holiday' ? (
+            <CalendarX className="size-5 text-amber-600 dark:text-amber-400 shrink-0" />
+          ) : (
+            <Wrench className="size-5 text-blue-600 dark:text-blue-400 shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <p className={cn(
+              "font-medium text-sm",
+              closedDate.type === 'holiday' 
+                ? "text-amber-700 dark:text-amber-300" 
+                : "text-blue-700 dark:text-blue-300"
+            )}>
+              Location Closed
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {closedDate.reason}
+              {dayEvents.length > 0 && ` • ${dayEvents.length} session${dayEvents.length > 1 ? 's' : ''} cancelled`}
+            </p>
+          </div>
+        </div>
+      )}
       {showAllDaySection && (
         <div className="border-foreground/10 dark:border-border/10 bg-muted/50 border-t">
           <div className="grid grid-cols-[3rem_1fr] sm:grid-cols-[4rem_1fr]">
@@ -224,7 +266,10 @@ export function DayView({
         </div>
       )}
 
-      <div className="grid flex-1 grid-cols-[3rem_1fr] overflow-auto sm:grid-cols-[4rem_1fr]">
+      <div className={cn(
+        "grid flex-1 grid-cols-[3rem_1fr] overflow-auto sm:grid-cols-[4rem_1fr]",
+        isClosed && closedOverlayStyle
+      )}>
         <div className="border-foreground/10 dark:border-border/10 border-r">
           {hours.map((hour, index) => (
             <div
@@ -245,7 +290,10 @@ export function DayView({
           {positionedEvents.map((positionedEvent) => (
             <div
               key={positionedEvent.event.id}
-              className="absolute z-10 px-0.5"
+              className={cn(
+                "absolute z-10 px-0.5",
+                isClosed && "opacity-40 pointer-events-none"
+              )}
               style={{
                 top: `${positionedEvent.top}px`,
                 height: `${positionedEvent.height}px`,
@@ -254,14 +302,23 @@ export function DayView({
                 zIndex: positionedEvent.zIndex,
               }}
             >
-              <div className="size-full">
-                <DraggableEvent
-                  event={positionedEvent.event}
-                  view="day"
-                  onClick={(e) => handleEventClick(positionedEvent.event, e)}
-                  showTime
-                  height={positionedEvent.height}
-                />
+              <div className="size-full" style={{ height: positionedEvent.height || "auto" }}>
+                {isClosed ? (
+                  <EventItem
+                    event={positionedEvent.event}
+                    view="day"
+                    showTime
+                    className="line-through cursor-not-allowed h-full"
+                  />
+                ) : (
+                  <DraggableEvent
+                    event={positionedEvent.event}
+                    view="day"
+                    onClick={(e) => handleEventClick(positionedEvent.event, e)}
+                    showTime
+                    height={positionedEvent.height}
+                  />
+                )}
               </div>
             </div>
           ))}
@@ -304,9 +361,10 @@ export function DayView({
                         quarter === 2 &&
                           "top-[calc(var(--week-cells-height)/4*2)]",
                         quarter === 3 &&
-                          "top-[calc(var(--week-cells-height)/4*3)]"
+                          "top-[calc(var(--week-cells-height)/4*3)]",
+                        isClosed && "cursor-not-allowed"
                       )}
-                      onClick={() => {
+                      onClick={isClosed ? undefined : () => {
                         const startTime = new Date(currentDate);
                         startTime.setHours(hourValue);
                         startTime.setMinutes(quarter * 15);

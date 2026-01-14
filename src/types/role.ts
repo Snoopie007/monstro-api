@@ -1,5 +1,5 @@
 import { permissions, roleHasPermissions, roles } from "@/db/schemas";
-import { Staff } from "./staff";
+
 
 export type Permission = typeof permissions.$inferSelect
 export type PermissionGroup = {

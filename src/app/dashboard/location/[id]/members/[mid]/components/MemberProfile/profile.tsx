@@ -1,101 +1,160 @@
 "use client";
+
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Button,
-  Card,
-  CardContent,
+	Avatar,
+	AvatarImage,
+	Button,
+	Card,
+	CardContent,
+	CardDescription,
+	CardTitle,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
 } from "@/components/ui";
-
-import { ChevronLeft, Mail, PhoneCall } from "lucide-react";
-import { useMemberStatus } from "../../providers/MemberContext";
+import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { MemberDeleteButton, MemberEditButton } from "../ContactInfo";
-import { usePermission } from "@/hooks/usePermissions";
+import { VisuallyHidden } from "react-aria";
+import { useMemberStatus } from "../../providers/MemberContext";
+import { ProfileActions } from "./ProfileActions";
+import { format } from "date-fns";
+import { FamilyMember } from "@/types/FamilyMember";
+import { cn } from "@/libs/utils";
 
-type MemberProfileData = {
-  totalPointsEarned: number;
-  lastSeenFormatted: string;
-};
 
-interface MemberProfileProps {
-  params: { id: string; mid: string };
-  profileData: MemberProfileData;
+
+
+export function MemberProfile({ params }: { params: { id: string; mid: string } }) {
+
+	const { member, ml } = useMemberStatus();
+	const router = useRouter();
+
+	const memberProfile = ml?.profile || member;
+
+	return (
+		<Card className="border-none bg-muted/50 rounded-lg p-3">
+			<VisuallyHidden className="p-0">
+				<CardTitle></CardTitle>
+				<CardDescription></CardDescription>
+			</VisuallyHidden>
+
+			<CardContent className="space-y-4 px-0">
+				<div className="flex justify-between flex-row items-center">
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={() => {
+							router.back();
+						}}
+						className="bg-foreground/5 size-6"
+					>
+						<ChevronLeft className="size-4" />
+					</Button>
+					<div className="flex flex-row group">
+						<ProfileActions params={params} />
+					</div>
+				</div>
+				<div className="flex flex-row gap-4 ">
+					<Avatar className="size-18 rounded-full bg-foreground/5">
+						<AvatarImage src={memberProfile.avatar || '/images/default-avatar.png'} />
+					</Avatar>
+					<div className="flex flex-col gap-4 flex-1">
+						<div className="flex flex-row gap-10 items-center ">
+							<div className="space-y-1">
+								<div className="text-xs text-muted-foreground">
+									Name
+								</div>
+								<div className="text-sm font-medium">
+									{memberProfile?.firstName} {memberProfile?.lastName}
+								</div>
+
+							</div>
+							<div className="space-y-1">
+								<div className="text-xs text-muted-foreground">Birthday</div>
+								<div className="text-sm font-medium">
+									{member.dob ? format(member.dob, 'MMM d, yyyy') : 'Unknown'}
+								</div>
+							</div>
+							<div className="space-y-1">
+								<div className="text-xs text-muted-foreground">
+									Gender
+								</div>
+								<div className="text-sm font-medium">
+									{member.gender}
+								</div>
+							</div>
+
+						</div>
+						<div className="flex flex-row gap-10 items-center ">
+							<div className="space-y-1">
+								<div className="text-xs text-muted-foreground">
+									Email
+								</div>
+								<div className="text-sm font-medium">
+									{memberProfile?.email}
+								</div>
+
+							</div>
+							<div className="space-y-1">
+								<div className="text-xs text-muted-foreground">
+									Phone
+								</div>
+								<div className="text-sm font-medium">{memberProfile?.phone}</div>
+							</div>
+						</div>
+
+						{ml.knownFamilyMembers && ml.knownFamilyMembers.length > 0 && (
+							<div className="flex flex-row gap-10 items-center ">
+								<div className="space-y-1">
+									<div className="text-xs text-muted-foreground">
+										Last seen
+									</div>
+									<div className="text-sm font-medium">
+										{ml.lastCheckInTime ? format(ml.lastCheckInTime, 'MMM d, yyyy hh:mm a') : 'n/a'}
+									</div>
+								</div>
+								<div className="space-y-1">
+									<div className="text-xs text-muted-foreground">
+										Know Family Members
+									</div>
+									<div className="flex flex-row gap-1 relative">
+										{ml.knownFamilyMembers.map((familyMember, index) => (
+											<FamilyMembers key={familyMember.id} familyMember={familyMember} />
+										))}
+									</div>
+								</div>
+							</div>
+						)}
+					</div>
+				</div>
+			</CardContent>
+		</Card>
+	);
 }
 
-export function MemberProfile({ params, profileData }: MemberProfileProps) {
-    const canDeleteMember = usePermission("delete member", params.id)
-    const canEditMember = usePermission("edit member", params.id)
-  const { member, ml } = useMemberStatus();
-  const router = useRouter();
 
-  const memberProfile = ml?.profile || member;
+interface FamilyMembersProps {
+	familyMember: FamilyMember;
+}
 
-  return (
-    <Card className="border-none">
-      <CardContent className="px-0">
-        <div className="flex justify-between flex-row items-center px-4 py-2 gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              router.back();
-            }}
-            className="bg-foreground/5 size-6"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <div className="flex flex-row space-x-2">
-            {canDeleteMember && <MemberDeleteButton params={params} />}
-            {canEditMember && <MemberEditButton params={params} />}
-          </div>
-        </div>
+function FamilyMembers({ familyMember, }: FamilyMembersProps) {
 
-        <div className="flex px-4 py-4 gap-6">
-          <div className="flex-initial relative">
-            <Avatar className="w-20 h-20 rounded-full mx-auto">
-              <AvatarImage src={memberProfile?.avatar || ""} />
-              <AvatarFallback className="text-4xl uppercase text-muted bg-foreground font-medium">
-                {(memberProfile?.firstName || memberProfile?.lastName)?.charAt(
-                  0
-                )}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-          <div className="flex flex-initial w-[250px] ">
-            <div className="flex flex-col  text-sm gap-1.5 ">
-              <div className=" font-bold text-lg ">
-                {memberProfile?.firstName}
-              </div>
-              <div className="flex flex-row gap-2 items-center">
-                <Mail size={14} />
-                <span>{memberProfile?.email}</span>
-              </div>
-              <div className="flex flex-row gap-2 items-center">
-                <PhoneCall size={14} />
-                <span>{memberProfile?.phone}</span>
-              </div>
-              <div className="flex flex-row gap-2 items-center">
-                <strong>Last seen:</strong>
-                <span>
-                  {profileData.lastSeenFormatted}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="flex-1 flex flex-col text-sm gap-2">
-            <div className="flex flex-col">
-              <strong>Total Points Earned</strong>
-              <span>{profileData.totalPointsEarned}</span>
-            </div>
-            <div className="flex flex-col">
-              <strong className="">Current Points Balance</strong>
-              <span>{ml?.points || 0}</span>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+	const m = familyMember.relatedMember;
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+
+				<Avatar className={cn("size-6 rounded-lg bg-foreground/5 ")}>
+					<AvatarImage src={m?.avatar || '/images/default-avatar.png'} />
+				</Avatar>
+			</TooltipTrigger>
+			<TooltipContent>
+				<div>
+					<div className="text-sm font-medium">{m?.firstName} {m?.lastName}</div>
+					<div className="text-xs text-muted-foreground">{familyMember.relationship}</div>
+				</div>
+			</TooltipContent>
+		</Tooltip>
+
+	)
 }

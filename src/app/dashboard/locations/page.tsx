@@ -1,8 +1,7 @@
 import { db } from '@/db/db'
-import React from 'react'
-import { auth } from '@/auth'
 import { LocationsList } from './components/LocationsList'
 import { inArray } from 'drizzle-orm'
+import { authWithContext } from '@/libs/auth/server'
 
 
 
@@ -17,16 +16,16 @@ async function fetchLocations(id: string, role: string) {
             })
             return locations
         } else if (role === "staff") {
-            const staffLocations = await db.query.staffsLocations.findMany({
+            const staffLocations = await db.query.staffLocations.findMany({
                 where: (staffLocations, { eq }) => eq(staffLocations.staffId, id),
-            })  
-            
+            })
+
             const locationIds = staffLocations.map(sl => sl.locationId)
-            
+
             if (locationIds.length === 0) {
                 return []
             }
-            
+
             const locations = await db.query.locations.findMany({
                 where: (locations) => inArray(locations.id, locationIds),
                 with: {
@@ -44,17 +43,19 @@ async function fetchLocations(id: string, role: string) {
 
 
 export default async function LocationsPage() {
-    const session = await auth();
+    const session = await authWithContext();
     if (!session) {
         return (
             <div>Invalid Session</div>
         )
     }
+
     const locations = await fetchLocations(session.user.role === "staff" ? session.user.staffId : session.user.vendorId, session.user.role) || []
     return (
         <div className='w-full h-full'>
             <div className='p-4'>
                 <LocationsList locations={locations} />
+
             </div>
         </div>
     )

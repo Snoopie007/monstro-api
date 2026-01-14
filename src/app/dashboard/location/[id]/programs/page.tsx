@@ -1,140 +1,74 @@
 "use client";
-import { use, useState } from "react";
+import { use, useMemo, useState } from "react";
 
 import { usePrograms } from "@/hooks/usePrograms";
 import { AddProgram } from "./components";
 import ErrorComponent from "@/components/error";
 import { Program } from "@/types";
-import {
-	TablePage,
-	TablePageHeader,
-	TablePageHeaderSection,
-	TablePageContent,
-	TablePageFooter,
-	TableCell,
-	TableHeader,
-	Table,
-	TableRow,
-	TableHead,
-	TableBody,
-	Skeleton,
-} from "@/components/ui";
 import Loading from "@/components/loading";
-import { flexRender, getCoreRowModel, useReactTable } from "@/libs/table-utils";
-import { ProgramColumns } from "./components/ProgramColumns";
 import { Input } from "@/components/forms/input";
 import { usePermission } from "@/hooks/usePermissions";
+import { ProgramItem } from "./components";
+import { ScrollArea } from "@/components/ui/ScrollArea";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Programs(props: { params: Promise<{ id: string }> }) {
 	const params = use(props.params);
-	const { data, isLoading, error } = usePrograms(params.id);
+	const { programs, isLoading, error, mutate } = usePrograms(params.id);
 	const canAddProgram = usePermission("add program", params.id);
+	const refetchPrograms = () => mutate();
+
 	const [searchQuery, setSearchQuery] = useState<string>("");
+	const filteredPrograms = useMemo(() => {
+		if (searchQuery.length > 0 && programs) {
+			return programs.filter((program: Program) =>
+				program.name.toLowerCase().includes(searchQuery.toLowerCase())
+			);
+		}
+		return programs;
+	}, [programs, searchQuery]);
 
-	const columns = ProgramColumns(params.id);
-
-	const table = useReactTable({
-		data,
-		columns,
-		getCoreRowModel: getCoreRowModel(),
-	});
 
 	if (error) return <ErrorComponent error={error} />;
 	if (isLoading) return <Loading />;
 	// Filter programs based on the search query
-	const filteredPrograms = data?.filter((program: Program) =>
-		program.name.toLowerCase().includes(searchQuery.toLowerCase())
-	);
+
 
 	return (
-		<TablePage>
-			<TablePageHeader>
-				<TablePageHeaderSection>
-					<Input
-						placeholder="Find a program..."
-						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
-						variant="search"
-					/>
-					{canAddProgram && <AddProgram lid={params.id} />}
-				</TablePageHeaderSection>
-			</TablePageHeader>
-			<TablePageContent>
-				<Table className="w-auto border-r border-b border-foreground/5">
-					<TableHeader>
-						{table.getHeaderGroups().map((headerGroup) => (
-							<TableRow
-								key={headerGroup.id}
-								className="align-middle text-sm bg-foreground/5"
-							>
-								{headerGroup.headers.map((header) => {
-									return (
-										<TableHead
-											key={header.id}
-											className="h-auto border-foreground/5 py-1 text-foreground"
-										>
-											{header.isPlaceholder
-												? null
-												: flexRender(
-													header.column.columnDef.header,
-													header.getContext()
-												)}
-										</TableHead>
-									);
-								})}
-							</TableRow>
+		<div className="flex flex-col gap-4">
+			<ScrollArea className="h-[calc(100vh-52px)] w-full ">
+
+				<div className="max-w-6xl mx-auto w-full space-y-4">
+					<div className="flex flex-row items-center gap-2 justify-between">
+						<Input
+							placeholder="Find a program..."
+							value={searchQuery}
+							className="h-10 bg-foreground/5 rounded-lg w-[300px]"
+							onChange={(e) => setSearchQuery(e.target.value)}
+							variant="search"
+						/>
+						{canAddProgram && <AddProgram lid={params.id} />}
+
+					</div>
+
+					{isLoading && (
+						<div>
+							<Skeleton className="h-10 w-full rounded-lg border border-foreground/5" />
+							<Skeleton className="h-10 w-full rounded-lg border border-foreground/5" />
+						</div>
+					)}
+					<div className="space-y-2 pb-10">
+
+
+						{filteredPrograms?.map((program) => (
+							<ProgramItem key={program.id} program={program} onDeleted={refetchPrograms} />
 						))}
-					</TableHeader>
-					<TableBody>
-						{isLoading ? (
-							<TableRow>
-								{table.getHeaderGroups()[0].headers.map((header, i) => {
-									return (
-										<TableCell key={i}>
-											<Skeleton className="w-full h-4 bg-gray-100" />
-										</TableCell>
-									);
-								})}
-							</TableRow>
-						) : (
-							<>
-								{table.getRowModel().rows?.length ? (
-									table.getRowModel().rows.map((row) => (
-										<TableRow
-											key={row.id}
-											data-state={row.getIsSelected() && "selected"}
-										>
-											{row.getVisibleCells().map((cell) => (
-												<TableCell
-													key={cell.id}
-													className="border border-foreground/5 py-1.5"
-												>
-													{flexRender(
-														cell.column.columnDef.cell,
-														cell.getContext()
-													)}
-												</TableCell>
-											))}
-										</TableRow>
-									))
-								) : (
-									<TableRow>
-										<TableCell
-											colSpan={columns.length}
-											className="h-6 w-full font-medium text-center"
-										>
-											No programs found.
-										</TableCell>
-									</TableRow>
-								)}
-							</>
-						)}
-					</TableBody>
-				</Table>
-			</TablePageContent>
-			<TablePageFooter>
-				<p className="p-2">{filteredPrograms?.length} programs found</p>
-			</TablePageFooter>
-		</TablePage>
-	);
+
+
+					</div>
+				</div>
+			</ScrollArea>
+		</div >
+	)
 }
+

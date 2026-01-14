@@ -8,10 +8,10 @@ import Stripe from "stripe";
 
 export default function Invoices({ invoices }: { invoices: Stripe.Invoice[] }) {
     return (
-        <div className="border rounded-sm">
+        <div className="bg-foreground/5 rounded-lg">
             <Table >
-                <TableHeader>
-                    <TableRow>
+                <TableHeader >
+                    <TableRow className='border-foreground/5'>
                         {['ID', 'Date', 'Status', 'Amount', 'Invoice'].map((header, i) => (
                             <TableHead key={i}>{header}</TableHead>
                         ))}
@@ -24,17 +24,17 @@ export default function Invoices({ invoices }: { invoices: Stripe.Invoice[] }) {
                         </TableRow>
                     )}
                     {invoices?.map((invoice, index) => (
-                        <TableRow key={index} >
-                            <TableCell className="py-3">{invoice.id}</TableCell>
-                            <TableCell className="py-3">{format(invoice.created * 1000, 'MMM d, yyyy')}</TableCell>
+                        <TableRow key={index} className='border-foreground/5' >
+                            <TableCell>{invoice.id}</TableCell>
+                            <TableCell >{format(invoice.created * 1000, 'MMM d, yyyy')}</TableCell>
 
-                            <TableCell className="py-3">{formatAmountForDisplay(invoice.total / 100, 'usd', true)}</TableCell>
-                            <TableCell className="py-3">
-                                <Badge variant={invoice.status === 'paid' ? 'active' : 'inactive'}>{invoice.status}</Badge>
+                            <TableCell >{formatAmountForDisplay(invoice.total / 100, 'usd', true)}</TableCell>
+                            <TableCell >
+                                <Badge member={invoice.status === 'paid' ? 'active' : 'inactive'}>{invoice.status}</Badge>
                             </TableCell>
-                            <TableCell className="text-center py-3">
-                                <Button variant="foreground" size="icon" className="size-6">
-                                    <DownloadCloudIcon className="size-4" />
+                            <TableCell className="flex justify-start ">
+                                <Button variant="ghost" size="icon" className="size-8">
+                                    <DownloadCloudIcon className="size-5" />
                                 </Button>
                             </TableCell>
                         </TableRow>

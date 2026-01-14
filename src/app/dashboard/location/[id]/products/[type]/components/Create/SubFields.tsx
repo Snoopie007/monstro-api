@@ -15,7 +15,7 @@ import {
 } from "@/components/forms";
 
 import { z } from "zod";
-import React, { useState } from "react";
+import React from "react";
 import { UseFormReturn } from "react-hook-form";
 import {
 	Switch,
@@ -25,8 +25,6 @@ import {
 } from "@/components/ui";
 import {
 	NewPlanSchema,
-	PresetIntervals,
-	PresetInterval,
 	BillingAnchorConfigSchema,
 } from "@/libs/FormSchemas";
 import { cn } from "@/libs/utils";
@@ -39,96 +37,8 @@ interface SubFieldsProps {
 }
 
 export function PlanSubFields({ lid, form }: SubFieldsProps) {
-	const [billingThreshold, setBillingThreshold] = useState<
-		PresetInterval | undefined
-	>();
-
-	function handleBillingThresholdChange(e: string) {
-		const preset = PresetIntervals.find((p) => p.label === e);
-
-		if (preset) {
-			setBillingThreshold(preset);
-			form.setValue("sub.intervalThreshold", preset.intervalThreshold);
-			form.setValue(
-				"sub.interval",
-				preset.interval as "day" | "week" | "month" | "year"
-			);
-		}
-	}
-
-	function matchPresetLabel() {
-		const preset = PresetIntervals.find(
-			(p) =>
-				p.intervalThreshold === form.getValues("sub.intervalThreshold") &&
-				p.interval === form.getValues("sub.interval")
-		);
-		return preset?.label || "Custom";
-	}
 	return (
 		<div className="space-y-2">
-			<fieldset className="flex flex-row gap-2 items-baseline">
-				<div className="flex-1">
-					<FormLabel size={"tiny"}>Billing Threshold</FormLabel>
-					<Select
-						onValueChange={handleBillingThresholdChange}
-						value={matchPresetLabel()}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="Select..." />
-						</SelectTrigger>
-
-						<SelectContent>
-							{PresetIntervals.map((preset, index) => (
-								<SelectItem key={index} value={preset.label}>
-									{preset.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-				<div
-					className={cn(
-						"flex-1",
-						billingThreshold?.label !== "Custom" && "hidden"
-					)}
-				>
-					<FormLabel size={"tiny"}>Every</FormLabel>
-					<div className=" flex-1 grid grid-cols-3 gap-2 items-baseline">
-						<FormField
-							control={form.control}
-							name="sub.intervalThreshold"
-							render={({ field }) => (
-								<FormItem className="col-span-1">
-									<FormControl>
-										<Input type="number" placeholder="1" {...field} />
-									</FormControl>
-								</FormItem>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="sub.interval"
-							render={({ field }) => (
-								<FormItem className="col-span-2">
-									<Select onValueChange={field.onChange} value={field.value}>
-										<SelectTrigger>
-											<SelectValue placeholder="Select interval..." />
-										</SelectTrigger>
-										<SelectContent>
-											{["day", "week", "month", "year"].map((preset, index) => (
-												<SelectItem key={index} value={preset}>
-													{preset}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</FormItem>
-							)}
-						/>
-					</div>
-				</div>
-			</fieldset>
-
 			<fieldset className="grid grid-cols-2 gap-2 items-baseline">
 				<FormField
 					control={form.control}
@@ -166,6 +76,33 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
 							<FormDescription className="text-xs">
 								Leave blank for unlimited.
 							</FormDescription>
+						</FormItem>
+					)}
+				/>
+			</fieldset>
+			<fieldset>
+				<FormField
+					control={form.control}
+					name="makeUpCredits"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel size={"tiny"}>Make-up Credits</FormLabel>
+							<FormControl>
+								<Input
+									type="number"
+									placeholder="0"
+									min={0}
+									onChange={(e) => {
+										const value = e.target.value;
+										field.onChange(value ? parseInt(value) : undefined);
+									}}
+									value={field.value || ""}
+								/>
+							</FormControl>
+							<FormDescription className="text-xs">
+								Number of make-up classes included per billing period. Leave blank or 0 for none.
+							</FormDescription>
+							<FormMessage />
 						</FormItem>
 					)}
 				/>
@@ -252,49 +189,41 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
 							)}
 						/>
 					</fieldset>
-					{form.getValues("sub.interval") === "month" && (
-						<fieldset>
-							<FormField
-								control={form.control}
-								name="sub.billingAnchor"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel size={"tiny"}>Start Date</FormLabel>
-										<FormDescription className="text-xs">
-											Default will be today, but you can change it to the 1st or
-											15th of the month.
-											<b className="text-red-500">
-												{" "}
-												If allow protation is turn on the customer will be bill
-												a proated amount before the started day if the start
-												date is not today.
-											</b>
-										</FormDescription>
-										<FormControl>
-											<Select
-												onValueChange={(value) => field.onChange(parseInt(value))}
-												value={field.value?.toString() || ""}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select..." />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													{BillingAnchorConfigSchema.map((anchor, index) => (
-														<SelectItem key={index} value={anchor.value.toString()}>
-															{anchor.label}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						</fieldset>
-					)}
+					<fieldset>
+						<FormField
+							control={form.control}
+							name="sub.billingAnchor"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel size={"tiny"}>Billing Anchor (Monthly Plans)</FormLabel>
+									<FormDescription className="text-xs">
+										For monthly billing, you can set the billing to start on a specific day.
+									</FormDescription>
+									<FormControl>
+										<Select
+											onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))}
+											value={field.value?.toString() || "none"}
+										>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="Select..." />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value="none">Default (signup date)</SelectItem>
+												{BillingAnchorConfigSchema.map((anchor, index) => (
+													<SelectItem key={index} value={anchor.value.toString()}>
+														{anchor.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</fieldset>
 				</CollapsibleContent>
 			</Collapsible>
 		</div>

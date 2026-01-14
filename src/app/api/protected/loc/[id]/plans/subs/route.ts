@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { memberPlans, planPrograms } from "@/db/schemas";
+import { memberPlans, memberPlanPricing, planPrograms } from "@/db/schemas";
 import { and } from "drizzle-orm";
 import { MemberStripePayments } from "@/libs/server/stripe";
+
+// Type for pricing option input
+type PricingOptionInput = {
+  name: string;
+  price: number;
+  currency?: string;
+  interval?: "day" | "week" | "month" | "year";
+  intervalThreshold?: number;
+  expireInterval?: "day" | "week" | "month" | "year" | null;
+  expireThreshold?: number | null;
+};
 
 export async function GET(
   req: NextRequest,
@@ -23,6 +34,7 @@ export async function GET(
             program: true,
           },
         },
+        pricingOptions: true,
       },
     });
 
@@ -38,61 +50,90 @@ export async function POST(
 ) {
   const params = await props.params;
 
-  const { amount, programs, ...data } = await req.json();
+  const { pricingOptions, programs, ...data } = await req.json();
 
   try {
-    const integration = await db.query.integrations.findFirst({
-      where: (interations, { eq }) =>
-        and(
-          eq(interations.locationId, params.id),
-          eq(interations.service, "stripe")
-        ),
-    });
-
-    if (!integration) {
+    // Validate that at least one pricing option is provided
+    if (!pricingOptions || !Array.isArray(pricingOptions) || pricingOptions.length === 0) {
       return NextResponse.json(
-        { error: "Stripe integration not found" },
+        { error: "At least one pricing option is required" },
         { status: 400 }
       );
     }
-    const stripe = new MemberStripePayments(String(integration.id));
 
-    const stripePrice = await stripe.createStripeProduct(
-      { ...data, price: amount, programId: params.id },
-      {
-        locationId: params.id,
-        planId: data.id,
-        vendorAccountId: integration.accountId,
-      }
-    );
-
-    if (!stripePrice) {
-      return NextResponse.json(
-        { error: "Failed to create Stripe product" },
-        { status: 500 }
-      );
-    }
+    const integration = await db.query.integrations.findFirst({
+      where: (integrations, { eq }) =>
+        and(
+          eq(integrations.locationId, params.id),
+          eq(integrations.service, "stripe")
+        ),
+    });
 
     const plan = await db.transaction(async (tx) => {
+      // Step 1: Create the plan
       const [plan] = await tx
         .insert(memberPlans)
         .values({
           ...data,
           locationId: params.id,
-          price: amount,
-          programId: params.id,
-          stripePriceId: stripePrice.id || "",
         })
-        .returning({ id: memberPlans.id });
+        .returning({ id: memberPlans.id, name: memberPlans.name });
 
-      await tx.insert(planPrograms).values(
-        programs.map((program: number) => ({
-          planId: plan.id,
-          programId: program,
-        }))
-      );
+      // Step 2: Create pricing options for the plan
+      const pricingRecords = [];
+      for (const pricingOption of pricingOptions as PricingOptionInput[]) {
+        let stripePriceId: string | null = null;
 
-      return plan;
+        // Create Stripe price if integration exists
+        if (integration) {
+          const stripe = new MemberStripePayments(String(integration.id));
+          const stripePrice = await stripe.createStripeProduct(
+            {
+              name: `${plan.name} - ${pricingOption.name}`,
+              description: data.description || "",
+              price: pricingOption.price,
+              currency: pricingOption.currency || "USD",
+              interval: pricingOption.interval || "month",
+              intervalThreshold: pricingOption.intervalThreshold || 1,
+            },
+            {
+              locationId: params.id,
+              planId: plan.id,
+              vendorAccountId: integration.accountId,
+            }
+          );
+          stripePriceId = stripePrice?.id || null;
+        }
+
+        const [pricingRecord] = await tx
+          .insert(memberPlanPricing)
+          .values({
+            memberPlanId: plan.id,
+            name: pricingOption.name,
+            price: pricingOption.price,
+            currency: pricingOption.currency || "USD",
+            interval: pricingOption.interval || "month",
+            intervalThreshold: pricingOption.intervalThreshold || 1,
+            expireInterval: pricingOption.expireInterval || null,
+            expireThreshold: pricingOption.expireThreshold || null,
+            stripePriceId,
+          })
+          .returning();
+
+        pricingRecords.push(pricingRecord);
+      }
+
+      // Step 3: Create program associations
+      if (programs && programs.length > 0) {
+        await tx.insert(planPrograms).values(
+          programs.map((program: string) => ({
+            planId: plan.id,
+            programId: program,
+          }))
+        );
+      }
+
+      return { ...plan, pricingOptions: pricingRecords };
     });
 
     return NextResponse.json(plan, { status: 200 });

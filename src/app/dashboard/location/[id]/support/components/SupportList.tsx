@@ -19,15 +19,19 @@ import {
     DropdownMenuItem,
 } from '@/components/ui'
 import { Input } from '@/components/forms'
-import { RefreshCw, MoreHorizontal, Settings } from 'lucide-react'
+import { RefreshCw, Settings } from 'lucide-react'
 import { SupportConversation, SupportConversationStatus } from '@/types/'
 import { formatDistance } from 'date-fns'
 import { useSupport } from '../providers'
 import { cn } from '@/libs/utils'
 import Link from 'next/link'
+import { useAccountStatus } from '../../providers'
+import { EmptySupportAssistant } from './EmptyAssistant'
 
 export function SupportList({ lid }: { lid: string }) {
-    const { conversations, current } = useSupport()
+    const { conversations, current, assistant } = useSupport()
+    const { locationState } = useAccountStatus()
+    const isFreePlan = locationState?.planId === 1;
     const [status, setStatus] = useState<SupportConversationStatus>('open')
     const [search, setSearch] = useState<string>('')
 
@@ -69,8 +73,8 @@ export function SupportList({ lid }: { lid: string }) {
     }
 
     return (
-        <div className="flex flex-col">
-            <div className="flex items-center justify-between p-2">
+        <div className="flex flex-col bg-muted/50 rounded-lg  h-full">
+            <div className="flex items-center justify-between px-4 py-2">
                 <div className="text-base font-bold">Support Inbox</div>
                 <div className="flex items-center gap-1">
                     <TooltipProvider>
@@ -80,7 +84,7 @@ export function SupportList({ lid }: { lid: string }) {
                                     variant="ghost"
                                     size="icon"
                                     className="size-8"
-                                    onClick={() => {}}
+                                    onClick={() => { }}
                                     disabled={isLoading}
                                 >
                                     <RefreshCw
@@ -120,7 +124,7 @@ export function SupportList({ lid }: { lid: string }) {
                 </div>
             </div>
 
-            <div className="flex-col flex-1 space-y-2 ">
+            <div className="flex flex-col flex-1 space-y-2 overflow-hidden">
                 <div className="space-y-4 px-2">
                     <Input
                         placeholder="Search"
@@ -173,9 +177,9 @@ export function SupportList({ lid }: { lid: string }) {
                 )}
 
                 {!isLoading && (
-                    <ScrollArea className="px-2">
+                    <ScrollArea className="flex-1 px-2">
                         {filteredConversations.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
+                            <div className="text-center pt-8 text-muted-foreground">
                                 <p>No conversations yet</p>
                             </div>
                         ) : (
@@ -190,6 +194,9 @@ export function SupportList({ lid }: { lid: string }) {
                             </div>
                         )}
                     </ScrollArea>
+                )}
+                {!assistant && !isFreePlan && (
+                    <EmptySupportAssistant lid={lid} />
                 )}
             </div>
         </div>

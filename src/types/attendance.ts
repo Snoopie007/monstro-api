@@ -1,7 +1,7 @@
 import {
   attendances,
   recurringReservations,
-  recurringReservationsExceptions,
+  reservationExceptions,
   reservations,
 } from "@/db/schemas";
 import { ProgramSession } from "@/types/program";
@@ -10,9 +10,11 @@ import { Member, MemberPackage } from "./member";
 export type Attendance = typeof attendances.$inferSelect & {
   recurring?: RecurringReservation;
   reservation?: Reservation;
+  programName?: string;
 };
 
 export type ExtendedAttendance = Attendance & {
+  programId: string | null;
   programName: string;
 };
 
@@ -22,52 +24,34 @@ export type Reservation = typeof reservations.$inferSelect & {
   session?: ProgramSession;
   member?: Member;
   memberPackage?: MemberPackage | null;
-  exceptions?: RecurringReservationException[];
+  exceptions?: ReservationException[];
 };
 
 export type RecurringReservation = typeof recurringReservations.$inferSelect & {
   session?: ProgramSession;
   location?: Location;
   member?: Member;
-  exceptions?: RecurringReservationException[];
+  exceptions?: ReservationException[];
 };
 
-export type RecurringReservationException =
-  typeof recurringReservationsExceptions.$inferSelect & {
+// Unified exception type - supports both recurring and single reservations
+export type ReservationException =
+  typeof reservationExceptions.$inferSelect & {
     recurring?: RecurringReservation;
     reservation?: Reservation;
   };
 
-export type CalendarEvent = {
-    id: string;
-    title: string;
-    end: Date;
-    duration: number;
-    start: Date;
-    data: CalendarEventData;
-    staff: CalendarEventStaff;
-};
+// Backward compatible alias
+export type RecurringReservationException = ReservationException;
 
-export type CalendarEventStaff = {
-    id: string;
-    name: string;
-    avatar?: string | null;
-};
+export interface MissedReservation {
+  id: string;
+  startOn: Date | string;
+  programId: string | null;
+  programName: string;
+}
 
-export type CalendarEventData = {
-  reservationId?: string;
-  recurringId?: string;
-  programId: string;
-  sessionId: string;
-  members: CalendarEventMember[];
-  isRecurring: boolean;
-  memberPlanId?: string[] | null;
-};
-
-export type CalendarEventMember = {
-  memberId?: string;
-  name: string;
-  avatar?: string | null;
-};
-
-export type CalendarView = "month" | "week" | "day";
+export interface AttendanceResponse {
+  attendances: ExtendedAttendance[];
+  missedReservations: MissedReservation[];
+}

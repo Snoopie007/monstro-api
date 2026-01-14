@@ -97,6 +97,33 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
           )}
         />
       </fieldset>
+      <fieldset>
+        <FormField
+          control={form.control}
+          name="makeUpCredits"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel size={"tiny"}>Make-up Credits</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  min={0}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    field.onChange(value ? parseInt(value) : undefined);
+                  }}
+                  value={field.value || ""}
+                />
+              </FormControl>
+              <FormDescription className="text-xs">
+                Number of make-up classes included with this plan. Leave blank or 0 for none.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </fieldset>
 
       <Collapsible>
         <CollapsibleTrigger className="flex group flex-row items-center gap-1">
@@ -109,48 +136,6 @@ export function PlanPkgFields({ lid, form }: SubFieldsProps) {
           </span>
         </CollapsibleTrigger>
         <CollapsibleContent className="bg-background rounded-sm p-4 space-y-2">
-          <fieldset className="flex flex-col gap-1 items-baseline">
-            <FormLabel size={"tiny"}>Expires In (From Signup Date)</FormLabel>
-            <div className="grid grid-cols-3 gap-3 items-baseline">
-              <FormField
-                control={form.control}
-                name="pkg.expireThreshold"
-                render={({ field }) => (
-                  <FormItem className="col-span-1">
-                    <FormControl>
-                      <Input type="number" placeholder="1" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="pkg.expireInterval"
-                render={({ field }) => (
-                  <FormItem className="col-span-2">
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || ""}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select interval..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {["day", "week", "month", "year"].map(
-                          (preset, index) => (
-                            <SelectItem key={index} value={preset}>
-                              {preset}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-            </div>
-          </fieldset>
-
           <fieldset>
             <FormField
               control={form.control}

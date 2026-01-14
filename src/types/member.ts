@@ -1,6 +1,5 @@
 import { Contract, MemberContract } from './contract'
 import { FamilyMember } from './FamilyMember'
-import { Transaction } from './transaction'
 import { Location } from './location'
 import { PlanProgram } from './program'
 import {
@@ -9,13 +8,17 @@ import {
     memberLocations,
     memberPackages,
     memberPlans,
-    memberPointsHistory,
+    memberPlanPricing,
     memberReferrals,
     members,
     memberSubscriptions,
     memberFields,
     memberCustomFields,
 } from '@/db/schemas'
+import { PaymentType } from './DatabaseEnums'
+import { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
+import { ColumnFiltersState } from '@tanstack/react-table'
+
 
 export type Member = typeof members.$inferSelect & {
     familyMembers?: FamilyMember[]
@@ -28,21 +31,27 @@ export type Member = typeof members.$inferSelect & {
     referredBy?: MemberReferral
 }
 
+export type MemberPlanPricing = typeof memberPlanPricing.$inferSelect & {
+    plan?: MemberPlan
+}
+
 export type MemberSubscription = typeof memberSubscriptions.$inferSelect & {
     child?: MemberSubscription | null
     invoices?: MemberInvoice[]
     plan?: MemberPlan
+    pricing?: MemberPlanPricing | null
     contract?: MemberContract | null
     member?: Member
+    paymentType: PaymentType
 }
 
 export type MemberPackage = typeof memberPackages.$inferSelect & {
-    invoice?: MemberInvoice | null
     plan?: MemberPlan
+    pricing?: MemberPlanPricing | null
     contract?: MemberContract | null
     member?: Member
     parent?: MemberPackage | null
-    transactions?: Transaction[]
+    paymentType: PaymentType
 }
 
 export type BillingCycleAnchorConfig = {
@@ -57,6 +66,7 @@ export type MemberPlan = typeof memberPlans.$inferSelect & {
     contract?: Contract | undefined
     billingAnchorConfig: BillingCycleAnchorConfig | null
     planPrograms?: PlanProgram[]
+    pricingOptions?: MemberPlanPricing[]
     member?: Member
 }
 
@@ -69,8 +79,15 @@ export type MemberInvoice = typeof memberInvoices.$inferSelect & {
 
 export type MemberLocation = typeof memberLocations.$inferSelect & {
     location?: Location
-    member?: Member
+    member?: Member,
+    knownFamilyMembers?: FamilyMember[],
+    lastCheckInTime?: Date | null
+    totalPointsEarned?: number
+    memberPaymentMethods?: MemberPaymentMethod[]
+    paymentMethods?: PaymentMethod[]
 }
+
+
 
 export type MemberLocationProfile = {
     firstName: string
@@ -87,7 +104,9 @@ export type FamilyPlan = {
     packageId?: number
 }
 
-export type ImportMember = typeof importMembers.$inferSelect & {}
+export type ImportMember = typeof importMembers.$inferSelect & {
+    plan?: MemberPlan
+}
 
 export type MemberReferral = typeof memberReferrals.$inferSelect & {
     member?: Member
@@ -129,6 +148,7 @@ export type CustomFieldDefinition = MemberField & {
     helpText?: string
 }
 
+
 export type MemberSortableField =
     | 'created'
     | 'updated'
@@ -148,10 +168,98 @@ export const MEMBER_SORTABLE_FIELDS: MemberSortableField[] = [
 
 // Determine sort order - type-safe mapping of sortable fields
 export const sortColumnMap: Record<MemberSortableField, any> = {
-  created: members.created,
-  updated: members.updated,
-  firstName: members.firstName,
-  lastName: members.lastName,
-  email: members.email,
-  dob: members.dob,
+    created: members.created,
+    updated: members.updated,
+    firstName: members.firstName,
+    lastName: members.lastName,
+    email: members.email,
+    dob: members.dob,
+}
+
+export type MemberTagRef = {
+    id: string
+    name: string
+}
+
+export type MemberCustomFieldValue = {
+    fieldId: string
+    value: string
+}
+
+export type MemberListItem = {
+    id: string
+    userId: string
+    firstName: string
+    lastName: string | null
+    email: string
+    phone: string
+    avatar: string | null
+    created: string
+    updated: string | null
+    dob: string | null
+    gender: string | null
+    firstTime: boolean
+    referralCode: string
+    stripeCustomerId: string | null
+    memberLocation: { status: string }
+    tags: MemberTagRef[]
+    customFields: MemberCustomFieldValue[]
+}
+
+export type LocationMembersResponse = {
+    count: number
+    members: MemberListItem[]
+    customFields: CustomFieldDefinition[]
+}
+
+export type MemberStatus = 
+    | 'active' | 'incomplete' | 'past_due' | 'canceled' 
+    | 'paused' | 'trialing' | 'unpaid' | 'incomplete_expired' | 'archived'
+
+export interface TableState {
+    page: number
+    pageSize: number
+    columnFilters: ColumnFiltersState
+    searchQuery: string
+    selectedTags: string[]
+    tagOperator: 'AND' | 'OR'
+    sorting: { id: string; direction: 'asc' | 'desc' }[]
+}
+
+export interface TabConfig {
+    id: string
+    name: string
+    statusFilter: MemberStatus[]
+    removable: boolean
+    state: TableState
+}
+
+export interface SavedTabConfig {
+    id: string
+    name: string
+    statusFilter: MemberStatus[]
+    columnFilters: ColumnFiltersState
+    searchQuery: string
+    selectedTags: string[]
+    tagOperator: 'AND' | 'OR'
+    sorting: { id: string; direction: 'asc' | 'desc' }[]
+}
+
+export interface MembersTabState extends TabConfig {
+    filteredData: {
+        members: MemberListItem[]
+        count: number
+        customFields: CustomFieldDefinition[]
+    }
+}
+
+export interface TabParams {
+    id: string
+    page: number
+    pageSize: number
+    searchQuery: string
+    selectedTags: string[]
+    columnFilters: ColumnFiltersState
+    tagOperator: 'AND' | 'OR'
+    sorting: { id: string; direction: 'asc' | 'desc' }[]
 }

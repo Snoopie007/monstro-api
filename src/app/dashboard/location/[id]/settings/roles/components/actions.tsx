@@ -8,14 +8,14 @@ export default function RoleListActions({ role, deleteFunction }: { role: Role, 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant={"ghost"} className='h-auto px-0 hover:bg-transparent'>
-                    <EllipsisVerticalIcon className='size-4' />
+                <Button variant={"ghost"} size="icon" className='size-8 '>
+                    <EllipsisVerticalIcon className='size-5' />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className='w-[150px]'>
+            <DropdownMenuContent align="end" className='w-[150px] border-foreground/20'>
 
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className='cursor-pointer bg-red-500 flex flex-row items-center justify-between' onClick={() => deleteFunction(role.id)}>
+                <DropdownMenuItem className='cursor-pointer flex flex-row items-center justify-between' onClick={() => deleteFunction(role.id)}>
 
                     <span>Delete</span>
                     <Trash2 className='size-4' />

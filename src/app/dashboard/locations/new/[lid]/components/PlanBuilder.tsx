@@ -1,50 +1,24 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { VendorPayment } from './VendorPayment'
+import { Elements } from '@stripe/react-stripe-js'
 import { useState } from 'react'
 import { cn, sleep } from '@/libs/utils'
-import PlanList from './PlanList'
-import PackageList from './PackageList'
+import { PlanSelector } from '../../../components'
 import { Button } from '@/components/ui'
 import { Loader2 } from 'lucide-react'
-import { useNewLocation } from '../provider/NewLocationContext'
-
-
-const TABS = [
-    {
-        name: "Plans",
-        desc: "Plans are Monstro-X monthly subscriptions that provides access to all Monstro-X features.",
-        value: "plan",
-    },
-    {
-        name: "Packages",
-        desc: "Packages includes Monstro-X monthly subscriptions but bundles in a proven system to help you grow your business.",
-        value: "package",
-    }
-]
+import { useNewLocation } from '../provider'
+import { PaymentDetails, ExistingPlanPayment, NewPlanPayment } from './PlanPayment'
+import { getStripe } from '@/libs/client/stripe'
+import { useSession } from '@/hooks/useSession'
 
 
 
-export function VendorPlanBuilder({ lid }: { lid: string }) {
+export function PlanBuilder({ lid }: { lid: string }) {
     const [step, setStep] = useState(1)
-    const [tab, setTab] = useState<string | null>(null);
+    const { data: session } = useSession()
     const [loading, setLoading] = useState(false);
-    const { locationState, updateLocationState } = useNewLocation()
-
-
-
-    function handleTabChange(tab: string) {
-        console.log("handleTabChange", tab);
-        setTab(tab);
-        updateLocationState({
-            ...locationState,
-            planId: null,
-            pkgId: null,
-            paymentPlanId: null
-        });
-    }
-
+    const { locationState, updateLocationState, plans } = useNewLocation()
     async function handleNext() {
         setLoading(true);
         await sleep(1000);
@@ -53,63 +27,58 @@ export function VendorPlanBuilder({ lid }: { lid: string }) {
 
     }
 
+    function handlePlanSelect(id: number) {
+        updateLocationState({
+            ...locationState,
+            planId: id
+        });
+    }
+
     return (
-        <div className="space-y-4 py-4">
+        <div className="py-4">
 
-            <div className={cn("space-y-2", { hidden: step === 2 })} >
-                <div className='text-lg font-semibold'>Choose between plans and packages</div>
-                <AnimatedSection>
-                    <div className="space-y-4">
+            <AnimatedSection className={cn("space-y-2", { hidden: step !== 1 })}>
+                <div className="text-lg font-semibold">Select your plan</div>
+                <PlanSelector onSelect={handlePlanSelect} value={locationState.planId} plans={plans} />
 
-                        <div className='grid grid-cols-2 gap-2'>
-                            {TABS.map((tabItem) => (
-                                <div key={tabItem.name}
-                                    onClick={(e) => handleTabChange(tabItem.value)}
-                                    className={cn(
-                                        "border-2 border-foreground/20  space-y-4 rounded-lg p-8 opacity-80 cursor-pointer",
-                                        "hover:border-indigo-500 hover:opacity-100 hover:text-indigo-500",
-                                        {
-                                            "opacity-100 border-indigo-500 text-indigo-500": tabItem.value === tab,
-                                        }
-                                    )}
-                                >
-                                    <div className='text-lg font-semibold'>{tabItem.name}</div>
-                                    <p className='text-sm text-muted-foreground'>{tabItem.desc}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </AnimatedSection>
-            </div>
-            <div className={cn("space-y-2", { hidden: step === 2 || !tab })}>
+                <div className="flex flex-row justify-end">
 
-                <AnimatedSection>
-                    <div className='space-y-4'>
+                    <Button variant={"primary"}
+                        size="lg"
+                        onClick={handleNext}
+                        disabled={!locationState.planId}
+                    >
+                        {loading ? <Loader2 className="size-4 animate-spin " /> : "Next"}
 
-                        {tab === "plan" && <PlanList />}
-                        {tab === "package" && <PackageList />}
-                        <div className="flex flex-row gap-2 ">
-
-                            <Button
-                                variant={"continue"} className={cn("children:hidden", {
-                                    "children:inline-block": loading,
-                                })}
-                                onClick={handleNext}
-                                disabled={!locationState.planId && !locationState.paymentPlanId}
-                            >
-                                <Loader2 className="size-4 animate-spin mr-1" />
-                                Next
-                            </Button>
-                        </div>
-                    </div>
-                </AnimatedSection>
-            </div>
-            <div className={cn("space-y-2", { hidden: step !== 2 })}>
+                    </Button>
+                </div>
+            </AnimatedSection>
+            <AnimatedSection className={cn("space-y-4", { hidden: step !== 2 })}>
                 <div className='text-lg font-semibold'>Payment details</div>
-                <AnimatedSection>
-                    <VendorPayment lid={lid} />
-                </AnimatedSection>
-            </div>
+                <div className='flex flex-col gap-2'>
+                    <PaymentDetails />
+
+                    <Elements
+                        stripe={getStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY)}
+                        options={{
+                            appearance: {
+                                variables: {
+                                    colorIcon: "#6772e5",
+                                    fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
+                                },
+                            },
+                        }}
+                    >
+                        {session?.user.stripeCustomerId ? (
+
+                            <ExistingPlanPayment lid={lid} />
+                        ) : (
+                            <NewPlanPayment lid={lid} />
+                        )}
+
+                    </Elements>
+                </div>
+            </AnimatedSection>
         </div>
     )
 }

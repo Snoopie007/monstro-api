@@ -1,8 +1,8 @@
 
 import { VendorStripePayments } from "@/libs/server/stripe";
-import { auth } from "@/auth";
+import { authWithContext } from "@/libs/auth/server";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import Invoices from "./Invoices";
 import Charges from "./Charges";
 
@@ -23,27 +23,22 @@ async function getCustomerInvoices(customerId: string): Promise<{ invoices: Stri
 
 
 export default async function InvoicesPage(props: { params: Promise<{ id: number }> }) {
-    const session = await auth();
+    const session = await authWithContext();
 
     const invoices = await getCustomerInvoices(session?.user.stripeCustomerId);
 
     return (
-        <div className="space-y-4">
-            <Tabs defaultValue="invoices">
-                <TabsList className="rounded-sm">
-                    <TabsTrigger value="invoices">Invoices</TabsTrigger>
-                    <TabsTrigger value="charges">Charges</TabsTrigger>
-                </TabsList>
-                <TabsContent value="invoices">
-                    <Invoices invoices={invoices.invoices} />
-                </TabsContent>
-                <TabsContent value="charges">
-                    <Charges charges={invoices.charges} />
-                </TabsContent>
-            </Tabs>
-
-
-
-        </div>
+        <Tabs defaultValue="invoices">
+            <TabsList className="rounded-none p-0 bg-transparent border-none mb-2 gap-2">
+                <TabsTrigger value="invoices" className="bg-foreground/5">Invoices</TabsTrigger>
+                <TabsTrigger value="charges" className=" bg-foreground/5">Charges</TabsTrigger>
+            </TabsList>
+            <TabsContent value="invoices">
+                <Invoices invoices={invoices.invoices} />
+            </TabsContent>
+            <TabsContent value="charges">
+                <Charges charges={invoices.charges} />
+            </TabsContent>
+        </Tabs>
     )
 }

@@ -9,6 +9,7 @@ import {
     DialogFooter,
     DialogTrigger,
     DialogClose,
+    ButtonGroup,
     Switch,
 } from '@/components/ui'
 import React, { useEffect, useState } from 'react'
@@ -72,7 +73,9 @@ export function ImportMembers({ lid }: { lid: string }) {
                     return
                 }
 
-                const headers = results.meta.fields as string[]
+                const headers = (results.meta.fields as string[]).filter(
+                    (h) => h.trim().length > 0 && !h.startsWith('_')
+                )
                 const data = results.data as Record<string, string>[]
                 setPreview({ headers, data })
             },
@@ -147,9 +150,11 @@ export function ImportMembers({ lid }: { lid: string }) {
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="create" size="sm">
-                    <FileDown className="size-4" /> Import Members
+                <Button variant="ghost" className=' bg-foreground/5 flex flex-row items-center gap-2'>
+                    <FileDown className='size-4' />
+                    <span>Import Members</span>
                 </Button>
+
             </DialogTrigger>
             <DialogContent className="w-full max-w-lg md:rounded-lg p-0 gap-0 border-foreground/10">
                 {isLoading ? (

@@ -10,18 +10,16 @@ export default async function VendorOnboarding(props: { searchParams: Promise<{ 
     return (
         <div className="space-y-4 max-w-xl mx-auto py-10">
             <div className={cn("flex flex-col gap-2")}>
-                <div className="space-y-2">
-                    <div className={cn("flex flex-col items-start space-y-1 text-foreground cursor-pointer")}>
-                        <h1 className="font-semibold text-lg leading-none">
+                <div className="space-y-4">
+                    <div className={cn("space-y-1 ")}>
+                        <h1 className="font-semibold text-lg ">
                             Create your business profile
                         </h1>
-                        <p className="text-gray-600 text-sm">
+                        <p className="text-muted-foreground text-sm">
                             Find your business on Google or manually add your business information below.
                         </p>
                     </div>
-                    <div>
-                        <AddLocation saleId={saleId} />
-                    </div>
+                    <AddLocation saleId={saleId} />
                 </div>
             </div>
         </div>

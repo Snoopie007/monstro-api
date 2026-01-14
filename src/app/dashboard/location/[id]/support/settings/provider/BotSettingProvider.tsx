@@ -1,4 +1,5 @@
 "use client"
+import { getDefaultAssistantSettings } from '@/libs/utils';
 import { Member, SupportAssistant, TestChatMessage } from '@/types';
 import { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 
@@ -7,6 +8,7 @@ import { createContext, useContext, useReducer, ReactNode, useEffect } from 'rea
 type BotSettingState = {
     messages: TestChatMessage[];
     assistant: SupportAssistant | null;
+    exists: boolean;
     member: Member | null;
 };
 
@@ -16,7 +18,7 @@ type BotSettingAction =
     | { type: 'SET_MEMBER'; payload: Member }
     | { type: 'SET_ASSISTANT'; payload: SupportAssistant }
     | { type: 'UPDATE_ASSISTANT'; payload: SupportAssistant | ((prev: SupportAssistant) => SupportAssistant) }
-
+    | { type: 'SET_EXISTS'; payload: boolean }
 const BotSettingContext = createContext<{
     state: BotSettingState;
     dispatch: React.Dispatch<BotSettingAction>;
@@ -25,6 +27,7 @@ const BotSettingContext = createContext<{
 const initialState: BotSettingState = {
     messages: [],
     assistant: null,
+    exists: false,
     member: null
 };
 
@@ -75,6 +78,11 @@ function reducer(state: BotSettingState, action: BotSettingAction): BotSettingSt
                 ...state,
                 assistant: action.payload as SupportAssistant
             };
+        case 'SET_EXISTS':
+            return {
+                ...state,
+                exists: action.payload as boolean
+            };
         default:
             return state;
     }
@@ -82,14 +90,30 @@ function reducer(state: BotSettingState, action: BotSettingAction): BotSettingSt
 
 interface BotSettingProviderProps {
     children: ReactNode;
-    assistant: SupportAssistant;
+    assistant: SupportAssistant | null | undefined;
+    locationId: string;
 }
 
-export function BotSettingProvider({ children, assistant }: BotSettingProviderProps) {
+export function BotSettingProvider({ children, assistant, locationId }: BotSettingProviderProps) {
     const [state, dispatch] = useReducer(reducer, initialState);
     useEffect(() => {
-        dispatch({ type: 'SET_ASSISTANT', payload: assistant });
-    }, [assistant]);
+        if (assistant) {
+            dispatch({ type: 'SET_ASSISTANT', payload: assistant });
+            dispatch({ type: 'SET_EXISTS', payload: true });
+        } else {
+            const defaultAssistant = getDefaultAssistantSettings();
+            dispatch({ type: 'SET_ASSISTANT', payload: {
+                ...defaultAssistant,
+                id: '',
+                created: new Date(),
+                updated: null,
+                locationId: locationId,
+                status: 'Draft',
+                modelId: 'gpt-4o',
+            } });
+            dispatch({ type: 'SET_EXISTS', payload: false });
+        }
+    }, [assistant, locationId]);
     return (
         <BotSettingContext.Provider value={{ state, dispatch }}>
             {children}
@@ -103,7 +127,7 @@ export function useBotSettingContext() {
         throw new Error('useBotSettingContext must be used within a BotSettingProvider');
     }
     const { state, dispatch } = context;
-    const { messages, member, assistant } = state;
+    const { messages, member, assistant, exists } = state;
 
     function setMessage(message: TestChatMessage | TestChatMessage[] | ((prev: TestChatMessage[]) => TestChatMessage[])) {
         dispatch({ type: 'SET_MESSAGE', payload: message });
@@ -121,6 +145,10 @@ export function useBotSettingContext() {
         dispatch({ type: 'UPDATE_ASSISTANT', payload: assistant });
     }
 
+    function setExists(exists: boolean) {
+        dispatch({ type: 'SET_EXISTS', payload: exists });
+    }
+
     return {
         messages,
         member,
@@ -128,6 +156,8 @@ export function useBotSettingContext() {
         setMessage,
         resetMessage,
         setMember,
-        updateAssistant
+        updateAssistant,
+        exists,
+        setExists
     };
 }

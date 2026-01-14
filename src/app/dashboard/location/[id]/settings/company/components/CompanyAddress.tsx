@@ -1,7 +1,7 @@
 'use client'
 import { Loader2 } from "lucide-react";
 import React, { useState } from 'react'
-import { Button, Card, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { Location } from "@/types";
 import { cn, tryCatch } from "@/libs/utils";
 import { z } from "zod";
@@ -10,7 +10,6 @@ import {
     Form,
     FormField,
     FormItem,
-    FormLabel,
     FormControl,
     FormMessage,
     Input,
@@ -40,7 +39,7 @@ export default function CompanyAddress({ location }: { location: Location }) {
     async function update(values: z.infer<typeof CompanyAddressSchema>) {
         setLoading(true);
         const { result, error } = await tryCatch(
-            fetch(`/api/protected/loc/${location.id}/vendor/company`, {
+            fetch(`/api/protected/loc/${location.id}/config/company`, {
                 method: "POST",
                 body: JSON.stringify(values)
             })
@@ -48,21 +47,26 @@ export default function CompanyAddress({ location }: { location: Location }) {
         setLoading(false);
         if (error || !result || !result.ok) {
             toast.error("Failed to update address");
+            form.reset({
+                address: location.address || "",
+                city: location.city || "",
+                state: location.state || "",
+                postalCode: location.postalCode || "",
+                country: location.country || "",
+            });
             return;
         }
-        const data = await result.json();
-        console.log(data);
     }
     return (
-        <Card className="rounded-sm  border-foreground/10">
+        <div className="bg-foreground/5 rounded-lg">
 
             <div className="p-6 space-y-4">
-                <CardHeader className="p-0 space-y-2">
-                    <CardTitle className="text-base">Business Address</CardTitle>
-                    <CardDescription>
+                <div className="space-y-1">
+                    <div className="text-lg font-bold">Business Address</div>
+                    <p className="text-sm text-muted-foreground">
                         This is the address that will be displayed to the public.
-                    </CardDescription>
-                </CardHeader>
+                    </p>
+                </div>
                 <Form {...form}>
                     <form className="space-y-3">
                         <fieldset>
@@ -159,15 +163,13 @@ export default function CompanyAddress({ location }: { location: Location }) {
                     </form>
                 </Form>
             </div>
-            <CardFooter className="flex justify-end border-t px-6 py-3 bg-foreground/5 border-foreground/5">
+            <div className="flex justify-end px-6 py-3 bg-foreground/5">
                 <Button variant="foreground" size="sm" disabled={loading} onClick={form.handleSubmit(update)}
-                    className={cn('children:hidden', loading && 'children:block')}
                 >
-                    {loading && <Loader2 className="animate-spin size-4 mr-2" />}
-                    Save
+                    {loading ? <Loader2 className="animate-spin size-4 " /> : 'Update'}
                 </Button>
 
-            </CardFooter>
-        </Card >
+            </div>
+        </div>
     )
 }

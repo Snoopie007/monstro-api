@@ -2,113 +2,159 @@
 import { useSubscriptions } from "@/hooks";
 import ErrorComponent from "@/components/error";
 import {
-	TablePageContent,
-	TablePageFooter,
-	TableCell,
-	TableHeader,
-	Table,
-	TableRow,
-	TableHead,
-	TableBody,
-	Skeleton,
+	Empty,
+	EmptyHeader,
+	InfoField,
+	EmptyTitle,
+	EmptyDescription,
+	EmptyMedia,
+	Collapsible,
+	CollapsibleTrigger,
+	CollapsibleContent,
 } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
 import Loading from "@/components/loading";
-import { flexRender, useReactTable, getCoreRowModel } from "@/libs/table-utils";
-
-import { SubColumns } from "./SubColumns";
-
+import { CircleFadingPlusIcon, ChevronRight } from "lucide-react";
+import { MemberPlan, PlanProgram } from "@/types";
+import { useState } from "react";
+import { formatAmountForDisplay } from "@/libs/utils";
+import PlanActions from "./PlanActions";
 export function SubscriptionList({ lid }: { lid: string }) {
 	const { subscriptions, isLoading, error } = useSubscriptions(lid);
-
-	const columns = SubColumns(lid);
-
-	const table = useReactTable({
-		data: subscriptions || [],
-		columns,
-		getCoreRowModel: getCoreRowModel(),
-	});
 
 	if (error) return <ErrorComponent error={error} />;
 	if (isLoading) return <Loading />;
 
 	return (
 		<>
-			<TablePageContent>
-				<Table className="w-auto border-r border-b border-foreground/5">
-					<TableHeader>
-						{table.getHeaderGroups().map((headerGroup) => (
-							<TableRow
-								key={headerGroup.id}
-								className="align-middle text-sm bg-foreground/5"
-							>
-								{headerGroup.headers.map((header) => {
-									return (
-										<TableHead
-											key={header.id}
-											className="h-auto border-r last:border-r-0 border-foreground/5 py-1 text-foreground"
-										>
-											{header.isPlaceholder
-												? null
-												: flexRender(
-													header.column.columnDef.header,
-													header.getContext()
-												)}
-										</TableHead>
-									);
-								})}
-							</TableRow>
-						))}
-					</TableHeader>
-					<TableBody>
-						{isLoading ? (
-							<TableRow>
-								{table.getHeaderGroups()[0].headers.map((header, i) => {
-									return (
-										<TableCell key={i}>
-											<Skeleton className="w-full h-4 bg-gray-100" />
-										</TableCell>
-									);
-								})}
-							</TableRow>
-						) : (
-							<>
-								{table.getRowModel().rows?.length ? (
-									table.getRowModel().rows.map((row) => (
-										<TableRow
-											key={row.id}
-											data-state={row.getIsSelected() && "selected"}
-										>
-											{row.getVisibleCells().map((cell) => (
-												<TableCell
-													key={cell.id}
-													className="border border-foreground/5 py-1.5"
-												>
-													{flexRender(
-														cell.column.columnDef.cell,
-														cell.getContext()
-													)}
-												</TableCell>
-											))}
-										</TableRow>
-									))
-								) : (
-									<TableRow>
-										<TableCell
-											colSpan={columns.length}
-											className="h-6 w-full font-medium text-center"
-										>
-											No subscriptions found.
-										</TableCell>
-									</TableRow>
-								)}
-							</>
-						)}
-					</TableBody>
-				</Table>
-			</TablePageContent>
-			<TablePageFooter>
-				<p className="p-2">{subscriptions?.length} subscriptions found</p>
-			</TablePageFooter>
+			{subscriptions && subscriptions.length > 0 ? (
+				subscriptions.map((sub) => (
+					<SubscriptionItem key={sub.id} sub={sub} />
+				))
+			) : (
+				<Empty variant="border">
+					<EmptyHeader>
+						<EmptyMedia variant="icon">
+							<CircleFadingPlusIcon className="size-5" />
+						</EmptyMedia>
+						<EmptyTitle>No subscriptions found</EmptyTitle>
+						<EmptyDescription>Subscriptions will appear here when they are created</EmptyDescription>
+					</EmptyHeader>
+				</Empty>
+			)}
 		</>
+	);
+}
+
+export function SubscriptionItem({ sub }: { sub: MemberPlan }) {
+	const [open, setOpen] = useState(false);
+	const lid = sub.locationId;
+
+	function getInterval(interval: string | null | undefined) {
+		if (!interval) return 'N/A';
+		return interval === 'month' ? 'monthly' : interval === 'year' ? 'annual' : interval === 'week' ? 'weekly' : 'daily';
+	}
+
+	// Get pricing display
+	const pricingOptions = sub.pricingOptions || [];
+	const getPriceDisplay = () => {
+		if (pricingOptions.length === 0) return 'N/A';
+		if (pricingOptions.length === 1) {
+			return formatAmountForDisplay(pricingOptions[0].price / 100, pricingOptions[0].currency || 'usd');
+		}
+		// Show range for multiple pricing
+		const prices = pricingOptions.map(p => p.price);
+		const min = Math.min(...prices);
+		const max = Math.max(...prices);
+		const currency = pricingOptions[0].currency || 'usd';
+		if (min === max) {
+			return formatAmountForDisplay(min / 100, currency);
+		}
+		return `${formatAmountForDisplay(min / 100, currency)} - ${formatAmountForDisplay(max / 100, currency)}`;
+	};
+
+	const getCycleDisplay = () => {
+		if (pricingOptions.length === 0) return 'N/A';
+		// Show first pricing's interval
+		return getInterval(pricingOptions[0]?.interval);
+	};
+
+	return (
+		<div className="flex flex-col gap-2 bg-muted/50 border rounded-lg border-foreground/5 last:border-b-0">
+			<div className="flex flex-row gap-4 items-center justify-between p-4">
+				<div className="grid grid-cols-6 flex-1 gap-x-4 w-full">
+					<InfoField label="Subscription Name" className="col-span-2">
+						{sub.name}
+					</InfoField>
+					<InfoField label="Price" className="col-span-1">
+						{getPriceDisplay()}
+						{pricingOptions.length > 1 && (
+							<span className="text-xs text-muted-foreground ml-1">({pricingOptions.length} options)</span>
+						)}
+					</InfoField>
+					<InfoField label="Cycle" className="col-span-1">
+						{getCycleDisplay()}
+					</InfoField>
+					<InfoField label="Family Plan" className="col-span-1 gap-0.5">
+						<div className="flex flex-row items-center gap-2">
+							<Badge
+								variant={sub.family ? 'default' : 'secondary'}
+
+								className="rounded-sm"
+							>
+								{sub.family ? 'Yes' : 'No'}
+							</Badge>
+						</div>
+					</InfoField>
+
+				</div>
+				<div className="flex-shrink-0">
+					<PlanActions lid={lid} plan={sub} />
+				</div>
+			</div>
+			<Collapsible open={open} onOpenChange={setOpen} className="border-t border-foreground/5 group px-4 pt-3 pb-2">
+				<CollapsibleTrigger onClick={() => setOpen(!open)}>
+					<div className="flex flex-row items-center gap-1">
+						<ChevronRight className="size-4 transition-transform duration-300 group-data-[state=open]:rotate-90" />
+						<span className="text-sm font-medium">More Details</span>
+					</div>
+				</CollapsibleTrigger>
+				<CollapsibleContent className="py-4">
+					<div className="grid grid-cols-3 gap-4">
+						{sub.family && (
+							<InfoField label="Family Member Limit">
+								{sub.familyMemberLimit || 'Unlimited'}
+							</InfoField>
+						)}
+						<InfoField label="Total Class Limit">
+							{sub.totalClassLimit || 'Unlimited'}
+						</InfoField>
+						<InfoField label="Programs" className="col-span-1">
+							<div className="flex flex-wrap gap-1">
+								{sub.planPrograms && sub.planPrograms.length > 0 ? (
+									<>
+										{sub.planPrograms
+											.slice(0, 2)
+											.map((planProgram: PlanProgram) => (
+												<Badge
+													key={planProgram.program?.id}
+													variant="default"
+												>
+													{planProgram.program?.name}
+												</Badge>
+											))}
+										{sub.planPrograms.length > 2 && (
+											<span className="text-xs text-muted-foreground">+{sub.planPrograms.length - 2}</span>
+										)}
+									</>
+								) : (
+									<span className="text-xs text-muted-foreground">None</span>
+								)}
+							</div>
+						</InfoField>
+					</div>
+				</CollapsibleContent>
+			</Collapsible>
+		</div>
 	);
 }

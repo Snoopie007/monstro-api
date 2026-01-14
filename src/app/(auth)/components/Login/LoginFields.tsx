@@ -50,7 +50,7 @@ export function LoginFields({ form }: LoginFieldsProps) {
 
 
 
-    const InputStyle = "bg-white border border-gray-200 rounded-lg h-12 text-base";
+    const InputStyle = "bg-white border border-gray-200 text-base";
 
     return (
         <div className="space-y-4 flex flex-col">
@@ -58,8 +58,8 @@ export function LoginFields({ form }: LoginFieldsProps) {
                 <h1 className="text-2xl font-bold">
                     Welcome back!
                 </h1>
-                <p className="text-gray-500 text-sm">
-                    Sign in to Monstro-X to have some fun! Let's go!
+                <p className="text-gray-500 ">
+                    Login to Monstro-X to have some fun! Let's go!
                 </p>
             </div>
             <fieldset>

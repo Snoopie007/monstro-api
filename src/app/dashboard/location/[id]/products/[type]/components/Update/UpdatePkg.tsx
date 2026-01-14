@@ -1,48 +1,56 @@
 "use client";
 import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  Textarea,
+} from "@/components/forms";
+import {
   Button,
   Dialog,
   DialogBody,
+  DialogClose,
   DialogContent,
   DialogFooter,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-  Switch,
+  DialogTitle
 } from "@/components/ui";
 import { cn, tryCatch } from "@/libs/utils";
-import { z } from "zod";
-import {
-  Form,
-  FormField,
-  FormLabel,
-  FormMessage,
-  FormItem,
-  FormControl,
-  Input,
-  Textarea,
-  FormDescription,
-} from "@/components/forms";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
-import { toast } from "react-toastify";
-import { Loader2, Pencil } from "lucide-react";
-import AddPrograms from "../AddPrograms";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/forms";
 import { usePackages } from "@/hooks/usePlans";
 import { UpdatePkgPlanSchema } from "@/libs/FormSchemas";
 import { MemberPlan } from "@/types";
+import { Loader2 } from "lucide-react";
 import { VisuallyHidden } from "react-aria";
+import { toast } from "react-toastify";
+import { useProducts } from "../../providers";
+import AddPrograms from "../AddPrograms";
 
 interface CreatePlanProps {
   lid: string;
   pkg: MemberPlan;
+  open: boolean;
+  setOpen: (open: boolean) => void;
 }
 
-export function UpdatePkg({ lid, pkg }: CreatePlanProps) {
-  const [open, setOpen] = useState(false);
+export function UpdatePkg({ lid, pkg, open, setOpen }: CreatePlanProps) {
   const { mutate: mutatePkgs } = usePackages(lid);
+  const { groups } = useProducts();
 
   const form = useForm<z.infer<typeof UpdatePkgPlanSchema>>({
     resolver: zodResolver(UpdatePkgPlanSchema),
@@ -51,9 +59,23 @@ export function UpdatePkg({ lid, pkg }: CreatePlanProps) {
       description: pkg.description,
       programs: pkg.planPrograms?.map((program) => program.program?.id) || [],
       familyMemberLimit: pkg.familyMemberLimit || 0,
+      groupId: pkg.groupId || undefined,
     },
     mode: "onChange",
   });
+
+  // Reset form values when dialog opens or package changes
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        name: pkg.name,
+        description: pkg.description,
+        programs: pkg.planPrograms?.map((program) => program.program?.id) || [],
+        familyMemberLimit: pkg.familyMemberLimit || 0,
+        groupId: pkg.groupId || undefined,
+      });
+    }
+  }, [open, pkg.id]);
 
   async function onSubmit(v: z.infer<typeof UpdatePkgPlanSchema>) {
     if (form.formState.isSubmitting) return;
@@ -94,15 +116,7 @@ export function UpdatePkg({ lid, pkg }: CreatePlanProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          size={"icon"}
-          variant={"ghost"}
-          className=" rounded-md bg-foreground/10 hover:bg-foreground/10 size-5 p-0"
-        >
-          <Pencil className="size-3" />
-        </Button>
-      </DialogTrigger>
+
       <DialogContent className="max-w-lg border-foreground/10">
         <VisuallyHidden className="space-y-0">
           <DialogTitle></DialogTitle>
@@ -172,6 +186,41 @@ export function UpdatePkg({ lid, pkg }: CreatePlanProps) {
                   )}
                 />
               </fieldset>
+              {groups && groups.length > 0 && (
+                <fieldset>
+                  <FormField
+                    control={form.control}
+                    name="groupId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel size={"tiny"}>Add to Group (Optional)</FormLabel>
+                        <Select 
+                          onValueChange={(value) => field.onChange(value === "none" ? null : value)} 
+                          value={field.value || "none"}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a group" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">No group</SelectItem>
+                            {groups.map((group) => (
+                              <SelectItem key={group.id} value={group.id}>
+                                {group.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="text-xs">
+                          Members will be automatically added to this group when they purchase this plan.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </fieldset>
+              )}
               {pkg.family && (
                 <fieldset>
                   <FormField

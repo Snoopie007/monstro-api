@@ -1,6 +1,6 @@
 'use client'
 
-import { cn } from '@/components/event-calendar/utils'
+import { cn } from '@/libs/utils'
 import {
     Badge,
     Card,
@@ -69,7 +69,7 @@ export function RevenueTrent({ transactions, lid }: RevenueTrendProps) {
                         isSameYear(created, targetDate)
                     )
                 })
-                .reduce((acc, t) => acc + (t.amount || 0), 0) / 100
+                .reduce((acc, t) => acc + (t.total || 0), 0) / 100
 
         const current = sumForMonth(now)
         const previous = sumForMonth(lastMonth)

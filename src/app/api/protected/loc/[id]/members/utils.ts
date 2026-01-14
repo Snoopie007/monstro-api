@@ -1,342 +1,334 @@
 import {
-  MemberPlan,
-  MemberPackage,
-  MemberInvoice,
-  Transaction,
-  MemberSubscription,
+	PaymentType,
+	TaxRate,
 } from "@/types";
-import { isAfter } from "date-fns";
+import { isAfter, addDays, addWeeks, addMonths, addYears } from "date-fns";
+import { serversideApiClient } from "@/libs/api/server";
+import { db } from "@/db/db";
+import { groupMembers } from "@/db/schemas";
 
-type BaseData = {
-  memberPlanId: string;
-  locationId: string;
-  memberId: string;
-  programId: string;
-  startDate: Date | string;
-  paymentMethod:
-  | "card"
-  | "cash"
-  | "check"
-  | "zelle"
-  | "venmo"
-  | "paypal"
-  | "apple"
-  | "google";
-};
 
-type PackageData = BaseData & {
-  expireDate?: Date;
-  totalClassLimit?: number;
-};
+const STRIPE_FEE_PERCENT = 2.9
+const STRIPE_FEE_AMOUNT = 0.30
+const STRIPE_BANK_FEE = 0.8;
+function calculateStripeFeePercentage(amount: number, paymentType: PaymentType) {
+	if (paymentType === 'us_bank_account') {
+		return STRIPE_BANK_FEE;
+	}
+	const additionalPercentage = Number(((STRIPE_FEE_AMOUNT / (amount / 100)) * 100).toFixed(2))
+	return Number((additionalPercentage + STRIPE_FEE_PERCENT).toFixed(2))
+}
 
-type SubscriptionData = BaseData & {
-  startDate: string;
-  endDate?: string;
-  trialDays?: number;
-};
+function calculateStripeFeeAmount(amount: number, paymentType: PaymentType) {
+	const stripeFeePercentage = calculateStripeFeePercentage(amount, paymentType);
+	return Math.floor(amount * (stripeFeePercentage / 100));
+}
 
-// Create insert types that omit auto-generated fields
-type TransactionInsert = Omit<
-  Transaction,
-  | "id"
-  | "created"
-  | "updated"
-  | "member"
-  | "subscription"
-  | "package"
-  | "metadata"
-  | "invoice"
-> & {
-  metadata?: Record<string, any>;
-  invoiceId?: string | null;
-  subscriptionId?: string | null;
-  packageId?: string | null;
-  refunded?: boolean;
-};
-
-type MemberInvoiceInsert = Omit<
-  MemberInvoice,
-  | "id"
-  | "created"
-  | "updated"
-  | "member"
-  | "location"
-  | "memberPackage"
-  | "memberSubscription"
-> & {
-  metadata?: Record<string, any>;
-  memberPackageId?: string | null;
-  memberSubscriptionId?: string | null;
-  dueDate?: Date;
-  attemptCount?: number;
-  invoicePdf?: string | null;
-  forPeriodStart?: Date | null;
-  forPeriodEnd?: Date | null;
-};
-
-type MemberPackageInsert = Omit<
-  MemberPackage,
-  | "id"
-  | "updated"
-  | "invoice"
-  | "plan"
-  | "contract"
-  | "member"
-  | "parent"
-  | "transactions"
-> & {
-  metadata?: Record<string, unknown>;
-  memberContractId?: string | null;
-  stripePaymentId?: string | null;
-  parentId?: string | null;
-  totalClassAttended?: number;
-};
-
-type MemberSubscriptionInsert = Omit<
-  MemberSubscription,
-  | "id"
-  | "created"
-  | "updated"
-  | "child"
-  | "invoices"
-  | "plan"
-  | "contract"
-  | "member"
-> & {
-  cancelAt?: Date | null;
-  cancelAtPeriodEnd?: boolean;
-  trialEnd?: Date | null;
-  endedAt?: Date | null;
-  metadata?: Record<string, unknown>;
-};
-
-type BaseReturnType = {
-  newTransaction: TransactionInsert;
-  newInvoice: MemberInvoiceInsert;
-};
-
-type CreatePackageReturn = BaseReturnType & {
-  newPkg: MemberPackageInsert;
-};
-
-type CreateSubscriptionReturn = BaseReturnType & {
-  newSubscription: MemberSubscriptionInsert;
-};
-
-function calculateCurrentPeriodEnd(
-  startDate: Date,
-  interval: string,
-  threshold: number
+function calculatePeriodEnd(
+	startDate: Date,
+	interval: string,
+	threshold: number
 ): Date {
-  const endDate = new Date(startDate); // Initialize endDate with startDate
+	const endDate = new Date(startDate); // Initialize endDate with startDate
 
-  switch (interval) {
-    case "day":
-      endDate.setDate(endDate.getDate() + threshold);
-      break;
-    case "week":
-      endDate.setDate(endDate.getDate() + threshold * 7);
-      break;
-    case "month":
-      endDate.setMonth(endDate.getMonth() + threshold);
-      break;
-    case "year":
-      endDate.setFullYear(endDate.getFullYear() + threshold);
-      break;
-    default:
-      throw new Error("Invalid plan interval");
-  }
-  return endDate;
+	switch (interval) {
+		case "day":
+			endDate.setDate(endDate.getDate() + threshold);
+			break;
+		case "week":
+			endDate.setDate(endDate.getDate() + threshold * 7);
+			break;
+		case "month":
+			endDate.setMonth(endDate.getMonth() + threshold);
+			break;
+		case "year":
+			endDate.setFullYear(endDate.getFullYear() + threshold);
+			break;
+		default:
+			throw new Error("Invalid plan interval");
+	}
+	return endDate;
 }
 
-function calculateInvoice(plans: MemberPlan[], tax: number, discount: number) {
-  const items: { name: string; quantity: number; price: number }[] = [];
-  let subtotal = 0;
 
-  plans.forEach((plan) => {
-    items.push({
-      name: plan.name,
-      quantity: 1,
-      price: plan.price,
-    });
-    subtotal += plan.price;
-  });
-  const total = subtotal - discount + tax;
-  return {
-    items,
-    tax,
-    total,
-    discount,
-    subtotal,
-  };
+function calculateTax(price: number, taxRates: TaxRate[]) {
+	if (taxRates.length === 0) return 0;
+
+	let tax = 0;
+	let defaultTaxRate = taxRates.find((taxRate) => taxRate.isDefault);
+	if (!defaultTaxRate) {
+		defaultTaxRate = taxRates[0];
+	}
+	if (defaultTaxRate) {
+		tax = Math.floor(price * (defaultTaxRate.percentage || 0) / 100);
+	}
+
+	return tax;
 }
 
-type RestProps = {
-  memberId: string;
-  locationId: string;
-  paymentMethod: string;
-};
-
-function createTransaction(
-  plan: MemberPlan,
-  props: RestProps,
-  tax: number
-): TransactionInsert {
-  const today = new Date();
-  const description =
-    plan.type === "recurring"
-      ? `Subscription to ${plan.name}`
-      : `One time payment for ${plan.name}`;
-
-  return {
-    ...props,
-    chargeDate: today,
-    status: "incomplete",
-    type: "inbound",
-    description,
-    taxAmount: tax,
-    amount: plan.price,
-    currency: plan.currency,
-    // TODO: ammend type later on
-    items: [{ name: plan.name }],
-    metadata: {},
-    refunded: false,
-    invoiceId: null,
-    subscriptionId: null,
-    packageId: null,
-  };
+function getTaxRateId(taxRates: TaxRate[]): string | undefined {
+	if (taxRates.length === 0) return undefined;
+	const defaultTaxRate = taxRates.find((taxRate) => taxRate.isDefault);
+	if (defaultTaxRate && defaultTaxRate.stripeRateId) {
+		return defaultTaxRate.stripeRateId as string;
+	} else {
+		return taxRates[0].stripeRateId as string;
+	}
 }
 
-function createInvoice(
-  plan: MemberPlan,
-  props: RestProps,
-  tax: number
-): MemberInvoiceInsert {
-  const description =
-    plan.type === "recurring"
-      ? `Subscription to ${plan.name}`
-      : `Payment for ${plan.name}`;
-  return {
-    ...calculateInvoice([plan], tax, 0),
-    memberId: props.memberId,
-    locationId: props.locationId,
-    description,
-    currency: plan.currency,
-    paid: false,
-    status: "draft",
-    metadata: {},
-    memberPackageId: null,
-    memberSubscriptionId: null,
-    dueDate: new Date(),
-    attemptCount: 0,
-    invoicePdf: null,
-    forPeriodStart: null,
-    forPeriodEnd: null,
-  };
+
+function calculateTrialEnd(startDate: Date, trialDays: number): Date {
+	const today = new Date();
+	if (isAfter(startDate, today)) {
+		return new Date(
+			Math.max(startDate.getTime(), startDate.getTime() + trialDays * 24 * 60 * 60 * 1000)
+		);
+	} else {
+		return new Date(
+			Math.max(today.getTime(), today.getTime() + trialDays * 24 * 60 * 60 * 1000)
+		);
+	}
 }
 
-function createPackage(
-  data: PackageData,
-  plan: MemberPlan,
-  tax: number
-): CreatePackageReturn {
-  const today = new Date();
-  const startDate = data.startDate ? new Date(data.startDate) : today;
-  const { totalClassLimit, ...rest } = data;
-  const { expireInterval, expireThreshold } = plan;
+/**
+ * Calculate the expiration date based on term settings.
+ * Returns null if no expiration is set (ongoing subscription/package).
+ */
+function calculateExpiresAt(
+	startDate: Date,
+	expireInterval: string | null | undefined,
+	expireThreshold: number | null | undefined
+): Date | null {
+	if (!expireInterval || !expireThreshold) {
+		return null; // Ongoing, no expiration
+	}
 
-  let expireDate: Date | null = null;
-  if (data.expireDate) {
-    expireDate = new Date(data.expireDate);
-  } else if (expireInterval && expireThreshold) {
-    expireDate = calculateCurrentPeriodEnd(
-      startDate,
-      expireInterval,
-      expireThreshold
-    );
-  }
-
-  const newPkg: MemberPackageInsert = {
-    ...rest,
-    locationId: rest.locationId,
-    startDate: startDate,
-    expireDate,
-    totalClassLimit: totalClassLimit || 0,
-    created: today,
-    status: "incomplete",
-    metadata: {},
-    memberContractId: null,
-    stripePaymentId: null,
-    parentId: null,
-    totalClassAttended: 0,
-  };
-
-  const newTransaction = createTransaction(plan, rest, tax);
-  const newInvoice = createInvoice(plan, rest, tax);
-  return { newTransaction, newPkg, newInvoice };
+	switch (expireInterval) {
+		case "day":
+			return addDays(startDate, expireThreshold);
+		case "week":
+			return addWeeks(startDate, expireThreshold);
+		case "month":
+			return addMonths(startDate, expireThreshold);
+		case "year":
+			return addYears(startDate, expireThreshold);
+		default:
+			return null;
+	}
 }
 
-function createSubscription(
-  data: SubscriptionData,
-  plan: MemberPlan,
-  tax: number
-): CreateSubscriptionReturn {
-  const today = new Date();
-  const startDate = data.startDate ? new Date(data.startDate) : today;
-  const periodEnd = calculateCurrentPeriodEnd(
-    startDate,
-    plan.interval!,
-    plan.intervalThreshold!
-  );
 
-  const { trialDays, endDate, ...rest } = data;
+async function scheduleRecurringInvoiceReminders(params: {
+	subscriptionId: string;
+	memberId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.post(`/x/loc/${params.locationId}/invoices/recurring`, {
+			subscriptionId: params.subscriptionId,
+			memberId: params.memberId,
+			locationId: params.locationId,
+		})
 
-  let trialEnd: Date | null = null;
-  if (data.trialDays) {
-    if (isAfter(startDate, today)) {
-      trialEnd = new Date(
-        Math.max(startDate.getTime(), startDate.getTime() + data.trialDays * 24 * 60 * 60 * 1000)
-      );
-    } else {
-      trialEnd = new Date(
-        Math.max(today.getTime(), today.getTime() + data.trialDays * 24 * 60 * 60 * 1000)
-      );
+		return {success: true};
+	} catch (error) {
+		console.error('Failed to schedule recurring invoice reminders:', error);
+		throw error;
+	}
+}
+
+// In monstro-15: When creating a one-off invoice
+async function scheduleOneOffInvoiceReminders(invoiceId: string, dueDate: Date, locationId: string) {
+    const apiClient = serversideApiClient();
+    
+    // Schedule PRE-DUE reminder (5 days before)
+    const preDueReminderDate = addDays(dueDate, -5);
+    if (preDueReminderDate > new Date()) {
+        await apiClient.post(`/x/loc/${locationId}/invoices/reminder`, {
+            invoiceId,
+            sendAt: preDueReminderDate.toISOString(),
+        });
     }
-  }
+    
+    // Schedule OVERDUE CHECK (30 mins after due date)
+    const overdueCheckDate = new Date(dueDate.getTime() + 30 * 60 * 1000); // 30 minutes after
+    await apiClient.post(`/x/loc/${locationId}/invoices/overdue`, {
+        invoiceId,
+        sendAt: overdueCheckDate.toISOString(),
+    });
+}
 
-  const cancelAt = data.endDate ? new Date(data.endDate) : null;
-  const newSubscription: MemberSubscriptionInsert = {
-    ...rest,
-    memberId: rest.memberId,
-    startDate: startDate,
-    currentPeriodStart: startDate,
-    currentPeriodEnd: periodEnd,
-    cancelAt: cancelAt,
-    status: "incomplete",
-    trialEnd,
-    cancelAtPeriodEnd: false,
-    endedAt: cancelAt || null,
-    metadata: {},
-    parentId: null,
-    stripeSubscriptionId: null,
-    memberContractId: null,
-  };
+async function cancelRecurringInvoiceReminders(params: {
+	subscriptionId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.delete(`/x/loc/${params.locationId}/invoices/recurring/${params.subscriptionId}`);
+		return {success: true};
+	} catch (error) {
+		console.error('Failed to cancel recurring invoice reminders:', error);
+		throw error;
+	}
+}
 
-  const newTransaction = createTransaction(plan, rest, tax);
-  const newInvoice = {
-    ...createInvoice(plan, rest, tax),
-    forPeriodStart: startDate,
-    forPeriodEnd: periodEnd,
-  };
+async function cancelInvoiceReminders(params: {
+	invoiceId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		// Cancel pre-due reminder
+		await apiClient.delete(`/x/loc/${params.locationId}/invoices/reminder/${params.invoiceId}`);
+		
+		// Cancel overdue check/reminders
+		await apiClient.delete(`/x/loc/${params.locationId}/invoices/overdue/${params.invoiceId}`);
+		
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel invoice reminders:', error);
+		throw error;
+	}
+}
 
-  return { newSubscription, newTransaction, newInvoice };
+// Class reminder scheduling functions
+async function scheduleClassReminders(params: {
+	reservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		// Schedule upcoming class reminder (3 days before)
+		await apiClient.post(`/x/loc/${params.locationId}/class/reminder`, {
+			reservationId: params.reservationId,
+			locationId: params.locationId,
+		});
+
+		// Schedule missed class check (30 mins after class end)
+		await apiClient.post(`/x/loc/${params.locationId}/class/missed`, {
+			reservationId: params.reservationId,
+			locationId: params.locationId,
+		});
+
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to schedule class reminders:', error);
+		throw error;
+	}
+}
+
+async function scheduleRecurringClassReminders(params: {
+	recurringReservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.post(`/x/loc/${params.locationId}/class/recurring`, {
+			recurringReservationId: params.recurringReservationId,
+			locationId: params.locationId,
+		});
+
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to schedule recurring class reminders:', error);
+		throw error;
+	}
+}
+
+async function cancelClassReminders(params: {
+	reservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		// Cancel upcoming class reminder
+		await apiClient.delete(`/x/loc/${params.locationId}/class/reminder/${params.reservationId}`);
+
+		// Cancel missed class check
+		await apiClient.delete(`/x/loc/${params.locationId}/class/missed/${params.reservationId}`);
+
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel class reminders:', error);
+		throw error;
+	}
+}
+
+async function cancelMissedClassReminder(params: {
+	reservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.delete(`/x/loc/${params.locationId}/class/missed/${params.reservationId}`);
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel missed class reminder:', error);
+		throw error;
+	}
+}
+
+async function cancelRecurringClassReminders(params: {
+	recurringReservationId: string;
+	locationId: string;
+}) {
+	const apiClient = serversideApiClient();
+	try {
+		await apiClient.delete(`/x/loc/${params.locationId}/class/recurring/${params.recurringReservationId}`);
+		return { success: true };
+	} catch (error) {
+		console.error('Failed to cancel recurring class reminders:', error);
+		throw error;
+	}
+}
+
+/**
+ * Add a user to a group if groupId is provided.
+ * Uses onConflictDoNothing to avoid duplicate membership errors.
+ */
+async function addUserToGroup(params: {
+	groupId: string | null | undefined;
+	userId: string;
+}) {
+	const { groupId, userId } = params;
+	
+	if (!groupId) {
+		return { success: true, added: false };
+	}
+
+	try {
+		await db.insert(groupMembers).values({
+			groupId,
+			userId,
+			role: "member",
+		}).onConflictDoNothing();
+
+		console.log(`👥 Added user ${userId} to group ${groupId}`);
+		return { success: true, added: true };
+	} catch (error) {
+		console.error('Failed to add user to group:', error);
+		// Don't throw - group membership failure shouldn't fail the checkout
+		return { success: false, added: false, error };
+	}
 }
 
 export {
-  calculateCurrentPeriodEnd,
-  calculateInvoice,
-  createPackage,
-  createSubscription,
-  createInvoice,
-  createTransaction,
+	calculatePeriodEnd,
+	calculateTax,
+	calculateStripeFeeAmount,
+	calculateStripeFeePercentage,
+	getTaxRateId,
+	calculateTrialEnd,
+	calculateExpiresAt,
+	scheduleRecurringInvoiceReminders,
+	scheduleOneOffInvoiceReminders,
+	cancelRecurringInvoiceReminders,
+	cancelInvoiceReminders,
+	scheduleClassReminders,
+	scheduleRecurringClassReminders,
+	cancelClassReminders,
+	cancelMissedClassReminder,
+	cancelRecurringClassReminders,
+	addUserToGroup,
 };

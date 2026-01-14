@@ -1,11 +1,11 @@
-import { auth } from "@/auth";
+import { auth } from "@/libs/auth/server";
 import { db } from "@/db/db";
 import { integrations } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import Stripe from "stripe";
 import { Integration } from "@/types/integrations";
 import { getQuickbooksSettings, exchangeCodeForToken } from "@/libs/quickbooks";
-import { VendorGHL } from "@/libs/server/ghl";
+import { HighLevelClient } from "@/libs/server/ghl";
 
 interface IntegrationSearchParams {
   code: string;
@@ -68,8 +68,8 @@ async function completeIntegration(
     } else if (name === "gl") {
       if (searchParams.error || !searchParams.code) return false;
 
-      const ghl = new VendorGHL();
-      const tokenData = await ghl.getLocationToken(searchParams.code);
+      const ghl = new HighLevelClient();
+      const tokenData = await ghl.getAccessToken({ code: searchParams.code, type: 'Location', callback: '/callbacks/integrations/ghl' });
 
       if (!tokenData?.access_token) return false;
 

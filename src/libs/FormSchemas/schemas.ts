@@ -19,24 +19,20 @@ export const UserInfoSchema = z.object({
     referralCode: z.string().optional()
 }).merge(EmailSchema);
 
-export const PasswordSchema = z.object({
-    password: z.string().min(8, { message: "password must be atleast 8 characters long." }).refine(
-        (v) => /[!@#$&]/.test(v), "password must contain atleast one symbol !@#$&*.")
-        .refine((v) => /[A-Z]/.test(v), "password must contain atleast one UPPERCASE letter.")
-        .refine((v) => /[0-9]/.test(v), "password must contain atleast one number.")
-        .refine((v) => !/[()*+\-[\]{}|`~<>,.\/?^]/.test(v), "password contains invalid characters."),
-});
+
+
 
 export const RegisterSchema = z.object({
     firstName: z.string().min(2, "Required"),
     lastName: z.string().min(2, "Required"),
     phone: z.string().min(11, { message: 'Invalid phone number' }),
-}).merge(PasswordSchema).merge(EmailSchema);
+    password: z.string().min(8, { message: "password must be atleast 8 characters long." }),
+}).merge(EmailSchema);
 
 
 export const AddCreditCardSchema = z.object({
     name: z.string().min(2, { message: "Required" }),
-    default: z.boolean().optional(),
+    type: z.enum(["card", "us_bank_account"]),
     address: z.object({
         line1: z.string().optional(),
         line2: z.string().optional(),
@@ -52,23 +48,32 @@ export const LoginSchema = z.object({
     token: z.string().min(6, "Invalid token."),
     type: z.enum(["email", "sms"]).optional(),
     email: z.string().min(8, "Email is required.").email("invalid email."),
-    password: z.string().min(8, "Password is required."),
+    password: z.string().min(8, "Password must be at least 8 characters long."),
 })
-
-export const VendorRegistrationSchema = z.object({
-    confirmPassword: z.string().min(8),
-}).merge(PasswordSchema).merge(UserInfoSchema);
 
 
 
 
 export const ResetPasswordSchema = z.object({
     token: z.string(),
-    confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters long")
-}).merge(PasswordSchema).refine(
+    confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters long."),
+    password: z.string().min(8, "Password must be at least 8 characters long."),
+}).refine(
     (data) => data.password === data.confirmPassword,
     {
-        message: "Passwords do not match",
+        message: "Passwords do not match.",
+        path: ["confirmPassword"]
+    }
+);
+
+export const UpdatePasswordSchema = z.object({
+    confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters long."),
+    password: z.string().min(8, "Password must be at least 8 characters long."),
+    currentPassword: z.string().min(8, "Current password must be at least 8 characters long."),
+}).refine(
+    (data) => data.password === data.confirmPassword,
+    {
+        message: "Passwords do not match.",
         path: ["confirmPassword"]
     }
 );
@@ -96,8 +101,9 @@ export const VendorBillingSchema = z.object({
 });
 
 export const VendorInviteSchema = z.object({
-    email: z.string().min(1, { message: "Email is required" }).email({ message: "Invalid email address" }),
-}).merge(PasswordSchema);
+
+    password: z.string().min(8, "Password must be at least 8 characters long."),
+}).merge(EmailSchema);
 
 
 

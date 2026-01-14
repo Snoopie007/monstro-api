@@ -1,7 +1,7 @@
-import { auth } from "@/auth";
+import { authWithContext } from "@/libs/auth/server";
 import { NextResponse } from "next/server";
 
-export type Permission = 
+export type Permission =
   // Member Management (view is implicit for all authenticated users)
   | "edit member" | "add member" | "delete member"
   // Program Management (view is implicit for all authenticated users)
@@ -27,16 +27,14 @@ export interface PermissionCheck {
  * @returns Promise<boolean> - True if user has permission, false otherwise
  */
 export async function hasPermission(permission: Permission, locationId?: string): Promise<boolean> {
-  const session = await auth();
-  
+  const session = await authWithContext();
+
   if (!session?.user) {
     return false;
   }
   // Vendors have all permissions for their locations
   if (session.user.role === "vendor") {
     if (!locationId) return true; // Vendor has global permission if no location specified
-    console.log(locationId)
-    console.log(session.user.locations);
     return session.user.locations?.some((loc: any) => loc.id === locationId) || false;
   }
 
@@ -44,7 +42,7 @@ export async function hasPermission(permission: Permission, locationId?: string)
   if (session.user.role === "staff") {
     if (!locationId) {
       // Check if user has permission for any location
-      return session.user.locations?.some((loc: any) => 
+      return session.user.locations?.some((loc: any) =>
         loc.permissions?.includes(permission)
       ) || false;
     }
@@ -64,8 +62,8 @@ export async function hasPermission(permission: Permission, locationId?: string)
  * @returns Promise<boolean> - True if user can view, false otherwise
  */
 export async function canView(locationId?: string): Promise<boolean> {
-  const session = await auth();
-  
+  const session = await authWithContext();
+
   if (!session?.user) {
     return false;
   }
@@ -127,14 +125,14 @@ export async function requirePermission(
   // This would be used in API routes where we have access to the request
   // For now, we'll use the session-based approach
   const hasAuth = await hasPermission(permission);
-  
+
   if (!hasAuth) {
     return NextResponse.json(
       { error: "Insufficient permissions" },
       { status: 403 }
     );
   }
-  
+
   return null;
 }
 
@@ -144,8 +142,8 @@ export async function requirePermission(
  * @returns Promise<string[]> - Array of permission names
  */
 export async function getUserPermissions(locationId?: string): Promise<string[]> {
-  const session = await auth();
-  
+  const session = await authWithContext();
+
   if (!session?.user) {
     return [];
   }
@@ -166,9 +164,9 @@ export async function getUserPermissions(locationId?: string): Promise<string[]>
       // Business Management (view is implicit)
       "edit business_profile", "add member_card"
     ];
-    
+
     if (!locationId) return allPermissions;
-    
+
     return session.user.locations?.some((loc: any) => loc.id === locationId) ? allPermissions : [];
   }
 
@@ -178,7 +176,9 @@ export async function getUserPermissions(locationId?: string): Promise<string[]>
       // Get all permissions across all locations
       const allPermissions = new Set<string>();
       session.user.locations?.forEach((loc: any) => {
-        loc.permissions?.forEach((perm: any) => allPermissions.add(perm));
+        loc.permissions?.forEach((perm: any) => {
+          allPermissions.add(perm);
+        });
       });
       return Array.from(allPermissions);
     }
@@ -210,7 +210,7 @@ export function withPermission(
     }
 
     const hasAuth = await hasPermission(permission, locationId);
-    
+
     if (!hasAuth) {
       return NextResponse.json(
         { error: "Insufficient permissions" },

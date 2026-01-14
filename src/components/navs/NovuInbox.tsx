@@ -1,9 +1,12 @@
+'use client'
+
 import { Inbox } from '@novu/nextjs'
-import { useSession } from 'next-auth/react'
 import { useTheme } from 'next-themes'
 import { Inbox as InboxIcon } from 'lucide-react'
 import { Button } from '../ui/button'
 import Link from 'next/link'
+import { ExtendedUser } from '@/types/user'
+import React from 'react'
 
 const lightAppearance = {
     variables: {
@@ -30,16 +33,21 @@ const darkAppearance = {
     },
 }
 
-export function NovuInbox() {
-    const { data: session } = useSession()
-    const user = session?.user
+export function NovuInbox({ user }: { user: ExtendedUser }) {
     const appId = process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER
-    const { theme } = useTheme()
+    const { theme, resolvedTheme } = useTheme()
+    const [mounted, setMounted] = React.useState(false)
+
+    // Ensure theme is mounted before rendering
+    React.useEffect(() => {
+        setMounted(true)
+    }, [])
 
     if (!process.env.NEXT_PUBLIC_NOVU_APP_IDENTIFIER)
         throw new Error('NEXT_PUBLIC_NOVU_APP_IDENTIFIER is not set')
 
     if (!appId || !user?.id) return null
+    const currentTheme = mounted ? (resolvedTheme || theme) : 'light'
 
     return (
         <Inbox
@@ -53,9 +61,9 @@ export function NovuInbox() {
                     },
                 },
                 icons: {
-                    bell: () => <InboxIcon size={14} />,
+                    bell: () => <InboxIcon size={16} />,
                 },
-                ...(theme === 'dark' ? darkAppearance : lightAppearance),
+                ...(currentTheme === 'dark' ? darkAppearance : lightAppearance),
             }}
             renderCustomActions={(notification) => {
                 return (

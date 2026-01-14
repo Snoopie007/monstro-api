@@ -2,6 +2,8 @@ import { db } from "@/db/db";
 import { reservations } from "@/db/schemas/reservations";
 import { NextResponse } from "next/server";
 import { and, eq, inArray } from "drizzle-orm";
+import { serviceApiClient } from "@/libs/api/server";
+import { format, subDays, addHours } from "date-fns";
 
 type Params = {
   id: string;
@@ -44,9 +46,12 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
   }
 
   try {
-    // First, fetch the session to get the duration for calculating endOn
+    // First, fetch the session with program info to get all denormalized data
     const session = await db.query.programSessions.findFirst({
       where: (s, { eq }) => eq(s.id, sessionId),
+      with: {
+        program: true,
+      },
     });
 
     if (!session) {
@@ -79,34 +84,52 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
         if (programWithPlans) {
           const planIds = programWithPlans.planPrograms.map((pp) => pp.planId);
 
-          // Try to find an active subscription first
-          const activeSubscription =
-            await db.query.memberSubscriptions.findFirst({
-              where: (s, { eq, and, inArray }) =>
+          const activeSubscriptions =
+            await db.query.memberSubscriptions.findMany({
+              where: (s, { eq, and }) =>
                 and(
                   eq(s.memberId, memberId),
                   eq(s.locationId, id),
-                  eq(s.status, "active"),
-                  inArray(s.memberPlanId, planIds)
+                  eq(s.status, "active")
                 ),
+              with: {
+                pricing: {
+                  with: {
+                    plan: { columns: { id: true } },
+                  },
+                },
+              },
             });
 
-          if (activeSubscription) {
-            memberSubscriptionId = activeSubscription.id;
+          const matchingSubscription = activeSubscriptions.find(
+            (sub) => sub.pricing?.plan?.id && planIds.includes(sub.pricing.plan.id)
+          );
+
+          if (matchingSubscription) {
+            memberSubscriptionId = matchingSubscription.id;
           } else {
-            // Try to find an active package
-            const activePackage = await db.query.memberPackages.findFirst({
-              where: (p, { eq, and, inArray }) =>
+            const activePackages = await db.query.memberPackages.findMany({
+              where: (p, { eq, and }) =>
                 and(
                   eq(p.memberId, memberId),
                   eq(p.locationId, id),
-                  eq(p.status, "active"),
-                  inArray(p.memberPlanId, planIds)
+                  eq(p.status, "active")
                 ),
+              with: {
+                pricing: {
+                  with: {
+                    plan: { columns: { id: true } },
+                  },
+                },
+              },
             });
 
-            if (activePackage) {
-              memberPackageId = activePackage.id;
+            const matchingPackage = activePackages.find(
+              (pkg) => pkg.pricing?.plan?.id && planIds.includes(pkg.pricing.plan.id)
+            );
+
+            if (matchingPackage) {
+              memberPackageId = matchingPackage.id;
             }
           }
         }
@@ -120,11 +143,136 @@ export async function POST(req: Request, props: { params: Promise<Params> }) {
         sessionId,
         locationId: id,
         memberId,
+        // Denormalized session/program fields
+        programId: session.programId,
+        programName: session.program?.name,
+        sessionTime: session.time,
+        sessionDuration: session.duration,
+        sessionDay: session.day,
+        staffId: session.staffId,
+        status: 'confirmed' as const,
       });
     }
 
-    // Insert all reservations
-    await db.insert(reservations).values(reservationsToInsert);
+    // Insert all reservations and get the created reservation IDs
+    const createdReservations = await db.insert(reservations).values(reservationsToInsert).returning();
+
+    // Schedule class reminder emails (only for planId >= 2)
+    try {
+      const locationState = await db.query.locationState.findFirst({
+        where: (ls, { eq }) => eq(ls.locationId, id)
+      });
+
+      if (locationState?.planId && locationState.planId >= 2) {
+        // Fetch location details and session program info
+        const location = await db.query.locations.findFirst({
+          where: (l, { eq }) => eq(l.id, id)
+        });
+
+        const program = await db.query.programs.findFirst({
+          where: (p, { eq }) => eq(p.id, session.programId)
+        });
+
+        if (location && program) {
+          const apiClient = serviceApiClient();
+
+          // Schedule emails for each created reservation
+          for (const reservation of createdReservations) {
+            // Fetch member details
+            const member = await db.query.members.findFirst({
+              where: (m, { eq }) => eq(m.id, reservation.memberId)
+            });
+
+            if (member) {
+              const startOn = reservation.startOn;
+              const endOn = reservation.endOn;
+              const now = new Date();
+              
+              // Format the day and time for display
+              const dayTime = format(startOn, "EEEE, MMMM d 'at' h:mm a");
+
+              // Calculate when to send emails
+              const upcomingReminderTime = subDays(startOn, 3);
+              const missedClassTime = addHours(endOn, 1);
+
+              const emailData = {
+                member: {
+                  firstName: member.firstName || '',
+                  lastName: member.lastName || '',
+                },
+                session: {
+                  programName: program.name,
+                  dayTime,
+                },
+                location: {
+                  name: location.name || '',
+                  address: location.address || '',
+                },
+                monstro: {
+                  fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',
+                  privacyUrl: 'https://mymonstro.com/privacy',
+                  unsubscribeUrl: 'https://mymonstro.com/unsubscribe',
+                },
+              };
+
+              // For missed class email validation
+              const missedClassEmailData = {
+                ...emailData,
+                session: {
+                  ...emailData.session,
+                  startTime: startOn.toISOString(),
+                  endTime: endOn.toISOString(),
+                  reservationId: reservation.id,
+                  recurringId: null,
+                },
+              };
+
+              // Schedule upcoming class reminder
+              if (startOn > now) {
+                // Class is in the future
+                let reminderSendTime: Date;
+                
+                if (upcomingReminderTime > now) {
+                  // Class is 3+ days away - schedule for 3 days before
+                  reminderSendTime = upcomingReminderTime;
+                  console.log(`📧 Scheduled upcoming class reminder for 3 days before ${dayTime}`);
+                } else {
+                  // Class is < 3 days away - send immediately
+                  reminderSendTime = now;
+                  console.log(`📧 Sending upcoming class reminder immediately (class is < 3 days away)`);
+                }
+
+                await apiClient.post('/protected/locations/email', {
+                  recipient: member.email,
+                  subject: `Reminder: ${program.name} class coming up`,
+                  template: 'ClassReminderEmail',
+                  data: emailData,
+                  sendAt: reminderSendTime.toISOString(),
+                  jobId: `class-reminder-${reservation.id}`,
+                });
+              } else {
+                console.log(`⏭️ Skipping upcoming reminder - class is in the past`);
+              }
+
+              // Schedule missed class email (1 hour after class ends)
+              await apiClient.post('/protected/locations/email', {
+                recipient: member.email,
+                subject: `We missed you at ${program.name}`,
+                template: 'MissedClassEmail',
+                data: missedClassEmailData,
+                sendAt: missedClassTime.toISOString(),
+                jobId: `missed-class-${reservation.id}`,
+              });
+
+              console.log(`📧 Scheduled class reminder emails for reservation ${reservation.id}`);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error scheduling class reminder emails:', error);
+      // Don't fail the reservation if email scheduling fails
+    }
 
     return NextResponse.json(
       {

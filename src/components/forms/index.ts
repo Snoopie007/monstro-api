@@ -1,6 +1,7 @@
 export * from "./RegionSelect";
 export * from "./radio-group";
 export * from "./checkbox";
+export * from "./color-picker";
 export * from "./input";
 export * from "./textarea";
 export * from "./select";
@@ -11,3 +12,5 @@ export * from "./OTPInput";
 export * from "./PriceInput";
 export * from "./switch";
 export * from "./slider";
+export * from "./InputGroup";
+export * from "./PasswordField";

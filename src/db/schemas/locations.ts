@@ -21,7 +21,11 @@ import { transactions } from "./transactions";
 import { vendors } from "./vendors";
 import { memberPlans, memberSubscriptions } from "./MemberPlans";
 import { LocationStatusEnum } from "./DatabaseEnums";
-import { MemberLocationProfile } from "@/types/member";
+import type { MemberLocationProfile } from "@/types/member";
+import { attendances } from "./attendances";
+import type { LocationSettings } from "@/types";
+import { taxRates } from "./tax";
+import { memberPaymentMethods } from "./PaymentMethods";
 
 export const locations = pgTable("locations", {
   id: uuid("id")
@@ -57,27 +61,19 @@ export const locationState = pgTable("location_state", {
   locationId: text("location_id")
     .primaryKey()
     .references(() => locations.id, { onDelete: "cascade" }),
-  planId: integer("plan_id"),
-  pkgId: integer("pkg_id"),
-  paymentPlanId: integer("payment_plan_id"),
+  planId: integer("plan_id").notNull().default(1),
   waiverId: text("waiver_id").references(() => locations.id, {
     onDelete: "set null",
   }),
   agreeToTerms: boolean("agree_to_terms").notNull().default(false),
-  lastRenewalDate: timestamp("last_renewal_date", {
-    withTimezone: true,
-  }).defaultNow(),
+  lastRenewalDate: timestamp("last_renewal_date", { withTimezone: true, }).defaultNow(),
+  stripeSubscriptionId: text("stripe_subscription_id"),
   startDate: timestamp("start_date", { withTimezone: true }),
-  settings: jsonb("settings")
-    .$type<Record<string, any>>()
-    .notNull()
-    .default(sql`'{}'::jsonb`),
+  settings: jsonb("settings").$type<LocationSettings>().notNull().default(sql`'{}'::jsonb`),
   usagePercent: integer("usage_percent").notNull().default(0),
-  taxRate: integer("tax_rate").notNull().default(0),
+  premiumSupport: boolean("premium_support").notNull().default(false),
   status: LocationStatusEnum("status").notNull().default("incomplete"),
-  created: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),
 });
 
@@ -151,6 +147,9 @@ export const memberLocations = pgTable(
   (t) => [primaryKey({ columns: [t.memberId, t.locationId] })]
 );
 
+
+
+
 export const locationsRelations = relations(locations, ({ many, one }) => ({
   memberLocations: many(memberLocations),
   integrations: many(integrations),
@@ -172,6 +171,7 @@ export const locationsRelations = relations(locations, ({ many, one }) => ({
     fields: [locations.id],
     references: [wallets.locationId],
   }),
+  taxRates: many(taxRates),
 }));
 
 export const locationStateRelations = relations(locationState, ({ one }) => ({
@@ -193,6 +193,10 @@ export const memberLocationsRelations = relations(
       references: [locations.id],
     }),
     transactions: many(transactions),
+    attendances: many(attendances),
+    memberPaymentMethods: many(memberPaymentMethods, {
+      relationName: 'memberPaymentMethods',
+    }),
   })
 );
 
@@ -203,3 +207,4 @@ export const walletRelations = relations(wallets, ({ one, many }) => ({
   }),
   usages: many(walletUsages, { relationName: "usages" }),
 }));
+

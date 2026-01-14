@@ -33,7 +33,7 @@ import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { NewContractSchema } from "../schema"
 import { useForm } from "react-hook-form"
-import { Loader2 } from "lucide-react"
+import { Loader2, Plus } from "lucide-react"
 import { VisuallyHidden } from "react-aria"
 
 export function CreateContract({ locationId }: { locationId: string }) {
@@ -62,7 +62,7 @@ export function CreateContract({ locationId }: { locationId: string }) {
             })
         );
 
-        if(result?.status === 403) {
+        if (result?.status === 403) {
             toast.error("You are not authorized to create a contract");
             return;
         }
@@ -82,8 +82,9 @@ export function CreateContract({ locationId }: { locationId: string }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant={"create"} size={"sm"} >
-                    + Contract
+                <Button variant={"primary"} className="items-center gap-2" >
+                    <span>Contract</span>
+                    <Plus className="size-3.5" />
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg border-foreground/10">
@@ -156,9 +157,9 @@ export function CreateContract({ locationId }: { locationId: string }) {
                                     control={form.control}
                                     name="requireSignature"
                                     render={({ field }) => (
-                                        <FormItem className="flex flex-row items-center gap-2 rounded-sm border border-foreground/10 py-2 px-3 ">
+                                        <FormItem className="flex flex-row items-center rounded-lg gap-3 border border-foreground/10 py-2 px-3 ">
 
-                                            <FormControl>
+                                            <FormControl className="-mt-1.5">
                                                 <Switch
                                                     checked={field.value}
                                                     onCheckedChange={field.onChange}

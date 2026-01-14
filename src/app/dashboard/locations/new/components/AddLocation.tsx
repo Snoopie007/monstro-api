@@ -23,14 +23,14 @@ import {
     SelectValue,
 } from "@/components/forms";
 
-import { useSession } from "next-auth/react";
+import { useSession } from "@/hooks/useSession";
 
 import { toast } from "react-toastify";
 import { Industries } from "@/libs/data";
 import { useRouter } from "next/navigation";
 import { GoogleMapProvider } from "../providers";
 
-const InputStyle = "bg-background border border-foreground/10 ";
+const InputStyle = "bg-foreground/5 h-12 text-base px-4 py-2 rounded-lg border border-foreground/10 ";
 
 export function AddLocation({ saleId }: { saleId: string | null }) {
 
@@ -123,7 +123,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
         setLoading(true);
         await sleep(2000);
 
-        const path = saleId ? `/api/protected/vendor/${saleId}` : "/api/protected/vendor/locations";
+        const path = saleId ? `/api/protected/account/sales/${saleId}` : "/api/protected/account/loc";
 
         const { result, error } = await tryCatch(
             fetch(path, {
@@ -141,15 +141,13 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
 
         if (!result || error || !result.ok) {
             setLoading(false);
-            const error = await result?.json();
-            console.log(error)
-            return toast.error(error?.error || "Failed to add location, please try again.");
+            const err = await result?.json();
+            console.log(err)
+            return toast.error(err.error || "Failed to add location, please try again.");
         }
         const data = await result.json();
 
-        await update({
-            locations: [...session?.user.locations, data],
-        })
+        await update()
 
         const url = saleId ? `/dashboard/location/${data.id}` : `/dashboard/locations/new/${data.id}`;
         return router.push(url);
@@ -164,7 +162,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
 
     return (
         <div className="space-y-4">
-            <div className="space-y-1">
+            <div className="space-y-2">
                 <GoogleMapProvider>
                     <AutoComplete onSelect={selectAddress} />
                 </GoogleMapProvider>
@@ -178,10 +176,8 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
             </div>
 
             {edit && (
-                <div className="bg-foreground/5 border border-foreground/10  text-foreground p-4 pb-8 space-y-2 rounded-md">
-                    <p className="text-sm font-medium border-b border-foreground/10  pb-2">
-                        Double check your information.
-                    </p>
+                <div className="pb-8 space-y-2 rounded-md">
+
                     <ul className="space-y-2 list-disc list-inside ">
 
                         {form.formState.errors && Object.keys(form.formState.errors).map((key) => (
@@ -199,11 +195,11 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                     name="name"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-[0.65rem]  uppercase font-semibold">Business Name</FormLabel>
+                                            <FormLabel size="tiny">Business Name</FormLabel>
                                             <FormControl>
-                                                <Input type="text" className="bg-background border border-foreground/10" {...field} />
+                                                <Input type="text" className={InputStyle}
+                                                    placeholder="Business name" {...field} />
                                             </FormControl>
-
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -213,15 +209,14 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                     name="industry"
                                     render={({ field }) => (
                                         <FormItem className="flex-1">
-                                            <FormLabel className="text-[0.65rem]  uppercase font-semibold">Industry</FormLabel>
-
+                                            <FormLabel size="tiny">Industry</FormLabel>
                                             <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger className={InputStyle} >
                                                         <SelectValue placeholder="Select your industry" />
                                                     </SelectTrigger>
                                                 </FormControl>
-                                                <SelectContent className={InputStyle}>
+                                                <SelectContent >
                                                     {Industries.map((industry, index) => (
                                                         <SelectItem key={index} value={industry} className="cursor-pointer">
                                                             {industry}
@@ -229,7 +224,6 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                                     ))}
                                                 </SelectContent>
                                             </Select>
-
                                             <FormMessage />
                                         </FormItem>
                                     )}
@@ -243,7 +237,7 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                         <FormItem>
                                             <FormLabel className="text-[0.65rem] uppercase font-semibold">Phone</FormLabel>
                                             <FormControl>
-                                                <Input type="text" className={InputStyle} {...field} />
+                                                <Input type="text" className={InputStyle} placeholder="Business phone number" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -270,9 +264,9 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                     name="slug"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-[0.65rem] uppercase font-semibold">Unique Business Handle</FormLabel>
+                                            <FormLabel size="tiny">Unique Business Handle</FormLabel>
                                             <FormControl>
-                                                <Input type="text" className={InputStyle} {...field} />
+                                                <Input type="text" className={InputStyle} placeholder="Unique business handle" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -286,9 +280,9 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
                                     name="address"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel className="text-[0.65rem] uppercase font-semibold">Address</FormLabel>
+                                            <FormLabel size="tiny">Address</FormLabel>
                                             <FormControl>
-                                                <Input type="text" className={InputStyle}  {...field} />
+                                                <Input type="text" className={InputStyle} placeholder="Business address" {...field} />
                                             </FormControl>
 
                                         </FormItem>
@@ -297,75 +291,63 @@ export function AddLocation({ saleId }: { saleId: string | null }) {
 
                             </fieldset>
                             <fieldset className={"grid grid-cols-8 gap-4"}>
-                                <div className="col-span-3">
-                                    <FormField
-                                        control={form.control}
-                                        name="city"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className="text-[0.65rem] uppercase font-semibold">City</FormLabel>
-                                                <FormControl>
-                                                    <Input type="text" className={InputStyle} {...field} />
-                                                </FormControl>
+                                <FormField
+                                    control={form.control}
+                                    name="city"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-3">
+                                            <FormLabel size="tiny">City</FormLabel>
+                                            <FormControl>
+                                                <Input type="text" className={InputStyle} placeholder="City" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="state"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-3">
+                                            <FormLabel size="tiny">State</FormLabel>
+                                            <FormControl>
+                                                <Input type="text" className={InputStyle} placeholder="State" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                                <div className="col-span-3">
-                                    <FormField
-                                        control={form.control}
-                                        name="state"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className="text-[0.65rem] uppercase font-semibold">State</FormLabel>
-                                                <FormControl>
-                                                    <Input type="text" className={InputStyle} {...field} />
-                                                </FormControl>
-
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                <div className="col-span-2">
-                                    <FormField
-                                        control={form.control}
-                                        name="postalCode"
-                                        render={({ field }) => (
-                                            <FormItem >
-                                                <FormLabel className="text-[0.65rem] uppercase font-semibold">Postal Code</FormLabel>
-                                                <FormControl>
-                                                    <Input type="text" className={InputStyle}  {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
+                                <FormField
+                                    control={form.control}
+                                    name="postalCode"
+                                    render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                            <FormLabel size="tiny">Postal Code</FormLabel>
+                                            <FormControl>
+                                                <Input type="text" className={InputStyle} placeholder="Postal code" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </fieldset>
 
                         </form>
                     </Form>
                 </div>
-            )
-            }
+            )}
             <div className="flex justify-end gap-2">
-                <Button variant={"clear"} size={"sm"} onClick={() => remove()} className="">Clear</Button>
+                <Button variant={"clear"} onClick={() => remove()} className="">Clear</Button>
 
                 <Button
                     variant={"continue"}
-                    size={"sm"}
+
                     onClick={form.handleSubmit(submit)}
-                    className={cn(" children:hidden ", {
-                        "children:inline-flex": loading
-                    })}
+
                     disabled={loading || form.formState.isSubmitting}
                 >
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Continue
+                    {loading ? <Loader2 className="size-4 animate-spin" /> : "Add Location"}
                 </Button>
 
             </div>

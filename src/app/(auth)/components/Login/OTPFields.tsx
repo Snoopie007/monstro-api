@@ -1,18 +1,19 @@
 "use client"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/forms'
 import { Button } from '@/components/ui/button'
-import React, { useState } from 'react'
-import { cn } from '@/libs/utils'
+import React from 'react'
+import { formatEmail, formatPhone } from '@/libs/utils'
 import { z } from 'zod'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FormControl, FormField } from '@/components/forms'
 import { FormItem } from '@/components/forms'
 import { UseFormReturn } from 'react-hook-form'
 import { toast } from 'react-toastify'
-import { signIn } from 'next-auth/react'
+import { signIn } from '@/hooks/useSession'
 import { Loader2 } from 'lucide-react'
 import { OTPRetry } from './OTPRetry'
 import { LoginSchema } from '@/libs/FormSchemas/schemas'
+import { useLogin } from '../../providers'
 
 interface VerifyOTPProps {
     form: UseFormReturn<z.infer<typeof LoginSchema>>;
@@ -20,8 +21,8 @@ interface VerifyOTPProps {
 
 export function VerifyOTP({ form }: VerifyOTPProps) {
     const searchParams = useSearchParams();
-    const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const { user } = useLogin();
     const { type, ...rest } = form.getValues();
 
 
@@ -33,22 +34,20 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
             return;
         }
 
-        setLoading(true);
-
         const res = await signIn("credentials", {
             redirect: false,
             ...v,
         });
 
-        setLoading(false)
         if (res?.error) {
+
             toast.error(res.code || 'Something went wrong. Please contact support at support@monstro.com.');
             return;
         }
         const redirect = searchParams.get('redirect');
         const redirectUrl = redirect ? decodeURIComponent(redirect) : '/dashboard/locations';
-        return router.push(redirectUrl);
 
+        router.push(redirectUrl);
     }
 
     return (
@@ -59,7 +58,10 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
                     Authenticate your identity
                 </div>
                 <p className="text-gray-500">
-                    We've sent you an email to {rest.email}. The code will expire in 30 minutes.
+                    {type === 'sms' 
+                        ? `We've sent a text message to ${formatPhone(user?.phone || '')}` 
+                        : `We've sent an email to ${formatEmail(rest.email)}`
+                    }. The code will expire in 30 minutes.
                 </p>
             </div>
             <div className="flex flex-col gap-2 space-y-1">
@@ -84,16 +86,10 @@ export function VerifyOTP({ form }: VerifyOTPProps) {
             <div className="flex ">
                 <Button
                     size="lg"
-                    disabled={form.formState.isSubmitting || loading || !form.formState.isValid}
-                    className={cn(
-                        "children:hidden cursor-pointer ",
-
-                        { "children:inline-block": loading })
-                    }
+                    disabled={form.formState.isSubmitting || !form.formState.isValid}
                     onClick={form.handleSubmit(onSubmit)}
                 >
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                    Verify
+                    {form.formState.isSubmitting ? <Loader2 className=" size-4 animate-spin" /> : "Verify"}
                 </Button>
             </div>
         </div>

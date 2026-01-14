@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarEvent } from "@/types";
+import { CalendarEvent } from "@/types/calendar";
 import { tryCatch } from "@/libs/utils";
 import {
   Button,
@@ -38,8 +38,8 @@ export function CheckinButton({
         startTime: event.start,
         endTime: event.end,
         checkInTime: new Date().toISOString(),
-        sessionId: event.data.sessionId,
-        reservationId: event.data.reservationId,
+        sessionId: event.data?.sessionId,
+        reservationId: event.data?.reservationId,
       };
 
       const { result, error } = await tryCatch(

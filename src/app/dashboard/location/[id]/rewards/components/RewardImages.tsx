@@ -1,4 +1,4 @@
-
+'use client'
 import Image from 'next/image'
 import { cn } from '@/libs/utils'
 import React, { useEffect } from 'react'

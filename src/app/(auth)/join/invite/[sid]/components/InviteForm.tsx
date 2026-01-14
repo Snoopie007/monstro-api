@@ -13,27 +13,25 @@ import {
 
 } from "@/components/forms";
 import { useEffect, useState } from "react";
-import { VendorInviteSchema } from "@/libs/FormSchemas/schemas";
+import { VendorInviteSchema } from "@/libs/FormSchemas";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { cn, sleep, tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn } from "@/hooks/useSession";
 import { Sale } from "@/types/admin";
 import { TermsAndConditions } from "@/components/terms";
-import { MonstroLegal } from "@/libs/server/MDXParse";
+import { PasswordField } from "@/components/forms";
 
 interface InviteFormProps {
     sale: Sale;
-    tos: MonstroLegal | undefined;
+    tos: string | null;
 }
 
 const InputStyle = "bg-white border border-gray-200 rounded-lg h-12 text-base"
 
 export function InviteForm({ sale, tos }: InviteFormProps) {
-
-    const [loading, setLoading] = useState<boolean>(false);
     const [errors, setErrors] = useState<FieldErrors<z.infer<typeof VendorInviteSchema>> | null>(null);
     const [checked, setChecked] = useState<boolean>(false);
     const router = useRouter();
@@ -49,7 +47,6 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
     });
 
 
-
     useEffect(() => {
         if (form.formState.errors) {
             setErrors(form.formState.errors);
@@ -61,7 +58,6 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
 
         if (!form.getValues('password')) return;
 
-        setLoading(true);
         const { result, error } = await tryCatch(
             fetch(`/api/auth/invite`, {
                 method: "POST",
@@ -73,14 +69,13 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
 
 
         if (error || !result || !result.ok) {
-            setLoading(false);
 
             const data = await result?.json();
             toast.error(data?.error || "Uh oh, something went wrong")
             return;
         }
 
-        const signInResult = await signIn("credentials", { redirect: false, ...v })
+        const signInResult = await signIn("credentials", { redirect: false, ...v, skipVerification: true })
         if (signInResult?.error) {
             toast.error(signInResult.code || 'Something went wrong. Please contact support at support@monstro.com.');
             return;
@@ -94,7 +89,7 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
 
             <Form {...form}>
                 <form >
-                    <div className="space-y-2">
+                    <div className="space-y-3">
 
                         <div className="space-y-1">
                             <div className="text-xl font-bold">
@@ -122,37 +117,30 @@ export function InviteForm({ sale, tos }: InviteFormProps) {
                             )} />
                         </fieldset>
 
-                        <fieldset>
+                        <fieldset className="space-y-2">
                             <FormField control={form.control} name="password" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel size="tiny">
                                         Setup Your Password
                                     </FormLabel>
                                     <FormControl>
-                                        <Input type="password" placeholder="••••••••" className={InputStyle} {...field} />
+                                        <PasswordField value={field.value} onChange={field.onChange} className={InputStyle} placeholder="••••••••" />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />
+
                         </fieldset>
-                        <TermsAndConditions checked={checked} tos={tos} setChecked={setChecked} />
+                        <TermsAndConditions checked={checked} tos={tos} setChecked={setChecked} className="border-gray-200" />
 
-                        <div >
-
-                            <Button
-                                type="button"
-                                className={cn(
-                                    " children:hidden  bg-indigo-500 text-white cursor-pointer ",
-
-                                    { "children:inline-block": loading })
-                                }
-                                onClick={form.handleSubmit(onSubmit)}
-                                disabled={loading || !checked}
-                            >
-                                <Loader2 className="mr-2 size-4 animate-spin" />
-                                Create Account
-                            </Button>
-                        </div>
+                        <Button
+                            size="lg"
+                            variant={"primary"}
+                            onClick={form.handleSubmit(onSubmit)}
+                            disabled={form.formState.isSubmitting || !form.formState.isValid || !checked}
+                        >
+                            {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : "Create Account"}
+                        </Button>
                     </div>
                 </form>
             </Form>

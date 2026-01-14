@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 import { Transaction } from '@/types/transaction'
 import { Loader2 } from 'lucide-react'
 import { MONTHS } from '@/libs/data'
-import { cn } from '@/components/event-calendar'
+import { cn } from '@/libs/utils'
 
 const chartConfig = {
     desktop: {
@@ -64,7 +64,7 @@ export function RecurringRevenueChart({
                 if (transaction.status === 'paid' && !transaction.refunded) {
                     const month =
                         MONTHS[new Date(transaction.created as Date).getMonth()]
-                    recurringRevenueByMonth[month] += transaction.amount / 100
+                    recurringRevenueByMonth[month] += transaction.total / 100
                 }
             })
 

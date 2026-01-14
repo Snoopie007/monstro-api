@@ -1,11 +1,9 @@
-import { db } from '@/db/db'
-import { importMembers } from '@/db/schemas/ImportMembers'
-import { NextResponse } from 'next/server'
-import { EmailSender } from '@/libs/server/emails'
-import { MonstroData } from '@/libs/data'
-import { parsePhoneNumberFromString } from 'libphonenumber-js'
-const emailSender = new EmailSender()
-const DATE_FORMAT_REGEX = /^\d{4}-\d{2}-\d{2}$/
+import { db } from "@/db/db";
+import { importMembers } from "@/db/schemas/ImportMembers";
+import { NextResponse } from "next/server";
+import { sendEmailViaApi } from "@/libs/server/emails";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
+import Papa from "papaparse";
 
 export async function POST(
     request: Request,
@@ -42,82 +40,76 @@ export async function POST(
         const arrayBuffer = await file.arrayBuffer()
         const content = new TextDecoder('utf-8').decode(arrayBuffer)
 
-        const rows = content.trim().split('\n')
-        const headers = rows[0].split(',').map((h) => h.trim())
+		const { data: records } = Papa.parse<Record<string, string>>(content.trim(), {
+			header: true,
+			skipEmptyLines: true,
+		});
 
-        const records = rows.slice(1).map((row) => {
-            const values = row.split(',').map((v) => v.trim())
-            return Object.fromEntries(
-                headers.map((header, index) => [header, values[index]])
-            )
-        })
+		const insertMembers = [];
+		for (const record of records) {
+			const firstName = record[fieldMapping.firstName];
+			const lastName = record[fieldMapping.lastName];
+			const email = record[fieldMapping.email];
+			const phone = record[fieldMapping.phone];
+			const lastRenewalDate = record[fieldMapping.lastRenewalDate];
 
-        const insertMembers = []
-        for (const record of records) {
-            const formattedPhone = parsePhoneNumberFromString(
-                record[fieldMapping.phone],
-                'US'
-            )
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-            const email = record[fieldMapping.email]
-            const lastRenewalDate = record[fieldMapping.lastRenewalDate]
+			if (!email) continue;
+			const formattedPhone = parsePhoneNumberFromString(phone, "US");
+			
+			if (!formattedPhone) continue;
 
-            if (!formattedPhone || !formattedPhone.isValid()) {
-                continue
-            }
+			// Validate the date before creating a Date object
+			if (!lastRenewalDate) {
+				console.warn(`Skipping ${email}: missing renewal date`);
+				continue;
+			}
+			
+			const lastRenewalDay = new Date(lastRenewalDate);
+			if (isNaN(lastRenewalDay.getTime())) {
+				console.warn(`Skipping ${email}: invalid date "${lastRenewalDate}"`);
+				continue;
+			}
 
-            if (!emailRegex.test(email)) {
-                continue
-            }
+			insertMembers.push({
+				firstName,
+				lastName,
+				email,
+				phone: formattedPhone.number,
+				lastRenewalDay,
+				planId: planId ? planId.toString() : null,
+				locationId: params.id,
+			});
+		}
 
-            if (!DATE_FORMAT_REGEX.test(lastRenewalDate)) {
-                continue
-            }
+		if (insertMembers.length === 0) {
+			return NextResponse.json(
+				{ message: "No valid members to insert. Please check the format of the file and try again." },
+				{ status: 400 }
+			);
+		}
 
-            insertMembers.push({
-                firstName: record[fieldMapping.firstName],
-                lastName: record[fieldMapping.lastName],
-                email: email,
-                phone: formattedPhone.number,
-                lastRenewalDay: new Date(lastRenewalDate),
-                planId: planId ? planId.toString() : null,
-                locationId: params.id,
-                payment: requirePayment,
-            })
-        }
+		const [{ id }] = await db.insert(importMembers).values(insertMembers).returning({ id: importMembers.id });
 
-        if (insertMembers.length === 0) {
-            return NextResponse.json(
-                { message: 'No valid members to insert' },
-                { status: 400 }
-            )
-        }
-
-        await db.insert(importMembers).values(insertMembers)
-
-        await Promise.all(
-            insertMembers.map((m) => {
-                const subject = `You've been invited to join ${location.name} on Monstro`
-                return emailSender.send({
-                    options: {
-                        to: m.email,
-                        subject,
-                    },
-                    template: 'MemberInvite',
-                    data: {
-                        location: {
-                            name: location.name,
-                        },
-                        member: m,
-                        ui: {
-                            btnText: 'Accept Invite',
-                            btnUrl: `https://m.monstro-x.com/invite/${params.id}?email=${m.email}`,
-                        },
-                        monstro: MonstroData,
-                    },
-                })
-            })
-        )
+		await Promise.all(
+			insertMembers.map((m) => {
+				const subject = `You've been invited to join ${location.name} on Monstro`;
+				return sendEmailViaApi({
+					recipient: m.email,
+					template: "MemberInviteEmail",
+					subject,
+					data: {
+						location: {
+							name: location.name,
+						},
+						member: m,
+						ui: {
+							btnText: "Accept Invite",
+							btnUrl: `https://m.monstro-x.com/invite/import/${id}`,
+						}
+					}
+				});
+			})
+		);
 
         return NextResponse.json(
             { sample: records.slice(0, 3) },

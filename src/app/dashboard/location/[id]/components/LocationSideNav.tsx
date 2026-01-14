@@ -10,7 +10,7 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui"
 import React from 'react';
-import { useAccountStatus } from '../providers/AccountStatusProvider';
+import { useAccountStatus } from '../providers/';
 import { ChevronsUpDown } from 'lucide-react';
 
 
@@ -28,7 +28,7 @@ export function LocationSideNav({ lid }: { lid: string }) {
         <aside className="h-full">
             <nav className='flex-row flex w-full h-full relative'>
                 <motion.aside whileHover={{ width: "300px" }}
-                    className={"border-r border-foreground/10 w-[56px] group overflow-hidden h-full"}
+                    className={" w-[56px] group overflow-hidden h-full"}
                     onMouseEnter={() => setIsOpen(true)}
                     onMouseLeave={() => {
                         setCurrentMenuToggle(null)

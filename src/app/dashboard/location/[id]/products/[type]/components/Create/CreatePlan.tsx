@@ -1,41 +1,49 @@
 "use client";
 import {
+	Form,
+	FormControl,
+	FormDescription,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+	Input,
+	Textarea,
+} from "@/components/forms";
+import {
 	Button,
 	Dialog,
 	DialogBody,
+	DialogClose,
 	DialogContent,
 	DialogFooter,
 	DialogTitle,
 	DialogTrigger,
-	DialogClose,
 } from "@/components/ui";
-import { cn, tryCatch } from "@/libs/utils";
-import { z } from "zod";
-import {
-	Form,
-	FormField,
-	FormLabel,
-	FormMessage,
-	FormItem,
-	FormControl,
-	Input,
-	Textarea,
-	FormDescription,
-	PriceInput,
-} from "@/components/forms";
-import { useForm } from "react-hook-form";
 import { NewPlanSchema } from "@/libs/FormSchemas";
+import { cn, tryCatch } from "@/libs/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useState } from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 
-import { toast } from "react-toastify";
-import { PlanSubFields } from "./SubFields";
-import { Loader2 } from "lucide-react";
-import { PlanPkgFields } from "./PkgFields";
-import AddPrograms from "../AddPrograms";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/forms";
 import { usePackages, useSubscriptions } from "@/hooks/usePlans";
+import { Loader2, Plus } from "lucide-react";
 import { VisuallyHidden } from "react-aria";
+import { toast } from "react-toastify";
+import { useProducts } from "../../providers";
+import AddPrograms from "../AddPrograms";
+import { PlanPkgFields } from "./PkgFields";
+import { PricingOptions } from "./PricingOptions";
+import { PlanSubFields } from "./SubFields";
 
 interface CreatePlanProps {
 	lid: string;
@@ -46,6 +54,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 	const [open, setOpen] = useState(false);
 	const { mutate: mutateSubs } = useSubscriptions(lid);
 	const { mutate: mutatePkgs } = usePackages(lid);
+	const { groups } = useProducts();
 
 	const form = useForm<z.infer<typeof NewPlanSchema>>({
 		resolver: zodResolver(NewPlanSchema),
@@ -55,21 +64,25 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 			type: type === "subs" ? "recurring" : "one-time",
 			family: false,
 			familyMemberLimit: 0,
-			amount: 0,
+			pricingOptions: [{
+				name: "Standard",
+				price: 0,
+				interval: type === "subs" ? "month" : undefined,
+				intervalThreshold: 1,
+				expireInterval: null,
+				expireThreshold: null,
+			}],
 			programs: [],
 			intervalClassLimit: undefined,
 			sub: {
-				interval: "month",
-				intervalThreshold: 1,
 				allowProration: false,
 				billingAnchor: undefined,
 			},
 			pkg: {
-				expireInterval: undefined,
-				expireThreshold: undefined,
 				totalClassLimit: type === "pkgs" ? 1 : 0,
 			},
 			contractId: undefined,
+			groupId: undefined,
 		},
 		mode: "onChange",
 	});
@@ -78,12 +91,13 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 		if (form.formState.isSubmitting) return;
 
 		try {
-			const { pkg, sub, ...rest } = v;
+			const { pkg, sub, pricingOptions, ...rest } = v;
 			const { result, error } = await tryCatch(
 				fetch(`/api/protected/loc/${lid}/plans/${type}`, {
 					method: "POST",
 					body: JSON.stringify({
 						...rest,
+						pricingOptions,
 						...(type === "subs" ? { ...sub } : { ...pkg }),
 					}),
 				})
@@ -114,22 +128,23 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
 				<Button
-					size={"sm"}
-					variant={"ghost"}
-					className="flex-1 items-center gap-1 rounded-sm bg-foreground/10 hover:bg-foreground/10"
+
+					variant={"primary"}
+					className=" items-center gap-2"
 				>
-					+ {type === "subs" ? "Subscription" : "Package"}
+					{type === "subs" ? "Subscription" : "Package"}
+					<Plus className="size-3.5 text-white" />
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="max-w-lg border-foreground/10">
+			<DialogContent className="max-w-lg border-foreground/10 max-h-[90vh] flex flex-col">
 				<VisuallyHidden className="space-y-0">
 					<DialogTitle>
 					</DialogTitle>
 				</VisuallyHidden>
-				<DialogBody>
+				<DialogBody className="overflow-y-auto flex-1">
 					<Form {...form}>
 						<form className="space-y-2">
-							<fieldset className="grid grid-cols-2 gap-2">
+							<fieldset>
 								<FormField
 									control={form.control}
 									name="name"
@@ -142,22 +157,6 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 													className={cn("")}
 													placeholder="Name"
 													{...field}
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="amount"
-									render={({ field }) => (
-										<FormItem className="flex-1">
-											<FormLabel size={"tiny"}>Price</FormLabel>
-											<FormControl>
-												<PriceInput
-													value={field.value}
-													onChange={field.onChange}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -184,6 +183,10 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 									)}
 								/>
 							</fieldset>
+							<PricingOptions 
+								form={form} 
+								planType={type === "subs" ? "recurring" : "one-time"} 
+							/>
 							<fieldset>
 								<FormField
 									control={form.control}
@@ -207,6 +210,41 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 									)}
 								/>
 							</fieldset>
+							{groups && groups.length > 0 && (
+								<fieldset>
+									<FormField
+										control={form.control}
+										name="groupId"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel size={"tiny"}>Add to Group (Optional)</FormLabel>
+												<Select 
+													onValueChange={(value) => field.onChange(value === "none" ? undefined : value)} 
+													value={field.value || "none"}
+												>
+													<FormControl>
+														<SelectTrigger>
+															<SelectValue placeholder="Select a group" />
+														</SelectTrigger>
+													</FormControl>
+													<SelectContent>
+														<SelectItem value="none">No group</SelectItem>
+														{groups.map((group) => (
+															<SelectItem key={group.id} value={group.id}>
+																{group.name}
+															</SelectItem>
+														))}
+													</SelectContent>
+												</Select>
+												<FormDescription className="text-xs">
+													Members will be automatically added to this group when they purchase this plan.
+												</FormDescription>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								</fieldset>
+							)}
 							{type === "subs" && <PlanSubFields lid={lid} form={form} />}
 							{type === "pkgs" && <PlanPkgFields lid={lid} form={form} />}
 						</form>
@@ -216,21 +254,21 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 					<div className="flex flex-row gap-2 items-center">
 						<DialogClose asChild>
 							<Button
-								size={"sm"}
+
 								variant={"outline"}
-								className="bg-transparent"
+								className="border-foreground/10"
 							>
 								Cancel
 							</Button>
 						</DialogClose>
 						<Button
-							size={"sm"}
+
 							onClick={form.handleSubmit(onSubmit)}
-							variant={"foreground"}
+							variant={"primary"}
 							disabled={form.formState.isSubmitting || !form.formState.isValid}
 						>
 							{form.formState.isSubmitting ? (
-								<Loader2 className="size-3.5 animate-spin" />
+								<Loader2 className="size-4 animate-spin" />
 							) : (
 								"Save"
 							)}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import type { CustomFieldDefinition } from "@/components/custom-fields";
+import type { CustomFieldDefinition } from "@/types";
 
 interface CustomFieldValue {
   fieldId: string;
@@ -28,7 +28,7 @@ export function useCustomFields({
   const fetchFieldDefinitions = async () => {
     try {
       const response = await fetch(
-        `/api/protected/loc/${locationId}/custom-fields`
+        `/api/protected/loc/${locationId}/cfs`
       );
       const data = await response.json();
 
@@ -38,7 +38,7 @@ export function useCustomFields({
         // If we have a memberId, fetch the member's current values
         if (memberId) {
           const memberResponse = await fetch(
-            `/api/protected/loc/${locationId}/members/${memberId}/custom-fields`
+            `/api/protected/loc/${locationId}/members/${memberId}/cfs`
           );
           const memberData = await memberResponse.json();
 
@@ -109,7 +109,7 @@ export function useCustomFields({
       }
 
       const response = await fetch(
-        `/api/protected/loc/${locationId}/members/${targetMemberId}/custom-fields`,
+        `/api/protected/loc/${locationId}/members/${targetMemberId}/cfs`,
         {
           method: "POST",
           headers: {

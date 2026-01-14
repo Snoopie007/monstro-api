@@ -1,14 +1,13 @@
 import { db } from "@/db/db";
-import { users } from "@/db/schemas";
-import { MonstroData } from "@/libs/data";
-import { EmailSender } from "@/libs/server/emails";
-import { eq } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
+import { users, accounts } from "@/db/schemas";
+import { sendEmailViaApi } from "@/libs/server/emails";
+import { eq, and } from "drizzle-orm";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { getRedisClient } from "@/libs/server/redis";
 import bcrypt from "bcryptjs";
 
 const redis = getRedisClient();
-const emailSender = new EmailSender();
 
 export async function POST(req: NextRequest) {
   const { password, confirmPassword, ...rest } = await req.json();
@@ -49,6 +48,8 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Update users table
     await db
       .update(users)
       .set({
@@ -56,21 +57,31 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(users.id, user.id));
 
+    // Update accounts table for Better Auth
+    await db
+      .update(accounts)
+      .set({
+        password: hashedPassword,
+      })
+      .where(
+        and(
+          eq(accounts.userId, user.id),
+          eq(accounts.provider, "credential")
+        )
+      );
+
     const [firstName, lastName] = user.name.split(" ");
-    await emailSender.send({
-      options: {
-        to: user.email,
-        subject: "Password reset successful",
-      },
+    await sendEmailViaApi({
+      recipient: user.email,
       template: "ResetSuccessEmail",
+      subject: "Password reset successful",
       data: {
         member: {
           firstName,
           lastName,
           email: user.email,
-        },
-        monstro: MonstroData,
-      },
+        }
+      }
     });
     await redis.del(RedisKey);
     return NextResponse.json({ success: true }, { status: 200 });

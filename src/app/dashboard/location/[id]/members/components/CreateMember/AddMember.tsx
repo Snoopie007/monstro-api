@@ -2,8 +2,6 @@ import {
     Button,
     Dialog,
     DialogContent,
-    DialogDescription,
-    DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui';
@@ -14,6 +12,7 @@ import { CreateMemberForm } from '.';
 import { Member } from '@/types';
 import { Stripe } from 'stripe';
 import { VisuallyHidden } from 'react-aria';
+import { Plus, } from 'lucide-react';
 
 interface CreateMemberProps {
     lid: string
@@ -36,12 +35,13 @@ export function AddMember({ lid, stripeKey }: CreateMemberProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size={"sm"} variant={"create"}>
-                    + Member
+                <Button variant={"ghost"} className='bg-foreground/5 flex flex-row items-center gap-2'>
+                    <span>Member</span>
+                    <Plus className="size-4" />
                 </Button>
             </DialogTrigger>
 
-            <DialogContent className="max-w-lg border-foreground/10" aria-modal>
+            <DialogContent className="max-w-xl border-foreground/10" aria-modal>
                 <VisuallyHidden>
                     <DialogTitle></DialogTitle>
                 </VisuallyHidden>

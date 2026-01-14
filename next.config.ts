@@ -1,49 +1,65 @@
 import type { NextConfig } from "next";
+
 // import ReactComponentName from "react-scan/react-component-name/webpack";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  // output: 'standalone',
+	/* config options here */
+	// output: 'standalone',
+	// productionBrowserSourceMaps: false,
 
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'monstro-bucket.s3.us-east-2.amazonaws.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'monstro-bucket.s3.amazonaws.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'mymonstroapp.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'maps.gstatic.com',
-        pathname: '/**',
-      }
-    ]
-  },
-  serverRuntimeConfig: {
-    maxHeaderSize: 32 * 1024, // 32KB
-  },
-  skipTrailingSlashRedirect: true,
-  transpilePackages: ['next-mdx-remote'],
-  output: 'standalone'
-  // webpack: (config) => {
-  //   config.plugins.push(ReactComponentName({}));
-  //   return config;
-  // },
+	// Suppress source map warnings in development
+	// webpack: (config, { dev }) => {
+	// 	if (dev) {
+	// 		config.devtool = false; // Disable source maps in dev
+	// 	}
+	// 	return config;
+	// },
+	// Remove eslint config - it's no longer supported in next.config.ts
+	// If you need to ignore ESLint during builds, use: next build --no-lint
+	// Or configure ESLint in .eslintrc.json
+
+	images: {
+		remotePatterns: [
+			{
+				protocol: "https",
+				hostname: "monstro-bucket.s3.us-east-2.amazonaws.com",
+				pathname: "/**",
+			},
+			{
+				protocol: "https",
+				hostname: "images.unsplash.com",
+				pathname: "/**",
+			},
+			{
+				protocol: "https",
+				hostname: "monstro-bucket.s3.amazonaws.com",
+				pathname: "/**",
+			},
+			{
+				protocol: "https",
+				hostname: "mymonstroapp.com",
+			},
+			{
+				protocol: "https",
+				hostname: "maps.gstatic.com",
+				pathname: "/**",
+			},
+			{
+				protocol: "https",
+				hostname: "api.dicebear.com",
+				pathname: "/**",
+			},
+		],
+	},
+	// Remove serverRuntimeConfig - not a valid Next.js option
+	// If you need server-side config, use environment variables or API routes
+	skipTrailingSlashRedirect: true,
+	// transpilePackages: ["gray-matter"],
+	output: "standalone",
+	// webpack: (config) => {
+	//   config.plugins.push(ReactComponentName({}));
+	//   return config;
+	// },
 };
 
 export default nextConfig;
-

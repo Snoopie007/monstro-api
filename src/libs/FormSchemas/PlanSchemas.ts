@@ -1,31 +1,34 @@
 import { z } from "zod";
 
+// Schema for individual pricing option
+const PricingOptionSchema = z.object({
+  name: z.string().min(1, { message: "Pricing name is required" }),
+  price: z.number().min(100, { message: "Price must be at least $1" }),
+  interval: z.enum(["day", "week", "month", "year"]).optional(),
+  intervalThreshold: z.number().min(1).default(1),
+  expireInterval: z.enum(["day", "week", "month", "year"]).optional().nullable(),
+  expireThreshold: z.number().optional().nullable(),
+});
+
 const NewPlanSchema = z
   .object({
     type: z.enum(["recurring", "one-time"], { message: "Required" }),
     name: z.string().min(2, { message: "Required" }),
     description: z.string().min(2, { message: "Required" }),
-    amount: z.number().gt(1, { message: "Price must be at least $1." }),
+    pricingOptions: z.array(PricingOptionSchema).min(1, { message: "At least one pricing option is required" }),
     family: z.boolean().optional(),
     familyMemberLimit: z.number().optional(),
     contractId: z.string().optional(),
     intervalClassLimit: z.number().optional(),
+    makeUpCredits: z.number().min(0).optional(),
+    groupId: z.string().optional(),
     programs: z
       .array(z.string())
       .min(1, { message: "Select at least one program." }),
     pkg: z.object({
-      expireInterval: z.enum(["day", "week", "month", "year"]).optional(),
-      expireThreshold: z.number().optional(),
       totalClassLimit: z.number().optional(),
     }),
     sub: z.object({
-      interval: z.enum(["day", "week", "month", "year"], {
-        message: "Required",
-      }),
-      intervalThreshold: z
-        .number()
-        .min(1, { message: "Required" })
-        .max(365, { message: "Max 31" }),
       allowProration: z.boolean().optional(),
       billingAnchor: z.number().optional(),
     }),
@@ -61,6 +64,19 @@ const NewPlanSchema = z
         });
       }
     }
+    // Validate pricing options based on plan type
+    if (data.type === "recurring") {
+      for (let i = 0; i < data.pricingOptions.length; i++) {
+        const option = data.pricingOptions[i];
+        if (!option.interval) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Billing interval is required for subscriptions",
+            path: ["pricingOptions", i, "interval"],
+          });
+        }
+      }
+    }
   });
 
 const UpdateSubPlanSchema = z
@@ -68,6 +84,7 @@ const UpdateSubPlanSchema = z
     name: z.string().min(2, { message: "Required" }),
     description: z.string().min(2, { message: "Required" }),
     intervalClassLimit: z.number().optional(),
+    groupId: z.string().optional().nullable(),
     programs: z
       .array(z.string())
       .min(1, { message: "Select at least one program." }),
@@ -90,6 +107,7 @@ const UpdatePkgPlanSchema = z
   .object({
     name: z.string().min(2, { message: "Required" }),
     description: z.string().min(2, { message: "Required" }),
+    groupId: z.string().optional().nullable(),
     programs: z
       .array(z.string())
       .min(1, { message: "Select at least one program." }),
@@ -138,11 +156,13 @@ const BillingAnchorConfigSchema = [
 ];
 
 export {
-  type PresetInterval,
-  PresetIntervals,
-  PlanType,
   BillingAnchorConfigSchema,
-  NewPlanSchema,
-  UpdateSubPlanSchema,
-  UpdatePkgPlanSchema,
+  NewPlanSchema, 
+  PlanType, 
+  PresetIntervals, 
+  PricingOptionSchema,
+  UpdatePkgPlanSchema, 
+  UpdateSubPlanSchema, 
+  type PresetInterval
 };
+

@@ -1,73 +1,60 @@
-import { db } from "@/db/db";
+
 import React from "react";
-import { Location } from "@/types";
-import { MemberStripePayments } from "@/libs/server/stripe";
-import { StripeTax, TaxRate } from "./components";
+import { NewTaxRate, TaxList } from "./components/";
+import {
+	Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription,
+} from "@/components/ui";
+import { PercentIcon } from "lucide-react";
+import { db } from "@/db/db";
+import { TaxRate } from "@/types";
+import { TaxRateProvider } from "./provider";
 
-async function fetchLocation(lid: string): Promise<Location | null> {
-  try {
-    const location = await db.query.locations.findFirst({
-      where: (location, { eq }) => eq(location.id, lid),
-      with: {
-        locationState: true,
-      },
-    });
-    if (!location) {
-      throw new Error("Location not found");
-    }
-    return location;
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
-}
 
-async function fetchStripe(lid: string) {
-  try {
-    const integration = await db.query.integrations.findFirst({
-      where: (integration, { eq, and }) =>
-        and(eq(integration.locationId, lid), eq(integration.service, "stripe")),
-    });
+async function getTaxRates({ id }: { id: string }): Promise<TaxRate[]> {
 
-    if (!integration || !integration.accessToken) {
-      throw new Error("Stripe account not found");
-    }
-    const stripe = new MemberStripePayments(integration.accessToken);
-    const taxSettings = await stripe.retrieveTaxSettings();
-    return taxSettings;
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
+	try {
+		const taxRates = await db.query.taxRates.findMany({
+			where: (taxRates, { eq }) => eq(taxRates.locationId, id),
+		});
+		return taxRates;
+	} catch (error) {
+		console.error(error);
+		return [];
+	}
 }
 
 export default async function SettingsPage(props: {
-  params: Promise<{ id: string }>;
+	params: Promise<{ id: string }>;
 }) {
-  const params = await props.params;
-  const location = await fetchLocation(params.id);
-  const taxSettings = await fetchStripe(params.id);
+	const params = await props.params;
+	const taxRates = await getTaxRates({ id: params.id });
 
-  if (!location) {
-    return <div>Error loading tax registrations</div>;
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className=" w-full flex flex-row justify-between items-center">
-        <div className="space-y-1">
-          <div className="text-xl font-semibold mb-1">Tax Settings</div>
-          <p className="text-sm">Manage your tax settings below.</p>
-        </div>
-      </div>
-      {taxSettings && (
-        <StripeTax
-          lid={params.id}
-          location={location}
-          taxSettings={JSON.stringify(taxSettings)}
-        />
-      )}
-      <TaxRate lid={params.id} location={location} />
-    </div>
-  );
+	return (
+		<TaxRateProvider initialTaxRates={taxRates}>
+			<div className="space-y-4">
+				<div className="flex justify-between items-center">
+					<div className="space-y-1">
+						<div className='text-xl font-semibold mb-1'>Tax Rates</div>
+						<p className='text-sm'>Manage your tax rates for your location.</p>
+					</div>
+					<NewTaxRate lid={params.id} />
+				</div>
+				<div className='space-y-4 bg-foreground/5 rounded-lg'>
+					{taxRates.length === 0 ? (
+						<Empty>
+							<EmptyHeader>
+								<EmptyMedia variant="icon">
+									<PercentIcon className='size-4' />
+								</EmptyMedia>
+								<EmptyTitle>No tax rates found</EmptyTitle>
+								<EmptyDescription>Create your first tax rate to get started</EmptyDescription>
+							</EmptyHeader>
+						</Empty>
+					) : (
+						<TaxList />
+					)}
+				</div>
+			</div>
+		</TaxRateProvider>
+	);
 }

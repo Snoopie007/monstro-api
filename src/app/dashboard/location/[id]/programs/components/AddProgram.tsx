@@ -2,20 +2,23 @@ import {
     Button,
     Sheet,
     SheetContent,
-    SheetHeader,
     SheetTitle,
     SheetTrigger,
     SheetFooter,
     SheetClose,
     ScrollArea,
-    SheetSection
+    Switch
 } from '@/components/ui';
 
 import { z } from "zod";
 import { useState } from 'react'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem, FormLabel, Select, SelectTrigger, SelectValue, SelectContent, SelectItem, FormDescription } from '@/components/forms';
+import {
+    Form, Input, Textarea, FormControl, FormField, FormMessage, FormItem,
+    FormLabel, Select, SelectTrigger, SelectValue, SelectContent,
+    SelectItem, FormDescription, ProgramColorPicker
+} from '@/components/forms';
 import { cn, getTimezoneOffset, sleep, tryCatch } from "@/libs/utils";
 
 import SessionComponent from './ProgramSessions';
@@ -23,18 +26,18 @@ import { NewProgramSchema } from '../schemas';
 
 import { toast } from 'react-toastify';
 import { usePrograms } from '@/hooks/usePrograms';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { VisuallyHidden } from 'react-aria';
-import { useStaffs } from '@/hooks/useStaffs';
+import { useStaffLocations } from '@/hooks/useStaffs';
 
 
 
 
 export function AddProgram({ lid }: { lid: string }) {
     const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
+
     const { mutate } = usePrograms(lid);
-    const { staffs, error: staffsError, isLoading: staffsLoading } = useStaffs(lid);
+    const { sls } = useStaffLocations(lid);
     const form = useForm<z.infer<typeof NewProgramSchema>>({
         resolver: zodResolver(NewProgramSchema),
         defaultValues: {
@@ -50,16 +53,19 @@ export function AddProgram({ lid }: { lid: string }) {
                     duration: 30,
                 }
             ],
-            instructorId: undefined
+            instructorId: undefined,
+            color: 1,
+            allowWaitlist: false,
+            waitlistCapacity: 0,
+            allowMakeUpClass: false,
+            cancelationThreshold: 0
         },
         mode: "onChange",
     })
 
 
     async function onSubmit(v: z.infer<typeof NewProgramSchema>) {
-        if (loading) return; // Prevent multiple submissions
 
-        setLoading(true);
 
         try {
             const offsetString = getTimezoneOffset();
@@ -76,9 +82,8 @@ export function AddProgram({ lid }: { lid: string }) {
             )
 
             await sleep(1000);
-            setLoading(false);
 
-            if(result?.status === 403) {
+            if (result?.status === 403) {
                 toast.error("You are not authorized to create a program");
                 return;
             }
@@ -102,147 +107,250 @@ export function AddProgram({ lid }: { lid: string }) {
     return (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-                <Button variant={"create"} size={"sm"}>
-                    + Program
+                <Button variant="primary" className="flex flex-row items-center gap-2 ">
+                    <span className="font-medium">
+                        Add Program
+                    </span>
+
+                    <Plus className="size-4" />
+
                 </Button>
             </SheetTrigger>
             <SheetContent className="border-foreground/10 sm:max-w-[540px] sm:w-[540px] p-0">
                 <VisuallyHidden>
                     <SheetTitle></SheetTitle>
                 </VisuallyHidden>
-                <ScrollArea className="h-[calc(100vh-95px)] w-full ">
+                <ScrollArea className="h-[calc(100vh-52px)] w-full ">
 
                     <Form {...form}>
-                        <form >
-                            <SheetSection>
+                        <form className='space-y-4 pt-4 pb-10 px-4'>
+
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem >
+                                            <FormLabel size="tiny">Program Name</FormLabel>
+                                            <FormControl>
+                                                <Input type='text' placeholder="Program Name" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+
+                                    )}
+                                />
+
+                            </fieldset>
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="description"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size="tiny">Description</FormLabel>
+                                            <FormControl>
+                                                <Textarea
+                                                    placeholder="Program Description"
+                                                    className="resize-none border-foreground/10"
+                                                    {...field}
+                                                />
+                                            </FormControl>
+
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="instructorId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size={"tiny"}>Instructor</FormLabel>
+                                            <FormDescription>Select a staff member that will be assigned to the program by default. Leave blank to not assign a staff.</FormDescription>
+                                            <FormControl>
+                                                <Select onValueChange={(v) => field.onChange(v)} value={field.value || "null"}>
+                                                    <SelectTrigger className={cn("")}>
+                                                        <SelectValue placeholder="Select a instructor" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {sls.map((sl) => {
+                                                            const staff = sl.staff;
+                                                            return (
+                                                                <SelectItem key={staff?.id ?? ''} value={staff?.id ?? ''}>
+                                                                    {staff?.firstName} {staff?.lastName}
+                                                                </SelectItem>
+                                                            )
+                                                        })}
+                                                        <SelectItem value={"null"} key={"none"}>None</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="color"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size={"tiny"}>Calendar Color</FormLabel>
+                                            <FormDescription>Select a color for this program on the calendar.</FormDescription>
+                                            <FormControl>
+                                                <ProgramColorPicker
+                                                    value={field.value}
+                                                    onChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
+                            <fieldset className='flex flex-row items-center gap-2  w-full'>
+
+                                <FormField
+                                    control={form.control}
+                                    name="capacity"
+                                    render={({ field }) => (
+                                        <FormItem >
+                                            <FormLabel size={"tiny"}>Capacity</FormLabel>
+                                            <FormControl>
+                                                <Input type='number' className={cn()} placeholder={'Capacity'}  {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="minAge"
+                                    render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                            <FormLabel size={"tiny"}>Min Age</FormLabel>
+                                            <FormControl>
+                                                <Input type='number' className={cn()} placeholder={'Min Age'} {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="maxAge"
+                                    render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                            <FormLabel size={"tiny"}>Max Age</FormLabel>
+                                            <FormControl>
+                                                <Input type='number' className={cn()} placeholder={'Max Age'} {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+
+                                    )}
+                                />
+                            </fieldset>
+                            <fieldset >
+                                <FormField
+                                    control={form.control}
+                                    name="allowWaitlist"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-start gap-3 rounded-lg bg-foreground/10 border border-foreground/10 py-2 px-3 ">
+                                            <FormControl className="mt-1.5">
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                            <div className="space-y-0.5">
+                                                <FormLabel className="text-sm font-medium">
+                                                    Allow Waitlist
+                                                </FormLabel>
+                                                <FormDescription className="text-xs">
+                                                    Allow members to join the waitlist for the program.
+                                                </FormDescription>
+                                            </div>
+
+                                        </FormItem>
+                                    )}
+                                />
+
+                            </fieldset>
+                            {form.getValues("allowWaitlist") && (
                                 <fieldset>
                                     <FormField
                                         control={form.control}
-                                        name="name"
-                                        render={({ field }) => (
-                                            <FormItem >
-                                                <FormLabel size="tiny">Program Name</FormLabel>
-                                                <FormControl>
-                                                    <Input type='text' placeholder="Program Name" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-
-                                        )}
-                                    />
-
-                                </fieldset>
-                                <fieldset>
-                                    <FormField
-                                        control={form.control}
-                                        name="description"
+                                        name="waitlistCapacity"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel size="tiny">Program Description</FormLabel>
+                                                <FormLabel size={"tiny"}>Waitlist Capacity</FormLabel>
                                                 <FormControl>
-                                                    <Textarea
-                                                        placeholder="Program Description"
-                                                        className="resize-none border-foreground/10"
-                                                        {...field}
-                                                    />
-                                                </FormControl>
-
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </fieldset>
-                                <fieldset>
-                                    <FormField
-                                        control={form.control}
-                                        name="instructorId"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel size={"tiny"}>Instructor</FormLabel>
-                                                <FormDescription>Select a staff member that will be assigned to the program by default. Leave blank to not assign a staff.</FormDescription>
-                                                <FormControl>
-                                                    <Select onValueChange={(v) => field.onChange(v)} value={field.value || "null"}>
-                                                        <SelectTrigger className={cn("")}>
-                                                            <SelectValue placeholder="Select a instructor" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {staffs.map((staff) => (
-                                                                <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
-                                                            ))}
-                                                            <SelectItem value={"null"} key={"none"}>None</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <Input type='number' className={cn()} placeholder={'Waitlist Capacity'} {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
                                 </fieldset>
-                                <fieldset className='flex flex-row items-center gap-2  w-full'>
+                            )}
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="allowMakeUpClass"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-start gap-3 rounded-lg bg-foreground/10 border border-foreground/10 py-2 px-3 ">
+                                            <FormControl className="mt-1.5">
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                            <div className="space-y-0.5">
+                                                <FormLabel className="text-sm font-medium">
+                                                    Allow Make Up Class
+                                                </FormLabel>
+                                                <FormDescription className="text-xs">
+                                                    Allow members to make up a class if they miss a session.
+                                                </FormDescription>
+                                            </div>
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
+                            <fieldset>
+                                <FormField
+                                    control={form.control}
+                                    name="cancelationThreshold"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel size={"tiny"}>Cancelation Threshold</FormLabel>
+                                            <FormControl>
+                                                <Input type='number' className={cn()} placeholder={'Cancelation Threshold'} {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </fieldset>
 
-                                    <FormField
-                                        control={form.control}
-                                        name="capacity"
-                                        render={({ field }) => (
-                                            <FormItem >
-                                                <FormLabel size={"tiny"}>Capacity</FormLabel>
-                                                <FormControl>
-                                                    <Input type='number' className={cn()} placeholder={'Capacity'}  {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
+                            <SessionComponent control={form.control} />
 
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="minAge"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormLabel size={"tiny"}>Min Age</FormLabel>
-                                                <FormControl>
-                                                    <Input type='number' className={cn()} placeholder={'Min Age'} {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="maxAge"
-                                        render={({ field }) => (
-                                            <FormItem className="flex-1">
-                                                <FormLabel size={"tiny"}>Max Age</FormLabel>
-                                                <FormControl>
-                                                    <Input type='number' className={cn()} placeholder={'Max Age'} {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-
-                                        )}
-                                    />
-                                </fieldset>
-                            </SheetSection>
-                            <SheetSection>
-                                <SessionComponent control={form.control} />
-                            </SheetSection>
                         </form>
                     </Form>
                 </ScrollArea>
-                <SheetFooter className='border-t border-foreground/10 py-2 px-4'>
+                <SheetFooter className='border-t border-foreground/10 py-3 px-4'>
                     <SheetClose asChild>
-                        <Button variant={"outline"} size={"sm"}>Cancel</Button>
+                        <Button variant={"outline"} className="border-foreground/10">Cancel</Button>
                     </SheetClose>
                     <Button
                         variant={"foreground"}
-                        size={"sm"}
                         onClick={form.handleSubmit(onSubmit)}
-                        disabled={loading || !form.formState.isValid || form.formState.isSubmitting}
-                        className={cn("children:hidden  ", (loading && "children:inline-block"))}
+                        disabled={!form.formState.isValid || form.formState.isSubmitting}
+
                     >
-                        <Loader2 className="mr-2 size-3.5 animate-spin" />
-                        Save
+                        {form.formState.isSubmitting ? <Loader2 className="size-3.5 animate-spin" /> : "Save"}
+
                     </Button>
                 </SheetFooter>
 

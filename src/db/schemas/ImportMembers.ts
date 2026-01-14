@@ -46,5 +46,6 @@ export const importedMembersRelations = relations(importMembers, ({ one }) => ({
     plan: one(memberPlans, {
         fields: [importMembers.planId],
         references: [memberPlans.id],
-    }),
-}))
+    })
+}));
+

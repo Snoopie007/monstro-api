@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { getRedisClient } from "@/libs/server/redis";
-import { EmailSender } from "@/libs/server/emails";
-import { MonstroData } from "@/libs/data";
+import { sendEmailViaApi } from "@/libs/server/emails";
 
 const redis = getRedisClient();
 
@@ -17,7 +17,6 @@ function generateResetToken() {
 	return token;
 }
 
-const emailSender = new EmailSender();
 export async function POST(req: NextRequest) {
 	const { email } = await req.json()
 	try {
@@ -32,12 +31,10 @@ export async function POST(req: NextRequest) {
 			redis.set(RedisKey, `${token}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt })
 			const [firstName, lastName] = user.name.split(" ")
 
-			await emailSender.send({
-				options: {
-					to: user.email,
-					subject: 'Reset your password',
-				},
+			await sendEmailViaApi({
+				recipient: user.email,
 				template: 'ResetPasswordEmail',
+				subject: 'Reset your password',
 				data: {
 					ui: {
 						btnText: "Reset Password",
@@ -47,24 +44,23 @@ export async function POST(req: NextRequest) {
 						firstName,
 						lastName,
 						email
-					},
-					monstro: MonstroData
+					}
 				}
 			});
 		}
 
 		return NextResponse.json({ success: true }, { status: 200 });
 	} catch (err) {
-
+		console.error(err)
 		return NextResponse.json({ message: (err as Error).message || "Something went wrong" }, { status: 500 })
 	}
 }
 
 export async function PUT(req: NextRequest) {
 	const { email } = await req.json()
-
+	const normalizedEmail = email.toLowerCase();
 	try {
-		const user = await findUser(email)
+		const user = await findUser(normalizedEmail)
 		const RedisKey = `reset:${user.id}`;
 		// Remove the old OTP
 		await redis.del(RedisKey);
@@ -77,12 +73,10 @@ export async function PUT(req: NextRequest) {
 
 		const [firstName, lastName] = user.name.split(" ")
 
-		await emailSender.send({
-			options: {
-				to: user.email,
-				subject: 'Reset your password',
-			},
+		await sendEmailViaApi({
+			recipient: user.email,
 			template: 'ResetPasswordEmail',
+			subject: 'Reset your password',
 			data: {
 				member: {
 					firstName,
@@ -92,9 +86,8 @@ export async function PUT(req: NextRequest) {
 				ui: {
 					btnText: "Reset Password",
 					btnUrl: `${req.nextUrl.origin}/login/reset/${token}+${user.id}`
-				},
-				monstro: MonstroData
-			},
+				}
+			}
 		});
 
 		return NextResponse.json({ success: true }, { status: 200 })
@@ -102,13 +95,9 @@ export async function PUT(req: NextRequest) {
 		console.log(error)
 		return NextResponse.json({ error }, { status: 500 })
 	}
-
 }
 
 async function findUser(email: string) {
-
-
-
 	const user = await db.query.users.findFirst({
 		where: (user, { eq }) => eq(user.email, email),
 		with: {

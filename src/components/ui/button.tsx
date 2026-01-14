@@ -9,24 +9,26 @@ const buttonVariants = cva(
 	{
 		variants: {
 			variant: {
-				create: "items-center gap-1 rounded-sm bg-foreground/10 hover:bg-foreground/10 hover:bg-foreground hover:text-background",
+
+				primary: "bg-indigo-500 text-white hover:bg-indigo-500/90",
 				default: "bg-primary text-primary-foreground hover:bg-primary/90",
 				destructive:
 					"bg-destructive text-destructive-foreground hover:bg-destructive/90",
 				outline:
-					"border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+					"border bg-background hover:bg-accent hover:text-accent-foreground bg-foreground/5",
 				secondary:
 					"bg-secondary text-secondary-foreground hover:bg-secondary/80",
 				ghost: "hover:bg-accent hover:text-accent-foreground",
 				link: "text-primary underline-offset-4 hover:underline",
-				foreground: "bg-foreground text-background font-semibold ",
+				foreground: "bg-foreground text-background  ",
 				menu: "flex  flex-row items-center justify-start rounded-sm gap-2 w-full hover:bg-accent hover:text-accent-foreground",
 				clear: "rounded-sm bg-gray-200 text-black hover:bg-gray-100",
 				continue: "rounded-sm  bg-red-500 text-white",
+				create: "rounded-sm bg-indigo-500 text-white",
 			},
 			size: {
-				default: "h-10 px-4 py-2",
-				sm: "h-8 px-3 text-sm rounded-sm",
+				default: "px-4 py-2",
+				sm: "h-8 px-3 text-sm ",
 				xs: "h-auto py-1 text-xs rounded-sm px-3",
 				lg: "h-11 px-8 text-base rounded-lg",
 				icon: "h-10 w-10",

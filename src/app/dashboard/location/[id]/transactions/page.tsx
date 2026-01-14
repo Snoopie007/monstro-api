@@ -1,27 +1,34 @@
-
-
+import ErrorComponent from '@/components/error';
 import { db } from "@/db/db";
 import { TransactionsList } from "./components/TransactionsList";
-import { Transaction } from "@/types";
+import { TransactionProvider } from "./providers";
 
-async function fetchTransactions(id: string): Promise<Transaction[]> {
+async function fetchTransactions(lid: string) {
     try {
         const transactions = await db.query.transactions.findMany({
-            where: (transaction, { eq }) => eq(transaction.locationId, id)
-        })
+            where: (transaction, { eq }) => eq(transaction.locationId, lid)
+        });
         return transactions;
     } catch (error) {
-        console.log("error", error);
-        return [];
+        console.error(error);
+        return null;
     }
 }
 
-
-export default async function Transactions(props: { params: Promise<{ id: string }> }) {
+export default async function TransactionsPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
+
     const transactions = await fetchTransactions(params.id);
 
+    if (!transactions) return <ErrorComponent error={new Error('Failed to fetch transactions')} />
+
     return (
-        <TransactionsList params={params} transactions={transactions} />
-    );
+        <TransactionProvider transactions={transactions}>
+            <div className=' space-y-4 pr-2 pb-2'>
+                <div className='border border-foreground/10 rounded-lg'>
+                    <TransactionsList lid={params.id} />
+                </div>
+            </div>
+        </TransactionProvider>
+    )
 }

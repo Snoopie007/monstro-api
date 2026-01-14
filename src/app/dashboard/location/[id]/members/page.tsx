@@ -1,5 +1,3 @@
-import { MemberList } from './components/MemberList'
-
 import { db } from '@/db/db'
 import { and } from 'drizzle-orm'
 import MembersPage from './components/MembersPage'
@@ -30,7 +28,9 @@ export default async function Members(props: {
     const stripeKey = await fetchStripeKeys(params.id)
 
     return (
-        <MembersPage id={params.id} stripeKey={stripeKey} />
-        // <MemberList params={params} stripeKey={stripeKey} />
+        <div className="flex flex-col pb-2 pr-2 h-[calc(100vh-50px)]">
+            <MembersPage id={params.id} stripeKey={stripeKey} />
+        </div>
+
     )
 }

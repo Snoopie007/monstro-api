@@ -1,12 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { db } from "@/db/db";
-import { eq, desc } from "drizzle-orm";
 import {
-	supportAssistants,
-	supportConversations,
-	supportMessages,
+  supportAssistants,
+  supportConversations,
+  supportMessages,
 } from "@/db/schemas";
+import { auth } from "@/libs/auth/server";
+import {
+  broadcastSupportConversation,
+  broadcastSupportMessage,
+  SupportConversationPayload,
+  SupportMessagePayload
+} from "@/libs/server/broadcast";
+import { eq } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
 	const params = await props.params;
@@ -86,9 +92,32 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 			})
 			.returning();
 
+		// Broadcast new conversation to Supabase Realtime
+		try {
+			const conversationPayload: SupportConversationPayload = {
+				id: newConversation.id,
+				supportAssistantId: newConversation.supportAssistantId,
+				locationId: newConversation.locationId,
+				memberId: newConversation.memberId,
+				category: newConversation.category,
+				isVendorActive: newConversation.isVendorActive ?? false,
+				status: newConversation.status,
+				title: newConversation.title,
+				metadata: newConversation.metadata || {},
+				created: newConversation.created,
+				updated: newConversation.updated,
+				takenOverAt: newConversation.takenOverAt,
+				description: newConversation.description,
+				priority: newConversation.priority,
+			};
+			await broadcastSupportConversation(params.id, conversationPayload, 'conversation_inserted');
+		} catch (broadcastError) {
+			console.error("Failed to broadcast new conversation:", broadcastError);
+		}
+
 		// Create initial system message if provided
 		if (initialMessage) {
-			await db.insert(supportMessages).values({
+			const [systemMessage] = await db.insert(supportMessages).values({
 				conversationId: newConversation.id,
 				content: initialMessage,
 				role: 'system',
@@ -96,7 +125,27 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
 				metadata: {
 					createdBy: session?.user?.id,
 				},
-			});
+			}).returning();
+
+			// Broadcast initial system message
+			if (systemMessage) {
+				try {
+					const messagePayload: SupportMessagePayload = {
+						id: systemMessage.id,
+						conversationId: systemMessage.conversationId,
+						content: systemMessage.content,
+						role: systemMessage.role,
+						channel: systemMessage.channel,
+						agentId: systemMessage.agentId,
+						agentName: systemMessage.agentName,
+						metadata: systemMessage.metadata || {},
+						created: systemMessage.created,
+					};
+					await broadcastSupportMessage(newConversation.id, messagePayload);
+				} catch (broadcastError) {
+					console.error("Failed to broadcast initial message:", broadcastError);
+				}
+			}
 		}
 
 		return NextResponse.json(newConversation, { status: 200 });

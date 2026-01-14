@@ -3,15 +3,12 @@
 import { createContext, useReducer, ReactElement, useCallback, useContext, ReactNode } from "react";
 
 import { LocationState } from "@/types/location";
-import { MonstroLegal } from "@/libs/server/MDXParse";
-import { MonstroPackage } from "@/types/admin";
 import { MonstroPlan } from "@/types/admin";
 
 type StateType = {
     locationState: LocationState;
-    tos: MonstroLegal | undefined;
+    tos: string | null;
     plans: MonstroPlan[];
-    packages: MonstroPackage[];
 }
 
 const enum REDUCER_ACTION_TYPE {
@@ -51,19 +48,21 @@ export const NewLocationContext = createContext<UseNewLocationContextType | null
 
 interface NewLocationProviderProps {
     state: LocationState;
-    tos: MonstroLegal | undefined;
+    tos: string | null;
     children: ReactNode;
     plans: MonstroPlan[];
-    packages: MonstroPackage[];
 }
 
-export const NewLocationProvider = ({ children, state, tos, plans, packages }: NewLocationProviderProps): ReactElement => {
+export const NewLocationProvider = ({ children, state, tos, plans }: NewLocationProviderProps): ReactElement => {
     return (
         <NewLocationContext.Provider value={useNewLocationContext({
-            locationState: state,
+            locationState: {
+                ...state,
+                planId: plans[0].id,
+            },
             tos: tos,
+
             plans: plans,
-            packages: packages
         })}>
             {children}
         </NewLocationContext.Provider>
@@ -73,9 +72,8 @@ export const NewLocationProvider = ({ children, state, tos, plans, packages }: N
 type UseNewLocationHookType = {
     locationState: LocationState;
     updateLocationState: (locationState: LocationState) => void;
-    tos: MonstroLegal | undefined;
+    tos: string | null;
     plans: MonstroPlan[];
-    packages: MonstroPackage[];
 }
 
 export const useNewLocation = (): UseNewLocationHookType => {
@@ -90,6 +88,5 @@ export const useNewLocation = (): UseNewLocationHookType => {
         updateLocationState,
         tos: state.tos,
         plans: state.plans,
-        packages: state.packages
     };
 }

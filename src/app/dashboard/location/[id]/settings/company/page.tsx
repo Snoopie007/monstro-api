@@ -1,5 +1,3 @@
-import { auth } from "@/auth";
-import { Session } from "next-auth";
 import { db } from "@/db/db";
 import CompanyLogo from "./components/CompanyLogo";
 import CompanyTimeZone from "./components/CompanyTimeZone";

@@ -1,10 +1,9 @@
-import { SupportAssistant } from '@/types'
+import type { SupportAssistant } from '@/types'
 import { db } from '@/db/db'
 import { eq } from 'drizzle-orm'
 import { supportAssistants } from '@/db/schemas'
 import { SupportList, ChatView } from './components'
 import { SupportProvider } from './providers/SupportProvider'
-import CreateAssistant from './components/CreateAssistant'
 
 async function getAssistant(lid: string): Promise<SupportAssistant | null> {
 
@@ -40,23 +39,15 @@ export default async function SupportPage(props: {
     const params = await props.params
     const assistant = await getAssistant(params.id)
 
-    if (!assistant) {
-        return (
-            <div className="w-full h-full">
-                <CreateAssistant />
-            </div>
-        )
-    }
-
     return (
-        <div className="w-full h-full">
+        <div className="w-full h-full pb-2 pr-2">
             <SupportProvider assistant={assistant}>
-                <div className="flex flex-row h-full transition-all duration-300 ease-in-out gap-1">
+                <div className="flex flex-row h-full transition-all duration-300 ease-in-out gap-2">
                     <div className="flex-none w-[25%]">
                         <SupportList lid={params.id} />
                     </div>
-                    <div className="flex-1 py-2">
-                        <div className="bg-foreground/5 rounded-lg h-full">
+                    <div className="flex-1 ">
+                        <div className="bg-muted/50 rounded-lg h-full">
                             <ChatView lid={params.id} />
                         </div>
                     </div>

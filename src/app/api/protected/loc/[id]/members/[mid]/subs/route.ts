@@ -1,30 +1,50 @@
 import { db } from "@/db/db";
-import { memberInvoices, memberLocations, memberSubscriptions, transactions } from "@/db/schemas";
-import { getStripeCustomer } from "@/libs/server/stripe";
-import { createSubscription } from "../../utils";
-import { NextResponse } from "next/server";
-import { and, eq } from "drizzle-orm";
-import { MemberSubscription } from "@/types";
-import { addDays, addMonths } from "date-fns";
-import Stripe from "stripe";
-import { evaluateTriggers } from "@/libs/achievements";
+import { memberSubscriptions, memberPlanPricing } from "@/db/schemas";
+import { MemberStripePayments } from "@/libs/server/stripe";
+import { NextRequest, NextResponse } from "next/server";
+import {
+    addUserToGroup,
+    calculatePeriodEnd,
+    calculateStripeFeePercentage,
+    calculateTrialEnd,
+    scheduleRecurringInvoiceReminders,
+    calculateExpiresAt,
+} from "../../utils";
+import { eq } from "drizzle-orm";
+
+import { PaymentType } from "@/types";
+import { getTaxRateId } from "../../utils";
 
 
-export async function GET(req: Request, props: { params: Promise<{ id: string, mid: string }> }) {
-    const params = await props.params;
+type Props = {
+    params: Promise<{
+        id: string;
+        mid: string;
+    }>
+}
+
+
+
+export async function GET(req: NextRequest, props: Props) {
+    const { id, mid } = await props.params;
 
     try {
+
         const subscriptions = await db.query.memberSubscriptions.findMany({
             where: (memberSubscriptions, { eq, and }) => and(
-                eq(memberSubscriptions.memberId, params.mid),
-                eq(memberSubscriptions.locationId, params.id)
+                eq(memberSubscriptions.memberId, mid),
+                eq(memberSubscriptions.locationId, id)
             ),
             with: {
-                plan: {
+                pricing: {
                     with: {
-                        planPrograms: {
+                        plan: {
                             with: {
-                                program: true
+                                planPrograms: {
+                                    with: {
+                                        program: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -32,121 +52,181 @@ export async function GET(req: Request, props: { params: Promise<{ id: string, m
             }
         })
 
-        return NextResponse.json(subscriptions, { status: 200 })
+        // Transform to include plan at top level for backwards compatibility
+        const transformedSubs = subscriptions.map(sub => ({
+            ...sub,
+            plan: sub.pricing?.plan
+        }))
+
+        return NextResponse.json(transformedSubs, { status: 200 })
     } catch (err) {
-        return NextResponse.json({ error: err }, { status: 500 })
+        console.error("Error fetching subscriptions:", err)
+        return NextResponse.json({ error: String(err) }, { status: 500 })
     }
 }
 
 
-export async function POST(req: Request, props: { params: Promise<{ id: string, mid: string }> }) {
-    const params = await props.params;
-    const { stripePaymentMethod, hasIncompletePlan, other, trialDays, ...data } = await req.json();
+export async function POST(req: Request, props: Props) {
+    const { id, mid } = await props.params;
+    const body = await req.json();
+    const { paymentMethod, paymentType, trialDays, pricingId, ...data } = body;
+
     try {
+        // Validate pricingId is provided
+        if (!pricingId) {
+            return NextResponse.json({ error: "Pricing selection is required" }, { status: 400 });
+        }
 
+        // Fetch the pricing option
+        const pricing = await db.query.memberPlanPricing.findFirst({
+            where: eq(memberPlanPricing.id, pricingId)
+        });
 
+        if (!pricing) {
+            return NextResponse.json({ error: "Pricing option not found" }, { status: 404 });
+        }
 
         const plan = await db.query.memberPlans.findFirst({
             where: (memberPlan, { eq }) => eq(memberPlan.id, data.memberPlanId)
         })
 
-        if (!plan || !plan.stripePriceId) {
-            return NextResponse.json({ error: "No valid plan not found" }, { status: 404 })
+        if (!plan) {
+            throw new Error("Plan not found")
         }
 
-        const locationState = await db.query.locationState.findFirst({
-            where: (locationState, { eq }) => eq(locationState.locationId, params.id),
+        // Validate pricing belongs to the plan
+        if (pricing.memberPlanId !== plan.id) {
+            return NextResponse.json({ error: "Pricing does not belong to this plan" }, { status: 400 });
+        }
+
+
+        const ml = await db.query.memberLocations.findFirst({
+            where: (memberLocation, { eq, and }) => and(
+                eq(memberLocation.memberId, mid),
+                eq(memberLocation.locationId, id)
+            ),
+            with: {
+                member: true,
+                location: {
+                    with: {
+                        taxRates: true,
+                        locationState: true
+                    }
+                }
+            }
+        });
+
+        if (!ml) {
+            throw new Error("No member location found")
+        }
+
+        const { location, member } = ml;
+
+        if (!member || !member.stripeCustomerId) {
+            throw new Error("Member not found");
+        }
+
+
+        const integration = await db.query.integrations.findFirst({
+            where: (integration, { eq, and }) =>
+                and(
+                    eq(integration.locationId, id),
+                    eq(integration.service, "stripe")
+                ),
+            columns: {
+                accountId: true,
+            },
+        });
+
+        if (!integration) {
+            throw new Error("Integration not found");
+        }
+
+        const stripe = new MemberStripePayments(integration.accountId)
+        stripe.setCustomer(member.stripeCustomerId);
+
+        const today = new Date()
+        const startDate = data.startDate ? new Date(data.startDate) : today;
+        
+        // Use pricing for period calculation
+        const periodEnd = calculatePeriodEnd(
+            startDate,
+            pricing.interval!,
+            pricing.intervalThreshold!
+        );
+
+        // Calculate expires_at: use manually selected endDate first, then pricing term, then null (ongoing)
+        let expiresAt: Date | null = null;
+        if (data.endDate) {
+            // User manually selected an end date from Duration picker
+            expiresAt = new Date(data.endDate);
+        } else if (pricing.expireInterval && pricing.expireThreshold) {
+            // Use pricing term settings
+            expiresAt = calculateExpiresAt(startDate, pricing.expireInterval, pricing.expireThreshold);
+        }
+
+        const taxRateId = getTaxRateId(location.taxRates);
+
+
+        const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentMethod.type as PaymentType);
+        const feePercent = location.locationState?.usagePercent + stripeFeePercentage;
+
+        // Pass both plan and pricing to createSubscription
+        const stripeSubscription = await stripe.createSubscription(plan, pricing, {
+            startDate,
+            cancelAt: expiresAt || (data.cancelAt ? new Date(data.cancelAt) : undefined),
+            trialEnd: trialDays ? calculateTrialEnd(startDate, trialDays) : undefined,
+            paymentMethod: paymentMethod.stripeId,
+            allowProration: plan.allowProration,
+            feePercent,
+            taxRateId,
+            metadata: {
+                memberId: mid,
+                locationId: id,
+                pricingId: pricing.id
+            },
         })
 
-        if (!locationState) {
-            return NextResponse.json({ error: "No valid location not found" }, { status: 404 })
-        }
 
-        // Apply tax to the plan price
-        const tax = Math.floor(plan.price * (locationState.taxRate / 10000))
-
-        const { newSubscription, newInvoice, newTransaction } = createSubscription({
-            ...data,
-            memberId: params.mid,
-            locationId: params.id,
-            trialDays
-        }, plan, tax)
-
-        if (data.paymentMethod === "card") {
-            const stripe = await getStripeCustomer(params)
-            const settings = {
-                cancelAt: newSubscription.cancelAt,
-                trialEnd: newSubscription.trialEnd,
-                paymentMethod: stripePaymentMethod.id,
-                allowProration: data.allowProration,
-                applicationFeePercent: locationState?.usagePercent,
-                metadata: {
-                    memberId: params.mid,
-                    locationId: params.id
-                },
+        const [sub] = await db.insert(memberSubscriptions).values({
+            stripeSubscriptionId: stripeSubscription.id,
+            startDate: startDate,
+            currentPeriodStart: startDate,
+            currentPeriodEnd: periodEnd,
+            expiresAt: expiresAt,
+            locationId: id,
+            memberId: mid,
+            memberPlanPricingId: pricing.id,
+            paymentType,
+            status: "incomplete",
+            makeUpCredits: 0,
+            allowMakeUpCarryOver: false,
+            metadata: {
+                paymentMethodId: paymentMethod.id,
+                memberId: mid,
+                locationId: id
             }
+        }).returning()
 
-            const sub = await stripe.createSubscription(plan, newSubscription.currentPeriodStart, settings)
-            if (!sub.id) {
-                return NextResponse.json({ error: "Failed to create subscription" }, { status: 500 })
-            }
-
-            newSubscription.stripeSubscriptionId = sub.id
+        // Add user to group if plan has a groupId
+        if (plan.groupId && member.userId) {
+            await addUserToGroup({ groupId: plan.groupId, userId: member.userId });
         }
 
-        if (data.paymentMethod !== "card") {
-            newSubscription.status = "active"
-        }
+        const { locationState } = location;
 
-
-        const sub = await db.transaction(async (tx) => {
-            const [sub] = await tx.insert(memberSubscriptions).values({
-                ...newSubscription
-            }).returning()
-
-
-            if (data.paymentMethod === "cash") {
-
-                const [{ invoiceId }] = await tx.insert(memberInvoices).values({
-                    ...newInvoice,
-                    status: "draft",
-                    memberSubscriptionId: sub.id
-                }).returning({ invoiceId: memberInvoices.id });
-                await tx.insert(transactions).values({
-                    ...newTransaction,
-                    invoiceId,
-                    subscriptionId: sub.id,
-                    status: "paid",
+        if (locationState?.planId && locationState.planId >= 2) {
+            if (member && location && pricing.interval && pricing.intervalThreshold) {
+                await scheduleRecurringInvoiceReminders({ 
+                    subscriptionId: sub.id, 
+                    memberId: mid, 
+                    locationId: id 
                 });
+                console.log(`📧 Scheduled recurring invoice emails for subscription ${sub.id}`);
             }
-            return sub
-        })
-        if (data.paymentMethod !== "card") {
-            try {
-                await evaluateTriggers({
-                    memberId: params.mid,
-                    locationId: params.id,
-                    triggerType: 'plan_signup',
-                    data: { memberPlanId: sub.memberPlanId }
-                });
-            } catch (error) {
-                console.error('Error evaluating plan signup triggers:', error);
-                // Don't fail the request if trigger evaluation fails
-            }
-        }
-        if (hasIncompletePlan) {
-            await db.update(memberLocations).set({
-                status: "active",
-            }).where(and(
-                eq(memberLocations.memberId, params.mid),
-                eq(memberLocations.locationId, params.id)
-            ))
         }
 
-        return NextResponse.json({
-            ...sub,
-            plan: plan,
-        } as MemberSubscription, { status: 200 })
+        return NextResponse.json({ ...sub, plan: plan, pricing: pricing }, { status: 200 })
     } catch (err) {
         console.log(err)
         return NextResponse.json({ error: err }, { status: 500 })

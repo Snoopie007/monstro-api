@@ -1,27 +1,28 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
 import { ScrollArea } from '@/components/ui'
+import { useEffect, useRef, useState } from 'react'
 
+import { tryCatch, isGroupedSupportMessage } from '@/libs/utils'
 import { SupportMessage } from '@/types'
+import { format } from 'date-fns'
 import { toast } from 'react-toastify'
 import { useSupportRealtime } from '../../hooks/useSupportRealtime'
 import { useSupport } from '../../providers/SupportProvider'
-import { tryCatch } from '@/libs/utils'
-import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
-import { format } from 'date-fns'
+import { ChatMessage } from './ChatMessage'
 
 export function ChatView({ lid }: { lid: string }) {
     const { current, updateConversation, setConversations, conversations } = useSupport()
     const [messages, setMessages] = useState<SupportMessage[]>([])
     
     
-    const { isAiMode } = useSupportRealtime({
+    const { isAiMode, isConnected, error } = useSupportRealtime({
         locationId: lid,
         conversationId: current?.id,
         conversation: current || undefined,
         onNewMessage: (message) => {
+            console.log('🎯 ChatView received new message:', { messageId: message.id, content: message.content })
             setMessages((prev) => [...prev, message])
         },
         onConversationUpdate: async (conversation) => {
@@ -42,11 +43,11 @@ export function ChatView({ lid }: { lid: string }) {
         },
         onConversationInsert: async (conversation) => {
             const member = await tryCatch(
-                fetch(`/api/protected/loc/${lid}/member/${conversation.memberId}/info`)
+                fetch(`/api/protected/loc/${lid}/members/${conversation.memberId}/info`)
             )
             if (member.error || !member.result || !member.result.ok) {
                 toast.error('Failed to get member')
-                return
+                return 
             }
             const memberData = await member.result.json()
             setConversations([...conversations, {...conversation, member: memberData.member}])
@@ -58,6 +59,15 @@ export function ChatView({ lid }: { lid: string }) {
             setMessages(current.messages || [])
         }
     }, [current])
+
+    useEffect(() => {
+        console.log('📊 ChatView connection status:', { 
+            isConnected, 
+            error, 
+            conversationId: current?.id,
+            messageCount: messages.length 
+        })
+    }, [isConnected, error, current?.id, messages.length])
 
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -94,7 +104,7 @@ export function ChatView({ lid }: { lid: string }) {
 
     if (!current) {
         return (
-            <div className="text-center">
+            <div className="text-center h-full flex items-center justify-center">
                 <p className="text-lg font-medium text-muted-foreground mb-2">
                     No Conversation Selected
                 </p>
@@ -114,43 +124,13 @@ export function ChatView({ lid }: { lid: string }) {
                             {format(current.created, 'MMM d, yyyy')}
                         </div>
                     </div>
-                    {/* <div className="flex flex-row gap-1 items-center">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="size-8 rounded-lg border-foreground/10"
-                                >
-                                    <MoreHorizontal className="size-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                {current?.isVendorActive ? (
-                                    <DropdownMenuItem
-                                        onClick={handleHandBackToBot}
-                                    >
-                                        <Bot className="size-4 mr-2" />
-                                        Hand back to bot
-                                    </DropdownMenuItem>
-                                ) : (
-                                    <DropdownMenuItem
-                                        onClick={handleTakeOverConversation}
-                                    >
-                                        <User className="size-4 mr-2" />
-                                        Take over
-                                    </DropdownMenuItem>
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div> */}
                 </div>
             )}
 
             <div className="flex flex-col h-full flex-1  overflow-hidden">
                 <div className="relative h-full flex flex-col">
                     <ScrollArea className="h-full px-4">
-                        <div className="space-y-8 py-4">
+                        <div className="space-y-1 py-4">
                             {messages
                                 .sort(
                                     (a, b) =>
@@ -158,13 +138,22 @@ export function ChatView({ lid }: { lid: string }) {
                                         new Date(b.created).getTime()
                                 )
                                 .filter((message) => ["ai", "human", "system", "staff"].includes(message.role))
-                                .map((message, index) => (
-                                    <ChatMessage
-                                        key={index}
-                                        message={message}
-                                        member={current.member}
-                                    />
-                                ))}
+                                .map((message, index, arr) => {
+                                    const prevMessage = index > 0 ? arr[index - 1] : null;
+                                    const nextMessage = index < arr.length - 1 ? arr[index + 1] : null;
+                                    const isGrouped = isGroupedSupportMessage(message, prevMessage);
+                                    const isGroupedWithNext = isGroupedSupportMessage(nextMessage, message);
+                                    return (
+                                        <div className={!isGroupedWithNext ? 'mb-4' : ''}>
+                                            <ChatMessage
+                                                key={index}
+                                                message={message}
+                                                member={current.member}
+                                                isGrouped={isGrouped}
+                                            />
+                                        </div>
+                                    );
+                                })}
                             <div ref={messagesEndRef} />
                         </div>
                     </ScrollArea>

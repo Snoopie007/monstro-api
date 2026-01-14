@@ -1,9 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { db } from "@/db/db";
-import { eq } from "drizzle-orm";
 import { supportConversations, supportMessages } from "@/db/schemas";
+import { auth } from "@/libs/auth/server";
+import {
+  broadcastSupportConversation,
+  broadcastSupportMessage,
+  SupportConversationPayload,
+  SupportMessagePayload
+} from "@/libs/server/broadcast";
 import { SupportMessage } from "@/types/support";
+import { eq } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
 	req: NextRequest,
@@ -73,6 +79,47 @@ export async function POST(
 			
 			await db.insert(supportMessages).values([systemMessage]);
 
+		// Broadcast conversation update
+		try {
+			const conversationPayload: SupportConversationPayload = {
+				id: updatedConversation.id,
+				supportAssistantId: updatedConversation.supportAssistantId,
+				locationId: updatedConversation.locationId,
+				memberId: updatedConversation.memberId,
+				category: updatedConversation.category,
+				isVendorActive: updatedConversation.isVendorActive ?? true,
+				status: updatedConversation.status,
+				title: updatedConversation.title,
+				metadata: updatedConversation.metadata || {},
+				created: updatedConversation.created,
+				updated: updatedConversation.updated,
+				takenOverAt: updatedConversation.takenOverAt,
+				description: updatedConversation.description,
+				priority: updatedConversation.priority,
+			};
+			await broadcastSupportConversation(params.id, conversationPayload, 'conversation_updated');
+		} catch (broadcastError) {
+			console.error("Failed to broadcast conversation update:", broadcastError);
+		}
+
+		// Broadcast system message
+		try {
+			const messagePayload: SupportMessagePayload = {
+				id: systemMessage.id,
+				conversationId: systemMessage.conversationId,
+				content: systemMessage.content,
+				role: systemMessage.role,
+				channel: systemMessage.channel,
+				agentId: systemMessage.agentId,
+				agentName: systemMessage.agentName,
+				metadata: systemMessage.metadata || {},
+				created: systemMessage.created,
+			};
+			await broadcastSupportMessage(params.cid, messagePayload);
+		} catch (broadcastError) {
+			console.error("Failed to broadcast system message:", broadcastError);
+		}
+
 		return NextResponse.json(updatedConversation, { status: 200 });
 	} catch (error) {
 		console.error("Error taking over conversation:", error);
@@ -131,6 +178,29 @@ export async function DELETE(
 			})
 			.where(eq(supportConversations.id, params.cid))
 			.returning();
+
+		// Broadcast conversation update for hand-back
+		try {
+			const conversationPayload: SupportConversationPayload = {
+				id: updatedConversation.id,
+				supportAssistantId: updatedConversation.supportAssistantId,
+				locationId: updatedConversation.locationId,
+				memberId: updatedConversation.memberId,
+				category: updatedConversation.category,
+				isVendorActive: updatedConversation.isVendorActive ?? false,
+				status: updatedConversation.status,
+				title: updatedConversation.title,
+				metadata: updatedConversation.metadata || {},
+				created: updatedConversation.created,
+				updated: updatedConversation.updated,
+				takenOverAt: updatedConversation.takenOverAt,
+				description: updatedConversation.description,
+				priority: updatedConversation.priority,
+			};
+			await broadcastSupportConversation(params.id, conversationPayload, 'conversation_updated');
+		} catch (broadcastError) {
+			console.error("Failed to broadcast hand-back update:", broadcastError);
+		}
 
 		return NextResponse.json({ success: "Conversation handed back to bot successfully" }, { status: 200 });
 	} catch (error) {

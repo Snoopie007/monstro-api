@@ -1,25 +1,13 @@
 
-import {
-    TablePage,
-    TablePageFooter,
-} from "@/components/ui";
 import ErrorComponent from '@/components/error';
 import { db } from "@/db/db";
-import { AchievementTable } from "./components";
+import { AchievementList, CreateAchievement } from "./components";
 import { AchievementProvider } from "./providers";
-
 async function fetchAchievements(lid: string) {
 
     try {
         const achievements = await db.query.achievements.findMany({
             where: (achievements, { eq }) => eq(achievements.locationId, lid),
-            with: {
-                triggedAchievement: {
-                    with: {
-                        trigger: true,
-                    }
-                },
-            }
         });
 
         return achievements;
@@ -31,37 +19,26 @@ async function fetchAchievements(lid: string) {
 
 
 
-async function fetchTriggers() {
-    try {
-        const triggers = await db.query.achievementTriggers.findMany();
-
-        return triggers;
-    } catch (error) {
-        console.error(error);
-        return null;
-    }
-}
-
 
 export default async function AchievementsPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     const lid = params.id;
     const achievements = await fetchAchievements(lid);
-    const triggers = await fetchTriggers();
 
-    if (!triggers) return <ErrorComponent error={new Error('Failed to fetch triggers')} />
     if (!achievements) return <ErrorComponent error={new Error('Failed to fetch achievements')} />
 
     return (
-        <AchievementProvider achievements={achievements} triggers={triggers}>
-            <TablePage>
-                <AchievementTable lid={lid} />
-                <TablePageFooter>
-                    <div className='p-2'>
-                        Showing {achievements && achievements.length} achievements
-                    </div>
-                </TablePageFooter>
-            </TablePage>
+        <AchievementProvider achievements={achievements}>
+            <div className='max-w-6xl mx-auto py-4 space-y-4'>
+                <div className='flex flex-row items-center justify-between'>
+                    <h2 className='text-xl font-semibold'>Achievements</h2>
+
+                    <CreateAchievement lid={lid} />
+                </div>
+                <div className='border border-foreground/10 rounded-lg'>
+                    <AchievementList lid={lid} />
+                </div>
+            </div>
         </AchievementProvider>
     )
 }

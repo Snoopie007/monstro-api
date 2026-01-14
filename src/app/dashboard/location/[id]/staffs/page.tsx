@@ -1,186 +1,161 @@
 "use client";
-import { use, useMemo, useState } from "react";
+import React, { use, useMemo, useState } from "react";
 import ErrorComponent from "@/components/error";
-import { useStaffs } from "@/hooks/useStaffs";
-import { StaffProfile } from "./components";
-import {
-  Skeleton,
-  TableHead,
-  TableHeader,
-  Table,
-  TablePage,
-  TablePageContent,
-  TablePageFooter,
-  TablePageHeader,
-  TablePageHeaderSection,
-  TableBody,
-  TableCell,
-  TableRow,
-} from "@/components/ui";
+import { useStaffLocations } from "@/hooks/useStaffs";
 import { useRoles } from "@/hooks/useRoles";
-import InviteStaff from "./components/InviteStaff";
+import { InviteStaff } from "./components";
 import { Input } from "@/components/forms";
-import { Staff } from "@/types";
-import useSWR from "swr";
-import { toast } from "react-toastify";
-import { flexRender, getCoreRowModel, useReactTable } from "@/libs/table-utils";
-import { StaffColumns } from "./components/StaffColumn";
-import { tryCatch } from "@/libs/utils";
+import {
+	Badge,
+	Avatar,
+	ItemGroup,
+	AvatarImage,
+	Empty,
+	EmptyHeader,
+	EmptyMedia,
+	EmptyTitle,
+	EmptyDescription,
+	Button
+} from "@/components/ui";
+import { ChevronRight, UserIcon } from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/libs/utils";
+import { format } from "date-fns";
+import { StaffLocation } from "@/types/staff";
 
 interface StaffsPageProps {
-  params: Promise<{
-    id: string;
-  }>;
+	params: Promise<{
+		id: string;
+	}>;
 }
 
 export default function StaffsPage(props: StaffsPageProps) {
-  const params = use(props.params);
-  const { staffs, isLoading, error } = useStaffs(params.id);
-  const {
-    roles,
-    isLoading: isRolesLoading,
-    error: isRolesError,
-  } = useRoles(params.id);
-  const [currentStaff, setCurrentStaff] = useState<Staff | null>(null);
-  const { mutate } = useSWR(`/api/protected/${params.id}/staffs`);
+	const params = use(props.params);
+	const { sls, isLoading, error } = useStaffLocations(params.id);
+	const [searchQuery, setSearchQuery] = useState<string>("");
+	const { roles, isLoading: isRolesLoading, error: isRolesError } = useRoles(params.id);
 
-  const columns = StaffColumns();
-  const table = useReactTable({
-    data: staffs,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
 
-  // if (isLoading) return <Loading />
-  if (error) return <ErrorComponent error={error} />;
-  const editOptions = useMemo(() => {
-    return {
-      currentStaff,
-      onChange: (staff: Staff) => setCurrentStaff(staff),
-    };
-  }, [currentStaff]);
+	const filteredStaffs = useMemo(() => {
+		if (searchQuery.length > 0) {
+			return sls.filter((s) => {
+				const { staff } = s;
+				const query = searchQuery.toLowerCase();
+				return (
+					staff?.firstName.toLowerCase().includes(query)
+					|| staff?.lastName.toLowerCase().includes(query)
+					|| staff?.phone.toLowerCase().includes(query)
+					|| staff?.email.toLowerCase().includes(query)
+				);
+			});
+		}
+		return sls;
+	}, [sls, searchQuery]);
 
-  async function removeStaff(staffId: number) {
-    const { result, error } = await tryCatch(
-      fetch(`/api/protected/loc/${params.id}/staffs/${staffId}`, {
-        method: "DELETE",
-      })
-    );
+	if (error) return (
+		<ErrorComponent error={error} />
+	);
 
-    if (error || !result || !result.ok) {
-      toast.error("Something went wrong.");
-      return;
-    }
 
-    toast.success("Staff deleted successfully.");
-    mutate();
-  }
+	return (
+		<div className="flex flex-col pr-2 pb-2 h-full">
+			<div className="max-w-6xl mx-auto w-full space-y-4">
 
-  return (
-    <>
-      <TablePage>
-        <TablePageHeader>
-          <TablePageHeaderSection>
-            <div className="flex flex-row   items-center gap-2 ">
-              <Input
-                placeholder="Find a member..."
-                onChange={(event) => {
-                  const value = event.target.value;
-                  // table.getColumn("name")?.setFilterValue(value);
-                }}
-                variant="search"
-              />
+				<div className="flex flex-row  items-center gap-2 justify-between ">
+					<Input
+						placeholder="Find a staff..."
+						className="h-10 w-[300px] bg-foreground/5"
+						value={searchQuery}
+						onChange={(event) => setSearchQuery(event.target.value)}
+						variant="search"
+					/>
 
-              {!isRolesLoading && !isRolesError && (
-                <InviteStaff roles={roles} lid={params.id} />
-              )}
-            </div>
-          </TablePageHeaderSection>
-        </TablePageHeader>
-        <TablePageContent>
-          <Table className="w-auto border-r border-b border-foreground/5">
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow
-                  key={headerGroup.id}
-                  className="align-middle text-sm  bg-foreground/5"
-                >
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead
-                        key={header.id}
-                        className="h-auto  border-foreground/5  py-1  text-foreground"
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  {table.getHeaderGroups()[0].headers.map((header, i) => {
-                    return (
-                      <TableCell key={i}>
-                        <Skeleton className="w-full h-4 bg-gray-100" />
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ) : (
-                <>
-                  {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell
-                            key={cell.id}
-                            className="border border-foreground/5 py-1.5"
-                          >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={columns.length}
-                        className="h-6 w-full font-medium text-center"
-                      >
-                        No staff found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
-              )}
-            </TableBody>
-          </Table>
-        </TablePageContent>
-        <TablePageFooter>
-          {!isLoading && (
-            <div className="p-2">Showing {staffs.length} staff members</div>
-          )}
-        </TablePageFooter>
-      </TablePage>
+					{!isRolesLoading && !isRolesError && (
+						<InviteStaff roles={roles} lid={params.id} />
+					)}
+				</div>
+				<div className="bg-muted/50  rounded-lg ">
+					{!isLoading && filteredStaffs.length > 0 && (
+						<ItemGroup>
+							{filteredStaffs.map((sl) => (
+								<StaffItem key={sl.id} sl={sl} lid={params.id} />
+							))}
+						</ItemGroup>
+					)}
+					{!isLoading && filteredStaffs.length === 0 && (
+						<Empty >
+							<EmptyHeader>
+								<EmptyMedia variant="icon">
+									<UserIcon className="size-5" />
+								</EmptyMedia>
+								<EmptyTitle>No staffs found</EmptyTitle>
+								<EmptyDescription>Add a new staff to get started</EmptyDescription>
+							</EmptyHeader>
+						</Empty>
+					)}
+				</div>
 
-      <StaffProfile
-        staff={editOptions.currentStaff}
-        onChange={editOptions.onChange}
-      />
-    </>
-  );
+			</div>
+
+		</div>
+	);
+}
+
+
+function StaffItem({ sl, lid }: { sl: StaffLocation, lid: string }) {
+	const { staff, roles } = sl;
+	const defaultAvatar = staff?.avatar || '/images/default-avatar.png';
+	return (
+		<div key={sl.id} className={cn(
+			"flex flex-row items-center justify-between gap-3 p-3 border-b border-foreground/5",
+			"last:border-b-0"
+		)}>
+
+			<div className="flex-shrink-0">
+				<Avatar className="size-12">
+					<AvatarImage src={defaultAvatar} className="grayscale" />
+
+				</Avatar>
+			</div>
+			<div className="grid grid-cols-6 gap-2 items-center flex-1">
+				<div className="flex flex-col items-start col-span-2">
+					<span className="text-sm font-bold">{staff?.firstName} {staff?.lastName}</span>
+					<span className="text-sm text-muted-foreground truncate max-w-48">{staff?.email}</span>
+				</div>
+				<div className="flex flex-col  col-span-1">
+					<span className="text-sm">Phone</span>
+					<span className="text-sm">
+						{staff?.phone || '-'}
+					</span>
+				</div>
+				<div className="flex flex-col col-span-2">
+					<span className="text-sm">Roles</span>
+					<div className="flex flex-row gap-2">
+						{roles && roles.length > 0 ? (
+							roles?.map((r) => (
+								<Badge key={r.id} roles={r.color}>
+									{r.name}
+								</Badge>
+							))
+						) : (
+							<span className="text-sm text-muted-foreground">No roles</span>
+						)}
+					</div>
+				</div>
+				<div className="flex flex-col col-span-1">
+					<span className="text-sm">Joined</span>
+					<span className="text-sm text-muted-foreground">
+						{format(staff?.created || new Date(), 'MMM d, yyyy')}
+					</span>
+				</div>
+			</div>
+			<div className="flex-shrink-0">
+				<Button variant="ghost" size="icon" className="size-8 " asChild>
+					<Link href={`/dashboard/location/${lid}/staffs/${staff?.id}`}>
+						<ChevronRight className="size-4" />
+					</Link>
+				</Button>
+			</div>
+		</div>
+	)
 }

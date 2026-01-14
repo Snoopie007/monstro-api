@@ -15,3 +15,11 @@ export type Database = {
         }
     }
 }
+
+export type UploadUrl = {
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    publicUrl: string;
+    uploadUrl: string;
+}

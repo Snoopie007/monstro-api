@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { authWithContext } from '@/libs/auth/server'
 import { db } from '@/db/db'
 import {
     and,
@@ -24,13 +24,13 @@ import {
 } from '@/db/schemas'
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { MemberSortableField, sortColumnMap } from '@/types/member'
-import { hasPermission, canView } from "@/libs/server/permissions";
-import { evaluateTriggers } from "@/libs/achievements";
+import { hasPermission } from "@/libs/server/permissions";
 
 export async function GET(
     req: Request,
     props: { params: Promise<{ id: string }> }
 ) {
+
     const params = await props.params
     const { searchParams } = new URL(req.url)
 
@@ -46,18 +46,11 @@ export async function GET(
     const columnFiltersParam = searchParams.get('columnFilters')
     const columnFilters = columnFiltersParam ? JSON.parse(columnFiltersParam) : []
 
-
     try {
-        const session = await auth()
+        const session = await authWithContext()
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        // Check if user can view members (view is implicit for authenticated users)
-        const canViewAuth = await canView(params.id);
-        if (!canViewAuth) {
-            return NextResponse.json({ error: "Access denied" }, { status: 403 });
         }
 
         // Base condition: Filter by locationId from memberLocations
@@ -69,9 +62,9 @@ export async function GET(
         // Optional search condition for members (case-insensitive match)
         const searchCondition = query
             ? or(
-                  ilike(members.firstName, `%${query}%`), // Match firstName
-                  ilike(members.lastName, `%${query}%`) // Match lastName
-              )
+                ilike(members.firstName, `%${query}%`), // Match firstName
+                ilike(members.lastName, `%${query}%`) // Match lastName
+            )
             : undefined
 
         // Tag filtering condition
@@ -112,7 +105,6 @@ export async function GET(
                         'active': 'active',
                         'inactive': 'incomplete',
                         'past due': 'past_due',
-                        'past_due': 'past_due',
                         'canceled': 'canceled',
                         'cancelled': 'canceled',
                         'paused': 'paused',
@@ -201,6 +193,7 @@ export async function GET(
         const membersResult = await db
             .select({
                 id: members.id,
+                userId: members.userId,
                 firstName: members.firstName,
                 lastName: members.lastName,
                 email: members.email,
@@ -436,25 +429,26 @@ export async function POST(
         })
 
         // Evaluate referral triggers if this member was referred
-        if (data.referralCode) {
-            try {
-                // Find the referrer by their referral code
-                const referrer = await db.query.members.findFirst({
-                    where: eq(members.referralCode, data.referralCode),
-                });
+        // if (data.referralCode) {
+        //     try {
+        //         // Find the referrer by their referral code
+        //         const referrer = await db.query.members.findFirst({
+        //             where: eq(members.referralCode, data.referralCode),
+        //         });
 
-                if (referrer) {
-                    await evaluateTriggers({
-                        memberId: referrer.id,
-                        locationId: params.id,
-                        triggerType: 'referrals_count'
-                    });
-                }
-            } catch (error) {
-                console.error('Error evaluating referral triggers:', error);
-                // Don't fail the request if trigger evaluation fails
-            }
-        }
+        //         if (referrer) {
+        //             await triggerIncrement({
+        //                 mid: referrer.id,
+        //                 lid: params.id,
+        //                 type: 'Referrals Count',
+        //                 amount: 1,
+        //             });
+        //         }
+        //     } catch (error) {
+        //         console.error('Error evaluating referral triggers:', error);
+        //         // Don't fail the request if trigger evaluation fails
+        //     }
+        // }
 
         return NextResponse.json({ existing: false, member }, { status: 200 })
     } catch (err) {

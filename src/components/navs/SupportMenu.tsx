@@ -9,89 +9,107 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Book, CircleHelp, Mail, Phone, Webcam } from 'lucide-react'
 import Image from 'next/image'
+import { LocationState } from '@/types'
 
-const SupportButtonStyle =
-    'text-foreground hover:bg-transparent hover:border-foreground rounded-sm'
+const SupportButtonStyle = 'text-foreground hover:bg-transparent hover:border-foreground text-[0.8rem] border-foreground/10'
 const SupportURL = 'https://support.monstro-x.com'
 
-export function SupportMenu() {
+export function SupportMenu({ locationState }: { locationState: LocationState }) {
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="size-6 hover:bg-neutral-200 dark:hover:bg-neutral-900"
+                    className="size-6"
                 >
-                    <CircleHelp size={14} />
+                    <CircleHelp size={16} />
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[350px] ">
+            <DropdownMenuContent align="end" className="w-[350px] border-foreground/10 ">
                 <div className="py-4 px-2 space-y-3">
                     <div className="text-sm font-medium">
-                        Need help with your location?
+                        Need help?
                     </div>
                     <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">
-                            For issues with your location, automation, or
-                            payments.
+                        <p className="text-[0.8rem] text-muted-foreground">
+                            If you're having issues with your membership software, you can contact our support team.
                         </p>
                         <div className="flex flex-row gap-2">
                             <Button
                                 variant="outline"
-                                size="xs"
+                                size="sm"
                                 className={SupportButtonStyle}
                                 asChild
                             >
                                 <Link href={`${SupportURL}/cases`}>
-                                    <Mail size={14} className="mr-1" />
+                                    <Mail size={16} className="mr-1" />
                                     Contact Support
                                 </Link>
                             </Button>
                             <Button
                                 variant="outline"
-                                size="xs"
+                                size="sm"
                                 className={SupportButtonStyle}
                                 asChild
                             >
                                 <Link href={`${SupportURL}/docs`}>
-                                    <Book size={14} className="mr-1" />
+                                    <Book size={16} className="mr-1" />
                                     Doc
                                 </Link>
                             </Button>
                         </div>
                     </div>
-                    <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">
-                            Being on the premium plans, you're eligible for
-                            priority support and zoom or phone support.
-                        </p>
-                        <div className="flex flex-row gap-2">
+                    {locationState.premiumSupport ? (
+                        <div className="space-y-1">
+                            <p className="text-[0.8rem] text-muted-foreground">
+                                Being on the premium support plan, you're eligible for
+                                priority support and zoom or phone support.
+                            </p>
+                            <div className="flex flex-row gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className={SupportButtonStyle}
+                                    asChild
+                                >
+                                    <Link href={`${SupportURL}/booking/zoom`}>
+                                        <Webcam size={16} className="mr-1" />
+                                        Book a Zoom Call
+                                    </Link>
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className={SupportButtonStyle}
+                                    asChild
+                                >
+                                    <Link href={`${SupportURL}/booking`}>
+                                        <Phone size={16} className="mr-1" />
+                                        Book a Call
+                                    </Link>
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-1">
+                            <p className="text-[0.8rem] text-muted-foreground">
+                                Want faster and more personalized support? Upgrade to the premium support plan.
+                            </p>
                             <Button
                                 variant="outline"
-                                size="xs"
+                                size="sm"
                                 className={SupportButtonStyle}
                                 asChild
                             >
-                                <Link href={`${SupportURL}/booking/zoom`}>
-                                    <Webcam size={14} className="mr-1" />
-                                    Book a Zoom Call
-                                </Link>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="xs"
-                                className={SupportButtonStyle}
-                                asChild
-                            >
-                                <Link href={`${SupportURL}/booking`}>
-                                    <Phone size={14} className="mr-1" />
-                                    Book a Call
+                                <Link href="#" className="">
+                                    Upgrade
                                 </Link>
                             </Button>
                         </div>
-                    </div>
-                    <div className="bg-foreground/5 border border-foreground/10 rounded-sm p-2 text-xs text-muted-foreground ">
+                    )}
+                    <div className="bg-foreground/5 border border-foreground/10 rounded-sm p-2 text-[0.8rem] text-muted-foreground ">
                         Expected response time is based on your billing plan.
                         Support hours are 9am-6pm EST Mon-Fri. We're off on all
                         public holidays.
@@ -105,7 +123,7 @@ export function SupportMenu() {
                         <div className="text-sm font-medium">
                             Reach out to our community
                         </div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-[0.8rem] text-muted-foreground">
                             For other support, including questions on our client
                             libraries, advice, or best practices.
                         </p>

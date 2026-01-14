@@ -1,9 +1,11 @@
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { ExtendedAttendance, Member } from "@/types";
 import { Time } from '@internationalized/date';
-import { NextRequest } from "next/server";
-import { Member } from "@/types";
+import { type ClassValue, clsx } from "clsx";
+import { addDays, format, isToday, isYesterday, subDays, isSameDay } from "date-fns";
 import { decodeJwt } from "jose";
+import { NextRequest } from "next/server";
+import { twMerge } from "tailwind-merge";
+import { DEFAULT_SUPPORT_TOOLS } from "./SupportDefaults";
 
 export function stringToTime(time: string) {
     return new Time(parseInt(time.split(":")[0]), parseInt(time.split(":")[1]));
@@ -13,9 +15,9 @@ export function stringToTime(time: string) {
 export const StripeCardOptions = {
   style: {
       base: {
-          fontWeight: "500",
+          fontWeight: "600",
           fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
-          fontSize: "14px",
+          fontSize: "16px",
           fontSmoothing: "antialiased",
       },
       invalid: {
@@ -29,13 +31,13 @@ export const StripeCardOptions = {
 
  const formatAmountForDisplay = (
 	amount: number,
-	currency: string,
+	currency: string | null,
 	withSymbol = true,
 	minimumFractionDigits = 0
 ): string => {
 	const formatter = new Intl.NumberFormat('en-US', {
 		style: withSymbol ? 'currency' : 'decimal',
-		currency,
+		currency: currency ?? 'USD',
 		minimumFractionDigits,
 	});
 	
@@ -60,7 +62,7 @@ function ErrorHandler<T, E extends new (message?: string) => Error>(
 		return promise
 			.then((data) => [data, undefined] as [T, undefined])
 			.catch((error) => {
-				if (errorFilters == undefined) {
+				if (errorFilters === undefined) {
 				return [error]
 			}
 			if (errorFilters.some((filter) => error instanceof filter)) {
@@ -204,19 +206,182 @@ function getTimezoneOffset() {
 	return offsetString;
 }
 
-export {
-	sleep,
-	tryCatch,
-	formatAmountForDisplay,
-  	cn,	
-	formatTime,
-	formatEmail,
-	formatPhone,
-	interEmailsAndText,
-	authenticateMember,
-	interpolate,
-	getTimezoneOffset
+
+// Seeded random number generator for deterministic results
+const seededRandom = (seed: number): number => {
+    const x = Math.sin(seed) * 10000
+    return x - Math.floor(x)
 }
+
+// Generate hard-coded test attendance data for demo member
+const generateTestAttendanceData = (): ExtendedAttendance[] => {
+    const now = new Date()
+    const ninetyDaysAgo = subDays(now, 90)
+    const attendances: ExtendedAttendance[] = []
+    let seed = 12345 // Fixed seed for consistent results
+    
+    // Generate 3-4 random attendances per week for the past 90 days
+    let currentDate = new Date(ninetyDaysAgo)
+    let weekIndex = 0
+    
+    while (currentDate <= now) {
+        // Deterministically decide if this week should have 3 or 4 attendances
+        seed = (seed * 9301 + 49297) % 233280
+        const attendancesThisWeek = seededRandom(seed) > 0.5 ? 3 : 4
+        
+        // Generate random days within this week (Monday-Friday mostly)
+        const possibleDays = [1, 2, 3, 4, 5] // Mon-Fri
+        const selectedDays: number[] = []
+        
+        for (let i = 0; i < attendancesThisWeek; i++) {
+            let randomDay: number
+            do {
+                seed = (seed * 9301 + 49297) % 233280
+                randomDay = possibleDays[Math.floor(seededRandom(seed) * possibleDays.length)]
+            } while (selectedDays.includes(randomDay))
+            selectedDays.push(randomDay)
+        }
+        
+        selectedDays.forEach((dayOffset, dayIndex) => {
+            const attendanceDate = addDays(currentDate, dayOffset)
+            if (attendanceDate <= now) {
+                seed = (seed * 9301 + 49297) % 233280
+                const checkInTime = new Date(attendanceDate)
+                checkInTime.setHours(Math.floor(seededRandom(seed) * 3) + 16) // 4pm-7pm
+                
+                seed = (seed * 9301 + 49297) % 233280
+                checkInTime.setMinutes(Math.floor(seededRandom(seed) * 60))
+                
+                const checkOutTime = new Date(checkInTime)
+                seed = (seed * 9301 + 49297) % 233280
+                checkOutTime.setHours(checkOutTime.getHours() + 1)
+                checkOutTime.setMinutes(checkOutTime.getMinutes() + Math.floor(seededRandom(seed) * 30))
+                
+                const startTime = new Date(checkInTime)
+                startTime.setHours(checkInTime.getHours() - 1) // Program starts 1 hour before check-in
+                
+                seed = (seed * 9301 + 49297) % 233280
+                const programs = ['Boxing', 'Muay Thai', 'CrossFit', 'Yoga']
+                
+                attendances.push({
+                    id: `test-att-${weekIndex}-${dayIndex}`,
+                    memberId: 'mbr_BpT7jEb3Q16nOPL3vo7qlw',
+                    locationId: '',
+                    reservationId: null,
+                    recurringId: null,
+                    programName: programs[Math.floor(seededRandom(seed) * programs.length)],
+                    checkInTime,
+                    checkOutTime,
+                    startTime,
+                    endTime: checkOutTime,
+                    ipAddress: null,
+                    macAddress: null,
+                    lat: null,
+                    lng: null,
+                    created: new Date(),
+                } as ExtendedAttendance)
+            }
+        })
+        
+        // Move to next week (7 days)
+        currentDate = addDays(currentDate, 7)
+        weekIndex++
+    }
+    
+    return attendances
+}
+
+
+// If a timestamp string given is within the client's day -- it should just show the time. If it is more than a day -- it should show the date in this format "11/18/25 10:00 AM"
+function formatMessageTimestamp(timestamp: string | Date | number) {
+    const date = new Date(timestamp);
+    if (isToday(date)) {
+        return format(date, 'h:mm a');
+    }
+    return format(date, 'MM/dd/yy h:mm a');
+}
+
+function getDateLabel(date: Date): string {
+    // Handle invalid dates
+    if (!date || isNaN(date.getTime())) {
+        return 'Unknown date';
+    }
+    if (isToday(date)) {
+        return 'Today';
+    } else if (isYesterday(date)) {
+        return 'Yesterday';
+    } else {
+        return format(date, 'MMMM d, yyyy');
+    }
+}
+
+/**
+ * Determines if a message should be visually grouped with the previous message.
+ * Messages are grouped when:
+ * 1. Same sender (senderId matches)
+ * 2. Same day (no date separator between them)
+ * 3. Within time threshold (default 2 minutes)
+ * 
+ * @param current - Current message being rendered
+ * @param previous - Previous message in the list (or null if first)
+ * @param options - Optional configuration
+ * @returns true if message should be rendered compactly (no avatar/name)
+ */
+function isGroupedMessage(
+    current: { senderId?: string | null; created: Date | string } | null | undefined,
+    previous: { senderId?: string | null; created: Date | string } | null | undefined,
+    options?: { thresholdMs?: number }
+): boolean {
+    if (!previous || !current) return false;
+    
+    const { thresholdMs = 120000 } = options ?? {}; // 2 minutes default
+    
+    // Must be same sender
+    if (previous.senderId !== current.senderId) return false;
+    
+    const prevDate = new Date(previous.created);
+    const currDate = new Date(current.created);
+    
+    // Must be same day (don't group across date separators)
+    if (!isSameDay(prevDate, currDate)) return false;
+    
+    // Must be within time threshold
+    const timeDiff = currDate.getTime() - prevDate.getTime();
+    return timeDiff < thresholdMs && timeDiff >= 0;
+}
+
+/**
+ * Role-based grouping for support chat messages.
+ * Groups by message role (ai, human, staff) + agentId for staff messages.
+ */
+function isGroupedSupportMessage(
+    current: { role: string; agentId?: string | null; created: Date | string } | null | undefined,
+    previous: { role: string; agentId?: string | null; created: Date | string } | null | undefined,
+    options?: { thresholdMs?: number }
+): boolean {
+    if (!previous || !current) return false;
+    
+    const { thresholdMs = 120000 } = options ?? {};
+    
+    // Must be same role
+    if (previous.role !== current.role) return false;
+    
+    // For staff messages, must be same agent
+    if (current.role === 'staff' && previous.agentId !== current.agentId) return false;
+    
+    const prevDate = new Date(previous.created);
+    const currDate = new Date(current.created);
+    
+    if (!isSameDay(prevDate, currDate)) return false;
+    
+    const timeDiff = currDate.getTime() - prevDate.getTime();
+    return timeDiff < thresholdMs && timeDiff >= 0;
+}
+
+export {
+    authenticateMember, cn, formatAmountForDisplay, formatEmail, formatMessageTimestamp, formatPhone, formatTime, generateTestAttendanceData, getDateLabel, getTimezoneOffset, interEmailsAndText, interpolate, sleep,
+    tryCatch, isGroupedMessage, isGroupedSupportMessage
+};
 
 
 // export const zPhone = z.string().transform((arg, ctx) => {
@@ -241,3 +406,24 @@ export {
 //   });
 //   return z.NEVER;
 // });
+
+
+export function getDefaultAssistantSettings() {
+    return {
+        prompt: 'You are a helpful customer support assistant for our fitness center. friendly and professional.',
+        initialMessage: "Hi! 👋 I'm your support assistant. How can I help you today.",
+        temperature: '0.7',
+        model: 'gpt' as const,
+        persona: {
+            avatar: 'https://randomuser.me/api/portraits/lego/4.jpg',
+            responseStyle: 'Respond in a friendly manner',
+            personality: ['friendly', 'informative', 'professional'],
+        },
+        triggers: [],
+        knowledgeBase: {
+            qa_entries: [],
+            document: null,
+        },
+        availableTools: DEFAULT_SUPPORT_TOOLS,
+    }
+}

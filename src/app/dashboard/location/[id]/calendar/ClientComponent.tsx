@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useMemo } from "react";
+import { use, useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   startOfMonth,
   endOfMonth,
@@ -10,50 +10,20 @@ import {
 } from "date-fns";
 import { toast } from "react-toastify";
 
-import { useSessionCalendar } from "./providers/SessionCalendarProvider";
+import { useSessionCalendar } from "./providers";
 import { Calendar } from "@/components/ui/calendar";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
-import { CalendarFilters } from "./components/CalendarFilters";
-import { CalendarEvent as OldCalendarEvent } from "@/types";
+import { useCalendarClosures, type ClosedDate } from "@/hooks";
+import { CalendarFilters } from "./components/";
 import { tryCatch } from "@/libs/utils";
-import { EnhancedEventDialog } from "./components/EnhancedEventDialog";
+import { SessionManagementDialog } from "./components/EnhancedEventDialog";
 
-// Import new event calendar components
 import {
   EventCalendar,
-  CalendarDndProvider,
-  type CalendarEvent,
-  type CalendarView,
+  CalendarDndProvider
 } from "@/components/event-calendar";
-import LoaderOverlay from "@/components/ui/loader-overlay";
-
-// Extend the CalendarEvent type to include original data
-interface ExtendedCalendarEvent extends CalendarEvent {
-  __originalData?: OldCalendarEvent["data"];
-}
-
-// Data adapter to convert old CalendarEvent to new CalendarEvent format
-function convertToNewCalendarEvent(
-  oldEvent: OldCalendarEvent
-): ExtendedCalendarEvent {
-  return {
-    id: oldEvent.id,
-    title: oldEvent.title,
-    description: `Session: ${oldEvent.data.sessionId}${
-      oldEvent.data.members.length > 0
-        ? ` | ${oldEvent.data.members.length} member(s)`
-        : ""
-    }`,
-    start: oldEvent.start,
-    end: oldEvent.end,
-    allDay: false,
-    color: "sky" as const, // Default color for all events
-    location: undefined,
-    staff: oldEvent.staff,
-    // Store original event data for dialog functionality
-    __originalData: oldEvent.data,
-  };
-}
+import { CalendarEvent, CalendarView } from "@/types";
+import { Loader2 } from "lucide-react";
 
 interface CalendarPageClientProps {
   params: Promise<{ id: string }>;
@@ -68,10 +38,10 @@ export default function CalendarPageClient({
 
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
 
-  // State for enhanced dialog
-  const [isEnhancedDialogOpen, setIsEnhancedDialogOpen] = useState(false);
+  // State for session management dialog
+  const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] =
-    useState<ExtendedCalendarEvent | null>(null);
+    useState<CalendarEvent | null>(null);
 
   // State to track cached date range - only update when navigation goes outside this range
   const [cachedDateRange, setCachedDateRange] = useState(() => ({
@@ -79,27 +49,29 @@ export default function CalendarPageClient({
     endDate: endOfMonth(addMonths(currentDate, 5)),
   }));
 
-  // Track plan filter changes to reset cache
-  const [lastPlanFilterHash, setLastPlanFilterHash] = useState(() =>
-    JSON.stringify(selectedPlanIds)
-  );
+  // Use ref to track plan filter changes without causing re-renders
+  const lastPlanFilterHashRef = useRef(JSON.stringify(selectedPlanIds));
 
-  // Smart caching: only update date range when currentDate goes outside cached range or filters change
+  // Pure computation in useMemo - no state updates here
   const { startDate, endDate } = useMemo(() => {
+    return cachedDateRange;
+  }, [cachedDateRange]);
+
+  // Handle cache invalidation in useEffect (proper place for side effects)
+  useEffect(() => {
+    const currentPlanFilterHash = JSON.stringify(selectedPlanIds);
     const currentMonth = startOfMonth(currentDate);
     const cachedStart = cachedDateRange.startDate;
     const cachedEnd = cachedDateRange.endDate;
-    const currentPlanFilterHash = JSON.stringify(selectedPlanIds);
 
-    // Check if plan filters changed
-    if (currentPlanFilterHash !== lastPlanFilterHash) {
-      setLastPlanFilterHash(currentPlanFilterHash);
-      const newRange = {
+    // Check if plan filters changed - reset cache completely
+    if (currentPlanFilterHash !== lastPlanFilterHashRef.current) {
+      lastPlanFilterHashRef.current = currentPlanFilterHash;
+      setCachedDateRange({
         startDate: startOfMonth(subMonths(currentDate, 3)),
         endDate: endOfMonth(addMonths(currentDate, 5)),
-      };
-      setCachedDateRange(newRange);
-      return newRange;
+      });
+      return;
     }
 
     // Check if current date is outside the cached range
@@ -108,26 +80,20 @@ export default function CalendarPageClient({
 
     if (isBeforeCachedRange || isAfterCachedRange) {
       // Expand cache in the direction of navigation
-      const newRange = {
+      setCachedDateRange({
         startDate: isBeforeCachedRange
           ? startOfMonth(subMonths(currentDate, 6)) // Expand backward
           : cachedStart,
         endDate: isAfterCachedRange
           ? endOfMonth(addMonths(currentDate, 6)) // Expand forward
           : cachedEnd,
-      };
-
-      setCachedDateRange(newRange);
-      return newRange;
+      });
     }
-
-    // Current date is within cached range, no API call needed
-    return cachedDateRange;
-  }, [currentDate, cachedDateRange, selectedPlanIds, lastPlanFilterHash]);
+  }, [currentDate, selectedPlanIds, cachedDateRange]);
 
   // Use the existing hook to fetch events
   const {
-    events: oldEvents,
+    events,
     isLoading,
     mutate,
   } = useCalendarEvents({
@@ -137,11 +103,15 @@ export default function CalendarPageClient({
     planIds: selectedPlanIds.length > 0 ? selectedPlanIds : undefined,
   });
 
-  // Convert old events to new format
-  const newEvents = useMemo<ExtendedCalendarEvent[]>(() => {
-    if (!oldEvents) return [];
-    return oldEvents.map(convertToNewCalendarEvent);
-  }, [oldEvents]);
+  // Fetch closures for the calendar
+  const { closures } = useCalendarClosures({
+    locationId: id,
+    startDate: format(startDate, "yyyy-MM-dd"),
+    endDate: format(endDate, "yyyy-MM-dd"),
+  });
+
+  // Memoize closedDates to prevent unnecessary re-renders
+  const closedDates = useMemo<ClosedDate[]>(() => closures, [closures]);
 
   // Handle calendar date selection - navigates to day view of selected date
   const handleDateSelect = (date: Date) => {
@@ -151,10 +121,14 @@ export default function CalendarPageClient({
 
   // Handle removing a reservation (migrated from original implementation)
   const handleRemoveReservation = async (
-    event: OldCalendarEvent,
+    event: CalendarEvent,
     memberId: string
   ) => {
     try {
+      if (!event.data) {
+        throw new Error("Event data is missing");
+      }
+
       const isRecurring = event.data.isRecurring;
       let url: string;
 
@@ -162,9 +136,8 @@ export default function CalendarPageClient({
         if (!event.data.recurringId) {
           throw new Error("Missing recurringId for recurring reservation");
         }
-        url = `/api/protected/loc/${id}/members/${memberId}/reservations/${
-          event.data.recurringId
-        }/recurring?date=${format(event.start, "yyyy-MM-dd")}`;
+        url = `/api/protected/loc/${id}/members/${memberId}/reservations/${event.data.recurringId
+          }/recurring?date=${format(event.start, "yyyy-MM-dd")}`;
       } else {
         if (!event.data.reservationId) {
           throw new Error("Missing reservationId for regular reservation");
@@ -188,10 +161,10 @@ export default function CalendarPageClient({
     }
   };
 
-  // Handle event selection to open enhanced dialog
-  const handleEventSelect = (event: ExtendedCalendarEvent) => {
+  // Handle event selection to open session management dialog
+  const handleEventSelect = (event: CalendarEvent) => {
     setSelectedEvent(event);
-    setIsEnhancedDialogOpen(true);
+    setIsSessionDialogOpen(true);
   };
 
   // Event handlers for the new calendar
@@ -215,34 +188,33 @@ export default function CalendarPageClient({
   return (
     <div className="flex flex-row h-full ">
       <CalendarDndProvider onEventUpdate={handleEventUpdate}>
-        <div className="relative flex-1 h-full p-2">
+        <div className="relative flex-1 h-full pr-2 pb-2">
           {/* Loader Overlay on the container */}
-          {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <LoaderOverlay isLoading={isLoading} />
+          {isLoading ? (
+            <div className="h-full w-full flex items-center justify-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm text-foreground/80">Loading events...</span>
             </div>
+          ) : (
+            <EventCalendar
+              events={events}
+              closedDates={closedDates}
+              currentDate={currentDate}
+              view={view}
+              onDateChange={setCurrentDate}
+              onViewChange={setView}
+              onEventUpdate={handleEventUpdate}
+              onEventClick={handleEventSelect}
+            />
           )}
-          <EventCalendar
-            events={newEvents}
-            currentDate={currentDate}
-            view={view}
-            onDateChange={setCurrentDate}
-            onViewChange={setView}
-            onEventAdd={handleEventAdd}
-            onEventUpdate={handleEventUpdate}
-            onEventDelete={handleEventDelete}
-            onEventClick={handleEventSelect}
-            lid={id}
-          />
         </div>
       </CalendarDndProvider>
 
-      <div className="flex-initial w-[300px] flex flex-col pl-0 pr-2 pt-2 pb-1 space-y-2">
+      <div className="flex-initial w-[300px] flex flex-col space-y-2">
         {/* Small calendar date picker for navigation to day view */}
-        <div className="rounded-lg border border-foreground/10 bg-background flex py-4 flex-row justify-center items-center">
+        <div className="rounded-lg border border-foreground/10  flex py-4 flex-row justify-center items-center">
           <Calendar
             mode="single"
-            fromDate={new Date()}
             selected={currentDate}
             onSelect={(date) => {
               if (date) {
@@ -258,11 +230,11 @@ export default function CalendarPageClient({
           onFilterChange={setSelectedPlanIds}
         />
       </div>
-      <EnhancedEventDialog
+      <SessionManagementDialog
         event={selectedEvent}
-        isOpen={isEnhancedDialogOpen}
+        isOpen={isSessionDialogOpen}
         onClose={() => {
-          setIsEnhancedDialogOpen(false);
+          setIsSessionDialogOpen(false);
           setSelectedEvent(null);
         }}
         onSave={handleEventUpdate}

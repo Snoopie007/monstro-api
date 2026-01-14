@@ -1,13 +1,13 @@
-import { Select, SelectItem, SelectContent, SelectValue, SelectTrigger, Input } from "@/components/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Input } from "@/components/forms";
 import { FilterInputType } from "./ColumnTypes";
 
-export const FilterInput = ({ 
-    columnId, 
-    value, 
-    onChange, 
-    inputType, 
-    options, 
-    placeholder 
+export const FilterInput = ({
+    columnId,
+    value,
+    onChange,
+    inputType,
+    options,
+    placeholder
 }: {
     columnId: string;
     value: string;
@@ -19,8 +19,8 @@ export const FilterInput = ({
     switch (inputType) {
         case FilterInputType.SELECT:
             return (
-                <Select 
-                    value={value} 
+                <Select
+                    value={value}
                     onValueChange={onChange}
                 >
                     <SelectTrigger className="h-7 text-sm">
@@ -35,45 +35,45 @@ export const FilterInput = ({
                     </SelectContent>
                 </Select>
             );
-        
+
         case FilterInputType.MULTI_SELECT:
             // Implementation for multi-select (future enhancement)
             return (
-                <Input 
-                    className="h-7 text-sm" 
-                    value={value} 
+                <Input
+                    className="h-7 text-sm"
+                    value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={placeholder}
                 />
             );
-        
+
         case FilterInputType.DATE:
             return (
-                <Input 
+                <Input
                     type="date"
-                    className="h-7 text-sm" 
-                    value={value} 
+                    className="h-7 text-sm"
+                    value={value}
                     onChange={(e) => onChange(e.target.value)}
                 />
             );
-        
+
         case FilterInputType.NUMBER:
             return (
-                <Input 
+                <Input
                     type="number"
-                    className="h-7 text-sm" 
-                    value={value} 
+                    className="h-7 text-sm"
+                    value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={placeholder}
                 />
             );
-        
+
         case FilterInputType.TEXT:
         default:
             return (
-                <Input 
-                    className="h-7 text-sm" 
-                    value={value} 
+                <Input
+                    className="h-7 text-sm"
+                    value={value}
                     onChange={(e) => onChange(e.target.value)}
                     placeholder={placeholder}
                 />

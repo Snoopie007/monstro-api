@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/chart'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
-import { cn } from '../event-calendar'
+import { cn } from '@/libs/utils'
 import { Transaction } from '@/types/transaction'
 import { MONTHS } from '@/libs/data'
 import { Loader2 } from 'lucide-react'
@@ -63,7 +63,7 @@ export function RevenueChart({
                 if (transaction.status === 'paid' && !transaction.refunded) {
                     const month =
                         MONTHS[new Date(transaction.created as Date).getMonth()]
-                    revenueByMonth[month] += transaction.amount / 100
+                    revenueByMonth[month] += transaction.total / 100
                 }
             })
 
