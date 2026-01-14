@@ -43,7 +43,7 @@ type FilePreviewType = {
     data: Record<string, string>[]
 }
 
-export function ImportMigration({ lid }: { lid: string }) {
+export function ImportMigration({ lid, onSuccess }: { lid: string; onSuccess?: () => void }) {
     const [isLoading, setIsLoading] = useState(false)
     const [file, setFile] = useState<File | undefined>(undefined)
     const [planId, setPlanId] = useState<number | null>(null)
@@ -143,6 +143,7 @@ export function ImportMigration({ lid }: { lid: string }) {
         }
 
         toast.success('Members migrated successfully')
+        onSuccess?.()
         handleOpenChange(false)
     }
 
