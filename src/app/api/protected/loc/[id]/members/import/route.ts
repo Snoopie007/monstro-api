@@ -6,38 +6,39 @@ import { parsePhoneNumberFromString } from "libphonenumber-js";
 import Papa from "papaparse";
 
 export async function POST(
-	request: Request,
-	props: { params: Promise<{ id: string }> }
+    request: Request,
+    props: { params: Promise<{ id: string }> }
 ) {
-	const params = await props.params;
+    const params = await props.params
 
-	const data = await request.formData();
-	const file = data.get("file");
-	const planId = data.get("planId");
-	const fieldMapping = JSON.parse(data.get("fieldMapping") as string);
+    const data = await request.formData()
+    const file = data.get('file')
+    const planId = data.get('planId')
+    const fieldMapping = JSON.parse(data.get('fieldMapping') as string)
+    const requirePayment = data.get('requirePayment') === 'true'
 
-	if (!file || !(file instanceof Blob)) {
-		return NextResponse.json(
-			{ status: "fail", message: "No file uploaded" },
-			{ status: 400 }
-		);
-	}
+    if (!file || !(file instanceof Blob)) {
+        return NextResponse.json(
+            { status: 'fail', message: 'No file uploaded' },
+            { status: 400 }
+        )
+    }
 
-	// Example: Looping over each record
-	const location = await db.query.locations.findFirst({
-		where: (locations, { eq }) => eq(locations.id, params.id),
-	});
+    // Example: Looping over each record
+    const location = await db.query.locations.findFirst({
+        where: (locations, { eq }) => eq(locations.id, params.id),
+    })
 
-	if (!location) {
-		return NextResponse.json(
-			{ status: "fail", message: "Location not found" },
-			{ status: 404 }
-		);
-	}
+    if (!location) {
+        return NextResponse.json(
+            { status: 'fail', message: 'Location not found' },
+            { status: 404 }
+        )
+    }
 
-	try {
-		const arrayBuffer = await file.arrayBuffer();
-		const content = new TextDecoder("utf-8").decode(arrayBuffer);
+    try {
+        const arrayBuffer = await file.arrayBuffer()
+        const content = new TextDecoder('utf-8').decode(arrayBuffer)
 
 		const { data: records } = Papa.parse<Record<string, string>>(content.trim(), {
 			header: true,
@@ -110,9 +111,12 @@ export async function POST(
 			})
 		);
 
-		return NextResponse.json({ sample: records.slice(0, 3) }, { status: 200 });
-	} catch (error) {
-		console.error(error);
-		return NextResponse.json({ status: 500 });
-	}
+        return NextResponse.json(
+            { sample: records.slice(0, 3) },
+            { status: 200 }
+        )
+    } catch (error) {
+        console.error(error)
+        return NextResponse.json({ status: 500 })
+    }
 }

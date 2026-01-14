@@ -10,6 +10,7 @@ import {
     DialogTrigger,
     DialogClose,
     ButtonGroup,
+    Switch,
 } from '@/components/ui'
 import React, { useEffect, useState } from 'react'
 import Papa from 'papaparse'
@@ -47,6 +48,7 @@ export function ImportMembers({ lid }: { lid: string }) {
     const [file, setFile] = useState<File | undefined>(undefined)
     const [planId, setPlanId] = useState<number | null>(null)
     const [preview, setPreview] = useState<FilePreviewType | null>(null)
+    const [requirePayment, setRequirePayment] = useState(false)
     const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({})
     const [errors, setErrors] = useState<string[]>([])
     const { plans } = useMemberPlans(lid)
@@ -64,7 +66,8 @@ export function ImportMembers({ lid }: { lid: string }) {
             complete: (results) => {
                 if (!results.meta.fields?.length || !results.data?.length) {
                     setErrors([
-                        `Invalid CSV: No ${!results.meta.fields?.length ? 'headers' : 'data'
+                        `Invalid CSV: No ${
+                            !results.meta.fields?.length ? 'headers' : 'data'
                         } found.`,
                     ])
                     return
@@ -123,6 +126,7 @@ export function ImportMembers({ lid }: { lid: string }) {
         if (planId) {
             formData.append('planId', planId.toString())
         }
+        formData.append('requirePayment', requirePayment.toString())
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${lid}/members/import`, {
                 method: 'POST',
@@ -240,6 +244,26 @@ export function ImportMembers({ lid }: { lid: string }) {
                                         assign one later.
                                     </p>
                                 </div>
+                            )}
+                            {file && preview && (
+                                <>
+                                    <div className="flex flex-row items-center gap-2">
+                                        <Label className="text-tiny uppercase font-medium">
+                                            Require Payment
+                                        </Label>
+                                        <Switch
+                                            onCheckedChange={(checked) =>
+                                                setRequirePayment(checked)
+                                            }
+                                            checked={requirePayment}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-yellow-400">
+                                        If checked, members will be required to
+                                        add a payment method right away when
+                                        joining.
+                                    </p>
+                                </>
                             )}
                         </div>
                         <DialogFooter className="px-4 pb-4 pt-0 md:justify-between">
