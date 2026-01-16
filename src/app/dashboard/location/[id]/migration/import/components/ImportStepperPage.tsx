@@ -17,7 +17,7 @@ import { PreviewStep } from './PreviewStep'
 import { StepperFooter } from './StepperFooter'
 import type { CustomFieldDefinition, CustomFieldType } from '@/types'
 
-export type ImportSource = 'csv' | 'gohighlevel' | 'spark' | null
+export type ImportSource = 'csv' | 'gohighlevel' | null
 
 export interface NewCustomField {
     csvColumn: string

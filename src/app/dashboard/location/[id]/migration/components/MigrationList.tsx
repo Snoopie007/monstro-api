@@ -26,7 +26,7 @@ import { Pagination,
     PaginationNext,
     PaginationPrevious } from '@/components/ui/pagination'
 
-export function MigrationList({ lid, onRefetchReady }: { lid: string; onRefetchReady?: (refetch: () => void) => void }) {
+export function MigrationList({ lid }: { lid: string }) {
     const [page, setPage] = useState(0)
     const [pageSize] = useState(15)
 
@@ -62,10 +62,6 @@ export function MigrationList({ lid, onRefetchReady }: { lid: string; onRefetchR
     useEffect(() => {
         refetch()
     }, [page, pageSize, refetch])
-
-    useEffect(() => {
-        onRefetchReady?.(refetch)
-    }, [refetch, onRefetchReady])
 
     return (
         <div className="space-y-2">

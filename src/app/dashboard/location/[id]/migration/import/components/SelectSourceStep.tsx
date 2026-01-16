@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef } from 'react'
-import { FileSpreadsheet, Zap, Sparkles, FileIcon, XIcon, CheckIcon } from 'lucide-react'
+import { FileSpreadsheet, Zap, FileIcon, XIcon, CheckIcon } from 'lucide-react'
 import { cn } from '@/libs/utils'
 import { Badge, Button } from '@/components/ui'
 import type { ImportSource } from './ImportStepperPage'
@@ -51,19 +51,12 @@ export function SelectSourceStep({
             description: 'Import members directly from your GoHighLevel account',
             icon: Zap,
             enabled: false,
-        },
-        {
-            id: 'spark' as const,
-            name: 'Spark',
-            description: 'Import members from your Spark membership platform',
-            icon: Sparkles,
-            enabled: false,
-        },
+        }
     ]
 
     return (
         <div className='space-y-6'>
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 {sources.map((source) => (
                     <button
                         key={source.id}
