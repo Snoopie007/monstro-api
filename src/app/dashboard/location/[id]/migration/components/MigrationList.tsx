@@ -12,6 +12,7 @@ import {
     EmptyDescription,
     EmptyTitle,
     EmptyHeader,
+    Skeleton,
 } from '@/components/ui'
 import { MigrationColumns } from '.'
 import { flexRender, getCoreRowModel, useReactTable } from '@/libs/table-utils'
@@ -25,7 +26,7 @@ import { Pagination,
     PaginationNext,
     PaginationPrevious } from '@/components/ui/pagination'
 
-export function MigrationList({ lid, onRefetchReady }: { lid: string; onRefetchReady?: (refetch: () => void) => void }) {
+export function MigrationList({ lid }: { lid: string }) {
     const [page, setPage] = useState(0)
     const [pageSize] = useState(15)
 
@@ -62,10 +63,6 @@ export function MigrationList({ lid, onRefetchReady }: { lid: string; onRefetchR
         refetch()
     }, [page, pageSize, refetch])
 
-    useEffect(() => {
-        onRefetchReady?.(refetch)
-    }, [refetch, onRefetchReady])
-
     return (
         <div className="space-y-2">
             <div className="border border-foreground/10 rounded-lg overflow-hidden">
@@ -89,7 +86,19 @@ export function MigrationList({ lid, onRefetchReady }: { lid: string; onRefetchR
                         ))}
                     </TableHeader>
                     <TableBody>
-                        {migrations.length > 0 ? (
+                        {isLoading ? (
+                            <>
+                                {Array.from({ length: 5 }).map((_, rowIndex) => (
+                                    <TableRow key={`skeleton-${rowIndex}`}>
+                                        {table.getHeaderGroups()[0].headers.map((header, cellIndex) => (
+                                            <TableCell key={`skeleton-${rowIndex}-${cellIndex}`}>
+                                                <Skeleton className="w-full h-4" />
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))}
+                            </>
+                        ) : migrations.length > 0 ? (
                             table.getRowModel().rows.map((row) => (
                                 <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
                                     {row.getVisibleCells().map((cell) => (

@@ -1,9 +1,9 @@
-import { boolean, pgTable, timestamp, text, uuid } from 'drizzle-orm/pg-core'
+import { boolean, pgTable, timestamp, text, uuid, jsonb } from 'drizzle-orm/pg-core'
 import { locations } from './locations'
 import { relations, sql } from 'drizzle-orm'
-import { memberPlans } from './MemberPlans'
+import { memberPlanPricing } from './MemberPlans'
 import { members } from './members'
-import { ImportedMemberStatusEnum } from './DatabaseEnums'
+import { ImportedMemberStatusEnum, PlanType } from './DatabaseEnums'
 
 export const importMembers = pgTable('import_members', {
     id: uuid('id')
@@ -24,11 +24,17 @@ export const importMembers = pgTable('import_members', {
     status: ImportedMemberStatusEnum('status').notNull().default('pending'),
     created: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
-    planId: text('plan_id').references(() => memberPlans.id, {
+    pricingId: text('pricing_id').references(() => memberPlanPricing.id, {
         onDelete: 'set null',
     }),
+    planType: PlanType('plan_type'),
     oauth: boolean('oauth').notNull().default(false),
     payment: boolean('payment').notNull().default(true),
+    metadata: jsonb('metadata')
+        .$type<{
+            customFieldValues?: Array<{ fieldId: string; value: string }>
+        }>()
+        .default(sql`'{}'::jsonb`),
     locationId: text('location_id')
         .notNull()
         .references(() => locations.id, { onDelete: 'cascade' }),
@@ -43,9 +49,9 @@ export const importedMembersRelations = relations(importMembers, ({ one }) => ({
         fields: [importMembers.memberId],
         references: [members.id],
     }),
-    plan: one(memberPlans, {
-        fields: [importMembers.planId],
-        references: [memberPlans.id],
+    pricing: one(memberPlanPricing, {
+        fields: [importMembers.pricingId],
+        references: [memberPlanPricing.id],
     })
 }));
 

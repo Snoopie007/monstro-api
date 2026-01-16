@@ -50,13 +50,13 @@ export const MigrationColumns = (): ColumnDef<ImportMember, any>[] => {
             },
         },
         {
-            accessorKey: 'plan',
-            header: 'Plan',
+            accessorKey: 'pricing',
+            header: 'Pricing',
             cell: ({ row }) => {
                 const migration = row.original
                 return (
                     <span className="text-sm">
-                        {migration.plan ? migration.plan?.name : '-'}
+                        {migration.pricing ? migration.pricing?.name : '-'}
                     </span>
                 )
             },
