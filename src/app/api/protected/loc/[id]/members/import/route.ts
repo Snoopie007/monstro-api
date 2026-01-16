@@ -1,9 +1,11 @@
 import { db } from "@/db/db";
 import { importMembers } from "@/db/schemas/ImportMembers";
+import { memberFields } from "@/db/schemas/members";
 import { NextResponse } from "next/server";
 import { sendEmailViaApi } from "@/libs/server/emails";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import Papa from "papaparse";
+import type { CustomFieldType } from "@/types/member";
 
 export async function POST(
     request: Request,
@@ -13,9 +15,20 @@ export async function POST(
 
     const data = await request.formData()
     const file = data.get('file')
-    const planId = data.get('planId')
+    const pricingId = data.get('pricingId')
+    const planType = data.get('planType') as 'recurring' | 'one-time' | null
     const fieldMapping = JSON.parse(data.get('fieldMapping') as string)
     const requirePayment = data.get('requirePayment') === 'true'
+
+    // Parse custom field data
+    const customFieldMappingRaw = data.get('customFieldMapping')
+    const customFieldMapping: Record<string, string> = customFieldMappingRaw
+        ? JSON.parse(customFieldMappingRaw as string)
+        : {}
+
+    const newCustomFieldsRaw = data.get('newCustomFields')
+    const newCustomFields: Array<{ csvColumn: string; fieldName: string; fieldType: string }> =
+        newCustomFieldsRaw ? JSON.parse(newCustomFieldsRaw as string) : []
 
     if (!file || !(file instanceof Blob)) {
         return NextResponse.json(
@@ -37,6 +50,27 @@ export async function POST(
     }
 
     try {
+        // Create new custom fields and map csvColumn -> fieldId
+        const newFieldIdMap: Record<string, string> = {}
+
+        for (const field of newCustomFields) {
+            const [created] = await db.insert(memberFields).values({
+                name: field.fieldName,
+                type: field.fieldType as CustomFieldType,
+                locationId: params.id,
+            }).returning()
+
+            newFieldIdMap[field.csvColumn] = created.id
+        }
+
+        // Merge all mappings: { fieldId: csvColumnName }
+        const allFieldMappings: Record<string, string> = {
+            ...customFieldMapping,
+            ...Object.fromEntries(
+                Object.entries(newFieldIdMap).map(([csvCol, fieldId]) => [fieldId, csvCol])
+            ),
+        }
+
         const arrayBuffer = await file.arrayBuffer()
         const content = new TextDecoder('utf-8').decode(arrayBuffer)
 
@@ -70,14 +104,26 @@ export async function POST(
 				continue;
 			}
 
+			// Build custom field values for this record
+			const customFieldValues: Array<{ fieldId: string; value: string }> = []
+
+			for (const [fieldId, csvColumn] of Object.entries(allFieldMappings)) {
+				const value = record[csvColumn]
+				if (value !== undefined && value !== null && value !== '') {
+					customFieldValues.push({ fieldId, value: String(value) })
+				}
+			}
+
 			insertMembers.push({
 				firstName,
 				lastName,
 				email,
 				phone: formattedPhone.number,
 				lastRenewalDay,
-				planId: planId ? planId.toString() : null,
+				pricingId: pricingId ? pricingId.toString() : null,
+				planType: planType || null,
 				locationId: params.id,
+				metadata: { customFieldValues },
 			});
 		}
 

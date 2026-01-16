@@ -12,10 +12,10 @@ import {
     ButtonGroup,
     Switch,
 } from '@/components/ui'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import Papa from 'papaparse'
 import { FileDown, Loader2 } from 'lucide-react'
-import { sleep, tryCatch } from '@/libs/utils'
+import { sleep, tryCatch, formatAmountForDisplay } from '@/libs/utils'
 import {
     Select,
     SelectTrigger,
@@ -27,7 +27,7 @@ import {
 import { toast } from 'react-toastify'
 import { useMemberPlans } from '@/hooks'
 import Link from 'next/link'
-import { MemberPlan } from '@/types'
+import { MemberPlan, MemberPlanPricing } from '@/types'
 import { ImportMemberForm, FieldMapping } from './'
 
 const REQUIRED_FIELDS = [
@@ -46,13 +46,26 @@ type FilePreviewType = {
 export function ImportMigration({ lid, onSuccess }: { lid: string; onSuccess?: () => void }) {
     const [isLoading, setIsLoading] = useState(false)
     const [file, setFile] = useState<File | undefined>(undefined)
-    const [planId, setPlanId] = useState<number | null>(null)
+    const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
+    const [pricingId, setPricingId] = useState<string | null>(null)
     const [preview, setPreview] = useState<FilePreviewType | null>(null)
     const [requirePayment, setRequirePayment] = useState(false)
     const [fieldMapping, setFieldMapping] = useState<Record<string, string>>({})
     const [errors, setErrors] = useState<string[]>([])
     const { plans } = useMemberPlans(lid)
     const [open, setOpen] = useState(false)
+
+    // Derived state for selected plan and pricing options
+    const selectedPlan = useMemo(() => {
+        return plans?.find((p: MemberPlan) => p.id === selectedPlanId)
+    }, [plans, selectedPlanId])
+
+    const pricingOptions = selectedPlan?.pricingOptions || []
+
+    // Reset pricing when plan changes
+    useEffect(() => {
+        setPricingId(null)
+    }, [selectedPlanId])
 
     useEffect(() => {
         setErrors([])
@@ -122,8 +135,8 @@ export function ImportMigration({ lid, onSuccess }: { lid: string; onSuccess?: (
 
         formData.append('file', file as File)
         formData.append('fieldMapping', JSON.stringify(fieldMapping))
-        if (planId) {
-            formData.append('planId', planId.toString())
+        if (pricingId) {
+            formData.append('pricingId', pricingId)
         }
         formData.append('requirePayment', requirePayment.toString())
         const { result, error } = await tryCatch(
@@ -210,34 +223,48 @@ export function ImportMigration({ lid, onSuccess }: { lid: string; onSuccess?: (
                                             Select a Plan
                                         </Label>
                                         <Select
-                                            onValueChange={(value) => {
-                                                setPlanId(Number(value))
-                                                console.log(value)
-                                            }}
+                                            value={selectedPlanId || ''}
+                                            onValueChange={setSelectedPlanId}
                                         >
                                             <SelectTrigger className="border-foreground/10">
                                                 <SelectValue placeholder="Select a Plan" />
                                             </SelectTrigger>
                                             <SelectContent className="border-foreground/10">
-                                                {plans.map(
-                                                    (
-                                                        p: MemberPlan,
-                                                        index: number
-                                                    ) => (
+                                                {(plans || [])
+                                                    .filter((p: MemberPlan) => p.id)
+                                                    .map((p: MemberPlan) => (
                                                         <SelectItem
-                                                            key={index}
-                                                            value={
-                                                                p.id?.toString() ||
-                                                                ''
-                                                            }
+                                                            key={p.id}
+                                                            value={p.id}
                                                         >
                                                             {p.name}
                                                         </SelectItem>
-                                                    )
-                                                )}
+                                                    ))}
                                             </SelectContent>
                                         </Select>
                                     </div>
+                                    {selectedPlanId && pricingOptions.length > 0 && (
+                                        <div className="space-y-1">
+                                            <Label className="text-tiny uppercase font-medium">
+                                                Select Pricing Option
+                                            </Label>
+                                            <Select
+                                                value={pricingId || ''}
+                                                onValueChange={setPricingId}
+                                            >
+                                                <SelectTrigger className="border-foreground/10">
+                                                    <SelectValue placeholder="Select pricing" />
+                                                </SelectTrigger>
+                                                <SelectContent className="border-foreground/10">
+                                                    {pricingOptions.map((pricing: MemberPlanPricing) => (
+                                                        <SelectItem key={pricing.id} value={pricing.id}>
+                                                            {pricing.name} - {formatAmountForDisplay(pricing.price / 100, pricing.currency || 'usd')}/{pricing.interval || "one-time"}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
                                     <p className="text-xs text-yellow-400">
                                         If no plan is selected, members will be
                                         added without a program or plan. You can

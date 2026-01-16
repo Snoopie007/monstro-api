@@ -12,6 +12,7 @@ import {
     EmptyDescription,
     EmptyTitle,
     EmptyHeader,
+    Skeleton,
 } from '@/components/ui'
 import { MigrationColumns } from '.'
 import { flexRender, getCoreRowModel, useReactTable } from '@/libs/table-utils'
@@ -89,7 +90,19 @@ export function MigrationList({ lid, onRefetchReady }: { lid: string; onRefetchR
                         ))}
                     </TableHeader>
                     <TableBody>
-                        {migrations.length > 0 ? (
+                        {isLoading ? (
+                            <>
+                                {Array.from({ length: 5 }).map((_, rowIndex) => (
+                                    <TableRow key={`skeleton-${rowIndex}`}>
+                                        {table.getHeaderGroups()[0].headers.map((header, cellIndex) => (
+                                            <TableCell key={`skeleton-${rowIndex}-${cellIndex}`}>
+                                                <Skeleton className="w-full h-4" />
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))}
+                            </>
+                        ) : migrations.length > 0 ? (
                             table.getRowModel().rows.map((row) => (
                                 <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
                                     {row.getVisibleCells().map((cell) => (

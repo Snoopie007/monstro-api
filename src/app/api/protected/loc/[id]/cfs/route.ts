@@ -8,6 +8,22 @@ type Props = {
 }
 
 
+export async function GET(req: NextRequest, props: Props) {
+	const { id } = await props.params;
+
+	try {
+		const customFields = await db.query.memberFields.findMany({
+			where: (field, { eq }) => eq(field.locationId, id),
+			orderBy: (field, { asc }) => [asc(field.created)],
+		});
+
+		return NextResponse.json({ success: true, data: customFields }, { status: 200 });
+	} catch (error) {
+		console.error("Error fetching custom fields:", error);
+		return NextResponse.json({ success: false, error: "Failed to fetch custom fields" }, { status: 500 });
+	}
+}
+
 export async function POST(req: NextRequest, props: Props) {
 	const { id } = await props.params;
 	const body = await req.json();

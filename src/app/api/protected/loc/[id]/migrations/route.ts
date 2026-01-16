@@ -1,6 +1,6 @@
 import { db } from "@/db/db"
 import { importMembers } from "@/db/schemas/ImportMembers"
-import { memberPlans } from "@/db/schemas/MemberPlans"
+import { memberPlanPricing } from "@/db/schemas/MemberPlans"
 import { desc, eq, sql } from "drizzle-orm"
 import { NextRequest, NextResponse } from "next/server"
  
@@ -21,7 +21,7 @@ export async function GET(
         const migrations = await db
             .select()
             .from(importMembers)
-            .leftJoin(memberPlans, eq(importMembers.planId, memberPlans.id))
+            .leftJoin(memberPlanPricing, eq(importMembers.pricingId, memberPlanPricing.id))
             .where(eq(importMembers.locationId, params.id))
             .orderBy(desc(importMembers.created))
             .limit(size)
@@ -36,7 +36,7 @@ export async function GET(
         // Transform result to flatten the joined data
         const formattedMigrations = migrations.map(row => ({
             ...row.import_members,
-            plan: row.member_plans,
+            pricing: row.member_plan_pricing,
         }))
         
         return NextResponse.json({
