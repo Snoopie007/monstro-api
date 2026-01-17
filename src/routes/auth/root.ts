@@ -5,8 +5,8 @@ import { mobileAppleLogin, mobileGoogleLogin, mobileLogin, mobileRefreshToken } 
 export const AuthRoutes = new Elysia({ prefix: '/auth' })
     .group('/mobile', (app) => {
         app.use(mobileLogin)
-            .use(mobileGoogleLogin)
-            .use(mobileAppleLogin)
-            .use(mobileRefreshToken);
+        app.use(mobileGoogleLogin)
+        app.use(mobileAppleLogin)
+        app.use(mobileRefreshToken)
         return app
     })

@@ -2,15 +2,23 @@ import { db } from "@/db/db"
 import { getTableColumns } from "drizzle-orm"
 import { Elysia, t } from "elysia"
 import {
-    memberPackages, memberPlanPricing, memberPlans, memberSubscriptions,
-    reservations
+    memberPackages,
+    memberPlanPricing,
+    memberPlans,
+    memberSubscriptions,
 } from "@/db/schemas"
-import { and, eq, sql, } from "drizzle-orm"
+import { and, eq, } from "drizzle-orm"
 import type { Program } from "@/types/program"
 
+const MemberPlansProps = {
+    params: t.Object({
+        mid: t.String(),
+        lid: t.String(),
+    }),
+};
 
 export function mlPlansRoutes(app: Elysia) {
-    return app.get('/plans', async ({ params, status }) => {
+    app.get('/plans', async ({ params, status }) => {
         const { mid, lid } = params;
         try {
             const plans = await Promise.all([
@@ -60,12 +68,9 @@ export function mlPlansRoutes(app: Elysia) {
             console.error(error);
             return status(500, { error: "Internal Server Error" });
         }
-    }, {
-        params: t.Object({
-            mid: t.String(),
-            lid: t.String(),
-        }),
-    })
+    }, MemberPlansProps)
+
+    return app;
 }
 
 
@@ -92,7 +97,7 @@ async function queryMemberPlans(
             price: memberPlanPricing.price,
         },
         planId: memberPlans.id,
-        reservationsCount: sql<number>`count(${reservations.id})`,
+        // reservationsCount: sql<number>`count(${reservations.id})`,
     })
         .from(table)
         .where(and(
@@ -101,7 +106,7 @@ async function queryMemberPlans(
         ))
         .innerJoin(memberPlanPricing, eq(table.memberPlanPricingId, memberPlanPricing.id))
         .innerJoin(memberPlans, eq(memberPlanPricing.memberPlanId, memberPlans.id))
-        .leftJoin(reservations, eq(table.id, reservations.id))
+        // .leftJoin(reservations, eq(table.id, reservations.id))
         .groupBy(
             table.id,
             memberPlans.id,

@@ -9,6 +9,7 @@ export type Contract = typeof contractTemplates.$inferSelect & {
     planName?: string;
     memberPlanId?: string;
     pricingId?: string;
+    signedOn?: Date;
 }
 
 

@@ -9,6 +9,7 @@ import { locationSupport } from "./support";
 import { locationPurchaseRoutes } from "./purchase";
 import { locationLeaderboard } from "./leaderboard";
 import { locationPlans } from "./plans";
+import { locationMigrateRoutes } from "./migrate";
 import { Elysia } from "elysia";
 import { locationEmail } from "./email";
 import { db } from "@/db/db";
@@ -67,5 +68,6 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
         app.use(locationLeaderboard);
         app.use(locationPlans);
         app.use(locationPurchaseRoutes);
+        app.use(locationMigrateRoutes);
         return app;
     })

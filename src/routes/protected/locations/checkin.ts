@@ -1,11 +1,16 @@
 import { db } from "@/db/db";
-import { attendances, memberPackages, reservations, recurringReservations, programSessions } from "@/db/schemas";
+import {
+    attendances, memberPackages, reservations,
+    recurringReservations, programSessions
+} from "@/db/schemas";
 import type { Reservation } from "@/types/attendance";
 import { isSameHour } from "date-fns";
 import Elysia from "elysia";
 import { eq } from "drizzle-orm";
-import { emailQueue, classQueue } from "@/libs/queues";
+import { classQueue } from "@/libs/queues";
 import { z } from "zod";
+
+
 const LocationCheckinProps = {
     body: z.object({
         reservationId: z.string(),
@@ -40,6 +45,10 @@ export async function locationCheckin(app: Elysia) {
 
                     reservation = {
                         ...recurring,
+                        cancelledAt: null,
+                        cancelledReason: null,
+                        isMakeUpClass: false,
+                        originalReservationId: null,
                         startOn,
                         endOn,
                         isRecurring,

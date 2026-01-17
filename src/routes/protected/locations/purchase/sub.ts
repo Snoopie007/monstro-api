@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberLocations, memberSubscriptions } from "@/db/schemas";
+import { memberPlans, memberPlanPricing, memberSubscriptions, importMembers } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { eq, and } from "drizzle-orm";
@@ -25,8 +25,68 @@ export function purchaseSubRoutes(app: Elysia) {
     app.group('/sub', (app) => {
         app.post('/', async ({ params, status, body }) => {
             const { lid } = params;
-            const { paymentMethodId, priceId, mid, memberContractId, paymentType } = body;
-            ;
+            const { priceId, mid, paymentType } = body;
+            try {
+
+                const pricing = await db.query.memberPlanPricing.findFirst({
+                    where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
+                    with: {
+                        plan: true,
+                    },
+                });
+
+                if (!pricing) {
+                    return status(404, { error: "Pricing not found" });
+                }
+
+                const startDate = new Date();
+                const endDate = calculatePeriodEnd(
+                    startDate,
+                    pricing.interval!,
+                    pricing.intervalThreshold!
+                );
+
+                const [subscription] = await db.insert(memberSubscriptions).values({
+                    startDate: startDate,
+                    currentPeriodStart: startDate,
+                    currentPeriodEnd: endDate,
+                    locationId: lid,
+                    memberId: mid,
+                    memberPlanPricingId: pricing.id,
+                    paymentType: paymentType,
+                    status: 'incomplete',
+                }).returning({ id: memberSubscriptions.id });
+
+                if (!subscription) {
+                    return status(500, { error: "Failed to create subscription" });
+                }
+
+                const { plan, ...rest } = pricing;
+                return status(200, {
+                    ...subscription,
+                    plan: plan,
+                    pricing: rest,
+                    planId: plan.id,
+                });
+            } catch (error) {
+                console.error(error);
+                return status(500, { error: "Failed to checkout" });
+            }
+        }, {
+            ...PurchaseSubProps,
+            body: t.Object({
+                priceId: t.String(),
+                mid: t.String(),
+                paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
+            }),
+        })
+        app.post('/stripe', async ({ params, status, body }) => {
+            const { lid } = params;
+            const {
+                paymentMethodId, mid, priceId,
+                memberPlanId, paymentType
+            } = body;
+
             try {
 
                 const member = await db.query.members.findFirst({
@@ -86,15 +146,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 };
 
                 const taxRate = taxRates?.find((t) => t.isDefault) || taxRates[0];
-
-
                 const startDate = new Date();
-                const endDate = calculatePeriodEnd(
-                    startDate,
-                    pricing.interval!,
-                    pricing.intervalThreshold!
-                );
-
                 stripe.setCustomer(member.stripeCustomerId);
 
                 const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentType as PaymentType);
@@ -109,29 +161,21 @@ export function purchaseSubRoutes(app: Elysia) {
                     metadata,
                 });
 
-                const [subscription] = await db.insert(memberSubscriptions).values({
-                    startDate: startDate,
-                    stripeSubscriptionId: sub.id,
-                    currentPeriodStart: startDate,
-                    currentPeriodEnd: endDate,
-                    locationId: lid,
-                    memberId: mid,
-                    memberPlanPricingId: pricing.id,
-                    paymentType: paymentType,
-                    metadata: {
-                        stripePaymentMethodId: paymentMethodId,
-                    },
-                    status: sub.status,
-                    memberContractId: memberContractId,
-                }).returning({ id: memberSubscriptions.id });
+
+                await db.transaction(async (tx) => {
+                    await tx.update(memberSubscriptions).set({
+                        status: sub.status,
+                        stripeSubscriptionId: sub.id,
+                        metadata: {
+                            stripePaymentMethodId: paymentMethodId,
+                        },
+                    }).where(eq(memberSubscriptions.id, memberPlanId));
+                });
 
 
-                if (!subscription) {
-                    return status(500, { error: "Failed to create subscription" });
-                }
+            
 
-
-                return status(200, { id: subscription.id, status: sub.status });
+                return status(200, { status: sub.status });
             } catch (error) {
                 console.error(error);
                 return status(500, { error: "Failed to checkout" });
@@ -141,8 +185,9 @@ export function purchaseSubRoutes(app: Elysia) {
             body: t.Object({
                 paymentMethodId: t.String(),
                 priceId: t.String(),
+           
+                memberPlanId: t.String(),
                 mid: t.String(),
-                memberContractId: t.String(),
                 paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
             }),
         });
@@ -151,133 +196,5 @@ export function purchaseSubRoutes(app: Elysia) {
     });
 
     return app
-    // return app.post('/sub', async ({ params, status, body }) => {
-    //     const { lid } = params;
-    //     const { paymentMethodId, pricingId, memberContractId, mid, ...data } = body;
-    //     try {
-
-
-    //         const pricing = await db.query.memberPlanPricing.findFirst({
-    //             where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, pricingId),
-    //             with: {
-    //                 plan: true,
-    //             },
-    //         });
-
-
-    //         if (!pricing) {
-    //             return status(404, { error: "Pricing not found" });
-    //         }
-    //         const location = await db.query.locations.findFirst({
-    //             where: (location, { eq }) => eq(location.id, lid),
-    //             with: {
-    //                 taxRates: true,
-    //                 locationState: true,
-    //             },
-    //         });
-
-
-    //         if (!location) {
-    //             return status(404, { error: "Location not found" });
-    //         }
-    //         const { taxRates, locationState } = location;
-    //         const integrations = await db.query.integrations.findFirst({
-    //             where: (integration, { eq, and }) =>
-    //                 and(
-    //                     eq(integration.locationId, lid),
-    //                     eq(integration.service, "stripe")
-    //                 ),
-    //             columns: {
-    //                 accountId: true,
-    //             },
-    //         });
-
-    //         if (!integrations?.accountId) {
-    //             throw new Error("Stripe integration not found");
-    //         }
-
-    //         const stripe = new MemberStripePayments(integrations.accountId);
-
-    //         const metadata = {
-    //             locationId: lid,
-    //             memberId: mid,
-    //         };
-
-
-
-    //         const startDate = data.startDate ? new Date(data.startDate) : new Date();
-    //         const endDate = calculatePeriodEnd(
-    //             startDate,
-    //             pricing.interval!,
-    //             pricing.intervalThreshold!
-    //         );
-
-    //         // let stripeCustomer = null;
-
-
-
-    //         // stripe.setCustomer(stripeCustomer?.id as string);
-
-    //         const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, data.paymentType as PaymentType);
-    //         const feePercent = locationState?.usagePercent + stripeFeePercentage;
-
-    //         const sub = await stripe.createSubscription(pricing, {
-    //             startDate,
-    //             // taxRateId,
-    //             // cancelAt: data.cancelAt,
-    //             // trialEnd: data.trialEnd,
-    //             feePercent,
-    //             paymentMethod: paymentMethodId || undefined,
-    //             metadata,
-    //         });
-
-    //         const sid = await db.transaction(async (tx) => {
-    //             const [ms] = await tx.insert(memberSubscriptions).values({
-    //                 startDate: startDate,
-    //                 stripeSubscriptionId: sub.id,
-    //                 currentPeriodStart: startDate,
-    //                 currentPeriodEnd: endDate,
-    //                 locationId: lid,
-    //                 memberId: mid,
-    //                 memberPlanId: pricing.memberPlanId,
-    //                 paymentType: data.paymentType,
-    //                 metadata: {
-    //                     stripePaymentMethodId: paymentMethodId,
-    //                 },
-    //                 memberContractId: memberContractId,
-    //             }).returning({ id: memberSubscriptions.id });
-    //            
-    //             await tx.update(memberLocations).set({ status: "active" }).where(
-    //                 and(
-    //                     eq(memberLocations.memberId, mid),
-    //                     eq(memberLocations.locationId, lid)
-    //                 )
-    //             );
-    //             return ms.id;
-    //         });
-
-    //         // if (data.importId) {
-    //         //     await db.update(importMembers).set({
-    //         //         status: "completed",
-    //         //     }).where(eq(importMembers.id, data.importId));
-    //         // }
-
-    //         return status(200, { message: "Checkout" });
-    //     } catch (error) {
-    //         console.error(error);
-    //         return status(500, { error: "Failed to checkout" });
-    //     }
-    // }, {
-    //     ...CheckoutSubProps,
-    //     body: z.object({
-    //         paymentMethodId: z.string(),
-    //         pricingId: z.string(),
-    //         mid: z.string(),
-    //         memberContractId: z.string(),
-    //         startDate: z.string().optional(),
-    //         cancelAt: z.string().optional(),
-    //         trialEnd: z.string().optional(),
-    //         paymentType: z.enum(["cash", "card", "us_bank_account", "paypal", "apple_pay", "google_pay"]),
-    //     }),
-    // })
+ 
 }

@@ -196,6 +196,8 @@ function cleanupHTML(html: string): string {
 
     return cleaned;
 }
+
+
 function interpolate(template: string, variables: Record<string, any>): string {
     if (!template) return "";
 

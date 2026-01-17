@@ -440,13 +440,15 @@ class VendorStripePayments extends BaseStripePayments {
 class MemberStripePayments extends BaseStripePayments {
     private _accountId: string | null;
     constructor(accountId?: string, secretKey?: string) {
-        super(secretKey || process.env.STRIPE_MEMBER_SECRET_KEY!);
+        super(secretKey || process.env.STRIPE_SECRET_KEY!);
         this._accountId = accountId || null;
     }
 
     async getPaymentMethod(id: string): Promise<Stripe.PaymentMethod> {
         return await this._stripe.paymentMethods.retrieve(id, { expand: ["customer"] });
     }
+
+
     override async getCharges(limit?: number) {
         if (!this._customer) {
             throw new Error("Customer not set");

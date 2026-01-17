@@ -21,129 +21,36 @@ const liveStripe = new VendorStripePayments();
 
 
 export function memberPayments(app: Elysia) {
-    app.get("/payments", async ({ status, params }) => {
-        const { mid } = params;
-        try {
-            const methods = await db.query.paymentMethods.findMany({
-                where: (paymentMethod, { eq }) => eq(paymentMethod.memberId, mid),
-                columns: {
-                    fingerprint: false,
-                }
-            })
-
-
-
-            return status(200, methods)
-        } catch (err) {
-            console.log(err)
-            return status(500, { error: err })
-        }
-    }, GetMPProps)
-    app.delete("/payments", async ({ status, body, params }) => {
-
-        const { paymentMethodId } = body;
-        try {
-
-            await liveStripe.detachPaymentMethod(paymentMethodId)
-            await db.delete(paymentMethods).where(eq(paymentMethods.stripeId, paymentMethodId))
-
-            return status(200, { message: "Payment method deleted" })
-        } catch (err) {
-            console.log(err)
-            return status(500, { error: err })
-        }
-    }, {
-        ...GetMPProps,
-        body: z.object({
-            paymentMethodId: z.string(),
-        }),
-    })
-
-
-    app.group("/payments/checkout", (app) => {
+    app.group("/payments", (app) => {
         app.get("/", async ({ status, params }) => {
             const { mid } = params;
             try {
-                const member = await db.query.members.findFirst({
-                    where: (member, { eq }) => eq(member.id, mid)
+                const methods = await db.query.paymentMethods.findMany({
+                    where: (paymentMethod, { eq }) => eq(paymentMethod.memberId, mid),
+                    columns: {
+                        fingerprint: false,
+                    }
                 })
-                if (!member) {
-                    return status(404, { error: "Member not found" })
-                }
-                const stripe = new VendorStripePayments();
-
-                let stripeCustomerId = member.stripeCustomerId;
-                if (!stripeCustomerId) {
-                    const newCustomer = await stripe.createCustomer({
-                        email: member.email,
-                        phone: member.phone,
-                        firstName: member.firstName,
-                        lastName: member.lastName,
-                    }, undefined, {
-                        memberId: mid,
-                    });
-                    await db.update(members).set({
-                        stripeCustomerId: newCustomer.id,
-                    }).where(eq(members.id, mid));
-                    stripeCustomerId = newCustomer.id;
-                }
-
-                stripe.setCustomer(stripeCustomerId);
-                const setupIntent = await stripe.createSetupIntent();
-                const ephemeralKey = await stripe.createEphemeralKey();
 
 
 
-                return status(200, { customer: stripeCustomerId, ephemeralKey: ephemeralKey.secret })
+                return status(200, methods)
             } catch (err) {
                 console.log(err)
                 return status(500, { error: err })
             }
         }, GetMPProps)
-        app.post("/", async ({ status, body, params }) => {
-            const { mid } = params;
-            const { token, lid, secret } = body;
-            if (!secret) {
-                return status(400, { error: "Secret is required" })
-            }
-            // Extract SetupIntent ID from client secret
-            const setupIntentId = secret.split('_secret_')[0];
-            if (!setupIntentId) {
-                return status(400, { error: "Setup intent ID is required" })
-            }
-            console.log(setupIntentId)
+
+        app.delete("/", async ({ status, body, params }) => {
+
+
+            const { paymentMethodId } = body;
             try {
 
-                // const member = await db.query.members.findFirst({
-                //     where: (member, { eq }) => eq(member.id, mid)
-                // })
-                // if (!member) {
-                //     return status(404, { error: "Member not found" })
-                // }
-                const stripe = new VendorStripePayments();
+                await liveStripe.detachPaymentMethod(paymentMethodId)
+                await db.delete(paymentMethods).where(eq(paymentMethods.stripeId, paymentMethodId))
 
-                // let stripeCustomerId = member.stripeCustomerId;
-                // if (!stripeCustomerId) {
-                //     const newCustomer = await stripe.createCustomer({
-                //         email: member.email,
-                //         phone: member.phone,
-                //         firstName: member.firstName,
-                //         lastName: member.lastName,
-                //     }, undefined, {
-                //         memberId: mid,
-                //     });
-                //     await db.update(members).set({
-                //         stripeCustomerId: newCustomer.id,
-                //     }).where(eq(members.id, mid));
-                //     stripeCustomerId = newCustomer.id;
-                // }
-                // stripe.setCustomer(stripeCustomerId);
-                // const setupIntent = await stripe.createSetupIntent(stripeCustomerId, token);
-                // const paymentMethod = setupIntent.payment_method as Stripe.PaymentMethod;
-                // console.log(paymentMethod)
-                // await attachPaymentMethod(paymentMethod, mid, `${member.firstName} ${member.lastName}`);
-
-                return status(200, { success: true })
+                return status(200, { message: "Payment method deleted" })
             } catch (err) {
                 console.log(err)
                 return status(500, { error: err })
@@ -151,76 +58,134 @@ export function memberPayments(app: Elysia) {
         }, {
             ...GetMPProps,
             body: z.object({
-                token: z.string().optional(),
-                lid: z.string().optional(),
-                secret: z.string().optional(),
+                paymentMethodId: z.string(),
             }),
         })
-        return app;
-    })
 
-
-    app.group("/payments/new", (app) => {
-        app.post("/", async ({ status, body, params }) => {
-            const { mid } = params;
-            const { userAgent, secret } = body;
-            // const ip = headers['x-forwarded-for'] || headers['cf-connecting-ip'] || '127.0.0.1';
-            const setupIntentId = secret.split('_secret_')[0];
-            if (!setupIntentId) {
-                return status(400, { error: "Setup intent ID is required" })
-            }
-            try {
-                const member = await db.query.members.findFirst({
-                    where: (member, { eq }) => eq(member.id, mid)
-                })
-
-                if (!member || !member.stripeCustomerId) {
-                    return status(404, { error: "Member not found" })
+        app.group("/new", (app) => {
+            app.post("/", async ({ status, body, params }) => {
+                const { mid } = params;
+                const { userAgent, secret } = body;
+                // const ip = headers['x-forwarded-for'] || headers['cf-connecting-ip'] || '127.0.0.1';
+                const setupIntentId = secret.split('_secret_')[0];
+                if (!setupIntentId) {
+                    return status(400, { error: "Setup intent ID is required" })
                 }
+                try {
+                    const member = await db.query.members.findFirst({
+                        where: (member, { eq }) => eq(member.id, mid)
+                    })
 
-                const isTestMember = member.email === 'mtest@yahoo.com';
-                const stripe = new VendorStripePayments(isTestMember ? process.env.STRIPE_TEST_SECRET_KEY : undefined);
-                stripe.setCustomer(member.stripeCustomerId);
-                const setupIntent = await stripe.getSetupIntent(setupIntentId);
+                    if (!member) {
+                        return status(404, { error: "Member not found" })
+                    }
 
 
-                if (setupIntent.status === 'succeeded') {
-                    // Save the payment method to your database
-                    const paymentMethod = setupIntent.payment_method as Stripe.PaymentMethod;
+                    const isTestMember = member.email === 'mtest@yahoo.com';
+                    const stripe = new VendorStripePayments(isTestMember ? process.env.STRIPE_TEST_SECRET_KEY : undefined);
 
-                    const pm = await attachPaymentMethod(paymentMethod, mid);
 
-                    return status(200, pm);
-                } else {
-                    return status(400, { error: 'Setup intent not succeeded' });
+
+                    let stripeCustomerId = member.stripeCustomerId;
+                    if (!stripeCustomerId) {
+                        const newCustomer = await stripe.createCustomer({
+                            email: member.email,
+                            phone: member.phone,
+                            firstName: member.firstName,
+                            lastName: member.lastName,
+                        }, undefined, {
+                            memberId: mid,
+                        });
+                        await db.update(members).set({
+                            stripeCustomerId: newCustomer.id,
+                        }).where(eq(members.id, mid));
+                        stripeCustomerId = newCustomer.id;
+                    }
+
+
+                    stripe.setCustomer(stripeCustomerId);
+                    const setupIntent = await stripe.getSetupIntent(setupIntentId);
+
+
+                    if (setupIntent.status === 'succeeded') {
+                        // Save the payment method to your database
+                        const paymentMethod = setupIntent.payment_method as Stripe.PaymentMethod;
+
+                        const pm = await attachPaymentMethod(paymentMethod, mid);
+
+                        return status(200, pm);
+                    } else {
+                        return status(400, { error: 'Setup intent not succeeded' });
+                    }
+
+                } catch (err) {
+                    console.log(err)
+                    return status(500, { error: err })
                 }
+            }, {
+                ...GetMPProps,
+                body: z.object({
+                    userAgent: z.string().optional(),
+                    secret: z.string(),
+                }),
+            })
+            app.get("/intent", async ({ status, params, query }) => {
+                const { mid } = params;
+                const { ephemeralKey } = query;
+                try {
+                    const member = await db.query.members.findFirst({
+                        where: (member, { eq }) => eq(member.id, mid)
+                    })
 
-            } catch (err) {
-                console.log(err)
-                return status(500, { error: err })
-            }
-        }, {
-            ...GetMPProps,
-            body: z.object({
-                userAgent: z.string().optional(),
-                secret: z.string(),
-            }),
+                    if (!member) {
+                        throw new Error("Member not found")
+                    }
+
+                    const stripe = new VendorStripePayments();
+
+                    let stripeCustomerId = member.stripeCustomerId;
+                    if (!stripeCustomerId) {
+                        const newCustomer = await stripe.createCustomer({
+                            email: member.email,
+                            phone: member.phone,
+                            firstName: member.firstName,
+                            lastName: member.lastName,
+                        }, undefined, {
+                            memberId: mid,
+                        });
+                        await db.update(members).set({
+                            stripeCustomerId: newCustomer.id,
+                        }).where(eq(members.id, mid));
+                        stripeCustomerId = newCustomer.id;
+                    }
+
+                    stripe.setCustomer(stripeCustomerId);
+                    const setupIntent = await stripe.createSetupIntent();
+
+                    let ek = undefined;
+                    if (ephemeralKey) {
+                        const ephemeralKey = await stripe.createEphemeralKey();
+                        ek = ephemeralKey;
+                    }
+
+                    return status(200, {
+                        customer: setupIntent.customer,
+                        clientSecret: setupIntent.client_secret,
+                        ephemeralKey: ek,
+                    })
+                } catch (err) {
+                    console.log(err)
+                    return status(500, { error: err })
+                }
+            }, {
+                ...GetMPProps,
+                query: z.object({
+                    ephemeralKey: z.boolean().optional().default(false),
+                }),
+            })
+            return app;
         })
-        app.get("/intent", async ({ status, params }) => {
-            const { mid } = params;
-            try {
-                const stripe = await getStripeCustomer(mid);
-                const setupIntent = await stripe.createSetupIntent();
 
-                return status(200, {
-                    customer: setupIntent.customer,
-                    clientSecret: setupIntent.client_secret,
-                })
-            } catch (err) {
-                console.log(err)
-                return status(500, { error: err })
-            }
-        }, GetMPProps)
         return app;
     })
 
@@ -228,23 +193,6 @@ export function memberPayments(app: Elysia) {
     return app;
 }
 
-
-async function getStripeCustomer(mid: string) {
-    const member = await db.query.members.findFirst({
-        where: (member, { eq }) => eq(member.id, mid)
-    })
-
-    if (!member) {
-        throw new Error("Member not found")
-    }
-
-    if (!member.stripeCustomerId) {
-        throw new Error("Stripe Customer not found")
-    }
-
-    liveStripe.setCustomer(member.stripeCustomerId);
-    return liveStripe;
-}
 
 
 

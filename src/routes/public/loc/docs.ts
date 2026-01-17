@@ -4,7 +4,6 @@ import { interpolate } from "@/libs/utils";
 import { DocumentPageTemplate, NotFoundPageTemplate } from "@/libs/html";
 import { z } from "zod";
 
-
 const DocsProps = {
 	params: z.object({
 		did: z.string(),
@@ -47,7 +46,10 @@ export const docsRoutes = new Elysia({ prefix: "/docs" })
 
 			let variables: Record<string, any> = {
 				location: ct.location,
-				member,
+				member: {
+					...member,
+					name: member.firstName + " " + member.lastName,
+				},
 			};
 
 			if (type === "contract" && pricingId) {
@@ -61,9 +63,10 @@ export const docsRoutes = new Elysia({ prefix: "/docs" })
 				if (pricing) {
 					const { plan, ...rest } = pricing;
 					variables["plan"] = {
-						...plan,
-						...rest,
-						pricingName: pricing.name,
+						name: plan.name,
+						price: rest.price,
+						interval: `${rest.interval} ${rest.intervalThreshold}`,
+						pricingName: rest.name,
 					};
 				}
 			}

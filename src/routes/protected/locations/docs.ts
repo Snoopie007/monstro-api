@@ -1,11 +1,7 @@
 
 import type { Elysia } from "elysia";
-import { t } from "elysia";
 import S3Bucket from "@/libs/s3";
 import { z } from "zod";
-import { db } from "@/db/db";
-import { memberContracts } from "@/db/schemas";
-import type { Contract, Member } from "@/types";
 const s3 = new S3Bucket();
 
 const DownloadDocProps = {
@@ -19,76 +15,10 @@ const DownloadDocProps = {
 
 };
 
-const LocationDocsProps = {
-    params: t.Object({
-        lid: t.String(),
-    })
-};
-
-async function generatePDF(template: Contract, variables: Record<string, any>) {
-    // try {
-    //         const pdfBuffer = await generatePDFBuffer(template, {
-    //             location: template.location,
-    //             member,
-    //             plan: plan,
-    //         });
-    //         const filename = `${template.title
-    //             .toLowerCase()
-    //             .replace(/ /g, "-")}-${new Date().getTime()}.pdf`;
-
-    //         await s3.uploadBuffer(
-    //             pdfBuffer,
-    //             `members/${mid}/locations/${lid}/docs/${filename}`,
-    //             "application/pdf"
-    //         );
-
-    //         await db.update(memberContracts)
-    //             .set({ pdfFilename: filename })
-    //             .where(eq(memberContracts.id, c.id));
-    //     } catch (error) {
-    //         console.error("Background PDF generation failed:", error);
-    //     }
-
-}
 
 export async function locationDocs(app: Elysia) {
 
-    app.post('/docs/', async ({ params, status, body }) => {
-        const { lid } = params;
-        const { mid, priceId, signature, templateId } = body;
 
-        try {
-            // const [contract] = await db.insert(memberContracts).values({
-            //     memberId: mid,
-            //     locationId: lid,
-            //     templateId: templateId,
-            //     signature: signature,
-            // }).returning();
-
-
-            // Generate PDF in background (non-blocking)
-            // generatePDF(contract, {
-            //     location: contract.location,
-            //     member: contract.member,
-            //     plan: contract.plan,
-            // });
-
-
-            return status(200, { id: "test-id" });
-        } catch (error) {
-            console.error(error);
-            status(500, { error: 'Internal server error' });
-            return { error: 'Internal server error' }
-        }
-    }, {
-        ...LocationDocsProps,
-        body: t.Object({
-            mid: t.String(),
-            priceId: t.String(),
-            signature: t.String(t.Optional),
-            templateId: t.String(),
-        })
-    })
     app.get('/docs/download/:file', async ({ params, status, query, set }) => {
         const { file, lid } = params;
 

@@ -1,32 +1,93 @@
 import { db } from "@/db/db";
-import { memberLocations, memberSubscriptions } from "@/db/schemas";
+import { importMembers, memberPackages, memberPaymentMethods, transactions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculatePeriodEnd,
-    calculateStripeFeePercentage,
-    calculateCancelAt
+    calculateTax,
+    calculateStripeFeeAmount
 } from "./utils";
 
+import Stripe from "stripe";
 
-
-import type { PaymentType } from "@/types/DatabaseEnums";
-
-const PurchaseSubProps = {
+const PurchasePkgProps = {
     params: z.object({
         lid: z.string(),
     }),
 };
 
-export function purchaseSubRoutes(app: Elysia) {
+
+
+export function purchasePkgRoutes(app: Elysia) {
 
     app.group('/pkg', (app) => {
         app.post('/', async ({ params, status, body }) => {
+
             const { lid } = params;
-            const { paymentMethodId, priceId, mid, memberContractId, paymentType } = body;
-            ;
+            const { priceId, mid, paymentType } = body;
+            try {
+
+                const pricing = await db.query.memberPlanPricing.findFirst({
+                    where: (mpp, { eq }) => eq(mpp.id, priceId),
+                    with: {
+                        plan: true,
+                    },
+                });
+
+                if (!pricing) {
+                    return status(404, { error: "Pricing not found" });
+                }
+
+                const today = new Date();
+                const endDate = calculatePeriodEnd(
+                    today,
+                    pricing.expireInterval!,
+                    pricing.expireThreshold!
+                );
+
+
+                const [pkg] = await db.insert(memberPackages).values({
+                    locationId: lid,
+                    memberId: mid,
+                    memberPlanPricingId: pricing.id,
+                    paymentType: paymentType,
+                    startDate: today,
+                    expireDate: endDate,
+                    status: "incomplete",
+                }).returning();
+
+                if (!pkg) {
+                    return status(500, { error: "Failed to create package" });
+                }
+                const { plan, ...rest } = pricing;
+
+                return status(200, {
+                    ...pkg,
+                    pricing: rest,
+                    plan: plan,
+                    planId: plan.id,
+                });
+            } catch (error) {
+                console.error(error);
+                return status(500, { error: "Failed to checkout" });
+            }
+        }, {
+            ...PurchasePkgProps,
+            body: t.Object({
+                priceId: t.String(),
+                mid: t.String(),
+                paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
+            }),
+        })
+        app.post('/stripe', async ({ params, status, body }) => {
+            const { lid } = params;
+            const {
+                paymentMethodId, mid, priceId,
+                memberPlanId, paymentType, migrateId
+            } = body;
+
             try {
 
                 const member = await db.query.members.findFirst({
@@ -74,75 +135,119 @@ export function purchaseSubRoutes(app: Elysia) {
                 const { taxRates, locationState, integrations } = location;
 
                 const integration = integrations?.find((i) => i.service === "stripe");
-                if (!integration) {
+                if (!integration || !integration.accountId) {
                     throw new Error("Stripe integration not found");
                 }
 
                 const stripe = new MemberStripePayments(integration.accountId);
+
+                const paymentMethod = await db.query.paymentMethods.findFirst({
+                    where: (paymentMethod, { eq }) => eq(paymentMethod.id, paymentMethodId),
+                });
+
+                if (!paymentMethod) {
+                    return status(404, { error: "Payment method not found" });
+                }
+
+                await db.insert(memberPaymentMethods).values({
+                    paymentMethodId: paymentMethodId,
+                    memberId: mid,
+                    locationId: lid,
+                }).onConflictDoNothing({
+                    target: [
+                        memberPaymentMethods.paymentMethodId,
+                        memberPaymentMethods.memberId,
+                        memberPaymentMethods.locationId
+                    ],
+                });
 
                 const metadata = {
                     locationId: lid,
                     memberId: mid,
                 };
 
-                const taxRate = taxRates?.find((t) => t.isDefault) || taxRates[0];
-
-
-                const startDate = new Date();
-                const endDate = calculatePeriodEnd(
-                    startDate,
-                    pricing.interval!,
-                    pricing.intervalThreshold!
-                );
-
                 stripe.setCustomer(member.stripeCustomerId);
 
-                const stripeFeePercentage = calculateStripeFeePercentage(pricing.price, paymentType as PaymentType);
-                const feePercent = locationState?.usagePercent + stripeFeePercentage;
+                const today = new Date();
 
-                const sub = await stripe.createSubscription(pricing, {
-                    startDate,
-                    taxRateId: taxRate?.stripeRateId || undefined,
-                    cancelAt: calculateCancelAt(startDate, pricing),
-                    feePercent,
-                    paymentMethod: paymentMethodId || undefined,
-                    metadata,
-                });
+                const tax = calculateTax(pricing.price, taxRates);
+                let subTotal = pricing.price;
+                let total = subTotal + tax;
+                const monstroFee = Math.floor(subTotal * (locationState.usagePercent / 100));
+                const stripeFee = calculateStripeFeeAmount((
+                    locationState.settings.passOnFees ? total : total + monstroFee
+                ), paymentMethod.type);
 
-                const [subscription] = await db.insert(memberSubscriptions).values({
-                    startDate: startDate,
-                    stripeSubscriptionId: sub.id,
-                    currentPeriodStart: startDate,
-                    currentPeriodEnd: endDate,
-                    locationId: lid,
-                    memberId: mid,
-                    memberPlanPricingId: pricing.id,
-                    paymentType: paymentType,
-                    metadata: {
-                        stripePaymentMethodId: paymentMethodId,
-                    },
-                    status: sub.status,
-                    memberContractId: memberContractId,
-                }).returning({ id: memberSubscriptions.id });
+                const applicationFeeAmount = monstroFee + stripeFee;
 
-
-                if (!subscription) {
-                    return status(500, { error: "Failed to create subscription" });
+                if (locationState.settings.passOnFees) {
+                    total += applicationFeeAmount;
+                    subTotal += applicationFeeAmount;
                 }
 
 
-                return status(200, { id: subscription.id, status: sub.status });
+                const description = `Payment for ${pricing.plan.name}/${pricing.name}`;
+                await stripe.createPaymentIntent(total, applicationFeeAmount, {
+                    paymentMethod: paymentMethod.stripeId,
+                    currency: pricing.plan.currency,
+                    description: description,
+                    productName: `${pricing.plan.name}/${pricing.name}`,
+                    unitCost: subTotal,
+                    tax: tax,
+                    metadata: {
+                        pricingId: pricing.id,
+                        planId: pricing.plan.id,
+                        ...metadata,
+                    },
+                });
+
+                await db.transaction(async (tx) => {
+                    await tx.update(memberPackages).set({
+                        status: "active",
+                        metadata: {
+                            paymentMethodId: paymentMethod.stripeId,
+                        },
+                    }).where(eq(memberPackages.id, memberPlanId));
+                    await tx.insert(transactions).values({
+                        description: description,
+                        items: [{ name: pricing.plan.name, quantity: 1, price: pricing.price }],
+                        type: "inbound",
+                        total: pricing.price + tax,
+                        subTotal: pricing.price,
+                        totalTax: tax,
+                        status: "paid",
+                        locationId: lid,
+                        memberId: mid,
+                        paymentType: paymentType,
+                        chargeDate: today,
+                    });
+                });
+
+
+                if (migrateId) {
+                    await db.update(importMembers).set({
+                        status: "completed"
+                    }).where(eq(importMembers.id, migrateId));
+                }
+
+
+                return status(200, { status: "active" });
             } catch (error) {
-                console.error(error);
+
+                if (error instanceof Stripe.errors.StripeError) {
+                    console.error('Stripe error', error.message);
+                    return status(500, { error: error.message });
+                }
                 return status(500, { error: "Failed to checkout" });
             }
         }, {
-            ...PurchaseSubProps,
+            ...PurchasePkgProps,
             body: t.Object({
+                migrateId: t.Optional(t.String()),
                 paymentMethodId: t.String(),
                 priceId: t.String(),
+                memberPlanId: t.String(),
                 mid: t.String(),
-                memberContractId: t.String(),
                 paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
             }),
         });

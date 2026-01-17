@@ -8,7 +8,7 @@ function calculatePeriodEnd(
     threshold: number
 ): Date {
     const endDate = new Date(startDate); // Initialize endDate with startDate
-
+    console.log(interval, threshold);
     switch (interval) {
         case "day":
             endDate.setDate(endDate.getDate() + threshold);
