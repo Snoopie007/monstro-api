@@ -22,7 +22,7 @@ import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
 export type Member = typeof members.$inferSelect & {
   familyMembers?: FamilyMember[]
   relatedByFamily?: FamilyMember[]
-  memberLocation?: MemberLocation
+  memberLocations?: MemberLocation[]
   subscriptions?: MemberSubscription[]
   packages?: MemberPackage[]
   referrals?: MemberReferral[]

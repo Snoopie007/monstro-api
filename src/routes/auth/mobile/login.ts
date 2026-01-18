@@ -1,12 +1,12 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { db } from "../../../db/db";
 import bcrypt from "bcryptjs";
 import { generateMobileToken } from "../../../libs/auth";
-import { z } from "zod";
+
 const MobileLoginSchema = {
-    body: z.object({
-        email: z.string(),
-        password: z.string(),
+    body: t.Object({
+        email: t.String({ format: "email" }),
+        password: t.String(),
     }),
 };
 
@@ -22,18 +22,21 @@ export async function mobileLogin(app: Elysia) {
         }
         try {
 
-            const user = await db.query.users.findFirst({
-                where: (user, { eq }) => eq(user.email, `${email}`),
+            const account = await db.query.accounts.findFirst({
+                where: (account, { eq }) => eq(account.accountId, `${email}`),
+                with: {
+                    user: true
+                },
             });
 
-            console.log(user ? "User found" : "User not found");
+            console.log(account ? "Account found" : "Account not found");
 
-            if (!user || !user.password) {
+            if (!account || !account.password) {
                 console.log("User not found or no password in simple query");
                 return status(404, { message: "User not found." })
             }
 
-            const match = await bcrypt.compare(password, user.password);
+            const match = await bcrypt.compare(password, account.password);
 
             console.log("Password match:", match);
 
@@ -43,7 +46,7 @@ export async function mobileLogin(app: Elysia) {
             }
 
             const member = await db.query.members.findFirst({
-                where: (member, { eq }) => eq(member.userId, `${user.id}`)
+                where: (member, { eq }) => eq(member.userId, `${account.userId}`)
             });
 
             if (!member) {
@@ -51,9 +54,9 @@ export async function mobileLogin(app: Elysia) {
             }
 
 
-            const { password: userPassword, ...rest } = user;
+            const user = account.user;
             const data = {
-                ...rest,
+                ...user,
                 phone: member.phone,
                 stripeCustomerId: member?.stripeCustomerId,
                 memberId: member?.id,
@@ -63,11 +66,18 @@ export async function mobileLogin(app: Elysia) {
 
             const { accessToken, refreshToken, expires } = await generateMobileToken({
                 memberId: member.id,
-                userId: user.id,
+                userId: user?.id,
                 email: user.email,
+
             });
 
-            return status(200, { token: accessToken, refreshToken, expires, user: data })
+            return status(200, {
+                token: accessToken,
+                refreshToken,
+                expires,
+                user: data,
+                setupComplete: member.setupCompleted
+            })
         } catch (error) {
             console.error("Error in mobile login:", error);
             return status(500, { message: "Internal server error" });

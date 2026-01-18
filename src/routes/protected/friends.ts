@@ -1,8 +1,7 @@
 import { db } from "@/db/db"
 import { Elysia, type Context } from "elysia"
-import { z } from "zod";
 
-export const userFriends = new Elysia({ prefix: '/friends' })
+export const friendsRoutes = new Elysia({ prefix: '/friends' })
     .get('/', async ({ params, body, status, ...ctx }) => {
         const { userId } = ctx as Context & { userId: string };
         if (!userId) {

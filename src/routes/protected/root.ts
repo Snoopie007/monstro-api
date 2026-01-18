@@ -7,7 +7,7 @@ import {
     userFeedsRoutes,
     userMomentsRoutes,
 } from './users';
-import { userFriends } from './friends';
+import { friendsRoutes } from './friends';
 import { mediaRoutes } from './medias';
 import { stripeRoutes } from './stripe';
 import { userPushTokenRoutes } from './push-token';
@@ -31,7 +31,7 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(commentRoutes)
     .use(reactionRoutes)
     .use(userChats)
-    .use(userFriends)
+    .use(friendsRoutes)
     .use(mediaRoutes)
     .use(userPushTokenRoutes)
     .use(groupRoutes)

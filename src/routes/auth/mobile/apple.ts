@@ -8,86 +8,24 @@ import { z } from "zod";
 const APPLE_JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
 
 
-const AppleLoginSchema = {
-    body: z.object({
-        idToken: z.string(),
-    }),
-};
-
-
-const AppleNewAccountSchema = {
+const ApplAccountSchema = {
     body: z.object({
         token: z.string(),
         email: z.string(),
         name: z.string(),
-        phone: z.string().optional(),
+        additionalData: z.object({
+            migrateId: z.string().optional(),
+            referralCode: z.string().optional(),
+        }).optional(),
     }),
 };
 
 
 export async function mobileAppleLogin(app: Elysia) {
-    app.post('/apple', async ({ body, status }) => {
-        const { idToken } = body;
 
-        if (!idToken) {
-            return status(400, { message: "Id token is required" });
-        }
-
-        try {
-            const decodedToken = await jwtVerify(idToken, APPLE_JWKS, {
-                issuer: "https://appleid.apple.com",
-                audience: process.env.APPLE_CLIENT_ID,
-            });
-
-            const { payload } = decodedToken;
-            const account = await db.query.accounts.findFirst({
-                where: (account, { eq, and }) => and(
-                    eq(account.accountId, `${payload.sub}`),
-                    eq(account.provider, "apple")
-                )
-            });
-
-            if (!account) {
-                return status(404, { message: "No Account" });
-            }
-
-            const user = await db.query.users.findFirst({
-                where: (user, { eq }) => eq(user.id, account.userId!),
-                with: {
-                    member: true
-                },
-            });
-
-            if (!user) {
-                return status(404, { message: "No Account" });
-            }
-
-            const { password, member, ...rest } = user;
-            const data = {
-                ...rest,
-                phone: member?.phone,
-                image: member?.avatar,
-                stripeCustomerId: member?.stripeCustomerId,
-                memberId: member?.id,
-                role: "member",
-            };
-
-            const { accessToken, refreshToken, expires } = await generateMobileToken({
-                memberId: member.id,
-                userId: user.id,
-                email: user.email,
-            });
-            console.log(accessToken, refreshToken, user, data, expires);
-            return status(200, { token: accessToken, refreshToken, user: data, expires });
-        } catch (error) {
-            console.error(error);
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            return status(500, { message: errorMessage });
-        }
-    }, AppleLoginSchema)
 
     app.post('/apple/new', async ({ body, status }) => {
-        const { token, email, name, phone } = body;
+        const { token, email, name } = body;
 
         if (!token) {
             return status(400, { message: "Id token is required" });
@@ -100,24 +38,62 @@ export async function mobileAppleLogin(app: Elysia) {
             });
 
             const { payload } = decodedToken;
+            console.log(payload);
 
-            let user = await db.query.users.findFirst({
-                where: (user, { eq }) => eq(user.email, payload.email as string),
+            const account = await db.query.accounts.findFirst({
+                where: (account, { eq, and }) => and(
+                    eq(account.accountId, `${payload.sub}`),
+                    eq(account.provider, "apple")
+                ),
                 with: {
-                    member: true
+                    user: {
+                        with: {
+                            member: true
+                        }
+                    }
                 },
             });
 
+            let user = account?.user;
+
             if (!user) {
-                const result = await db.transaction(async (tx) => {
+                user = await db.query.users.findFirst({
+                    where: (user, { eq }) => eq(user.email, email),
+                    with: {
+                        member: true
+                    },
+                });
+            }
+
+            if (!user) {
+                user = await db.transaction(async (tx) => {
+
+
+
+
                     const [newUser] = await tx.insert(users).values({
                         email,
                         name,
-                        image: null, // Apple doesn't provide profile pictures
                     }).returning();
 
                     if (!newUser) {
-                        throw new Error("Failed to create user");
+                        tx.rollback();
+                        return;
+                    }
+
+                    const [newAccount] = await tx.insert(accounts).values({
+                        userId: newUser.id,
+                        provider: "apple",
+                        type: "oidc",
+                        accountId: `${payload.sub}`,
+                        expiresAt: payload.exp || null,
+                        tokenType: "bearer",
+                        scope: "openid",
+                        idToken: token,
+                    }).returning();
+                    if (!newAccount) {
+                        tx.rollback();
+                        return;
                     }
 
                     const [newMember] = await tx.insert(members).values({
@@ -125,28 +101,21 @@ export async function mobileAppleLogin(app: Elysia) {
                         firstName: name.split(" ")[0] || "Unknown",
                         lastName: name.split(" ")[1] || "",
                         email: email,
-                        phone: phone || "",
+                        phone: '',
                         referralCode: generateReferralCode(),
                     }).returning();
 
                     if (!newMember) {
-                        throw new Error("Failed to create member");
+                        tx.rollback();
+                        return;
                     }
 
                     return {
-                        id: newUser.id,
-                        name: newUser.name,
-                        email: newUser.email,
-                        emailVerified: newUser.emailVerified,
-                        image: newUser.image,
-                        password: newUser.password,
-                        created: newUser.created,
-                        updated: newUser.updated,
+                        ...newUser,
                         member: newMember
                     };
                 });
 
-                user = result;
             }
 
             if (!user) {
@@ -161,21 +130,9 @@ export async function mobileAppleLogin(app: Elysia) {
                 )
             });
 
-            if (!existingAccount) {
-                await db.insert(accounts).values({
-                    userId: user.id,
-                    provider: "apple",
-                    type: "oidc",
-                    accountId: payload.sub as string,
-                    accessToken: null, // Apple doesn't provide access tokens in the same way
-                    expiresAt: payload.exp?.toString() || null,
-                    tokenType: "bearer",
-                    scope: "openid",
-                    idToken: token,
-                });
-            }
 
-            const { password, member, ...rest } = user;
+
+            const { member, image, ...rest } = user;
 
             if (!member) {
                 return status(500, { message: "Member record not found" });
@@ -184,8 +141,7 @@ export async function mobileAppleLogin(app: Elysia) {
             const data = {
                 ...rest,
                 phone: member.phone,
-                image: member.avatar,
-                stripeCustomerId: member.stripeCustomerId,
+                image,
                 memberId: member.id,
                 role: "member",
             };
@@ -207,6 +163,6 @@ export async function mobileAppleLogin(app: Elysia) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             return status(500, { message: errorMessage });
         }
-    }, AppleNewAccountSchema);
+    }, ApplAccountSchema);
     return app;
 }
