@@ -1,5 +1,5 @@
 import { db } from "@/db/db"
-import { importMembers, memberLocations, members, users } from "@/db/schemas";
+import { accounts, importMembers, memberLocations, members, users } from "@/db/schemas";
 import { generateReferralCode } from "@/libs/utils";
 import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia"
@@ -68,7 +68,6 @@ export const migrationRoutes = new Elysia({ prefix: '/migrate' })
                             .insert(users)
                             .values({
                                 name: `${firstName} ${lastName}`,
-                                password: hashedPassword,
                                 email,
                             })
                             .returning({ uid: users.id });
@@ -77,6 +76,12 @@ export const migrationRoutes = new Elysia({ prefix: '/migrate' })
                             await tx.rollback();
                             return;
                         }
+                        await tx.insert(accounts).values({
+                            userId: user.uid,
+                            provider: "credentials",
+                            accountId: email,
+                            password: hashedPassword,
+                        });
                         userId = user.uid;
                     }
 
