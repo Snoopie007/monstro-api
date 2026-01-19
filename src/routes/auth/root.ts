@@ -1,5 +1,8 @@
 import { Elysia } from "elysia";
-import { mobileAppleLogin, mobileGoogleLogin, mobileLogin, mobileRefreshToken } from "./mobile";
+import {
+    mobileAppleLogin, mobileGoogleLogin,
+    mobileLogin, mobileRefreshToken, verifySession
+} from "./mobile";
 
 
 export const AuthRoutes = new Elysia({ prefix: '/auth' })
@@ -8,5 +11,6 @@ export const AuthRoutes = new Elysia({ prefix: '/auth' })
         app.use(mobileGoogleLogin)
         app.use(mobileAppleLogin)
         app.use(mobileRefreshToken)
+        app.use(verifySession)
         return app
     })

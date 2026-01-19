@@ -151,11 +151,11 @@ export async function mobileAppleLogin(app: Elysia) {
                 userId: user.id,
                 email: user.email,
             });
-
             return status(200, {
                 token: tokens.accessToken,
                 refreshToken: tokens.refreshToken,
                 user: data,
+                setupComplete: member.setupCompleted,
                 expires: tokens.expires
             });
         } catch (error) {

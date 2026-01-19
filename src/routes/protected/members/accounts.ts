@@ -1,13 +1,13 @@
 import { db } from "@/db/db";
-import { Elysia } from "elysia";
-import { z } from "zod";
+import { Elysia, t } from "elysia";
 const MemberAccountsProps = {
-    params: z.object({
-        mid: z.string(),
+    params: t.Object({
+        mid: t.String(),
     }),
 };
 export async function memberAccounts(app: Elysia) {
-    return app.get('/accounts', async ({ params, status }) => {
+
+    app.get('/accounts', async ({ params, status }) => {
         const { mid } = params;
         try {
             const member = await db.query.members.findFirst({
@@ -34,4 +34,6 @@ export async function memberAccounts(app: Elysia) {
             return status(500, { message: "Internal server error", code: "INTERNAL_SERVER_ERROR" });
         }
     }, MemberAccountsProps)
+
+    return app;
 }

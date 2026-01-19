@@ -1,22 +1,26 @@
-import Elysia from "elysia";
+import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { members, users } from "@/db/schemas";
+import { members, users, accounts } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { getRedisClient } from "@/libs/redis";
 import { EmailSender } from "@/libs/email";
 import { generateOtp } from "@/libs/utils";
 import { MonstroData } from "@/libs/data";
-import { z } from "zod";
+import bcrypt from "bcryptjs";
 
-
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 const MemberProfileProps = {
-    params: z.object({
-        mid: z.string(),
+    params: t.Object({
+        mid: t.String(),
     }),
-    body: z.object({
-        firstName: z.string(),
-        lastName: z.string(),
-        email: z.string(),
+    body: t.Object({
+        firstName: t.String(),
+        lastName: t.Optional(t.String()),
+        email: t.String(),
+        phone: t.Optional(t.String()),
+        dob: t.Optional(t.Date()),
+        gender: t.Optional(t.String()),
+        password: t.Optional(t.String()),
     }),
 };
 
@@ -27,28 +31,68 @@ const emailSender = new EmailSender();
 
 
 export function memberProfile(app: Elysia) {
-    return app.patch("/", async ({ status, params, body }) => {
+    app.patch("/", async ({ status, params, body }) => {
         const { mid } = params;
-        const data = body as Record<string, any>;
+        const { password, ...rest } = body;
+
+        let phoneNumber: string | null = null;
+        if (rest.phone) {
+            const parsedPhoneNumber = parsePhoneNumberFromString(rest.phone, "US");
+            if (parsedPhoneNumber && (parsedPhoneNumber.isValid() || parsedPhoneNumber.isPossible())) {
+                phoneNumber = parsedPhoneNumber.format("E.164");
+            } else {
+                phoneNumber = rest.phone;
+            }
+        }
 
         try {
             await db.transaction(async (tx) => {
-                const [member] = await tx.update(members)
-                    .set(data)
-                    .where(eq(members.id, mid))
-                    .returning();
+                const [member] = await tx.update(members).set({
+                    ...rest,
+                    phone: phoneNumber,
+                    dob: rest.dob ? new Date(rest.dob) : null,
+
+                }).where(eq(members.id, mid)).returning({ userId: members.userId });
                 if (!member) {
                     return await tx.rollback();
                 }
-                const name = `${data.firstName} ${data.lastName}`;
-                await tx.update(users).set({ email: data.email, name }).where(eq(users.id, member.userId));
+                const name = `${rest.firstName} ${rest.lastName}`;
+
+
+                if (password) {
+                    const hashedPassword = await bcrypt.hash(password, 10);
+                    await db.insert(accounts).values({
+                        userId: member.userId,
+                        provider: "credentials",
+                        accountId: rest.email,
+                        password: hashedPassword,
+                    }).onConflictDoNothing({
+                        target: [accounts.userId, accounts.provider]
+                    });
+                }
+                await tx.update(users).set({ email: rest.email, name }).where(eq(users.id, member.userId));
             });
             return status(200, { success: true });
         } catch (error) {
             console.error(error);
             return status(500, { message: "Internal server error", code: "INTERNAL_SERVER_ERROR" });
         }
-    }, MemberProfileProps).patch("/email", async ({ status, body, params }) => {
+    }, MemberProfileProps)
+    app.patch('/completed', async ({ status, params }) => {
+        const { mid } = params;
+        try {
+            await db.update(members).set({ setupCompleted: true }).where(eq(members.id, mid));
+            return status(200, { success: true });
+        } catch (error) {
+            console.error(error);
+            return status(500, { message: "Internal server error", code: "INTERNAL_SERVER_ERROR" });
+        }
+    }, {
+        params: t.Object({
+            mid: t.String(),
+        }),
+    })
+    app.patch("/email", async ({ status, body, params }) => {
         const { email } = body;
         const { mid } = params;
         try {
@@ -94,5 +138,13 @@ export function memberProfile(app: Elysia) {
             console.error(error);
             return status(422, { error: "Unprocessable Entity" })
         }
-    }, MemberProfileProps)
+    }, {
+        params: t.Object({
+            mid: t.String(),
+        }),
+        body: t.Object({
+            email: t.String(),
+        }),
+    })
+    return app;
 }
