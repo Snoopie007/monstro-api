@@ -58,7 +58,6 @@ export async function mobileLogin(app: Elysia) {
             const data = {
                 ...user,
                 phone: member.phone,
-                stripeCustomerId: member?.stripeCustomerId,
                 memberId: member?.id,
                 role: "member",
             };
@@ -70,13 +69,13 @@ export async function mobileLogin(app: Elysia) {
                 email: user.email,
 
             });
-
+            console.log("Member setup completed:", member.setupCompleted);
             return status(200, {
                 token: accessToken,
                 refreshToken,
                 expires,
                 user: data,
-                setupComplete: member.setupCompleted
+                setupCompleted: member.setupCompleted
             })
         } catch (error) {
             console.error("Error in mobile login:", error);

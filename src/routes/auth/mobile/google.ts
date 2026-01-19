@@ -167,7 +167,7 @@ export async function mobileGoogleLogin(app: Elysia) {
                 token: tokens.accessToken,
                 refreshToken: tokens.refreshToken,
                 user: data,
-                setupComplete: member.setupCompleted,
+                setupCompleted: member.setupCompleted,
                 expires: tokens.expires
             });
 
