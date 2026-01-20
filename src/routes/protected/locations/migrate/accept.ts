@@ -11,27 +11,26 @@ export function migrateAcceptRoutes(app: Elysia) {
         const { migrateId, lid } = params;
         const { mid, payment, planType, lastRenewalDay, pricingId } = body;
         const today = new Date();
+
+        const hasPlan = pricingId && planType;
+
+
         try {
 
-
-            let memberLocation = await db.query.memberLocations.findFirst({
-                where: (ml, { eq, and }) => and(eq(ml.memberId, mid), eq(ml.locationId, lid)),
+            const state = hasPlan && payment ? "incomplete" : "active";
+            await db.insert(memberLocations).values({
+                memberId: mid,
+                locationId: lid,
+                status: state,
+            }).onConflictDoUpdate({
+                target: [memberLocations.memberId, memberLocations.locationId],
+                set: {
+                    updated: today,
+                    status: state,
+                },
             });
 
-            if (!memberLocation) {
-                const [newMemberLocation] = await db.insert(memberLocations).values({
-                    memberId: mid,
-                    locationId: lid,
-                    status: !payment ? "active" : "incomplete",
-                }).returning();
-                if (!newMemberLocation) {
-                    return status(500, { error: "Failed to accept " });
-                }
-                memberLocation = newMemberLocation;
-            }
-
-
-            if (!payment) {
+            if (!payment && pricingId && planType) {
 
                 await db.transaction(async (tx) => {
                     const pricing = await db.query.memberPlanPricing.findFirst({
@@ -64,16 +63,15 @@ export function migrateAcceptRoutes(app: Elysia) {
                             startDate: today,
                         });
                     }
-                    await tx.update(migrateMembers).set({
-                        memberId: memberLocation.memberId,
-                        status: "completed",
-                        acceptedOn: today,
-                        updated: today,
-                    }).where(eq(migrateMembers.id, migrateId))
+
                 });
             }
 
-
+            await db.update(migrateMembers).set({
+                status: !payment ? "completed" : "pending",
+                acceptedOn: today,
+                updated: today,
+            }).where(eq(migrateMembers.id, migrateId));
 
             return status(200, { success: true });
         } catch (error) {
@@ -90,8 +88,11 @@ export function migrateAcceptRoutes(app: Elysia) {
             mid: t.String(),
             payment: t.Boolean(),
             lastRenewalDay: t.String(),
-            pricingId: t.String(),
-            planType: t.Enum(t.Literal('recurring'), t.Literal('one_time')),
+            pricingId: t.Optional(t.Union([t.String(), t.Null()])),
+            planType: t.Optional(t.Union([
+                t.Enum(t.Literal('recurring'), t.Literal('one_time')),
+                t.Null()
+            ])),
         }),
     });
     app.post('/decline', async ({ status, params }) => {
