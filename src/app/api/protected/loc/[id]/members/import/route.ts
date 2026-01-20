@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { importMembers } from "@/db/schemas/ImportMembers";
+import { migrateMembers } from "@/db/schemas/MigrateMembers";
 import { memberFields } from "@/db/schemas/members";
 import { NextResponse } from "next/server";
 import { sendEmailViaApi } from "@/libs/server/emails";
@@ -134,7 +134,7 @@ export async function POST(
 			);
 		}
 
-		const [{ id }] = await db.insert(importMembers).values(insertMembers).returning({ id: importMembers.id });
+		const [{ id }] = await db.insert(migrateMembers).values(insertMembers).returning({ id: migrateMembers.id });
 
 		await Promise.all(
 			insertMembers.map((m) => {

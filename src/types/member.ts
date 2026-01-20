@@ -3,7 +3,7 @@ import { FamilyMember } from './FamilyMember'
 import { Location } from './location'
 import { PlanProgram } from './program'
 import {
-    importMembers,
+    migrateMembers,
     memberInvoices,
     memberLocations,
     memberPackages,
@@ -104,7 +104,7 @@ export type FamilyPlan = {
     packageId?: number
 }
 
-export type ImportMember = typeof importMembers.$inferSelect & {
+export type MigrateMember = typeof migrateMembers.$inferSelect & {
     pricing?: MemberPlanPricing | null
 }
 

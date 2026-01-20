@@ -1,6 +1,6 @@
 'use client'
 
-import { ImportMember } from '@/types/member'
+import { MigrateMember } from '@/types/member'
 import { ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui'
 import { format } from 'date-fns'
@@ -12,7 +12,7 @@ const statusColorMap: Record<string, string> = {
     failed: 'bg-red-100 text-red-800',
 }
 
-export const MigrationColumns = (): ColumnDef<ImportMember, any>[] => {
+export const MigrationColumns = (): ColumnDef<MigrateMember, any>[] => {
     return [
         {
             accessorKey: 'name',

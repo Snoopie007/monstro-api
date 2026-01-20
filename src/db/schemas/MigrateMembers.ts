@@ -3,9 +3,9 @@ import { locations } from './locations'
 import { relations, sql } from 'drizzle-orm'
 import { memberPlanPricing } from './MemberPlans'
 import { members } from './members'
-import { ImportedMemberStatusEnum, PlanType } from './DatabaseEnums'
+import { MigrateStatusEnum, PlanType } from './DatabaseEnums'
 
-export const importMembers = pgTable('import_members', {
+export const migrateMembers = pgTable('migrate_members', {
     id: uuid('id')
         .primaryKey()
         .notNull()
@@ -17,18 +17,19 @@ export const importMembers = pgTable('import_members', {
     }),
     email: text('email').notNull(),
     phone: text('phone').notNull(),
-    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+    acceptedOn: timestamp('accepted_at', { withTimezone: true }),
+    declinedOn: timestamp('declined_at', { withTimezone: true }),
+    viewedOn: timestamp('viewed_at', { withTimezone: true }),
     lastRenewalDay: timestamp('last_renewal_day', {
         withTimezone: true,
     }).notNull(),
-    status: ImportedMemberStatusEnum('status').notNull().default('pending'),
+    status: MigrateStatusEnum('status').notNull().default('pending'),
     created: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
     pricingId: text('pricing_id').references(() => memberPlanPricing.id, {
         onDelete: 'set null',
     }),
     planType: PlanType('plan_type'),
-    oauth: boolean('oauth').notNull().default(false),
     payment: boolean('payment').notNull().default(true),
     metadata: jsonb('metadata')
         .$type<{
@@ -40,18 +41,17 @@ export const importMembers = pgTable('import_members', {
         .references(() => locations.id, { onDelete: 'cascade' }),
 })
 
-export const importedMembersRelations = relations(importMembers, ({ one }) => ({
+export const migrateRelations = relations(migrateMembers, ({ one }) => ({
     location: one(locations, {
-        fields: [importMembers.locationId],
+        fields: [migrateMembers.locationId],
         references: [locations.id],
     }),
     member: one(members, {
-        fields: [importMembers.memberId],
+        fields: [migrateMembers.memberId],
         references: [members.id],
     }),
     pricing: one(memberPlanPricing, {
-        fields: [importMembers.pricingId],
+        fields: [migrateMembers.pricingId],
         references: [memberPlanPricing.id],
     })
 }));
-
