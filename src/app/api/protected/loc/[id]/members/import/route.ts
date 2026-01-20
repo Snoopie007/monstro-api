@@ -150,7 +150,7 @@ export async function POST(
 						member: m,
 						ui: {
 							btnText: "Accept Invite",
-							btnUrl: `https://m.monstro-x.com/invite/${id}`,
+							btnUrl: `https://m.monstro-x.com/register?migrateId=${id}`,
 						}
 					}
 				});
