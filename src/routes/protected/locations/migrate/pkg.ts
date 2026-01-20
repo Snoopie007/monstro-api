@@ -12,6 +12,7 @@ import {
 
 const MigratePkgProps = {
     params: z.object({
+        migrateId: z.string(),
         lid: z.string(),
     }),
 };
@@ -21,8 +22,8 @@ const MigratePkgProps = {
 export function migratePkgRoutes(app: Elysia) {
     app.post('/pkg', async ({ params, status, body }) => {
 
-        const { lid } = params;
-        const { priceId, mid, paymentType, migrateId, paymentMethodId } = body;
+        const { lid, migrateId } = params;
+        const { priceId, mid, paymentType, paymentMethodId } = body;
         try {
             const member = await db.query.members.findFirst({
                 where: (member, { eq }) => eq(member.id, mid),
@@ -177,8 +178,6 @@ export function migratePkgRoutes(app: Elysia) {
                 chargeDate: today,
             });
 
-
-
             const { plan, ...rest } = pricing;
 
             return status(200, {
@@ -197,7 +196,6 @@ export function migratePkgRoutes(app: Elysia) {
             priceId: t.String(),
             mid: t.String(),
             paymentMethodId: t.String(),
-            migrateId: t.String(),
             paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
         }),
     })

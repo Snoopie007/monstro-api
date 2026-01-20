@@ -61,9 +61,9 @@ export function memberProfile(app: Elysia) {
 
                 if (password) {
                     const hashedPassword = await bcrypt.hash(password, 10);
-                    await db.insert(accounts).values({
+                    await tx.insert(accounts).values({
                         userId: member.userId,
-                        provider: "credentials",
+                        provider: "credential",
                         accountId: rest.email,
                         password: hashedPassword,
                     }).onConflictDoNothing({

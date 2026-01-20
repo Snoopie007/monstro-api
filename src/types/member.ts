@@ -17,9 +17,11 @@ import {
 } from '@/db/schemas'
 import type { PaymentType } from './DatabaseEnums'
 import type { MemberPaymentMethod, PaymentMethod } from './PaymentMethods'
+import type { User } from './user'
 
 
 export type Member = typeof members.$inferSelect & {
+  user?: User
   familyMembers?: FamilyMember[]
   relatedByFamily?: FamilyMember[]
   memberLocations?: MemberLocation[]

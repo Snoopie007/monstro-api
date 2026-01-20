@@ -2,9 +2,10 @@ import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
-import { users, members, accounts } from "@/db/schemas";
+import { users, members, accounts, importMembers } from "@/db/schemas";
 import { generateReferralCode } from "@/libs/utils";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 const GOOGLE_JWKS = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
 
 
@@ -15,8 +16,10 @@ const GoogleAccountSchema = {
         token: z.string(),
         accessToken: z.string(),
         additionalData: z.object({
+            isRegister: z.boolean().optional().default(false),
+            lid: z.string().optional(),
             migrateId: z.string().optional(),
-            referralCode: z.string().optional(),
+            ref: z.string().optional(),
         }).optional(),
     }),
 };
@@ -32,8 +35,8 @@ type GooglePayload = {
 export async function mobileGoogleLogin(app: Elysia) {
 
     app.post('/google', async ({ body, status }) => {
-        const { token, accessToken, } = body;
-
+        const { token, accessToken, additionalData } = body;
+        console.log(additionalData)
         if (!token) {
             return status(400, { message: "Id token is required" });
 
@@ -148,8 +151,15 @@ export async function mobileGoogleLogin(app: Elysia) {
             }
 
 
-
             const { member, ...rest } = user;
+
+            if (additionalData?.migrateId) {
+                await db.update(importMembers).set({
+                    memberId: member.id,
+                    status: "processing",
+                }).where(eq(importMembers.id, additionalData.migrateId));
+            }
+
 
             const data = {
                 ...rest,
@@ -157,12 +167,12 @@ export async function mobileGoogleLogin(app: Elysia) {
                 memberId: member.id,
                 role: "member",
             };
-
             const tokens = await generateMobileToken({
                 memberId: member.id,
                 userId: user.id,
                 email: user.email,
             });
+
             return status(200, {
                 token: tokens.accessToken,
                 refreshToken: tokens.refreshToken,

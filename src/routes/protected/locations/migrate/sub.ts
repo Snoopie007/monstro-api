@@ -9,24 +9,22 @@ import {
     calculateStripeFeePercentage,
     calculateCancelAt
 } from "../purchase/utils";
-
-
-
 import type { PaymentType } from "@/types/DatabaseEnums";
 import { isToday } from "date-fns";
 
 const MigrateSubProps = {
     params: z.object({
         lid: z.string(),
+        migrateId: z.string(),
     }),
 };
 
 export function migrateSubRoutes(app: Elysia) {
     app.post('/sub', async ({ params, status, body }) => {
-        const { lid } = params;
+        const { lid, migrateId } = params;
         const {
             paymentMethodId, mid, priceId,
-            paymentType, migrateId,
+            paymentType,
             startDate
         } = body;
         try {
@@ -147,7 +145,6 @@ export function migrateSubRoutes(app: Elysia) {
         body: t.Object({
             paymentMethodId: t.String(),
             priceId: t.String(),
-            migrateId: t.String(),
             startDate: t.String(),
             mid: t.String(),
             paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))

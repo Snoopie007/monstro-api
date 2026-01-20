@@ -2,9 +2,10 @@ import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
-import { users, members, accounts } from "@/db/schemas";
+import { users, members, accounts, importMembers } from "@/db/schemas";
 import { generateReferralCode } from "@/libs/utils";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 const APPLE_JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
 
 
@@ -12,10 +13,13 @@ const ApplAccountSchema = {
     body: z.object({
         token: z.string(),
         email: z.string(),
-        name: z.string(),
+        firstName: z.string(),
+        lastName: z.string().nullable().optional(),
         additionalData: z.object({
+            isRegister: z.boolean().optional().default(false),
+            lid: z.string().optional(),
             migrateId: z.string().optional(),
-            referralCode: z.string().optional(),
+            ref: z.string().optional(),
         }).optional(),
     }),
 };
@@ -24,11 +28,15 @@ const ApplAccountSchema = {
 export async function mobileAppleLogin(app: Elysia) {
 
 
-    app.post('/apple/new', async ({ body, status }) => {
-        const { token, email, name } = body;
+    app.post('/apple', async ({ body, status }) => {
+        const { token, email, firstName, lastName, additionalData } = body;
 
         if (!token) {
             return status(400, { message: "Id token is required" });
+        }
+
+        if (!email || !firstName) {
+            return status(400, { message: "Email and name are required" });
         }
 
         try {
@@ -38,7 +46,6 @@ export async function mobileAppleLogin(app: Elysia) {
             });
 
             const { payload } = decodedToken;
-            console.log(payload);
 
             const account = await db.query.accounts.findFirst({
                 where: (account, { eq, and }) => and(
@@ -67,13 +74,10 @@ export async function mobileAppleLogin(app: Elysia) {
 
             if (!user) {
                 user = await db.transaction(async (tx) => {
-
-
-
-
                     const [newUser] = await tx.insert(users).values({
                         email,
-                        name,
+                        name: `${firstName} ${lastName}`,
+                        emailVerified: payload.email_verified ? new Date() : null,
                     }).returning();
 
                     if (!newUser) {
@@ -98,10 +102,9 @@ export async function mobileAppleLogin(app: Elysia) {
 
                     const [newMember] = await tx.insert(members).values({
                         userId: newUser.id,
-                        firstName: name.split(" ")[0] || "Unknown",
-                        lastName: name.split(" ")[1] || "",
-                        email: email,
-                        phone: '',
+                        firstName,
+                        lastName,
+                        email,
                         referralCode: generateReferralCode(),
                     }).returning();
 
@@ -122,20 +125,19 @@ export async function mobileAppleLogin(app: Elysia) {
                 return status(500, { message: "Failed to create or find user" });
             }
 
-            // Check if account already exists to avoid duplicate key errors
-            const existingAccount = await db.query.accounts.findFirst({
-                where: (account, { eq, and }) => and(
-                    eq(account.accountId, payload.sub as string),
-                    eq(account.provider, "apple")
-                )
-            });
-
-
 
             const { member, image, ...rest } = user;
 
             if (!member) {
                 return status(500, { message: "Member record not found" });
+            }
+
+
+            if (additionalData?.migrateId) {
+                await db.update(importMembers).set({
+                    memberId: member.id,
+                    status: "processing",
+                }).where(eq(importMembers.id, additionalData.migrateId));
             }
 
             const data = {

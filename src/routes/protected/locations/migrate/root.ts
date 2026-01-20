@@ -2,16 +2,15 @@
 import { Elysia, t } from "elysia"
 import { migrateSubRoutes } from "./sub";
 import { migratePkgRoutes } from "./pkg";
-import { db } from "@/db/db";
+import { migrateAcceptRoutes } from "./accept";
 
 
 
 export function locationMigrateRoutes(app: Elysia) {
-    app.group('/migrate', (app) => {
+    app.group('/migrate/:migrateId', (app) => {
         app.use(migrateSubRoutes);
         app.use(migratePkgRoutes);
-
-
+        app.use(migrateAcceptRoutes);
         return app;
     })
     return app;
