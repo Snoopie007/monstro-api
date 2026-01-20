@@ -1,5 +1,5 @@
 import { db } from '@/db/db';
-import { users } from '@/db/schemas';
+import { accounts, users } from '@/db/schemas';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import Elysia from 'elysia';
@@ -26,22 +26,19 @@ export async function resetPassword(app: Elysia) {
         }
 
         try {
-            const user = await db.query.users.findFirst({
-                where: (user, { eq }) => eq(user.id, uid)
+            const account = await db.query.accounts.findFirst({
+                where: (account, { eq, and }) => and(eq(account.userId, uid), eq(account.provider, "credential"))
             })
 
-            if (!user) {
-                return status(404, { error: "User not found" })
+            if (!account) {
+                return status(404, { error: "Account not found" })
             }
 
-            if (!user.password) {
-                return status(401, {
-                    message: "User has no password",
-                    code: "NO_PASSWORD"
-                })
+            if (!account.password) {
+                return status(404, { error: "Account has no password" })
             }
 
-            const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+            const isPasswordValid = await bcrypt.compare(currentPassword, account.password);
             if (!isPasswordValid) {
                 return status(401, {
                     message: "Invalid password",
@@ -50,7 +47,7 @@ export async function resetPassword(app: Elysia) {
             }
 
             const hashedPassword = await bcrypt.hash(newPassword, 10);
-            await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
+            await db.update(accounts).set({ password: hashedPassword }).where(eq(accounts.userId, uid));
 
             return status(200, { success: true })
 

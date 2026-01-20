@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { importMembers, memberPackages, memberPaymentMethods, transactions } from "@/db/schemas";
+import { migrateMembers, memberPackages, memberPaymentMethods, transactions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { eq } from "drizzle-orm";
@@ -154,9 +154,10 @@ export function migratePkgRoutes(app: Elysia) {
                     },
                 }).returning();
 
-                await tx.update(importMembers).set({
-                    status: "completed"
-                }).where(eq(importMembers.id, migrateId));
+                await tx.update(migrateMembers).set({
+                    status: "completed",
+                    updated: today,
+                }).where(eq(migrateMembers.id, migrateId));
                 return pkg;
             });
 

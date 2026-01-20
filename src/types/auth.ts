@@ -7,9 +7,8 @@ export type BaseUser = {
   image?: string | null; // Optional, can be null
   emailVerified?: Date | null;
   role: string;
-  stripeCustomerId: string | null;
   phone: string | null;
-  sbToken?: string;
+  apiToken?: string;
 };
 
 export type ExtendedUser = BaseUser & {

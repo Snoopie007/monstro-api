@@ -3,7 +3,7 @@ import type { Elysia, Context } from "elysia";
 import { z } from "zod";
 import { userNotifications } from "@/db/schemas";
 
-const MobilePushTokenSchema = {
+const MobileNotificationSchema = {
     body: z.object({
         token: z.string(),
         deviceModelId: z.string().nullish(),
@@ -12,8 +12,8 @@ const MobilePushTokenSchema = {
     }),
 };
 
-export async function userPushTokenRoutes(app: Elysia) {
-    app.post('/push-token', async ({ body, status, ...ctx }) => {
+export async function userNotificationRoutes(app: Elysia) {
+    app.post('/notification/token', async ({ body, status, ...ctx }) => {
         const { userId } = ctx as Context & { userId: string };
         const data = body;
         if (!data.token) {
@@ -31,6 +31,6 @@ export async function userPushTokenRoutes(app: Elysia) {
             console.error(error);
             return status(500, { message: "Internal server error" });
         }
-    }, MobilePushTokenSchema);
+    }, MobileNotificationSchema);
     return app;
 }

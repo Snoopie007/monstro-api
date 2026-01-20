@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberPackages, memberSubscriptions, importMembers, memberLocations } from "@/db/schemas";
+import { memberPackages, memberSubscriptions, migrateMembers, memberLocations } from "@/db/schemas";
 import type { MemberPlanPricing, PaymentType } from "@/types";
 import { Elysia, t } from "elysia";
 import { eq } from "drizzle-orm";
@@ -11,8 +11,8 @@ export function migrateAcceptRoutes(app: Elysia) {
         const { migrateId, lid } = params;
         const today = new Date();
         try {
-            const migrate = await db.query.importMembers.findFirst({
-                where: (importMembers, { eq }) => eq(importMembers.id, migrateId),
+            const migrate = await db.query.migrateMembers.findFirst({
+                where: (migrateMembers, { eq }) => eq(migrateMembers.id, migrateId),
                 with: {
                     pricing: true,
                 },
@@ -32,7 +32,7 @@ export function migrateAcceptRoutes(app: Elysia) {
                 const [newMemberLocation] = await db.insert(memberLocations).values({
                     memberId: migrate.memberId!,
                     locationId: lid,
-                    status: "incomplete",
+                    status: !migrate.payment ? "active" : "incomplete",
                 }).returning();
                 if (!newMemberLocation) {
                     return status(500, { error: "Failed to accept " });
@@ -72,12 +72,12 @@ export function migrateAcceptRoutes(app: Elysia) {
                             startDate: today,
                         });
                     }
-                    await tx.update(importMembers).set({
+                    await tx.update(migrateMembers).set({
                         memberId: memberLocation.memberId,
                         status: "completed",
-                        acceptedAt: today,
+                        acceptedOn: today,
                         updated: today,
-                    }).where(eq(importMembers.id, migrateId))
+                    }).where(eq(migrateMembers.id, migrateId))
                 });
             }
 
@@ -92,6 +92,24 @@ export function migrateAcceptRoutes(app: Elysia) {
         params: t.Object({
             migrateId: t.String(),
             lid: t.String(),
+        }),
+    });
+    app.post('/decline', async ({ status, params }) => {
+        const { migrateId } = params;
+        const today = new Date();
+        try {
+            await db.update(migrateMembers).set({
+                status: "completed",
+                declinedOn: today,
+                updated: today,
+            }).where(eq(migrateMembers.id, migrateId));
+        } catch (error) {
+            console.error(error);
+            return status(500, { error: "Failed to decline migrate" });
+        }
+    }, {
+        params: t.Object({
+            migrateId: t.String(),
         }),
     });
     return app;

@@ -12,7 +12,7 @@ export * from "./DatabaseEnums";
 export * from "./staffs";
 export * from "./transactions";
 export * from "./attendances";
-export * from "./ImportedMember";
+export * from "./MigrateMembers";
 export * from "./rewards";
 export * from "./achievements";
 export * from "./SupportAssistants";

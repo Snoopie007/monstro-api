@@ -1,4 +1,4 @@
-import { importMembers } from "@/db/schemas";
+import { migrateMembers } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
@@ -72,12 +72,11 @@ export async function mobileRegister(app: Elysia) {
                     member = newMember;
                 }
                 if (migrateId) {
-                    await tx.update(importMembers).set({
+                    await tx.update(migrateMembers).set({
                         memberId: member?.id,
-                        status: "processing",
-                        acceptedAt: today,
+                        viewedOn: today,
                         updated: today,
-                    }).where(eq(importMembers.id, migrateId));
+                    }).where(eq(migrateMembers.id, migrateId));
                 }
 
             });

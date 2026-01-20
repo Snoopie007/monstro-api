@@ -10,7 +10,7 @@ import {
 import { friendsRoutes } from './friends';
 import { mediaRoutes } from './medias';
 import { stripeRoutes } from './stripe';
-import { userPushTokenRoutes } from './push-token';
+import { userNotificationRoutes } from './notifications';
 import { groupRoutes } from './groups';
 import { locationsRoutes } from './locations';
 import {
@@ -33,7 +33,7 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(userChats)
     .use(friendsRoutes)
     .use(mediaRoutes)
-    .use(userPushTokenRoutes)
+    .use(userNotificationRoutes)
     .use(groupRoutes)
     .group('/users/:uid', (app) => {
         app.use(userFeedsRoutes);

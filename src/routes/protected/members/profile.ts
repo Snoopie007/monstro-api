@@ -16,11 +16,10 @@ const MemberProfileProps = {
     body: t.Object({
         firstName: t.String(),
         lastName: t.Optional(t.String()),
-        email: t.String(),
+        email: t.Optional(t.String()),
         phone: t.Optional(t.String()),
         dob: t.Optional(t.Date()),
         gender: t.Optional(t.String()),
-        password: t.Optional(t.String()),
     }),
 };
 
@@ -33,15 +32,15 @@ const emailSender = new EmailSender();
 export function memberProfile(app: Elysia) {
     app.patch("/", async ({ status, params, body }) => {
         const { mid } = params;
-        const { password, ...rest } = body;
+        const { phone, dob, ...rest } = body;
 
         let phoneNumber: string | null = null;
-        if (rest.phone) {
-            const parsedPhoneNumber = parsePhoneNumberFromString(rest.phone, "US");
+        if (phone) {
+            const parsedPhoneNumber = parsePhoneNumberFromString(phone, "US");
             if (parsedPhoneNumber && (parsedPhoneNumber.isValid() || parsedPhoneNumber.isPossible())) {
                 phoneNumber = parsedPhoneNumber.format("E.164");
             } else {
-                phoneNumber = rest.phone;
+                phoneNumber = phone;
             }
         }
 
@@ -50,7 +49,7 @@ export function memberProfile(app: Elysia) {
                 const [member] = await tx.update(members).set({
                     ...rest,
                     phone: phoneNumber,
-                    dob: rest.dob ? new Date(rest.dob) : null,
+                    dob: dob ? new Date(dob) : null,
 
                 }).where(eq(members.id, mid)).returning({ userId: members.userId });
                 if (!member) {
@@ -58,19 +57,7 @@ export function memberProfile(app: Elysia) {
                 }
                 const name = `${rest.firstName} ${rest.lastName}`;
 
-
-                if (password) {
-                    const hashedPassword = await bcrypt.hash(password, 10);
-                    await tx.insert(accounts).values({
-                        userId: member.userId,
-                        provider: "credential",
-                        accountId: rest.email,
-                        password: hashedPassword,
-                    }).onConflictDoNothing({
-                        target: [accounts.userId, accounts.provider]
-                    });
-                }
-                await tx.update(users).set({ email: rest.email, name }).where(eq(users.id, member.userId));
+                await tx.update(users).set({ name }).where(eq(users.id, member.userId));
             });
             return status(200, { success: true });
         } catch (error) {

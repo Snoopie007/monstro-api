@@ -10,7 +10,7 @@ export const users = pgTable("users", {
     id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
     name: text("name").notNull(),
     email: text("email").notNull().unique(),
-    emailVerified: timestamp("email_verified_at", { withTimezone: true }),
+    emailVerified: boolean("email_verified").notNull().default(false),
     image: text("image"),
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
