@@ -56,7 +56,6 @@ export const locationsRoutes = new Elysia({ prefix: 'locations' })
                 return { error: 'Internal server error' }
             }
         }, LocationGetProps);
-
         app.use(locationAchievements);
         app.use(locationCheckin);
         app.use(locationDocs);

@@ -7,32 +7,22 @@ import { addYears, addMonths } from "date-fns";
 
 
 export function migrateAcceptRoutes(app: Elysia) {
-    app.post('/accept', async ({ status, params }) => {
+    app.post('/accept', async ({ status, params, body }) => {
         const { migrateId, lid } = params;
+        const { mid, payment, planType, lastRenewalDay, pricingId } = body;
         const today = new Date();
         try {
-            const migrate = await db.query.migrateMembers.findFirst({
-                where: (migrateMembers, { eq }) => eq(migrateMembers.id, migrateId),
-                with: {
-                    pricing: true,
-                },
-            });
-
-            if (!migrate || !migrate.memberId) {
-                return status(404, { error: "Migrate not found" });
-            }
-
 
 
             let memberLocation = await db.query.memberLocations.findFirst({
-                where: (ml, { eq, and }) => and(eq(ml.memberId, migrate.memberId!), eq(ml.locationId, lid)),
+                where: (ml, { eq, and }) => and(eq(ml.memberId, mid), eq(ml.locationId, lid)),
             });
 
             if (!memberLocation) {
                 const [newMemberLocation] = await db.insert(memberLocations).values({
-                    memberId: migrate.memberId!,
+                    memberId: mid,
                     locationId: lid,
-                    status: !migrate.payment ? "active" : "incomplete",
+                    status: !payment ? "active" : "incomplete",
                 }).returning();
                 if (!newMemberLocation) {
                     return status(500, { error: "Failed to accept " });
@@ -41,25 +31,27 @@ export function migrateAcceptRoutes(app: Elysia) {
             }
 
 
-            if (!migrate.payment) {
+            if (!payment) {
 
                 await db.transaction(async (tx) => {
-                    const { pricing } = migrate;
+                    const pricing = await db.query.memberPlanPricing.findFirst({
+                        where: (mpp, { eq }) => eq(mpp.id, pricingId)
+                    });
 
                     if (!pricing) return;
 
 
                     const commonValues = {
-                        memberId: memberLocation.memberId,
+                        memberId: mid,
                         locationId: lid,
                         memberPlanPricingId: pricing.id,
                         status: "active" as const,
                         paymentType: 'cash' as PaymentType,
                     }
 
-                    if (migrate.planType === "recurring") {
+                    if (planType === "recurring") {
 
-                        const { renewalDate, endDate } = calculateRenewalPeriod(migrate.lastRenewalDay, pricing);
+                        const { renewalDate, endDate } = calculateRenewalPeriod(new Date(lastRenewalDay), pricing);
                         await tx.insert(memberSubscriptions).values({
                             ...commonValues,
                             startDate: renewalDate,
@@ -92,6 +84,14 @@ export function migrateAcceptRoutes(app: Elysia) {
         params: t.Object({
             migrateId: t.String(),
             lid: t.String(),
+
+        }),
+        body: t.Object({
+            mid: t.String(),
+            payment: t.Boolean(),
+            lastRenewalDay: t.String(),
+            pricingId: t.String(),
+            planType: t.Enum(t.Literal('recurring'), t.Literal('one_time')),
         }),
     });
     app.post('/decline', async ({ status, params }) => {
@@ -109,6 +109,7 @@ export function migrateAcceptRoutes(app: Elysia) {
         }
     }, {
         params: t.Object({
+            lid: t.String(),
             migrateId: t.String(),
         }),
     });
