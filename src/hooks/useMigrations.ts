@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { ImportMember } from '@/types/member'
+import { MigrateMember } from '@/types/member'
 
 interface UseMigrationsParams {
     locationId: string
@@ -11,7 +11,7 @@ interface UseMigrationsParams {
 }
 
 export type MigrationsResponse = {
-    migrations: ImportMember[]
+    migrations: MigrateMember[]
     count: number
 }
 

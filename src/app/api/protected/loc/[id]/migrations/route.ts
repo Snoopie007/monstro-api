@@ -1,5 +1,5 @@
 import { db } from "@/db/db"
-import { importMembers } from "@/db/schemas/ImportMembers"
+import { migrateMembers } from "@/db/schemas/MigrateMembers"
 import { memberPlanPricing } from "@/db/schemas/MemberPlans"
 import { desc, eq, sql } from "drizzle-orm"
 import { NextRequest, NextResponse } from "next/server"
@@ -20,22 +20,22 @@ export async function GET(
         // Fetch migrations for the location
         const migrations = await db
             .select()
-            .from(importMembers)
-            .leftJoin(memberPlanPricing, eq(importMembers.pricingId, memberPlanPricing.id))
-            .where(eq(importMembers.locationId, params.id))
-            .orderBy(desc(importMembers.created))
+            .from(migrateMembers)
+            .leftJoin(memberPlanPricing, eq(migrateMembers.pricingId, memberPlanPricing.id))
+            .where(eq(migrateMembers.locationId, params.id))
+            .orderBy(desc(migrateMembers.created))
             .limit(size)
             .offset(offset)
-        
+
         // Get total count
         const [{ count }] = await db
             .select({ count: sql<number>`count(*)` })
-            .from(importMembers)
-            .where(eq(importMembers.locationId, params.id))
-        
+            .from(migrateMembers)
+            .where(eq(migrateMembers.locationId, params.id))
+
         // Transform result to flatten the joined data
         const formattedMigrations = migrations.map(row => ({
-            ...row.import_members,
+            ...row.migrate_members,
             pricing: row.member_plan_pricing,
         }))
         

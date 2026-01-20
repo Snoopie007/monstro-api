@@ -5,7 +5,7 @@ export * from "./chats";
 export * from "./ContractTemplates";
 export * from "./friends";
 export * from "./groups";
-export * from "./ImportMembers";
+export * from "./MigrateMembers";
 export * from "./integrations";
 export * from "./locations";
 export * from "./media";
