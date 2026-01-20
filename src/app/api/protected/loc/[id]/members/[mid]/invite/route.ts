@@ -46,7 +46,7 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ id: str
             data: {
                 ui: {
                     btnText: "Accept Invite",
-                    btnUrl: `https://m.monstro-x.com/invite/${migrateMember.id}`
+                    btnUrl: `https://m.monstro-x.com/register?migrateId=${migrateMember.id}`
                 },
                 location,
                 member
