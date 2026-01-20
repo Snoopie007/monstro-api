@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { importMembers, memberPackages, memberPaymentMethods, transactions } from "@/db/schemas";
+import { memberPackages, memberPaymentMethods, transactions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { eq } from "drizzle-orm";
@@ -85,7 +85,7 @@ export function purchasePkgRoutes(app: Elysia) {
             const { lid } = params;
             const {
                 paymentMethodId, mid, priceId,
-                memberPlanId, paymentType, migrateId
+                memberPlanId, paymentType
             } = body;
 
             try {
@@ -224,11 +224,7 @@ export function purchasePkgRoutes(app: Elysia) {
                 });
 
 
-                if (migrateId) {
-                    await db.update(importMembers).set({
-                        status: "completed"
-                    }).where(eq(importMembers.id, migrateId));
-                }
+
 
 
                 return status(200, { status: "active" });
@@ -243,7 +239,6 @@ export function purchasePkgRoutes(app: Elysia) {
         }, {
             ...PurchasePkgProps,
             body: t.Object({
-                migrateId: t.Optional(t.String()),
                 paymentMethodId: t.String(),
                 priceId: t.String(),
                 memberPlanId: t.String(),

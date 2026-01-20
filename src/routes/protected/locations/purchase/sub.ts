@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
-import { memberPlans, memberPlanPricing, memberSubscriptions, importMembers } from "@/db/schemas";
+import { memberSubscriptions } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculatePeriodEnd,
@@ -173,7 +173,7 @@ export function purchaseSubRoutes(app: Elysia) {
                 });
 
 
-            
+
 
                 return status(200, { status: sub.status });
             } catch (error) {
@@ -185,7 +185,7 @@ export function purchaseSubRoutes(app: Elysia) {
             body: t.Object({
                 paymentMethodId: t.String(),
                 priceId: t.String(),
-           
+
                 memberPlanId: t.String(),
                 mid: t.String(),
                 paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
@@ -196,5 +196,5 @@ export function purchaseSubRoutes(app: Elysia) {
     });
 
     return app
- 
+
 }
