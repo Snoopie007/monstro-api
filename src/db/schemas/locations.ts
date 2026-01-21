@@ -115,37 +115,23 @@ export const walletUsages = pgTable("wallet_usages", {
 		.defaultNow(),
 });
 
-export const memberLocations = pgTable(
-	"member_locations",
-	{
-		memberId: text("member_id")
-			.notNull()
-			.references(() => members.id, { onDelete: "cascade" }),
-		locationId: text("location_id")
-			.notNull()
-			.references(() => locations.id, { onDelete: "cascade" }),
-		status: LocationStatusEnum("status").notNull().default("incomplete"),
-		points: integer("points").notNull().default(0),
-		inviteDate: timestamp("invite_date", { withTimezone: true }),
-		inviteAcceptedDate: timestamp("invite_accepted_date", {
-			withTimezone: true,
-		}),
-		created: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-		updated: timestamp("updated_at", { withTimezone: false }),
-		waiverId: text("waiver_id").references(() => locations.id, {
-			onDelete: "set null",
-		}),
+export const memberLocations = pgTable("member_locations", {
+	memberId: text("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+	locationId: text("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+	status: LocationStatusEnum("status").notNull().default("incomplete"),
+	points: integer("points").notNull().default(0),
+	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	updated: timestamp("updated_at", { withTimezone: false }),
+	waiverId: text("waiver_id").references(() => locations.id, {
+		onDelete: "set null",
+	}),
+	// MEMBER INFO UPDATE START: Added member personal information fields
+	profile: jsonb("profile").$type<MemberLocationProfile>(),
+	// MEMBER INFO UPDATE END
+	botMetadata: jsonb("bot_metadata").default(sql`'{}'::jsonb`),
+	lastBotInteraction: timestamp("last_bot_interaction", { withTimezone: true }),
 
-
-		// MEMBER INFO UPDATE START: Added member personal information fields
-		profile: jsonb("profile").$type<MemberLocationProfile>(),
-		// MEMBER INFO UPDATE END
-		botMetadata: jsonb("bot_metadata").default(sql`'{}'::jsonb`),
-		lastBotInteraction: timestamp("last_bot_interaction", { withTimezone: true }),
-
-	},
+},
 	(t) => [primaryKey({ columns: [t.memberId, t.locationId] })]
 );
 

@@ -21,10 +21,7 @@ export type Location = typeof locations.$inferSelect & {
   taxRates?: TaxRate[];
 };
 
-export type ExtendedLocation = Location & {
-  migration?: MigrateMember;
-  memberLocation?: MemberLocation;
-}
+
 
 export type LocationState = typeof locationState.$inferSelect & {
   settings: LocationSettings;
