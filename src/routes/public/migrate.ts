@@ -12,17 +12,17 @@ export const migrationRoutes = new Elysia({ prefix: '/migrate' })
         app.get('/', async ({ params, status }) => {
             const { migrateId } = params;
             try {
-                const migrate = await db.query.importMembers.findFirst({
-                    where: (importMembers, { eq }) => eq(importMembers.id, migrateId),
+                const migration = await db.query.migrateMembers.findFirst({
+                    where: (migrateMembers, { eq }) => eq(migrateMembers.id, migrateId),
                     with: {
                         location: true,
                         pricing: true,
                     },
                 });
-                if (!migrate) {
-                    return status(404, { error: "Migrate not found" });
+                if (!migration) {
+                    return status(404, { error: "Migration not found" });
                 }
-                return status(200, migrate);
+                return status(200, migration);
             } catch (error) {
                 return status(500, { error: "Failed to get migrate" });
             }

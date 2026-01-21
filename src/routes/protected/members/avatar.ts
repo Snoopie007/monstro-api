@@ -29,24 +29,22 @@ export async function memberAvatar(app: Elysia) {
         try {
             const member = await db.query.members.findFirst({
                 where: (members, { eq }) => eq(members.id, mid),
+                with: {
+                    user: true,
+                },
             })
 
             if (!member) {
                 return status(404, { message: 'Member not found' });
             }
-
-            if (!member.avatar) {
+            const { user } = member;
+            if (!user.image) {
 
                 await db.transaction(async (tx) => {
-                    const [member] = await tx.update(members).set({
-                        avatar: url,
-                    }).where(eq(members.id, mid)).returning({ userId: members.userId });
-                    if (!member) {
-                        return await tx.rollback();
-                    }
+
                     await tx.update(users).set({
                         image: url,
-                    }).where(eq(users.id, member.userId))
+                    }).where(eq(users.id, user.id))
                 })
             }
 
@@ -62,15 +60,19 @@ export async function memberAvatar(app: Elysia) {
         try {
             const member = await db.query.members.findFirst({
                 where: eq(members.id, mid),
+                with: {
+                    user: true,
+                },
             })
             if (!member) {
                 return status(404, { message: 'Member not found' });
             }
-            if (member.avatar) {
-                const fileName = member.avatar?.split('/').pop() || '';
-                await s3.removeFile(`members/${member.id}/avatars`, fileName);
+            const { user } = member;
+            if (user.image) {
+                const fileName = user.image?.split('/').pop() || '';
+                await s3.removeFile(`users/${user.id}/images`, fileName);
             }
-            await db.update(members).set({ avatar: null }).where(eq(members.id, mid));
+            await db.update(users).set({ image: null }).where(eq(users.id, user.id));
             return status(200, { success: true });
         } catch (error) {
             console.error(error);

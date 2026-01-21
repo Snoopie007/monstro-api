@@ -8,7 +8,7 @@ import type {
   TaxRate,
 } from ".";
 import { locations, locationState } from "@/db/schemas/locations";
-import type { MemberPlan } from "./member";
+import type { MemberLocation, MemberPlan, MigrateMember } from "./member";
 
 export type Location = typeof locations.$inferSelect & {
   locationState?: LocationState;
@@ -20,6 +20,11 @@ export type Location = typeof locations.$inferSelect & {
   memberPlans?: MemberPlan[];
   taxRates?: TaxRate[];
 };
+
+export type ExtendedLocation = Location & {
+  migration?: MigrateMember;
+  memberLocation?: MemberLocation;
+}
 
 export type LocationState = typeof locationState.$inferSelect & {
   settings: LocationSettings;

@@ -141,9 +141,8 @@ export async function memberFamilies(app: Elysia) {
                         const [user] = await tx
                             .insert(users)
                             .values({
-                                name: `${rest.firstName} ${rest.lastName}`,
                                 email: rest.email,
-                                password: "",
+                                name: `${rest.firstName} ${rest.lastName}`,
                             })
                             .returning({ id: users.id });
                         uid = user?.id;
@@ -160,9 +159,6 @@ export async function memberFamilies(app: Elysia) {
                     if (!member) {
                         return await tx.rollback();
                     }
-
-
-
                     const [familyMember] = await tx.insert(familyMembers).values({
                         memberId: member.id,
                         relatedMemberId: mid,

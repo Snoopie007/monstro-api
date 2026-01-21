@@ -20,12 +20,14 @@ export function mlReferralsRoutes(app: Elysia) {
                     referredMember: {
                         columns: {
                             id: true,
-                            avatar: true,
                             firstName: true,
                             lastName: true,
                             email: true,
                             phone: true,
-                        }
+                        },
+                        with: {
+                            user: true,
+                        },
                     }
                 },
             });

@@ -23,7 +23,7 @@ export async function memberAccounts(app: Elysia) {
                 columns: {
                     provider: true,
                     accountId: true,
-                    expiresAt: true,
+                    expires: true,
                 }
             });
 

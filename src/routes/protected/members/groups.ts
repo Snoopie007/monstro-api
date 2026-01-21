@@ -1,10 +1,7 @@
 import { db } from "@/db/db";
 import { Elysia } from "elysia";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
-import type { ReactionCounts } from "@/types/reactions";
-import { reactionCounts } from "@/db/schemas/chat/reactions";
-
 const MemberGroupsProps = {
     params: z.object({
         mid: z.string(),
