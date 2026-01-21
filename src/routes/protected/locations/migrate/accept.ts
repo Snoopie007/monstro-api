@@ -90,7 +90,7 @@ export function migrateAcceptRoutes(app: Elysia) {
             lastRenewalDay: t.String(),
             pricingId: t.Optional(t.Union([t.String(), t.Null()])),
             planType: t.Optional(t.Union([
-                t.Enum(t.Literal('recurring'), t.Literal('one_time')),
+                t.Enum(t.Literal('recurring'), t.Literal('one-time')),
                 t.Null()
             ])),
         }),
