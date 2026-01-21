@@ -17,7 +17,7 @@ import Link from "next/link";
 import React from "react";
 
 import { cn, formatAmountForDisplay } from "@/libs/utils";
-import { authWithContext } from "@/libs/auth/server";
+import { auth } from "@/libs/auth/server";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { LocationState } from "@/types";
 import { Stripe } from "stripe";
@@ -108,11 +108,11 @@ export default async function BillingPage(props: {
 	params: Promise<{ id: string }>;
 }) {
 	const params = await props.params;
-	const sesson = await authWithContext();
+	const sesson = await auth();
 	const locationState = await getLocationState(params.id);
 
 	const { paymentMethods, subscriptions } = await fetchClientStripe(
-		sesson?.user.stripeCustomerId,
+		sesson?.user.stripeCustomerId ?? '',
 		params.id,
 		locationState!
 	);
@@ -228,7 +228,7 @@ export default async function BillingPage(props: {
 			<Wallet lid={params.id} />
 			<CardList
 				paymentMethods={paymentMethods}
-				customerId={sesson?.user.stripeCustomerId}
+				customerId={sesson?.user.stripeCustomerId ?? ''}
 				locationId={params.id}
 			/>
 		</div>

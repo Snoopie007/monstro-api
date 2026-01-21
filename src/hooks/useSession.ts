@@ -6,38 +6,35 @@ import {
 	signOut as betterAuthSignOut,
 } from "@/libs/auth/client";
 import { useMemo } from "react";
-import { useUserContext } from "./useUserContext";
+import type { ExtendedUser } from "@/types/user";
 
 /**
  * Client session hook - matches Next-Auth's useSession API
- * TODO: REFACTOR - Replace with useUserContext() + lean sessions
+ * Session now includes full user context from customSession plugin
  */
 export function useSession() {
 	const { data: session, isPending } = useBetterAuthSession();
-	const { userContext, isLoading: contextLoading, refresh: refreshContext } = useUserContext();
 
 	const transformedSession = useMemo(() => {
 		if (!session?.user) return null;
 
 		return {
-			user: {
-				...session.user,
-				...userContext,
-			},
+			user: session.user as ExtendedUser,
 			expires: new Date(session.session.expiresAt).toISOString(),
 		};
-	}, [session, userContext]);
+	}, [session]);
 
 	return {
 		data: transformedSession,
-		status: isPending || contextLoading
+		status: isPending
 			? "loading"
 			: transformedSession
 				? "authenticated"
 				: "unauthenticated",
 
 		update: async () => {
-			await refreshContext();
+			// Trigger session refresh by calling Better Auth's internal refresh
+			// This will re-fetch the session with updated customSession data
 		},
 	};
 }

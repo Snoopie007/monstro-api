@@ -21,6 +21,7 @@ import { ColumnFiltersState } from '@tanstack/react-table'
 
 
 export type Member = typeof members.$inferSelect & {
+    user?: { image?: string | null }
     familyMembers?: FamilyMember[]
     relatedByFamily?: FamilyMember[]
     memberLocation?: MemberLocation

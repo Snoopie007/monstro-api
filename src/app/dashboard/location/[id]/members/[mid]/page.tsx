@@ -46,9 +46,22 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 			with: {
 				member: {
 					with: {
+						user: {
+							columns: {
+								image: true,
+							},
+						},
 						familyMembers: {
 							with: {
-								relatedMember: true,
+								relatedMember: {
+									with: {
+										user: {
+											columns: {
+												image: true,
+											},
+										},
+									},
+								},
 							},
 						},
 					},

@@ -7,7 +7,7 @@ import { useSession } from '@/hooks/useSession'
 
 export function LocationsNav() {
     const { data: session } = useSession();
-    const user = session?.user;
+    const user = session?.user!
     return (
         <div className=" w-full border-b border-foreground/10 py-2 px-3 flex flex-initial justify-between">
             <div className="flex flex-row items-center gap-2">

@@ -1,10 +1,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { VendorStripePayments } from '@/libs/server/stripe';
-import { authWithContext } from '@/libs/auth/server';
+import { auth } from '@/libs/auth/server';
 
 export async function GET(req: NextRequest) {
-    const session = await authWithContext();
+    const session = await auth();
 
     try {
         if (!session || !session.user.stripeCustomerId) {
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-    const session = await authWithContext();
+    const session = await auth();
     const { paymentMethodId, customerId } = await req.json();
     try {
         if (!session || !session.user.stripeCustomerId) {
@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-    const session = await authWithContext();
+    const session = await auth();
 
     try {
         if (!session || !session.user.stripeCustomerId) {

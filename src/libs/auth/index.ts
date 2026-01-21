@@ -2,13 +2,65 @@ import { db } from '@/db/db';
 import { accounts, sessions, users } from '@/db/schemas';
 import bcrypt from 'bcryptjs';
 import { customSession, multiSession } from "better-auth/plugins";
-import { betterAuth } from 'better-auth';
+import { APIError, betterAuth } from 'better-auth';
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { createAuthMiddleware } from "better-auth/api";
 import { toNextJsHandler } from "better-auth/next-js";
+import { SignJWT } from "jose";
 
 const isProduction = process.env.NODE_ENV === "production";
 const isPreview = process.env.VERCEL_ENV === "preview";
+
+/**
+ * Signs a JWT token using Supabase JWT secret for authenticated API access
+ */
+async function signSupabaseJWT(
+  payload: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    vendorId?: string;
+    staffId?: string;
+  },
+  userId: string
+): Promise<string> {
+  const supabaseJwtSecret = process.env.SUPABASE_JWT_SECRET;
+
+  if (!supabaseJwtSecret) {
+    throw new Error("SUPABASE_JWT_SECRET environment variable is required");
+  }
+
+  const secret = new TextEncoder().encode(supabaseJwtSecret);
+
+  const jwtPayload = {
+    sub: userId,
+    email: payload.email,
+    user_metadata: {
+      name: payload.name,
+      email: payload.email,
+    },
+    app_metadata: {
+      provider: "credentials",
+      providers: ["credentials"],
+    },
+    aud: "authenticated",
+    role: "authenticated",
+    vendorId: payload.vendorId,
+    staffId: payload.staffId,
+    userRole: payload.role,
+  };
+
+  const jwt = await new SignJWT(jwtPayload)
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setIssuedAt()
+    .setExpirationTime("24h")
+    .setIssuer(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1`)
+    .setAudience("authenticated")
+    .sign(secret);
+
+  return jwt;
+}
 
 export const auth = betterAuth({
     baseURL: process.env.NEXT_PUBLIC_APP_URL,
@@ -23,16 +75,15 @@ export const auth = betterAuth({
     plugins: [
       multiSession(),
       customSession(async ({user, session}) => {
-        // Fetch vendor with their locations in a single optimized query
-        const userWithVendor = await db.query.users.findFirst({
+        // Fetch user with vendor OR staff data in a single optimized query
+        const userData = await db.query.users.findFirst({
           where: (users, { eq }) => eq(users.id, user.id),
-          columns: {
-            id: true,
-          },
           with: {
             vendor: {
               columns: {
                 id: true,
+                phone: true,
+                stripeCustomerId: true,
               },
               with: {
                 locations: {
@@ -50,20 +101,125 @@ export const auth = betterAuth({
                 },
               },
             },
+            staff: {
+              columns: {
+                id: true,
+                phone: true,
+                avatar: true,
+              },
+              with: {
+                staffLocations: {
+                  columns: {
+                    status: true,
+                  },
+                  with: {
+                    location: {
+                      columns: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                    roles: {
+                      with: {
+                        role: {
+                          with: {
+                            permissions: {
+                              with: {
+                                permission: true,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         });
 
-        // Filter and map locations to only include active ones
-        const filteredLocations = userWithVendor?.vendor?.locations
-          .filter((location) => {
-            const { locationState } = location;
-            return locationState && ["active"].includes(locationState.status);
-          })
-          .map((location) => ({
-            id: location.id,
-            name: location.name,
-            status: location.locationState?.status,
-          })) || [];
+        if (!userData) {
+          throw new APIError("BAD_REQUEST", {
+            message: "User not found",
+          });
+        }
+
+        let userPayload: {
+          phone: string | null;
+          image: string | null;
+          vendorId?: string;
+          staffId?: string;
+          stripeCustomerId?: string | null;
+          role: "vendor" | "staff";
+          locations: any[];
+        };
+
+        if (userData.vendor) {
+          // Vendor logic
+          const filteredLocations = userData.vendor.locations
+            .filter((location) => {
+              const { locationState } = location;
+              return locationState && ["active"].includes(locationState.status);
+            })
+            .map((location) => ({
+              id: location.id,
+              name: location.name,
+              status: location.locationState?.status,
+            }));
+
+          userPayload = {
+            phone: userData.vendor.phone,
+            image: userData.image,
+            vendorId: userData.vendor.id,
+            stripeCustomerId: userData.vendor.stripeCustomerId,
+            role: "vendor",
+            locations: filteredLocations,
+          };
+        } else if (userData.staff) {
+          // Staff logic
+          const transformedLocations = userData.staff.staffLocations.map((staffLocation: any) => {
+            const permissions = new Set<string>();
+            staffLocation.roles.forEach((roleAssignment: any) => {
+              roleAssignment.role.permissions.forEach((rp: any) => {
+                permissions.add(rp.permission.name);
+              });
+            });
+
+            return {
+              id: staffLocation.location.id,
+              name: staffLocation.location.name,
+              status: staffLocation.status,
+              roles: staffLocation.roles.map((r: any) => r.role),
+              permissions: Array.from(permissions),
+            };
+          });
+
+          userPayload = {
+            phone: userData.staff.phone,
+            image: userData.staff.avatar,
+            staffId: userData.staff.id,
+            role: "staff",
+            locations: transformedLocations,
+          };
+        } else {
+          throw new APIError("BAD_REQUEST", {
+            message: "User not associated with vendor or staff",
+          });
+        }
+
+        // Generate Supabase JWT
+        const sbToken = await signSupabaseJWT(
+          {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: userPayload.role,
+            vendorId: userPayload.vendorId,
+            staffId: userPayload.staffId,
+          },
+          user.id
+        );
 
         return {
           session: {
@@ -71,7 +227,8 @@ export const auth = betterAuth({
           },
           user: {
             ...user,
-            locations: filteredLocations,
+            ...userPayload,
+            sbToken,
           },
         }
       })
@@ -138,11 +295,19 @@ export const auth = betterAuth({
             columns: {
               id: true,
               email: true,
-              password: true,
+              username: true,
+              discriminator: true,
             },
+            with: {
+              accounts: { 
+                columns: {
+                  password: true,
+                }
+              }
+            }
           });
           
-          if (user && user.password) {
+          if (user && user.accounts?.[0]?.password) {
             // User exists with password, check if they have an account record
             const existingAccount = await db.query.accounts.findFirst({
               where: (account, { eq, and }) => 
@@ -161,7 +326,7 @@ export const auth = betterAuth({
             if (!existingAccount) {
               // User exists but no account record - create one for backwards compatibility
               // This handles migrated users from Next-Auth
-              const match = await bcrypt.compare(password, user.password);
+              const match = await bcrypt.compare(password, user.accounts?.[0]?.password);
 
               if (match) {
                 // Create credential account record
@@ -170,7 +335,7 @@ export const auth = betterAuth({
                   type: "email" as any, // Type for email/password accounts
                   provider: "credential",
                   accountId: user.email, // Use user ID as account ID for credentials
-                  password: user.password
+                  password: user.accounts?.[0]?.password
                 });
               }
             }

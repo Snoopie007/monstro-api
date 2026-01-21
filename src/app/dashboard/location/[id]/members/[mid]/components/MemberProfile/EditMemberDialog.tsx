@@ -50,7 +50,7 @@ export default function EditMemberDialog({ params, open, setOpen }: Props) {
 			lastName: memberProfile?.lastName || "",
 			email: memberProfile?.email || "",
 			phone: memberProfile?.phone || "",
-			avatar: memberProfile?.avatar || "",
+			avatar: member.user?.image || "",
 		},
 	});
 

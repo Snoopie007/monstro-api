@@ -48,14 +48,6 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Update users table
-    await db
-      .update(users)
-      .set({
-        password: hashedPassword,
-      })
-      .where(eq(users.id, user.id));
 
     // Update accounts table for Better Auth
     await db

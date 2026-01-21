@@ -1,6 +1,6 @@
 import { ScrollArea } from '@/components/ui/ScrollArea';
 import { SettingMenu } from './components';
-import { authWithContext } from '@/libs/auth/server';
+import { auth } from '@/libs/auth/server';
 
 export default async function SettingsLayout(
     props: {
@@ -9,7 +9,7 @@ export default async function SettingsLayout(
     }
 ) {
     const params = await props.params;
-    const session = await authWithContext();
+    const session = await auth();
     const { children } = props;
 
 
@@ -22,7 +22,7 @@ export default async function SettingsLayout(
                         <h4 className='text-lg font-bold'>Settings</h4>
                     </section>
                     <section className='grid grid-cols-8 gap-6'>
-                        <SettingMenu roles={session?.user.role} locationId={params.id} />
+                        <SettingMenu roles={session?.user.role!} locationId={params.id} />
                         <div className="col-span-6">
                             {children}
                         </div>

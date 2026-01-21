@@ -27,7 +27,15 @@ export async function PATCH(req: Request, props: { params: Promise<{ uid: string
       const vendor = await db.query.vendors.findFirst({
         where: (vendor, { eq }) => eq(vendor.id, uid),
         with: {
-          user: true,
+          user: {
+            with: {
+              accounts: {
+                columns: {
+                  password: true,
+                }
+              }
+            }
+          },
         },
       })
       user = vendor?.user;
@@ -35,26 +43,32 @@ export async function PATCH(req: Request, props: { params: Promise<{ uid: string
       const staff = await db.query.staffs.findFirst({
         where: (staff, { eq }) => eq(staff.id, uid),
         with: {
-          user: true,
+          user: {
+            with: {
+              accounts: {
+                columns: {
+                  password: true,
+                }
+              }
+            }
+          },
         },
       })
       user = staff?.user;
     }
 
-    if (!user || !user.password) {
+    const userPassword = user?.accounts?.[0]?.password;
+    if (!user || !userPassword) {
       return NextResponse.json({ message: 'User not found.' }, { status: 404 })
     }
 
-    const isValidCurrentPassword = await bcrypt.compare(currentPassword, user.password)
+    const isValidCurrentPassword = await bcrypt.compare(currentPassword, userPassword)
 
     if (!isValidCurrentPassword) {
       return NextResponse.json({ message: 'Current password is incorrect.' }, { status: 400 })
     }
 
     const newHashedPassword: string = await bcrypt.hash(password, 10)
-
-    // Update users table
-    await db.update(users).set({ password: newHashedPassword }).where(eq(users.id, user.id))
 
     // Update accounts table for Better Auth
     await db

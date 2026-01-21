@@ -1,4 +1,4 @@
-import { authWithContext } from "@/libs/auth/server";
+import { auth } from "@/libs/auth/server";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { getPlan } from "../../../utils";
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ lid: str
     if (!planId) {
         return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
-    const session = await authWithContext();
+    const session = await auth();
     if (!session || !session.user.stripeCustomerId) {
         return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
     }

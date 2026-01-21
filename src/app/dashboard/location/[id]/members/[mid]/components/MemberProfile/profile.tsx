@@ -56,7 +56,7 @@ export function MemberProfile({ params }: { params: { id: string; mid: string } 
 				</div>
 				<div className="flex flex-row gap-4 ">
 					<Avatar className="size-18 rounded-full bg-foreground/5">
-						<AvatarImage src={memberProfile.avatar || '/images/default-avatar.png'} />
+						<AvatarImage src={member.user?.image || '/images/default-avatar.png'} />
 					</Avatar>
 					<div className="flex flex-col gap-4 flex-1">
 						<div className="flex flex-row gap-10 items-center ">
@@ -144,9 +144,9 @@ function FamilyMembers({ familyMember, }: FamilyMembersProps) {
 		<Tooltip>
 			<TooltipTrigger asChild>
 
-				<Avatar className={cn("size-6 rounded-lg bg-foreground/5 ")}>
-					<AvatarImage src={m?.avatar || '/images/default-avatar.png'} />
-				</Avatar>
+			<Avatar className={cn("size-6 rounded-lg bg-foreground/5 ")}>
+				<AvatarImage src={m?.user?.image || '/images/default-avatar.png'} />
+			</Avatar>
 			</TooltipTrigger>
 			<TooltipContent>
 				<div>

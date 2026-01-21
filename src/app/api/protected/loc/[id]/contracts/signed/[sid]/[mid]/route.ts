@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { memberContracts } from "@/db/schemas";
 import { db } from "@/db/db";
 import { and, eq } from "drizzle-orm";
-import { authWithContext } from "@/libs/auth/server";
+import { auth } from "@/libs/auth/server";
 import { generatePdfFromHtml } from "@/libs/generatePdf";
 import { generateContractHtml } from "@/libs/ContractTemplates";
 
@@ -11,7 +11,7 @@ export async function GET(
   props: { params: Promise<{ id: string; sid: string; mid: string }> }
 ) {
   const params = await props.params;
-  const session = await authWithContext();
+  const session = await auth();
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

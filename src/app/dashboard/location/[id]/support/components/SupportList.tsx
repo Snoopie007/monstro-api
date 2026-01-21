@@ -221,7 +221,7 @@ function ConversationItem({ conversation, isSelected }: ConversationItemProps) {
             )}
         >
             <Avatar className="size-10">
-                <AvatarImage src={member?.avatar || ''} />
+                <AvatarImage src={member?.user?.image || ''} />
                 <AvatarFallback className="bg-foreground/10 text-foreground/50 font-bold">
                     {member?.firstName?.charAt(0) || '?'}
                 </AvatarFallback>

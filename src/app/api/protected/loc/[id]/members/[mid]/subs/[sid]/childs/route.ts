@@ -1,9 +1,10 @@
 import { db } from "@/db/db";
-import { familyMembers, memberLocations, members, memberSubscriptions, users } from "@/db/schemas";
+import { accounts, familyMembers, memberLocations, members, memberSubscriptions, users } from "@/db/schemas";
 import { NextResponse } from "next/server";
 import { sql, and, eq } from "drizzle-orm";
 import { MemberRelationship } from "@/types/DatabaseEnums";
 import bcrypt from "bcryptjs";
+import { generateUsername, generateDiscriminator } from "../../../../utils";
 
 type Params = {
     id: string;
@@ -195,9 +196,20 @@ export async function PATCH(req: Request, props: { params: Promise<Params> }) {
                 .values({
                     name: `${firstName} ${lastName}`,
                     email: email,
-                    password: await bcrypt.hash(generatePassword, 10),
+                    username: generateUsername(`${firstName} ${lastName}`),
+                    discriminator: generateDiscriminator(),
                 })
                 .returning();
+            if (!user) {
+                throw new Error("Failed to create user");
+            }
+            await db.insert(accounts).values({
+                userId: user.id,
+                password: await bcrypt.hash(generatePassword, 10),
+                provider: "credential",
+                type: "email",
+                accountId: email,
+            });
 
             const generateReferralCode = () => {
                 return Math.random().toString(36).substring(2, 8).toUpperCase();

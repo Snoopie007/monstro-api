@@ -6,8 +6,9 @@ import {
     memberLocations,
     members,
     memberTags,
+    users,
 } from '@/db/schemas'
-import { authWithContext } from '@/libs/auth/server'
+import { auth } from '@/libs/auth/server'
 import { CustomFieldDefinition, MemberListItem } from '@/types/member'
 import { and, eq, inArray, ne } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
@@ -19,7 +20,7 @@ export async function GET(
     const params = await props.params
 
     try {
-        const session = await authWithContext()
+        const session = await auth()
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
@@ -39,20 +40,20 @@ export async function GET(
                 lastName: members.lastName,
                 email: members.email,
                 phone: members.phone,
-                avatar: members.avatar,
                 created: members.created,
                 updated: members.updated,
                 dob: members.dob,
                 gender: members.gender,
-                firstTime: members.firstTime,
                 referralCode: members.referralCode,
                 stripeCustomerId: members.stripeCustomerId,
+                avatar: users.image,
                 memberLocation: {
                     status: memberLocations.status,
                 },
             })
             .from(memberLocations)
             .innerJoin(members, eq(memberLocations.memberId, members.id))
+            .innerJoin(users, eq(members.userId, users.id))
             .where(baseCondition)
         // NO .limit() or .offset() - fetch all
 

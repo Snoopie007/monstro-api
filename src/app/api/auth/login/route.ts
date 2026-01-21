@@ -11,7 +11,11 @@ export async function POST(req: NextRequest) {
 		user = await db.query.vendors.findFirst({
 			where: (vendor, { eq }) => eq(vendor.email, normalizedEmail),
 			with: {
-				user: true,
+				user: {
+					with: {
+						accounts: true
+					}
+				},
 			},
 		});
 
@@ -19,16 +23,22 @@ export async function POST(req: NextRequest) {
 			user = await db.query.staffs.findFirst({
 				where: (staff, { eq }) => eq(staff.email, normalizedEmail),
 				with: {
-					user: true,
+					user: {
+						with: {
+							accounts: true
+						}
+					},
 				},
 			});
 		}
 
-		if ((!user || !user.user || !user.user.password)) {
+		const password = user?.user.accounts?.[0]?.password;
+
+		if ((!user || !user.user || !password)) {
 			return NextResponse.json({ error: "User not found" }, { status: 401 });
 		}
 
-		const match = await bcrypt.compare(password, user?.user.password);
+		const match = await bcrypt.compare(password, password);
 
 		if (!match) {
 			return NextResponse.json({ error: "Invalid password" }, { status: 401 });

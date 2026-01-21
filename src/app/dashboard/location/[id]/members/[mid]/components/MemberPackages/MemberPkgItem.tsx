@@ -152,7 +152,7 @@ function FamilyPlanMember({ plan }: { plan: MemberPackage }) {
             <TooltipTrigger asChild>
 
                 <Avatar className={cn("size-6 rounded-lg bg-foreground/5 ")} >
-                    <AvatarImage src={fm?.avatar || '/images/default-avatar.png'} />
+                    <AvatarImage src={fm?.user?.image || '/images/default-avatar.png'} />
                 </Avatar>
             </TooltipTrigger>
             <TooltipContent>

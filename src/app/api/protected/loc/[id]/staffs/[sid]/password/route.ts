@@ -28,7 +28,15 @@ export async function PATCH(req: Request, props: { params: Promise<StaffPassword
     const staff = await db.query.staffs.findFirst({
       where: (staffs, { eq }) => eq(staffs.id, sid),
       with: {
-        user: true,
+        user: {
+          with: {
+            accounts: {
+              columns: {
+                password: true,
+              }
+            }
+          }
+        }
       },
     });
 
@@ -37,21 +45,19 @@ export async function PATCH(req: Request, props: { params: Promise<StaffPassword
     }
 
     const user = staff.user;
+    const userPassword = user?.accounts?.[0]?.password;
 
-    if (!user.password) {
+    if (!userPassword) {
       return NextResponse.json({ message: 'User has no password set.' }, { status: 400 });
     }
 
-    const isValidCurrentPassword = await bcrypt.compare(currentPassword, user.password);
+    const isValidCurrentPassword = await bcrypt.compare(currentPassword, userPassword);
 
     if (!isValidCurrentPassword) {
       return NextResponse.json({ message: 'Current password is incorrect.' }, { status: 400 });
     }
 
     const newHashedPassword: string = await bcrypt.hash(password, 10);
-
-    // Update users table with the correct user.id
-    await db.update(users).set({ password: newHashedPassword }).where(eq(users.id, user.id));
 
     // Update accounts table for Better Auth
     await db

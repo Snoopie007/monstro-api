@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { ChevronsUpDown } from "lucide-react";
 import { ScrollArea } from "@/components/ui/ScrollArea";
-import { Location } from "@/types";
+import { SessionLocation } from "@/types/user";
 import { useSession } from "@/hooks/useSession";
 import { useRouter } from "next/navigation";
 import { cn } from "@/libs/utils";
@@ -18,17 +18,17 @@ import { cn } from "@/libs/utils";
 
 export default function LocationSelect({ locationId }: { locationId: string }) {
     const [open, setOpen] = useState<boolean>(false);
-    const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+    const [selectedLocation, setSelectedLocation] = useState<SessionLocation | null>(null);
     const { push } = useRouter();
     const { data: session } = useSession();
 
     useEffect(() => {
         if (locationId) {
-            setSelectedLocation(session?.user.locations.find((location: Location) => `${location.id}` === locationId));
+            setSelectedLocation(session?.user.locations.find((location) => `${location.id}` === locationId) || null);
         }
     }, [locationId, session?.user.locations])
 
-    function handleSelect(location: Location) {
+    function handleSelect(location: SessionLocation) {
 
         setOpen(false);
         if (`${location.id}` === locationId) return;
@@ -61,7 +61,7 @@ export default function LocationSelect({ locationId }: { locationId: string }) {
                             <CommandEmpty>No location found.</CommandEmpty>
                             <CommandGroup>
                                 <ScrollArea className="overflow-y-auto  w-full h-40">
-                                    {session?.user.locations.map((location: Location) => (
+                                    {session?.user.locations.map((location) => (
                                         <CommandItem
                                             value={`${location.id}`}
                                             key={location.id}
