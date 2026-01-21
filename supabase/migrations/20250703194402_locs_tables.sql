@@ -53,8 +53,6 @@ CREATE TABLE IF NOT EXISTS member_locations (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,
   status location_status NOT NULL DEFAULT 'incomplete',
-  invite_date timestamp with time zone,
-  invite_accepted_date timestamp with time zone,
   profile jsonb,
   onboarded boolean NOT NULL DEFAULT false,
   CONSTRAINT member_locations_pkey PRIMARY KEY (location_id, member_id),

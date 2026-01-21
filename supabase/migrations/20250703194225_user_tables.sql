@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS users (
   email text NOT NULL UNIQUE,
   email_verified_at timestamp with time zone,
   image text,
-  password text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
@@ -28,6 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_session_token ON sessions (session_token);
 
 CREATE TABLE public.account (
+  id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
   user_id text NOT NULL,
   type text NULL,
   provider text NOT NULL,
@@ -55,7 +55,6 @@ CREATE TABLE IF NOT EXISTS vendors (
   user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
   stripe_customer_id text,
   email text UNIQUE NOT NULL,
-  avatar text,
   phone text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
@@ -68,10 +67,9 @@ CREATE INDEX IF NOT EXISTS idx_vendors_user_id ON vendors (user_id);
 CREATE TABLE IF NOT EXISTS members (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62('mbr_'),
   user_id text REFERENCES users (id) ON DELETE CASCADE NOT NULL,
-  email text NOT NULL,
+  email text NOT NULL UNIQUE,
   phone text,
   referral_code text UNIQUE,
-  avatar text,
   stripe_customer_id text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone,

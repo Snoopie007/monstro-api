@@ -1,6 +1,8 @@
 CREATE TYPE plan_type AS ENUM('recurring', 'one-time');
 CREATE TYPE package_status AS ENUM('active', 'incomplete', 'expired', 'completed');
 CREATE TYPE subscription_status AS ENUM('incomplete', 'active', 'past_due', 'canceled', 'paused', 'trialing', 'unpaid', 'incomplete_expired');
+
+
 -- Tables with dependencies on programs
 CREATE TABLE IF NOT EXISTS member_plans (
   id text PRIMARY KEY NOT NULL DEFAULT uuid_base62(),
@@ -18,14 +20,11 @@ CREATE TABLE IF NOT EXISTS member_plans (
   editable boolean NOT NULL DEFAULT true,
   stripe_price_id text,
   total_class_limit integer,
-  class_limit_interval interval_type,
+  class_limit_interval text ,
   billing_anchor_config jsonb,
   marketing_details jsonb NOT NULL DEFAULT '{}'::jsonb,
   allow_proration boolean NOT NULL DEFAULT false,
   archived boolean NOT NULL DEFAULT false,
-  class_limit_threshold smallint,
-  expire_interval interval_type,
-  expire_threshold smallint,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone
 );
