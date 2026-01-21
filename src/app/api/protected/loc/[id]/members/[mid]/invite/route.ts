@@ -53,7 +53,6 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ id: str
             }
         });
         await db.update(memberLocations).set({
-            inviteDate: new Date(),
             status: "incomplete"
         }).where(and(eq(memberLocations.memberId, params.mid), eq(memberLocations.locationId, params.id)));
 

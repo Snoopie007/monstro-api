@@ -114,17 +114,18 @@ export async function POST(
 				}
 			}
 
-			insertMembers.push({
-				firstName,
-				lastName,
-				email,
-				phone: formattedPhone.number,
-				lastRenewalDay,
-				pricingId: pricingId ? pricingId.toString() : null,
-				planType: planType || null,
-				locationId: params.id,
-				metadata: { customFieldValues },
-			});
+		insertMembers.push({
+			firstName,
+			lastName,
+			email,
+			phone: formattedPhone.number,
+			lastRenewalDay,
+			pricingId: pricingId ? pricingId.toString() : null,
+			planType: planType || null,
+			locationId: params.id,
+			metadata: { customFieldValues },
+			payment: requirePayment,
+		});
 		}
 
 		if (insertMembers.length === 0) {
