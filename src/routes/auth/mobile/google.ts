@@ -3,12 +3,10 @@ import { db } from "@/db/db";
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
 import { users, members, accounts, migrateMembers } from "@/db/schemas";
-import { generateReferralCode } from "@/libs/utils";
+import { generateDiscriminator, generateReferralCode, generateUsername } from "@/libs/utils";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 const GOOGLE_JWKS = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
-
-
 
 
 const GoogleAccountSchema = {
@@ -36,7 +34,7 @@ export async function mobileGoogleLogin(app: Elysia) {
 
     app.post('/google', async ({ body, status }) => {
         const { token, accessToken, additionalData } = body;
-        console.log(additionalData)
+
         if (!token) {
             return status(400, { message: "Id token is required" });
 
@@ -75,14 +73,6 @@ export async function mobileGoogleLogin(app: Elysia) {
                 });
             }
 
-
-            const newUserData = {
-                email: payload.email as string,
-                name: payload.name as string,
-                image: payload.picture as string || null,
-                emailVerified: payload.email_verified as boolean,
-            };
-
             const newAccountData = {
                 provider: "google",
                 type: "oidc",
@@ -95,25 +85,31 @@ export async function mobileGoogleLogin(app: Elysia) {
             }
 
             await db.transaction(async (tx) => {
+                const name = payload.name as string;
+                const email = payload.email as string;
                 if (!user) {
                     const [newUser] = await tx.insert(users).values({
-                        email: newUserData.email,
-                        name: newUserData.name,
+                        email: email,
+                        name: name,
+                        username: generateUsername(name),
+                        discriminator: generateDiscriminator(),
                         emailVerified: payload.email_verified as boolean || false,
+                    }).onConflictDoNothing({
+                        target: [users.email]
                     }).returning();
                     if (!newUser) {
                         tx.rollback();
                         return;
                     }
-                    const [firstName, lastName] = newUserData.name.split(" ");
+                    const [firstName, lastName] = name.split(" ");
                     const [newMember] = await tx.insert(members).values({
                         userId: newUser.id,
                         firstName: firstName || "",
                         lastName: lastName || "",
-                        email: newUserData.email,
+                        email: email,
                         referralCode: generateReferralCode(),
                     }).onConflictDoNothing({
-                        target: [members.userId]
+                        target: [members.email]
                     }).returning();
                     if (!newMember) {
                         tx.rollback();
@@ -158,6 +154,7 @@ export async function mobileGoogleLogin(app: Elysia) {
 
             const data = {
                 ...rest,
+                referralCode: member.referralCode,
                 phone: member.phone,
                 memberId: member.id,
                 role: "member",

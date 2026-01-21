@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import { members, users, accounts } from "@/db/schemas";
-import { generateReferralCode } from "@/libs/utils";
+import { generateDiscriminator, generateReferralCode, generateUsername } from "@/libs/utils";
 import bcrypt from "bcryptjs";
 import type { Member } from "@/types/member";
 
@@ -37,6 +37,10 @@ export async function mobileRegister(app: Elysia) {
                     const [newUser] = await tx.insert(users).values({
                         name: `${firstName} ${lastName}`,
                         email,
+                        username: generateUsername(`${firstName} ${lastName}`),
+                        discriminator: generateDiscriminator(),
+                    }).onConflictDoNothing({
+                        target: [users.email]
                     }).returning();
 
                     if (!newUser) {

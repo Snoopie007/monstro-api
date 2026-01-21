@@ -3,7 +3,7 @@ import { db } from "@/db/db";
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
 import { users, members, accounts, migrateMembers } from "@/db/schemas";
-import { generateReferralCode } from "@/libs/utils";
+import { generateDiscriminator, generateReferralCode, generateUsername } from "@/libs/utils";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 const APPLE_JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
@@ -91,6 +91,8 @@ export async function mobileAppleLogin(app: Elysia) {
                     const [newUser] = await tx.insert(users).values({
                         email,
                         name: `${firstName} ${lastName}`,
+                        username: generateUsername(`${firstName} ${lastName}`),
+                        discriminator: generateDiscriminator(),
                         emailVerified: payload.email_verified as boolean || false,
                     }).returning();
                     if (!newUser) {
@@ -156,6 +158,7 @@ export async function mobileAppleLogin(app: Elysia) {
             const data = {
                 ...rest,
                 phone: member.phone,
+                referralCode: member.referralCode,
                 image,
                 memberId: member.id,
                 role: "member",

@@ -1,4 +1,4 @@
-import { text, timestamp, pgTable, uuid, check, index, boolean } from "drizzle-orm/pg-core";
+import { text, timestamp, pgTable, uuid, index, boolean, unique, integer } from "drizzle-orm/pg-core";
 import { accounts } from "./accounts";
 import { relations, sql } from "drizzle-orm";
 import { members } from "./members";
@@ -12,10 +12,13 @@ export const users = pgTable("users", {
     email: text("email").notNull().unique(),
     emailVerified: boolean("email_verified").notNull().default(false),
     image: text("image"),
+    username: text("username").notNull(),
+    discriminator: integer("discriminator").notNull(), // 4-digit number as string
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
-});
-
+}, (t) => [
+    unique("unique_username_discriminator").on(t.username, t.discriminator),
+]);
 
 export const userNotifications = pgTable("user_notifications", {
     id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),

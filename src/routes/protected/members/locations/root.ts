@@ -37,25 +37,45 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             })
 
 
-            const lids = mls.map(ml => ml.locationId);
-
-            const migrations = await db.query.migrateMembers.findMany({
-                where: (mm, { inArray, and, eq }) => and(
-                    inArray(mm.locationId, lids),
-                    eq(mm.status, "pending"),
-                ),
+            const lids = new Set<string>();
+            mls.forEach((ml) => {
+                if (ml.locationId) {
+                    lids.add(ml.locationId);
+                }
             });
 
-            const extendedLocations = mls.map(ml => {
-                const migration = migrations.find(m => m.locationId === ml.locationId);
+
+            const migrations = await db.query.migrateMembers.findMany({
+                where: (migrateMembers, { eq, and, isNull }) => and(
+                    eq(migrateMembers.memberId, mid),
+                    eq(migrateMembers.status, "pending"),
+                ),
+                with: {
+                    location: {
+                        with: {
+                            locationState: true,
+                        },
+                    },
+                },
+            });
+
+            const extendedLocations = mls.map((ml) => {
+                const migrate = migrations.find((m) => m.locationId === ml.locationId);
 
                 return {
                     ...ml,
-                    migration,
-                };
+                    ...(!migrate?.acceptedOn && { migrate: migrate }),
+                }
             });
 
-            return status(200, extendedLocations);
+            const filteredMigrations = migrations.filter((m) => !lids.has(m.locationId));
+
+
+
+            return status(200, {
+                migrations: filteredMigrations,
+                memberLocations: extendedLocations,
+            });
         } catch (error) {
             status(500, { error: 'Internal server error' });
             return { error: 'Internal server error' }

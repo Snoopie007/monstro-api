@@ -16,7 +16,7 @@ export const members = pgTable('members', {
 	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
 	firstName: text('first_name').notNull(),
 	lastName: text('last_name'),
-	email: text('email').notNull(),
+	email: text('email').notNull().unique(),
 	phone: text('phone'),
 	referralCode: text('referral_code').notNull(),
 	gender: text('gender'),

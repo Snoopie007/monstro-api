@@ -18,6 +18,7 @@ export function migrateAcceptRoutes(app: Elysia) {
         try {
 
             const state = hasPlan && payment ? "incomplete" : "active";
+
             await db.insert(memberLocations).values({
                 memberId: mid,
                 locationId: lid,
@@ -68,7 +69,7 @@ export function migrateAcceptRoutes(app: Elysia) {
             }
 
             await db.update(migrateMembers).set({
-                status: !payment ? "completed" : "pending",
+                ...(!payment && { status: "completed" }),
                 acceptedOn: today,
                 updated: today,
             }).where(eq(migrateMembers.id, migrateId));

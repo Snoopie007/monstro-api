@@ -57,6 +57,7 @@ export async function mobileLogin(app: Elysia) {
             const user = account.user;
             const data = {
                 ...user,
+                referralCode: member.referralCode,
                 phone: member.phone,
                 memberId: member?.id,
                 role: "member",
