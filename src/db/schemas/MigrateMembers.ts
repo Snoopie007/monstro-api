@@ -29,7 +29,6 @@ export const migrateMembers = pgTable('migrate_members', {
   updated: timestamp('updated_at', { withTimezone: true }),
   planType: PlanType('plan_type').notNull(),
   priceId: text('pricing_id').references(() => memberPlanPricing.id, { onDelete: 'set null' }),
-  oauth: boolean('oauth').notNull().default(false),
   payment: boolean('payment').notNull().default(true),
   locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
 })

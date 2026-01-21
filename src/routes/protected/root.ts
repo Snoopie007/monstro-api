@@ -22,6 +22,7 @@ import {
     memberPlans,
     memberProfile,
     membersLocations,
+    migrationsRoutes,
     resetPassword,
 } from './members';
 
@@ -48,6 +49,7 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
         app.use(memberPayments);
         app.use(memberGroups);
         app.use(memberPlans);
+        app.use(migrationsRoutes);
         app.group('/profile', (app) => {
             app.use(memberProfile);
             app.use(memberAvatar);

@@ -7,3 +7,4 @@ export * from './profile';
 export * from './avatar';
 export * from './plans';
 export * from './groups';
+export * from './migrations';
