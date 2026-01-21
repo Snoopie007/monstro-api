@@ -26,7 +26,7 @@ export const MigrationColumns = (): ColumnDef<MigrateMember, any>[] => {
                             {migration.firstName.charAt(0)}
                             {migration.lastName.charAt(0)}
                         </div>
-                        <span className="text-sm font-medium">
+                        <span className="text-sm font-medium whitespace-nowrap">
                             {migration.firstName} {migration.lastName}
                         </span>
                     </div>
@@ -38,7 +38,7 @@ export const MigrationColumns = (): ColumnDef<MigrateMember, any>[] => {
             header: 'Email',
             cell: ({ row }) => {
                 const migration = row.original
-                return <span className="text-sm">{migration.email}</span>
+                return <span className="text-sm whitespace-nowrap">{migration.email}</span>
             },
         },
         {
@@ -46,7 +46,7 @@ export const MigrationColumns = (): ColumnDef<MigrateMember, any>[] => {
             header: 'Phone',
             cell: ({ row }) => {
                 const migration = row.original
-                return <span className="text-sm">{migration.phone}</span>
+                return <span className="text-sm whitespace-nowrap">{migration.phone}</span>
             },
         },
         {
@@ -55,7 +55,7 @@ export const MigrationColumns = (): ColumnDef<MigrateMember, any>[] => {
             cell: ({ row }) => {
                 const migration = row.original
                 return (
-                    <span className="text-sm">
+                    <span className="text-sm whitespace-nowrap">
                         {migration.pricing ? migration.pricing?.name : '-'}
                     </span>
                 )
@@ -68,19 +68,67 @@ export const MigrationColumns = (): ColumnDef<MigrateMember, any>[] => {
                 const migration = row.original
                 const statusColor = statusColorMap[migration.status] || 'bg-gray-100 text-gray-800'
                 return (
-                    <Badge className={`${statusColor} capitalize`}>
+                    <Badge className={`${statusColor} capitalize whitespace-nowrap`}>
                         {migration.status}
                     </Badge>
                 )
             },
         },
         {
-            accessorKey: 'lastRenewalDay',
-            header: 'Last Renewal',
+            accessorKey: 'payment',
+            header: 'Payment',
             cell: ({ row }) => {
                 const migration = row.original
                 return (
-                    <span className="text-sm">
+                    <Badge className={`whitespace-nowrap ${migration.payment ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {migration.payment ? 'Required' : 'Not Required'}
+                    </Badge>
+                )
+            },
+        },
+        {
+            accessorKey: 'viewedOn',
+            header: 'Viewed',
+            cell: ({ row }) => {
+                const migration = row.original
+                return (
+                    <span className="text-sm whitespace-nowrap">
+                        {migration.viewedOn ? format(new Date(migration.viewedOn), 'MMM dd, yyyy') : '-'}
+                    </span>
+                )
+            },
+        },
+        {
+            accessorKey: 'acceptedOn',
+            header: 'Accepted',
+            cell: ({ row }) => {
+                const migration = row.original
+                return (
+                    <span className="text-sm whitespace-nowrap">
+                        {migration.acceptedOn ? format(new Date(migration.acceptedOn), 'MMM dd, yyyy') : '-'}
+                    </span>
+                )
+            },
+        },
+        {
+            accessorKey: 'declinedOn',
+            header: 'Declined',
+            cell: ({ row }) => {
+                const migration = row.original
+                return (
+                    <span className="text-sm whitespace-nowrap">
+                        {migration.declinedOn ? format(new Date(migration.declinedOn), 'MMM dd, yyyy') : '-'}
+                    </span>
+                )
+            },
+        },
+        {
+            accessorKey: 'lastRenewalDay',
+            header: () => <span className="whitespace-nowrap">Last Renewal</span>,
+            cell: ({ row }) => {
+                const migration = row.original
+                return (
+                    <span className="text-sm whitespace-nowrap">
                         {format(new Date(migration.lastRenewalDay), 'MMM dd, yyyy')}
                     </span>
                 )
@@ -92,7 +140,7 @@ export const MigrationColumns = (): ColumnDef<MigrateMember, any>[] => {
             cell: ({ row }) => {
                 const migration = row.original
                 return (
-                    <span className="text-sm">
+                    <span className="text-sm whitespace-nowrap">
                         {migration.created ? format(new Date(migration.created), 'MMM dd, yyyy') : '-'}
                     </span>
                 )
