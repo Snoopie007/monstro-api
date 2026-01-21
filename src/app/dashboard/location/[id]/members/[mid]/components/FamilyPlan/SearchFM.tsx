@@ -215,7 +215,7 @@ function SearchResult({ familyMember, onAttach }: SearchResultProps) {
         <div className="flex flex-row justify-between items-center bg-foreground/5 rounded-lg p-3">
             <div className="flex flex-row gap-3 items-center">
                 <Avatar className="size-8">
-                    <AvatarImage src={familyMember.member?.avatar || '/images/default-avatar.png'} />
+                    <AvatarImage src={familyMember.member?.user?.image || '/images/default-avatar.png'} />
                 </Avatar>
                 <div className='flex flex-row gap-4'>
                     <div className=" font-medium">

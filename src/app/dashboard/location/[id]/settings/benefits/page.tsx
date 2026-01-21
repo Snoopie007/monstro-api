@@ -1,4 +1,4 @@
-import { authWithContext } from '@/libs/auth/server'
+import { auth } from '@/libs/auth/server'
 import { db } from '@/db/db'
 import { Vendor } from '@/types'
 import { Card, CardContent, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui'
@@ -46,7 +46,7 @@ async function fetchVendor(id: string, lid: string): Promise<Vendor> {
 
 async function BenefitsPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
-    const session = await authWithContext();
+    const session = await auth();
     if (!session || session.user.role !== "vendor") {
         return <div>Unauthorized</div>
     }

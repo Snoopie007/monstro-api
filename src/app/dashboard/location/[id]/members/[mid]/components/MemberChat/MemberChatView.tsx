@@ -94,7 +94,7 @@ export function MemberChatView({ locationId, currentMemberId, currentMember }: M
 
 	const canChat = fromUserId && toUserId && fromUserId !== toUserId;
 	const currentMemberName = `${currentMember?.firstName ?? ""} ${currentMember?.lastName ?? ""}`.trim() || "Member";
-	const currentMemberAvatar = currentMember?.avatar || undefined;
+	const currentMemberAvatar = currentMember?.user?.image || undefined;
 	const currentMemberInitials = `${currentMember?.firstName?.[0] ?? ""}${currentMember?.lastName?.[0] ?? ""}`.trim() || "?";
 
 	return (

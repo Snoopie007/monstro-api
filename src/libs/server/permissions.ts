@@ -1,4 +1,4 @@
-import { authWithContext } from "@/libs/auth/server";
+import { auth } from "@/libs/auth/server";
 import { NextResponse } from "next/server";
 
 export type Permission =
@@ -27,7 +27,7 @@ export interface PermissionCheck {
  * @returns Promise<boolean> - True if user has permission, false otherwise
  */
 export async function hasPermission(permission: Permission, locationId?: string): Promise<boolean> {
-  const session = await authWithContext();
+  const session = await auth();
 
   if (!session?.user) {
     return false;
@@ -62,7 +62,7 @@ export async function hasPermission(permission: Permission, locationId?: string)
  * @returns Promise<boolean> - True if user can view, false otherwise
  */
 export async function canView(locationId?: string): Promise<boolean> {
-  const session = await authWithContext();
+  const session = await auth();
 
   if (!session?.user) {
     return false;
@@ -142,7 +142,7 @@ export async function requirePermission(
  * @returns Promise<string[]> - Array of permission names
  */
 export async function getUserPermissions(locationId?: string): Promise<string[]> {
-  const session = await authWithContext();
+  const session = await auth();
 
   if (!session?.user) {
     return [];

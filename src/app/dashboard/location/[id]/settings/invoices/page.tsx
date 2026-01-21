@@ -1,6 +1,6 @@
 
 import { VendorStripePayments } from "@/libs/server/stripe";
-import { authWithContext } from "@/libs/auth/server";
+import { auth } from "@/libs/auth/server";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
 import type Stripe from "stripe";
 import Invoices from "./Invoices";
@@ -23,9 +23,9 @@ async function getCustomerInvoices(customerId: string): Promise<{ invoices: Stri
 
 
 export default async function InvoicesPage(props: { params: Promise<{ id: number }> }) {
-    const session = await authWithContext();
+    const session = await auth();
 
-    const invoices = await getCustomerInvoices(session?.user.stripeCustomerId);
+    const invoices = await getCustomerInvoices(session?.user.stripeCustomerId ?? '');
 
     return (
         <Tabs defaultValue="invoices">

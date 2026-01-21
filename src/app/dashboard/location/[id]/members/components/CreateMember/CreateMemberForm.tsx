@@ -138,7 +138,7 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 							<div className="flex flex-row gap-4 items-center border border-indigo-500 rounded-sm px-4 py-3">
 								<div>
 									<Avatar className="w-[35px] h-[35px] rounded-full mx-auto">
-										<AvatarImage src={member?.avatar || '/images/default-avatar.png'} />
+										<AvatarImage src={member?.user?.image || '/images/default-avatar.png'} />
 
 									</Avatar>
 								</div>

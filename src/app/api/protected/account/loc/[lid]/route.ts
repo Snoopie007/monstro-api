@@ -4,7 +4,7 @@ import { locationState, vendors } from "@/db/schemas";
 import { VendorStripePayments } from "@/libs/server/stripe";
 import { eq } from "drizzle-orm";
 import { getPlan, notifyAdminAPI } from "../../utils";
-import { authWithContext } from '@/libs/auth/server';
+import { auth } from '@/libs/auth/server';
 import Stripe from "stripe";
 
 const stripe = new VendorStripePayments();
@@ -16,14 +16,21 @@ export async function POST(
 	const data = await req.json();
 	const { token, state } = data;
 
-	const session = await authWithContext();
+	const session = await auth();
 	if (!session || !session.user) {
 		return NextResponse.json({ error: "Account not found" }, { status: 404 });
 	}
 
 	const params = await props.params;
 	const lid = params.lid;
-	const vendorId = session.user.vendorId;
+	let vendorId: string;
+	if (session.user.role === 'vendor') {
+		vendorId = session.user.vendorId!;
+	} else if (session.user.role === 'staff') {
+		vendorId = session.user.staffId!;
+	} else {
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	}
 
 	try {
 

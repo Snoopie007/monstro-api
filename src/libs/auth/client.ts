@@ -8,4 +8,5 @@ export const authClient = createAuthClient({
   ]
 });
 
-export const { useSession, signIn, signOut, multiSession } = authClient;
+export const { useSession, signIn, signOut } = authClient;
+export const multiSession = authClient.multiSession;

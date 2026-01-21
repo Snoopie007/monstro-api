@@ -293,7 +293,7 @@ export function SessionManagementDialog({
 				return {
 					memberId: m.id,
 					name: `${m.firstName} ${m.lastName}`,
-					avatar: m.avatar,
+					// avatar: m.avatar,
 				};
 			})
 			.filter((m): m is NonNullable<typeof m> => m !== null);
@@ -625,8 +625,7 @@ export function SessionManagementDialog({
 														className="h-4 w-4"
 													/>
 													<Avatar className="h-8 w-8">
-														<AvatarImage src={member.avatar || '/images/default-avatar.png'} />
-
+														<AvatarImage src={member.user?.image || '/images/default-avatar.png'} />
 													</Avatar>
 													<div className="flex-1 min-w-0">
 														<p className="text-sm font-medium">

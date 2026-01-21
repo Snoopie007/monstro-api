@@ -1,7 +1,7 @@
 import { Staff, Vendor } from "@/types";
 import { UserEmail, UserProfile } from "./components";
 import { db } from "@/db/db";
-import { authWithContext } from "@/libs/auth/server";
+import { auth } from "@/libs/auth/server";
 import { notFound, redirect } from "next/navigation";
 import UserPhone from "./components/UserPhone";
 
@@ -38,7 +38,7 @@ async function getStaff(id: string): Promise<Staff | undefined> {
 }
 
 export default async function ProfilePage() {
-    const session = await authWithContext();
+    const session = await auth();
     if (!session) {
         return redirect('/login');
     }

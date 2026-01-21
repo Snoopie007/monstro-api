@@ -9,16 +9,34 @@ export type User = typeof users.$inferSelect & {
     staff?: Staff;
 }
 
-export type ExtendedUser = Partial<User> & {
+/**
+ * Simplified location type from session context
+ * Contains only the essential fields needed for client-side location selection
+ */
+export type SessionLocation = {
+    id: string;
     name: string;
-    image: string;
-    role: string;
-    stripeCustomerId: string;
-    phone: string;
+    status?: string;
+    roles?: any[];
+    permissions?: string[];
+};
+
+export type ExtendedUser = Partial<User> & {
+    id: string;
+    name: string;
+    image?: string | null;
+    username?: string | null;
+    discriminator?: number | null;
+    role: "vendor" | "staff";
+    stripeCustomerId?: string | null;
+    phone?: string | null;
     sbToken: string;
     email: string;
-    locations: { id: string, name: string, status: string, roles?: any[], permissions?: string[] }[] | null;
-    vendorId: number | 0,
-    staffId: number | 0
+    locations: { id: string, name: string, status?: string, roles?: any[], permissions?: string[] }[];
+    vendorId?: string;
+    staffId?: string;
+    createdAt: Date;
+    updatedAt: Date;
+    emailVerified: boolean;
 };
 

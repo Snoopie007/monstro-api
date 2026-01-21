@@ -9,6 +9,7 @@ import { and } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { sendEmailViaApi } from "@/libs/server/emails";
 import { hasPermission } from "@/libs/server/permissions";
+import { generateUsername, generateDiscriminator } from "../members/utils";
 
 type StaffProps = {
 	id: string;
@@ -165,6 +166,8 @@ export async function POST(
 				email: data.email,
 				name: staffName, // Use combined name for user table
 				created: new Date(),
+				username: generateUsername(staffName),
+				discriminator: generateDiscriminator(),
 				// Removed password as it's optional and not provided in request
 			})
 			.returning();

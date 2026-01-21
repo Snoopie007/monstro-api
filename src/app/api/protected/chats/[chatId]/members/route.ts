@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db/db';
 import { chatMembers, groupMembers } from '@/db/schemas';
-import { authWithContext } from '@/libs/auth/server';
+import { auth } from '@/libs/auth/server';
 
 export async function POST(
     req: Request,
@@ -16,7 +16,7 @@ export async function POST(
     }
 
     try {
-        const session = await authWithContext();
+        const session = await auth();
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

@@ -1,7 +1,7 @@
 import { db } from '@/db/db'
 import { LocationsList } from './components/LocationsList'
 import { inArray } from 'drizzle-orm'
-import { authWithContext } from '@/libs/auth/server'
+import { auth } from '@/libs/auth/server'
 
 
 
@@ -43,14 +43,14 @@ async function fetchLocations(id: string, role: string) {
 
 
 export default async function LocationsPage() {
-    const session = await authWithContext();
+    const session = await auth();
     if (!session) {
         return (
             <div>Invalid Session</div>
         )
     }
 
-    const locations = await fetchLocations(session.user.role === "staff" ? session.user.staffId : session.user.vendorId, session.user.role) || []
+    const locations = await fetchLocations(session.user.role === "staff" ? session.user.staffId! : session.user.vendorId!, session.user.role!) || []
     return (
         <div className='w-full h-full'>
             <div className='p-4'>

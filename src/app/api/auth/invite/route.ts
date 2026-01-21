@@ -1,11 +1,12 @@
 import { admindb, db } from "@/db/db";
 
 import { NextRequest, NextResponse } from "next/server";
-import { users, vendors, vendorLevels } from "@/db/schemas";
+import { users, vendors, vendorLevels, accounts } from "@/db/schemas";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { sales } from "@/db/admin";
+import { generateUsername, generateDiscriminator } from "@/app/api/protected/loc/[id]/members/utils";
 
 
 export async function POST(req: NextRequest) {
@@ -39,9 +40,12 @@ export async function POST(req: NextRequest) {
             const [{ id }] = await tx.insert(users).values({
                 name: `${sale.firstName} ${sale.lastName}`,
                 email: sale.email,
-                password: hashedPassword,
+                username: generateUsername(`${sale.firstName} ${sale.lastName}`),
+                discriminator: generateDiscriminator(),
             }).returning({ id: users.id })
-
+            await tx.update(accounts).set({
+                password: hashedPassword,
+            }).where(eq(accounts.userId, id))
 
             const [{ vid }] = await tx.insert(vendors).values({
                 ...rest,

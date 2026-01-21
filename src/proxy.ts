@@ -23,7 +23,7 @@ export default async function proxy(req: NextRequest) {
 				return NextResponse.redirect(new URL("/dashboard/locations", req.nextUrl.origin))
 			}
 
-			if (!["active", "incomplete"].includes(next.status) && !pathname.startsWith(`/dashboard/location/${next.id}`)) {
+			if (!["active", "incomplete"].includes(next.status ?? '') && !pathname.startsWith(`/dashboard/location/${next.id}`)) {
 				return NextResponse.redirect(new URL(`/dashboard/location/${next.id}`, req.nextUrl.origin))
 			}
 		}

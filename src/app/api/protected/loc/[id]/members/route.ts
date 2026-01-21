@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server'
-import { authWithContext } from '@/libs/auth/server'
+import { auth } from '@/libs/auth/server'
 import { db } from '@/db/db'
 import {
     and,
@@ -25,6 +25,7 @@ import {
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { MemberSortableField, sortColumnMap } from '@/types/member'
 import { hasPermission } from "@/libs/server/permissions";
+import { generateUsername, generateDiscriminator } from "./utils";
 
 export async function GET(
     req: Request,
@@ -47,7 +48,7 @@ export async function GET(
     const columnFilters = columnFiltersParam ? JSON.parse(columnFiltersParam) : []
 
     try {
-        const session = await authWithContext()
+        const session = await auth()
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -198,20 +199,20 @@ export async function GET(
                 lastName: members.lastName,
                 email: members.email,
                 phone: members.phone,
-                avatar: members.avatar,
                 created: members.created,
                 updated: members.updated,
                 dob: members.dob,
                 gender: members.gender,
-                firstTime: members.firstTime,
                 referralCode: members.referralCode,
                 stripeCustomerId: members.stripeCustomerId,
+                avatar: users.image,
                 memberLocation: {
                     status: memberLocations.status,
                 },
             })
             .from(memberLocations)
             .innerJoin(members, eq(memberLocations.memberId, members.id))
+            .innerJoin(users, eq(members.userId, users.id))
             .where(whereCondition)
             .orderBy(sortDirection(sortColumn))
             .limit(pageSize)
@@ -392,6 +393,8 @@ export async function POST(
                 .values({
                     name: `${data.firstName} ${data.lastName}`,
                     email: data.email,
+                    username: generateUsername(`${data.firstName} ${data.lastName}`),
+                    discriminator: generateDiscriminator(),
                 })
                 .returning()
 

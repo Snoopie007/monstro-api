@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
-import { authWithContext } from "@/libs/auth/server";
+import { auth } from "@/libs/auth/server";
 import { eq, sql } from "drizzle-orm";
 import { wallets } from "@/db/schemas";
 import { VendorStripePayments } from "@/libs/server/stripe";
@@ -15,13 +15,13 @@ export async function POST(
   const { amount, id } = body;
 
   const stripe = new VendorStripePayments();
-  const session = await authWithContext();
+  const session = await auth();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
     const walletPayment = amount * 100;
-    stripe.setCustomer(session?.user.stripeCustomerId);
+    stripe.setCustomer(session?.user.stripeCustomerId ?? '');
     const { clientSecret } = await stripe.createPaymentIntent(
       walletPayment,
       undefined,
