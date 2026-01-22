@@ -59,6 +59,7 @@ export async function signIn(
 ) {
 	try {
 		if (provider === "credentials") {
+
 			// Skip OTP verification for new account onboarding
 			if (!options.skipVerification) {
 				const verifyResponse = await fetch("/api/auth/login/verify", {

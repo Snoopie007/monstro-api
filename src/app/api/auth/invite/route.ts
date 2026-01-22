@@ -15,9 +15,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "You must agree to the terms and conditions" }, { status: 400 })
     }
 
-    const normalizedEmail = data.email.toLowerCase();
+    const normalizedEmail = data.email.trim().toLowerCase();
     try {
-        const user = await db.query.users.findFirst({
+        let user = await db.query.users.findFirst({
             where: (user, { eq }) => eq(user.email, normalizedEmail)
         })
         if (user) {
@@ -39,34 +39,36 @@ export async function POST(req: NextRequest) {
         await db.transaction(async (tx) => {
 
             const name = `${sale.firstName} ${sale.lastName}`;
-            const [{ id }] = await tx.insert(users).values({
-                name: name,
-                email: sale.email,
-                username: generateUsername(name),
-                discriminator: generateDiscriminator(),
-            }).onConflictDoNothing(
-                { target: [users.email] }
-            ).returning({ id: users.id })
+            if (!user) {
+                const [newUser] = await tx.insert(users).values({
+                    name: name,
+                    email: normalizedEmail,
+                    username: generateUsername(name),
+                    discriminator: generateDiscriminator(),
+                }).onConflictDoNothing(
+                    { target: [users.email] }
+                ).returning()
 
-            if (!id) {
-
-                tx.rollback();
-                return
+                if (!newUser) {
+                    tx.rollback();
+                    return
+                }
+                user = newUser;
             }
 
 
             await tx.insert(accounts).values({
-                userId: id,
+                userId: user.id,
                 password: hashedPassword,
                 provider: "credential",
                 type: "email",
-                accountId: sale.email,
+                accountId: normalizedEmail,
             })
 
             const [{ vid }] = await tx.insert(vendors).values({
                 ...rest,
-                phone: parsePhoneNumberFromString(sale.phone)?.number,
-                userId: id,
+                phone: parsePhoneNumberFromString(sale.phone)?.number || null,
+                userId: user.id,
             }).onConflictDoNothing(
                 { target: [vendors.email] }
             ).returning({ vid: vendors.id });

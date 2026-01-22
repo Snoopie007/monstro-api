@@ -16,7 +16,7 @@
         "@dnd-kit/modifiers": "^9.0.0",
         "@dnd-kit/utilities": "^3.2.2",
         "@gohighlevel/api-client": "^2.2.2",
-        "@hookform/resolvers": "^3.9.1",
+        "@hookform/resolvers": "^5.2.2",
         "@novu/nextjs": "^3.11.0",
         "@radix-ui/react-accordion": "^1.2.0",
         "@radix-ui/react-alert-dialog": "^1.1.6",
@@ -85,7 +85,7 @@
         "libphonenumber-js": "^1.12.10",
         "lucide-react": "^0.544.0",
         "nanoid": "^5.0.9",
-        "next": "^16.0.10",
+        "next": "^16.1.4",
         "next-themes": "^0.4.6",
         "papaparse": "^5.4.1",
         "postgres": "^3.4.5",
@@ -96,7 +96,7 @@
         "react-aria": "^3.44.0",
         "react-day-picker": "^9.11.1",
         "react-dom": "^19.2.3",
-        "react-hook-form": "^7.53.2",
+        "react-hook-form": "^7.71.1",
         "react-markdown": "^10.1.0",
         "react-number-format": "^5.4.4",
         "react-phone-number-input": "^3.4.9",
@@ -115,7 +115,7 @@
         "y-prosemirror": "^1.2.13",
         "y-protocols": "^1.0.6",
         "yjs": "^13.6.20",
-        "zod": "^3.23.8"
+        "zod": "^4.3.5"
     },
     "optionalDependencies": {
         "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",
@@ -133,11 +133,12 @@
         "eslint-config-next": "15.0.3",
         "postcss": "^8",
         "react-scan": "^0.3.4",
-        "supabase": "^2.22.12",
+        "supabase": "^2.72.8",
         "tailwind-merge": "^2.5.5",
         "typescript": "^5"
     },
     "overrides": {
-        "react-is": "^19.0.0"
+        "react-is": "^19.0.0",
+        "tar": "^7.2.0"
     }
 }
