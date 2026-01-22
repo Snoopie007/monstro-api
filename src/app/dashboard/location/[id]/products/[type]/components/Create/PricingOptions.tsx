@@ -44,6 +44,7 @@ export function PricingOptions({ form, planType }: PricingOptionsProps) {
 			intervalThreshold: 1,
 			expireInterval: null,
 			expireThreshold: null,
+			downpayment: 0,
 		});
 	};
 
@@ -128,6 +129,7 @@ export function PricingOptions({ form, planType }: PricingOptionsProps) {
 										<PriceInput
 											value={field.value}
 											onChange={field.onChange}
+											size="lg"
 										/>
 									</FormControl>
 									<FormMessage />
@@ -189,8 +191,40 @@ export function PricingOptions({ form, planType }: PricingOptionsProps) {
 						</div>
 					)}
 
-					{/* Term/Expiration fields */}
+					{/* Downpayment and Term/Expiration fields */}
 					<div className="grid grid-cols-2 gap-2">
+						<FormField
+							control={form.control}
+							name={`pricingOptions.${index}.downpayment`}
+							render={({ field }) => (
+								<FormItem>
+									<div className="flex items-center gap-1">
+										<FormLabel size="tiny">Downpayment</FormLabel>
+										<TooltipProvider>
+											<Tooltip>
+												<TooltipTrigger type="button">
+													<HelpCircle className="size-3 text-muted-foreground" />
+												</TooltipTrigger>
+												<TooltipContent className="max-w-xs">
+													<p>
+														Optional upfront payment collected when the member
+														signs up for this plan.
+													</p>
+												</TooltipContent>
+											</Tooltip>
+										</TooltipProvider>
+									</div>
+									<FormControl>
+										<PriceInput
+											value={field.value}
+											onChange={field.onChange}
+											size="lg"
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 						<FormField
 							control={form.control}
 							name={`pricingOptions.${index}.expireInterval`}
@@ -236,7 +270,10 @@ export function PricingOptions({ form, planType }: PricingOptionsProps) {
 								</FormItem>
 							)}
 						/>
-						{form.watch(`pricingOptions.${index}.expireInterval`) && (
+					</div>
+					{form.watch(`pricingOptions.${index}.expireInterval`) && (
+						<div className="grid grid-cols-2 gap-2">
+							<div /> {/* Empty spacer to align with downpayment */}
 							<FormField
 								control={form.control}
 								name={`pricingOptions.${index}.expireThreshold`}
@@ -261,8 +298,8 @@ export function PricingOptions({ form, planType }: PricingOptionsProps) {
 									</FormItem>
 								)}
 							/>
-						)}
-					</div>
+						</div>
+					)}
 				</div>
 			))}
 			</div>

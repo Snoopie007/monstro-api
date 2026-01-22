@@ -59,6 +59,7 @@ export const memberPlanPricing = pgTable("member_plan_pricing", {
   // Term/Expiration: how long until auto-cancel (null = ongoing/never expires)
   expireInterval: IntervalType("expire_interval"),
   expireThreshold: integer("expire_threshold"),
+  downpayment: integer("downpayment"),
   stripePriceId: text("stripe_price_id"),
   created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updated: timestamp("updated_at", { withTimezone: true }),

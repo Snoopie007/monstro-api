@@ -9,6 +9,7 @@ type PricingOptionInput = {
   currency?: string;
   expireInterval?: "day" | "week" | "month" | "year" | null;
   expireThreshold?: number | null;
+  downpayment?: number;
 };
 
 export async function GET(
@@ -83,6 +84,7 @@ export async function POST(
             intervalThreshold: null,
             expireInterval: pricingOption.expireInterval || null,
             expireThreshold: pricingOption.expireThreshold || null,
+            downpayment: pricingOption.downpayment ? pricingOption.downpayment : null,
             stripePriceId: null, // Packages don't use Stripe recurring prices
           })
           .returning();
