@@ -280,6 +280,7 @@ export function ProgramDialog({
 												className={cn()}
 												placeholder={"Capacity"}
 												{...field}
+												onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -299,6 +300,7 @@ export function ProgramDialog({
 												className={cn()}
 												placeholder={"Min Age"}
 												{...field}
+												onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -318,6 +320,7 @@ export function ProgramDialog({
 												className={cn()}
 												placeholder={"Max Age"}
 												{...field}
+												onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)}
 											/>
 										</FormControl>
 										<FormMessage />

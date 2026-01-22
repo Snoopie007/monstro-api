@@ -40,4 +40,4 @@ export const NewMemberPaymentSchema = z.object({
 export const CreateMemberSchema = z.object({
     dob: z.string().optional(),
     gender: z.string().optional(),
-}).merge(MemberGeneralInfoSchema)
+}).and(MemberGeneralInfoSchema)

@@ -17,7 +17,7 @@ export const UserInfoSchema = z.object({
     lastName: z.string().min(2, { message: "Required" }),
     phone: z.string().min(11, { message: 'Invalid phone number' }),
     referralCode: z.string().optional()
-}).merge(EmailSchema);
+}).and(EmailSchema);
 
 
 
@@ -27,7 +27,7 @@ export const RegisterSchema = z.object({
     lastName: z.string().min(2, "Required"),
     phone: z.string().min(11, { message: 'Invalid phone number' }),
     password: z.string().min(8, { message: "password must be atleast 8 characters long." }),
-}).merge(EmailSchema);
+}).and(EmailSchema);
 
 
 export const AddCreditCardSchema = z.object({
@@ -101,9 +101,8 @@ export const VendorBillingSchema = z.object({
 });
 
 export const VendorInviteSchema = z.object({
-
     password: z.string().min(8, "Password must be at least 8 characters long."),
-}).merge(EmailSchema);
+}).and(EmailSchema);
 
 
 
