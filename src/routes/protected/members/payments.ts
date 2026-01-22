@@ -141,7 +141,8 @@ export function memberPayments(app: Elysia) {
                         throw new Error("Member not found")
                     }
 
-                    const stripe = new VendorStripePayments();
+                    const isTestMember = member.email === 'mtest@yahoo.com';
+                    const stripe = new VendorStripePayments(isTestMember ? process.env.STRIPE_TEST_SECRET_KEY : undefined);
 
                     let stripeCustomerId = member.stripeCustomerId;
                     if (!stripeCustomerId) {
@@ -185,11 +186,8 @@ export function memberPayments(app: Elysia) {
             })
             return app;
         })
-
         return app;
     })
-
-
     return app;
 }
 
