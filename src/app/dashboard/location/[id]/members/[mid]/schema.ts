@@ -20,7 +20,7 @@ export const ChargeItemSchema = z.object({
 const CommonFields = z.object({
     memberPlanId: z.string().min(1, "required"),
     pricingId: z.string().min(1, "Pricing option is required"),
-    startDate: z.date().min(Date.now(), "Activation date must be in the future"),
+    startDate: z.date().min(new Date(), "Activation date must be in the future"),
 })
 
 export const NewSubscriptionSchema = z.object({
