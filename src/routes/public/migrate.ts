@@ -16,7 +16,6 @@ export const migrationRoutes = new Elysia({ prefix: '/migrate' })
                     where: (migrateMembers, { eq }) => eq(migrateMembers.id, migrateId),
                     with: {
                         location: true,
-                        pricing: true,
                     },
                 });
                 if (!migration) {

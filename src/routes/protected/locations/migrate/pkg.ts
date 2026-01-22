@@ -1,8 +1,11 @@
 import { db } from "@/db/db";
-import { migrateMembers, memberPackages, memberPaymentMethods, transactions } from "@/db/schemas";
+import {
+    migrateMembers, memberLocations, memberPackages,
+    memberPaymentMethods, transactions
+} from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
     calculatePeriodEnd,
@@ -156,6 +159,11 @@ export function migratePkgRoutes(app: Elysia) {
                         paymentMethodId: paymentMethod.stripeId,
                     },
                 }).returning();
+
+
+                await tx.update(memberLocations).set({
+                    status: "active",
+                }).where(and(eq(memberLocations.memberId, mid), eq(memberLocations.locationId, lid)));
 
                 await tx.update(migrateMembers).set({
                     status: "completed",

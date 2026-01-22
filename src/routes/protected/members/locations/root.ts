@@ -51,6 +51,11 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                     eq(migrateMembers.status, "pending"),
                 ),
                 with: {
+                    pricing: {
+                        with: {
+                            plan: true,
+                        },
+                    },
                     location: {
                         with: {
                             locationState: true,
