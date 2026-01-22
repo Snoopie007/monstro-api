@@ -11,12 +11,13 @@ export async function mobileRegister(app: Elysia) {
     app.post('/register', async ({ status, body }) => {
         const { password, firstName, lastName, email, migrateId, phone } = body;
         const today = new Date();
+        const normalizedEmail = email.trim().toLowerCase();
         try {
             let member: Member | undefined;
 
             // Look for existing member with this email at the given location
             member = await db.query.members.findFirst({
-                where: (m, { eq }) => eq(m.email, email),
+                where: (m, { eq }) => eq(m.email, normalizedEmail),
                 with: {
                     user: true
                 }
@@ -25,7 +26,7 @@ export async function mobileRegister(app: Elysia) {
             let user = member?.user;
             if (!user) {
                 user = await db.query.users.findFirst({
-                    where: (u, { eq }) => eq(u.email, email),
+                    where: (u, { eq }) => eq(u.email, normalizedEmail),
 
                 });
             }
@@ -36,7 +37,7 @@ export async function mobileRegister(app: Elysia) {
                     const hashedPassword = await bcrypt.hash(password, 10);
                     const [newUser] = await tx.insert(users).values({
                         name: `${firstName} ${lastName}`,
-                        email,
+                        email: normalizedEmail,
                         username: generateUsername(`${firstName} ${lastName}`),
                         discriminator: generateDiscriminator(),
                     }).onConflictDoNothing({
@@ -52,7 +53,7 @@ export async function mobileRegister(app: Elysia) {
                         userId: newUser.id,
                         provider: "credential",
                         type: 'email',
-                        accountId: email,
+                        accountId: normalizedEmail,
                         password: hashedPassword,
                     });
                     user = newUser;
@@ -64,7 +65,7 @@ export async function mobileRegister(app: Elysia) {
                         .values({
                             firstName,
                             lastName,
-                            email,
+                            email: normalizedEmail,
                             userId: user.id,
                             referralCode: generateReferralCode(),
                         }).returning();

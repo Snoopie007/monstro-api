@@ -20,10 +20,11 @@ export async function mobileLogin(app: Elysia) {
         if (!email || !password) {
             return status(400, { message: "Email and password are required" })
         }
+        const normalizedEmail = email.trim().toLowerCase();
         try {
 
             const account = await db.query.accounts.findFirst({
-                where: (account, { eq }) => eq(account.accountId, `${email}`),
+                where: (account, { eq }) => eq(account.accountId, normalizedEmail),
                 with: {
                     user: true
                 },

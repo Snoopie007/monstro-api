@@ -48,6 +48,7 @@ export async function mobileGoogleLogin(app: Elysia) {
 
             const payload = decodedToken.payload;
 
+            const normalizedEmail = `${payload.email}`.trim().toLowerCase();
             let account = await db.query.accounts.findFirst({
                 where: (account, { eq, and }) => and(
                     eq(account.accountId, `${payload.sub}`),
@@ -66,7 +67,7 @@ export async function mobileGoogleLogin(app: Elysia) {
             let user = account?.user;
             if (!user) {
                 user = await db.query.users.findFirst({
-                    where: (user, { eq }) => eq(user.email, payload.email as string),
+                    where: (user, { eq }) => eq(user.email, normalizedEmail),
                     with: {
                         member: true
                     },
@@ -86,10 +87,9 @@ export async function mobileGoogleLogin(app: Elysia) {
 
             await db.transaction(async (tx) => {
                 const name = payload.name as string;
-                const email = payload.email as string;
                 if (!user) {
                     const [newUser] = await tx.insert(users).values({
-                        email: email,
+                        email: normalizedEmail,
                         name: name,
                         username: generateUsername(name),
                         discriminator: generateDiscriminator(),
@@ -106,7 +106,7 @@ export async function mobileGoogleLogin(app: Elysia) {
                         userId: newUser.id,
                         firstName: firstName || "",
                         lastName: lastName || "",
-                        email: email,
+                        email: normalizedEmail,
                         referralCode: generateReferralCode(),
                     }).onConflictDoNothing({
                         target: [members.email]
@@ -154,7 +154,6 @@ export async function mobileGoogleLogin(app: Elysia) {
 
             const data = {
                 ...rest,
-                referralCode: member.referralCode,
                 phone: member.phone,
                 memberId: member.id,
                 role: "member",

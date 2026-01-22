@@ -38,7 +38,7 @@ export async function mobileAppleLogin(app: Elysia) {
         if (!email || !firstName) {
             return status(400, { message: "Email and name are required" });
         }
-
+        const normalizedEmail = email.trim().toLowerCase();
         const today = new Date();
         try {
             const decodedToken = await jwtVerify(token, APPLE_JWKS, {
@@ -66,7 +66,7 @@ export async function mobileAppleLogin(app: Elysia) {
 
             if (!user) {
                 user = await db.query.users.findFirst({
-                    where: (user, { eq }) => eq(user.email, email),
+                    where: (user, { eq }) => eq(user.email, normalizedEmail),
                     with: {
                         member: true
                     },
@@ -87,11 +87,12 @@ export async function mobileAppleLogin(app: Elysia) {
 
 
             await db.transaction(async (tx) => {
+                const name = `${firstName} ${lastName}`;
                 if (!user) {
                     const [newUser] = await tx.insert(users).values({
-                        email,
-                        name: `${firstName} ${lastName}`,
-                        username: generateUsername(`${firstName} ${lastName}`),
+                        email: normalizedEmail,
+                        name: name,
+                        username: generateUsername(name),
                         discriminator: generateDiscriminator(),
                         emailVerified: payload.email_verified as boolean || false,
                     }).returning();
@@ -103,7 +104,7 @@ export async function mobileAppleLogin(app: Elysia) {
                         userId: newUser.id,
                         firstName,
                         lastName,
-                        email,
+                        email: normalizedEmail,
                         referralCode: generateReferralCode(),
                     }).onConflictDoNothing({
                         target: [members.userId]
