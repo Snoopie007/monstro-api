@@ -54,6 +54,8 @@ export function migratePkgRoutes(app: Elysia) {
                 return status(404, { error: "Location not found" });
             }
 
+
+
             const pricing = await db.query.memberPlanPricing.findFirst({
                 where: (mpp, { eq }) => eq(mpp.id, priceId),
                 with: {

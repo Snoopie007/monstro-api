@@ -59,21 +59,20 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
                 },
             });
 
+
             const extendedLocations = mls.map((ml) => {
                 const migrate = migrations.find((m) => m.locationId === ml.locationId);
-
-                return {
-                    ...ml,
-                    ...(!migrate?.acceptedOn && { migrate: migrate }),
+                if (migrate) {
+                    const { location, ...rest } = migrate;
+                    return {
+                        ...ml,
+                        migration: rest,
+                    };
                 }
+                return ml;
             });
 
-            const filteredMigrations = migrations.filter((m) => !lids.has(m.locationId));
-
-
-
             return status(200, {
-                migrations: filteredMigrations,
                 memberLocations: extendedLocations,
             });
         } catch (error) {

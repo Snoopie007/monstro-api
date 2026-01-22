@@ -1,5 +1,5 @@
 import { db } from "@/db/db";
-import { memberSubscriptions, migrateMembers } from "@/db/schemas";
+import { memberPaymentMethods, memberSubscriptions, migrateMembers } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/stripe";
 import { Elysia, t } from "elysia";
 import { eq } from "drizzle-orm";
@@ -57,6 +57,18 @@ export function migrateSubRoutes(app: Elysia) {
             if (!location) {
                 return status(404, { error: "Location not found" });
             }
+
+            await db.insert(memberPaymentMethods).values({
+                paymentMethodId: paymentMethodId,
+                memberId: mid,
+                locationId: lid,
+            }).onConflictDoNothing({
+                target: [
+                    memberPaymentMethods.paymentMethodId,
+                    memberPaymentMethods.memberId,
+                    memberPaymentMethods.locationId,
+                ],
+            });
 
             const pricing = await db.query.memberPlanPricing.findFirst({
                 where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, priceId),
