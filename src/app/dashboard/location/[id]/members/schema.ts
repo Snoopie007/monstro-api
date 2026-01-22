@@ -9,7 +9,7 @@ export const MemberGeneralInfoSchema = z.object({
 });
 
 export const MemberProgramSchema = z.object({
-    startDate: z.date(),
+    startDate: z.iso.datetime(),
     memberPlanId: z.number(),
     other: z.object({
         skipContract: z.boolean().optional(),
@@ -18,11 +18,11 @@ export const MemberProgramSchema = z.object({
     }),
 
     pkg: z.object({
-        expireDate: z.date().optional(),
+        expireDate: z.iso.datetime().optional(),
         totalClassLimit: z.number().min(0, "Total class limit must be greater than 0").max(100, "Total class limit must be less than 100").optional(),
     }),
     sub: z.object({
-        endDate: z.date().optional(),
+        endDate: z.iso.datetime().optional(),
         trailDays: z.number().int().optional(),
         allowProration: z.boolean().optional(),
     })

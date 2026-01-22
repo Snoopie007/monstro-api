@@ -21,8 +21,6 @@ import { ArrowLeft } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import React, { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { toast } from 'react-toastify'
-import useSWR from 'swr'
 import {
     InvoiceDetailsStep,
     InvoiceItemsStep,
@@ -44,25 +42,25 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
     const resolvedParams = React.use(params)
     const searchParams = useSearchParams()
 
-	// TODO: handle null when initial fetch happens (404 and 500 responses; add a member selector to the page if mid search param is null)
+    // TODO: handle null when initial fetch happens (404 and 500 responses; add a member selector to the page if mid search param is null)
     const memberId = searchParams.get('mid')
 
-	const {
-		isLoadingMember,
-		memberError,
-		handleGoBack,
-		handleComplete,
-		handleCreateInvoice,
-		handleSendInvoice,
-		handlePreview,
-		previewData,
-		createdInvoice,
-		isCreating,
-		isSending,
-		isGeneratingPreview,
-		member,
-		memberName,
-	} = useInvoiceCreation({id: resolvedParams.id, mid: memberId, ref: stepperRef as React.RefObject<HTMLDivElement & IStepperMethods>});
+    const {
+        isLoadingMember,
+        memberError,
+        handleGoBack,
+        handleComplete,
+        handleCreateInvoice,
+        handleSendInvoice,
+        handlePreview,
+        previewData,
+        createdInvoice,
+        isCreating,
+        isSending,
+        isGeneratingPreview,
+        member,
+        memberName,
+    } = useInvoiceCreation({ id: resolvedParams.id, mid: memberId, ref: stepperRef as React.RefObject<HTMLDivElement & IStepperMethods> });
 
     const form = useForm<CreateInvoiceFormData>({
         resolver: zodResolver(CreateInvoiceSchema),
@@ -155,14 +153,14 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
                 </InteractiveStepperItem>
 
                 <InteractiveStepperItem key={4}>
-					<InteractiveStepperTrigger>
-                    <InteractiveStepperIndicator />
-                    <div>
-                        <InteractiveStepperTitle>
-                            Confirm Invoice
-                        </InteractiveStepperTitle>
-                    </div>
-					</InteractiveStepperTrigger>
+                    <InteractiveStepperTrigger>
+                        <InteractiveStepperIndicator />
+                        <div>
+                            <InteractiveStepperTitle>
+                                Confirm Invoice
+                            </InteractiveStepperTitle>
+                        </div>
+                    </InteractiveStepperTrigger>
                 </InteractiveStepperItem>
 
                 <InteractiveStepperContent step={1}>

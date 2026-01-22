@@ -128,6 +128,7 @@ export function ChatMembersDialog({
                     id: selectedMember.id,
                     name: `${selectedMember.firstName} ${selectedMember.lastName}`,
                     email: selectedMember.email,
+                    emailVerified: false,
                     image: selectedMember.avatar,
                     username: selectedMember.username,
                     discriminator: selectedMember.discriminator,

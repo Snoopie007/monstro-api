@@ -21,21 +21,20 @@ const InvoiceItemSchema = z.object({
 
 const RecurringSettingsSchema = z.object({
 	interval: z.enum(["day", "week", "month", "year"]),
-	intervalCount: z.number().min(1).max(12).default(1),
-	startDate: z.string().datetime(),
-	endDate: z.string().datetime().optional(),
+	intervalCount: z.number().min(1).max(12),
+	startDate: z.iso.datetime(),
+	endDate: z.iso.datetime().optional(),
 });
 
 const CreateInvoiceSchema = z
 	.object({
 		type: z.enum(["one-off", "recurring"]),
 		description: z.string().optional(),
-		dueDate: z.string().datetime().optional(),
-		collectionMethod: z
-			.enum(["charge_automatically", "send_invoice"])
-			.default("send_invoice"),
+		dueDate: z.iso.datetime().optional(),
+		collectionMethod: z.enum(["charge_automatically", "send_invoice"]),
+
 		items: z.array(InvoiceItemSchema).min(1, "At least one item is required"),
-		isRecurring: z.boolean().default(false),
+		isRecurring: z.boolean(),
 		recurringSettings: RecurringSettingsSchema.optional(),
 	})
 	.refine(
@@ -278,7 +277,7 @@ export async function POST(
 			return NextResponse.json(
 				{
 					error: "Validation failed",
-					details: error.errors,
+					details: error.message,
 				},
 				{ status: 400 }
 			);

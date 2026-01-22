@@ -29,7 +29,6 @@ import { useParams } from "next/navigation";
 import { format, intervalToDuration } from "date-fns";
 import { MemberPaymentMethod, MemberSubscription } from "@/types";
 import { EndDayPicker } from ".";
-import { PMSelect } from "../../PMSelect";
 import { useMemberStatus } from "../../../providers";
 import { useMemberSubscriptions } from "@/hooks";
 
@@ -37,8 +36,8 @@ const UpdateSubSchema = z.object({
 	endAt: z.date().optional(),
 	paymentMethodId: z.string().optional(),
 	trialDays: z.number().min(0, "Trial days must be non-negative").optional(),
-	allowProration: z.boolean().default(false),
-	reset: z.boolean().default(false),
+	allowProration: z.boolean(),
+	reset: z.boolean(),
 });
 
 interface UpdateSubProps {
@@ -125,22 +124,22 @@ export function UpdateSub({ sub, open, onOpenChange }: UpdateSubProps) {
 										{format(new Date(sub.currentPeriodStart), "MMM d, yyyy")}
 									</span>
 									<ArrowRight className="size-3.5 " />
-								<FormField
-									control={form.control}
-									name="endAt"
-									render={({ field }) => (
-										<FormItem>
-											<FormControl>
-												<EndDayPicker
-													onChange={field.onChange}
-													startDate={sub.currentPeriodStart}
-													endDate={field.value || effectiveEndDate}
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
+									<FormField
+										control={form.control}
+										name="endAt"
+										render={({ field }) => (
+											<FormItem>
+												<FormControl>
+													<EndDayPicker
+														onChange={field.onChange}
+														startDate={sub.currentPeriodStart}
+														endDate={field.value || effectiveEndDate}
+													/>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
 								</div>
 							</fieldset>
 

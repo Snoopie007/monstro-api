@@ -5,7 +5,7 @@ const PricingOptionSchema = z.object({
   name: z.string().min(1, { message: "Pricing name is required" }),
   price: z.number().min(100, { message: "Price must be at least $1" }),
   interval: z.enum(["day", "week", "month", "year"]).optional(),
-  intervalThreshold: z.number().min(1).default(1),
+  intervalThreshold: z.number().min(1),
   expireInterval: z.enum(["day", "week", "month", "year"]).optional().nullable(),
   expireThreshold: z.number().optional().nullable(),
 });
@@ -22,14 +22,13 @@ const NewPlanSchema = z
     intervalClassLimit: z.number().optional(),
     makeUpCredits: z.number().min(0).optional(),
     groupId: z.string().optional(),
-    programs: z
-      .array(z.string())
+    programs: z.array(z.string())
       .min(1, { message: "Select at least one program." }),
     pkg: z.object({
       totalClassLimit: z.number().optional(),
     }),
     sub: z.object({
-      allowProration: z.boolean().optional(),
+      allowProration: z.boolean(),
       billingAnchor: z.number().optional(),
     }),
   })
@@ -157,12 +156,12 @@ const BillingAnchorConfigSchema = [
 
 export {
   BillingAnchorConfigSchema,
-  NewPlanSchema, 
-  PlanType, 
-  PresetIntervals, 
+  NewPlanSchema,
+  PlanType,
+  PresetIntervals,
   PricingOptionSchema,
-  UpdatePkgPlanSchema, 
-  UpdateSubPlanSchema, 
+  UpdatePkgPlanSchema,
+  UpdateSubPlanSchema,
   type PresetInterval
 };
 

@@ -115,8 +115,8 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId
                                     {watchedType === 'one-off'
                                         ? 'A single invoice that will be sent once'
                                         : watchedType === 'recurring'
-                                        ? 'A recurring invoice based on a schedule'
-                                        : 'Generate an invoice for a past due subscription'}
+                                            ? 'A recurring invoice based on a schedule'
+                                            : 'Generate an invoice for a past due subscription'}
                                 </FormDescription>
                                 <FormMessage />
                             </FormItem>
@@ -131,16 +131,16 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Select Subscription</FormLabel>
-                                    <Select 
-                                        onValueChange={field.onChange} 
+                                    <Select
+                                        onValueChange={field.onChange}
                                         defaultValue={field.value}
                                         disabled={isLoadingSubscriptions}
                                     >
                                         <FormControl>
                                             <SelectTrigger className="border-none rounded-lg">
                                                 <SelectValue placeholder={
-                                                    isLoadingSubscriptions 
-                                                        ? "Loading subscriptions..." 
+                                                    isLoadingSubscriptions
+                                                        ? "Loading subscriptions..."
                                                         : "Choose a past due subscription"
                                                 } />
                                             </SelectTrigger>
@@ -198,30 +198,30 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId
                     />
 
                     <FormField
-                    control={form.control}
-                    name="paymentType"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Payment Method</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                            <SelectTrigger className="border-none rounded-lg">
-                                <SelectValue placeholder="Select payment method" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value='cash'>Cash (Cash/Check)</SelectItem>
-                            {hasStripeCustomer && <SelectItem value="card">Card (Stripe)</SelectItem>}
-                            </SelectContent>
-                        </Select>
-                        <FormDescription>
-                            {field.value === 'cash'
-                            ? 'Invoice will be created as draft. You can mark it as sent and collect payment manually.'
-                            : 'Invoice will be processed through Stripe'}
-                        </FormDescription>
-                        <FormMessage />
-                        </FormItem>
-                    )}
+                        control={form.control}
+                        name="paymentType"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Payment Method</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger className="border-none rounded-lg">
+                                            <SelectValue placeholder="Select payment method" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value='cash'>Cash (Cash/Check)</SelectItem>
+                                        {hasStripeCustomer && <SelectItem value="card">Card (Stripe)</SelectItem>}
+                                    </SelectContent>
+                                </Select>
+                                <FormDescription>
+                                    {field.value === 'cash'
+                                        ? 'Invoice will be created as draft. You can mark it as sent and collect payment manually.'
+                                        : 'Invoice will be processed through Stripe'}
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                        )}
                     />
 
                     {/* Due Date (only for send_invoice and not from-subscription) */}
@@ -240,7 +240,7 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId
                                                     className={cn(
                                                         'w-full pl-3 text-left font-normal border-none',
                                                         !field.value &&
-                                                            'text-muted-foreground'
+                                                        'text-muted-foreground'
                                                     )}
                                                 >
                                                     {field.value ? (
@@ -366,13 +366,13 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId
                                                 min="1"
                                                 max="12"
                                                 {...field}
-                                                // onChange={(e) =>
-                                                //     field.onChange(
-                                                //         parseInt(
-                                                //             e.target.value
-                                                //         ) || 1
-                                                //     )
-                                                // }
+                                            // onChange={(e) =>
+                                            //     field.onChange(
+                                            //         parseInt(
+                                            //             e.target.value
+                                            //         ) || 1
+                                            //     )
+                                            // }
                                             />
                                         </FormControl>
                                         <FormDescription>
@@ -398,7 +398,7 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId
                                                         className={cn(
                                                             'w-full pl-3 text-left font-normal border-none',
                                                             !field.value &&
-                                                                'text-muted-foreground'
+                                                            'text-muted-foreground'
                                                         )}
                                                     >
                                                         {field.value ? (
@@ -451,7 +451,7 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId
                                                         className={cn(
                                                             'w-full pl-3 text-left font-normal border-none',
                                                             !field.value &&
-                                                                'text-muted-foreground'
+                                                            'text-muted-foreground'
                                                         )}
                                                     >
                                                         {field.value ? (
@@ -477,14 +477,14 @@ export function InvoiceDetailsStep({ form, onNext, hasStripeCustomer, locationId
                                                     selected={field.value}
                                                     onSelect={field.onChange}
                                                     disabled={(date) => {
-                                                        return (
+                                                        return !!(
                                                             date < new Date() ||
                                                             (watchedStartDate &&
-                                                                date <=
-                                                                    watchedStartDate)
-                                                        )
+                                                                date <= watchedStartDate)
+                                                        );
                                                     }}
                                                 />
+// ... existing code ...
                                             </PopoverContent>
                                         </Popover>
                                         <FormDescription>

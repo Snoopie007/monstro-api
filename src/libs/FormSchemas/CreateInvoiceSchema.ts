@@ -14,15 +14,14 @@ export const InvoiceItemSchema = z.object({
 
 export const RecurringSettingsSchema = z.object({
   interval: z.enum(["day", "week", "month", "year"], {
-    required_error: "Please select a billing interval",
+    message: "Please select a billing interval",
   }),
   intervalCount: z
     .number()
     .min(1, "Interval count must be at least 1")
-    .max(12, "Interval count cannot exceed 12")
-    .default(1),
+    .max(12, "Interval count cannot exceed 12"),
   startDate: z.date({
-    required_error: "Start date is required",
+    message: "Start date is required",
   }),
   endDate: z.date().optional(),
 })
@@ -42,24 +41,22 @@ export const RecurringSettingsSchema = z.object({
 export const CreateInvoiceSchema = z
   .object({
     type: z.enum(["one-off", "recurring", "from-subscription"], {
-      required_error: "Please select an invoice type",
+      message: "Please select an invoice type",
     }),
     description: z
       .string()
       .max(500, "Description cannot exceed 500 characters")
       .optional(),
     dueDate: z.date().optional(),
-    collectionMethod: z
-      .enum(["charge_automatically", "send_invoice"], {
-        required_error: "Please select a collection method",
-      })
-      .default("send_invoice"),
+    collectionMethod: z.enum(["charge_automatically", "send_invoice"], {
+      message: "Please select a collection method",
+    }),
     items: z
       .array(InvoiceItemSchema)
       .max(20, "Cannot exceed 20 items"),
-    isRecurring: z.boolean().default(false),
+    isRecurring: z.boolean(),
     recurringSettings: RecurringSettingsSchema.optional(),
-    paymentType: z.enum(PaymentTypeEnum.enumValues).default('cash'),
+    paymentType: z.enum(PaymentTypeEnum.enumValues),
     selectedSubscriptionId: z.string().optional(),
   })
   .refine(
@@ -113,7 +110,9 @@ export const CreateInvoiceSchema = z
 // TypeScript types
 export type InvoiceItem = z.infer<typeof InvoiceItemSchema>;
 export type RecurringSettings = z.infer<typeof RecurringSettingsSchema>;
-export type CreateInvoiceFormData = z.infer<typeof CreateInvoiceSchema>;
+export type CreateInvoiceFormData = z.infer<typeof CreateInvoiceSchema> & {
+  collectionMethod: "charge_automatically" | "send_invoice";
+};
 
 // Additional validation helpers
 export const validateInvoiceTotal = (items: InvoiceItem[]): number => {

@@ -5,7 +5,7 @@ export const adminUsers = pgTable("admin_users", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  role: AdminUserRoleEnum("role").default("Staff"),
+  role: AdminUserRoleEnum("role"),
   image: text("image"),
   password: text("password"),
   phone: text("phone"),

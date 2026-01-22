@@ -4,7 +4,7 @@ import { MemberGeneralInfoSchema } from "../schema";
 export const UpdateMemberSchema = z.object({
     currentPoints: z.number().int().min(0, 'Current points must be a positive number'),
     reedemPoints: z.number().int().min(0, 'Reedem points must be a positive number'),
-}).merge(MemberGeneralInfoSchema);
+}).and(MemberGeneralInfoSchema);
 
 
 export const ChargeItemSchema = z.object({
@@ -20,25 +20,25 @@ export const ChargeItemSchema = z.object({
 const CommonFields = z.object({
     memberPlanId: z.string().min(1, "required"),
     pricingId: z.string().min(1, "Pricing option is required"),
-    startDate: z.date().min(new Date(), "Activation date must be in the future"),
+    startDate: z.date().min(Date.now(), "Activation date must be in the future"),
 })
 
 export const NewSubscriptionSchema = z.object({
     endDate: z.date().optional(),
     trailDays: z.number().int().optional(),
     allowProration: z.boolean().optional()
-}).merge(CommonFields)
+}).and(CommonFields)
 
 export const NewPackageSchema = z.object({
     expireDate: z.date().optional(),
     totalClassLimit: z.number().min(0, "Total class limit must be greater than 0").max(100, "Total class limit must be less than 100").optional(),
-}).merge(CommonFields)
+}).and(CommonFields)
 
 
 export const MemberInfoSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().optional(),
-    email: z.string().email("Please enter a valid email address"),
+    email: z.email("Please enter a valid email address"),
     phone: z.string().optional(),
     avatar: z.string().url().optional().or(z.literal("")),
 });

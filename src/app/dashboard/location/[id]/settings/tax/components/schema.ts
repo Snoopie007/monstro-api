@@ -7,8 +7,8 @@ export const taxRateSchema = z.object({
     description: z.string().min(1, "Description is required"),
     country: z.string().min(1),
     state: z.string().min(1),
-    percentage: z.number().min(0).max(100).default(0.00),
-    inclusive: z.boolean().default(false),
+    percentage: z.number().min(0).max(100),
+    inclusive: z.boolean(),
 });
 
 

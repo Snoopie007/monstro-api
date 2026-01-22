@@ -160,7 +160,7 @@ export function PkgForm({ lid, mid, pkgs, onFinish }: PkgFormProps) {
                                                     {pricingOptions.map((pricing: MemberPlanPricing) => (
                                                         <SelectItem key={pricing.id} value={pricing.id}>
                                                             {pricing.name} - {formatAmountForDisplay(pricing.price / 100, pricing.currency || 'usd')}
-                                                            {pricing.expireInterval && pricing.expireThreshold && 
+                                                            {pricing.expireInterval && pricing.expireThreshold &&
                                                                 ` (expires in ${pricing.expireThreshold} ${pricing.expireInterval}s)`
                                                             }
                                                         </SelectItem>

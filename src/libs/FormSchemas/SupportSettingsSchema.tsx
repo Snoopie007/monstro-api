@@ -15,7 +15,7 @@ export const TriggerSchema = z.object({
     toolCall: z
         .object({
             tool: z.string(),
-            parameters: z.record(z.any()),
+            parameters: z.record(z.string(), z.any()),
         })
         .optional(),
     examples: z.array(
@@ -62,7 +62,7 @@ export const KnowledgeBaseSchema = z.object({
 export const SupportSettingsSchema = z.object({
     prompt: z.string().min(10, { message: '' }),
     model: z.enum(['anthropic', 'gpt', 'gemini']),
-    temperature: z.coerce.number().min(0).max(1).step(0.1).optional(),
+    temperature: z.number().min(0).max(1).step(0.1).optional(),
     initialMessage: z.string().optional(),
     persona: z.object({
         avatar: z.string().optional(),

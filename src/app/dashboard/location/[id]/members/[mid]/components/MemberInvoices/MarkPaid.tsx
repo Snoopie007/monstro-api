@@ -45,7 +45,7 @@ const MarkPaidSchema = z.object({
     paidDate: z
         .string()
         .min(1, 'Date is required'),
-    paymentMethod: z.enum(['cash', 'check', 'bank_transfer']).default('cash'),
+    paymentMethod: z.enum(['cash', 'check', 'bank_transfer']),
     notes: z.string().optional(),
 })
 
@@ -100,7 +100,7 @@ export const MarkPaid = ({
             toast.success('Invoice marked as paid')
             setIsOpen(false)
             onPaid()
-            
+
             // Also revalidate subscriptions to update status (if invoice is linked to subscription)
             mutate({ url: `members/${params.mid}/subs`, id: params.id })
         } catch (error) {
@@ -174,11 +174,11 @@ export const MarkPaid = ({
                                                         >
                                                             {field.value
                                                                 ? format(
-                                                                      new Date(
-                                                                          field.value
-                                                                      ),
-                                                                      'PPP'
-                                                                  )
+                                                                    new Date(
+                                                                        field.value
+                                                                    ),
+                                                                    'PPP'
+                                                                )
                                                                 : 'Select date'}
                                                             <ChevronDownIcon />
                                                         </Button>
@@ -196,8 +196,8 @@ export const MarkPaid = ({
                                                             selected={
                                                                 field.value
                                                                     ? new Date(
-                                                                          field.value as string
-                                                                      )
+                                                                        field.value as string
+                                                                    )
                                                                     : undefined
                                                             }
                                                             captionLayout="dropdown"
