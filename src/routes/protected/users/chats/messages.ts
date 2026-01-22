@@ -1,44 +1,33 @@
 import { db } from "@/db/db";
-import { chatMembers, chats, media, messages, reactionCounts, users } from "@/db/schemas";
+import { chatMembers, chats, media, messages, reactionCounts } from "@/db/schemas";
 import { broadcastMessage, broadcastMessageUpdate, broadcastMessageDelete } from "@/libs/messages";
-import type { Media, Message, ReactionCounts, MessageReply, MessageSender, User } from "@/types";
+import type { Media, Message, ReactionCounts, MessageReply } from "@/types";
 import { and, eq, inArray } from "drizzle-orm";
-import { Elysia, type Context } from "elysia";
-import { z } from "zod";
+import { Elysia, t, type Context } from "elysia";
 import { ALLOWED_IMAGE_TYPES } from "@/libs/data";
 
-const GetProps = {
-    params: z.object({
-        cid: z.string(),
+const MessageProps = {
+    params: t.Object({
+        uid: t.String(),
+        cid: t.String(),
     }),
 };
 
 const PostProps = {
-    ...GetProps,
-    body: z.object({
-        content: z.string().optional(),
-        replyId: z.string().optional(),
-        files: z.array(z.object({
-            fileName: z.string(),
-            mimeType: z.string(),
-            fileSize: z.number(),
-            url: z.string(),
-        })),
+    ...MessageProps,
+    body: t.Object({
+        content: t.Optional(t.String()),
+        replyId: t.Optional(t.String()),
+        files: t.Optional(t.Array(t.Object({
+            fileName: t.String(),
+            mimeType: t.String(),
+            fileSize: t.Number(),
+            url: t.String(),
+        })))
     }),
 };
 
-const DeleteProps = {
-    params: z.object({
-        cid: z.string(),
-        mid: z.string(),
-    }),
-};
-const PutProps = {
-    ...DeleteProps,
-    body: z.object({
-        content: z.string(),
-    }),
-};
+
 
 /**
  * Determines the file type category based on MIME type
@@ -54,7 +43,7 @@ function getFileTypeCategory(mimeType: string): 'image' | 'video' | 'audio' | 'd
 export function messageRoute(app: Elysia) {
     // Get messages for a chat with media and reactions
     app.get('/messages', async ({ params, set }) => {
-        const { cid } = params as { cid: string };
+        const { cid, uid } = params;
         try {
             // Fetch messages with sender and media relations
             const messageRows = await db.query.messages.findMany({
@@ -138,12 +127,11 @@ export function messageRoute(app: Elysia) {
             set.status = 500;
             return { error: 'Failed to load messages' };
         }
-    }, GetProps)
+    }, MessageProps)
 
     app.post('/messages', async ({ params, body, set, ...ctx }) => {
-        const { userId } = ctx as Context & { userId: string };
 
-        const { cid } = params as { cid: string };
+        const { cid, uid } = params;
         const { content, files, replyId } = body;
 
         if (!content && (!files || files.length === 0)) {
@@ -161,7 +149,7 @@ export function messageRoute(app: Elysia) {
                 const existingMembership = await db.query.chatMembers.findFirst({
                     where: and(
                         eq(chatMembers.chatId, cid),
-                        eq(chatMembers.userId, userId!)
+                        eq(chatMembers.userId, uid)
                     ),
                 });
 
@@ -169,7 +157,7 @@ export function messageRoute(app: Elysia) {
                     // Add sender as a chat member
                     await db.insert(chatMembers).values({
                         chatId: cid,
-                        userId: userId!,
+                        userId: uid,
                     });
                 }
             }
@@ -177,7 +165,7 @@ export function messageRoute(app: Elysia) {
             // Insert the message first
             const [newMessage] = await db.insert(messages).values({
                 chatId: cid,
-                senderId: userId,
+                senderId: uid,
                 content: content?.trim() || null,
                 replyId: replyId || null,
             }).returning();
@@ -225,9 +213,8 @@ export function messageRoute(app: Elysia) {
         }
     }, PostProps)
 
-    app.put('/messages/:mid', async ({ params, body, set, ...ctx }) => {
-        const { userId } = ctx as Context & { userId: string };
-        const { cid, mid } = params as { cid: string; mid: string };
+    app.put('/messages/:messageId', async ({ params, body, set, ...ctx }) => {
+        const { cid, messageId, uid } = params;
         const { content } = body;
 
         if (!content || content.trim().length === 0) {
@@ -239,7 +226,7 @@ export function messageRoute(app: Elysia) {
             // Find the message and verify ownership
             const message = await db.query.messages.findFirst({
                 where: (messages, { eq, and }) => and(
-                    eq(messages.id, mid),
+                    eq(messages.id, messageId),
                     eq(messages.chatId, cid)
                 ),
                 with: {
@@ -253,7 +240,7 @@ export function messageRoute(app: Elysia) {
                 return { error: 'Message not found' };
             }
 
-            if (message.senderId !== userId) {
+            if (message.senderId !== uid) {
                 set.status = 403;
                 return { error: 'You can only edit your own messages' };
             }
@@ -264,7 +251,7 @@ export function messageRoute(app: Elysia) {
                     content: content.trim(),
                     updated: new Date(),
                 })
-                .where(eq(messages.id, mid))
+                .where(eq(messages.id, messageId))
                 .returning();
 
             if (!updatedMessage) {
@@ -275,7 +262,7 @@ export function messageRoute(app: Elysia) {
             // Get latest medias after update (for enrichment)
             const updatedMedias = await db.select().from(media).where(and(
                 eq(media.ownerType, 'message'),
-                eq(media.ownerId, mid)
+                eq(media.ownerId, messageId)
             ));
 
             const enrichedMessage: Message = {
@@ -293,17 +280,26 @@ export function messageRoute(app: Elysia) {
             set.status = 500;
             return { error: 'Internal server error' };
         }
-    }, PutProps)
+    }, {
+        params: t.Object({
+            uid: t.String(),
+            cid: t.String(),
+            messageId: t.String(),
+        }),
+        body: t.Object({
+            content: t.String(),
+        }),
+    })
 
-    app.delete('/messages/:mid', async ({ params, set, ...ctx }) => {
+    app.delete('/messages/:messageId', async ({ params, set, ...ctx }) => {
         const { userId } = ctx as Context & { userId: string };
-        const { cid, mid } = params as { cid: string; mid: string };
+        const { cid, messageId, uid } = params;
 
         try {
             // Find the message and verify ownership
             const message = await db.query.messages.findFirst({
                 where: (messages, { eq, and }) => and(
-                    eq(messages.id, mid),
+                    eq(messages.id, messageId),
                     eq(messages.chatId, cid)
                 ),
             });
@@ -319,10 +315,10 @@ export function messageRoute(app: Elysia) {
             }
 
             // Delete the message (cascade will handle media and reactions)
-            await db.delete(messages).where(eq(messages.id, mid));
+            await db.delete(messages).where(eq(messages.id, messageId));
 
             // Broadcast the deletion
-            await broadcastMessageDelete(cid, mid);
+            await broadcastMessageDelete(cid, messageId);
 
             set.status = 200;
             return { success: true };
@@ -331,7 +327,13 @@ export function messageRoute(app: Elysia) {
             set.status = 500;
             return { error: 'Internal server error' };
         }
-    }, DeleteProps);
+    }, {
+        params: t.Object({
+            uid: t.String(),
+            cid: t.String(),
+            messageId: t.String(),
+        }),
+    });
 
     return app;
 }

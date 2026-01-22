@@ -1,6 +1,5 @@
 import { AuthMiddleware } from '@/middlewares';
 import { Elysia } from 'elysia';
-import { userChats } from './chats';
 import { commentRoutes } from './comments';
 import { reactionRoutes } from './reactions';
 import {
@@ -13,8 +12,8 @@ import { stripeRoutes } from './stripe';
 import { userNotificationRoutes } from './notifications';
 import { groupRoutes } from './groups';
 import { locationsRoutes } from './locations';
+import { userAccountsRoutes } from './users/accounts';
 import {
-    memberAccounts,
     memberAvatar,
     memberFamilies,
     memberGroups,
@@ -30,19 +29,18 @@ export const ProtectedRoutes = new Elysia({ prefix: '/protected' })
     .use(stripeRoutes)
     .use(commentRoutes)
     .use(reactionRoutes)
-    .use(userChats)
     .use(friendsRoutes)
     .use(mediaRoutes)
     .use(userNotificationRoutes)
     .use(groupRoutes)
     .group('/users/:uid', (app) => {
+        app.use(userAccountsRoutes);
         app.use(userFeedsRoutes);
         app.use(userMomentsRoutes);
         return app;
     })
     .group('/member/:mid', (app) => {
         app.use(membersLocations);
-        app.use(memberAccounts);
         app.use(resetPassword);
         app.use(memberFamilies);
         app.use(memberPayments);

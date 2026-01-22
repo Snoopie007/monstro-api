@@ -46,16 +46,17 @@ export const memberPlans = pgTable("member_plans", {
 	updated: timestamp("updated_at", { withTimezone: true }),
 });
 
-// New table for multiple pricing options per plan
 export const memberPlanPricing = pgTable("member_plan_pricing", {
 	id: uuid("id").primaryKey().notNull().default(sql`uuid_base62()`),
 	memberPlanId: text("member_plan_id").notNull().references(() => memberPlans.id, { onDelete: "cascade" }),
 	name: text("name").notNull(),
 	price: integer("price").notNull().default(0),
+	currency: text("currency").notNull().default("USD"),
 	interval: IntervalType("interval").default("month"),
 	intervalThreshold: integer("interval_threshold").default(1),
 	expireInterval: IntervalType("expire_interval"),
 	expireThreshold: integer("expire_threshold"),
+	downpayment: integer("downpayment"),
 	stripePriceId: text("stripe_price_id"),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
