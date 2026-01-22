@@ -1,5 +1,5 @@
 'use client';;
-import { use } from "react";
+import { use, useState } from "react";
 import { Button } from '@/components/ui';
 import {
     Table,
@@ -20,7 +20,7 @@ import Link from 'next/link';
 import { tryCatch } from "@/libs/utils";
 import { toast } from "react-toastify";
 import { format } from "date-fns";
-import { CloudDownloadIcon, FileIcon } from "lucide-react";
+import { CloudDownloadIcon, FileIcon, LoaderIcon } from "lucide-react";
 import { MemberContract } from "@/types";
 import { Input } from "@/components/forms";
 
@@ -28,23 +28,29 @@ import { Input } from "@/components/forms";
 export default function MemberContractsPage(props: { params: Promise<{ id: string }> }) {
     const params = use(props.params);
     const { contracts, isLoading } = useSignedContracts(params.id);
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
     async function downloadContract(signedId: string, mid: string) {
+        setDownloadingId(signedId);
         const { result, error } = await tryCatch(
             fetch(`/api/protected/loc/${params.id}/contracts/signed/${signedId}/${mid}`)
         );
 
         if (error || !result || !result.ok) {
+            setDownloadingId(null);
             return toast.error(error?.message || "Error downloading contract");
         }
 
-        const data = await result.json();
+        const blob = await result.blob();
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = data.pdfUrl;
-        link.download = 'contract.pdf';
+        link.href = url;
+        link.download = `contract_${signedId}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setDownloadingId(null);
     }
     return (
         <div className="flex flex-col gap-4">
@@ -81,11 +87,13 @@ export default function MemberContractsPage(props: { params: Promise<{ id: strin
                                             {contract.contractTemplate?.title}
                                             <Button variant={"ghost"} size={"icon"}
                                                 onClick={() => downloadContract(contract.id, contract.memberId)}
-
+                                                disabled={downloadingId === contract.id}
                                                 className="size-6 hover:bg-foreground/5 text-foreground/50 rounded-sm">
-
-                                                <CloudDownloadIcon className="size-3.5" />
-
+                                                {downloadingId === contract.id ? (
+                                                    <LoaderIcon className="size-3.5 animate-spin" />
+                                                ) : (
+                                                    <CloudDownloadIcon className="size-3.5" />
+                                                )}
                                             </Button>
                                         </TableCell>
 
