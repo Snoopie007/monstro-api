@@ -37,21 +37,44 @@ export async function POST(req: NextRequest) {
         const { id, ...rest } = sale;
 
         await db.transaction(async (tx) => {
+
+            const name = `${sale.firstName} ${sale.lastName}`;
             const [{ id }] = await tx.insert(users).values({
-                name: `${sale.firstName} ${sale.lastName}`,
+                name: name,
                 email: sale.email,
-                username: generateUsername(`${sale.firstName} ${sale.lastName}`),
+                username: generateUsername(name),
                 discriminator: generateDiscriminator(),
-            }).returning({ id: users.id })
-            await tx.update(accounts).set({
+            }).onConflictDoNothing(
+                { target: [users.email] }
+            ).returning({ id: users.id })
+
+            if (!id) {
+
+                tx.rollback();
+                return
+            }
+
+
+            await tx.insert(accounts).values({
+                userId: id,
                 password: hashedPassword,
-            }).where(eq(accounts.userId, id))
+                provider: "credential",
+                type: "email",
+                accountId: sale.email,
+            })
 
             const [{ vid }] = await tx.insert(vendors).values({
                 ...rest,
                 phone: parsePhoneNumberFromString(sale.phone)?.number,
                 userId: id,
-            }).returning({ vid: vendors.id });
+            }).onConflictDoNothing(
+                { target: [vendors.email] }
+            ).returning({ vid: vendors.id });
+
+            if (!vid) {
+                tx.rollback();
+                return
+            }
 
             await tx.insert(vendorLevels).values({
                 vendorId: vid

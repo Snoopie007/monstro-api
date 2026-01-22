@@ -1,21 +1,23 @@
-import { relations } from "drizzle-orm";
-import { text, pgTable, primaryKey } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
+import { text, pgTable, primaryKey, timestamp, integer } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
 export const accounts = pgTable("account", {
-    // Better Auth expected fields (camelCase in code, snake_case in DB)
-    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    id: text("id").primaryKey().notNull().default(sql`uuid_base62()`),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     type: text("type"),
     provider: text("provider").notNull(),
-    accountId: text("provider_account_id").notNull(), // Better Auth expects 'accountId'
-    password: text("password"), // ← Add this
-    refreshToken: text("refresh_token"), // Better Auth expects 'refreshToken'
-    accessToken: text("access_token"), // Better Auth expects 'accessToken'
-    expiresAt: text("expires_at"), // Better Auth expects 'expiresAt'
-    tokenType: text("token_type"), // Better Auth expects 'tokenType'
-    idToken: text("id_token"), // Better Auth expects 'idToken'
+    accountId: text("provider_account_id").notNull(),
+    password: text("password"),
+    refreshToken: text("refresh_token"),
+    accessToken: text("access_token"),
+    expires: timestamp("expires_at", { withTimezone: true }),
+    tokenType: text("token_type"),
+    idToken: text("id_token"),
     scope: text("scope"),
-    sessionState: text("session_state"), // Better Auth expects 'sessionState'
+    sessionState: text("session_state"),
+    created: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [primaryKey({ columns: [t.provider, t.accountId] })]);
 
 export const accountsRelations = relations(accounts, ({ one }) => ({

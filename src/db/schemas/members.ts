@@ -8,21 +8,23 @@ import { contractTemplates } from './ContractTemplates'
 import { memberPackages, memberSubscriptions } from './MemberPlans'
 import { InvoiceStatusEnum, MemberRelationshipEnum, CustomFieldTypeEnum, PaymentTypeEnum } from './DatabaseEnums'
 import { InvoiceItem } from '@/types'
+
 export const members = pgTable('members', {
     id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
     userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     firstName: text('first_name').notNull(),
     lastName: text('last_name'),
-    email: text('email').notNull(),
-    phone: text('phone').notNull(),
+    email: text('email').notNull().unique(),
+    phone: text('phone'),
     referralCode: text('referral_code').notNull(),
     gender: text('gender'),
     dob: timestamp('dob', { withTimezone: true, mode: 'date' }).default(sql`NULL`),
     stripeCustomerId: text('stripe_customer_id'),
-    // firstTime: boolean('first_time').notNull().default(true),
+    setupCompleted: boolean('setup_completed').notNull().default(false),
     created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 })
+
 
 
 export const memberPointsHistory = pgTable('member_points_history', {
