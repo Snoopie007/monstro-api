@@ -227,6 +227,5 @@ async function attachPaymentMethod(paymentMethod: Stripe.PaymentMethod, mid: str
     }).onConflictDoNothing({
         target: [paymentMethods.fingerprint, paymentMethods.memberId],
     }).returning();
-    console.log('newPaymentMethod', newPaymentMethod)
     return newPaymentMethod;
 }

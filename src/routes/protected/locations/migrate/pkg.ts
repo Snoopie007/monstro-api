@@ -24,6 +24,7 @@ export function migratePkgRoutes(app: Elysia) {
 
         const { lid, migrateId } = params;
         const { priceId, mid, paymentType, paymentMethodId } = body;
+        console.log(body);
         try {
             const member = await db.query.members.findFirst({
                 where: (member, { eq }) => eq(member.id, mid),
@@ -85,7 +86,7 @@ export function migratePkgRoutes(app: Elysia) {
             }
 
             await db.insert(memberPaymentMethods).values({
-                paymentMethodId: paymentMethodId,
+                paymentMethodId: paymentMethod.id,
                 memberId: mid,
                 locationId: lid,
             }).onConflictDoNothing({

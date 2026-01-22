@@ -58,8 +58,16 @@ export function migrateSubRoutes(app: Elysia) {
                 return status(404, { error: "Location not found" });
             }
 
+            const paymentMethod = await db.query.paymentMethods.findFirst({
+                where: (paymentMethod, { eq }) => eq(paymentMethod.id, paymentMethodId),
+            });
+
+            if (!paymentMethod) {
+                return status(404, { error: "Payment method not found" });
+            }
+
             await db.insert(memberPaymentMethods).values({
-                paymentMethodId: paymentMethodId,
+                paymentMethodId: paymentMethod.id,
                 memberId: mid,
                 locationId: lid,
             }).onConflictDoNothing({
@@ -81,7 +89,7 @@ export function migrateSubRoutes(app: Elysia) {
                 return status(404, { error: "Pricing not found" });
             }
 
-            const start = new Date(startDate);
+            const start = startDate ? new Date(startDate) : new Date();
             const end = calculatePeriodEnd(
                 start,
                 pricing.interval!,
@@ -116,7 +124,7 @@ export function migrateSubRoutes(app: Elysia) {
                 taxRateId: taxRate?.stripeRateId || undefined,
                 cancelAt: calculateCancelAt(start, pricing),
                 feePercent,
-                paymentMethod: paymentMethodId || undefined,
+                paymentMethod: paymentMethod.stripeId,
                 metadata,
             });
 
@@ -159,7 +167,7 @@ export function migrateSubRoutes(app: Elysia) {
         body: t.Object({
             paymentMethodId: t.String(),
             priceId: t.String(),
-            startDate: t.String(),
+            startDate: t.Optional(t.String()),
             mid: t.String(),
             paymentType: t.Enum(t.Literal('card'), t.Literal('us_bank_account'))
         }),
