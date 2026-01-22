@@ -59,29 +59,42 @@ async function GetMemberPlans(toolCall: ToolCall, context: Context): Promise<str
 	let plans = [];
 
 	try {
-
 		const subs = await db.query.memberSubscriptions.findMany({
 			where: (subs, { eq }) => eq(subs.memberId, ml.memberId),
-			with: {
-				plan: {
-					with: {
-						planPrograms: {
-							with: {
-								program: true,
-							},
-						},
-					},
-				},
-			},
 		});
 		const pkgs = await db.query.memberPackages.findMany({
 			where: (pkgs, { eq }) => eq(pkgs.memberId, ml.memberId),
+		});
+
+		const pricingIds = new Set<string>();
+		subs.forEach(sub => pricingIds.add(sub.memberPlanPricingId));
+		pkgs.forEach(pkg => pricingIds.add(pkg.memberPlanPricingId));
+
+		const pricings = await db.query.memberPlanPricing.findMany({
+			where: (p, { inArray }) => inArray(p.id, Array.from(pricingIds)),
+			columns: {
+				id: true,
+				name: true,
+				price: true,
+				interval: true,
+				intervalThreshold: true,
+			},
 			with: {
 				plan: {
+					columns: {
+						id: true,
+						name: true,
+						familyMemberLimit: true,
+					},
 					with: {
 						planPrograms: {
 							with: {
-								program: true,
+								program: {
+									columns: {
+										id: true,
+										name: true,
+									},
+								},
 							},
 						},
 					},
@@ -89,27 +102,59 @@ async function GetMemberPlans(toolCall: ToolCall, context: Context): Promise<str
 			},
 		});
 
+		// Helper function to safely get pricing by id
+		function getPricingById(id: string) {
+			return pricings.find(p => p.id === id);
+		}
+
+		// Build for subscriptions
 		for (const sub of subs) {
-			const programs = sub.plan.planPrograms.map(p => ({ programId: p.program.id, programName: p.program.name }));
+			const pricing = getPricingById(sub.memberPlanPricingId);
+			if (!pricing || !pricing.plan) {
+				console.warn(`No pricing/plan found for subscription ${sub.id}`);
+				continue;
+			}
+			const plan = pricing.plan;
+			const programs = Array.isArray(plan.planPrograms)
+				? plan.planPrograms.map((p: any) => ({
+					programId: p.program.id,
+					programName: p.program.name,
+				}))
+				: [];
+
 			plans.push({
-				planName: sub.plan.name,
+				planName: plan.name,
 				subscriptionId: sub.id,
-				familyLimit: sub.plan.familyMemberLimit,
-				price: sub.plan.price,
-				interval: sub.plan.interval,
-				intervalThreshold: sub.plan.intervalThreshold,
+				familyLimit: plan.familyMemberLimit,
+				price: pricing.price,
+				interval: pricing.interval,
+				intervalThreshold: pricing.intervalThreshold,
 				includedPrograms: programs,
 				startDate: sub.startDate || sub.created,
 				status: sub.status,
 			});
 		}
+
+		// Build for packages
 		for (const pkg of pkgs) {
-			const programs = pkg.plan.planPrograms.map(p => ({ programId: p.program.id, programName: p.program.name }));
+			const pricing = getPricingById(pkg.memberPlanPricingId);
+			if (!pricing || !pricing.plan) {
+				console.warn(`No pricing/plan found for package ${pkg.id}`);
+				continue;
+			}
+			const plan = pricing.plan;
+			const programs = Array.isArray(plan.planPrograms)
+				? plan.planPrograms.map((p: any) => ({
+					programId: p.program.id,
+					programName: p.program.name,
+				}))
+				: [];
+
 			plans.push({
-				planName: pkg.plan.name,
+				planName: plan.name,
 				packageId: pkg.id,
-				familyLimit: pkg.plan.familyMemberLimit,
-				price: pkg.plan.price,
+				familyLimit: plan.familyMemberLimit,
+				price: pricing.price,
 				includedPrograms: programs,
 				startDate: pkg.startDate || pkg.created,
 				status: pkg.status,
@@ -139,12 +184,6 @@ async function RAGTool(toolCall: ToolCall) {
 	//     next
 	// }
 }
-
-
-
-
-
-
 
 
 const ToolFunctions = {

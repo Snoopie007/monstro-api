@@ -32,7 +32,7 @@ export async function processClassReminder(data: {
             // Queue email
             await emailQueue.add('send-email', {
                 to: reservation.member.email,
-                subject: `Class Reminder: ${reservation.session.program.name}`,
+                subject: `Class Reminder: ${reservation.session?.program.name}`,
                 template: 'ClassReminderEmail',
                 metadata: {
                     member: {
@@ -41,13 +41,13 @@ export async function processClassReminder(data: {
                         email: reservation.member.email,
                     },
                     class: {
-                        name: reservation.session.program.name,
-                        description: reservation.session.program.description,
+                        name: reservation.session?.program.name,
+                        description: reservation.session?.program.description,
                         startTime: reservation.startOn,
                         endTime: reservation.endOn,
-                        instructor: reservation.session.staff ? {
-                            firstName: reservation.session.staff.firstName,
-                            lastName: reservation.session.staff.lastName,
+                        instructor: reservation.session?.staff ? {
+                            firstName: reservation.session?.staff.firstName,
+                            lastName: reservation.session?.staff.lastName,
                         } : null,
                     },
                     location: {
@@ -89,7 +89,7 @@ export async function processRecurringClassReminder(data: {
 
         const now = new Date();
         const startDate = new Date(recurringReservation.startDate);
-        
+
         // Calculate next occurrence
         const nextOccurrence = calculateNextClassOccurrence(
             startDate,
@@ -108,7 +108,7 @@ export async function processRecurringClassReminder(data: {
 
         if (isException) {
             console.log(`⏭️ Occurrence on ${nextOccurrence.toISOString()} is an exception. Skipping to next.`);
-            
+
             // Schedule for next occurrence
             const nextCheckDate = addDays(nextOccurrence, -3);
             const delay = Math.max(0, nextCheckDate.getTime() - Date.now());
@@ -134,14 +134,14 @@ export async function processRecurringClassReminder(data: {
 
             // Get session time details to calculate actual start/end times
             const session = recurringReservation.session;
-            if (!session.time) {
-                console.error(`❌ Invalid session data: missing time for session ${session.id}`);
-                throw new Error(`Session ${session.id} has no time defined`);
+            if (!session?.time) {
+                console.error(`❌ Invalid session data: missing time for session ${session?.id}`);
+                throw new Error(`Session ${session?.id} has no time defined`);
             }
-            const [hours, minutes] = session.time.split(':').map(Number);
+            const [hours, minutes] = session?.time.split(':').map(Number);
             const startTime = new Date(nextOccurrence);
             startTime.setHours(hours!, minutes, 0, 0);
-            const endTime = new Date(startTime.getTime() + session.duration * 60000);
+            const endTime = new Date(startTime.getTime() + session?.duration * 60000);
 
             // Queue email
             await emailQueue.add('send-email', {
@@ -241,7 +241,7 @@ export async function checkMissedClass(data: {
 
             await emailQueue.add('send-email', {
                 to: reservation.member.email,
-                subject: `We Missed You: ${reservation.session.program.name}`,
+                subject: `We Missed You: ${reservation.session?.program.name}`,
                 template: 'MissedClassEmail',
                 metadata: {
                     member: {
@@ -250,13 +250,13 @@ export async function checkMissedClass(data: {
                         email: reservation.member.email,
                     },
                     class: {
-                        name: reservation.session.program.name,
-                        description: reservation.session.program.description,
+                        name: reservation.session?.program.name,
+                        description: reservation.session?.program.description,
                         startTime: reservation.startOn,
                         endTime: reservation.endOn,
-                        instructor: reservation.session.staff ? {
-                            firstName: reservation.session.staff.firstName,
-                            lastName: reservation.session.staff.lastName,
+                        instructor: reservation.session?.staff ? {
+                            firstName: reservation.session?.staff.firstName,
+                            lastName: reservation.session?.staff.lastName,
                         } : null,
                     },
                     location: {

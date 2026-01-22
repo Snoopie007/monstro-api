@@ -11,7 +11,7 @@ export const comments = pgTable("comments", {
     parentId: text("parent_id"),
     likes: text("likes").array().default(sql`'{}'::text[]`),
     pinned: boolean("pinned").notNull().default(false),
-    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    userId: text("user_id").notNull().references(() => users.id, { onDelete: "set null" }),
     content: text("content").notNull(),
     depth: integer("depth").notNull().default(0),
     replyCounts: integer("reply_counts").notNull().default(0),

@@ -35,7 +35,7 @@ export function commentPosts(app: Elysia) {
                 limit: 10,
             });
 
-            const userIds = commentList.map((c) => c.userId);
+            const userIds = commentList.map((c) => c.userId).filter((id): id is string => id !== null);
             const users =
                 userIds.length > 0
                     ? await db.query.users.findMany({

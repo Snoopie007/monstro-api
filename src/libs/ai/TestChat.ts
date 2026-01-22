@@ -107,7 +107,7 @@ export function createMockConversation(aid: string, mid: string, lid: string): S
 		title: "New Conversation",
 		metadata: {},
 		locationId: lid,
-		status: "active",
+		status: "open",
 		supportAssistantId: aid,
 		memberId: mid,
 		created: new Date(),

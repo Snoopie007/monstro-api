@@ -7,6 +7,8 @@
     "start": "bun run index.ts",
     "dev": "BUN_ENV=development bun --watch run index.ts",
     "build": "bun build index.ts --target bun --outdir dist",
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "tsc --noEmit --watch",
     "email": "email dev --dir src/emails"
   },
   "devDependencies": {

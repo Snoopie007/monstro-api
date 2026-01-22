@@ -4,9 +4,7 @@ import { addDays, addYears, addMonths, addWeeks } from "date-fns";
 export async function fetchSubscriptionData(subscriptionId: string) {
     const subscription = await db.query.memberSubscriptions.findFirst({
         where: (memberSubscriptions, { eq }) => eq(memberSubscriptions.id, subscriptionId),
-        with: {
-            plan: true,
-        }
+
     });
 
     if (!subscription) {
@@ -18,7 +16,7 @@ export async function fetchSubscriptionData(subscriptionId: string) {
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
         cancelAt: subscription.cancelAt,
         currentPeriodEnd: subscription.currentPeriodEnd,
-        memberPlanId: subscription.memberPlanId,
+        pricingId: subscription.memberPlanPricingId,
     };
 }
 
@@ -57,23 +55,27 @@ export async function fetchLocationData(locationId: string) {
     };
 }
 
-export async function fetchPlanData(planId: string) {
+export async function fetchPricingData(pricingId: string) {
     // TODO: Implement database query to fetch plan
     // Should return: name, description, price, interval, intervalThreshold
-    const plan = await db.query.memberPlans.findFirst({
-        where: (memberPlans, { eq }) => eq(memberPlans.id, planId),
+    const pricing = await db.query.memberPlanPricing.findFirst({
+        where: (memberPlanPricing, { eq }) => eq(memberPlanPricing.id, pricingId),
+        with: {
+            plan: true,
+        }
     });
 
-    if (!plan) {
-        throw new Error(`Plan not found for ID: ${planId}`);
+    if (!pricing) {
+        throw new Error(`Pricing not found for ID: ${pricingId}`);
     }
 
+    const { plan, ...rest } = pricing;
     return {
-        name: plan.name,
+        name: `${plan.name}::${rest.name}`,
         description: plan.description,
-        price: plan.price,
-        interval: plan.interval,
-        intervalThreshold: plan.intervalThreshold,
+        price: pricing.price,
+        interval: pricing.interval,
+        intervalThreshold: pricing.intervalThreshold,
     };
 }
 
@@ -164,7 +166,7 @@ export function calculateNextClassOccurrence(
     currentOccurrence: number = 0
 ): Date {
     const nextDate = new Date(startDate);
-    
+
     switch (interval) {
         case 'day':
             return addDays(nextDate, intervalThreshold * currentOccurrence);

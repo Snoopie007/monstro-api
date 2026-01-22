@@ -37,7 +37,9 @@ export function commentReplies(app: Elysia) {
 
             });
 
-            const userIds = replies.map(r => r.userId);
+
+
+            const userIds = replies.map(r => r.userId).filter((id): id is string => id !== null);
             const users = await db.query.users.findMany({
                 where: (users, { inArray }) => inArray(users.id, userIds),
                 columns: {

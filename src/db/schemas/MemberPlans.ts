@@ -79,6 +79,7 @@ export const memberSubscriptions = pgTable("member_subscriptions", {
 	cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
 	trialEnd: timestamp("trial_end", { withTimezone: true }),
 	endedAt: timestamp("ended_at", { withTimezone: true }),
+	classCredits: integer("class_credits").notNull().default(0),
 	paymentType: PaymentTypeEnum("payment_type").notNull().default("cash"),
 	metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
 	makeUpCredits: integer("make_up_credits").notNull().default(0),

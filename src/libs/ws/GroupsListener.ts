@@ -1,7 +1,7 @@
 import { createClient, RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { db } from "@/db/db";
 import { groupMembers, chatMembers, users, groupPosts, groups, staffsLocations } from "@/db/schemas";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
 	notifyUsersNewGroupPost,
 	notifyUsersNewGroupChatMessage,
@@ -55,7 +55,7 @@ export class GroupsListener {
 					schema: "public",
 					table: "group_posts",
 				}, (payload) => {
-					console.log("🚀 Group post insert", payload);
+					console.log("🚀 Group post insert", payload.new.id);
 					this.handleGroupPostInsert(payload);
 				})
 				.subscribe((status) => {
@@ -72,7 +72,7 @@ export class GroupsListener {
 					schema: "public",
 					table: "messages",
 				}, (payload) => {
-					console.log("🚀 Chat message insert", payload);
+					console.log("🚀 Chat message insert", payload.new.id);
 					this.handleChatMessageInsert(payload);
 				})
 				.subscribe((status) => {
@@ -265,7 +265,7 @@ export class GroupsListener {
 			const post = await db.query.groupPosts.findFirst({
 				where: eq(groupPosts.id, comment.post_id),
 				with: {
-					user: {
+					author: {
 						columns: {
 							email: true
 						}
@@ -309,8 +309,8 @@ export class GroupsListener {
 				});
 			});
 			commenters.add({
-				id: post.userId,
-				email: post.user?.email || "",
+				id: post.authorId,
+				email: post.author?.email || "",
 			});
 			if (comment.user_id) commenters.delete(comment.user_id); // Don't notify the commenter
 

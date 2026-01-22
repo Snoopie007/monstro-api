@@ -1,34 +1,26 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { familyMembers, members, users } from "@/db/schemas";
+import { accounts, familyMembers, members, users } from "@/db/schemas";
 import type { FamilyMember } from "@/types";
-import { generateReferralCode } from "@/libs/utils";
+import { generateDiscriminator, generateReferralCode, generateUsername } from "@/libs/utils";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
-
 import { EmailSender } from "@/libs/email";
-import { MonstroData } from "@/libs/data";
-import { z } from "zod";
+import bcrypt from "bcryptjs";
 
 const emailSender = new EmailSender();
 
 
 
 const MemberFamiliesProps = {
-    params: z.object({
-        mid: z.string(),
+    params: t.Object({
+        mid: t.String(),
     }),
-    body: z.object({
-        relationship: z.enum(["parent", "child"]),
-        firstName: z.string(),
-        lastName: z.string(),
-        email: z.string(),
-        phone: z.string(),
-    }),
+
 };
 
 export async function memberFamilies(app: Elysia) {
-    return app.get("/families", async ({ status, params }) => {
-        const { mid } = params as { mid: string };
+    app.get("/families", async ({ status, params }) => {
+        const { mid } = params;
         try {
             const families = await db.query.familyMembers.findMany({
                 where: (familyMembers, { eq }) => eq(familyMembers.relatedMemberId, mid),
@@ -41,43 +33,26 @@ export async function memberFamilies(app: Elysia) {
             console.error(error);
             return status(500, { error: "Failed to fetch families" });
         }
-    }).post("/families", async ({ status, params, body }) => {
-        const { mid } = params as { mid: string };
-        const { relationship, ...rest } = body as any;
+    }, MemberFamiliesProps)
+
+    app.post("/families/child", async ({ status, params, body }) => {
+        const { mid } = params;
+        const { firstName, lastName, email, phone } = body;
+
+        const normalizedEmail = email.trim().toLowerCase();
+        let phoneNumber: string | null = null;
+        if (phone) {
+            const parsedPhoneNumber = parsePhoneNumberFromString(phone, "US");
+            if (parsedPhoneNumber && (parsedPhoneNumber.isValid() || parsedPhoneNumber.isPossible())) {
+                phoneNumber = parsedPhoneNumber.format("E.164");
+            } else {
+                phoneNumber = phone;
+            }
+        }
 
         try {
-
-            // Handle phone number validation if provided
-            if (rest.phone && typeof rest.phone === "string" && rest.phone.trim() !== "") {
-
-                const phoneNumber = parsePhoneNumberFromString(rest.phone, "US");
-
-                if (!phoneNumber) {
-                    throw new Error(JSON.stringify({
-                        error: "Invalid phone number",
-                        details: {
-                            input: rest.phone,
-                        },
-                    }));
-                }
-
-                if (phoneNumber?.isValid() || phoneNumber?.isPossible()) {
-                    // Use the formatted number if valid, otherwise use the original for test numbers
-                    rest.phoneNumber = phoneNumber?.isValid()
-                        ? phoneNumber.formatNational()
-                        : rest.phone;
-                } else {
-                    throw new Error("Invalid phone number");
-                }
-
-                delete rest.phone;
-            } else {
-                // Set phoneNumber to empty string if no phone provided
-                rest.phoneNumber = "";
-            }
-
             const existingMember = await db.query.members.findFirst({
-                where: (members, { eq }) => eq(members.email, rest.email),
+                where: (members, { eq }) => eq(members.email, normalizedEmail),
                 with: {
                     familyMembers: {
                         where: (familyMembers, { eq }) =>
@@ -87,8 +62,11 @@ export async function memberFamilies(app: Elysia) {
             });
 
 
-            let fm: FamilyMember | undefined;
 
+
+
+            let family: FamilyMember | undefined;
+            let temporaryPassword: string | undefined = undefined;
             if (existingMember) {
                 if (existingMember.familyMembers.length > 0) {
                     throw new Error("This member already belongs to your family.");
@@ -96,15 +74,15 @@ export async function memberFamilies(app: Elysia) {
                     const [familyMember] = await db.insert(familyMembers).values({
                         memberId: existingMember.id,
                         relatedMemberId: mid,
-                        relationship: relationship,
+                        relationship: "child",
                     }).returning();
 
                     if (!familyMember?.id) {
                         throw new Error("Failed to create family member");
                     }
 
-                    const { ...restMember } = existingMember;
-                    fm = {
+                    const { familyMembers: _, ...restMember } = existingMember;
+                    family = {
                         ...familyMember,
                         member: restMember,
                     };
@@ -112,47 +90,54 @@ export async function memberFamilies(app: Elysia) {
             } else {
                 let uid: string | undefined;
                 const existingUser = await db.query.users.findFirst({
-                    where: (users, { eq }) => eq(users.email, rest.email),
+                    where: (users, { eq }) => eq(users.email, normalizedEmail),
                     columns: {
                         id: true,
                     },
                 });
 
-                const memberLocation = await db.query.memberLocations.findFirst({
-                    where: (memberLocations, { eq }) => eq(memberLocations.memberId, mid),
-                    with: {
-                        location: {
-                            columns: {
-                                name: true,
-                                id: true,
-                            }
-                        },
-                    },
-                });
-
-                if (!memberLocation) {
-                    return status(400, { error: "Member location not found" });
-                }
 
 
                 uid = existingUser?.id;
-                fm = await db.transaction(async (tx) => {
+                family = await db.transaction(async (tx) => {
                     if (!uid) {
                         const [user] = await tx
                             .insert(users)
                             .values({
-                                email: rest.email,
-                                name: `${rest.firstName} ${rest.lastName}`,
+                                email: normalizedEmail,
+                                name: `${firstName} ${lastName}`,
+                                username: generateUsername(`${firstName} ${lastName}`),
+                                discriminator: generateDiscriminator(),
                             })
                             .returning({ id: users.id });
-                        uid = user?.id;
+                        if (!user) {
+                            return await tx.rollback();
+                        }
+
+                        // Use a generated temporary password for the new user registration
+                        // Create a temporary password that is not just numbers, but includes both letters and numbers
+                        const tempPassword = Math.random().toString(36).slice(-10) +
+                            Math.random().toString(36).replace(/[^a-z]+/g, '').slice(-2);
+                        temporaryPassword = tempPassword;
+                        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+                        await tx.insert(accounts).values({
+                            userId: user.id,
+                            provider: "credential",
+                            type: 'email',
+                            accountId: normalizedEmail,
+                            password: hashedPassword,
+                        });
+
+                        uid = user.id;
                     }
 
                     const [member] = await tx.insert(members).values({
-                        userId: uid,
-                        ...rest,
+                        userId: uid || "",
+                        firstName,
+                        lastName,
+                        email: normalizedEmail,
+                        phone: phoneNumber,
                         referralCode: generateReferralCode(),
-                        currentPoints: 0,
                     }).returning();
 
 
@@ -162,45 +147,23 @@ export async function memberFamilies(app: Elysia) {
                     const [familyMember] = await tx.insert(familyMembers).values({
                         memberId: member.id,
                         relatedMemberId: mid,
-                        relationship,
+                        relationship: "child",
                     }).returning();
 
 
                     if (!familyMember?.id) {
                         return await tx.rollback();
                     }
-                    let inverseRelationship = relationship;
 
-                    if (relationship === "parent") {
-                        inverseRelationship = "child";
-                    } else if (relationship === "child") {
-                        inverseRelationship = "parent";
-                    }
 
                     await tx.insert(familyMembers).values({
                         memberId: mid,
                         relatedMemberId: member.id,
-                        relationship: inverseRelationship,
+                        relationship: "parent",
                     }).onConflictDoNothing({
                         target: [familyMembers.memberId, familyMembers.relatedMemberId],
                     });
 
-                    // await emailSender.send({
-                    //     options: {
-                    //         to: member.email,
-                    //         subject: `You've been added to ${memberLocation.location.name}`,
-                    //     },
-                    //     template: 'MemberInviteEmail',
-                    //     data: {
-                    //         member: { firstName: member.firstName },
-                    //         location: { name: memberLocation.location.name },
-                    //         ui: {
-                    //             btnUrl: `https://m.monstro-x.com/invite/${memberLocation.location.id}?email=${member.email}`,
-                    //             btnText: 'Accept Invite'
-                    //         },
-                    //         monstro: MonstroData
-                    //     }
-                    // });
 
                     return {
                         ...familyMember,
@@ -209,14 +172,20 @@ export async function memberFamilies(app: Elysia) {
                 });
             }
 
-            // Send email to the invited member
-            /// TODO: Send email to the notify family member.
-
-            return status(200, fm);
+            return status(200, { family, temporaryPassword });
         } catch (error) {
             console.error(error);
             const msg = error instanceof Error ? error.message : "Failed to create family member";
             return status(500, { error: msg });
         }
-    }, MemberFamiliesProps);
+    }, {
+        ...MemberFamiliesProps,
+        body: t.Object({
+            firstName: t.String(),
+            lastName: t.String(),
+            email: t.String(),
+            phone: t.String(),
+        }),
+    });
+    return app;
 }
