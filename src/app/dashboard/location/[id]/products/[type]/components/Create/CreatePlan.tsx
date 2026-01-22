@@ -52,6 +52,7 @@ interface CreatePlanProps {
 
 export function CreatePlan({ lid, type }: CreatePlanProps) {
 	const [open, setOpen] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const { mutate: mutateSubs } = useSubscriptions(lid);
 	const { mutate: mutatePkgs } = usePackages(lid);
 	const { groups } = useProducts();
@@ -71,6 +72,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 				intervalThreshold: 1,
 				expireInterval: null,
 				expireThreshold: null,
+				downpayment: 0,
 			}],
 			programs: [],
 			intervalClassLimit: undefined,
@@ -88,8 +90,7 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 	});
 
 	async function onSubmit(v: z.infer<typeof NewPlanSchema>) {
-		if (form.formState.isSubmitting) return;
-
+		setIsSubmitting(true);
 		try {
 			const { pkg, sub, pricingOptions, ...rest } = v;
 			const { result, error } = await tryCatch(
@@ -121,6 +122,8 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 		} catch (error) {
 			console.error("Error creating plan:", error);
 			toast.error("Failed to create plan");
+		} finally {
+			setIsSubmitting(false);
 		}
 	}
 
@@ -262,13 +265,16 @@ export function CreatePlan({ lid, type }: CreatePlanProps) {
 							</Button>
 						</DialogClose>
 						<Button
-
+							type="button"
 							onClick={form.handleSubmit(onSubmit)}
 							variant={"primary"}
-							disabled={form.formState.isSubmitting || !form.formState.isValid}
+							disabled={isSubmitting}
 						>
-							{form.formState.isSubmitting ? (
-								<Loader2 className="size-4 animate-spin" />
+							{isSubmitting ? (
+								<>
+									<Loader2 className="size-4 animate-spin" />
+									<span>Saving...</span>
+								</>
 							) : (
 								"Save"
 							)}
