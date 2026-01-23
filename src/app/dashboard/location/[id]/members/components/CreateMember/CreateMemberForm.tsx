@@ -21,12 +21,11 @@ import {
 	SelectItem,
 	Input,
 } from "@/components/forms";
-import { cn, tryCatch } from "@/libs/utils";
-import { z } from "zod";
-import React, { useState } from "react";
+import { tryCatch } from "@/libs/utils";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CreateMemberSchema } from "../../schema";
+import { CreateMemberSchema, CreateMemberFormValues } from "../../schema";
 import PhoneInput from "react-phone-number-input/input";
 import { CountryCodes } from "@/libs/data";
 import { CountryCode, Member } from "@/types";
@@ -49,9 +48,7 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 	const [retry, setRetry] = useState(false);
 	const router = useRouter();
 
-
-
-	const form = useForm<z.infer<typeof CreateMemberSchema>>({
+	const form = useForm<CreateMemberFormValues>({
 		resolver: zodResolver(CreateMemberSchema),
 		defaultValues: {
 			firstName: "",
@@ -64,19 +61,18 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 		mode: "onSubmit",
 	});
 
-	async function onSubmit(v: z.infer<typeof CreateMemberSchema>) {
+	async function onSubmit(v: CreateMemberFormValues) {
 		setLoading(true);
 		const { result, error } = await tryCatch(
 			fetch(`/api/protected/loc/${lid}/members`, {
 				method: "POST",
-				body: JSON.stringify({
-					...v,
-				}),
+				body: JSON.stringify(v),
 			})
 		);
 
 		if (error || !result || !result.ok) {
 			toast.error("Something went wrong. Please try again.");
+			setLoading(false);
 			return;
 		}
 
@@ -88,7 +84,6 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 			setLoading(false);
 			return;
 		}
-
 
 		if (invite) {
 			await sendInvite(m);
@@ -139,7 +134,6 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 								<div>
 									<Avatar className="w-[35px] h-[35px] rounded-full mx-auto">
 										<AvatarImage src={member?.user?.image || '/images/default-avatar.png'} />
-
 									</Avatar>
 								</div>
 								<div className="flex flex-col ">
@@ -212,7 +206,8 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 										)}
 									/>
 								</fieldset>
-								<fieldset >
+
+								<fieldset>
 									<FormLabel size="tiny">Phone</FormLabel>
 									<div className="flex flex-row gap-1">
 										<Select
@@ -221,13 +216,12 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 											}}
 											defaultValue={phoneRegion}
 										>
-											<SelectTrigger className=" w-[100px] ">
+											<SelectTrigger className="w-[100px]">
 												<SelectValue defaultValue={"US"} />
 											</SelectTrigger>
-
 											<SelectContent>
-												{CountryCodes.map((country, index) => (
-													<SelectItem key={index} value={country.code}>
+												{CountryCodes.map((country) => (
+													<SelectItem key={country.code} value={country.code}>
 														{country.shortName}
 													</SelectItem>
 												))}
@@ -243,21 +237,21 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 															type="tel"
 															className="rounded-lg bg-background inline-block w-full border px-4 h-12 border-foreground/10"
 															value={value}
-															withCountryCallingCode={true}
-															international={true}
+															withCountryCallingCode
+															international
 															country={phoneRegion}
 															onChange={onChange}
 														/>
 													</FormControl>
-
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
 									</div>
 								</fieldset>
+
 								<fieldset>
-									<div className="flex flex-row items-start gap-3 rounded-sm border border-foreground/10 py-2 px-3 ">
+									<div className="flex flex-row items-start gap-3 rounded-sm border border-foreground/10 py-2 px-3">
 										<div className="mt-1.5">
 											<Switch checked={invite} onCheckedChange={setInvite} />
 										</div>
@@ -272,8 +266,9 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 										</div>
 									</div>
 								</fieldset>
+
 								<div className="space-y-1">
-									<p className="text-xs text-muted-foreground uppercase ">
+									<p className="text-xs text-muted-foreground uppercase">
 										Optional
 									</p>
 									<fieldset className="grid grid-cols-5 gap-2 bg-foreground/10 px-3 py-2 rounded-sm">
@@ -288,15 +283,12 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 															value={field.value}
 															onValueChange={field.onChange}
 														>
-															<SelectTrigger className="w-full py-2 px-3 ">
+															<SelectTrigger className="w-full py-2 px-3">
 																<SelectValue placeholder="Gender" />
 															</SelectTrigger>
 															<SelectContent>
-																{["Male", "Female"].map((gender, index) => (
-																	<SelectItem key={index} value={gender}>
-																		{gender}
-																	</SelectItem>
-																))}
+																<SelectItem value="Male">Male</SelectItem>
+																<SelectItem value="Female">Female</SelectItem>
 															</SelectContent>
 														</Select>
 													</FormControl>
@@ -318,8 +310,6 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 										/>
 									</fieldset>
 								</div>
-
-
 							</form>
 						</Form>
 					)}
@@ -327,39 +317,32 @@ export function CreateMemberForm({ lid }: { lid: string }) {
 			</DialogBody>
 			<DialogFooter>
 				<DialogClose asChild>
-					<Button
-						variant={"outline"}
-
-						className="border-foreground/10"
-					>
+					<Button variant="outline" className="border-foreground/10">
 						Cancel
 					</Button>
 				</DialogClose>
 				{!existingMember && !retry && (
 					<DialogClose asChild>
 						<Button
-							variant={"foreground"}
-
+							variant="foreground"
 							disabled={
 								loading ||
 								form.formState.isSubmitting ||
 								!form.formState.isValid
 							}
 							onClick={form.handleSubmit(onSubmit)}
-
 						>
-							{loading ? <Loader2 className=" animate-spin size4" /> : "Create Account"}
-
+							{loading ? <Loader2 className="animate-spin size-4" /> : "Create Account"}
 						</Button>
 					</DialogClose>
 				)}
 				{retry && (
 					<Button
-						variant={"continue"}
+						variant="continue"
 						onClick={() => sendInvite(member)}
 						disabled={loading}
 					>
-						{loading ? <Loader2 className=" animate-spin size4" /> : "Retry"}
+						{loading ? <Loader2 className="animate-spin size-4" /> : "Retry"}
 					</Button>
 				)}
 			</DialogFooter>

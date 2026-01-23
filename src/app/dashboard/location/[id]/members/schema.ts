@@ -1,4 +1,3 @@
-
 import z from 'zod';
 
 export const MemberGeneralInfoSchema = z.object({
@@ -38,6 +37,12 @@ export const NewMemberPaymentSchema = z.object({
 })
 
 export const CreateMemberSchema = z.object({
+    firstName: z.string().min(2, 'First name is required'),
+    lastName: z.string().min(2, 'Last name is required'),
+    email: z.string().email('Valid email is required'),
+    phone: z.string().min(2, 'Phone number is required'),
     dob: z.string().optional(),
     gender: z.string().optional(),
-}).and(MemberGeneralInfoSchema)
+});
+
+export type CreateMemberFormValues = z.infer<typeof CreateMemberSchema>;

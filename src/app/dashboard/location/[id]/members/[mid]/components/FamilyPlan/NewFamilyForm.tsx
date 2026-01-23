@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState, useCallback } from "react";
 import {
 	Form,
 	FormField,
@@ -13,109 +13,95 @@ import {
 	SelectTrigger,
 	SelectValue,
 	Input,
-	FormDescription,
+	FormLabel,
 } from "@/components/forms";
 
-import { AddFamilyMemberSchema } from "../../schema";
-import { z } from "zod";
-import { CountryCode } from "@/types/other";
-import { CountryCodes } from "@/libs/data";
-import PhoneInput from "react-phone-number-input/input";
-import { Button, DialogClose } from "@/components/ui";
-import { MemberRelationship } from "@/types/DatabaseEnums";
+import { AddFamilyMemberSchema, AddFamilyMemberFormValues } from "../../schema";
+import { Button, DialogClose, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
 import { cn } from "@/libs/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Loader2 } from "lucide-react";
+import { Loader2, Info } from "lucide-react";
 import { toast } from "react-toastify";
 import { MemberPackage, MemberSubscription } from "@/types";
-import { Dispatch, SetStateAction } from "react";
+import { BirthdayField } from "../../../components/CreateMember";
 
 interface FamilyMemberFormProps {
 	parentPlan: MemberSubscription | MemberPackage;
-	setSlide: Dispatch<SetStateAction<'existing' | 'new'>>;
+	onClose: () => void;
 }
-const RelationshipOptions: MemberRelationship[] = [
-	"parent",
-	"spouse",
-	"child",
-	"sibling",
-	"other",
-];
 
 export function FamilyMemberForm({
 	parentPlan,
-	setSlide,
+	onClose,
 }: FamilyMemberFormProps) {
-	const [phoneRegion, setPhoneRegion] = useState<CountryCode>("US");
 	const [loading, setLoading] = useState(false);
 
-
-	const form = useForm<z.infer<typeof AddFamilyMemberSchema>>({
+	const form = useForm<AddFamilyMemberFormValues>({
 		resolver: zodResolver(AddFamilyMemberSchema),
 		defaultValues: {
 			firstName: "",
 			lastName: "",
-			email: "",
-			phone: "",
-			relationship: "",
+			dob: undefined,
+			gender: undefined,
 			parentPlanId: parentPlan.id,
 		},
 		mode: "onChange",
 	});
 
-	async function onSubmit(v: z.infer<typeof AddFamilyMemberSchema>) {
+	const onSubmit = useCallback(async (v: AddFamilyMemberFormValues) => {
 		setLoading(true);
 
 		try {
-			const payload = {
-				firstName: v.firstName,
-				lastName: v.lastName,
-				email: v.email,
-				phone: v.phone,
-				relationship: v.relationship,
-			};
-
-			const response = await fetch(`/api/protected/loc/${parentPlan.locationId}/members/${parentPlan.memberId}/family`, {
-				method: "POST",
-				body: JSON.stringify(payload),
-			});
+			const response = await fetch(
+				`/api/protected/loc/${parentPlan.locationId}/members/${parentPlan.memberId}/subs/${parentPlan.id}/childs`,
+				{
+					method: "PATCH",
+					body: JSON.stringify({
+						familyMemberId: parentPlan.memberId,
+						firstName: v.firstName,
+						lastName: v.lastName,
+						dob: v.dob,
+						gender: v.gender,
+					}),
+				}
+			);
 
 			if (!response.ok) {
 				const errorData = await response.json();
 				throw new Error(errorData.error || "Failed to add child member");
 			}
-			setSlide('existing');
+			toast.success("Child account created successfully");
+			onClose();
 		} catch (error) {
 			console.error("Error adding child member:", error);
+			toast.error("Failed to add child member");
 		} finally {
 			setLoading(false);
 		}
-	}
-
-	function useAliasEmail() {
-		const firstName = form.getValues("firstName");
-		if (!firstName) {
-			toast.error("First name is required");
-			return "";
-		}
-		const [localPart, domain] = parentPlan.member?.email?.split("@") || [];
-		const aliasEmail = `${localPart}+${firstName.toLowerCase()}@${domain}`;
-		return aliasEmail;
-	}
+	}, [parentPlan.locationId, parentPlan.memberId, parentPlan.id, onClose]);
 
 	return (
 		<Form {...form}>
-			<form className={cn("space-y-3 bg-foreground/5 rounded-b-lg p-3 ")}>
-
-
-
+			<form className={cn("space-y-3 bg-foreground/5 rounded-b-lg p-3")}>
+				{/* Name Fields */}
 				<fieldset className="grid grid-cols-2 gap-4">
 					<FormField
 						control={form.control}
 						name="firstName"
 						render={({ field }) => (
 							<FormItem>
+								<div className="flex items-center gap-1">
+									<FormLabel className="text-xs text-muted-foreground">First Name</FormLabel>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<Info className="size-3 text-muted-foreground cursor-help" />
+										</TooltipTrigger>
+										<TooltipContent side="top">
+											Email will be auto-generated based on the parent's email
+										</TooltipContent>
+									</Tooltip>
+								</div>
 								<FormControl>
 									<Input {...field} placeholder="First Name" />
 								</FormControl>
@@ -128,6 +114,7 @@ export function FamilyMemberForm({
 						name="lastName"
 						render={({ field }) => (
 							<FormItem>
+								<FormLabel className="text-xs text-muted-foreground">Last Name</FormLabel>
 								<FormControl>
 									<Input {...field} placeholder="Last Name" />
 								</FormControl>
@@ -136,100 +123,61 @@ export function FamilyMemberForm({
 						)}
 					/>
 				</fieldset>
-				<fieldset className="space-y-1">
+
+				{/* Gender and DOB */}
+				<fieldset className="grid grid-cols-5 gap-2 bg-background px-3 py-2 rounded-sm border border-foreground/10">
 					<FormField
 						control={form.control}
-						name="email"
+						name="gender"
 						render={({ field }) => (
-							<FormItem>
-
-								<FormDescription className="text-sm text-muted-foreground">
-									No email? We can create a proxy email that forwards
-									messages to you. Click the "Generate Proxy Email" below to generate one.
-								</FormDescription>
-								<FormControl>
-									<Input {...field} type="email" placeholder="Email" />
-								</FormControl>
+							<FormItem className="col-span-2">
+								<FormLabel className="text-xs text-muted-foreground">Gender</FormLabel>
+								<Select value={field.value} onValueChange={field.onChange}>
+									<FormControl>
+										<SelectTrigger className="w-full py-2 px-3">
+											<SelectValue placeholder="Gender" />
+										</SelectTrigger>
+									</FormControl>
+									<SelectContent>
+										<SelectItem value="Male">Male</SelectItem>
+										<SelectItem value="Female">Female</SelectItem>
+									</SelectContent>
+								</Select>
+							</FormItem>
+						)}
+					/>
+					<FormField
+						control={form.control}
+						name="dob"
+						render={({ field }) => (
+							<FormItem className="col-span-3">
+								<FormLabel className="text-xs text-muted-foreground">Date of Birth *</FormLabel>
+								<BirthdayField value={field.value} onChange={field.onChange} />
 								<FormMessage />
 							</FormItem>
 						)}
 					/>
-					<div
-						className="text-indigo-500 text-sm  font-medium cursor-pointer"
-						onClick={() => {
-							form.setValue("email", useAliasEmail());
-						}}
-					>
-						Generate Proxy Email
-					</div>
 				</fieldset>
-				<fieldset>
-					<div className="flex flex-row gap-1">
-						<Select
-							onValueChange={(value: string) =>
-								setPhoneRegion(value as CountryCode)
-							}
-							defaultValue={phoneRegion}
-						>
-							<SelectTrigger className=" w-[22%]">
-								<SelectValue defaultValue={"US"} />
-							</SelectTrigger>
-							<SelectContent>
-								{CountryCodes.map((country, index) => (
-									<SelectItem key={index} value={country.code}>
-										{country.shortName}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-						<FormField
-							control={form.control}
-							name="phone"
-							render={({ field: { onChange, value } }) => (
-								<FormItem className="flex-1">
-									<FormControl>
-										<PhoneInput
-											type="tel"
-											className="rounded-lg bg-background inline-block w-full border h-12 p-3 text-sm border-foreground/10"
-											value={value}
-											withCountryCallingCode={true}
-											international={true}
-											country={phoneRegion}
-											onChange={onChange}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-					</div>
-				</fieldset>
-				<div className="flex flex-row gap-2 mt-4 justify-between" >
 
-					<Button variant="foreground" type="button" onClick={() => setSlide('existing')}>
-						Back
-					</Button>
-
-					<div className="flex flex-row gap-2">
-						<DialogClose asChild>
-							<Button variant="outline" type="button" className='border-foreground/10'>
-								Cancel
-							</Button>
-						</DialogClose>
-
-						<Button className={cn("children:hidden", { "children:inline-flex": loading })}
-							type="submit"
-							variant={"primary"}
-							disabled={loading}
-							onClick={form.handleSubmit(onSubmit)}
-						>
-							<Loader2 className="mr-2 size-4 hidden animate-spin" />
-							Create Account
+				{/* Action Buttons */}
+				<div className="flex flex-row gap-2 mt-4 justify-end">
+					<DialogClose asChild>
+						<Button variant="outline" type="button" className="border-foreground/10">
+							Cancel
 						</Button>
-					</div>
+					</DialogClose>
+
+					<Button
+						type="submit"
+						variant="primary"
+						disabled={loading}
+						onClick={form.handleSubmit(onSubmit)}
+					>
+						{loading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+						Create Account
+					</Button>
 				</div>
 			</form>
-
 		</Form>
 	);
 }
