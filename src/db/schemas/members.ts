@@ -6,7 +6,10 @@ import { achievements, memberAchievements } from './achievements'
 import { rewards } from './rewards'
 import { contractTemplates } from './contracts'
 import { memberPackages, memberSubscriptions } from './MemberPlans'
-import { InvoiceStatusEnum, MemberRelationshipEnum, CustomFieldTypeEnum, PaymentTypeEnum } from './DatabaseEnums'
+import {
+	InvoiceStatusEnum, MemberRelationshipEnum, CustomFieldTypeEnum,
+	PaymentTypeEnum, FamilyMemberStatusEnum
+} from './DatabaseEnums'
 import type { InvoiceItem } from '@/types'
 
 
@@ -105,8 +108,10 @@ export const memberInvoices = pgTable('member_invoices', {
 export const familyMembers = pgTable('family_members', {
 	id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
 	memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
-	relatedMemberId: text('related_member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
-	relationship: MemberRelationshipEnum('relationship').notNull().default('other'),
+	relatedMemberId: text('related_member_id').references(() => members.id, { onDelete: 'cascade' }),
+	contactId: text('contact_id'),
+	status: FamilyMemberStatusEnum('status').notNull().default('pending'),
+	relationship: MemberRelationshipEnum('relationship').notNull().default('extended'),
 	created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp('updated_at', { withTimezone: true }),
 })

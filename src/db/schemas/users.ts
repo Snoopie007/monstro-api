@@ -13,6 +13,7 @@ export const users = pgTable("users", {
     emailVerified: boolean("email_verified").notNull().default(false),
     image: text("image"),
     username: text("username").notNull(),
+    isChild: boolean("is_child").notNull().default(false),
     discriminator: integer("discriminator").notNull(), // 4-digit number as string
     created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updated: timestamp("updated_at", { withTimezone: true }),
