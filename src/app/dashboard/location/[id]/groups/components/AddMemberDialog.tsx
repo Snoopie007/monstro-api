@@ -134,6 +134,7 @@ export function ChatMembersDialog({
                     discriminator: selectedMember.discriminator,
                     created: new Date(),
                     updated: null,
+                    isChild: false,
                 },
             };
             setMembers([...members, newChatMember]);

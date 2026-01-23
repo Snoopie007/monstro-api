@@ -90,23 +90,27 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 			return null;
 		}
 
-		const fmids = ml.member.familyMembers?.map((fm) => fm.relatedMemberId) || [];
+		const fmids = ml.member.familyMembers
+			?.map((fm) => fm.relatedMemberId)
+			.filter((id): id is string => id !== null) || [];
 
-		const knownFamilyMemberIds = await db.query.memberLocations.findMany({
-			where: (ml, { inArray, eq, and }) => and(inArray(ml.memberId, fmids), eq(ml.locationId, id)),
-			columns: {
-				memberId: true,
-			},
-		});
+		const knownFamilyMemberIds = fmids.length > 0
+			? await db.query.memberLocations.findMany({
+				where: (ml, { inArray, eq, and }) => and(inArray(ml.memberId, fmids), eq(ml.locationId, id)),
+				columns: {
+					memberId: true,
+				},
+			})
+			: [];
 
 		const filteredFamilyMembers = ml.member.familyMembers?.filter((fm) => {
-			return !knownFamilyMemberIds.find((kmnl) => kmnl.memberId === fm.memberId);
+			return fm.relatedMemberId && !knownFamilyMemberIds.find((kmnl) => kmnl.memberId === fm.relatedMemberId);
 		});
 
 		const { member, ...rest } = ml;
 		return {
-			member,
-			ml: { ...rest, knownFamilyMembers: filteredFamilyMembers },
+			member: member as Member,
+			ml: { ...rest, knownFamilyMembers: filteredFamilyMembers } as MemberLocation,
 		};
 	} catch (error) {
 		console.log("error", error);
