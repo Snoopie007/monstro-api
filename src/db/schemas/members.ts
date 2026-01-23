@@ -109,7 +109,7 @@ export const familyMembers = pgTable('family_members', {
 	id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
 	memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
 	relatedMemberId: text('related_member_id').references(() => members.id, { onDelete: 'cascade' }),
-	contactId: text('contact_id'),
+	contact: text('contact'),
 	status: FamilyMemberStatusEnum('status').notNull().default('pending'),
 	relationship: MemberRelationshipEnum('relationship').notNull().default('extended'),
 	created: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
