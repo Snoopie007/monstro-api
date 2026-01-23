@@ -90,9 +90,7 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 			return null;
 		}
 
-		const fmids = ml.member.familyMembers
-			?.map((fm) => fm.relatedMemberId)
-			.filter((id): id is string => id !== null) || [];
+		const fmids = ml.member.familyMembers?.map((fm) => fm.relatedMemberId) || [];
 
 		const knownFamilyMemberIds = fmids.length > 0
 			? await db.query.memberLocations.findMany({
@@ -104,7 +102,7 @@ async function fetchMemberLocationData(id: string, mid: string): Promise<Promise
 			: [];
 
 		const filteredFamilyMembers = ml.member.familyMembers?.filter((fm) => {
-			return fm.relatedMemberId && !knownFamilyMemberIds.find((kmnl) => kmnl.memberId === fm.relatedMemberId);
+			return !knownFamilyMemberIds.find((kmnl) => kmnl.memberId === fm.relatedMemberId);
 		});
 
 		const { member, ...rest } = ml;
