@@ -1,13 +1,10 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
 import { accounts, familyMembers, members, users } from "@/db/schemas";
-import type { FamilyMember } from "@/types";
+import type { FamilyMember, Member, User } from "@/types";
 import { generateDiscriminator, generateReferralCode, generateUsername } from "@/libs/utils";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
-import { EmailSender } from "@/libs/email";
 import bcrypt from "bcryptjs";
-
-const emailSender = new EmailSender();
 
 
 
@@ -15,7 +12,18 @@ const MemberFamiliesProps = {
     params: t.Object({
         mid: t.String(),
     }),
+};
 
+// Shared column selections
+const userColumns = {
+    id: true,
+    name: true,
+    image: true,
+};
+const memberColumns = {
+    id: true,
+    firstName: true,
+    lastName: true,
 };
 
 export async function memberFamilies(app: Elysia) {
@@ -27,7 +35,14 @@ export async function memberFamilies(app: Elysia) {
                 const families = await db.query.familyMembers.findMany({
                     where: (familyMembers, { eq }) => eq(familyMembers.relatedMemberId, mid),
                     with: {
-                        member: true,
+
+                        member: {
+                            with: {
+                                user: {
+                                    columns: userColumns,
+                                },
+                            },
+                        },
                     },
                 });
                 return status(200, families);
@@ -210,12 +225,101 @@ export async function memberFamilies(app: Elysia) {
 
         app.post("/invite", async ({ status, params, body }) => {
             const { mid } = params;
-            const { email } = body;
+            const { email, phone, unqiueUsername, relationship } = body;
 
-            const normalizedEmail = email.trim().toLowerCase();
-            // TODO: Send email to the invited member
+            if (!relationship) {
+                return status(400, { error: "Relationship is required" });
+            }
+
+            if (!email && !phone && !unqiueUsername) {
+                return status(400, { error: "Please provide at least one of: email, phone, or username" });
+            }
+
+
             try {
-                return status(200, { message: "Family member invited" });
+                let existingMember: Record<string, any> | undefined;
+                let normalizedContact: string | undefined = undefined;
+                if (email) {
+                    normalizedContact = email.trim().toLowerCase();
+
+                    existingMember = await db.query.members.findFirst({
+                        where: (m, { eq }) => eq(m.email, normalizedContact!),
+                        columns: memberColumns,
+                        with: {
+                            user: {
+                                columns: userColumns,
+                            },
+                        },
+                    });
+                } else if (phone) {
+                    const parsedPhoneNumber = parsePhoneNumberFromString(phone, "US");
+                    if (!parsedPhoneNumber || !(parsedPhoneNumber.isValid() || parsedPhoneNumber.isPossible())) {
+                        return status(400, { error: "Invalid phone number" });
+                    }
+
+                    normalizedContact = parsedPhoneNumber.format("E.164");
+                    existingMember = await db.query.members.findFirst({
+                        where: (m, { eq }) => eq(m.phone, normalizedContact!),
+                        columns: memberColumns,
+                        with: {
+                            user: {
+                                columns: userColumns,
+                            },
+                        },
+                    });
+                } else if (unqiueUsername) {
+                    normalizedContact = unqiueUsername.trim();
+                    const [username, discriminator] = normalizedContact.split("#");
+                    if (!username || !discriminator) {
+                        return status(400, { error: "Invalid username" });
+                    }
+                    const user = await db.query.users.findFirst({
+                        where: (m, { eq, and }) => and(eq(m.username, username), eq(m.discriminator, Number(discriminator))),
+                        columns: userColumns,
+                        with: {
+                            member: {
+                                columns: memberColumns,
+                            },
+                        },
+                    });
+                    if (user) {
+                        const { member, ...restUser } = user;
+                        existingMember = {
+                            ...member,
+                            user: restUser,
+                        };
+                    }
+                }
+
+
+
+                const [familyMember] = await db.insert(familyMembers).values({
+                    memberId: existingMember?.id ?? undefined,
+                    relatedMemberId: mid,
+                    relationship,
+                    contact: normalizedContact,
+                    status: "pending",
+                }).returning();
+
+                if (!familyMember) {
+                    return status(500, { error: "Failed to invite family member" });
+                }
+
+                if (email) {
+                    /// TODO: Send email to the new family member
+                } else if (phone) {
+                    /// TODO: Send SMS to the new family member
+                } else if (unqiueUsername) {
+                    /// TODO: Send notification to the new family member
+                }
+
+
+
+
+                return status(200, {
+                    ...familyMember,
+                    member: existingMember,
+                });
             } catch (error) {
                 console.error(error);
                 return status(500, { error: "Failed to invite family member" });
@@ -223,7 +327,11 @@ export async function memberFamilies(app: Elysia) {
         }, {
             ...MemberFamiliesProps,
             body: t.Object({
-                email: t.String(),
+                relationship: t.Union([t.Literal("parent"), t.Literal("spouse"),
+                t.Literal("child"), t.Literal("sibling"), t.Literal("extended")]),
+                email: t.Optional(t.String()),
+                phone: t.Optional(t.String()),
+                unqiueUsername: t.Optional(t.String()),
             }),
         });
         return app;
