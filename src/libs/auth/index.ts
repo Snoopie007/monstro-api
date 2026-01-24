@@ -139,6 +139,7 @@ export const auth = betterAuth({
 				},
 			});
 
+
 			if (!userData) {
 				throw new APIError("BAD_REQUEST", {
 					message: "User not found",
