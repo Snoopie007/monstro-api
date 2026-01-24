@@ -334,7 +334,10 @@ export async function POST(
 
     const formattedPhone = parsePhoneNumberFromString(data.phone, 'US')?.number
     if (!formattedPhone) {
-        throw new Error('Invalid phone number')
+        return NextResponse.json(
+            { error: 'Invalid phone number' },
+            { status: 400 }
+        )
     }
 
     try {
@@ -354,10 +357,6 @@ export async function POST(
         if (!canEditAuth) {
             return NextResponse.json({ error: "Access denied" }, { status: 403 });
         }
-
-        // const [{ exists }] = await db.execute<{ exists: boolean }>(
-        //     sql`select exists(${db.select({ n: sql`1` }).from(members).where(eq(members.email, data.email))}) as exists`
-        // )
 
         const existing = await db.query.members.findFirst({
             where: (member, { eq }) => eq(member.email, data.email),
@@ -381,7 +380,6 @@ export async function POST(
         })
 
         if (!user) {
-
             const canAddAuth = await hasPermission("add member", params.id);
             if (!canAddAuth) {
                 return NextResponse.json({ error: "Access denied" }, { status: 403 });
@@ -412,7 +410,7 @@ export async function POST(
                     ...data,
                     dob: data.dob ? new Date(data.dob) : null,
                     userId: user.id,
-                    phone: parsePhoneNumberFromString(data.phone, 'US')?.number,
+                    phone: formattedPhone,
                     referralCode: generateReferralCode(),
                 })
                 .returning({
@@ -428,6 +426,7 @@ export async function POST(
                 memberId: member.id,
                 status: 'incomplete',
             })
+
             return member
         })
 

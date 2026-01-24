@@ -126,21 +126,21 @@ export const formatInvoiceAmount = (amountInCents: number): string => {
 };
 
 // Default values for form initialization
-export const defaultInvoiceFormValues: Partial<CreateInvoiceFormData> = {
-	type: "one-off",
-	collectionMethod: "send_invoice",
-	items: [
-		{
-			id: crypto.randomUUID(),
-			name: "",
-			description: "",
-			quantity: 1,
-			price: 0,
-		},
-	],
-	paymentType: 'cash',
-	isRecurring: false,
-	selectedSubscriptionId: undefined,
+export const DEFAULT_INVOICE_FORM_VALUES: Partial<CreateInvoiceFormData> = {
+  type: "one-off",
+  collectionMethod: "send_invoice",
+  items: [
+    {
+      id: crypto.randomUUID(),
+      name: "",
+      description: "",
+      quantity: 1,
+      price: 0,
+    },
+  ],
+  paymentType: 'cash',
+  isRecurring: false,
+  selectedSubscriptionId: undefined,
 };
 
 // Validation for specific use cases

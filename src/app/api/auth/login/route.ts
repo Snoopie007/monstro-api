@@ -32,13 +32,13 @@ export async function POST(req: NextRequest) {
 			});
 		}
 
-		const password = user?.user.accounts?.[0]?.password;
+		const foundPassword = user?.user.accounts?.[0]?.password;
 
-		if ((!user || !user.user || !password)) {
+		if ((!user || !user.user || !foundPassword)) {
 			return NextResponse.json({ error: "User not found" }, { status: 401 });
 		}
 
-		const match = await bcrypt.compare(password, password);
+		const match = await bcrypt.compare(password, foundPassword);
 
 		if (!match) {
 			return NextResponse.json({ error: "Invalid password" }, { status: 401 });

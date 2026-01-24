@@ -8,6 +8,7 @@ const PricingOptionSchema = z.object({
   intervalThreshold: z.number().min(1),
   expireInterval: z.enum(["day", "week", "month", "year"]).optional().nullable(),
   expireThreshold: z.number().optional().nullable(),
+  downpayment: z.number().min(0).optional(),
 });
 
 const NewPlanSchema = z

@@ -123,7 +123,7 @@ export function MemberPackageItem({ pkg }: MemberPackageItemProps) {
                             ) : (familyPlans && familyPlans.length > 0 && familyPlans.map((plan) => (
                                 <FamilyPlanMember key={plan.id} plan={plan} />
                             )))}
-                            {canAddFamilyMember && <FamilyDialog familyPlans={familyPlans || []} parentPlan={pkg} />}
+                            {canAddFamilyMember && <FamilyDialog parentPlan={pkg} />}
                         </div>
                     </div>
                 )}

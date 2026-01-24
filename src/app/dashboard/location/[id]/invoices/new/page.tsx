@@ -14,7 +14,7 @@ import {
 import {
     type CreateInvoiceFormData,
     CreateInvoiceSchema,
-    defaultInvoiceFormValues,
+    DEFAULT_INVOICE_FORM_VALUES,
 } from '@/libs/FormSchemas/CreateInvoiceSchema'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft } from 'lucide-react'
@@ -64,7 +64,7 @@ export default function CreateInvoicePage({ params }: CreateInvoicePageProps) {
 
     const form = useForm<CreateInvoiceFormData>({
         resolver: zodResolver(CreateInvoiceSchema),
-        defaultValues: defaultInvoiceFormValues as CreateInvoiceFormData,
+        defaultValues: DEFAULT_INVOICE_FORM_VALUES as CreateInvoiceFormData,
     })
 
     // Show loading state while fetching member data

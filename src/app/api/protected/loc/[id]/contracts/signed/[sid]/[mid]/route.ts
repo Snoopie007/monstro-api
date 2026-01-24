@@ -3,8 +3,7 @@ import { memberContracts } from "@/db/schemas";
 import { db } from "@/db/db";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/libs/auth/server";
-import { generatePdfFromHtml } from "@/libs/generatePdf";
-import { generateContractHtml } from "@/libs/ContractTemplates";
+import { generateContractPdf } from "@/libs/generatePdf";
 
 export async function GET(
   req: NextRequest,
@@ -36,22 +35,21 @@ export async function GET(
     }
 
     const { location, ...contract } = mb;
-    const contractData = {
-      ...contract,
-      variables: {
-        contact: {
-          firstName: session.user.name.split(" ")[0],
-          lastName: session.user.name.split(" ")[1] || "",
-          email: session.user.email,
-          phone: session.user.phone,
-        },
-        location: location,
-      },
-    };
 
-    // 3. Generate HTML for the contract
-    const htmlContent = generateContractHtml({
-      contract: contractData,
+    // Generate PDF directly with react-pdf
+    const pdfBuffer = await generateContractPdf({
+      contract: {
+        ...contract,
+        variables: {
+          contact: {
+            firstName: session.user.name.split(" ")[0],
+            lastName: session.user.name.split(" ")[1] || "",
+            email: session.user.email,
+            phone: session.user.phone || "",
+          },
+          location: location,
+        },
+      },
       memberName: session.user.name,
       date: new Date(mb.created).toLocaleDateString("en-US", {
         year: "numeric",
@@ -61,11 +59,8 @@ export async function GET(
       contractId: contract.id,
     });
 
-    // 4. Convert HTML to PDF
-    const pdfBuffer = await generatePdfFromHtml(htmlContent);
-
-    // 5. Create response with PDF
-    const response = new NextResponse(pdfBuffer);
+    // Create response with PDF
+    const response = new NextResponse(pdfBuffer.toString());
     response.headers.set("Content-Type", "application/pdf");
     response.headers.set(
       "Content-Disposition",

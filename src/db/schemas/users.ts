@@ -16,6 +16,7 @@ export const users = pgTable("users", {
 	image: text("image"),
 	username: text("username").notNull(),
 	discriminator: integer("discriminator").notNull(), // 4-digit number as string
+	isChild: boolean("is_child").notNull().default(false),
 	created: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	updated: timestamp("updated_at", { withTimezone: true }),
 }, (t) => [

@@ -1,6 +1,6 @@
 'use client'
-import { Input } from "./input";
-import { useState, useEffect } from "react";
+import { NumericFormat } from "react-number-format";
+import { cn } from "@/libs/utils";
 
 import {
     ButtonGroup,
@@ -10,101 +10,41 @@ import { Label } from "./label";
 
 
 interface PriceInputProps {
-    value: number | undefined
+    value: number | undefined | null
     onChange: (value: number) => void
+    size?: "default" | "lg"
 }
-export function PriceInput({ value, onChange }: PriceInputProps) {
-    const [inputValue, setInputValue] = useState("0.00");
-
-    useEffect(() => {
-        if (value) {
-            setInputValue((value / 100).toFixed(2));
-        }
-    }, [])
-
-    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-
-        const val = e.target.value;
-        if (val === "") {
-            setInputValue("0.00");
-            return;
-        }
-
-        let cursorPos = e.target.selectionStart || 0;
-        const decimalIndex = e.target.value.indexOf('.');
-
-        // Split into whole number and decimal parts
-        const parts = val.split('.');
-        let wholeNum = parts[0] || "0";
-        let decimal = parts[1] || "00";
-
-        // Limit decimal to 2 digits
-        decimal = decimal.slice(0, 2).padEnd(2, '0');
-
-        // Handle number input before decimal point
-        if (cursorPos <= decimalIndex || decimalIndex === -1) {
-
-            if (inputValue.startsWith("0")) {
-                if (parts[0].startsWith("0")) {
-                    wholeNum = parts[0].slice(1) || "0";
-                    cursorPos = 1;
-                } else {
-                    wholeNum = parts[0].slice(0, 1) || "0";
-                }
-            } else {
-                wholeNum = parts[0] || "0";
-            }
-        }
-
-        const newValue = `${wholeNum}.${decimal}`;
-        setInputValue(newValue);
-
-        setTimeout(() => {
-            e.target.setSelectionRange(cursorPos, cursorPos);
-        }, 0);
-    }
-
-    function handleFocus(e: React.FocusEvent<HTMLInputElement>) {
-        const val = e.target.value;
-        const decimalIndex = val.indexOf('.');
-
-        if (decimalIndex !== -1) {
-            e.target.setSelectionRange(0, decimalIndex);
-
-        }
-
-    }
-
-    function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-        if (e.key === 'Backspace') {
-            const cursorPos = e.currentTarget.selectionStart;
-            if (cursorPos && inputValue[cursorPos - 1] === '.') {
-                e.preventDefault();
-                e.currentTarget.setSelectionRange(cursorPos, cursorPos - 1);
-            }
-        }
-    }
+export function PriceInput({ value, onChange, size = "default" }: PriceInputProps) {
+    // Convert from cents to dollars for display
+    const displayValue = value != null ? value / 100 : 0;
 
     return (
-        < ButtonGroup className="w-full">
+        <ButtonGroup className="w-full">
             <ButtonGroupText asChild>
-                <Label className="bg-foreground/5 border-foreground/5" >$</Label>
+                <Label className={cn(
+                    "bg-foreground/5 border-foreground/5",
+                    size === "lg" && "h-12 flex items-center"
+                )}>$</Label>
             </ButtonGroupText>
-            <Input
-                type="text"
-                className="pl-3"
+            <NumericFormat
+                className={cn(
+                    "flex w-full rounded-r-md border border-l-0 border-input dark:border-accent-foreground/10 bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+                    size === "default" && "h-9",
+                    size === "lg" && "h-12 rounded-lg"
+                )}
+                value={displayValue}
+                decimalScale={2}
+                fixedDecimalScale={true}
+                thousandSeparator={true}
                 placeholder="0.00"
-                value={inputValue}
-                onKeyDown={handleKeyDown}
-                onBlur={() => {
-                    const numericValue = parseFloat(inputValue) * 100;
-
-                    onChange(Math.round(numericValue));
+                onValueChange={(values) => {
+                    // Convert from dollars to cents for storage
+                    const cents = values.floatValue != null
+                        ? Math.round(values.floatValue * 100)
+                        : 0;
+                    onChange(cents);
                 }}
-                onChange={handleChange}
-                onFocus={handleFocus}
             />
-
         </ButtonGroup>
     )
 }

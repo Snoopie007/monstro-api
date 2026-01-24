@@ -221,7 +221,7 @@ export function AddProgram({ lid }: { lid: string }) {
                                         <FormItem >
                                             <FormLabel size={"tiny"}>Capacity</FormLabel>
                                             <FormControl>
-                                                <Input type='number' className={cn()} placeholder={'Capacity'}  {...field} />
+                                                <Input type='number' className={cn()} placeholder={'Capacity'}  {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -235,7 +235,7 @@ export function AddProgram({ lid }: { lid: string }) {
                                         <FormItem className="flex-1">
                                             <FormLabel size={"tiny"}>Min Age</FormLabel>
                                             <FormControl>
-                                                <Input type='number' className={cn()} placeholder={'Min Age'} {...field} />
+                                                <Input type='number' className={cn()} placeholder={'Min Age'} {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -249,7 +249,7 @@ export function AddProgram({ lid }: { lid: string }) {
                                         <FormItem className="flex-1">
                                             <FormLabel size={"tiny"}>Max Age</FormLabel>
                                             <FormControl>
-                                                <Input type='number' className={cn()} placeholder={'Max Age'} {...field} />
+                                                <Input type='number' className={cn()} placeholder={'Max Age'} {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -289,7 +289,7 @@ export function AddProgram({ lid }: { lid: string }) {
                                             <FormItem>
                                                 <FormLabel size={"tiny"}>Waitlist Capacity</FormLabel>
                                                 <FormControl>
-                                                    <Input type='number' className={cn()} placeholder={'Waitlist Capacity'} {...field} />
+                                                    <Input type='number' className={cn()} placeholder={'Waitlist Capacity'} {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -326,7 +326,7 @@ export function AddProgram({ lid }: { lid: string }) {
                                         <FormItem>
                                             <FormLabel size={"tiny"}>Cancelation Threshold</FormLabel>
                                             <FormControl>
-                                                <Input type='number' className={cn()} placeholder={'Cancelation Threshold'} {...field} />
+                                                <Input type='number' className={cn()} placeholder={'Cancelation Threshold'} {...field} onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : 0)} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>

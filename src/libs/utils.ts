@@ -378,6 +378,21 @@ function isGroupedSupportMessage(
     return timeDiff < thresholdMs && timeDiff >= 0;
 }
 
+export function calculateAge(dob: string | Date): number {
+    const birthDate = typeof dob === 'string' ? new Date(dob) : dob;
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+}
+
+export function isUnder18(dob: string | Date): boolean {
+    return calculateAge(dob) < 18;
+}
+
 export {
     authenticateMember, cn, formatAmountForDisplay, formatEmail, formatMessageTimestamp, formatPhone, formatTime, generateTestAttendanceData, getDateLabel, getTimezoneOffset, interEmailsAndText, interpolate, sleep,
     tryCatch, isGroupedMessage, isGroupedSupportMessage

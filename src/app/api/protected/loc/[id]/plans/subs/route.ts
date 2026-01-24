@@ -13,6 +13,7 @@ type PricingOptionInput = {
   intervalThreshold?: number;
   expireInterval?: "day" | "week" | "month" | "year" | null;
   expireThreshold?: number | null;
+  downpayment?: number;
 };
 
 export async function GET(
@@ -116,6 +117,7 @@ export async function POST(
             intervalThreshold: pricingOption.intervalThreshold || 1,
             expireInterval: pricingOption.expireInterval || null,
             expireThreshold: pricingOption.expireThreshold || null,
+            downpayment: pricingOption.downpayment ? pricingOption.downpayment : null,
             stripePriceId,
           })
           .returning();

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MemberGeneralInfoSchema } from "../schema";
+import { calculateAge } from "@/libs/utils";
 
 export const UpdateMemberSchema = z.object({
     currentPoints: z.number().int().min(0, 'Current points must be a positive number'),
@@ -20,7 +21,7 @@ export const ChargeItemSchema = z.object({
 const CommonFields = z.object({
     memberPlanId: z.string().min(1, "required"),
     pricingId: z.string().min(1, "Pricing option is required"),
-    startDate: z.date().min(Date.now(), "Activation date must be in the future"),
+    startDate: z.date().min(new Date(), "Activation date must be in the future"),
 })
 
 export const NewSubscriptionSchema = z.object({
@@ -42,15 +43,32 @@ export const MemberInfoSchema = z.object({
     phone: z.string().optional(),
     avatar: z.string().url().optional().or(z.literal("")),
 });
-export const AddFamilyMemberSchema = z.object({
-    firstName: z.string(),
-    lastName: z.string(),
-    email: z.string(),
-    phone: z.string(),
-    familyMemberId: z.string(),
-    relationship: z.string(),
+const AddChildMemberBaseSchema = z.object({
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    dob: z.string().optional(),
+    gender: z.string().optional(),
     parentPlanId: z.string()
-})
+});
+
+export const AddFamilyMemberSchema = AddChildMemberBaseSchema.superRefine((data, ctx) => {
+    // DOB required and must be under 18
+    if (!data.dob) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Date of birth is required",
+            path: ["dob"],
+        });
+    } else if (calculateAge(data.dob) >= 18) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Child must be under 18 years old",
+            path: ["dob"],
+        });
+    }
+});
+
+export type AddFamilyMemberFormValues = z.infer<typeof AddChildMemberBaseSchema>
 export const DAYS = [
     { label: "MON", value: 1 },
     { label: "TUE", value: 2 },
