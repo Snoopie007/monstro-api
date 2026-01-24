@@ -1,4 +1,4 @@
-import type { MonstroPlansBenefits } from "@/types/admin";
+
 import { integer, serial, text, timestamp, pgTable, jsonb, boolean } from "drizzle-orm/pg-core";
 export const monstroPlans = pgTable('monstro_plans', {
     id: serial('id').primaryKey(),
