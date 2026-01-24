@@ -73,7 +73,14 @@ export function mlDocsRoutes(app: Elysia) {
 			const pkgs = await db.query.memberPackages.findMany({
 				where: (pkg, { eq, and }) => and(eq(pkg.memberId, mid), eq(pkg.locationId, lid)),
 				with: {
-					contract: true,
+					contract: {
+						columns: {
+							id: true,
+							pdfFilename: true,
+							created: true,
+							updated: true,
+						},
+					},
 				},
 				columns: {
 					id: true,
@@ -84,7 +91,14 @@ export function mlDocsRoutes(app: Elysia) {
 			const subs = await db.query.memberSubscriptions.findMany({
 				where: (sub, { eq, and }) => and(eq(sub.memberId, mid), eq(sub.locationId, lid)),
 				with: {
-					contract: true,
+					contract: {
+						columns: {
+							id: true,
+							pdfFilename: true,
+							created: true,
+							updated: true,
+						},
+					},
 				},
 				columns: {
 					id: true,
@@ -92,7 +106,6 @@ export function mlDocsRoutes(app: Elysia) {
 					memberPlanPricingId: true,
 				},
 			});
-
 			// Improved: Avoids errors due to missing memberPlanPricingId in the selected columns.
 			const pricingIds = new Set([
 				...subs
@@ -146,10 +159,12 @@ export function mlDocsRoutes(app: Elysia) {
 				if (!contractId) return;
 				const contract = documents.find((d) => d.id === contractId);
 				if (!contract) return;
-
+				const { contract: signedContract } = sub;
 				extendedDocuments.push({
 					...contract,
-					signedOn: sub.contract ? sub.contract.created : undefined,
+					signedOn: signedContract ? signedContract.created : undefined,
+					signedContractId: signedContract ? signedContract.id : undefined,
+					signedContractPdf: signedContract ? signedContract.pdfFilename || undefined : undefined,
 					pricingId: sub.memberPlanPricingId,
 					planName: pricing?.plan?.name,
 					memberPlanId: sub.id,
@@ -162,9 +177,12 @@ export function mlDocsRoutes(app: Elysia) {
 				if (!contractId) return;
 				const contract = documents.find((d) => d.id === contractId);
 				if (!contract) return;
+				const { contract: signedContract } = pkg;
 				extendedDocuments.push({
 					...contract,
-					signedOn: pkg.contract ? pkg.contract.created : undefined,
+					signedOn: signedContract ? signedContract.created : undefined,
+					signedContractId: signedContract ? signedContract.id : undefined,
+					signedContractPdf: signedContract ? signedContract.pdfFilename || undefined : undefined,
 					pricingId: pkg.memberPlanPricingId,
 					planName: pricing?.plan?.name,
 					memberPlanId: pkg.id,
