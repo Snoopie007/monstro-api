@@ -91,11 +91,15 @@ export async function mobileGoogleLogin(app: Elysia) {
                     const [newUser] = await tx.insert(users).values({
                         email: normalizedEmail,
                         name: name,
+                        image: payload.picture as string,
                         username: generateUsername(name),
                         discriminator: generateDiscriminator(),
                         emailVerified: payload.email_verified as boolean || false,
-                    }).onConflictDoNothing({
-                        target: [users.email]
+                    }).onConflictDoUpdate({
+                        target: [users.email],
+                        set: {
+                            image: payload.picture as string,
+                        },
                     }).returning();
                     if (!newUser) {
                         tx.rollback();
