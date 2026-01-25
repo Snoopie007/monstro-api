@@ -106,8 +106,11 @@ export async function mobileAppleLogin(app: Elysia) {
                         lastName,
                         email: normalizedEmail,
                         referralCode: generateReferralCode(),
-                    }).onConflictDoNothing({
-                        target: [members.userId]
+                    }).onConflictDoUpdate({
+                        target: [members.userId],
+                        set: {
+                            userId: newUser.id,
+                        },
                     }).returning();
                     if (!newMember) {
                         tx.rollback();
@@ -116,7 +119,7 @@ export async function mobileAppleLogin(app: Elysia) {
                     user = {
                         ...newUser,
                         member: newMember
-                    }
+                    };
                 }
 
                 if (!account) {
@@ -141,7 +144,7 @@ export async function mobileAppleLogin(app: Elysia) {
             }
 
 
-            const { member, image, ...rest } = user;
+            const { member, ...rest } = user;
 
             if (!member) {
                 return status(500, { message: "Member record not found" });
@@ -160,7 +163,6 @@ export async function mobileAppleLogin(app: Elysia) {
                 ...rest,
                 phone: member.phone,
                 referralCode: member.referralCode,
-                image,
                 memberId: member.id,
                 role: "member",
             };

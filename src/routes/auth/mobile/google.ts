@@ -108,8 +108,11 @@ export async function mobileGoogleLogin(app: Elysia) {
                         lastName: lastName || "",
                         email: normalizedEmail,
                         referralCode: generateReferralCode(),
-                    }).onConflictDoNothing({
-                        target: [members.email]
+                    }).onConflictDoUpdate({
+                        target: [members.userId],
+                        set: {
+                            userId: newUser.id,
+                        },
                     }).returning();
                     if (!newMember) {
                         tx.rollback();
@@ -118,7 +121,7 @@ export async function mobileGoogleLogin(app: Elysia) {
                     user = {
                         ...newUser,
                         member: newMember
-                    }
+                    };
                 }
 
                 if (!account) {
@@ -157,6 +160,7 @@ export async function mobileGoogleLogin(app: Elysia) {
                 phone: member.phone,
                 memberId: member.id,
                 role: "member",
+                referralCode: member.referralCode,
             };
             const tokens = await generateMobileToken({
                 memberId: member.id,
