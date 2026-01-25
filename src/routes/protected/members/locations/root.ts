@@ -37,16 +37,8 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             })
 
 
-            const lids = new Set<string>();
-            mls.forEach((ml) => {
-                if (ml.locationId) {
-                    lids.add(ml.locationId);
-                }
-            });
-
-
             const migrations = await db.query.migrateMembers.findMany({
-                where: (migrateMembers, { eq, and, isNull }) => and(
+                where: (migrateMembers, { eq, and }) => and(
                     eq(migrateMembers.memberId, mid),
                     eq(migrateMembers.status, "pending"),
                 ),
@@ -65,20 +57,9 @@ export const membersLocations = new Elysia({ prefix: '/locations' })
             });
 
 
-            const extendedLocations = mls.map((ml) => {
-                const migrate = migrations.find((m) => m.locationId === ml.locationId);
-                if (migrate) {
-                    const { location, ...rest } = migrate;
-                    return {
-                        ...ml,
-                        migration: rest,
-                    };
-                }
-                return ml;
-            });
-
             return status(200, {
-                memberLocations: extendedLocations,
+                memberLocations: mls,
+                migrations,
             });
         } catch (error) {
             status(500, { error: 'Internal server error' });
