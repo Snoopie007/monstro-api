@@ -12,8 +12,8 @@ const APPLE_JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/ke
 const ApplAccountSchema = {
     body: z.object({
         token: z.string(),
-        email: z.string(),
-        firstName: z.string(),
+        email: z.string().nullable().optional(),
+        firstName: z.string().nullable().optional(),
         lastName: z.string().nullable().optional(),
         additionalData: z.object({
             isRegister: z.boolean().optional().default(false),
@@ -35,10 +35,7 @@ export async function mobileAppleLogin(app: Elysia) {
             return status(400, { message: "Id token is required" });
         }
 
-        if (!email || !firstName) {
-            return status(400, { message: "Email and name are required" });
-        }
-        const normalizedEmail = email.trim().toLowerCase();
+
         const today = new Date();
         try {
             const decodedToken = await jwtVerify(token, APPLE_JWKS, {
@@ -64,65 +61,70 @@ export async function mobileAppleLogin(app: Elysia) {
 
             let user = account?.user;
 
-            if (!user) {
-                user = await db.query.users.findFirst({
-                    where: (user, { eq }) => eq(user.email, normalizedEmail),
-                    with: {
-                        member: true
-                    },
-                });
-            }
-
-
-            const newAccountData = {
-                provider: "apple",
-                type: "oidc",
-                accountId: `${payload.sub}`,
-                expires: payload.exp ? new Date(payload.exp * 1000) : null,
-                tokenType: "bearer",
-                scope: "openid",
-                idToken: token
-            }
-
-
-
-            await db.transaction(async (tx) => {
-                const name = `${firstName} ${lastName}`;
-                if (!user) {
-                    const [newUser] = await tx.insert(users).values({
-                        email: normalizedEmail,
-                        name: name,
-                        username: generateUsername(name),
-                        discriminator: generateDiscriminator(),
-                        emailVerified: payload.email_verified as boolean || false,
-                    }).returning();
-                    if (!newUser) {
-                        tx.rollback();
-                        return;
-                    }
-                    const [newMember] = await tx.insert(members).values({
-                        userId: newUser.id,
-                        firstName,
-                        lastName,
-                        email: normalizedEmail,
-                        referralCode: generateReferralCode(),
-                    }).onConflictDoUpdate({
-                        target: [members.userId],
-                        set: {
-                            userId: newUser.id,
-                        },
-                    }).returning();
-                    if (!newMember) {
-                        tx.rollback();
-                        return;
-                    }
-                    user = {
-                        ...newUser,
-                        member: newMember
-                    };
+            if (!account) {
+                if (!email || !firstName || !lastName) {
+                    return status(400, { message: "Email is required" });
                 }
 
-                if (!account) {
+                const normalizedEmail = email.trim().toLowerCase();
+
+                if (!user) {
+                    user = await db.query.users.findFirst({
+                        where: (user, { eq }) => eq(user.email, normalizedEmail),
+                        with: {
+                            member: true
+                        },
+                    });
+                }
+
+                const newAccountData = {
+                    provider: "apple",
+                    type: "oidc",
+                    accountId: `${payload.sub}`,
+                    expires: payload.exp ? new Date(payload.exp * 1000) : null,
+                    tokenType: "bearer",
+                    scope: "openid",
+                    idToken: token
+                }
+
+
+
+                await db.transaction(async (tx) => {
+                    const name = `${firstName} ${lastName}`;
+                    if (!user) {
+                        const [newUser] = await tx.insert(users).values({
+                            email: normalizedEmail,
+                            name: name,
+                            username: generateUsername(name),
+                            discriminator: generateDiscriminator(),
+                            emailVerified: payload.email_verified as boolean || false,
+                        }).returning();
+                        if (!newUser) {
+                            tx.rollback();
+                            return;
+                        }
+                        const [newMember] = await tx.insert(members).values({
+                            userId: newUser.id,
+                            firstName,
+                            lastName,
+                            email: normalizedEmail,
+                            referralCode: generateReferralCode(),
+                        }).onConflictDoUpdate({
+                            target: [members.userId],
+                            set: {
+                                userId: newUser.id,
+                            },
+                        }).returning();
+                        if (!newMember) {
+                            tx.rollback();
+                            return;
+                        }
+                        user = {
+                            ...newUser,
+                            member: newMember
+                        };
+                    }
+
                     const [newAccount] = await tx.insert(accounts).values({
                         userId: user.id,
                         ...newAccountData
@@ -131,23 +133,18 @@ export async function mobileAppleLogin(app: Elysia) {
                         tx.rollback();
                         return;
                     }
-                } else {
-                    await tx.update(accounts).set({
-                        userId: user.id,
-                    }).where(eq(accounts.id, account.id));
-                }
-            });
-
+                });
+            }
 
             if (!user) {
-                return status(500, { message: "Failed to create or find user" });
+                return status(500, { message: "User not found" });
             }
 
 
             const { member, ...rest } = user;
 
             if (!member) {
-                return status(500, { message: "Member record not found" });
+                return status(500, { message: "This user is not a member" });
             }
 
 
