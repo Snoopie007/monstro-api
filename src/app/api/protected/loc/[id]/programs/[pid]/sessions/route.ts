@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, props: props) {
 	try {
 
 		const sessions = await db.query.programSessions.findMany({
-			where: eq(programSessions.programId, pid),
+			where: and(eq(programSessions.programId, pid), eq(programSessions.canceled, false)),
 			with: {
 				staff: {
 					with: {
