@@ -113,7 +113,7 @@ export async function mobileGoogleLogin(app: Elysia) {
                         email: normalizedEmail,
                         referralCode: generateReferralCode(),
                     }).onConflictDoUpdate({
-                        target: [members.userId],
+                        target: [members.email],
                         set: {
                             userId: newUser.id,
                         },

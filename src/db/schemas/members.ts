@@ -16,7 +16,7 @@ import type { InvoiceItem } from '@/types'
 
 export const members = pgTable('members', {
 	id: uuid('id').primaryKey().notNull().default(sql`uuid_base62()`),
-	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	userId: text('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
 	firstName: text('first_name').notNull(),
 	lastName: text('last_name'),
 	email: text('email').notNull().unique(),

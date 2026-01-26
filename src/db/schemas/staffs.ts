@@ -14,13 +14,10 @@ import { StaffStatusEnum } from './DatabaseEnums'
 export const staffs = pgTable('staffs', {
     id: serial('id').primaryKey(),
     firstName: text('first_name').notNull(),
-    lastName: text('last_name').notNull(),
-    email: text('email').notNull(),
+    lastName: text('last_name'),
+    email: text('email').notNull().unique(),
     phone: text('phone').notNull(),
-    avatar: text('avatar'),
-    userId: integer('user_id')
-        .notNull()
-        .references(() => users.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
     created: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updated: timestamp('updated_at', { withTimezone: true }),
 })
