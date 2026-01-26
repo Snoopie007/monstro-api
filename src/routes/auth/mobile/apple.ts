@@ -66,7 +66,7 @@ export async function mobileAppleLogin(app: Elysia) {
                 const randomFourDigits = Math.floor(Math.random() * 10000);
                 const normalizedEmail = email ? email.trim().toLowerCase() : `temporary-${discriminator}@example.com`;
                 const failSafeFirstName = firstName ? firstName : `User-${randomFourDigits}`;
-                const name = `${firstName} ${lastName}`;
+                const name = `${failSafeFirstName}${lastName ? ` ${lastName}` : ""}`;
 
                 if (!user) {
                     user = await db.query.users.findFirst({
@@ -139,6 +139,11 @@ export async function mobileAppleLogin(app: Elysia) {
                 return status(500, { message: "User not found" });
             }
 
+            if (!user.member) {
+                return status(500, { message: "Member not found" });
+            }
+
+
             const { member, ...rest } = user;
 
 
@@ -163,6 +168,7 @@ export async function mobileAppleLogin(app: Elysia) {
                 userId: user.id,
                 email: user.email,
             });
+
             return status(200, {
                 token: tokens.accessToken,
                 refreshToken: tokens.refreshToken,

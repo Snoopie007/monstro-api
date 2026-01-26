@@ -144,9 +144,12 @@ export async function mobileGoogleLogin(app: Elysia) {
                 }
             });
             if (!user) {
-                return status(500, { message: "Failed to create or find user" });
+                return status(500, { message: "User not found" });
             }
 
+            if (!user.member) {
+                return status(500, { message: "Member not found" });
+            }
 
             const { member, ...rest } = user;
 
