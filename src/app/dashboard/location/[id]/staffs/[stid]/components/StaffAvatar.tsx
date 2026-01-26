@@ -11,12 +11,14 @@ interface StaffAvatarProps {
     avatar: string | null;
     staffId: string;
     locationId: string;
+    userId: string;
 }
 
 export function StaffAvatar({
     avatar,
     staffId,
     locationId,
+    userId,
 }: StaffAvatarProps) {
     const fileRef = useRef<HTMLInputElement | null>(null);
     const [loading, setLoading] = useState(false);

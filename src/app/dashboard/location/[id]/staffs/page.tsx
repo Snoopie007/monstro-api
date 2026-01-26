@@ -104,7 +104,7 @@ export default function StaffsPage(props: StaffsPageProps) {
 
 function StaffItem({ sl, lid }: { sl: StaffLocation, lid: string }) {
 	const { staff, roles } = sl;
-	const defaultAvatar = staff?.avatar || '/images/default-avatar.png';
+	const defaultAvatar = staff?.user?.image || '/images/default-avatar.png';
 	return (
 		<div key={sl.id} className={cn(
 			"flex flex-row items-center justify-between gap-3 p-3 border-b border-foreground/5",

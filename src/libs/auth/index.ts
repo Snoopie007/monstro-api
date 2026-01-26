@@ -101,12 +101,11 @@ export const auth = betterAuth({
 							},
 						},
 					},
-					staff: {
-						columns: {
-							id: true,
-							phone: true,
-							avatar: true,
-						},
+				staff: {
+					columns: {
+						id: true,
+						phone: true,
+					},
 						with: {
 							staffLocations: {
 								columns: {
@@ -196,13 +195,13 @@ export const auth = betterAuth({
 					};
 				});
 
-				userPayload = {
-					phone: userData.staff.phone,
-					image: userData.staff.avatar,
-					staffId: userData.staff.id,
-					role: "staff",
-					locations: transformedLocations,
-				};
+			userPayload = {
+				phone: userData.staff.phone,
+				image: userData.image,
+				staffId: userData.staff.id,
+				role: "staff",
+				locations: transformedLocations,
+			};
 			} else {
 				throw new APIError("BAD_REQUEST", {
 					message: "User not associated with vendor or staff",
