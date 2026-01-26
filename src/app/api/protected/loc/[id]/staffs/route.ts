@@ -26,14 +26,22 @@ export async function GET(
 		const staffs = await db.query.staffLocations.findMany({
 			where: (staffLocations, { eq }) =>
 				and(eq(staffLocations.locationId, params.id)),
-			with: {
-				staff: true,
-				roles: {
-					with: {
-						role: true,
+		with: {
+			staff: {
+				with: {
+					user: {
+						columns: {
+							image: true,
+						},
 					},
 				},
 			},
+			roles: {
+				with: {
+					role: true,
+				},
+			},
+		},
 		});
 		return NextResponse.json(staffs, { status: 200 });
 	} catch (err) {

@@ -51,7 +51,11 @@ export async function GET(
           member: true,
           memberPackage: true,
           program: true,
-          staff: true,
+          staff: {
+            with: {
+              user: true,
+            },
+          },
         },
       }),
       // Get recurring reservations - uses denormalized data when available
@@ -70,11 +74,19 @@ export async function GET(
           session: {
             with: {
               program: true,
-              staff: true,
+              staff: {
+                with: {
+                  user: true,
+                },
+              },
             },
           },
           program: true,
-          staff: true,
+          staff: {
+            with: {
+              user: true,
+            },
+          },
           exceptions: true,
         },
       }) as Promise<RecurringReservation[]>,
@@ -91,7 +103,15 @@ export async function GET(
             planPrograms: true,
           },
         },
-        staff: true
+        staff: {
+          with: {
+            user: {
+              columns: {
+                image: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -160,7 +180,7 @@ export async function GET(
             staff: {
               id: session.staffId || "",
               name: session.staff?.firstName + " " + session.staff?.lastName,
-              avatar: session.staff?.avatar,
+              avatar: session.staff?.user?.image,
             },
           });
         }
@@ -311,7 +331,7 @@ function addEventToCalendar(
       staff: staff ? {
         id: staffId || "",
         name: (staff.firstName || '') + " " + (staff.lastName || ''),
-        avatar: staff.avatar,
+        avatar: staff.user?.image,
       } : {
         id: "",
         name: "Unassigned",

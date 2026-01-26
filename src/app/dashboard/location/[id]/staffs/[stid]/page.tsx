@@ -13,7 +13,11 @@ async function getStaffLocation(stid: string, lid: string) {
                 eq(staffLocations.locationId, lid)
             ),
             with: {
-                staff: true,
+                staff: {
+                    with: {
+                        user: true,
+                    },
+                },
                 roles: {
                     with: {
                         role: true,
@@ -53,7 +57,7 @@ export default async function StaffPage({ params }: StaffPageProps) {
         <div>
             <ScrollArea className="h-[calc(100vh-50px)]">
                 <div className="max-w-3xl mx-auto w-full  pb-20 space-y-4">
-                    <StaffAvatar avatar={staff.avatar} staffId={staff.id} locationId={id} />
+                    <StaffAvatar avatar={staff.user?.image ?? null} staffId={staff.id} locationId={id} userId={staff.userId} />
                     <StaffProfile staff={staff} lid={id} />
                     <StaffEmail staff={staff} lid={id} />
                     <StaffPassword staff={staff} lid={id} />
