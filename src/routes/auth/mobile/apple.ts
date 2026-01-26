@@ -16,7 +16,6 @@ const ApplAccountSchema = {
         firstName: z.string().nullable().optional(),
         lastName: z.string().nullable().optional(),
         additionalData: z.object({
-            isRegister: z.boolean().optional().default(false),
             lid: z.string().optional(),
             migrateId: z.string().optional(),
             ref: z.string().optional(),
@@ -62,11 +61,12 @@ export async function mobileAppleLogin(app: Elysia) {
             let user = account?.user;
 
             if (!account) {
-                if (!email || !firstName || !lastName) {
-                    return status(400, { message: "Email is required" });
-                }
 
-                const normalizedEmail = email.trim().toLowerCase();
+                const discriminator = generateDiscriminator();
+                const randomFourDigits = Math.floor(Math.random() * 10000);
+                const normalizedEmail = email ? email.trim().toLowerCase() : `temporary-${discriminator}@example.com`;
+                const failSafeFirstName = firstName ? firstName : `User-${randomFourDigits}`;
+                const name = `${firstName} ${lastName}`;
 
                 if (!user) {
                     user = await db.query.users.findFirst({
@@ -90,7 +90,6 @@ export async function mobileAppleLogin(app: Elysia) {
 
 
                 await db.transaction(async (tx) => {
-                    const name = `${firstName} ${lastName}`;
                     if (!user) {
                         const [newUser] = await tx.insert(users).values({
                             email: normalizedEmail,
@@ -105,7 +104,7 @@ export async function mobileAppleLogin(app: Elysia) {
                         }
                         const [newMember] = await tx.insert(members).values({
                             userId: newUser.id,
-                            firstName,
+                            firstName: failSafeFirstName,
                             lastName,
                             email: normalizedEmail,
                             referralCode: generateReferralCode(),
@@ -140,12 +139,7 @@ export async function mobileAppleLogin(app: Elysia) {
                 return status(500, { message: "User not found" });
             }
 
-
             const { member, ...rest } = user;
-
-            if (!member) {
-                return status(500, { message: "This user is not a member" });
-            }
 
 
             if (additionalData?.migrateId) {
