@@ -1,7 +1,7 @@
 import { Worker } from "bullmq";
 import { redisConfig } from "@/config";
 import { EmailSender } from "@/libs/email";
-import { MonstroData } from "@/libs/data";
+import { MonstroData } from "@/constants/data";
 import { shouldSendMissedClassEmail } from "@/libs/emailValidation";
 import { invoiceWorker } from "./invoices";
 import { classWorker } from "./classes";

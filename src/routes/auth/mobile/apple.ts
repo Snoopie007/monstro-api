@@ -2,10 +2,10 @@ import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
-import { users, members, accounts, migrateMembers } from "@/db/schemas";
-import { generateDiscriminator, generateReferralCode, generateUsername } from "@/libs/utils";
+import { users, members, accounts } from "@/db/schemas";
+import { generateDiscriminator, generateReferralCode, generateUsername, handleAdditionalData } from "@/libs/utils";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { AuthAdditionalDataSchema } from "@/libs/schemas";
 const APPLE_JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
 
 
@@ -15,11 +15,7 @@ const ApplAccountSchema = {
         email: z.string().nullable().optional(),
         firstName: z.string().nullable().optional(),
         lastName: z.string().nullable().optional(),
-        additionalData: z.object({
-            lid: z.string().optional(),
-            migrateId: z.string().optional(),
-            ref: z.string().optional(),
-        }).optional(),
+        additionalData: AuthAdditionalDataSchema.optional(),
     }),
 };
 
@@ -34,8 +30,6 @@ export async function mobileAppleLogin(app: Elysia) {
             return status(400, { message: "Id token is required" });
         }
 
-
-        const today = new Date();
         try {
             const decodedToken = await jwtVerify(token, APPLE_JWKS, {
                 issuer: "https://appleid.apple.com",
@@ -147,12 +141,8 @@ export async function mobileAppleLogin(app: Elysia) {
             const { member, ...rest } = user;
 
 
-            if (additionalData?.migrateId) {
-                await db.update(migrateMembers).set({
-                    memberId: member.id,
-                    viewedOn: today,
-                    updated: today,
-                }).where(eq(migrateMembers.id, additionalData.migrateId));
+            if (additionalData) {
+                handleAdditionalData(additionalData, member);
             }
 
             const data = {

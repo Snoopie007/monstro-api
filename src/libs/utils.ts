@@ -1,6 +1,11 @@
 import type { ProgramSession, RecurringReservation, Reservation } from "@/types";
 import { addDays, isBefore, isSameDay } from "date-fns";
 import { JWT } from "google-auth-library";
+import { db } from "@/db/db";
+import { migrateMembers } from "@/db/schemas";
+import { eq } from "drizzle-orm";
+import type { Member } from "@/types/member";
+import type { AuthAdditionalData } from "@/types/auth";
 
 
 async function tryCatch<T, E = Error>(
@@ -294,6 +299,45 @@ function generateUsername(name: string): string {
 function generateDiscriminator(): number {
     return Math.floor(Math.random() * 10000);
 }
+
+
+/**
+ * Handle additional data processing (e.g., migrateId updates)
+ * @param additionalData - The additional data object
+ * @param member - The member object
+ * @param options - Options for handling (blocking: if true, waits for completion; if false, fire-and-forget)
+ */
+async function handleAdditionalData(
+    additionalData: AuthAdditionalData,
+    member: Member,
+    options: { blocking?: boolean; delay?: number } = {}
+): Promise<void> {
+    const { blocking = false, delay = 1000 } = options;
+    const today = new Date();
+
+    const updateMigrateMember = async () => {
+        try {
+            if (additionalData.migrateId) {
+                await db.update(migrateMembers).set({
+                    memberId: member.id,
+                    viewedOn: today,
+                    updated: today,
+                }).where(eq(migrateMembers.id, additionalData.migrateId));
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    if (blocking) {
+        // Blocking mode: wait for the update
+        await updateMigrateMember();
+    } else {
+        // Non-blocking mode: fire-and-forget with optional delay
+        setTimeout(updateMigrateMember, delay);
+    }
+}
+
 export {
     getAccessTokenAsync,
     interEmailsAndText,
@@ -304,4 +348,5 @@ export {
     interpolate,
     generateOtp,
     tryCatch,
+    handleAdditionalData,
 };

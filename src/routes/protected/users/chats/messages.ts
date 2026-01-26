@@ -4,7 +4,7 @@ import { broadcastMessage, broadcastMessageUpdate, broadcastMessageDelete } from
 import type { Media, Message, ReactionCounts, MessageReply } from "@/types";
 import { and, eq, inArray } from "drizzle-orm";
 import { Elysia, t, type Context } from "elysia";
-import { ALLOWED_IMAGE_TYPES } from "@/libs/data";
+import { ALLOWED_IMAGE_TYPES } from "@/constants/data";
 
 const MessageProps = {
     params: t.Object({

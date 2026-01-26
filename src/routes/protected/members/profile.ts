@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { getRedisClient } from "@/libs/redis";
 import { EmailSender } from "@/libs/email";
 import { generateOtp } from "@/libs/utils";
-import { MonstroData } from "@/libs/data";
+import { MonstroData } from "@/constants/data";
 import bcrypt from "bcryptjs";
 
 import { parsePhoneNumberFromString } from "libphonenumber-js";

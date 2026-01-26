@@ -2,10 +2,11 @@ import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { generateMobileToken } from "@/libs/auth";
-import { users, members, accounts, migrateMembers } from "@/db/schemas";
-import { generateDiscriminator, generateReferralCode, generateUsername } from "@/libs/utils";
+import { users, members, accounts } from "@/db/schemas";
+import { generateDiscriminator, generateReferralCode, generateUsername, handleAdditionalData } from "@/libs/utils";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
+import { AuthAdditionalDataSchema } from "@/libs/schemas";
 const GOOGLE_JWKS = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
 
 
@@ -13,12 +14,7 @@ const GoogleAccountSchema = {
     body: z.object({
         token: z.string(),
         accessToken: z.string(),
-        additionalData: z.object({
-            isRegister: z.boolean().optional().default(false),
-            lid: z.string().optional(),
-            migrateId: z.string().optional(),
-            ref: z.string().optional(),
-        }).optional(),
+        additionalData: AuthAdditionalDataSchema.optional(),
     }),
 };
 
@@ -39,7 +35,6 @@ export async function mobileGoogleLogin(app: Elysia) {
             return status(400, { message: "Id token is required" });
 
         }
-        const today = new Date();
         try {
             const decodedToken = await jwtVerify<{ payload: GooglePayload }>(token, GOOGLE_JWKS, {
                 issuer: "https://accounts.google.com",
@@ -153,12 +148,8 @@ export async function mobileGoogleLogin(app: Elysia) {
 
             const { member, ...rest } = user;
 
-            if (additionalData?.migrateId) {
-                await db.update(migrateMembers).set({
-                    memberId: member.id,
-                    viewedOn: today,
-                    updated: today,
-                }).where(eq(migrateMembers.id, additionalData.migrateId));
+            if (additionalData) {
+                handleAdditionalData(additionalData, member);
             }
 
 

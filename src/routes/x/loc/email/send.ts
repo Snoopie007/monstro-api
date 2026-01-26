@@ -1,7 +1,7 @@
 import type { Elysia } from "elysia";
 import { EmailSender } from "@/libs/email";
 import type { EmailTemplates } from "@/emails";
-import { MonstroData } from "@/libs/data";
+import { MonstroData } from "@/constants/data";
 
 type SendEmailBody = {
     recipient: string;

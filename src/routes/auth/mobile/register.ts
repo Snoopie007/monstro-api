@@ -1,17 +1,27 @@
-import { migrateMembers } from "@/db/schemas";
-import { eq } from "drizzle-orm";
-import { Elysia, t } from "elysia";
+import { Elysia } from "elysia";
 import { db } from "@/db/db";
 import { members, users, accounts } from "@/db/schemas";
-import { generateDiscriminator, generateReferralCode, generateUsername } from "@/libs/utils";
+import { generateDiscriminator, generateReferralCode, generateUsername, handleAdditionalData } from "@/libs/utils";
 import bcrypt from "bcryptjs";
 import type { Member } from "@/types/member";
-
+import { parsePhoneNumberFromString } from "libphonenumber-js";
+import { z } from "zod";
+import { AuthAdditionalDataSchema } from "@/libs/schemas";
 export async function mobileRegister(app: Elysia) {
     app.post('/register', async ({ status, body }) => {
-        const { password, firstName, lastName, email, migrateId, phone } = body;
-        const today = new Date();
+        const { password, firstName, lastName, email, phone, additionalData } = body;
+
+
+
         const normalizedEmail = email.trim().toLowerCase();
+        let normalizedPhone: string | undefined = undefined;
+        if (phone) {
+            const parsedPhoneNumber = parsePhoneNumberFromString(phone, "US");
+            if (!parsedPhoneNumber || !(parsedPhoneNumber.isValid() || parsedPhoneNumber.isPossible())) {
+                return status(400, { error: "Invalid phone number" });
+            }
+            normalizedPhone = parsedPhoneNumber.format("E.164");
+        }
         try {
             let member: Member | undefined;
 
@@ -65,6 +75,7 @@ export async function mobileRegister(app: Elysia) {
                         .values({
                             firstName,
                             lastName,
+                            phone: normalizedPhone,
                             email: normalizedEmail,
                             userId: user.id,
                             referralCode: generateReferralCode(),
@@ -76,33 +87,32 @@ export async function mobileRegister(app: Elysia) {
                     }
                     member = newMember;
                 }
-                if (migrateId) {
-                    await tx.update(migrateMembers).set({
-                        memberId: member?.id,
-                        viewedOn: today,
-                        updated: today,
-                    }).where(eq(migrateMembers.id, migrateId));
-                }
+
 
             });
 
+            if (!member) {
+                return status(500, { error: "Failed to create account" });
+            }
+
+            if (additionalData) {
+                handleAdditionalData(additionalData, member);
+            }
             return status(200, member);
         } catch (error) {
             console.log(error);
             return status(500, { error: "Failed to migrate" });
         }
     }, {
-        body: t.Object({
-            password: t.String(),
-            firstName: t.String(),
-            lastName: t.String(),
-            email: t.String(),
-            migrateId: t.String(),
-            phone: t.Optional(t.String()),
-            referralCode: t.Optional(t.String()),
+        body: z.object({
+            password: z.string(),
+            firstName: z.string(),
+            lastName: z.string(),
+            email: z.string(),
+            phone: z.string().optional(),
+            additionalData: AuthAdditionalDataSchema.optional(),
         }),
     });
     return app;
 }
-
 
