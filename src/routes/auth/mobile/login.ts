@@ -72,6 +72,8 @@ export async function mobileLogin(app: Elysia) {
 
             });
 
+            console.log("Setup completed:", member.setupCompleted);
+
             return status(200, {
                 token: accessToken,
                 refreshToken,
