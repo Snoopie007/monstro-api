@@ -3,10 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/db";
 import { memberPackages, memberPlanPricing, memberSubscriptions } from "@/db/schemas";
 import { and, count, eq, inArray, or } from "drizzle-orm";
-
-// Active statuses that count as "having members"
-const ACTIVE_SUBSCRIPTION_STATUSES = ["active", "trialing", "past_due", "paused"] as const;
-const ACTIVE_PACKAGE_STATUSES = ["active", "incomplete"] as const;
+import { ACTIVE_SUBSCRIPTION_STATUSES, ACTIVE_PACKAGE_STATUSES } from "../../../constants";
 
 export async function GET(
   req: NextRequest,

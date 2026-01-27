@@ -4,10 +4,7 @@ import { db } from "@/db/db";
 import { memberPackages, memberPlanPricing, memberPlans, memberSubscriptions, planPrograms } from "@/db/schemas";
 import { MemberStripePayments } from "@/libs/server/stripe";
 import { and, count, eq, inArray, or } from "drizzle-orm";
-
-// Active statuses that count as "having members"
-const ACTIVE_SUBSCRIPTION_STATUSES = ["active", "trialing", "past_due", "paused"] as const;
-const ACTIVE_PACKAGE_STATUSES = ["active", "incomplete"] as const;
+import { ACTIVE_SUBSCRIPTION_STATUSES, ACTIVE_PACKAGE_STATUSES } from "../../constants";
 
 async function getActiveMemberCount(planId: string): Promise<number> {
   // Get all pricing IDs for this plan

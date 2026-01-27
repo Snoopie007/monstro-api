@@ -24,7 +24,7 @@ function useSubscriptions(id: string, archived: boolean = false) {
   });
 
   const mutate = () => {
-    queryClient.invalidateQueries({ queryKey: ["subscriptions", id] });
+    queryClient.invalidateQueries({ queryKey: ["subscriptions", id, archived] });
   };
 
   return {
@@ -46,7 +46,7 @@ function usePackages(id: string, archived: boolean = false) {
   });
 
   const mutate = () => {
-    queryClient.invalidateQueries({ queryKey: ["packages", id] });
+    queryClient.invalidateQueries({ queryKey: ["packages", id, archived] });
   };
 
   return {
