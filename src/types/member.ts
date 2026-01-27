@@ -107,6 +107,8 @@ export type FamilyPlan = {
 
 export type MigrateMember = typeof migrateMembers.$inferSelect & {
     pricing?: MemberPlanPricing | null
+    member?: Member
+    location?: Location
 }
 
 export type MemberReferral = typeof memberReferrals.$inferSelect & {

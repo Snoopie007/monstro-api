@@ -135,10 +135,11 @@ export async function POST(
 			);
 		}
 
-		const [{ id }] = await db.insert(migrateMembers).values(insertMembers).returning({ id: migrateMembers.id });
+		const insertedRecords = await db.insert(migrateMembers).values(insertMembers).returning({ id: migrateMembers.id });
 
 		await Promise.all(
-			insertMembers.map((m) => {
+			insertedRecords.map((record, index) => {
+				const m = insertMembers[index];
 				const subject = `You've been invited to join ${location.name} on Monstro`;
 				return sendEmailViaApi({
 					recipient: m.email,
@@ -151,7 +152,7 @@ export async function POST(
 						member: m,
 						ui: {
 							btnText: "Accept Invite",
-							btnUrl: `https://m.monstro-x.com/register?migrateId=${id}`,
+							btnUrl: `https://m.monstro-x.com/register?migrateId=${record.id}`,
 						}
 					}
 				});
