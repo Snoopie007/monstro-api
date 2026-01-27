@@ -4,6 +4,7 @@ import {
   timestamp,
   text,
   uuid,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { locations } from "./locations";
 import { relations, sql } from "drizzle-orm";
@@ -31,6 +32,11 @@ export const migrateMembers = pgTable('migrate_members', {
   priceId: text('pricing_id').references(() => memberPlanPricing.id, { onDelete: 'set null' }),
   payment: boolean('payment').notNull().default(true),
   locationId: text('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  metadata: jsonb('metadata')
+    .$type<{
+      customFieldValues?: Array<{ fieldId: string; value: string }>
+    }>()
+    .default(sql`'{}'::jsonb`),
 })
 
 export const migrateRelations = relations(migrateMembers, ({ one }) => ({
