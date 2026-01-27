@@ -76,7 +76,23 @@ export async function locationLeaderboard(app: Elysia) {
 
             // Get all member details
             const members = await db.query.members.findMany({
-                where: (member, { inArray }) => inArray(member.id, [...pointsMemberIds])
+                where: (member, { inArray }) => inArray(member.id, [...pointsMemberIds]),
+                columns: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    phone: true,
+                },
+                with: {
+                    user: {
+                        columns: {
+                            id: true,
+                            name: true,
+                            image: true,
+                        },
+                    },
+                },
             });
 
             // Calculate referral stats

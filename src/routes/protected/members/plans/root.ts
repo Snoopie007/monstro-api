@@ -34,14 +34,51 @@ export const memberPlans = new Elysia({ prefix: '/plans/:pid' })
                     plans = await db.query.memberSubscriptions.findMany({
                         where: (ms, { eq }) => eq(ms.parentId, pid),
                         with: {
-                            member: true,
+                            member: {
+                                columns: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                    phone: true,
+                                    referralCode: true,
+                                },
+                                with: {
+
+                                    user: {
+                                        columns: {
+                                            id: true,
+                                            name: true,
+                                            image: true,
+                                        },
+                                    },
+                                }
+                            },
                         },
                     });
                 } else {
                     plans = await db.query.memberPackages.findMany({
                         where: (mp, { eq }) => eq(mp.parentId, pid),
                         with: {
-                            member: true,
+                            member: {
+                                columns: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                    phone: true,
+                                    referralCode: true,
+                                },
+                                with: {
+                                    user: {
+                                        columns: {
+                                            id: true,
+                                            name: true,
+                                            image: true,
+                                        },
+                                    },
+                                }
+                            },
                         },
                     });
                 }
