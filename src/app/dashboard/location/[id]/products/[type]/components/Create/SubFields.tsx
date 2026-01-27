@@ -47,7 +47,7 @@ export function PlanSubFields({ lid, form }: SubFieldsProps) {
 						<FormItem>
 							<FormLabel size={"tiny"}>Attach a Contract</FormLabel>
 
-							<SelectContract lid={lid} onChange={field.onChange} />
+							<SelectContract lid={lid} value={field.value} onChange={field.onChange} />
 							<FormMessage />
 							<FormDescription className="text-xs">
 								Leave blank to not attach a contract.

@@ -1,6 +1,4 @@
-
-
-import { CreatePlan, SubscriptionList, PackageList } from "./components";
+import { ProductsTabs } from "./components";
 import { db } from "@/db/db";
 import { ProductsProvider } from "./providers";
 import { Group, Program } from "@/types";
@@ -46,20 +44,11 @@ export default async function Products(props: { params: Promise<{ id: string, ty
                 <ScrollArea className="h-[calc(100vh-52px)] w-full ">
 
                     <div className="max-w-4xl mx-auto w-full space-y-4">
-                        <div className="flex flex-row items-center gap-2 justify-between">
-                            <div className="text-xl font-bold">
-                                {params.type === "subs" ? "Subscriptions" : "Packages"}
-                            </div>
-                            <CreatePlan lid={params.id} type={params.type} />
+                        <div className="text-xl font-bold">
+                            {params.type === "subs" ? "Subscriptions" : "Packages"}
                         </div>
 
-                        <div className="space-y-2 pb-10">
-                            {params.type === "subs" ? (
-                                <SubscriptionList lid={params.id} />
-                            ) : (
-                                <PackageList lid={params.id} />
-                            )}
-                        </div>
+                        <ProductsTabs lid={params.id} type={params.type} />
                     </div>
                 </ScrollArea>
 

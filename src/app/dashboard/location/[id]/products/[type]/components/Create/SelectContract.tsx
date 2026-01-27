@@ -14,10 +14,11 @@ import { Skeleton } from "@/components/ui";
 
 interface SelectContractProps {
   lid: string;
+  value?: string | null | undefined;
   onChange: (value: string | undefined) => void;
 }
 
-export function SelectContract({ lid, onChange }: SelectContractProps) {
+export function SelectContract({ lid, value, onChange }: SelectContractProps) {
   const [contractsLoading, setContractsLoading] = useState(false);
   const [contracts, setContracts] = useState<Contract[]>([]);
 
@@ -35,6 +36,7 @@ export function SelectContract({ lid, onChange }: SelectContractProps) {
 
   return (
     <Select
+      value={value || undefined}
       onValueChange={(e) => onChange(e || undefined)}
       onOpenChange={(open) => open && getContracts()}
     >

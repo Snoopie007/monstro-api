@@ -18,9 +18,14 @@ import { MemberPlan } from "@/types";
 import { useState } from "react";
 import { formatAmountForDisplay } from "@/libs/utils";
 import PlanActions from "./PlanActions";
-export function PackageList({ lid }: { lid: string }) {
-  const { packages, isLoading, error } = usePackages(lid);
 
+interface PackageListProps {
+  lid: string;
+  archived?: boolean;
+}
+
+export function PackageList({ lid, archived = false }: PackageListProps) {
+  const { packages, isLoading, error } = usePackages(lid, archived);
 
   if (error) return <ErrorComponent error={error} />;
   if (isLoading) return <Loading />;
@@ -28,17 +33,24 @@ export function PackageList({ lid }: { lid: string }) {
   return (
     <>
       {packages && packages.length > 0 ? (
-        packages.map((pkg) => (
-          <PackageItem key={pkg.id} pkg={pkg} />
-        ))
+        <div className="space-y-2">
+          {packages.map((pkg) => (
+            <PackageItem key={pkg.id} pkg={pkg} />
+          ))}
+        </div>
       ) : (
         <Empty variant="border">
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <CircleFadingPlusIcon className="size-5" />
             </EmptyMedia>
-            <EmptyTitle>No packages found</EmptyTitle>
-            <EmptyDescription>Packages will appear here when they are created</EmptyDescription>
+            <EmptyTitle>No {archived ? 'archived' : 'active'} packages found</EmptyTitle>
+            <EmptyDescription>
+              {archived 
+                ? 'Archived packages will appear here'
+                : 'Packages will appear here when they are created'
+              }
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       )}

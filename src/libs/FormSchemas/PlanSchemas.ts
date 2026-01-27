@@ -79,6 +79,18 @@ const NewPlanSchema = z
     }
   });
 
+// Schema for updating pricing option (for full edit mode)
+const UpdatePricingOptionSchema = z.object({
+  id: z.string().optional(), // Existing pricing option ID
+  name: z.string().min(1, { message: "Pricing name is required" }),
+  price: z.number().min(100, { message: "Price must be at least $1" }),
+  interval: z.enum(["day", "week", "month", "year"]).optional(),
+  intervalThreshold: z.number().min(1),
+  expireInterval: z.enum(["day", "week", "month", "year"]).optional().nullable(),
+  expireThreshold: z.number().optional().nullable(),
+  downpayment: z.number().min(0).optional(),
+});
+
 const UpdateSubPlanSchema = z
   .object({
     name: z.string().min(2, { message: "Required" }),
@@ -90,6 +102,12 @@ const UpdateSubPlanSchema = z
       .min(1, { message: "Select at least one program." }),
     allowProration: z.boolean().optional(),
     familyMemberLimit: z.number().optional(),
+    // Full edit fields (only editable when no members)
+    pricingOptions: z.array(UpdatePricingOptionSchema).optional(),
+    contractId: z.string().optional().nullable(),
+    makeUpCredits: z.number().min(0).optional(),
+    currency: z.string().optional(),
+    billingAnchor: z.number().optional(),
   })
   .superRefine((data, ctx) => {
     // Add validation to ensure family limit can only be increased
@@ -112,6 +130,13 @@ const UpdatePkgPlanSchema = z
       .array(z.string())
       .min(1, { message: "Select at least one program." }),
     familyMemberLimit: z.number().optional(),
+    // Full edit fields (only editable when no members)
+    pricingOptions: z.array(UpdatePricingOptionSchema).optional(),
+    contractId: z.string().optional().nullable(),
+    intervalClassLimit: z.number().optional(),
+    makeUpCredits: z.number().min(0).optional(),
+    totalClassLimit: z.number().optional(),
+    currency: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     // Add validation to ensure family limit can only be increased

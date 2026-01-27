@@ -1,11 +1,11 @@
 import { db } from "@/db/db";
 import { migrateMembers } from "@/db/schemas/MigrateMembers";
 import { memberFields } from "@/db/schemas/members";
-import { NextResponse } from "next/server";
 import { sendEmailViaApi } from "@/libs/server/emails";
-import { parsePhoneNumberFromString } from "libphonenumber-js";
-import Papa from "papaparse";
 import type { CustomFieldType } from "@/types/member";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
+import { NextResponse } from "next/server";
+import Papa from "papaparse";
 
 export async function POST(
     request: Request,
@@ -79,7 +79,7 @@ export async function POST(
 			skipEmptyLines: true,
 		});
 
-		const insertMembers = [];
+		const insertMembers: Array<typeof migrateMembers.$inferInsert> = [];
 		for (const record of records) {
 			const firstName = record[fieldMapping.firstName];
 			const lastName = record[fieldMapping.lastName];
