@@ -1,8 +1,8 @@
 import { db } from "@/db/db";
-import { memberPackages, memberSubscriptions, migrateMembers, memberLocations } from "@/db/schemas";
+import { memberPackages, memberSubscriptions, migrateMembers, memberLocations, memberCustomFields } from "@/db/schemas";
 import type { MemberPlanPricing, PaymentType } from "@/types";
 import { Elysia, t } from "elysia";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { addYears, addMonths } from "date-fns";
 
 
@@ -30,6 +30,34 @@ export function migrateAcceptRoutes(app: Elysia) {
                     status: state,
                 },
             });
+
+            // Fetch migrate record to get custom field values
+            const migrateRecord = await db.query.migrateMembers.findFirst({
+                where: (mm, { eq }) => eq(mm.id, migrateId),
+            });
+
+            // Transfer custom field values if they exist
+            if (migrateRecord?.metadata?.customFieldValues?.length) {
+                const validValues = migrateRecord.metadata.customFieldValues
+                    .filter(cf => cf.fieldId && cf.value != null && cf.value !== '')
+                    .map(cf => ({
+                        memberId: mid,
+                        customFieldId: cf.fieldId,
+                        value: cf.value,
+                    }));
+
+                if (validValues.length > 0) {
+                    await db.insert(memberCustomFields)
+                        .values(validValues)
+                        .onConflictDoUpdate({
+                            target: [memberCustomFields.memberId, memberCustomFields.customFieldId],
+                            set: {
+                                value: sql`excluded.value`,
+                                updated: today,
+                            },
+                        });
+                }
+            }
 
             if (!payment && pricingId && planType) {
 
