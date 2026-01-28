@@ -11,15 +11,13 @@ import {
 
 interface UpdateEmailOTPEmailProps {
   member: { firstName: string; lastName: string };
-  update: { email: string };
-  ui: { btnUrl: string; btnText: string };
+  update: { email: string; token: string };
   monstro: { fullAddress: string };
 }
 
 export default function UpdateEmailOTPEmail({
   member,
   update,
-  ui,
   monstro,
 }: UpdateEmailOTPEmailProps) {
   return (
@@ -38,13 +36,8 @@ export default function UpdateEmailOTPEmail({
               click the button below. Your request link will expire in 24 hours.
             </Text>
 
-            <Section style={buttonSectionStyle}>
-              <Button
-                style={buttonStyle}
-                href={ui.btnUrl}
-              >
-                {ui.btnText}
-              </Button>
+            <Section style={otpBoxStyle}>
+              <Text style={otpCodeStyle}>{update.token}</Text>
             </Section>
 
             <Text style={warningStyle}>
@@ -91,22 +84,23 @@ const paragraphStyle: React.CSSProperties = {
   lineHeight: '1.5',
 };
 
-const buttonSectionStyle: React.CSSProperties = {
-  textAlign: 'center',
+const otpBoxStyle: React.CSSProperties = {
+  backgroundColor: '#FAFAFA',
+  border: '1px solid #e5e7eb',
+  borderRadius: '8px',
+  padding: '20px',
   margin: '24px 0',
+  textAlign: 'center',
 };
 
-const buttonStyle: React.CSSProperties = {
-  backgroundColor: '#4338ca',
-  color: '#ffffff',
-  fontSize: '16px',
+const otpCodeStyle: React.CSSProperties = {
+  fontSize: '36px',
   fontWeight: 'bold',
-  borderRadius: '3px',
-  textDecoration: 'none',
-  display: 'inline-block',
-  padding: '10px 25px'
+  color: '#000000',
+  margin: '0',
+  letterSpacing: '8px',
+  fontFamily: 'monospace',
 };
-
 const warningStyle: React.CSSProperties = {
   fontSize: '16px',
   color: '#000000',
@@ -129,10 +123,7 @@ UpdateEmailOTPEmail.PreviewProps = {
   },
   update: {
     email: 'newemail@example.com',
-  },
-  ui: {
-    btnUrl: 'https://example.com/update-email',
-    btnText: 'Confirm Email Update',
+    token: '123456',
   },
   monstro: {
     fullAddress: 'PO Box 123, City, State 12345\nCopyright 2025 Monstro',

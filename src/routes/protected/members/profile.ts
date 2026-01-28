@@ -1,14 +1,14 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/db";
-import { members, users, accounts } from "@/db/schemas";
+import { members, users } from "@/db/schemas";
 import { eq } from "drizzle-orm";
 import { getRedisClient } from "@/libs/redis";
 import { EmailSender } from "@/libs/email";
 import { generateOtp } from "@/libs/utils";
 import { MonstroData } from "@/constants/data";
-import bcrypt from "bcryptjs";
 
 import { parsePhoneNumberFromString } from "libphonenumber-js";
+import { addMinutes, isAfter, isBefore } from "date-fns";
 const MemberProfileProps = {
     params: t.Object({
         mid: t.String(),
@@ -79,7 +79,65 @@ export function memberProfile(app: Elysia) {
             mid: t.String(),
         }),
     })
-    app.patch("/email", async ({ status, body, params }) => {
+
+    app.patch("/email/verify", async ({ status, body, params }) => {
+        const { token } = body;
+        const { mid } = params;
+        try {
+            const RedisKey = `emailUpdate:${mid}`;
+            const cachedToken: string | null = await redis.get(RedisKey);
+
+            if (!cachedToken) {
+                return status(400, { error: "Invalid or expired token." });
+            }
+
+            // Redis value should be: <token>::<email>::<createdAtTimestampInSeconds>
+            const [tokenRedis, email, timestamp] = cachedToken.split("::");
+
+            // Validate the token itself
+            if (token !== tokenRedis) {
+                return status(400, { error: "Invalid or expired token." });
+            }
+
+            // Check if 60 minutes have passed since the token was created
+            const timestampDate = new Date(Number(timestamp) * 1000);
+            const now = new Date();
+            const diffMinutes = (now.getTime() - timestampDate.getTime()) / (60 * 1000);
+
+            // If more than 60 minutes have passed, token is expired.
+            if (diffMinutes > 60) {
+                return status(400, { error: "Token expired." });
+            }
+
+            await db.transaction(async (tx) => {
+                const member = await tx.query.members.findFirst({
+                    where: eq(members.id, mid),
+
+                });
+                if (!member) {
+                    return await tx.rollback();
+                }
+                await tx.update(users).set({ email }).where(eq(users.id, member.userId));
+                await tx.update(members).set({ email }).where(eq(members.id, mid));
+            });
+
+            // Clean up the token from Redis after successful use
+            await redis.del(RedisKey);
+
+            return status(200, { success: true });
+        } catch (error) {
+            console.error(error);
+            return status(500, { error: "Internal server error" });
+        }
+    }, {
+        params: t.Object({
+            mid: t.String(),
+        }),
+        body: t.Object({
+            token: t.String(),
+        }),
+    })
+    app.post("/email/token", async ({ status, body, params }) => {
         const { email } = body;
         const { mid } = params;
         try {
@@ -92,12 +150,12 @@ export function memberProfile(app: Elysia) {
             });
 
             if (member?.user.email === email || member?.user.email === email) {
-                return status(400, { error: "Email already in use" });
+                return status(400, { error: "This is the same email." });
             }
 
             const RedisKey = `emailUpdate:${member?.id}`;
             const token = generateOtp();
-            redis.set(RedisKey, `${token}::${email}::${Math.floor(Date.now() / 1000)}`, { ex: expiresAt })
+            redis.set(RedisKey, `${token}::${email}::${Math.floor(Date.now() + 30 * 60 * 1000 / 1000)}`, { ex: expiresAt })
 
 
 
@@ -114,16 +172,17 @@ export function memberProfile(app: Elysia) {
                     },
                     update: {
                         email,
+                        token,
                     },
                     monstro: MonstroData
                 }
             });
 
 
-            return status(200, { email })
+            return status(200, { success: true })
         } catch (error) {
             console.error(error);
-            return status(422, { error: "Unprocessable Entity" })
+            return status(500, { error: "Internal server error" })
         }
     }, {
         params: t.Object({
